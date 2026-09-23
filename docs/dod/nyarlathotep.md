@@ -340,3 +340,13 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-23 · status → in-progress · start
 - 2026-09-23 · D1 · pass · cmd: gh repo view → visibility PUBLIC, defaultBranchRef main · 184fb41 · claude
 - 2026-09-23 · note · A1 recorded (~D8, init patch exception) during Build step 1 post-audit
+- 2026-09-23 · D4 · pass · cmd: pwsh tools/preflight.ps1 → "pillar defaults: all off (5 switches, 0 templates)" · bf25842 · claude
+- 2026-09-23 · D5 · pass · cmd: pwsh tools/preflight.ps1 → "commands: 0 admin-only, 1 public (allow-listed)" · bf25842 · claude
+- 2026-09-23 · D6 · pass · cmd: pwsh tools/preflight.ps1 → "structural edits: fenced (0 Prefab-guarded calls in EntityExtensions.cs)" · bf25842 · claude
+- 2026-09-23 · D7 · pass · cmd: pwsh tools/preflight.ps1 → "file writes: fenced (0 calls in Services/Persistence.cs, no Persistence.cs yet)" · bf25842 · claude
+- 2026-09-23 · D8 · pass · cmd: pwsh tools/preflight.ps1 → "patch guards: 1/1" · bf25842 · claude
+- 2026-09-23 · D9 · pass · cmd: pwsh tools/preflight.ps1 → "secrets: none (187 files scanned, 39 index blobs)" · bf25842 · claude
+- 2026-09-23 · D10 · pass · cmd: pwsh tools/preflight.ps1 -SelfTest → "selftest: 16/16 checks, 3 fixtures each, 18 extra bad fixtures" · bf25842 · claude
+- 2026-09-23 · D19 · pass · cmd: pwsh tools/preflight.ps1 → "icon: 256x256" · bf25842 · claude
+- 2026-09-23 · D33 · pass · cmd: pwsh tools/preflight.ps1 -Paths → "paths: 199 walked, all in manifest" · bf25842 · claude
+- 2026-09-23 · D34 · pass · cmd: pwsh tools/preflight.ps1 → "data inventory: 29/29 complete" · bf25842 · claude
