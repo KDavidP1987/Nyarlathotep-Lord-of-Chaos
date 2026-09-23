@@ -17,7 +17,7 @@ Principles:
 - **Everything is temporary and reversible.** Buffs expire on their own; spawned units carry their own
   lifetime. If the server crashes mid-event, or the mod is removed, the world returns to vanilla.
 - **Bounded.** Hard caps on units, waves, and concurrent events protect tick time and the save file.
-- **Server-side only.** No client mod required. (A Raphael UI can come later through chat commands.)
+- **Server-side only.** No client mod required. (Raphael, the companion client UI, reads and drives it through `.nyar api` chat commands; see `docs/RAPHAEL_INTEGRATION_CONTRACT.md`.)
 
 ## 2. The unifying model: Event = Trigger → Action → Duration
 
@@ -98,20 +98,37 @@ Patterns inherited: `Core`/`IsReady` gate and coroutine host (Faust), registry-i
 - Live edits: `.nyar event reload` re-reads JSON; `.nyar event set <id> k=v,k=v` for quick tweaks (Faust
   `ConfigEditor` pattern — VCF 0.10 splits on spaces).
 
-## 6. Commands (planned, admin-only unless noted)
+## 6. Commands
 
-| Command | Purpose |
-|---|---|
-| `.nyar` | Overview (anyone) |
-| `.nyar status` | Active events, time left, tracked unit count (anyone? — Decision D9) |
-| `.nyar event list` / `info <id>` | Definitions and their state |
-| `.nyar event start <id>` / `stop <id>` | Manual trigger / early end |
-| `.nyar event enable|disable <id>` | Toggle without editing JSON |
-| `.nyar event reload` | Re-read JSON |
-| `.nyar zone add|remove|list` | Manage defended zones at your position |
-| `.nyar spawn <unit> [count] [level] [hp×] [power×]` | One-off test spawn through the full pipeline |
-| `.nyar purge [confirm]` | Kill switch: end everything, despawn all tracked units (two-step confirm) |
-| `.nyar debug here` | Faction/territory/zone/nearest boss at your position |
+The one command reference. The Thunderstore README and `docs/RAPHAEL_INTEGRATION_CONTRACT.md` quote
+it. **Who:** *anyone*, or *admin* (VCF `adminOnly`, Epic D5). **Child:** the child plan that builds it.
+
+| Command | Who | Purpose | Child |
+|---|---|---|---|
+| `.nyar` | anyone | Overview and the commands the caller may run | foundation |
+| `.nyar status` | anyone | Active events and time left; tracked-unit count for admins; never positions | foundation |
+| `.nyar event list` / `info <id>` | admin | Definitions and their state | foundation |
+| `.nyar event start <id>` / `stop <id>` | admin | Manual trigger / early end | foundation |
+| `.nyar event enable\|disable <id>` | admin | Toggle without editing JSON | foundation |
+| `.nyar event set <id> <field> <value>` | admin | Edit one validated field | foundation |
+| `.nyar event reload` | admin | Re-read events.json | foundation |
+| `.nyar spawn <unit> [count] [level] [hp×] [power×]` | admin | One-off test spawn through the full pipeline | foundation |
+| `.nyar purge [confirm]` | admin | Kill switch: end everything, despawn all tracked units (two-step) | foundation |
+| `.nyar debug here` | admin | Faction, territory, zone and nearest boss at your position | foundation |
+| `.nyar announce <text\|digest>` | admin | Broadcast now: free text, or the stats digest | foundation (digest: stats) |
+| `.nyar zone add\|remove\|list` | admin | Defended zones at your position | defended-zones |
+| `.nyar me` | anyone | Your own stats: today, week, all-time | stats |
+| `.nyar top <stat> [today\|week\|all] [page] [share]` | anyone | Leaderboard, 10 per page; `share` broadcasts your line (rate-limited, admin-enabled) | stats |
+| `.nyar stats hide\|show` | anyone | Leave or rejoin boards and digests | stats |
+| `.nyar stats reset <player\|all> [confirm]` | admin | Clear stats (two-step) | stats |
+| `.nyar api version` | anyone | Raphael handshake `[NYAR:version]` | foundation |
+| `.nyar api status\|me\|top …` | anyone | Machine-readable twins of the player reads | raphael-api |
+| `.nyar api events\|zones [page]` | admin | Machine-readable definitions and zones | raphael-api |
+| `.nyar api sub on\|off` | anyone | Push events `[NYAR:ev]` to this player | raphael-api |
+
+Stats: `kills` (event units), `events` (joined), `waves` (survived), `defences` (sieges won),
+`bossadds` (boss adds killed) and `deaths` (to our units). Counting rules are in the Epic plan's
+Business rules 11.
 
 ## 7. Build order
 
@@ -127,8 +144,10 @@ Spikes run first because they decide whether the riskier pillars are feasible at
 | **2. Event spawns** | Pillar D: waves at a point/zone with modifiers, Guard/Hunt behaviours | Spawn pipeline |
 | **3. Boss reinforcements** | Pillar C: BossEngaged + BossHealthPhase triggers, AroundBoss spawning, cleanup on boss death/reset | Boss hooks |
 | **4. Defended zones** | Pillar B2: zone activity sampling, thresholds, cooldowns, reinforcements | Activity sampling |
+| **2b. Stats** | Per-player counters, `.nyar me` / `top` / `stats`, daily digest and login stats (runs after event spawns) | Announcer + kill hooks |
 | **5. Sieges (MVP)** | Pillar B1: harassment raids at castle perimeter with target eligibility rules | S1 result |
-| 6. Later | Structure damage (HookDOTS, raid windows, RaidForge deferral); faction "heat"; BloodMoon trigger; map markers; Raphael UI API | — |
+| **5b. Raphael API** | `.nyar api` reads, paging and errors, push events per the contract | Every pillar |
+| 6. Later | Structure damage (HookDOTS, raid windows, RaidForge deferral); faction "heat"; BloodMoon trigger; map markers | — |
 
 ## 8. Risks
 
@@ -144,7 +163,7 @@ Spikes run first because they decide whether the riskier pillars are feasible at
 
 ## 9. Decisions
 
-All settled with the user on 2026-09-23 in plan mode and recorded as validated assumptions S-4 to S-17 in
+All settled with the user on 2026-09-23 in plan mode and recorded as validated assumptions S-4 to S-17 (D13–D15 and the D12 change: S-20, S-22 to S-24) in
 `docs/dod/nyarlathotep.md`. A change after this point is a DoD amendment, not an edit here.
 
 | # | Decision | Resolved |
@@ -160,7 +179,10 @@ All settled with the user on 2026-09-23 in plan mode and recorded as validated a
 | D9 | Player visibility | Announcements + player `.nyar status` (active events, time left, no positions) |
 | D10 | Siege target eligibility | **All admin-configurable:** owner or clan member online **or last online within `RecentlyOnlineHours`** (so logging out does not dodge a siege); optional **minimum castle-heart level** (not gear level — gear can be swapped); never sealed/decaying hearts; PvE/PvP availability per event; re-checked every tick |
 | D11 | Schedule time basis | Both: real server-local clock and in-game day/night |
-| D12 | Raphael (client UI) integration | Deferred; replies stay parse-friendly |
+| D12 | Raphael (client UI) integration | **In v1.0** (changed 2026-09-23, Epic A5): `[NYAR:*]` wire behind `.nyar api …`, human replies unchanged; handshake in foundation, reads and push events in the `raphael-api` child; contract `docs/RAPHAEL_INTEGRATION_CONTRACT.md` |
+| D13 | Player names on boards | Allowed on leaderboards, stat replies and digests, never positions; admins excluded by default, admin ignore list, player opt-out `.nyar stats hide` (Epic A3, S-22) |
+| D14 | Stats persistence | `stats.json`, 30 daily buckets + all-time, admin reset (Epic A6, S-23) |
+| D15 | Mod-initiated messages | Wave warnings + event banners, daily banner with digest, admin on-demand banner, private login stats, rate-limited player share; each off by default (Epic A7, S-24) |
 | P1 | Development procedure | Pre-audit / build / post-audit with Codex cross-inspection on every step (CLAUDE.md) |
 | P2 | Icon | Whole dragon artwork scaled to 256×256 (not cropped); same image as README cover |
 | P3 | First Thunderstore publication | After foundation + faction empowerment + event spawns pass in-game (~0.4.0); GitHub releases before |

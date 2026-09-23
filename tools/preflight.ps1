@@ -242,7 +242,7 @@ function Test-CheckPillarDefaults([string]$Root) {
     return New-Result $true "pillar defaults: all off ($($binds.Count) switches, $($templates.Count) templates)"
 }
 
-$script:PublicCommands = @('nyar', 'status', 'help')
+$script:PublicCommands = @('nyar', 'status', 'help', 'me', 'top', 'hide', 'show', 'version')   # Epic D5 (A4)
 
 function Test-CheckCommands([string]$Root) {
     $cs = Get-CsFiles $Root

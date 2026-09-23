@@ -29,8 +29,11 @@ offenders for this mod:
 
 Fixed section order:
 
-- **Thunderstore** (`Nyarlathotep/Nyarlathotep/README.md`): intro → what it does (grouped by pillar) →
-  install → quick start (enabling a first event) → commands → configuration → feedback → license.
+- **Thunderstore** (`Nyarlathotep/Nyarlathotep/README.md`): cover → intro → what it does (one collapsible
+  `<details>` per pillar, plus stats and announcements, each marked *in development* until its release) →
+  screenshots (collapsible; captioned slots, images as absolute `raw.githubusercontent.com` URLs under
+  `docs/img/screenshots/`) → installation (with dependency table) → quick start → commands (one
+  collapsible table per group) → configuration → uninstall → feedback → acknowledgements & license.
 - **GitHub** (`README.md`): intro → status → how it works → feature table → architecture → layout →
   building → release discipline → docs → license.
 
