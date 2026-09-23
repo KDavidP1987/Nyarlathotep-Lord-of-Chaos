@@ -125,7 +125,7 @@ All live under `.nyar api …`. Paged commands take an optional 1-based `[page]`
 - `state` ∈ `idle | alert | cooldown`. Coordinates are sent to admins only.
 
 ### Push events — `.nyar api sub on|off` (anyone)
-After `sub on`, the server pushes lines to that player until `sub off` or they disconnect:
+After `sub on`, the server pushes lines to that player until `sub off`, a disconnect or a server restart. Subscriptions live only in memory: a reconnect starts unsubscribed, so Raphael sends `sub on` again after every successful handshake. Lines go only to connected subscribers:
 ```
 [NYAR:ev] type=wave-warn id=ashfall secs=60 wave=2
 ```
@@ -173,7 +173,7 @@ single command surface, which `docs/NYARLATHOTEP_DESIGN.md` §6 lists in full. T
 | Reload definitions from disk | `.nyar event reload` | admin |
 | Test spawn | `.nyar spawn <unit> [count] [level] [hp×] [power×]` | admin |
 | Kill switch | `.nyar purge` then `.nyar purge confirm` (two presses, with a confirmation dialog) | admin |
-| Broadcast now | `.nyar announce <text>` / `.nyar announce digest` | admin |
+| Broadcast now | `.nyar announce <text>` / `.nyar announce digest` (text 1-200 characters, no `<`, `>` or control characters; otherwise `badarg`) | admin |
 | Add / remove a zone at the admin's position | `.nyar zone add <name> <radius>` / `.nyar zone remove <name>` | admin |
 | Reset stats | `.nyar stats reset <player\|all>` then `… confirm` | admin |
 | Hide / show me on boards | `.nyar stats hide` / `.nyar stats show` | anyone |

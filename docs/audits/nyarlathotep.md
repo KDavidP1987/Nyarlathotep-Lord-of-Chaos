@@ -1,6 +1,6 @@
 # Audit — nyarlathotep
 
-Epic-level Build plan steps (1, 2, 3, 11, 12). Child steps are audited in their own files.
+Epic-level Build plan steps (1, 2, 3, 13, 14). Child steps are audited in their own files.
 
 ## Pre-audit
 ### Step 2 · 2026-09-23 · f828a39

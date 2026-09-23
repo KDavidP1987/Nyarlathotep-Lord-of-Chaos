@@ -354,7 +354,7 @@ function Test-CheckFileWrites([string]$Root) {
         if ($f -eq $fence) { $inFence += $calls.Count } else { $bad += "$($calls[0].Value) in $f" }
     }
     # The fence itself (Epic D7): no non-private member takes a path, file, name or directory string, every
-    # file-name literal is one of the three data files or their .bak/.tmp siblings, and the directory is
+    # file-name literal is one of the four data files or their .bak/.tmp/.corrupt siblings, and the directory is
     # built from BepInEx's config path plus "Nyarlathotep".
     $pers = Read-Text $Root $fence
     $persNote = 'no Persistence.cs yet'
@@ -363,11 +363,11 @@ function Test-CheckFileWrites([string]$Root) {
         foreach ($m in [regex]::Matches($p, '(?m)^\s*(?:(?:public|internal|protected)\s+)(?:static\s+)?[\w<>\[\],.? ]+?\s+(\w+)\s*\(([^)]*)\)')) {
             if ($m.Groups[2].Value -match '(?i)\bstring\s+\w*(path|file|name|dir|folder)\w*') { $bad += "Persistence.$($m.Groups[1].Value) takes a path or file-name parameter" }
         }
-        # Outside log calls, the only string literals allowed are the data-file names, their .bak/.tmp
+        # Outside log calls, the only string literals allowed are the data-file names, their .bak/.tmp/.corrupt
         # suffixes and the folder name, so no other file name can be spelled or assembled (an interpolated
         # string outside a log call fails too).
         $noLogs = [regex]::Replace($p, '\bLog\w*\s*\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\)', 'LOG()')
-        $allowed = '^((events|zones|state)\.json(\.bak|\.tmp)?|\.bak|\.tmp|Nyarlathotep)$'
+        $allowed = '^((events|zones|state|stats)\.json(\.bak|\.tmp|\.corrupt)?|\.bak|\.tmp|\.corrupt|Nyarlathotep)$'
         foreach ($m in [regex]::Matches($noLogs, '(\$@|@\$|\$|@)?"((?:[^"\\]|\\.)*)"')) {
             if ($m.Groups[1].Value -match '\$') { $bad += "Persistence.cs builds a string outside a log call ($($m.Value))"; continue }
             if ($m.Groups[2].Value -notmatch $allowed) { $bad += "Persistence.cs names '$($m.Groups[2].Value)'" }
