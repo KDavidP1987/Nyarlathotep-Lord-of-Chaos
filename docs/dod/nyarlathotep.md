@@ -14,7 +14,7 @@ closed: none
 commit: 8c92928
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
-review: pending
+review: human
 ---
 
 # DoD: Nyarlathotep, Lord of Chaos, v0.1 to v1.0
@@ -391,3 +391,5 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-23 · version · v2.1 · Codex review 5 on the v2 scope: A8 (requested) and A9 (discovered) recorded, D44–D46 added, D7 D16 D26 D32 D37 D40 D42 revised, Business rules 13
 - 2026-09-23 · version · v2.2 · Codex review 6 on the v2.1 scope: A10 (requested), A11 and A12 (discovered) recorded; D15 D25 D36 D39 D40 D42 D43 D46 revised; the Player actor, wave membership, windows and read-audit policy decided
 - 2026-09-23 · version · v2.3 · Codex review 7 (third round on the v2 scope, the cap): A13 (requested) recorded; D5 D36 D37 D42 D46 revised; unreachable actors stated; taken to the owner for review
+- 2026-09-23 · note · owner confirmed hide = publication only, counting continues (S-22, Business rules 11)
+- 2026-09-23 · note · review pending → human: owner READY on v2.3 (Review 8)

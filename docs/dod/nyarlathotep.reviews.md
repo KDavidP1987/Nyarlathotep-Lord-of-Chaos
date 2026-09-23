@@ -222,3 +222,10 @@ VERDICT: REVISE
 - F12 · accepted · ~D46: serializing and writing 20000 records under 100 ms, at most once a minute
 - F13 · rejected · S-21's fallback already lists every affected surface and the reruns it needs (review 5 F17); it is cheap before the first release, which is when it would be taken
 - F14 · accepted · rescore recorded; author 15/15 · 49/49 vs reviewer 8/15 · 40/49, shown to the owner side by side
+
+## Review 8 · 2026-09-23 · human · plan commit 7de5492
+F1 advisory · Coverage: the project owner, reading the review page and Codex Reviews 5-7 on the v2 scope, finds every Considered layer answers its probes; the remaining Codex gaps are the process-tooling probes already accepted as advisory at Review 4; the hide policy (publication only, counting continues) is confirmed as written in Business rules 11 and D40 — no blocking gap
+15/15 layers · 49/49 probes
+VERDICT: READY
+### Dispositions
+- F1 · accepted · no change; hide = publication only confirmed by the owner
