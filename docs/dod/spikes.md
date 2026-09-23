@@ -398,3 +398,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-23 · note · review 3 (codex) REVISE at the 3-round cap; F3 applied (D19 compares the Compile-item set), F6 applied (D20 range recorded before the drill, helpers-only revert drilled); taken to human review
 - 2026-09-23 · status → ready · approve · review: human
 - 2026-09-23 · status → in-progress · start
+- 2026-09-23 · D14 · pass · cmd: pwsh tools/preflight.ps1 -SelfTest → "selftest: 19/19 checks, 3 fixtures each, 36 extra bad fixtures" · 8f4576c · claude
