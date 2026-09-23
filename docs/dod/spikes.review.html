@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review — Spikes S1-S3, march, restart marker, carrier buff</title>
+<style>
+:root { color-scheme: light dark; --bg:#fbfbfa; --fg:#1b1b1a; --dim:#55534e; --line:#d9d7d1; --card:#ffffff;
+  --ok:#1b5e3a; --warn:#7a4a00; --accent:#1f4f82; }
+@media (prefers-color-scheme: dark) { :root { --bg:#16181a; --fg:#eceae5; --dim:#a8a49c; --line:#33363a;
+  --card:#1e2124; --ok:#7fd8a4; --warn:#e8b765; --accent:#8fbde8; } }
+* { box-sizing: border-box; }
+/* plan text carries long unbroken tokens — a review-page URL in a Log note, a path, a hostile string with no
+   space in it — and at 375 px one of those is what pushes the document wider than the window (D20) */
+body, p, td, th, li, caption { overflow-wrap: anywhere; }
+body { margin:0; padding:1.5rem 1rem 4rem; background:var(--bg); color:var(--fg); max-width:60rem;
+  font:16px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+h1 { font-size:1.5rem; line-height:1.25; margin:0 0 .25rem; }
+h2 { font-size:1.15rem; margin:2.25rem 0 .5rem; padding-bottom:.25rem; border-bottom:1px solid var(--line); }
+h3 { font-size:1rem; margin:1.25rem 0 .35rem; color:var(--dim); }
+p { margin:.4rem 0; }
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.9em; }
+.sub { color:var(--dim); margin:0 0 1rem; }
+.absent { color:var(--dim); font-style:italic; }
+.legend { color:var(--dim); }
+.scroll { overflow-x:auto; }
+table { border-collapse:collapse; width:100%; min-width:32rem; }
+caption { text-align:left; color:var(--dim); padding:.25rem 0; }
+th, td { text-align:left; vertical-align:top; padding:.35rem .5rem; border-bottom:1px solid var(--line); }
+th { color:var(--dim); font-weight:600; white-space:nowrap; }
+td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+tr:target td { background:var(--card); outline:2px solid var(--accent); }
+ul.tree { list-style:none; margin:0; padding:0; }
+ul.tree li { padding:.2rem 0; border-bottom:1px solid var(--line); display:flex; gap:.5rem; flex-wrap:wrap; }
+ul.tree li span.pkg { font-weight:600; }
+ul.tree li.lvl2 { padding-left:1.25rem; }
+ul.tree li .pct { margin-left:auto; font-variant-numeric:tabular-nums; color:var(--dim); }
+a { color:var(--accent); }
+a:focus-visible { outline:3px solid var(--accent); outline-offset:2px; border-radius:2px; }
+.k { display:inline-block; min-width:5.5rem; color:var(--dim); }
+.done { color:var(--ok); } .open { color:var(--warn); }
+ol.said { margin:.25rem 0 .75rem; padding-left:1.25rem; }
+ol.said li { padding:.15rem 0; }
+.declared { border-left:3px solid var(--warn); padding:.35rem .6rem; margin:.5rem 0; color:var(--fg); }
+</style>
+</head>
+<body>
+<h1>Review — Spikes S1-S3, march, restart marker, carrier buff</h1>
+
+<p class="sub"><span class="mono">spikes</span> · draft · size M · parent nyarlathotep · 20 item(s)</p>
+
+<p class="legend mono">legend: D item · A amendment · S assumption · F review finding · P proposal · W work package · n.m layer.probe</p>
+
+<p class="legend">Every probe of this plan's rubric is below with the plan's own answer. The author's own marking is not on this page — form your own before you look at theirs.</p>
+
+<h2 id="L1">1. Purpose &amp; typical use</h2>
+<p class="absent">the plan writes no numbered sentences under Purpose &amp; typical use for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 1</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">1.1</td><td>Who uses it (role, frequency) and the one sentence they would say when they want it.</td><td><span class="open">no answer</span></td></tr><tr><td class="mono">1.2</td><td>The job it does for them — the outcome, not the mechanism.</td><td><span class="open">no answer</span></td></tr><tr><td class="mono">1.3</td><td>What exists today that it replaces, extends, or must coexist with.</td><td><span class="open">no answer</span></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L2">2. Actors &amp; permissions</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 2</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">2.1 ⛔</td><td>Every actor that can reach it (including unauthenticated, service accounts, admins) and what each may do.</td><td><a href="#D2">D2</a> <a href="#D6">D6</a></td></tr><tr><td class="mono">2.2</td><td>What happens on the unauthorized path — silent deny, error, redirect, audit entry.</td><td>VCF answers a non-admin with its standard no-permission reply and runs nothing</td></tr><tr><td class="mono">2.3</td><td>Ownership: who may see, change, or delete what someone else created, and what happens when ownership changes hands — a holder replaced mid-flight, a closed thing legitimately reopened.</td><td>spike units belong to no player and any admin may clear any spike group</td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L3">3. Inputs, outputs &amp; data</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 3</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">3.1</td><td>Every input: shape, limits, validation, and the response to invalid input.</td><td><a href="#D6">D6</a></td></tr><tr><td class="mono">3.2</td><td>Every output and side effect, including what other systems receive.</td><td><a href="#D5">D5</a> <a href="#D12">D12</a></td></tr><tr><td class="mono">3.3 ⛔</td><td>Persistence: what is stored, where, who owns it, how long it is kept, how it is deleted — for every artifact the feature produces, including by-products (logs, working directories, intermediates), and which of them exist only once.</td><td><a href="#D4">D4</a> <a href="#D18">D18</a> <a href="#D5">D5</a></td></tr><tr><td class="mono">3.4</td><td>Migration of existing data, if the shape changes.</td><td>no persisted schema changes</td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L4">4. Business rules &amp; invariants</h2>
+<h3>What the plan says under “Business rules”</h3>
+<ol class="said"><li>**Limits:** - at most 10 units per command - at most 30 marked units alive at once - LifeTime at most 600 s - clear destroys at most 5 per frame (D5; the per-frame limit comes from DEV_REMINDERS #8) - query radius at most 30 m (D6) - one 1 s server-wide cooldown shared by every spike command except clear, so a scripted admin gets at most one query or spawn per second (D6)</li><li>**Invariants:** - A spike never edits an entity carrying the Prefab component (D3). - A spike never writes stats directly on a native NPC. S3 changes native NPCs only through a carrier buff with LifeTime, per the Epic child constraint for faction-empowerment (D6 refuses a carrier without LifeTime). - Every spike-spawned unit is marked and is audited by sweep (D5).</li><li>**Time:** LifeTime counts server seconds. What happens across a restart is itself the S2 question (D8), so no rule assumes it.</li><li>**Precedence, highest first** (D6): 1. Core.IsReady=false: every spike command replies &quot;still loading&quot;. In practice this is unreachable, because VCF accepts chat only after players connect, which is after load. The guard stays anyway. 2. General.Enabled=false: march, tag and empower are refused with &quot;General.Enabled is false&quot;. Clear, sweep and inspect still run, so the kill path never closes (D6). 3. The argument ranges. 4. The 30-alive limit. Only the developer decides an exception, and only through an amendment to this plan.</li><li>**Every X sets:** - &quot;Every spike unit&quot; is the union of two sets: the in-memory list of units spawned this boot, and an EntityQuery over Buff+SpellLevel (IncludeDisabled) whose SpellLevel.Level is 1314472274, resolved to each buff&#39;s Target. `.nyar spike sweep` reports both sets and every difference between them (D5). - &quot;Every spike file&quot; (D13, D19) is the set the compiler actually builds plus every .cs file git sees: the project&#39;s Compile items (tracked, untracked and ignored alike) and git&#39;s tracked and untracked-not-ignored .cs files. Spike code is recognised by naming (namespace Nyarlathotep.Spikes, &quot;Spike&quot; type and member names, command group &quot;spike&quot;). Two escape routes are closed separately: an ignored Compile item fails D13 whatever its name, and a neutral-named file, tracked or untracked, fails D19, because after step 8 nothing under Nyarlathotep/ but EntityExtensions.cs may differ in git and the Compile items must equal the pre-harness list (D14 plants the first two routes). - &quot;Every server write&quot; (D4) is every file created, changed or deleted between the snapshot and the comparison, under the server directory and LocalLow\Stunlock Studios. Content hashes cover BepInEx/, logs/, save-data-* and LocalLow, so a write that restores the timestamp is still seen there. A file created and deleted inside one session leaves nothing behind and is not seen; that is accepted, because what matters for the world is what remains.</li><li>**Corrections:** an observation found wrong after its verdict was written is corrected by: - appending a new dated Test results entry that says &quot;supersedes &lt;date&gt;&quot; (the earlier entry stays) - rewriting the verdict line - updating the RESEARCH_NOTES contract row - recording a `corrected` amendment on the Epic, or a `discovered` one when a later child&#39;s plan already relied on it, with any affected child plan amended the same day The latest dated entry is authoritative (D11).</li></ol>
+<div class="scroll">
+<table><caption>probes of layer 4</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">4.1</td><td>Calculations, thresholds, and policies stated precisely enough to write a test from, and which document is authoritative for a threshold stated in two places.</td><td><a href="#D5">D5</a> <a href="#D6">D6</a></td></tr><tr><td class="mono">4.2</td><td>Invariants that must never be violated (uniqueness, ordering, balance, totals).</td><td><a href="#D3">D3</a> <a href="#D5">D5</a></td></tr><tr><td class="mono">4.3</td><td>Temporal rules — time zones, cut-offs, expiry, retroactive changes.</td><td><a href="#D5">D5</a> <a href="#D8">D8</a></td></tr><tr><td class="mono">4.4 ⛔</td><td>Precedence when rules conflict, and who decides an exception.</td><td><a href="#D6">D6</a></td></tr><tr><td class="mono">4.5</td><td>(rubric 2) “Every X” sets: for every rule of the form “every X”, how X is computed, what valid content the computation misses, who checks the computation — and, when a tool derives X (a grep, a diff, a directory walk), whether that tool can see every member at the moment it runs: a file not yet tracked, a file this build creates, a path the tool excludes.</td><td><a href="#D13">D13</a> <a href="#D14">D14</a> <a href="#D19">D19</a> <a href="#D5">D5</a> <a href="#D4">D4</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L5">5. Internal interfaces</h2>
+<p class="absent">the plan writes no numbered sentences under Interfaces for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 5</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">5.1</td><td>What it reads from other features/modules, with paths or symbols.</td><td><a href="#D1">D1</a></td></tr><tr><td class="mono">5.2</td><td>What it writes to or changes about other features, and what breaks there if this is wrong.</td><td><a href="#D11">D11</a> <a href="#D3">D3</a></td></tr><tr><td class="mono">5.3</td><td>Shared types, events, schemas or contracts it introduces or alters — each field enumerated against what the code emits or reads, not against the prose that describes it.</td><td><a href="#D10">D10</a> <a href="#D8">D8</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L6">6. External dependencies &amp; contracts</h2>
+<p class="absent">the plan writes no numbered sentences under Interfaces for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 6</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">6.1</td><td>Every external API, service, package, or vendor it depends on — version, quota, cost — and every input contract sampled across all its record types, not only the ones the feature expects.</td><td><a href="#D10">D10</a> <a href="#D1">D1</a></td></tr><tr><td class="mono">6.2 ⛔</td><td>Behaviour when each dependency is slow, down, rate-limited, or returns garbage, including internal collaborators — sibling agents and your own tools.</td><td><a href="#D6">D6</a> <a href="#D12">D12</a> <a href="#D14">D14</a></td></tr><tr><td class="mono">6.3</td><td>Sandbox / test-mode behaviour and how it is kept out of production.</td><td><a href="#D4">D4</a> <a href="#D18">D18</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L7">7. States &amp; lifecycle</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 7</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">7.1</td><td>Empty, first-run, loading, partial, and error states.</td><td><a href="#D5">D5</a> <a href="#D6">D6</a></td></tr><tr><td class="mono">7.2</td><td>Concurrent use — two users, two tabs, a retry racing the original — and which of these actors is you: the planner, the orchestrator, the build tooling.</td><td><a href="#D5">D5</a> <a href="#D6">D6</a></td></tr><tr><td class="mono">7.3</td><td>Stale data, cancel, undo, and re-entry after interruption, and what a correction invalidates.</td><td><a href="#D8">D8</a> <a href="#D11">D11</a> <a href="#D18">D18</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L8">8. Minimal stretch</h2>
+<p class="absent">the plan writes no numbered sentences under Use cases for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 8</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">8.1</td><td>The least a user can do: empty input, one item, defaults only, skipping optional steps.</td><td><a href="#D5">D5</a></td></tr><tr><td class="mono">8.2</td><td>The feature used once and never again — does anything leak, linger, or nag.</td><td><a href="#D5">D5</a> <a href="#D18">D18</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L9">9. Maximal stretch</h2>
+<p class="absent">the plan writes no numbered sentences under Use cases for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 9</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">9.1</td><td>Volume: 100× the expected count, size, or rate — what degrades and how.</td><td><a href="#D5">D5</a></td></tr><tr><td class="mono">9.2</td><td>Abuse and misuse: hostile input, automation, the clever workaround a power user will try.</td><td><a href="#D2">D2</a> <a href="#D6">D6</a> <a href="#D5">D5</a></td></tr><tr><td class="mono">9.3</td><td>Repeated or parallel use of the same action — idempotency, duplicates, double-submit.</td><td><a href="#D5">D5</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L10">10. Security &amp; privacy</h2>
+<p class="absent">the plan writes no numbered sentences under Security for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 10</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">10.1 ⛔</td><td>Authorization checked on every path, including indirect ones (jobs, webhooks, exports) — and an allowed program&#39;s options that change what runs (`git --upload-pack`, `npm --script-shell`, `node --require`) are the same boundary as the program itself.</td><td><a href="#D2">D2</a></td></tr><tr><td class="mono">10.2</td><td>Injection and unsafe content on every input that reaches a query, shell, template, or URL.</td><td><a href="#D6">D6</a></td></tr><tr><td class="mono">10.3 ⛔</td><td>Secrets and credentials: where they live, how they rotate, what must never be logged.</td><td><a href="#D16">D16</a></td></tr><tr><td class="mono">10.4</td><td>Personal data: what is collected, minimised, exposed in logs or exports, and the audit trail.</td><td><a href="#D18">D18</a> <a href="#D4">D4</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L11">11. Design &amp; UX</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 11</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">11.1</td><td>Where it lives in the product and how a user discovers it.</td><td><a href="#D2">D2</a></td></tr><tr><td class="mono">11.2</td><td>Feedback: progress, success, failure, and empty-result messaging in the product&#39;s voice.</td><td><a href="#D6">D6</a> <a href="#D5">D5</a></td></tr><tr><td class="mono">11.3</td><td>Accessibility (keyboard, screen reader, contrast) and small-screen behaviour.</td><td>chat is the game client&#39;s</td></tr><tr><td class="mono">11.4</td><td>(rubric 2) Activation: how the feature is invoked or activated when nobody asks for it — a trigger, a pointer line, a hook, a schedule — and what shows it was; the should-not-activate cases are unrelated to the feature&#39;s purpose, never adjacent to it — an agent that has just finished an adjacent task invokes it for a good reason.</td><td>runs only when an admin types a spike command</td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L12">12. Failure handling &amp; observability</h2>
+<p class="absent">the plan writes no numbered sentences under Failure &amp; observability for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 12</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">12.1</td><td>What the user sees for each failure class, and what they can do next.</td><td><a href="#D6">D6</a></td></tr><tr><td class="mono">12.2</td><td>What is logged or measured, with enough context to debug without reproducing.</td><td><a href="#D12">D12</a> <a href="#D10">D10</a></td></tr><tr><td class="mono">12.3</td><td>How you would know in production that it is broken — the alert or the dashboard.</td><td><a href="#D12">D12</a> <a href="#D5">D5</a></td></tr><tr><td class="mono">12.4 ⛔</td><td>(rubric 2) Failing case: for every check the plan introduces, the input that makes it report a failure, the input it must stay silent on, and what it prints on an empty input — which must not read as a pass; one evidence command per gating probe, able to fail for its stated `fails when`; and a selftest fixture spells what the real input spells and plants the state the real run produces, never a corrected copy of either.</td><td><a href="#D14">D14</a> <a href="#D13">D13</a> <a href="#D4">D4</a> <a href="#D17">D17</a> <a href="#D19">D19</a> <a href="#D20">D20</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L13">13. Performance &amp; scale</h2>
+<p class="absent">the plan writes no numbered sentences under Performance for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 13</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">13.1</td><td>The latency or throughput budget, and the hot path that decides it.</td><td>one-shot commands, a 1 Hz mover and a 5-per-frame queue, far under the 1 ms idle budget</td></tr><tr><td class="mono">13.2</td><td>Limits and pagination — what is bounded and what happens at the bound, the case a limit came from, and the valid case it excludes.</td><td><a href="#D5">D5</a> <a href="#D6">D6</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L14">14. Rollout &amp; compatibility</h2>
+<p class="absent">the plan writes no numbered sentences under Rollout for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 14</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">14.1</td><td>How it ships: flag, staged, all at once; who can turn it off.</td><td><a href="#D13">D13</a> <a href="#D2">D2</a></td></tr><tr><td class="mono">14.2</td><td>Backward compatibility with existing clients, data, and integrations.</td><td><a href="#D1">D1</a> <a href="#D19">D19</a></td></tr><tr><td class="mono">14.3 ⛔</td><td>Rollback: the exact steps to undo it, whether they are still possible after data has been written, and the commit range they cover when the change is committed more than once.</td><td><a href="#D20">D20</a> <a href="#D19">D19</a> <a href="#D18">D18</a> <a href="#D13">D13</a></td></tr><tr><td class="mono">14.4 ⛔</td><td>(rubric 2) Paths walked: every path the change ships, writes or regenerates, found by walking the Build plan step by step — generated indexes, tooling, fixtures, notes, ignored and generated files, the shipped files a release has to touch, the paths the review process itself writes (review pages, re-review records) and the plan store itself.</td><td><a href="#D15">D15</a> <a href="#D4">D4</a> <a href="#D17">D17</a> <a href="#D20">D20</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L15">15. Out of scope</h2>
+<p class="absent">the plan writes no numbered sentences under Out of scope for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 15</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">15.1</td><td>What was explicitly considered and excluded, so a builder does not fill the gap by guessing.</td><td><span class="open">no answer</span></td></tr><tr><td class="mono">15.2</td><td>What is deferred to a later item, and the slug or issue it lives in.</td><td><span class="open">no answer</span></td></tr></tbody>
+</table>
+</div>
+
+<h2>Items in full</h2>
+
+<h3 id="D1"><span class="mono">D1</span> Compiles with spike code</h3>
+<p>the solution builds in Release with 0 errors and 0 warnings with the spike harness present, without deploying</p>
+<p class="mono">cmd: dotnet build Nyarlathotep/Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__ → &quot;0 Warning(s)&quot; and &quot;0 Error(s)&quot; (fails when: a spike file has a compile error or adds a warning)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D2"><span class="mono">D2</span> Every command admin-only</h3>
+<p>every [Command] attribute in any .cs file of the repository (git ls-files plus untracked-not-ignored), spike commands included, lives under Commands/ and carries adminOnly: true. The only exceptions are the allow-list {nyar, status, help}, which is versioned as $script:PublicCommands in tools/preflight.ps1</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 → line &quot;commands: &lt;n&gt; admin-only, &lt;m&gt; public (allow-listed)&quot; (fails when: any command in any file outside the allow-list lacks adminOnly: true, or a [Command] lies outside Commands/)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D3"><span class="mono">D3</span> Spike edits fenced</h3>
+<p>spike code makes structural edits (AddComponent*, RemoveComponent*, AddBuffer, DestroyEntity) only through EntityExtensions.cs helpers. Every method there that makes such a call refuses entities carrying the Prefab component</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 → line &quot;structural edits: fenced (&lt;k&gt; Prefab-guarded calls in EntityExtensions.cs)&quot; (fails when: any other .cs file makes one of those calls, or an EntityExtensions method makes one without a Has&lt;Prefab&gt; guard)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D4"><span class="mono">D4</span> Only the throwaway save written</h3>
+<p>a snapshot taken before step 3 (`pwsh tools/preflight.ps1 -ServerWrites -Snapshot $env:TEMP\nyarspikes-before.tsv`: path, size, last-write time, and SHA-256 for every file under the server directory&#39;s BepInEx/, logs/ and save-data-*/ and under %USERPROFILE%\AppData\LocalLow\Stunlock Studios; path, size and time elsewhere under the server directory) is compared with the tree after each session. Every created, changed or deleted file matches a `server:` or `external:` glob in tools/paths-manifest.txt. No Saves folder other than save-data-nyarspikes exists or changed. After step 8, save-data-nyarspikes no longer exists</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 -ServerWrites -Compare $env:TEMP\nyarspikes-before.tsv → line &quot;server writes: &lt;c&gt; created, &lt;m&gt; changed, &lt;d&gt; deleted, all in manifest, no other save&quot; (fails when: a created, changed or deleted file matches no server or external glob, another Saves folder exists or changed, the snapshot is missing or empty, or, with -AfterCleanup, save-data-nyarspikes still exists)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D5"><span class="mono">D5</span> Spike units audited</h3>
+<p>`.nyar spike sweep` lists every unit spawned this boot and every marked entity (SpellLevel.Level 1314472274). For each it checks four things: the marker is present, LifeTime is present and at most 600 s, DestroyWhenDisabled is present, and the unit appears in both sets. It replies &quot;sweep: marked &lt;a&gt;, listed &lt;b&gt;, faults 0&quot; or names each fault. At most 30 marked units are alive at once. `.nyar spike clear` queues every unit and destroys at most 5 per frame. While the queue drains, a second clear replies &quot;clear in progress (&lt;k&gt; left)&quot;; once drained it replies &quot;nothing to clear&quot;</p>
+<p class="mono">manual: in the throwaway save, run `.nyar spike tag 10` three times, then a fourth time (reply &quot;spike limit 30 (30 alive)&quot;); `.nyar spike sweep` shows faults 0; run `.nyar spike clear` twice quickly (second reply &quot;clear in progress&quot;); while it drains run `.nyar spike tag 1` (reply &quot;clear in progress (&lt;k&gt; left)&quot;, nothing spawned); after 2 s run clear again (reply &quot;nothing to clear&quot;), and `.nyar spike sweep` shows &quot;marked 0, listed 0, faults 0&quot;; then run `.nyar spike march 2` and `.nyar spike clear` before the group arrives (the log shows the mover stopped before the first destroy, and sweep ends at 0); the log shows clear batches of at most 5</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D6"><span class="mono">D6</span> Arguments and gates</h3>
+<p>every argument in Design › UX › Argument ranges is range-checked, refused with &quot;&lt;arg&gt; must be &lt;min&gt;-&lt;max&gt;&quot;, and changes nothing. A carrier GUID that does not resolve to a prefab with Buff and LifeTime, or is on the GAME_ASSETS do-not-spawn list, is refused. Every spike command except clear shares one 1 s server-wide cooldown and replies &quot;spike cooldown (&lt;ms&gt; ms)&quot; inside it. Refusals follow the precedence in Business rules 4. Each command catches its own exceptions, replies &quot;spike failed: &lt;type&gt;: &lt;message&gt;&quot;, and logs one line with no stack. The server keeps ticking</p>
+<p class="mono">manual: for each argument in the table, run one value below its minimum and one above its maximum (every reply names the range); run `.nyar spike empower 30 10 1227555070` (refused if Buff_InCombat_Npc_Elite lacks LifeTime, else applied and recorded) and `.nyar spike empower 30 10 12345` (refused: unknown prefab). Then run the precedence pairs: with 30 alive run `.nyar spike tag 0` (argument message wins over the limit); set General.Enabled=false, restart, and run `.nyar spike tag 0` (Enabled message wins over the argument), then `.nyar spike clear`, `.nyar spike sweep` and `.nyar spike inspect` (all run). Run `.nyar spike inspect` twice within 1 s (second reply &quot;spike cooldown (&lt;ms&gt; ms)&quot;), then `.nyar spike clear` twice within 1 s (both run: clear has no cooldown). Record each reply in docs/audits/spikes.md</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D7"><span class="mono">D7</span> S1 march verdict</h3>
+<p>docs/features/SIEGES.md › Test results has a dated S1 entry, readable as a checklist: for each of variants 1, 2, 3 and the wall run: arrived (yes/no, seconds taken), path taken, stuck (where), engaged on arrival (yes/no), behaviour at the wall; the anchor entity used, with its PrefabGUID; a verdict line &quot;S1 verdict: go — &lt;mechanism&gt;&quot; or &quot;S1 verdict: no-go — &lt;reason&gt;&quot;</p>
+<p class="mono">manual: read the entry; every field above is present for every run, or the entry says why a run was impossible</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D8"><span class="mono">D8</span> S2 restart verdict</h3>
+<p>docs/features/EVENT_SPAWNS.md › Test results has a dated S2 entry, readable as a checklist: sweep output before the restart, after it, after the LifeTime ran out, and after the 200 m walk-away; marker survives restart (yes/no); DontSaveEntity units present after restart (count); LifeTime after restart (continued, reset or gone); DestroyWhenDisabled removed units once no player was near (yes/no); load errors (quoted, or none); a verdict line &quot;S2 verdict: go — &lt;tagging and restart recipe&gt;&quot; or &quot;S2 verdict: no-go — &lt;reason&gt;&quot;</p>
+<p class="mono">manual: read the entry; every field above is present</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D9"><span class="mono">D9</span> S3 carrier verdict</h3>
+<p>docs/features/FACTION_EMPOWERMENT.md › Test results has a dated S3 entry, readable as a checklist: `.nyar spike inspect` output before, during and after the buff; damage dealt and taken with and without the buff, in combat; Health.Value behaviour when the buff applies; stats back to base after expiry (yes/no); buff present after streaming out to 150 m for 60 s and back (yes/no); state after a restart mid-buff; the carrier prefab and GUID, with LifeTime confirmed; a verdict line &quot;S3 verdict: go — &lt;carrier recipe&gt;&quot; or &quot;S3 verdict: no-go — &lt;reason&gt;&quot;</p>
+<p class="mono">manual: read the entry; every field above is present</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D10"><span class="mono">D10</span> Contracts recorded</h3>
+<p>docs/RESEARCH_NOTES.md › &quot;## Spike contracts (VampireReferenceAssemblies 1.1.12)&quot; has one row per component and system the spike code read or wrote. Each row gives the fields touched, the prefab GUIDs, the source the recipe came from (path and line), and observed = documented or observed ≠ documented, with a note</p>
+<p class="mono">manual: list every component and system type named in Spikes/*.cs and Commands/SpikeCommands.cs (before step 8 deletes them); each has a row with all four columns filled</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D11"><span class="mono">D11</span> Verdicts reach the Epic</h3>
+<p>every no-go verdict, and every go verdict that changes a later child&#39;s mechanism, has an amendment in docs/dod/nyarlathotep.md dated before this plan closes. Each of the three feature docs&#39; Status lines names its spike&#39;s result. A verdict corrected after it was written follows Business rules 6</p>
+<p class="mono">manual: read the three verdict lines, the three Status lines and the Epic&#39;s ## Amendments; each no-go or changed mechanism has an amendment that names it, and each correction has its superseding entry</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D12"><span class="mono">D12</span> Spike sessions clean</h3>
+<p>no spike session crashes the server. No session&#39;s BepInEx/LogOutput.log contains a stack frame from our assembly (&quot;   at Nyarlathotep.&quot;). Caught spike failures are logged as single &quot;[nyar-spike] spike failed:&quot; lines without a stack, so any such frame means an unhandled exception</p>
+<p class="mono">cmd: pwsh -NoProfile -Command &quot;$l=&#39;C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer\BepInEx\LogOutput.log&#39;; if (-not (Test-Path $l)) { &#39;log check: no log&#39;; exit 1 }; $n=(Select-String -Path $l -SimpleMatch &#39;   at Nyarlathotep.&#39;).Count; $s=(Select-String -Path $l -SimpleMatch &#39;[nyar-spike]&#39;).Count; if ($s -eq 0) { &#39;log check: no spike lines (wrong log?)&#39;; exit 1 }; \&quot;log check: $n unhandled, $s spike lines\&quot;; exit [int]($n -gt 0)&quot; → &quot;log check: 0 unhandled, &lt;s&gt; spike lines&quot;, run after each session and recorded in docs/audits/spikes.md (fails when: an unhandled exception left a Nyarlathotep stack frame, the log is missing, or the log has no spike lines)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D13"><span class="mono">D13</span> Spike code removed</h3>
+<p>no .cs file in the repository (git ls-files plus untracked-not-ignored, plus every Compile item of `dotnet msbuild Nyarlathotep/Nyarlathotep/Nyarlathotep.csproj -getItem:Compile`, which includes ignored files) declares or uses an identifier beginning with &quot;Spike&quot;, declares namespace Nyarlathotep.Spikes, or registers a command group or command named &quot;spike&quot;. Every Compile item outside obj/ must also be a file git sees, so an ignored source file fails on its own whatever its name; a neutral-named tracked file is caught by D19. The check is Test-CheckSpikeCode in tools/preflight.ps1. While docs/dod/spikes.md has status in-progress, spike code prints &quot;spike code: present, allowed while spikes is in-progress&quot; and passes. Otherwise spike code prints &quot;spike code: present in &lt;files&gt;&quot; and fails. No spike code prints &quot;spike code: none&quot;</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 → line &quot;spike code: none&quot; (fails when: any spike identifier, namespace or command remains in any .cs file, a Compile item outside obj/ is ignored by git, or spike code exists while docs/dod/spikes.md is not in-progress)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D14"><span class="mono">D14</span> New checks self-tested</h3>
+<p>tools/preflight-checks.json has entries for Test-CheckSpikeCode, Test-CheckServerWrites and Test-CheckAuditSteps, each with good, bad and empty fixtures, alongside the Epic&#39;s entries for the checks D2, D3, D15 and D16 reuse. Test-CheckSpikeCode has two bad fixtures: a class named SpikeHelper in Services/ with the plan status done, and a neutral-named Services/Helper.cs listed in the captured compile-items.txt but absent from the captured git listing. Test-CheckServerWrites&#39; bad fixture is a before/after snapshot pair where a file under another Saves folder was deleted. Test-CheckAuditSteps&#39; bad fixture drops step 5&#39;s Codex verdict line. All fail on empty input</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 -SelfTest → &quot;selftest: &lt;n&gt;/&lt;n&gt; checks, 3 fixtures each&quot; (fails when: any listed check passes a bad or empty fixture or fails its good one, or a Test-Check function has no manifest entry)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D15"><span class="mono">D15</span> Spike paths manifested</h3>
+<p>after a deploying spike build and one spike session, the path walk finds no path outside tools/paths-manifest.txt. The walk covers every tracked, untracked and ignored path in the repository, plus the server&#39;s BepInEx/plugins/Nyarlathotep*, BepInEx/config/*Nyarlathotep*, BepInEx/config/Nyarlathotep/** and save-data-nyar*</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 -Paths → line &quot;paths: &lt;n&gt; walked, all in manifest&quot; (fails when: a walked path matches no manifest glob of its kind)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D16"><span class="mono">D16</span> No secrets in spike work</h3>
+<p>the secrets scan stays clean with the spike harness, the audit record and the quoted log excerpts present</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 → line &quot;secrets: none (&lt;n&gt; files scanned)&quot; (fails when: a spike file, audit record or log excerpt contains a token form, or a .cs file reads the environment)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D17"><span class="mono">D17</span> Audit matrix complete</h3>
+<p>docs/audits/spikes.md has a &quot;### Step &lt;n&gt;&quot; entry under a &quot;## Pre-audit&quot; heading and under a &quot;## Post-audit&quot; heading for every Build plan step 1–9 of this plan, and each post-audit entry has a &quot;Codex verdict:&quot; line</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 -AuditOf spikes → line &quot;audit steps: spikes 9/9 pre, 9/9 post, 9/9 Codex verdicts&quot; (fails when: any step lacks a pre-audit entry, a post-audit entry or a Codex verdict line, or the plan&#39;s Build plan has no steps)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D18"><span class="mono">D18</span> Throwaway world removed</h3>
+<p>after D13, the build without spike code is deployed and boots with &quot;Nyarlathotep initialized&quot;, `.nyar spike` is unknown to VCF, and save-data-nyarspikes is deleted</p>
+<p class="mono">manual: stop the server, deploy the D13 build, start it with the step-3 launch line, read the boot log, type `.nyar spike sweep` in game (VCF replies unknown command), stop the server, delete save-data-nyarspikes, then run the D4 command with -AfterCleanup; record it all in docs/audits/spikes.md</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D19"><span class="mono">D19</span> Code back to base</h3>
+<p>after step 8, the only file under Nyarlathotep/ that differs from the pre-harness commit (the step-2 parent, recorded in docs/audits/spikes.md) is Nyarlathotep/Nyarlathotep/EntityExtensions.cs, which keeps the Prefab-guarded helpers, and the project&#39;s Compile items (tracked, untracked or ignored, whatever their names) are exactly the list captured at the step-2 parent</p>
+<p class="mono">cmd: git diff --name-only &lt;step-2 parent&gt; HEAD -- Nyarlathotep/ → exactly &quot;Nyarlathotep/Nyarlathotep/EntityExtensions.cs&quot;; then pwsh -NoProfile -Command &quot;$now = dotnet msbuild Nyarlathotep/Nyarlathotep/Nyarlathotep.csproj -getItem:Compile | ConvertFrom-Json | % { $_.Items.Compile.Identity } | ? { $_ -notlike &#39;obj*&#39; } | Sort-Object; $base = Get-Content docs/audits/spikes-compile-base.txt | Sort-Object; if (-not $base) { &#39;compile items: no base list&#39;; exit 1 }; $d = Compare-Object $base $now; if ($d) { &#39;compile items: differ: &#39; + ($d.InputObject -join &#39;, &#39;); exit 1 }; &#39;compile items: &#39; + $now.Count + &#39; = base&#39;&quot; → &quot;compile items: &lt;n&gt; = base&quot; (fails when: any other file under Nyarlathotep/ differs, the diff output is empty because the base commit is wrong, a Compile item was added or removed since the step-2 parent, or the base list is missing)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D20"><span class="mono">D20</span> Rollback drill passes</h3>
+<p>in a disposable worktree, reverting the whole child&#39;s range restores the pre-child tree, which builds and passes preflight; separately, removing only the kept helpers still builds. The range is two commits recorded in docs/audits/spikes.md before the drill starts: &lt;pre-child&gt; (the parent of the step-1 commit) and &lt;drill base&gt; (HEAD after step 9&#39;s pre-audit is committed)</p>
+<p class="mono">cmd: git worktree add $env:TEMP\nyar-rollback &lt;drill base&gt;; in it: git revert --no-edit &lt;pre-child&gt;..&lt;drill base&gt;; dotnet build Nyarlathotep/Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__; pwsh tools/preflight.ps1; git diff --quiet &lt;pre-child&gt; HEAD -- . &quot;:!docs/dod/README.md&quot;; then git reset --hard &lt;drill base&gt;; git checkout &lt;step-2 parent&gt; -- Nyarlathotep/Nyarlathotep/EntityExtensions.cs; dotnet build Nyarlathotep/Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__; then git worktree remove --force $env:TEMP\nyar-rollback → both builds &quot;0 Error(s)&quot;, &quot;PREFLIGHT OK&quot;, diff exit 0 (fails when: the revert conflicts, the reverted tree does not build or fails preflight, a file other than the regenerated index differs from &lt;pre-child&gt;, the helpers-only tree does not build, or either recorded commit is missing). The world side needs no drill: D4 -AfterCleanup already proves the only server data is gone</p>
+<p class="absent">no evidence line yet</p>
+</body>
+</html>
