@@ -86,3 +86,10 @@ VERDICT: REVISE
 - F6 · accepted · D20 now reverts <pre-child>..<drill base>, both recorded in docs/audits/spikes.md before the drill (the drill base is HEAD after step 9's pre-audit commit), and also drills removing only the kept helpers (checkout of EntityExtensions.cs from the step-2 parent, then build); the world side is D4 -AfterCleanup
 - F7 · rejected · advisory by rule — 14.4 is answered at Rollout › Paths walked, which names every path each step writes, including the two $env:TEMP paths and the review artifacts; D15 walks the repository and plugin paths, D4 the server directory and LocalLow. A system-wide write monitor is in Out of scope. Unchanged since Review 2 F8
 - F8 · rejected · advisory — 7.2 is answered at Design › States: handlers are serialized on the main thread, so two admins are one admin's sequence; the owner is the only admin available for the in-game sessions
+
+## Review 4 · 2026-09-23 · human · plan commit ccd028f
+F1 advisory · Coverage: the project owner, reading the review page and Codex rounds 1-3, finds every Considered layer answers its probes and every pointer answers its probe; the declined asks (continuous write journal, automated precedence test, tooling fault injection, system-wide write monitor, two-admin session) are accepted as out of proportion for a throwaway child; no unhandled scenario named; every item verifiable by its evidence type — no blocking gap
+15/15 layers · 49/49 probes
+VERDICT: READY
+### Dispositions
+- F1 · accepted · no change; anything the spikes reveal is recorded as an amendment during the build

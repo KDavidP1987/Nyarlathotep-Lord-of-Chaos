@@ -223,7 +223,7 @@ Constraints each child inherits (a child's review checks they appear verbatim or
 - **sieges** — MVP scope per S-6; target eligibility per S-13 re-checked every tick (ineligible → end + despawn); announcements to the owner's clan only; community-admin pre-clearance recorded in docs/features/SIEGES.md before the release that ships it.
 
 ## Children
-- spikes · planned
+- spikes · in-progress
 - foundation · planned
 - faction-empowerment · planned
 - event-spawns · planned
