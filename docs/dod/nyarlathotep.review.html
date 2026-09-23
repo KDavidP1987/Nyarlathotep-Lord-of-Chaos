@@ -47,7 +47,7 @@ ol.said li { padding:.15rem 0; }
 <body>
 <h1>Review — Nyarlathotep, Lord of Chaos, v0.1 to v1.0</h1>
 
-<p class="sub"><span class="mono">nyarlathotep</span> · draft · size Epic · parent none · 36 item(s)</p>
+<p class="sub"><span class="mono">nyarlathotep</span> · in-progress · size Epic · parent none · 36 item(s)</p>
 
 <p class="legend mono">legend: D item · A amendment · S assumption · F review finding · P proposal · W work package · n.m layer.probe</p>
 
@@ -194,7 +194,7 @@ ol.said li { padding:.15rem 0; }
 <h3 id="D1"><span class="mono">D1</span> Public GitHub repo</h3>
 <p>repository KDavidP1987/Nyarlathotep-Lord-of-Chaos is public and its default branch is main</p>
 <p class="mono">cmd: gh repo view KDavidP1987/Nyarlathotep-Lord-of-Chaos --json visibility,defaultBranchRef → visibility PUBLIC, defaultBranchRef.name main (fails when: the repo is private or missing, or the default branch is master)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-09-23 · pass · cmd: gh repo view → visibility PUBLIC, defaultBranchRef main</li></ul>
 <h3 id="D2"><span class="mono">D2</span> Compiles clean</h3>
 <p>the solution (plugin and Nyarlathotep.Tests) builds in Release with 0 errors and 0 warnings without deploying</p>
 <p class="mono">cmd: dotnet build Nyarlathotep/Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__ → &quot;0 Warning(s)&quot; and &quot;0 Error(s)&quot; (fails when: any source file has a compile error or a new warning)</p>

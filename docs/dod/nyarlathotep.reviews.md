@@ -111,3 +111,10 @@ VERDICT: REVISE
 - F8 · rejected · advisory by rule — 12.4 is answered by the gating-control matrix (one command per gating probe, bad/silent/empty) and every test/cmd item's fails-when clause
 - F9 · rejected · advisory by rule — 14.4 is answered at Rollout › Paths walked and enforced by D33 after build and deploy; tracing every read is out of proportion to a mod repo
 
+## Review 4 · 2026-09-23 · human · plan commit 184fb41
+F1 advisory · Coverage: the project owner, reading the review page and Codex rounds 1-3, finds every Considered layer answers its probes and every pointer answers its probe; no N/A rows to contest; reversible assumptions S-18 to S-21 accepted as cheap; no unhandled scenario named; every item verifiable by its evidence type with one command per gating probe in the gating-control matrix — no blocking gap
+15/15 layers · 49/49 probes
+VERDICT: READY
+### Dispositions
+- F1 · accepted · no change; remaining thinness is caught by amendments during the build
+
