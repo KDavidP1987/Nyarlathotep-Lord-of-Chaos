@@ -147,6 +147,7 @@ Spikes run first because they decide whether the riskier pillars are feasible at
 | **2b. Stats** | Per-player counters, `.nyar me` / `top` / `stats`, daily digest and login stats (runs after event spawns) | Announcer + kill hooks |
 | **5. Sieges (MVP)** | Pillar B1: harassment raids at castle perimeter with target eligibility rules | S1 result |
 | **5b. Raphael API** | `.nyar api` reads, paging and errors, push events per the contract | Every pillar |
+| Backlog | Boss encounters: timed boss/mob spawns in a point or region, timer paused while engaged, admin-designated reward (`docs/features/BOSS_ENCOUNTERS.md`; enters the Epic as a requested amendment) | Event-spawns pipeline |
 | 6. Later | Structure damage (HookDOTS, raid windows, RaidForge deferral); faction "heat"; BloodMoon trigger; map markers | — |
 
 ## 8. Risks
