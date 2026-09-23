@@ -116,11 +116,12 @@
         "BepInEx/config/Nyarlathotep/*.corrupt",
         "events.json",
         "zones.json",
-        "state.json"
+        "state.json",
+        "stats.json"
       ],
       "location": "dedicated server BepInEx/config/Nyarlathotep",
-      "owner": "server admin (events, zones); the mod (state, .tmp, .corrupt)",
-      "retention": "events/zones until deleted, one .bak kept; state rewritten at most once per second; .tmp deleted on boot; .corrupt kept until the next corruption",
+      "owner": "server admin (events, zones); the mod (state, stats, .tmp, .corrupt)",
+      "retention": "events/zones until deleted, one .bak kept; state rewritten at most once per second; stats (SteamIDs, character names, per-player counters) keeps 30 daily buckets plus all-time totals until `.nyar stats reset` or deletion; .tmp deleted on boot; .corrupt kept until the next corruption",
       "deletion": "delete the folder for a full removal (README Uninstall)",
       "singleCopy": false
     },

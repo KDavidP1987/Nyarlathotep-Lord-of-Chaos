@@ -74,7 +74,7 @@ command that changes them.
 All live under `.nyar api …`. Paged commands take an optional 1-based `[page]` (§4).
 
 ### `status` — active events (anyone)
-`.nyar api status` sends one row per active event, then `[NYAR:end] cmd=status`:
+`.nyar api status` sends one row per active event, then `[NYAR:end] cmd=status count=<n>` (unpaged):
 ```
 [NYAR:event] id=ashfall kind=waves name=Ashfall_Raid state=active faction=Undead left=412 wave=2/3 units=18
 ```
@@ -86,7 +86,7 @@ All live under `.nyar api …`. Paged commands take an optional 1-based `[page]`
 - No row ever carries a position.
 
 ### `me` — the requester's own stats (anyone, when `stats=1`)
-`.nyar api me` sends three rows (windows `today`, `week`, `all`), then `[NYAR:end] cmd=me`:
+`.nyar api me` sends three rows (windows `today`, `week`, `all`), then `[NYAR:end] cmd=me count=<n>` (unpaged):
 ```
 [NYAR:me] window=week name=Vlad kills=57 events=6 waves=11 defences=1 bossadds=4 deaths=2 hidden=0
 ```
@@ -143,6 +143,9 @@ After `sub on`, the server pushes lines to that player until `sub off`, a discon
 - **Paging:** 1-based, 10 rows per page.
   - Every paged answer ends with `[NYAR:end] cmd=<cmd> page=<cur>/<total> count=<rows in all pages>`.
   - An empty result still sends `[NYAR:end] cmd=<cmd> page=1/1 count=0`.
+  - No page given means page 1. A page below 1 or not a number answers `[NYAR:err] cmd=<cmd> code=badarg arg=page`.
+  - A page past the last sends no rows, then `[NYAR:end] cmd=<cmd> page=<asked>/<total> count=<n>`.
+- **Unpaged reads** (`status`, `me`) end with `[NYAR:end] cmd=<cmd> count=<rows sent>` and take no page.
   - Raphael asks for `cur+1` until `cur == total`.
 - **Acknowledgement:** `[NYAR:ok] cmd=<cmd> …` for `api` commands that change nothing but a subscription.
 - **Errors:** `[NYAR:err] cmd=<cmd> code=<code> [secs=<n>] [arg=<name>]`. The codes:
@@ -150,7 +153,7 @@ After `sub on`, the server pushes lines to that player until `sub off`, a discon
 | Code | Meaning |
 |---|---|
 | `notready` | The world is still loading. Retry after `version` says `ready=1`. |
-| `noaccess` | Admin-only command from a non-admin. |
+| `noaccess` | Reserved. Admin-only commands are refused by VCF before the mod runs, with VCF's own human-readable line, so Raphael shows admin panels only when `version` says `admin=1`. |
 | `disabled` | The pillar, the stats or the mod is switched off. |
 | `notfound` | Unknown event id, zone or stat. |
 | `badarg` | Bad argument; `arg` names it. |

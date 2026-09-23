@@ -277,7 +277,8 @@
         "bad-6": "a command group named by concatenation, [CommandGroup(\"spi\" + \"ke\")], neutral file name, plan done",
         "bad-7": "a command group named by a neutral constant, [CommandGroup(GroupName)], neutral file name, plan done",
         "bad-8": "a command attribute used through a using-alias ([C(\"spike\")]) in EntityExtensions.cs, plan done",
-        "bad-9": "a class named Sp\\u0069keHelper (a C# unicode escape spelling SpikeHelper), plan done"
+        "bad-9": "a class named Sp\\u0069keHelper (a C# unicode escape spelling SpikeHelper), plan done",
+        "bad-10": "a nested command group [CommandGroup(\"nyar spike\")] in a file with a neutral name, plan done"
       }
     },
     {

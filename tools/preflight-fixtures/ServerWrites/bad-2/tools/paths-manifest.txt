@@ -19,6 +19,7 @@ tracked: Nyarlathotep/Nyarlathotep.Tests/**
 tracked: docs/*.md
 tracked: docs/features/*.md
 tracked: docs/audits/*.md
+tracked: docs/audits/spikes-compile-base.txt
 tracked: docs/img/*
 tracked: docs/dod/*.md
 tracked: docs/dod/*.html

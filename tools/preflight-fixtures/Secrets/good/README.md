@@ -4,7 +4,8 @@
 
 A server-side BepInEx IL2CPP plugin for V Rising that adds admin-configured, event-driven NPC behaviour:
 timed faction empowerment, castle sieges and reactive defended zones, boss-fight reinforcements, and
-scheduled spawn waves with optional stat modifiers.
+scheduled spawn waves with optional stat modifiers. Players get wave warnings, event banners and
+leaderboards, and the companion client Raphael gets a machine-readable API.
 
 ## Status
 
@@ -28,6 +29,8 @@ which everything the event created is reverted or despawned. Four services carry
 | Defended zones | [`docs/features/DEFENDED_ZONES.md`](docs/features/DEFENDED_ZONES.md) |
 | Boss reinforcements | [`docs/features/BOSS_REINFORCEMENTS.md`](docs/features/BOSS_REINFORCEMENTS.md) |
 | Event spawns | [`docs/features/EVENT_SPAWNS.md`](docs/features/EVENT_SPAWNS.md) |
+| Stats, leaderboards, announcements | Epic plan Business rules 11–12 ([`docs/dod/nyarlathotep.md`](docs/dod/nyarlathotep.md)) |
+| Raphael integration | [`docs/RAPHAEL_INTEGRATION_CONTRACT.md`](docs/RAPHAEL_INTEGRATION_CONTRACT.md) |
 
 ## Layout
 
@@ -55,7 +58,9 @@ changelogs, both READMEs). Run `pwsh tools/preflight.ps1` first.
 
 ## Docs
 
-- [`docs/NYARLATHOTEP_DESIGN.md`](docs/NYARLATHOTEP_DESIGN.md) — architecture, config, build order, open decisions
+- [`docs/NYARLATHOTEP_DESIGN.md`](docs/NYARLATHOTEP_DESIGN.md) — architecture, config, the command reference (§6), build order, decisions
+- [`docs/RAPHAEL_INTEGRATION_CONTRACT.md`](docs/RAPHAEL_INTEGRATION_CONTRACT.md) — the `[NYAR:*]` wire contract for Raphael
+- [`docs/dod/`](docs/dod/) — Definition-of-Done plans, reviews and progress
 - [`docs/RESEARCH_NOTES.md`](docs/RESEARCH_NOTES.md) — what we learned from sibling mods, reference mods, and Thunderstore
 - [`docs/GAME_ASSETS.md`](docs/GAME_ASSETS.md) — using the prefab dump; factions, buffs, units
 - [`docs/DEV_REMINDERS.md`](docs/DEV_REMINDERS.md) — IL2CPP/ECS gotchas with sources

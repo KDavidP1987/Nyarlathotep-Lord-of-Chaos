@@ -242,7 +242,7 @@ function Test-CheckPillarDefaults([string]$Root) {
     return New-Result $true "pillar defaults: all off ($($binds.Count) switches, $($templates.Count) templates)"
 }
 
-$script:PublicCommands = @('nyar', 'status', 'help', 'me', 'top', 'hide', 'show', 'version')   # Epic D5 (A4)
+$script:PublicCommands = @('nyar', 'status', 'help', 'me', 'top', 'hide', 'show', 'version', 'sub')   # Epic D5 (A4)
 
 function Test-CheckCommands([string]$Root) {
     $cs = Get-CsFiles $Root
@@ -320,7 +320,9 @@ function Test-CheckStructuralEdits([string]$Root) {
     if ($cs.Count -eq 0) { return New-Result $false 'structural edits: no source found' }
     # An ECS structural call always takes the entity as an argument; Unity's GameObject.AddComponent<T>()
     # (the coroutine host in Core.cs) takes none and is not a structural edit.
-    $rx = '\.(AddComponent\w*|RemoveComponent\w*|AddBuffer|DestroyEntity)\s*(<[^>]*>)?\s*\(\s*(?<arg>[^,)\s]+)'
+    # The fenced helpers themselves (AddComponentSafe, RemoveComponentSafe, AddBufferSafe, DestroySafe) are the
+    # sanctioned route and may be called anywhere.
+    $rx = '\.(AddComponent(?!Safe\b)\w*|RemoveComponent(?!Safe\b)\w*|AddBuffer|DestroyEntity)\s*(<[^>]*>)?\s*\(\s*(?<arg>[^,)\s]+)'
     $fence = "$PkgRel/EntityExtensions.cs"
     $bad = @(); $guarded = 0
     foreach ($f in $cs) {
@@ -695,11 +697,11 @@ function Test-CheckPaths([string]$Root) {
 # ---------------------------------------------------------------- checks: the spikes child (spikes D4, D13, D17)
 
 # Spike code is recognised by naming (docs/dod/spikes.md Business rules 5): the namespace
-# Nyarlathotep.Spikes, any identifier beginning with "Spike", or a command group or command named "spike"
-# (short, namespace- or global::-qualified attribute name, with or without the Attribute suffix, first in its
+# Nyarlathotep.Spikes, any identifier beginning with "Spike", or a command group or command whose name has
+# "spike" as a word, such as "spike" or "nyar spike" (short, namespace- or global::-qualified attribute name, with or without the Attribute suffix, first in its
 # attribute list or not, positional or name: argument, regular or verbatim literal, any letter case).
 # A using-alias for the attribute and a name that is not one literal count as spike code (Get-SpikeReason).
-$script:SpikeCodeRx = '\bnamespace\s+Nyarlathotep\.Spikes\b|\bSpike\w*|[\[,]\s*(?:[\w.:]*[.:])?Command(?:Group)?(?:Attribute)?\s*\(\s*(?:name\s*:\s*)?@?"(?i:spike)"'
+$script:SpikeCodeRx = '\bnamespace\s+Nyarlathotep\.Spikes\b|\bSpike\w*|[\[,]\s*(?:[\w.:]*[.:])?Command(?:Group)?(?:Attribute)?\s*\(\s*(?:name\s*:\s*)?@?"(?i:(?:[^"\\]*\s)?spike(?:\s[^"\\]*)?)"'
 
 # The project's Compile items as repository-relative paths (outside obj/), and the .cs files git sees.
 # A fixture supplies both as captured files: compile-items.txt (one Identity per line, as msbuild prints
@@ -759,7 +761,7 @@ function Get-SpikeReason([string]$Code) {
     if ($Code -cmatch $script:SpikeCodeRx) { return "spike identifier, namespace or command: '$($Matches[0])'" }
     foreach ($a in Get-CommandNameArgs $Code) {
         if ($a -notmatch '^@?"([^"\\]*)"$') { return "command name not a string literal: $a" }
-        if ($Matches[1] -ieq 'spike') { return 'command named "spike"' }
+        if ($Matches[1] -imatch '(^|\s)spike(\s|$)') { return "command named ""$($Matches[0].Trim())"" in ""$a""" }
     }
     return $null
 }
