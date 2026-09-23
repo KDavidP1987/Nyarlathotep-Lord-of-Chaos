@@ -123,6 +123,49 @@
       "retention": "events/zones until deleted, one .bak kept; state rewritten at most once per second; .tmp deleted on boot; .corrupt kept until the next corruption",
       "deletion": "delete the folder for a full removal (README Uninstall)",
       "singleCopy": false
+    },
+    {
+      "artifact": "Spikes throwaway world and its log",
+      "covers": [
+        "save-data-nyarspikes/**",
+        "logs/NyarSpikes.log"
+      ],
+      "location": "dedicated server directory",
+      "owner": "the developer",
+      "retention": "the spikes child only; holds the owner's SteamID in Settings/adminlist.txt",
+      "deletion": "deleted in spikes Build step 8, proven by -ServerWrites -Compare -AfterCleanup",
+      "singleCopy": true
+    },
+    {
+      "artifact": "Server, BepInEx and other plugins' own files",
+      "covers": [
+        "BepInEx/LogOutput*.log",
+        "BepInEx/ErrorLog.log",
+        "BepInEx/config/*.cfg",
+        "BepInEx/config/Faust/**",
+        "BepInEx/config/Uriel/**",
+        "BepInEx/config/kdpen.Beelzebub/**",
+        "BepInEx/cache/**",
+        "BepInEx/interop/**",
+        "logs/*.txt"
+      ],
+      "location": "dedicated server directory",
+      "owner": "the server operator and those plugins (not this mod)",
+      "retention": "theirs; LogOutput.log is overwritten each boot",
+      "deletion": "not ours to delete; listed so a before/after compare can tell them apart from this mod's writes",
+      "singleCopy": false
+    },
+    {
+      "artifact": "Game client and crash-reporter data",
+      "covers": [
+        "LocalLow/VRising/**",
+        "LocalLow/VRisingServer/backtrace/**"
+      ],
+      "location": "%USERPROFILE%\\AppData\\LocalLow\\Stunlock Studios",
+      "owner": "the player's game client (and the server's crash reporter)",
+      "retention": "theirs",
+      "deletion": "not ours to delete; the paths can contain a SteamID and are never quoted in audit records",
+      "singleCopy": false
     }
   ]
 }

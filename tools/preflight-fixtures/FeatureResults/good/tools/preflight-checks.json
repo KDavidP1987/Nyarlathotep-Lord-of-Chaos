@@ -121,7 +121,8 @@
         "bad-4": "the helper's Prefab test switched off by a conjunction (entity.Has<Prefab>() && false)",
         "bad-5": "the helper's Prefab guard nested inside an if (false) block",
         "bad-6": "the helper guards a different entity (other.Has<Prefab>()) than the one it destroys",
-        "bad-7": "the helper reassigns the entity between the guard and the DestroyEntity call"
+        "bad-7": "the helper reassigns the entity between the guard and the DestroyEntity call",
+        "bad-8": "a DestroyEntity call in Services/Leak.cs placed after a string holding \"//\" on the same line"
       }
     },
     {
@@ -255,6 +256,66 @@
       ],
       "plant": {
         "bad": "an unmanifested tracked path (stray/notes.txt) added to the walk"
+      }
+    },
+    {
+      "name": "SpikeCode",
+      "function": "Test-CheckSpikeCode",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/SpikeCode",
+      "inputs": [
+        "Nyarlathotep/Nyarlathotep Compile items (dotnet msbuild -getItem:Compile; compile-items.txt)",
+        "git ls-files *.cs (git-files.txt)",
+        "docs/dod/spikes.md status"
+      ],
+      "plant": {
+        "bad": "Services/SpikeHelper.cs added while the spikes plan is done",
+        "bad-2": "a neutral Services/Helper.cs that is a Compile item but ignored by git",
+        "bad-3": "a [CommandGroup(\"spike\")] in a file with a neutral name while the spikes plan is done",
+        "bad-4": "a SpikeHelper call placed after a string holding \"//\" on the same line while the spikes plan is done",
+        "bad-5": "a [VampireCommandFramework.CommandGroupAttribute(name: \"Spike\")] second in its attribute list, neutral file name, plan done",
+        "bad-6": "a command group named by concatenation, [CommandGroup(\"spi\" + \"ke\")], neutral file name, plan done",
+        "bad-7": "a command group named by a neutral constant, [CommandGroup(GroupName)], neutral file name, plan done",
+        "bad-8": "a command attribute used through a using-alias ([C(\"spike\")]) in EntityExtensions.cs, plan done",
+        "bad-9": "a class named Sp\\u0069keHelper (a C# unicode escape spelling SpikeHelper), plan done"
+      }
+    },
+    {
+      "name": "ServerWrites",
+      "function": "Test-CheckServerWrites",
+      "mode": "serverwrites",
+      "fixtures": "tools/preflight-fixtures/ServerWrites",
+      "inputs": [
+        "-Compare <before snapshot> (before.tsv)",
+        "the live server + LocalLow tree (after.tsv)",
+        "tools/paths-manifest.txt server/external globs",
+        "-AfterCleanup (aftercleanup.txt)"
+      ],
+      "plant": {
+        "bad": "a file of another save (save-data-main/Saves) deleted between the snapshots",
+        "bad-2": "an unmanifested file (VRisingServer_Data/stray.txt) created",
+        "bad-3": "-AfterCleanup while save-data-nyarspikes still exists",
+        "bad-4": "another Saves folder present but untouched",
+        "bad-5": "an empty save-data-main/Saves/ folder (a directory row only)",
+        "bad-6": "-AfterCleanup with every nyarspikes file gone but the empty save-data-nyarspikes/ folder left",
+        "bad-7": "a hashed BepInEx file recorded without a SHA-256 (locked) in the after snapshot"
+      }
+    },
+    {
+      "name": "AuditSteps",
+      "function": "Test-CheckAuditSteps",
+      "mode": "auditof",
+      "fixtures": "tools/preflight-fixtures/AuditSteps",
+      "inputs": [
+        "-AuditOf <slug> (auditof.txt)",
+        "docs/dod/<slug>.md Build plan",
+        "docs/audits/<slug>.md"
+      ],
+      "plant": {
+        "bad": "step 5's post-audit Codex verdict line dropped",
+        "bad-2": "step 9's pre-audit entry dropped",
+        "bad-3": "a Codex verdict line placed in a pre-audit entry instead of the post-audit one",
+        "bad-4": "the plan renumbered so step 5 is missing (1-4, 6-9) and the audit keeps entries 1-9"
       }
     }
   ]

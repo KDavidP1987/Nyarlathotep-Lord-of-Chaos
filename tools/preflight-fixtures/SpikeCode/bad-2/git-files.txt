@@ -1,0 +1,6 @@
+Nyarlathotep/Nyarlathotep/Commands/RootCommands.cs
+Nyarlathotep/Nyarlathotep/Config/Settings.cs
+Nyarlathotep/Nyarlathotep/Core.cs
+Nyarlathotep/Nyarlathotep/EntityExtensions.cs
+Nyarlathotep/Nyarlathotep/Patches/GameDataInitializedPatch.cs
+Nyarlathotep/Nyarlathotep/Plugin.cs

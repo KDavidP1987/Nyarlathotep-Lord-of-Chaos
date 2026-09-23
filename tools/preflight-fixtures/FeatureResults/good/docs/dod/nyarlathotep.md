@@ -223,7 +223,7 @@ Constraints each child inherits (a child's review checks they appear verbatim or
 - **sieges** — MVP scope per S-6; target eligibility per S-13 re-checked every tick (ineligible → end + despawn); announcements to the owner's clan only; community-admin pre-clearance recorded in docs/features/SIEGES.md before the release that ships it.
 
 ## Children
-- spikes · planned
+- spikes · in-progress
 - foundation · planned
 - faction-empowerment · planned
 - event-spawns · planned
@@ -329,6 +329,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 
 ## Amendments
 - A1 · 2026-09-23 · discovered · ~D8 · layer: 5.1 · the init patch runs before Core.IsReady and sets it, so it cannot return early unless ready; D8 now names that one inverse-guard exception and requires guard-then-try/catch structure (step-1 cross-inspection F4)
+- A2 · 2026-09-23 · defect · — · layer: — · tools/preflight.ps1 Remove-CsComments stripped from any "//" to the end of the line, string literals included, so a DestroyEntity or write call after "https://…" on one line was invisible to the D5–D8 source checks; now a literal-aware lexer (spikes step-1 cross-inspection F3), proven by StructuralEdits bad-8
 
 ## Log
 - 2026-09-23 · status → draft · plan
@@ -340,3 +341,13 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-23 · status → in-progress · start
 - 2026-09-23 · D1 · pass · cmd: gh repo view → visibility PUBLIC, defaultBranchRef main · 184fb41 · claude
 - 2026-09-23 · note · A1 recorded (~D8, init patch exception) during Build step 1 post-audit
+- 2026-09-23 · D4 · pass · cmd: pwsh tools/preflight.ps1 → "pillar defaults: all off (5 switches, 0 templates)" · bf25842 · claude
+- 2026-09-23 · D5 · pass · cmd: pwsh tools/preflight.ps1 → "commands: 0 admin-only, 1 public (allow-listed)" · bf25842 · claude
+- 2026-09-23 · D6 · pass · cmd: pwsh tools/preflight.ps1 → "structural edits: fenced (0 Prefab-guarded calls in EntityExtensions.cs)" · bf25842 · claude
+- 2026-09-23 · D7 · pass · cmd: pwsh tools/preflight.ps1 → "file writes: fenced (0 calls in Services/Persistence.cs, no Persistence.cs yet)" · bf25842 · claude
+- 2026-09-23 · D8 · pass · cmd: pwsh tools/preflight.ps1 → "patch guards: 1/1" · bf25842 · claude
+- 2026-09-23 · D9 · pass · cmd: pwsh tools/preflight.ps1 → "secrets: none (187 files scanned, 39 index blobs)" · bf25842 · claude
+- 2026-09-23 · D10 · pass · cmd: pwsh tools/preflight.ps1 -SelfTest → "selftest: 16/16 checks, 3 fixtures each, 18 extra bad fixtures" · bf25842 · claude
+- 2026-09-23 · D19 · pass · cmd: pwsh tools/preflight.ps1 → "icon: 256x256" · bf25842 · claude
+- 2026-09-23 · D33 · pass · cmd: pwsh tools/preflight.ps1 -Paths → "paths: 199 walked, all in manifest" · bf25842 · claude
+- 2026-09-23 · D34 · pass · cmd: pwsh tools/preflight.ps1 → "data inventory: 29/29 complete" · bf25842 · claude

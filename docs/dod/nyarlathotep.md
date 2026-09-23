@@ -329,6 +329,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 
 ## Amendments
 - A1 · 2026-09-23 · discovered · ~D8 · layer: 5.1 · the init patch runs before Core.IsReady and sets it, so it cannot return early unless ready; D8 now names that one inverse-guard exception and requires guard-then-try/catch structure (step-1 cross-inspection F4)
+- A2 · 2026-09-23 · defect · — · layer: — · tools/preflight.ps1 Remove-CsComments stripped from any "//" to the end of the line, string literals included, so a DestroyEntity or write call after "https://…" on one line was invisible to the D5–D8 source checks; now a literal-aware lexer (spikes step-1 cross-inspection F3), proven by StructuralEdits bad-8
 
 ## Log
 - 2026-09-23 · status → draft · plan
