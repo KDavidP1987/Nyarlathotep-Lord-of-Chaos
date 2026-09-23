@@ -1,5 +1,7 @@
 # Nyarlathotep, Lord of Chaos
 
+<p align="center"><img src="docs/img/nyarlathotep-cover.jpg" alt="Nyarlathotep, Lord of Chaos" width="512"></p>
+
 A server-side BepInEx IL2CPP plugin for V Rising that adds admin-configured, event-driven NPC behaviour:
 timed faction empowerment, castle sieges and reactive defended zones, boss-fight reinforcements, and
 scheduled spawn waves with optional stat modifiers.
