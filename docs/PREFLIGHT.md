@@ -37,6 +37,12 @@ Work this list at the top of every working session, before making changes.
 
 - [ ] If this session ends in a version bump: re-read CLAUDE.md → "Release & changelog discipline" (six
       surfaces move together) and run `pwsh tools/preflight.ps1` before the `chore(release)` commit.
+- [ ] Changed `tools/preflight.ps1` or a file a fixture copies? Run `pwsh tools/preflight.ps1 -SelfTest`
+      (every check must pass its good fixture and fail its bad and empty ones) and, after a build or
+      deploy, `pwsh tools/preflight.ps1 -Paths`. A new check needs a `Test-Check<Name>` function, a
+      `tools/preflight-checks.json` entry (name, function, mode, fixtures, inputs, one plant per bad
+      fixture) and `tools/preflight-fixtures/<Name>/{good,bad,empty}`, plus `bad-<n>/` for each further
+      bypass it must catch. `-SelfTest -Verbose` shows why each fixture passed or failed.
 - [ ] Touching a changelog or README? Follow `docs/DOC_STYLE.md`.
 
 ## 6. Live-server data

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "childDocs": {
+    "spikes": [
+      "docs/features/SIEGES.md",
+      "docs/features/EVENT_SPAWNS.md",
+      "docs/features/FACTION_EMPOWERMENT.md"
+    ],
+    "foundation": [
+      "docs/features/FOUNDATION.md"
+    ],
+    "faction-empowerment": [
+      "docs/features/FACTION_EMPOWERMENT.md"
+    ],
+    "event-spawns": [
+      "docs/features/EVENT_SPAWNS.md"
+    ],
+    "boss-reinforcements": [
+      "docs/features/BOSS_REINFORCEMENTS.md"
+    ],
+    "defended-zones": [
+      "docs/features/DEFENDED_ZONES.md"
+    ],
+    "sieges": [
+      "docs/features/SIEGES.md"
+    ]
+  },
+  "checks": []
+}

@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "note": "Machine-readable copy of docs/dod/nyarlathotep.md › Design › Data, and the authority for it. Every ignored and server glob in tools/paths-manifest.txt and every constant file name in Services/Persistence.cs must appear in some entry's covers list (Epic D34).",
+  "entries": [
+    {
+      "artifact": "Reference material copied from sibling workspaces",
+      "covers": [
+        "Reference Data/**",
+        "Learning Mods/**"
+      ],
+      "location": "repository root, git-ignored",
+      "owner": "developer",
+      "retention": "until the next game update refreshes it from Beelzebub's canonical copy",
+      "deletion": "delete the folders; refresh from ..\\Beelzebub Lord of Gluttony\\Reference Data",
+      "singleCopy": false
+    },
+    {
+      "artifact": "Source artwork",
+      "covers": [
+        "artwork-old/**"
+      ],
+      "location": "artwork/, git-ignored",
+      "owner": "project owner",
+      "retention": "kept locally; the shipped icon and cover are the tracked derivatives",
+      "deletion": "by the owner",
+      "singleCopy": true
+    },
+    {
+      "artifact": "Local workspace and editor state",
+      "covers": [
+        ".claude/**",
+        ".vs/**",
+        ".vscode/**",
+        ".idea/**",
+        "**/*.user"
+      ],
+      "location": "repository root, git-ignored",
+      "owner": "developer",
+      "retention": "as long as the tool uses it",
+      "deletion": "delete the folder; the tool recreates it",
+      "singleCopy": true
+    },
+    {
+      "artifact": "Build outputs",
+      "covers": [
+        "**/bin/**",
+        "**/obj/**",
+        "**/*.binlog"
+      ],
+      "location": "under each project, git-ignored",
+      "owner": "developer",
+      "retention": "overwritten by every build",
+      "deletion": "dotnet clean, or delete bin/ and obj/",
+      "singleCopy": false
+    },
+    {
+      "artifact": "Thunderstore staging and package",
+      "covers": [
+        "Nyarlathotep/Nyarlathotep/dist/**",
+        "Nyarlathotep/Nyarlathotep/build/**",
+        "**/*.zip"
+      ],
+      "location": "Nyarlathotep/Nyarlathotep/dist and build, git-ignored",
+      "owner": "developer",
+      "retention": "overwritten by each build; the GitHub release asset is the kept copy",
+      "deletion": "delete dist/ and build/",
+      "singleCopy": false
+    },
+    {
+      "artifact": "OS, editor and scratch noise",
+      "covers": [
+        "**/Thumbs.db",
+        "**/ehthumbs.db",
+        "**/Desktop.ini",
+        "**/.DS_Store",
+        "**/*.swp",
+        "**/*.tmp",
+        "**/~$*",
+        "**/__pycache__/**",
+        "**/*.pyc"
+      ],
+      "location": "anywhere, git-ignored",
+      "owner": "developer",
+      "retention": "none intended",
+      "deletion": "delete freely",
+      "singleCopy": false
+    },
+    {
+      "artifact": "Deployed plugin",
+      "covers": [
+        "BepInEx/plugins/Nyarlathotep.dll"
+      ],
+      "location": "dedicated server BepInEx/plugins",
+      "owner": "server operator",
+      "retention": "until the next deploy or uninstall",
+      "deletion": "stop the server and delete the file (Epic D12)",
+      "singleCopy": false
+    },
+    {
+      "artifact": "BepInEx configuration",
+      "covers": [
+        "BepInEx/config/kdpen.Nyarlathotep.cfg"
+      ],
+      "location": "dedicated server BepInEx/config",
+      "owner": "server admin",
+      "retention": "until the admin deletes it; survives uninstall by design",
+      "deletion": "delete the file",
+      "singleCopy": true
+    },
+    {
+      "artifact": "Event, zone and runtime state files",
+      "covers": [
+        "BepInEx/config/Nyarlathotep/*.json",
+        "BepInEx/config/Nyarlathotep/*.bak",
+        "BepInEx/config/Nyarlathotep/*.tmp",
+        "BepInEx/config/Nyarlathotep/*.corrupt",
+        "events.json",
+        "zones.json",
+        "state.json"
+      ],
+      "location": "dedicated server BepInEx/config/Nyarlathotep",
+      "owner": "server admin (events, zones); the mod (state, .tmp, .corrupt)",
+      "retention": "events/zones until deleted, one .bak kept; state rewritten at most once per second; .tmp deleted on boot; .corrupt kept until the next corruption",
+      "deletion": "delete the folder for a full removal (README Uninstall)",
+      "singleCopy": false
+    }
+  ]
+}

@@ -1,0 +1,261 @@
+{
+  "schemaVersion": 1,
+  "note": "Every preflight check (functions named Test-Check* in tools/preflight.ps1) with its fixtures. good/ holds copies of real repository files, bad/ the same with the planted change named in \"plant\", bad-<n>/ further planted faults (one each), empty/ nothing. Every check reads the \"inputs\" listed. `pwsh tools/preflight.ps1 -SelfTest` requires good to pass and bad and empty to fail (Epic D10). childDocs maps each Epic child to the feature docs whose \"## Test results\" it must fill (Epic D18).",
+  "childDocs": {
+    "spikes": [
+      "docs/features/SIEGES.md",
+      "docs/features/EVENT_SPAWNS.md",
+      "docs/features/FACTION_EMPOWERMENT.md"
+    ],
+    "foundation": [
+      "docs/features/FOUNDATION.md"
+    ],
+    "faction-empowerment": [
+      "docs/features/FACTION_EMPOWERMENT.md"
+    ],
+    "event-spawns": [
+      "docs/features/EVENT_SPAWNS.md"
+    ],
+    "boss-reinforcements": [
+      "docs/features/BOSS_REINFORCEMENTS.md"
+    ],
+    "defended-zones": [
+      "docs/features/DEFENDED_ZONES.md"
+    ],
+    "sieges": [
+      "docs/features/SIEGES.md"
+    ]
+  },
+  "checks": [
+    {
+      "name": "Version",
+      "function": "Test-CheckVersion",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/Version",
+      "inputs": [
+        "Nyarlathotep/Nyarlathotep/Nyarlathotep.csproj <Version>",
+        "Nyarlathotep/Nyarlathotep/thunderstore.toml versionNumber"
+      ],
+      "plant": {
+        "bad": "thunderstore.toml versionNumber changed to 0.1.1"
+      }
+    },
+    {
+      "name": "Changelogs",
+      "function": "Test-CheckChangelogs",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/Changelogs",
+      "inputs": [
+        "Nyarlathotep/Nyarlathotep/Nyarlathotep.csproj <Version>",
+        "CHANGELOG.md",
+        "Nyarlathotep/Nyarlathotep/CHANGELOG.md"
+      ],
+      "plant": {
+        "bad": "package CHANGELOG heading for 0.1.0 renamed to 0.0.9"
+      }
+    },
+    {
+      "name": "Description",
+      "function": "Test-CheckDescription",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/Description",
+      "inputs": [
+        "Nyarlathotep/Nyarlathotep/thunderstore.toml description"
+      ],
+      "plant": {
+        "bad": "description lengthened to 251 characters"
+      }
+    },
+    {
+      "name": "TemplatesJson",
+      "function": "Test-CheckTemplatesJson",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/TemplatesJson",
+      "inputs": [
+        "Nyarlathotep/Nyarlathotep/Resources/*.json (file set: git ls-files --cached --others --exclude-standard)"
+      ],
+      "plant": {
+        "bad": "the closing brace of the template removed (unterminated JSON)"
+      }
+    },
+    {
+      "name": "PillarDefaults",
+      "function": "Test-CheckPillarDefaults",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/PillarDefaults",
+      "inputs": [
+        "Nyarlathotep/Nyarlathotep/Config/Settings.cs [Pillars] Bind defaults",
+        "Nyarlathotep/Nyarlathotep/Resources/*.json \"enabled\""
+      ],
+      "plant": {
+        "bad": "FactionEmpowerment Bind default set to true",
+        "bad-2": "the shipped template event set to \"enabled\": true"
+      }
+    },
+    {
+      "name": "Commands",
+      "function": "Test-CheckCommands",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/Commands",
+      "inputs": [
+        "every .cs file git sees",
+        "$script:PublicCommands allow-list in tools/preflight.ps1"
+      ],
+      "plant": {
+        "bad": "a [Command] planted in Services/Leak.cs (outside Commands/, not adminOnly)"
+      }
+    },
+    {
+      "name": "StructuralEdits",
+      "function": "Test-CheckStructuralEdits",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/StructuralEdits",
+      "inputs": [
+        "every .cs file git sees",
+        "Nyarlathotep/Nyarlathotep/EntityExtensions.cs method bodies"
+      ],
+      "plant": {
+        "bad": "a DestroyEntity call planted in Services/Leak.cs",
+        "bad-2": "the helper's Prefab guard inverted (if (!entity.Exists() || !entity.Has<Prefab>()) return false;)",
+        "bad-3": "the helper's Prefab guard moved after the DestroyEntity call",
+        "bad-4": "the helper's Prefab test switched off by a conjunction (entity.Has<Prefab>() && false)",
+        "bad-5": "the helper's Prefab guard nested inside an if (false) block",
+        "bad-6": "the helper guards a different entity (other.Has<Prefab>()) than the one it destroys",
+        "bad-7": "the helper reassigns the entity between the guard and the DestroyEntity call"
+      }
+    },
+    {
+      "name": "FileWrites",
+      "function": "Test-CheckFileWrites",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/FileWrites",
+      "inputs": [
+        "every .cs file git sees",
+        "Nyarlathotep/Nyarlathotep/Services/Persistence.cs signatures, file-name literals and folder"
+      ],
+      "plant": {
+        "bad": "a File.WriteAllText call planted in Services/Leak.cs",
+        "bad-2": "Persistence gains a public method taking a string path parameter",
+        "bad-3": "Persistence names a fourth data file, other.json",
+        "bad-4": "Persistence assembles a file name from pieces (\"oth\" + \"er.json\")",
+        "bad-5": "Persistence builds its folder from the temp directory",
+        "bad-6": "Persistence writes to the bare file name (relative to the working directory)",
+        "bad-7": "Persistence writes to a path built from the file-name parameter instead of the folder"
+      }
+    },
+    {
+      "name": "PatchGuards",
+      "function": "Test-CheckPatchGuards",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/PatchGuards",
+      "inputs": [
+        "Nyarlathotep/Nyarlathotep/Patches/*.cs [HarmonyPrefix]/[HarmonyPostfix] method bodies"
+      ],
+      "plant": {
+        "bad": "the Core.IsReady guard removed from the init patch",
+        "bad-2": "ExamplePatch reads Core.IsReady into a variable instead of returning early",
+        "bad-3": "ExamplePatch does work after its try/catch",
+        "bad-4": "ExamplePatch uses the init patch's inverse guard"
+      }
+    },
+    {
+      "name": "Secrets",
+      "function": "Test-CheckSecrets",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/Secrets",
+      "inputs": [
+        "every file git sees, fixtures included",
+        "Nyarlathotep/Nyarlathotep/dist/** and Nyarlathotep/Nyarlathotep/build/** (zips opened)",
+        "every index blob (git grep --cached -I -P)"
+      ],
+      "plant": {
+        "bad": "README.md with a Thunderstore token assignment appended (stored base64 as README.md.b64plant)"
+      }
+    },
+    {
+      "name": "Audits",
+      "function": "Test-CheckAudits",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/Audits",
+      "inputs": [
+        "docs/dod/nyarlathotep.md ## Children",
+        "docs/dod/<child>.md status",
+        "docs/audits/<child>.md"
+      ],
+      "plant": {
+        "bad": "the Codex verdict line removed from the done child audit record"
+      }
+    },
+    {
+      "name": "FeatureResults",
+      "function": "Test-CheckFeatureResults",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/FeatureResults",
+      "inputs": [
+        "docs/dod/nyarlathotep.md ## Children",
+        "docs/dod/<child>.md status",
+        "tools/preflight-checks.json childDocs",
+        "docs/features/*.md ## Test results"
+      ],
+      "plant": {
+        "bad": "the dated entry removed from SIEGES.md Test results",
+        "bad-2": "SIEGES.md Test results undated, with a dated line only in a following ## section"
+      }
+    },
+    {
+      "name": "Icon",
+      "function": "Test-CheckIcon",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/Icon",
+      "inputs": [
+        "Nyarlathotep/Nyarlathotep/icon.png PNG header"
+      ],
+      "plant": {
+        "bad": "icon.png replaced by a PNG header stating 512x512"
+      }
+    },
+    {
+      "name": "ReleaseTags",
+      "function": "Test-CheckReleaseTags",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/ReleaseTags",
+      "inputs": [
+        "git log --format=\"%H %s\" (git-log.txt)",
+        "git for-each-ref refs/tags (tags.txt)",
+        "git ls-remote --tags origin, peeled (remote-tags.txt)",
+        "Nyarlathotep/Nyarlathotep/Nyarlathotep.csproj <Version>"
+      ],
+      "plant": {
+        "bad": "the v0.2.0 tag missing from origin",
+        "bad-2": "the v0.2.0 tag on origin points at another commit"
+      }
+    },
+    {
+      "name": "DataInventory",
+      "function": "Test-CheckDataInventory",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/DataInventory",
+      "inputs": [
+        "tools/data-inventory.json",
+        "tools/paths-manifest.txt ignored/server globs",
+        "Nyarlathotep/Nyarlathotep/Services/Persistence.cs const file names"
+      ],
+      "plant": {
+        "bad": "the artwork/** glob dropped from its inventory entry"
+      }
+    },
+    {
+      "name": "Paths",
+      "function": "Test-CheckPaths",
+      "mode": "paths",
+      "fixtures": "tools/preflight-fixtures/Paths",
+      "inputs": [
+        "tools/paths-manifest.txt",
+        "git ls-files + git status --ignored + server globs (walked.txt)"
+      ],
+      "plant": {
+        "bad": "an unmanifested tracked path (stray/notes.txt) added to the walk"
+      }
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "SchemaVersion": 1,
+  "events": [
+    { "id": "legion-surge", "enabled": false }
+  ]

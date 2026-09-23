@@ -1,0 +1,65 @@
+# Paths manifest — every path this project ships, writes or regenerates (Epic docs/dod/nyarlathotep.md
+# › Rollout › Paths walked). `pwsh tools/preflight.ps1 -Paths` walks the repository (tracked, untracked
+# and ignored paths) and the server's Nyarlathotep paths, and fails on any path no glob of its kind covers.
+# Kinds: tracked (in git, or untracked-not-ignored and about to be), ignored (git-ignored), server
+# (relative to the dedicated server directory). Globs: ** any depth, * one segment, ? one character.
+# Every ignored and server glob has an entry in tools/data-inventory.json (Epic D34).
+
+# ---- tracked: repository root
+tracked: .gitignore
+tracked: CHANGELOG.md
+tracked: CLAUDE.md
+tracked: LICENSE
+tracked: README.md
+# ---- tracked: the plugin and its tests
+tracked: Nyarlathotep/Nyarlathotep.sln
+tracked: Nyarlathotep/Nyarlathotep/**
+tracked: Nyarlathotep/Nyarlathotep.Tests/**
+# ---- tracked: documentation, plans, reviews, audits, images
+tracked: docs/*.md
+tracked: docs/features/*.md
+tracked: docs/audits/*.md
+tracked: docs/img/*
+tracked: docs/dod/*.md
+tracked: docs/dod/*.html
+tracked: docs/dod/wbs.*
+# ---- tracked: tooling and its fixtures
+tracked: tools/*.ps1
+tracked: tools/*.json
+tracked: tools/*.txt
+tracked: tools/preflight-fixtures/**
+
+# ---- ignored: reference material and local workspace state
+ignored: Reference Data/**
+ignored: Learning Mods/**
+ignored: artwork/**
+ignored: .claude/**
+ignored: .vs/**
+ignored: .vscode/**
+ignored: .idea/**
+# ---- ignored: build outputs
+ignored: **/bin/**
+ignored: **/obj/**
+ignored: Nyarlathotep/Nyarlathotep/dist/**
+ignored: Nyarlathotep/Nyarlathotep/build/**
+ignored: **/*.zip
+ignored: **/*.user
+ignored: **/*.binlog
+# ---- ignored: OS and editor noise
+ignored: **/Thumbs.db
+ignored: **/ehthumbs.db
+ignored: **/Desktop.ini
+ignored: **/.DS_Store
+ignored: **/*.swp
+ignored: **/*.tmp
+ignored: **/~$*
+ignored: **/__pycache__/**
+ignored: **/*.pyc
+
+# ---- server: what the mod and its deploy write under the dedicated server directory
+server: BepInEx/plugins/Nyarlathotep.dll
+server: BepInEx/config/kdpen.Nyarlathotep.cfg
+server: BepInEx/config/Nyarlathotep/*.json
+server: BepInEx/config/Nyarlathotep/*.bak
+server: BepInEx/config/Nyarlathotep/*.tmp
+server: BepInEx/config/Nyarlathotep/*.corrupt

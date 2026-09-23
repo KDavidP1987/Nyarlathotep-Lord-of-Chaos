@@ -1,0 +1,2 @@
+0123456789abcdef0123456789abcdef01234567 chore(release): v0.2.0
+4761cecc9d7129ca9e4f032e35e70a0226803758 feat(identity): add 256x256 Thunderstore icon and README cover from the dragon artwork
