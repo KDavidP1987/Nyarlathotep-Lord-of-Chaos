@@ -12,6 +12,19 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - feature doc read: none (tooling step); docs/dod/spikes.md Build plan step 1 and D4, D13, D14, D17
 - server: not running; not touched by this step
 
+### Step 2 · 2026-09-23 · 50e196a
+- git status: clean
+- compile: 0 errors, 0 warnings
+- preflight: exit 0 ("spike code: none", selftest 19/19)
+- dod status: spikes 1/20 verified; Epic 11/46 (review pending on v2.1, Codex round 2 running; it does not gate this step)
+- feature doc read: docs/dod/spikes.md Build plan step 2, Business rules 1–5, Design › States and UX, D1–D6, D12, D16, D19; DEV_REMINDERS #4, #8, #9, #13, #14, #16–#19, #22, #23
+- step-2 parent (D19): 50e196a. Compile items captured to docs/audits/spikes-compile-base.txt (6 items, none under obj/) before any harness file was added
+- scope note: step 3's D5 and D6 sessions already run `march` and `empower`, so this step builds all six subcommands, including Spikes/SpikeMarch.cs and Spikes/SpikeCarrier.cs. Steps 4 and 6 are the sessions and any variant tuning
+- marker recipe: AB_Consumable_PhysicalPowerPotion_T01_Buff (-1954355403), chosen because it has Buff and LifeTime (DEV_REMINDERS #17) and differs from the default carrier (T02, -1591883586). Its stat buffer is cleared, its gameplay-event components are stripped (#18), LifeTime is set to {0, None} so it lives with the unit, and SpellLevel.Level is set to 1314472274
+- risk: DEV_REMINDERS #13 warns that some buffs applied on the spawn frame crashed the server. The plan applies the marker on the spawn frame, and the throwaway save absorbs a crash. If one happens, the marker moves to the next frame under a `discovered` amendment
+- known limit: Test-CheckStructuralEdits matches `.DestroyEntity(`, not `DestroyUtility.Destroy(`. The harness calls DestroyUtility only inside EntityExtensions.DestroySafe, and the post-audit code review confirms this
+- server: not running; not touched by this step
+
 ## Post-audit
 ### Step 1 · 2026-09-23 · (this commit)
 - compile / preflight: 0 errors, 0 warnings (no C# change); `pwsh tools/preflight.ps1` exit 0 with "spike code: none"; `-SelfTest -Verbose` → "selftest: 19/19 checks, 3 fixtures each, 36 extra bad fixtures", every bad fixture failing for its planted reason; `-Paths` → "paths: 296 walked, all in manifest"

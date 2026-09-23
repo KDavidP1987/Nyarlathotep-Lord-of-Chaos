@@ -1,0 +1,6 @@
+Commands\RootCommands.cs
+Config\Settings.cs
+Core.cs
+EntityExtensions.cs
+Patches\GameDataInitializedPatch.cs
+Plugin.cs
