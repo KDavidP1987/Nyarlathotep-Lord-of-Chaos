@@ -55,3 +55,27 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - Codex verdict: REVISE at the 3-round cap. Every finding from the final round was applied and is proven by a failing fixture. There is no further Codex round; the owner reviews this record
 - in-game: not applicable (tooling only; no DLL change)
 - dod status: D14 verified (see Log); spikes 1/20
+
+### Step 2 · 2026-09-23 · dec14e1
+- compile / preflight (on dec14e1): `--no-incremental` build 0 errors, 0 warnings; `pwsh tools/preflight.ps1` → "PREFLIGHT OK" with "commands: 6 admin-only, 1 public (allow-listed)", "structural edits: fenced (3 Prefab-guarded calls in EntityExtensions.cs)", "secrets: none (331 files scanned)", "spike code: present, allowed while spikes is in-progress"; `-SelfTest` → "selftest: 19/19 checks, 3 fixtures each, 37 extra bad fixtures"; `-Paths` → "paths: 343 walked, all in manifest"
+- known-limit check: `git grep DestroyUtility -- *.cs` finds only EntityExtensions.cs:69, inside DestroySafe
+- /code-review (inline): refusal order matches Business rules 4; clear bypasses the cooldown and the Enabled gate; the drain is at most 5 destroys per batch, batches 0.25 s apart, so a second `clear` can land mid-drain (D5); `empower` has no per-command NPC cap beyond the 30 m radius, accepted for a spike because every carrier expires by LifeTime; no blocking findings
+- Codex runs from the scratchpad with the diff, DEV_REMINDERS and the plan pasted in. A first attempt run from the repo could not read files (sandbox policy) and is not counted
+- Codex round 1: REVISE.
+
+  | Finding | Disposition |
+  |---|---|
+  | F1 (structural helpers lack ECS generic constraints; would not compile) | rejected: the IL2CPP interop EntityManager generics carry no such constraint; the D1 build is 0 errors, 0 warnings |
+  | F2 (rich-text tags not stripped from replies) | accepted: Truncate strips `<...>` and stray angle brackets |
+- Codex round 2: REVISE.
+
+  | Finding | Disposition |
+  |---|---|
+  | F3 (a march anchor makes 11 units from one command) | accepted: march count 1–9 for variants 1 and 2; spikes amendment A3 (discovered) |
+  | F4 (marker and carrier queries lack IncludeSpawnTag) | accepted: both use IncludeDisabled and IncludeSpawnTag |
+  | F5 (raw exception message in the command failure log) | accepted: Fail sanitizes once and logs one line |
+- Codex round 3 (the cap): REVISE with 1 finding, applied:
+  - F6: the march mover and clear drain logged raw exception text. Both now use SpikeUnits.OneLine
+- Codex verdict: REVISE at the 3-round cap. Every finding from the final round was applied and rebuilt clean. There is no further Codex round; the owner reviews this record
+- in-game: not yet. The harness runs first in step 3, on the throwaway save
+- dod status: D1, D2, D3, D16 verified on dec14e1 (see the plan Log)

@@ -402,3 +402,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-23 · status → ready · approve · review: human
 - 2026-09-23 · status → in-progress · start
 - 2026-09-23 · D14 · pass · cmd: pwsh tools/preflight.ps1 -SelfTest → "selftest: 19/19 checks, 3 fixtures each, 36 extra bad fixtures" · 8f4576c · claude
+- 2026-09-23 · D1 · pass · cmd: dotnet build Nyarlathotep/Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__ → "0 Warning(s)" and "0 Error(s)" · dec14e1 · claude
+- 2026-09-23 · D2 · pass · cmd: pwsh tools/preflight.ps1 → "commands: 6 admin-only, 1 public (allow-listed)" · dec14e1 · claude
+- 2026-09-23 · D3 · pass · cmd: pwsh tools/preflight.ps1 → "structural edits: fenced (3 Prefab-guarded calls in EntityExtensions.cs)" · dec14e1 · claude
+- 2026-09-23 · D16 · pass · cmd: pwsh tools/preflight.ps1 → "secrets: none (331 files scanned)" · dec14e1 · claude

@@ -6,8 +6,8 @@
 | Plan | Title | Status | Size | Verified | Baseline items | Prediction | Parent |
 |---|---|---|---|---|---|---|---|
 | [nyarlathotep](nyarlathotep.md) | Nyarlathotep, Lord of Chaos, v0.1 to v1.0 | in-progress | Epic | 11/46 | 36 | 90 % |  |
-| [spikes](spikes.md) | Spikes S1-S3, march, restart marker, carrier buff | in-progress | M | 1/20 | 20 | 100 % | nyarlathotep |
+| [spikes](spikes.md) | Spikes S1-S3, march, restart marker, carrier buff | in-progress | M | 5/20 | 20 | 95 % | nyarlathotep |
 
-Most-missed layers — done plans: none; open plans (provisional): layer 5.1 (1), layer 10.1 (1), layer 3.1 (1), layer 6.3 (1).
+Most-missed layers — done plans: none; open plans (provisional): layer 5.1 (1), layer 10.1 (1), layer 3.1 (1), layer 6.3 (1), layer 4.1 (1).
 
 Store: `docs/dod`. Plans are the source of truth; this file is regenerated.
