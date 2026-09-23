@@ -1,0 +1,44 @@
+# ---- Reference-only data (copied from sibling workspaces for local context; NOT part of the mod) ----
+Reference Data/
+Learning Mods/
+
+# ---- Claude Code workspace settings (local hooks/permissions; CLAUDE.md IS tracked) ----
+.claude/
+
+# ---- Source/working art (NOT for distribution; the shipped Thunderstore icon is
+#      Nyarlathotep/Nyarlathotep/icon.png, which IS tracked once added) ----
+artwork/
+*.webp
+
+# ---- .NET / Visual Studio ----
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+.idea/
+
+# ---- Build / NuGet ----
+*.binlog
+packages/
+project.lock.json
+artifacts/
+
+# ---- Thunderstore packaging output ----
+*.zip
+dist/
+build/
+
+# ---- OS noise ----
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+*.tmp
+
+# ---- transient/build junk ----
+~$*
+__pycache__/
+*.pyc
