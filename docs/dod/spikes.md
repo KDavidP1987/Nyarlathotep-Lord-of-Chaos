@@ -170,7 +170,7 @@ Argument ranges (all arguments are integers, parsed by VCF, so no fractional, Na
 | Command | Argument | Range | Default |
 |---|---|---|---|
 | march | variant | 1–3 | — |
-| march | count | 1–10 | 5 |
+| march | count | 1–10 (variant 3), 1–9 (variants 1 and 2: the anchor is the tenth unit) | 5 |
 | march | distance (m) | 20–200 | 100 |
 | tag | count | 1–10 | — |
 | tag | lifetime (s) | 30–600 | 600 |
@@ -393,6 +393,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 ## Amendments
 - A1 · 2026-09-23 · external · ~D2 · layer: — · the parent Epic amendment A4 (requested) widened the player allow-list to add me, top, hide, show and version; D2 now names the set that $script:PublicCommands in tools/preflight.ps1 already holds (commit 0190e38)
 - A2 · 2026-09-23 · external · ~D2 · layer: — · the parent Epic amendment A13 (requested) adds `sub` to the allow-list for the Raphael push subscription; D2 names it and $script:PublicCommands holds it
+- A3 · 2026-09-23 · discovered · ~D6 · layer: 4.1 · the march anchor (variants 1 and 2) is itself a spawned spike unit, so count 10 made 11 units in one command against the 10-per-command limit; march count is now 1–9 for variants 1 and 2 and D6 checks that range (Codex cross-inspection, step 2 post-audit)
 
 ## Log
 - 2026-09-23 · status → draft · plan

@@ -1,5 +1,6 @@
 using ProjectM;
 using ProjectM.Network;
+using ProjectM.Shared;
 using Stunlock.Core;
 using Unity.Entities;
 
@@ -33,6 +34,45 @@ internal static class EntityExtensions
         component = Core.EntityManager.GetComponentData<T>(entity);
         return true;
     }
+
+    // ---- Structural edits: the only place the mod may add or remove components, add buffers or destroy
+    //      entities (Epic D6, spikes D3). Each refuses a missing entity and a Prefab entity, because a
+    //      structural edit on a prefab changes every future instance (DEV_REMINDERS #22). ----
+
+    public static bool AddComponentSafe<T>(this Entity entity)
+    {
+        if (!entity.Exists() || entity.Has<Prefab>()) { LogRefusal("AddComponent", typeof(T).Name, entity); return false; }
+        if (Core.EntityManager.HasComponent<T>(entity)) return true;
+        return Core.EntityManager.AddComponent<T>(entity);
+    }
+
+    public static bool RemoveComponentSafe<T>(this Entity entity)
+    {
+        if (!entity.Exists() || entity.Has<Prefab>()) { LogRefusal("RemoveComponent", typeof(T).Name, entity); return false; }
+        if (!Core.EntityManager.HasComponent<T>(entity)) return true;
+        return Core.EntityManager.RemoveComponent<T>(entity);
+    }
+
+    public static bool AddBufferSafe<T>(this Entity entity) where T : unmanaged
+    {
+        if (!entity.Exists() || entity.Has<Prefab>()) { LogRefusal("AddBuffer", typeof(T).Name, entity); return false; }
+        if (Core.EntityManager.HasComponent<T>(entity)) return true;
+        Core.EntityManager.AddBuffer<T>(entity);
+        return true;
+    }
+
+    /// <summary>Deferred destroy (stamps DestroyTag); never destroys twice (DEV_REMINDERS #9).</summary>
+    public static bool DestroySafe(this Entity entity)
+    {
+        if (!entity.Exists() || entity.Has<Prefab>()) { LogRefusal("Destroy", "-", entity); return false; }
+        if (Core.EntityManager.HasComponent<DestroyTag>(entity)) return true;
+        DestroyUtility.Destroy(Core.EntityManager, entity);
+        return true;
+    }
+
+    static void LogRefusal(string op, string type, Entity entity) =>
+        Core.Log.LogWarning($"[nyar] refused {op}<{type}> on {entity.Index}:{entity.Version}: " +
+                            (entity.Exists() ? "prefab entity" : "missing entity"));
 
     public static ulong GetSteamId(this Entity playerCharacter)
     {
