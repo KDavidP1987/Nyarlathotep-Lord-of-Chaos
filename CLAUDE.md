@@ -20,10 +20,10 @@ Everything ships **disabled**; admins opt in per pillar and per event.
 Same family as the author's other mods — **Beelzebub** (server), **Uriel** (server), **Faust** (server),
 and **Raphael** (client, formerly BloodCraftHub). Nyarlathotep mirrors the Faust/Uriel architecture.
 
-> **Status:** freshly scaffolded (v0.1.0). The project builds and loads; no pillar is implemented. The
-> first build target is the **Foundation** (SpawnTracker, EventScheduler, TriggerBus, JSON event store,
-> admin commands) — see `docs/NYARLATHOTEP_DESIGN.md` §"Build order". Open design decisions are listed in
-> that doc's §"Open decisions" and must be settled with the user before the code that depends on them.
+> **Status:** v0.1.0 scaffold; no pillar implemented. Development is tracked by the DoD Epic
+> `docs/dod/nyarlathotep.md` (children: spikes → foundation → faction-empowerment → event-spawns →
+> boss-reinforcements → defended-zones → sieges). Design decisions D1–D12 are settled in
+> `docs/NYARLATHOTEP_DESIGN.md` §9; new decisions go to the user in plan mode before dependent code.
 
 The only buildable project lives at `Nyarlathotep/` (`Nyarlathotep.sln`). When the user says "the mod",
 "this codebase", or "our mod" they mean `Nyarlathotep/`.
@@ -136,7 +136,42 @@ edits to spawn/buff/AI services and patches.
 When work reaches a point where the user must decide (design direction, scope, trade-offs), present the
 decisions together — each with: the decision and why it matters, the realistic options with trade-offs,
 a recommendation, and *Resolved* status for anything already settled. Use plan mode for this when
-mid-implementation. Record settled answers in `docs/NYARLATHOTEP_DESIGN.md` §"Open decisions".
+mid-implementation. Record settled answers in `docs/NYARLATHOTEP_DESIGN.md` §9 and as validated assumptions in the DoD plan.
+
+## Development procedure — plan, pre-audit, build, post-audit (every step)
+
+Settled with the user 2026-09-23 (`docs/dod/nyarlathotep.md` S-15). The product is the DoD Epic
+`docs/dod/nyarlathotep.md`; each pillar is a child plan built in the order listed there.
+
+1. **Plan** — `/dod plan <child>` (parent `nyarlathotep`). The plan is reviewed by **Codex, read-only**
+   (Claudex phase 2, dod `references/review.md`) until `VERDICT: READY`, then `dod approve`. Decisions the
+   user must make go to plan mode first (see above).
+2. **Pre-audit** before every Build-plan step, recorded in `docs/audits/<child>.md` (template:
+   `docs/audits/README.md`): git tree clean, compile check, `pwsh tools/preflight.ps1`, `dod status
+   <child>`, feature doc Status/Open questions read; for in-game steps a baseline boot of the current DLL
+   with the BepInEx log checked.
+3. **Build** — Claude builds (Claudex phase 3, Claude-builds direction). Anything the plan did not foresee
+   is a dod amendment **before** it is built.
+4. **Post-audit** after every step: compile check, preflight, `/code-review` on the diff, a **fresh
+   read-only Codex cross-inspection** of the diff (`codex exec -s read-only`, prompt via stdin) with its
+   verdict line written to the audit record, in-game test on the local server with results under the
+   feature doc's `## Test results`, `dod status <child>` evidence lines.
+5. A child closes with `dod close <child>` and a `chore(release)` commit + annotated tag (six surfaces).
+
+Tooling note: `~/.claude/skills/dod` is a junction; run `dod-feedback.mjs` through its real path
+(`...\SkillEra Skills and MCPs\skillera-skills\skills\dod\scripts\`) or it silently does nothing.
+
+<!-- dod:begin v1 -->
+## Definition of Done plans
+dod-store: docs/dod
+Plans live in the store above (index: `README.md` there). Before building anything that has a plan there,
+read the plan and follow its `## Build plan`; check items only with evidence; record anything the plan
+did not foresee as an amendment before building it; never edit `## Baseline`. Before claiming a feature
+is finished, run the `dod` skill's `status` on it. At the end of every work session, run `status` on the
+open plans, record anything unforeseen with `amend` before building it, and update any audit or gap
+document in the same pass. Trigger policy: auto — when the user asks to plan, design, or build a feature or function in this
+project, use the `dod` skill to plan it first unless they decline.
+<!-- dod:end -->
 
 ## Git workflow
 

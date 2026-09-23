@@ -1,7 +1,7 @@
 # Nyarlathotep, Lord of Chaos — design
 
-Status: **draft for review** (2026-09-23). Nothing below is implemented except the scaffold. Decisions
-marked *Open* in §9 must be settled before the code that depends on them.
+Status: **decisions settled** (2026-09-23). Nothing below is implemented except the scaffold. Decisions
+are recorded in §9; the build is tracked by the DoD Epic `docs/dod/nyarlathotep.md`.
 
 ## 1. Vision
 
@@ -142,19 +142,25 @@ Spikes run first because they decide whether the riskier pillars are feasible at
 | Sieges seen as griefing | Off by default, eligibility rules, community-admin pre-clearance |
 | Level-gap scaling makes units unkillable | Cap level delta (default ±5), prefer HP/power multipliers |
 
-## 9. Open decisions
+## 9. Decisions
 
-| # | Decision | Options | Recommendation | Status |
-|---|---|---|---|---|
-| D1 | Chat command root | `.nyar` · `.chaos` · `.nya` | `.nyar` — unambiguous, matches `.beelz`/`.faust`/`.uriel`; `.chaos` risks colliding with other mods | *Open* (scaffold uses `.nyar`) |
-| D2 | Event definition format | One unified `events.json` (trigger+action) · separate file per pillar | **Unified** — one engine, one validator, triggers and actions mix freely (e.g. boss kill → spawn waves) | *Open* |
-| D3 | What a siege does to a castle | (a) Harassment: fight defenders/servants/exposed pieces under vanilla rules · (b) Real structure damage via `DealDamageSystem` hook, only in raid windows · (c) Both, (b) opt-in | **(c)**, shipping (a) first; (b) later behind its own switch, deferring to RaidForge when present | *Open* |
-| D4 | Persistent marker for our units | `BlockFeedBuff` (Bloodcraft treats it as "familiar" — conflict) · own inert marker buff with magic value (Bloodcraft pattern) · `NameableInteractable` suffix (BloodyBoss) | **Own inert marker buff**, validated in spike S2 | *Open* |
-| D5 | How empowerment reaches NPCs | Sweep at start only · sweep + hook `SpawnTransformSystem_OnSpawn` · periodic re-sweep every ~15 s | **Start sweep + periodic re-sweep**; add the spawn hook only if the sweep proves too coarse | *Open* |
-| D6 | Wave engine for event spawns | Own spawner (`InstantiateEntityImmediate`) · reuse vanilla War Event (Rift) pipeline · both | **Own spawner** for control and cleanup; keep War Events as a possible later "Rift" action type | *Open* |
-| D7 | Loot / XP from event spawns | None · vanilla · per-event setting | **Per-event**, default loot **off** (anti-farm), XP vanilla | *Open* |
-| D8 | Events across a restart | Cancel everything on boot · resume events still inside their window | **Cancel on boot** for v1 (simplest, safest); resume later | *Open* |
-| D9 | Player visibility | Players see nothing but announcements · `.nyar status` for players · full event list | **Announcements + player `.nyar status`** (active events and time left, no positions) | *Open* |
-| D10 | Siege target eligibility | Any claimed castle · only if owner/clan online · also level/region gates | **Owner or clan member online**, heart not sealed/decaying, PvE/PvP availability per event, optional min gear level | *Open* |
-| D11 | Schedule time basis | Real-world clock (server local) · in-game day/night · both | **Both**: real clock for "every Saturday 20:00", in-game for "each night" / "each blood moon" | *Open* |
-| D12 | Raphael (client UI) integration | None · reserve `[NYAR:*]` wire + `.nyar api` later | **Defer**, but keep command replies parse-friendly | *Open* |
+All settled with the user on 2026-09-23 in plan mode and recorded as validated assumptions S-4 to S-17 in
+`docs/dod/nyarlathotep.md`. A change after this point is a DoD amendment, not an edit here.
+
+| # | Decision | Resolved |
+|---|---|---|
+| D1 | Chat command root | `.nyar` |
+| D2 | Event definition format | One unified `events.json` (trigger + action mix freely), `SchemaVersion` 1 |
+| D3 | What a siege does to a castle | Harassment MVP first (defenders, servants, exposed pieces under vanilla rules); structure damage later behind its own off-by-default switch, deferring to RaidForge |
+| D4 | Persistent marker for our units | Own inert marker buff with a distinct magic value (validated in spike S2) |
+| D5 | How empowerment reaches NPCs | Start sweep + re-sweep every ~15 s with remaining time; spawn hook only if the sweep proves too coarse |
+| D6 | Wave engine | Own spawner (`InstantiateEntityImmediate`); War Events maybe later as a "Rift" action |
+| D7 | Loot / XP from event spawns | Per event; loot default **off**, XP vanilla |
+| D8 | Events across a restart | Cancel on boot (v1); marked survivors swept |
+| D9 | Player visibility | Announcements + player `.nyar status` (active events, time left, no positions) |
+| D10 | Siege target eligibility | **All admin-configurable:** owner or clan member online **or last online within `RecentlyOnlineHours`** (so logging out does not dodge a siege); optional **minimum castle-heart level** (not gear level — gear can be swapped); never sealed/decaying hearts; PvE/PvP availability per event; re-checked every tick |
+| D11 | Schedule time basis | Both: real server-local clock and in-game day/night |
+| D12 | Raphael (client UI) integration | Deferred; replies stay parse-friendly |
+| P1 | Development procedure | Pre-audit / build / post-audit with Codex cross-inspection on every step (CLAUDE.md) |
+| P2 | Icon | Whole dragon artwork scaled to 256×256 (not cropped); same image as README cover |
+| P3 | First Thunderstore publication | After foundation + faction empowerment + event spawns pass in-game (~0.4.0); GitHub releases before |
