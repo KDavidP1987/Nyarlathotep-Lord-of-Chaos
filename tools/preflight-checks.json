@@ -298,6 +298,7 @@
         "bad-3": "-AfterCleanup while save-data-nyarspikes still exists",
         "bad-4": "another Saves folder present but untouched",
         "bad-5": "an empty save-data-main/Saves/ folder (a directory row only)",
+        "bad-8": "a file of the owner's own test world (LocalServer/Saves/v4/world1) changed between the snapshots",
         "bad-6": "-AfterCleanup with every nyarspikes file gone but the empty save-data-nyarspikes/ folder left",
         "bad-7": "a hashed BepInEx file recorded without a SHA-256 (locked) in the after snapshot"
       }

@@ -17,7 +17,9 @@
     -SelfTest    : every check against its three fixtures.
     -ServerWrites -Snapshot <file>
                  : records the server directory and LocalLow\Stunlock Studios tree (path, size, write
-                   time, SHA-256 under BepInEx/, logs/, save-data-*/ and LocalLow/) to <file> and exits.
+                   time, SHA-256 under BepInEx/, logs/, save-data-*/ and LocalLow/) plus the owner's own test
+                   server data at -LocalServerPath (C:\VRising-LocalServer, fully hashed, must not change at all)
+                   to <file> and exits.
     -ServerWrites -Compare <file> [-AfterCleanup]
                  : Test-CheckServerWrites: every file created, changed or deleted since the snapshot must
                    match a server/external glob of tools/paths-manifest.txt, no Saves folder other than
@@ -55,7 +57,8 @@ param(
     [switch]$AfterCleanup,
     [string]$AuditOf,               # plan slug: check its audit record covers every Build plan step
     [string]$ServerPath = 'C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer',
-    [string]$LocalLowPath = (Join-Path $env:USERPROFILE 'AppData\LocalLow\Stunlock Studios')
+    [string]$LocalLowPath = (Join-Path $env:USERPROFILE 'AppData\LocalLow\Stunlock Studios'),
+    [string]$LocalServerPath = 'C:\VRising-LocalServer'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -787,14 +790,15 @@ function Test-CheckSpikeCode([string]$Root) {
 # A snapshot line is "<path>`t<size>`t<last-write ticks>`t<sha256 or ->" for a file and
 # "<path>/`t-`t-`tdir" for a directory, so an empty folder (another save's Saves/, a leftover
 # save-data-nyarspikes/) is seen too. Paths are relative to the server directory, or "LocalLow/<path>"
-# under %USERPROFILE%\AppData\LocalLow\Stunlock Studios. Contents are hashed where a write matters
-# (BepInEx/, logs/, save-data-*/, LocalLow/); a file that cannot be hashed after three tries, or a folder
+# under %USERPROFILE%\AppData\LocalLow\Stunlock Studios, or "LocalServer/<path>" under the owner's own test
+# server data (-LocalServerPath; its world1 must come through the spikes byte for byte, spikes A4). Contents
+# are hashed where a write matters (BepInEx/, logs/, save-data-*/, LocalLow/, LocalServer/); a file that cannot be hashed after three tries, or a folder
 # that cannot be listed, is a problem that fails the snapshot and the comparison, never a silent row.
-$script:HashedRx = '^(BepInEx/|logs/|save-data-|LocalLow/)'
+$script:HashedRx = '^(BepInEx/|logs/|save-data-|LocalLow/|LocalServer/)'
 function Get-ServerTree {
     $rows = [System.Collections.Generic.List[string]]::new()
     $problems = [System.Collections.Generic.List[string]]::new()
-    foreach ($r in @(@{ Base = $ServerPath; Prefix = '' }, @{ Base = $LocalLowPath; Prefix = 'LocalLow/' })) {
+    foreach ($r in @(@{ Base = $ServerPath; Prefix = '' }, @{ Base = $LocalLowPath; Prefix = 'LocalLow/' }, @{ Base = $LocalServerPath; Prefix = 'LocalServer/' })) {
         if (-not (Test-Path $r.Base)) { continue }
         $base = (Resolve-Path $r.Base).Path.TrimEnd('\')
         $walkErrors = $null
@@ -867,8 +871,11 @@ function Test-CheckServerWrites([string]$Root) {
     $changed = @(& $files $after.Keys | Where-Object { $before.ContainsKey($_) -and $before[$_] -ne $after[$_] })
     $deleted = @(& $files $before.Keys | Where-Object { -not $after.ContainsKey($_) })
     $bad = @()
-    $isOtherSave = { param($p) $p -match '(^|/)Saves/' -and $p -notlike 'save-data-nyarspikes/*' }
+    # The owner's own test server data (LocalServer/) exists by design, so it is exempt from the Saves-folder
+    # existence rule, but any created, changed or deleted file under it fails.
+    $isOtherSave = { param($p) $p -match '(^|/)Saves/' -and $p -notlike 'save-data-nyarspikes/*' -and $p -notlike 'LocalServer/*' }
     foreach ($p in @($created + $changed + $deleted)) {
+        if ($p -like 'LocalServer/*') { $bad += "owner data touched: $(Format-SafePath $p)"; continue }
         if (& $isOtherSave $p) { $bad += "another save touched: $(Format-SafePath $p)"; continue }
         if (-not ($globs | Where-Object { Test-GlobMatch $p $_ })) { $bad += "unmanifested: $(Format-SafePath $p)" }
     }

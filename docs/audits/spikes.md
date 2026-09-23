@@ -25,6 +25,16 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - known limit: Test-CheckStructuralEdits matches `.DestroyEntity(`, not `DestroyUtility.Destroy(`. The harness calls DestroyUtility only inside EntityExtensions.DestroySafe, and the post-audit code review confirms this
 - server: not running; not touched by this step
 
+### Step 3 · 2026-09-23 · bd6bc0d
+- git status: clean except this step's A4 change (tools/preflight.ps1 -LocalServerPath, ServerWrites bad-8, spikes D4 and S-2), committed with this entry
+- compile: 0 errors, 0 warnings
+- preflight: exit 0; `-SelfTest` → "selftest: 19/19 checks, 3 fixtures each, 38 extra bad fixtures" (bad-8 fails with "owner data touched"); `-Paths` → "paths: 347 walked, all in manifest"
+- dod status: spikes 5/20 verified (D1 D2 D3 D14 D16); A3 and A4 recorded
+- feature doc read: docs/dod/spikes.md Build plan step 3, D4, D5, D6, D12; docs/features/EVENT_SPAWNS.md Status
+- owner input: the owner's test world lives at C:\VRising-LocalServer (world1, start_server_local.bat, same server executable). The throwaway save stays at <server>\save-data-nyarspikes with default host settings; A4 extends the D4 snapshot to C:\VRising-LocalServer so any change to world1 fails
+- baseline boot: BepInEx/LogOutput.log of the owner's last boot (2026-09-23 19:32) with the deployed v0.1.0 scaffold: "Nyarlathotep initialized via GameDataInitializedPatch (attempt #1)", loaded beside VCF 0.10.4, Beelzebub 0.136.0, Faust 0.16.5 and Uriel 0.20.0; 0 lines matching error or exception
+- server: not running
+
 ## Post-audit
 ### Step 1 · 2026-09-23 · (this commit)
 - compile / preflight: 0 errors, 0 warnings (no C# change); `pwsh tools/preflight.ps1` exit 0 with "spike code: none"; `-SelfTest -Verbose` → "selftest: 19/19 checks, 3 fixtures each, 36 extra bad fixtures", every bad fixture failing for its planted reason; `-Paths` → "paths: 296 walked, all in manifest"
