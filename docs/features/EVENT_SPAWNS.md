@@ -68,7 +68,7 @@ trigger, or by command. "Every night at 22:00 three waves of Cursed spawn at the
 
 ## Test results
 
-### S2 restart spike · 2026-09-24 · spikes step 3 sessions 9–11 (throwaway save; in progress)
+### S2 restart spike · 2026-09-24 · spikes step 3 sessions 9–12 (throwaway save)
 
 Units: CHAR_Bandit_Thug from `.nyar spike tag`, marked by the inert AB_Consumable_PhysicalPowerPotion_T01_Buff carrying SpellLevel 1314472274, with LifeTime (EndAction Destroy) and DestroyWhenDisabled. Even-numbered units also carry PersistenceV2.DontSaveEntity. `keep 1` sets CanPreventDisableWhenNoPlayersInRange.CanDisable = false. Restarts are a hard stop right after an autosave finishes (spikes A8).
 
@@ -83,6 +83,6 @@ Units: CHAR_Bandit_Thug from `.nyar spike tag`, marked by the inert AB_Consumabl
 
   Units that must outlive a player's absence need CanDisable = false and must then be bounded some other way
 - [x] LifeTime without a restart: a unit made with InstantiateEntityImmediate has no Age, so LifeTime never ran. Units lived past 600 s, and `tag 2 30` units were still alive at 60 s. With Age added at spawn (spikes A10), `tag 2 30` showed "21s … age 9s" and was gone by 60 s
-- [ ] LifeTime after restart (continued, reset or gone), with Age: pending
-- [ ] load errors: none in any boot so far ("exception" count 0 in BepInEx/LogOutput.log after every restart)
-- S2 verdict: pending (LifeTime across a restart with Age)
+- [x] LifeTime after restart, with Age: continued. `tag 2 300 1` swept "287s age 13s"; AutoSave_447, hard stop 11:12:16, restart. The sweep at 11:14 showed "saved 1 [… 175s age 125s] dontsave 0". Age and LifeTime are saved with the unit and keep counting after the load, so a restart does not extend or reset a unit's life
+- [x] load errors: none. "exception" count was 0 in BepInEx/LogOutput.log after every one of the six restarts in sessions 4–12
+- S2 verdict: go — tag with the inert marker buff (SpellLevel 1314472274) and find units after a restart with an IncludeDisabled | IncludeSpawnTag query on Buff + SpellLevel; bound every unit with LifeTime **plus Age** (without Age LifeTime never runs); add DestroyWhenDisabled for units that may be left alone (it removes them at boot and when players leave) or CanDisable = false for units that must persist, which LifeTime then bounds; add PersistenceV2.DontSaveEntity to units that must never survive a restart
