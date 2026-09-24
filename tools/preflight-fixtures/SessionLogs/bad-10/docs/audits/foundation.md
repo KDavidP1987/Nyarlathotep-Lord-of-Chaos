@@ -61,7 +61,6 @@ checks are lines "- session <n> log check: …" (D33).
 - session 4 log check: 0 unhandled, 2 nyar lines
   - before A10 the server log was not checked; read afterwards it held 120 orphan errors (A9)
 - session 8 log check: 0 unhandled, 2 nyar lines, 0 orphan errors, 1 unity errors [Backtrace native integration status: Cannot initialize Crashpad client]
-  - unity "Backtrace native integration status: Cannot initialize Crashpad client": game – the Backtrace crash reporter has no client on a dedicated server
 - Codex cross-inspection round 1 (2d4e85c): REVISE, 6 findings. The fixes are in 0a27e9d.
   - (1) a junction above BepInEx/config: declined. It is the admin's deployment choice, and D7 fences the mod's file names and the data folder, which Guard checks before every access.
   - (2) older-schema migration can't be reached: accepted as a record. Schema 1 is the first version, so the migrate branch first becomes reachable at schema 2, which brings its own legacy parser and test.

@@ -232,3 +232,26 @@ VERDICT: REVISE
 - F1 · accepted · with the reviewer's second fix: only sessions after foundation's session 7 count as checked (at least one is required), the pre-A10 sub-bullet's orphan count is parsed and every pre-A10 session with orphan errors is named in the line ("7 before A10 not counted (orphan errors in session 6, 7)"); fixture bad-9 has no post-A10 session. Made after the round cap, so no reviewer has seen it
 - F2 · rejected · with Review 8 F6 and Review 9 F4: the attribution D33 requires is where a Nyarlathotep-caused kind of another wording is found, and it is then an unhandled finding recorded by amendment; a machine rule over unknown wordings would have to guess
 - F3 · rejected · with Review 8 F7 and Review 9 F5
+
+## Review 11 · 2026-09-24 · codex · plan commit 5b9bed9 (extra round past the cap, owner-approved)
+F1 blocking — Probe `12.4`: D33 requires every Unity error kind listed by `-LogCheck` to be attributed, but `-SessionsOf foundation` does not fail when an attribution is absent, so a stranger cannot verify the whole item from its stated evidence.
+Fix: Make `-SessionsOf` require one attribution for every distinct listed Unity error kind, and add a self-test fixture containing a listed kind with no attribution.
+
+F2 advisory — Probe `3.3`: D27 exercises persistence with only `CHAR_Bandit_Thug`; a prefab whose saved child or marker topology differs could survive a restart without remaining discoverable by the marker query.
+Fix: Add a second fixture unit with materially different child/buff topology to the two-restart D27 exercise, or document repository evidence that all permitted prefabs share the relevant persistence behavior.
+
+F3 advisory — Probe `11.4`: D29 proves that a disabled Schedule twin stays inactive, but does not exercise disabled GameTime or VBloodKilled triggers; a trigger-specific enabled check could regress while the evidence still passes.
+Fix: Exercise one disabled definition for each implemented automatic trigger kind, or add a parameterized trigger-activation test covering enabled and disabled definitions.
+
+EARLIER: F1 resolved — D33 now excludes sessions 1–7 from the checked numerator, requires at least one post-session-7 result, parses the legacy orphan sub-bullets, names the dirty sessions, and D18 supplies bad-9 for the no-post-A10 case.
+
+EARLIER: F2 resolved — rejection is reasonable: unknown Unity wording cannot safely be classified mechanically, while D33 requires each listed Unity error kind to be reviewed and attributed; the remaining problem is that this attribution requirement is not enforced by the stated command, captured in current F1.
+
+EARLIER: F3 resolved — rejection is reasonable: the boot sweep reconstructs its queue from persisted markers on every boot, so another interruption does not depend on the previous in-memory queue; D24 separately covers the 500-unit performance ceiling.
+
+14/15 layers · 48/49 probes
+VERDICT: REVISE
+### Dispositions
+- F1 · accepted · the owner chose to enforce it (A13): -LogCheck lists every Unity error kind, Test-CheckSessionLogs fails a line with Unity errors that lists no kinds, leaves a kind without a '  - unity "<kind>": game|ours' sub-bullet, or attributes one to ours without citing an amendment; fixtures bad-10 to bad-12, each caught by a mutation of its rule. Also closes the gap Review 10 F2 pointed at: a Nyarlathotep-caused kind of any wording must be attributed to ours and carry an amendment
+- F2 · accepted · no DoD change: step 5's restart test (D21) spawns its wave from a unit prefab other than CHAR_Bandit_Thug, so the boot sweep is seen on a second unit type
+- F3 · accepted · D40 (A13): TriggerActivationTests covers enabled and disabled definitions for every automatic trigger kind

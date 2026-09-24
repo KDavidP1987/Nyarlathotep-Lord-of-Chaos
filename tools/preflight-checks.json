@@ -372,7 +372,10 @@
         "bad-6": "the audit's session 8 line omits the orphan count after session 4 carried it",
         "bad-7": "the audit has a session 8 line with 3 orphan errors and a clean second line for session 8",
         "bad-8": "every line uses the old format, including session 8, after foundation's last pre-A10 session 7",
-        "bad-9": "every session is before A10 (sessions 1-4), so none is checked"
+        "bad-9": "every session is before A10 (sessions 1-4), so none is checked",
+        "bad-10": "the audit's session 8 line lists a Unity error kind with no unity sub-bullet attributing it",
+        "bad-11": "the audit's session 8 line shows 1 unity error and lists no kinds",
+        "bad-12": "the audit's session 8 kind is attributed to ours without citing an amendment"
       }
     },
     {

@@ -36,7 +36,9 @@
                  : Test-CheckSessionLogs: every "### Session <n>" under docs/features/<SLUG>.md › Test results has a
                    "- session <n> log check: 0 unhandled, <s> nyar lines, 0 orphan errors, <u> unity errors" line in
                    docs/audits/<slug>.md, one per session; only sessions after A10 count (at least one), an orphan
-                   count above 0 fails them, and pre-A10 sessions are listed with their orphan errors named (D33, A10).
+                   count above 0 fails them, and pre-A10 sessions are listed with their orphan errors named (D33, A10);
+                   every listed Unity error kind needs a '  - unity "<kind>": game <why>' sub-bullet, or
+                   'ours <why> (A<n>)' citing its amendment (A13).
     -ListCommands admin
                  : every admin-only command of the commands walk, one per line, then "admin commands: <n>"
                    (foundation D19); Test-CheckAdminList keeps that list equal to the commands check's count.
@@ -952,12 +954,13 @@ function Test-CheckLogCheck([string]$Root) {
         $u++
         $j = $i - 1; while ($j -ge 0 -and $slines[$j].StartsWith('UnityEngine.')) { $j-- }
         $msg = if ($j -ge 0) { $slines[$j] } else { '' }
-        $kind = ($msg -replace '-?\d+', 'N').Trim()
+        $kind = ($msg -replace '-?\d+', 'N' -replace '\|', '/').Trim()
         if ($kind.Length -gt 90) { $kind = $kind.Substring(0, 90) + '...' }
         if (-not $kinds.Contains($kind)) { $kinds.Add($kind) }
     }
     $line = "log check: $n unhandled, $s nyar lines, $o orphan errors, $u unity errors"
-    if ($kinds.Count) { $line += " [$(@($kinds | Select-Object -First 5) -join ' | ')$(if ($kinds.Count -gt 5) { " | +$($kinds.Count - 5) kinds" })]" }
+    # Every kind is listed: -SessionsOf needs each one attributed in the session's audit line (A13).
+    if ($kinds.Count) { $line += " [$($kinds -join ' | ')]" }
     if ($s -eq 0) { return New-Result $false "$line (the wrong log, or the plugin did not initialise)" }
     return New-Result ($n -eq 0 -and $o -eq 0) $line
 }
@@ -1184,7 +1187,10 @@ function Test-CheckAdminList([string]$Root) {
 # (foundation D33). Only sessions after the plan's last pre-A10 session (below; a plan not listed has none) count as
 # checked, and there must be at least one. Pre-A10 lines may omit both counts and give the server log's orphan count
 # in a "  - before A10" sub-bullet; they are listed with any orphan errors named, never counted as clean (Review 10).
-# From the first line carrying the counts on, every line must carry them. A fixture names the slug in sessionsof.txt.
+# From the first line carrying the counts on, every line must carry them. A line with Unity errors carries -LogCheck's
+# "[kind | kind]" list, and each kind has a sub-bullet '  - unity "<kind>": game <why>' or '... ours <why> (A<n>)',
+# ours citing the amendment that records it (A13).
+# A fixture names the slug in sessionsof.txt.
 $script:SessionsBeforeA10 = @{ 'foundation' = 7 }
 
 function Test-CheckSessionLogs([string]$Root) {
@@ -1198,10 +1204,17 @@ function Test-CheckSessionLogs([string]$Root) {
     $results = [regex]::Match($doc, '(?ms)^## Test results\s*$(.*?)(?=^## |\z)')
     $sessions = if ($results.Success) { @([regex]::Matches($results.Groups[1].Value, '(?m)^### Session (\d+) · ') | ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object -Unique) } else { @() }
     if ($sessions.Count -eq 0) { return New-Result $false "session logs: $slug has no sessions under $docRel › Test results" }
-    $checks = @{}; $dupes = @()
-    $pattern = '(?m)^- session (\d+) log check: (\d+) unhandled, (\d+) nyar lines(?:, (\d+) orphan errors, (\d+) unity errors)?[^\r\n]*(?:\r?\n  - before A10[^\r\n]*?\b(\d+) orphan errors)?'
+    $checks = @{}; $dupes = @(); $unattributed = @()
+    $pattern = '(?m)^- session (\d+) log check: (\d+) unhandled, (\d+) nyar lines(?:, (\d+) orphan errors, (\d+) unity errors)?(?<rest>[^\r\n]*)(?:\r?\n  - before A10[^\r\n]*?\b(\d+) orphan errors)?'
     foreach ($m in [regex]::Matches($audit, $pattern)) {
         $n = [int]$m.Groups[1].Value
+        if ($m.Groups[5].Success -and [int]$m.Groups[5].Value -gt 0) {
+            $list = [regex]::Match($m.Groups['rest'].Value, '^ \[(.+)\]\s*$')
+            $kinds = if ($list.Success) { @($list.Groups[1].Value -split ' \| ' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) } else { @() }
+            $subs = [regex]::Match($audit.Substring($m.Index), '^[^\r\n]*((?:\r?\n  - [^\r\n]*)*)').Groups[1].Value
+            $bare = @($kinds | Where-Object { $subs -notmatch ('(?m)^  - unity "' + [regex]::Escape($_) + '": (game \S|ours [^\r\n]*\bA\d+\b)') })
+            if ($kinds.Count -eq 0 -or $bare.Count) { $unattributed += $n }
+        }
         # Two lines for one session: a clean copy must not hide a dirty one (Codex A9 round 1).
         if ($checks.ContainsKey($n)) { $dupes += $n }
         $orphans = if ($m.Groups[4].Success) { [int]$m.Groups[4].Value } else { -1 }
@@ -1218,7 +1231,8 @@ function Test-CheckSessionLogs([string]$Root) {
     $dirty = @($sessions | Where-Object { $checks.ContainsKey($_) -and ($checks[$_][0] -ne 0 -or $checks[$_][1] -eq 0 -or ($_ -gt $cutoff -and $checks[$_][2] -gt 0)) })
     $old = @($sessions | Where-Object { $checks.ContainsKey($_) -and $checks[$_][2] -lt 0 -and ($_ -gt $cutoff -or ($first -and $_ -gt $first[0])) })
     $dupes = @($dupes | Sort-Object -Unique)
-    $bad = @($dirty + $old + $dupes | Sort-Object -Unique)
+    $unattributed = @($unattributed | Sort-Object -Unique)
+    $bad = @($dirty + $old + $dupes + $unattributed | Sort-Object -Unique)
     $ok = @($post | Where-Object { $checks.ContainsKey($_) -and $bad -notcontains $_ }).Count
     $preOrphans = @($pre | Where-Object { $checks.ContainsKey($_) -and ([math]::Max($checks[$_][2], 0) + $checks[$_][3]) -gt 0 })
     $preNote = if ($pre.Count) { "; $($pre.Count) before A10 not counted$(if ($preOrphans) { " (orphan errors in session $($preOrphans -join ', '))" })" } else { '' }
@@ -1229,6 +1243,7 @@ function Test-CheckSessionLogs([string]$Root) {
         if ($dirty) { $why += "unhandled exceptions, no nyar lines or orphan errors in session $($dirty -join ', ')" }
         if ($old) { $why += "no orphan count in session $($old -join ', ')" }
         if ($dupes) { $why += "more than one log check line for session $($dupes -join ', ')" }
+        if ($unattributed) { $why += "unity error kinds not listed or not attributed in session $($unattributed -join ', ')" }
         return New-Result $false "session logs: $slug $ok/$($post.Count) checked after A10$preNote ($($why -join '; '))"
     }
     return New-Result $true "session logs: $slug $ok/$($post.Count) checked after A10$preNote"
