@@ -81,6 +81,10 @@ Build plan).
   check removed, a denial not logged, wire values unmapped, the 480-byte cap removed, a handshake key dropped,
   control characters kept, the announcement length unchecked, and the status line leaking the radius.
 - `pwsh tools/preflight.ps1 -SelfTest` → "selftest: 24/24 checks, 3 fixtures each, 50 extra bad fixtures".
+- After the code review and Codex rounds 1–3 (40d0e30): Passed 449, and "selftest: 24/24 checks, 3 fixtures each,
+  56 extra bad fixtures". The fixes: suffixed command attributes, a 0-nyar-line session, Unicode format and
+  separator characters judged per scalar, required wire lines that throw instead of dropping a field, named
+  dispatched services, and interpolated strings masked with their holes kept.
 
 ### Session 1 · 2026-09-24
 Dev world "Nyar Dev" (save-data-nyardev), created fresh, 127.0.0.1:9876, build 8865800.
