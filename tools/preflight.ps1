@@ -960,14 +960,18 @@ function Test-CheckAuditSteps([string]$Root) {
 
 # ---------------------------------------------------------------- checks: the foundation child (foundation D11, D17-D19, D33)
 
-# Every string and char literal blanked to "" / '' after comments are removed, so an identifier or a
-# directive inside a literal never counts.
+# Every plain string and char literal blanked to "" / '' after comments are removed, so an identifier or a
+# directive inside a literal never counts. An interpolated string ($"…", $@"…", @$"…", $"""…""") is kept
+# whole: its holes are code, so a call inside one still counts (its text may give a harmless extra match).
 function Remove-CsLiterals([string]$Text) {
     if (-not $Text) { return $Text }
-    return $script:CsLexRx.Replace((Remove-CsComments $Text), {
+    $clean = Remove-CsComments $Text
+    return $script:CsLexRx.Replace($clean, {
         param($m)
         if ($m.Groups['c'].Success) { return "''" }
         if ($m.Groups['lc'].Success -or $m.Groups['bc'].Success) { return $m.Value }
+        $interpolated = $m.Value.StartsWith('$') -or $m.Value.StartsWith('@$') -or ($m.Index -gt 0 -and $clean[$m.Index - 1] -eq '$')
+        if ($interpolated) { return $m.Value }
         return '""'
     })
 }

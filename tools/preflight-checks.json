@@ -319,7 +319,8 @@
       ],
       "plant": {
         "bad": "Commands/StatusCommands.cs calls EventStore.Reload() directly, outside Gateway.Run",
-        "bad-2": "Patches/GameDataInitializedPatch.cs captures EventStore.Reload as a delegate outside Gateway.Run and passes it in later"
+        "bad-2": "Patches/GameDataInitializedPatch.cs captures EventStore.Reload as a delegate outside Gateway.Run and passes it in later",
+        "bad-3": "Commands/StatusCommands.cs calls EventStore.Reload() inside an interpolated string's hole"
       }
     },
     {
@@ -333,7 +334,8 @@
       "plant": {
         "bad": "Config/Settings.cs reads FaultInjection in a property outside any #if",
         "bad-2": "the cfg bind of FaultInjection sits under #if !DEBUG",
-        "bad-3": "the cfg bind of FaultInjection sits in the #else branch of #if DEBUG"
+        "bad-3": "the cfg bind of FaultInjection sits in the #else branch of #if DEBUG",
+        "bad-4": "Config/Settings.cs reads FaultInjection inside an interpolated string's hole outside any #if"
       }
     },
     {
