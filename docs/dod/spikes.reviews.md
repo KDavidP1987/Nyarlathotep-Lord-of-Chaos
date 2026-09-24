@@ -93,3 +93,54 @@ F1 advisory · Coverage: the project owner, reading the review page and Codex ro
 VERDICT: READY
 ### Dispositions
 - F1 · accepted · no change; anything the spikes reveal is recorded as an amendment during the build
+
+## Review 5 · 2026-09-24 · codex · plan commit 418ad3a (re-review owed by A18, gating 6.2)
+F1 `blocking` — Blind re-score: Considered—1 Purpose & typical use; 2 Design › Permissions; 5 Interfaces › Internal; 7 Design › States; 8 Use cases › Minimal stretch; 9 Use cases › Maximal stretch; 11 Design › UX; 13 Performance; 15 Out of scope. Gap—3 (`3.3`); 4 (`4.4`); 6 (`6.2`); 10 (`10.1`); 12 (`12.4`); 14 (`14.4`). All layers are applicable; no N/A claim was made.
+Fix: Add the single failing evidence command identified below for each unanswered gating probe, then update the coverage table.
+
+F2 `blocking` — `3.3` is unanswered by one evidence command: D4 covers live filesystem residue, D13/D19 cover source removal, and manual prose covers retained records, so no single command fails when any produced artifact lacks its declared storage, owner, retention, or deletion treatment.
+Fix: Add one inventory command that reconciles every artifact in Design › Data against observed repository/server/external paths and fails on an unowned, unlisted, undeleted, or wrongly retained artifact.
+
+F3 `blocking` — D3 is unverifiable by its stated command: after step 8 removes the harness, `pwsh tools/preflight.ps1` can prove the kept helpers are guarded but cannot prove the removed spike code used those helpers; the only pre-removal pass predates A13’s `DestroyUtility.Destroy*` coverage.
+Fix: Preserve and command-check the pre-removal source/tree or its exact captured structural-call listing with the amended A13 checker before deletion.
+
+F4 `blocking` — `4.4` has no evidence command: D6’s manual samples exercise two precedence pairs, but no single command fails if loading, enabled-state, argument, and alive-limit precedence—or the amendment-only exception authority—is reordered or omitted.
+Fix: Add a command-driven precedence test covering all adjacent conflicts and the “exception only by plan amendment” rule.
+
+F5 `blocking` — `6.2` has no single evidence command: D6 is manual, D12 observes only surviving logs, D14 self-tests selected tooling checks, and A18’s D18 observation cannot fail automatically if an unknown command begins executing indirectly or producing side effects.
+Fix: Add one dependency-failure command that injects or replays slow/down/garbage cases for each applicable collaborator and fails on execution, mutation, self-approval, or an incorrect user-visible result.
+
+F6 `blocking` — `10.1` remains unanswered for indirect paths: D2 fails on an unauthorized `[Command]`, but still passes if a hook, coroutine, initialization path, or another mod calls the spike operations without traversing an admin-only command.
+Fix: Extend a single authorization command to enumerate every spike entry point and fail unless each is reachable only through an admin-checked command, with no hook, schedule, or public callable path.
+
+F7 `blocking` — `12.4` is incomplete: D14 self-tests only manifest-backed preflight functions, while D19’s diff, D20’s rollback drill, D12’s log scan, D5’s sweep audit, and the gating commands themselves lack executable bad/silent/empty cases; prose rows do not supply the required command.
+Fix: Put every introduced check behind one selftest command with real-format good, bad, silent, and empty fixtures, including a fixture that reproduces each real run’s spelling and state.
+
+F8 `blocking` — D12 is unverifiable by its stated `cmd` evidence: sessions 4–11 have only retrospective manual “no exception” readings from overwritten logs, and absence of a `Nyarlathotep` stack frame does not prove that a kept-mechanism session did not crash.
+Fix: Reclassify D12 as mixed/manual evidence with preserved per-session process-exit and log artifacts, or rerun every kept-mechanism session while executing and retaining the command output before each restart.
+
+F9 `blocking` — `14.4` lacks one path-walk command: D15 walks repository and selected server paths, D4 separately compares server/LocalLow, and D20 separately creates a temporary worktree; no command covers the snapshot, worktree, plan store, review outputs, generated index, ignored build products, and external paths together.
+Fix: Add one aggregate path-walk command that derives paths step-by-step from the Build plan and fails when any shipped, written, regenerated, temporary, ignored, review, or plan-store path is absent from the manifest.
+
+F10 `advisory` — The Build plan’s citations are incomplete: step 2 captures D19’s base but omits D19; step 3 performs D4 evidence but omits D4; steps 4–5 run D12 but omit D12; and step 8 performs D1 and D4 checks but omits both.
+Fix: Add every actually satisfied D-item to each step’s `satisfies` line.
+
+F11 `advisory` — Concurrent scenario (`7.2`): the plan decides that tag/march is refused while clear drains, but A14–A15 removed both manual interleavings and D5 now verifies only clear-versus-clear.
+Fix: Record the untested interleaving as an honest amendment and add a reproducible delayed-drain check or explicitly delegate that behavior to the named foundation child.
+
+F12 `advisory` — Maximal-stretch scenario (`9.1`): “30 marked units alive plus three march groups” is internally inconsistent because march units are marked and share the 30-alive cap, leaving the actual maximal composition and degradation behavior unclear.
+Fix: State whether the maximum is 30 total units partitioned among groups or an additional group allowance, and align the cap test accordingly.
+
+F13 `advisory` — A14 is not honestly classified as `corrected`: it records an owner waiver and reduces acceptance because the check was difficult to perform, which is a requested scope change rather than correction of a false fact.
+Fix: Reclassify A14 as `requested` and identify the owner’s explicit acceptance of the lost concurrency evidence.
+
+F14 `advisory` — A17 is not merely `discovered`: it changes D12’s policy from “no spike session crashes” to accepting crashes from mechanisms retired after they crashed.
+Fix: Classify A17 as a requested acceptance-policy change, naming who authorized the exception and why it remains safe.
+
+F15 `advisory` — A19 is not honestly `discovered`: it explicitly records a builder lapse and retroactively weakens command evidence to unauditable per-session readings.
+Fix: Classify A19 as `defect` and retain the failed-evidence consequence instead of presenting the weaker substitution as equivalent command proof.
+
+9/15 layers · 43/49 probes
+VERDICT: REVISE
+### Dispositions
+- pending: the owner decides (Build step 9); findings F1–F7 and F9 re-open the gating answers the owner accepted in Review 4, F8 and F13–F15 concern amendments A14–A19
