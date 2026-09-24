@@ -14,6 +14,8 @@ namespace Nyarlathotep.Patches;
 [HarmonyPatch(typeof(DeathEventListenerSystem), nameof(DeathEventListenerSystem.OnUpdate))]
 internal static class DeathEventPatch
 {
+    static readonly Logic.FailureStreak Faults = new();
+
     [HarmonyPostfix]
     public static void OnUpdate(DeathEventListenerSystem __instance)
     {
@@ -33,10 +35,12 @@ internal static class DeathEventPatch
             {
                 deaths.Dispose();
             }
+            Faults.Ok();
         }
         catch (Exception ex)
         {
-            Core.Log.LogError($"[nyar] death event read failed: {ex.Message}");
+            // Once per failure streak: in a large fight this runs every frame.
+            if (Faults.Fail()) Core.Log.LogError($"[nyar] death event read failed: {ex.Message}");
         }
     }
 }

@@ -184,9 +184,9 @@ internal static class SpawnTracker
             if (!_entities.TryGetValue(tracked.Key, out var unit) || !unit.TryGetComponent<Translation>(out var pos)) continue;
             var distance = math.distance(pos.Value.xz, at.xz);
             if (distance > radius) continue;
-            var left = unit.TryGetComponent<LifeTime>(out var life)
+            int? left = unit.TryGetComponent<LifeTime>(out var life)
                 ? (int)(life.Duration - (unit.TryGetComponent<Age>(out var age) ? age.Value : 0f))
-                : -1;
+                : null;
             var level = unit.TryGetComponent<UnitLevel>(out var ul) ? ul.Level._Value : 0;
             var health = unit.TryGetComponent<Health>(out var h) ? h : default;
             var power = unit.TryGetComponent<UnitStats>(out var stats) ? stats.PhysicalPower._Value : 0f;

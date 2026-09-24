@@ -71,9 +71,11 @@ internal static class Core
             IsReady = true;
             Log.LogInfo($"Nyarlathotep initialized via {trigger} (attempt #{_initAttempts}). Prefab map has {prefabSystem.SpawnableNameToPrefabGuidDictionary.Count} entries.");
 
-            Services.SpawnTracker.BootSweep();
-            // Temporary 1 s tick for the spawn and despawn queues; step 5's EventScheduler replaces it.
+            // Temporary 1 s tick for the spawn and despawn queues; step 5's EventScheduler replaces it. It starts before
+            // the sweep, so a sweep that throws never leaves the queues without a tick.
             _tick = StartCoroutine(TickLoop());
+            try { Services.SpawnTracker.BootSweep(); }
+            catch (System.Exception ex) { Log.LogError($"[nyar] boot sweep failed: {ex.Message}; marked survivors expire on their own LifeTime"); }
         }
         catch (System.Exception ex)
         {

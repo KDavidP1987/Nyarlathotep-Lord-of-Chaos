@@ -258,6 +258,7 @@ public class SpawnLedgerTests
         Assert.Equal("+3 more", report[^1]);
         Assert.Equal(["no tracked units within 30 m"], AdminLines.DebugReport([], 30));
         Assert.Equal("CHAR_Bandit_Thug manual left 0s lvl 18 hp 150/150 pp 12", AdminLines.DebugUnit("CHAR_Bandit_Thug", null, -4, 18, 150, 150, 12));
+        Assert.Equal("CHAR_Bandit_Thug raid left NONE lvl 18 hp 90/150 pp 12", AdminLines.DebugUnit("CHAR_Bandit_Thug", "raid", null, 18, 90, 150, 12));
     }
 
     [Fact]

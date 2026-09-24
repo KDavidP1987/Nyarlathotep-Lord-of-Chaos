@@ -25,9 +25,10 @@ public static class AdminLines
     public static string Tracked(int tracked, int pendingSpawns, int pendingDespawns) =>
         $"tracked units: {tracked} (spawning {pendingSpawns}, despawning {pendingDespawns})";
 
-    /// <summary>One `debug here` line: prefab, event (or "manual"), lifetime left, level, Health and PhysicalPower.</summary>
-    public static string DebugUnit(string prefab, string? eventId, int leftSeconds, int level, int health, int maxHealth, int power) =>
-        $"{prefab} {eventId ?? "manual"} left {Math.Max(0, leftSeconds)}s lvl {level} hp {health}/{maxHealth} pp {power}";
+    /// <summary>One `debug here` line: prefab, event (or "manual"), lifetime left (null: the unit has no LifeTime, a
+    /// recipe fault shown as "left NONE"), level, Health and PhysicalPower.</summary>
+    public static string DebugUnit(string prefab, string? eventId, int? leftSeconds, int level, int health, int maxHealth, int power) =>
+        $"{prefab} {eventId ?? "manual"} left {(leftSeconds is { } s ? $"{Math.Max(0, s)}s" : "NONE")} lvl {level} hp {health}/{maxHealth} pp {power}";
 
     /// <summary>At most <see cref="DebugMaxLines"/> lines, then "+&lt;k&gt; more"; none → "no tracked units within
     /// &lt;r&gt; m".</summary>
