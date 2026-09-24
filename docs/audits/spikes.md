@@ -90,7 +90,7 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - in-game: not yet. The harness runs first in step 3, on the throwaway save
 - dod status: D1, D2, D3, D16 verified on dec14e1 (see the plan Log)
 
-### Step 3 · 2026-09-23 · (in progress)
+### Step 3 · 2026-09-23 to 2026-09-24 · f4687a1
 - snapshot: `-ServerWrites -Snapshot $env:TEMP
 yarspikes-before.tsv` at 2026-09-23 19:46:28, server stopped, 1633 files and folders (85 under LocalServer/)
 - setup: save-data-nyarspikes\Settingsdminlist.txt written (one line, the owner's SteamID; not quoted here); step-2 build deployed (Nyarlathotep.dll 45056 bytes); default host settings (port 9876)
@@ -133,3 +133,15 @@ yarspikes-before.tsv` at 2026-09-23 19:46:28, server stopped, 1633 files and fol
   - clear has no cooldown: `clear` "clear: 30 queued, 5 per batch", then "clear in progress (25 left)", "(15 left)", "(10 left)"
   - General.Enabled = false, restart: `tag 0` "General.Enabled is false" (Enabled wins over the argument); `clear` "nothing to clear", `sweep` "marked 0, listed 0, faults 0" and `inspect` "no native NPC within 10 m" all ran; `march 4` "General.Enabled is false". Enabled restored to true afterwards
   - D12 log check: "log check: 0 unhandled, 5 spike lines"; no exception in any boot since session 3
+- in-game coverage: steps 3–6 of the Build plan ran together in sessions 1–13 (S1 march, S2 restart, S3 carrier, D5 and D6). Verdicts: S1 go, S2 go, S3 go
+- close-out checks (2026-09-24, f4687a1):
+  - compile: `dotnet build Nyarlathotep/Nyarlathotep.sln -c Release --no-incremental -p:VRisingServerPath=C:\__nodeploy__` → 0 Warning(s), 0 Error(s)
+  - preflight: PREFLIGHT OK ("secrets: none", "spike code: present, allowed while spikes is in-progress"); `-Paths` "348 walked, all in manifest"
+  - D4 `-ServerWrites -Compare`: not run yet. The owner's game client holds LocalLow files open ("not hashable"); rerun with the client closed
+  - /code-review (inline, on bd6bc0d..f4687a1): the variant 4 re-add is idempotent (one entry per target); every new structural edit goes through AddComponentSafe (Age, DontSaveEntity, CanPreventDisableWhenNoPlayersInRange); sweep's save groups only read; the tag `keep` argument is range-checked. No finding beyond Codex's
+  - Codex read-only cross-inspection of bd6bc0d..HEAD (Nyarlathotep/), 3 rounds:
+    - round 1: variants 1–2 still executable after both follow-link aborts → fixed, A11 (a91db69)
+    - round 2: a destroyed admin entity left in AggroBuffer → the mover drops the entry and stops (f4687a1)
+    - round 3: no remaining defect
+  - Codex verdict: READY
+  - dod status: verified 12/20 (D1 D2 D3 D5 D6 D7 D8 D9 D10 D11 D14 D15 D16 pass lines; D12 fail recorded for the session 1 and 3 aborts)
