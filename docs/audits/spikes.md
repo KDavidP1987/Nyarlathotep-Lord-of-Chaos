@@ -122,3 +122,5 @@ yarspikes-before.tsv` at 2026-09-23 19:46:28, server stopped, 1633 files and fol
 - session 6 (build 6e1a94b): the probe shows the ranges persist and the admin is pruned from AggroBuffer at about 86–94 m; 60 m arrives. A7 re-adds the entry
 - session 7 (build 98132c0): re-adding does not hold beyond about 80 m; at 80 m, 6/10 units froze in Combat. No exception in any session since the rat anchor was retired
 - session 8 (build 98132c0): wall run; the target is pruned whenever the wall breaks line of sight; S1 verdict go (D7). No exception
+- session 8 crash check: fed on a marked `tag 1` thug, no crash and no exception; marker-only units are safe to feed on. Session 3 cause (owner): a picked-up rat becomes an inventory item, so the rat entity is destroyed under live references
+- S2 support (A8): `tag` adds PersistenceV2.DontSaveEntity to even-numbered units; `sweep` appends the saved and DontSaveEntity groups with each unit's remaining LifeTime

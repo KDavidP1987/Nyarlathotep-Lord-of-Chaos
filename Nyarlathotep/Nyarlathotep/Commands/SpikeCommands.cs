@@ -27,16 +27,19 @@ internal static class SpikeCommands
             Range("count", count, 1, 10) ?? Range("lifetime", lifetime, 30, SpikeUnits.MaxLifetime), count, () =>
         {
             var center = ctx.Event.SenderCharacterEntity.Read<Unity.Transforms.Translation>().Value;
-            int spawned = 0;
+            int spawned = 0, dontSave = 0;
             string lastError = null;
             for (int i = 0; i < count; i++)
             {
                 var angle = i * (2 * Math.PI / count);
                 var at = center + new Unity.Mathematics.float3((float)Math.Cos(angle) * 6f, 0, (float)Math.Sin(angle) * 6f);
                 var e = SpikeUnits.Spawn(SpikeMarch.Thug, at, lifetime, out var err);
-                if (e.Exists()) spawned++; else lastError = err;
+                if (!e.Exists()) { lastError = err; continue; }
+                spawned++;
+                // S2 (Build step 5): even-numbered units are also excluded from the save.
+                if (i % 2 == 0 && e.AddComponentSafe<ProjectM.PersistenceV2.DontSaveEntity>()) dontSave++;
             }
-            return $"tag: {spawned}/{count} spawned, lifetime {lifetime}s, {SpikeUnits.AliveCount()} alive" +
+            return $"tag: {spawned}/{count} spawned ({dontSave} DontSaveEntity), lifetime {lifetime}s, {SpikeUnits.AliveCount()} alive" +
                    (lastError is null ? "" : $"; last error: {lastError}");
         });
 

@@ -146,7 +146,23 @@ internal static class SpikeUnits
         }
         foreach (var f in faults) Core.Log.LogInfo($"[nyar-spike] sweep fault: {f}");
         var head = $"sweep: marked {marked.Count}, listed {listed.Count}, faults {faults.Count}";
-        return faults.Count == 0 ? head : head + ": " + string.Join("; ", faults);
+        if (faults.Count > 0) head += ": " + string.Join("; ", faults);
+        return all.Count == 0 ? head : head + " | " + SaveGroups(all);
+    }
+
+    /// <summary>S2 (Build step 5): the units grouped by DontSaveEntity, each with its remaining LifeTime.</summary>
+    static string SaveGroups(HashSet<Entity> all)
+    {
+        var saved = new List<string>();
+        var dontSave = new List<string>();
+        foreach (var e in all.OrderBy(x => x.Index))
+        {
+            var left = e.TryGetComponent<LifeTime>(out var life)
+                ? $"{math.max(0f, life.Duration - (e.TryGetComponent<Age>(out var age) ? age.Value : 0f)):0}s"
+                : "none";
+            (e.Has<ProjectM.PersistenceV2.DontSaveEntity>() ? dontSave : saved).Add($"{e.Index} {left}");
+        }
+        return $"saved {saved.Count} [{string.Join(", ", saved)}] dontsave {dontSave.Count} [{string.Join(", ", dontSave)}]";
     }
 
     /// <summary>Queue every spike unit and drain at most 5 per batch. Returns the reply line.</summary>
