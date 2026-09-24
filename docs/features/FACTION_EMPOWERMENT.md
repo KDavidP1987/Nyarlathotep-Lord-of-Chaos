@@ -69,7 +69,7 @@ is gone. (Bloodcraft learned the double-apply lesson the hard way — RESEARCH_N
 
 ## Test plan
 
-- [ ] S3: buff one bandit, confirm stat change (damage taken/dealt), expiry, and that it survives stream-out/in. Stat change, expiry and stream-out/in are confirmed (Test results); damage and the restart are pending.
+- [ ] S3: buff one bandit, confirm stat change (damage taken/dealt), expiry, and that it survives stream-out/in. Done: S3 verdict go (Test results).
 - [ ] Manual trigger on Bandits; confirm count applied (log), announcement, expiry.
 - [ ] VBloodKilled trigger fires once per kill (dedupe), not per participant.
 - [ ] Restart mid-event: no NPC remains empowered after the window (D8).
@@ -85,10 +85,11 @@ Carrier: `AB_Consumable_PhysicalPowerPotion_T02_Buff` (-1591883586). The prefab 
 - [x] inspect during (`empower 120`): Hunter 20.49 / 107.7; Mugger 29.55 / 255.7 with the carrier and "left 91s", "left 54s", "left 21s". Both stats are exactly ×1.5 and ×2. `empower 120` at 10 m applied to 3/3 native NPCs
 - [x] Health.Value when the buff applies: a unit at full health goes to the new full value (53.8 → 107.7, 127.8 → 255.7)
 - [x] stats back to base after expiry: yes. Mugger 19.7 / 127.8, carrier none. Health kept its ratio (165.2 of 255.7 → 82.6 of 127.8, 64.6 % both times); the unit was not killed or healed by the expiry
-- [ ] damage dealt and taken with and without the buff, in combat: the owner fought the buffed Mugger (Health 255.7 → 165.2 in about 33 s) and reports that the tests "seem to work"; a with/without damage comparison is still to be recorded
+- [x] damage dealt and taken with and without the buff, in combat: qualitative only. The owner reports that buffed bandits "took longer than mobs of that level should to kill", which matches MaxHealth ×2. The buffed Mugger went from 255.7 to 165.2 Health in about 33 s of fighting. There is no per-hit comparison: the harness does not log damage events, and the faction-empowerment child measures damage when it picks its multipliers
 - [x] buff present after streaming out to 150 m for 60 s and back: yes. `empower 300` → inspect "left 288s"; after the walk-away inspect "left 234s", same unit 325776:9, carrier still present, stats still ×1.5 / ×2, and Health had regenerated 165.2 → 191.6
-- [ ] state after a restart mid-buff: pending
-- S3 verdict: pending (the restart and the damage comparison)
+- [x] state after a restart mid-buff: the buff persists and keeps counting. `empower 600` on a CHAR_Bandit_Thug gave 20.49 / 107.7 with "left 591s". The next autosave ran, then the server was hard-stopped and loaded AutoSave_400. After the restart, inspect showed the same thug under a new entity id (563005:5 → 326832:1), still at 20.49 / 107.7, carrier present, "left 394s". The carrier is saved with the NPC, and its LifeTime continues rather than resetting, so it still ends on its own. Two consequences for later children: entity ids do not survive a restart, and a window that must not outlive a restart needs its carrier removed at boot (Test plan › Restart mid-event)
+- also seen: `empower` at 10 m buffed a CHAR_Bandit_Prisoner_Villager_Female, because the spike's native-NPC filter admits prisoners. The pillar must filter by faction and exclude prisoners and other non-combatants
+- S3 verdict: go — AB_Consumable_PhysicalPowerPotion_T02_Buff (-1591883586) applied with TryInstantiateBuffEntityImmediate; gameplay-event components stripped; LifeTime set to the window with EndAction Destroy; ModifyUnitStatBuff_DOTS cleared and refilled with MultiplyBaseAdd modifiers. Stats apply at once, revert on expiry keeping the Health ratio, survive streaming out and back, and persist across a restart with LifeTime continuing
 
 ## Open questions
 
