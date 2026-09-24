@@ -1,16 +1,7 @@
 # Audit — spikes
 
 Build plan steps 1–9 of docs/dod/spikes.md. Each step has one "### Step <n>" entry under "## Pre-audit"
-and one under "### Step 9 · 2026-09-24 · 01e47cc
-- git status: clean (0 entries), HEAD 01e47cc
-- compile: `dotnet build … -p:VRisingServerPath=C:\__nodeploy__` → 0 Warning(s), 0 Error(s)
-- preflight: PREFLIGHT OK; "spike code: none", "secrets: none", "commands: 0 admin-only, 1 public (allow-listed)"
-- dod status: spikes 16/20 verified, 0 problems. Unverified: D5 (mid-drain `tag 1` waived by the owner in session 2; the `march 2` clear check became impossible when A11 retired variant 2), D12 (fail: sessions 1 and 3 aborted), D17 and D20 (this step)
-- server: not running
-- plan read: Build plan step 9 (D17, D20), Closure checklist; D5 and D12 need the owner's decision before close
-- rollback range: <pre-child> = 3ba32a0 (parent of the step-1 commit 8f4576c); <drill base> = the commit that adds this entry, recorded in Post-audit › Step 9
-
-## Post-audit"; every post-audit entry carries a "Codex verdict:" line (D17).
+and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line (D17).
 
 ## Pre-audit
 ### Step 1 · 2026-09-23 · 3ba32a0
@@ -64,6 +55,15 @@ and one under "### Step 9 · 2026-09-24 · 01e47cc
 - dod status: spikes 12/20 verified, 0 problems
 - server: not running; the owner's game client closed
 - plan read: Build plan step 8 (D13, D15, D18, D19), Rollout › Rollback; step-2 parent for D19 is 50e196a
+
+### Step 9 · 2026-09-24 · 01e47cc
+- git status: clean (0 entries), HEAD 01e47cc
+- compile: `dotnet build … -p:VRisingServerPath=C:\__nodeploy__` → 0 Warning(s), 0 Error(s)
+- preflight: PREFLIGHT OK; "spike code: none", "secrets: none", "commands: 0 admin-only, 1 public (allow-listed)"
+- dod status: spikes 16/20 verified, 0 problems. Unverified: D5 (mid-drain `tag 1` waived by the owner in session 2; the `march 2` clear check became impossible when A11 retired variant 2), D12 (fail: sessions 1 and 3 aborted), D17 and D20 (this step)
+- server: not running
+- plan read: Build plan step 9 (D17, D20), Closure checklist; D5 and D12 need the owner's decision before close
+- rollback range: <pre-child> = 3ba32a0 (parent of the step-1 commit 8f4576c); <drill base> = the commit that adds this entry, recorded in Post-audit › Step 9
 
 ## Post-audit
 ### Step 1 · 2026-09-23 · (this commit)

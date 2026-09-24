@@ -122,7 +122,8 @@
         "bad-5": "the helper's Prefab guard nested inside an if (false) block",
         "bad-6": "the helper guards a different entity (other.Has<Prefab>()) than the one it destroys",
         "bad-7": "the helper reassigns the entity between the guard and the DestroyEntity call",
-        "bad-8": "a DestroyEntity call in Services/Leak.cs placed after a string holding \"//\" on the same line"
+        "bad-8": "a DestroyEntity call in Services/Leak.cs placed after a string holding \"//\" on the same line",
+        "bad-9": "a DestroyUtility.Destroy(Core.EntityManager, e) call planted in Services/Leak.cs (spikes A13)"
       }
     },
     {

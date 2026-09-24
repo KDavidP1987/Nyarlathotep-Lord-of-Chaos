@@ -325,21 +325,22 @@ function Test-CheckStructuralEdits([string]$Root) {
     # (the coroutine host in Core.cs) takes none and is not a structural edit.
     # The fenced helpers themselves (AddComponentSafe, RemoveComponentSafe, AddBufferSafe, DestroySafe) are the
     # sanctioned route and may be called anywhere.
-    $rx = '\.(AddComponent(?!Safe\b)\w*|RemoveComponent(?!Safe\b)\w*|AddBuffer|DestroyEntity)\s*(<[^>]*>)?\s*\(\s*(?<arg>[^,)\s]+)'
+    # DestroyUtility.Destroy*(em, entity) is the deferred destroy; its entity is the second argument (spikes A13).
+    $rx = '(?:\.(?<op>AddComponent(?!Safe\b)\w*|RemoveComponent(?!Safe\b)\w*|AddBuffer|DestroyEntity)\s*(?:<[^>]*>)?\s*\(\s*|\b(?<op>DestroyUtility\.Destroy\w*)\s*\(\s*[^,()]+,\s*)(?<arg>[^,)\s]+)'
     $fence = "$PkgRel/EntityExtensions.cs"
     $bad = @(); $guarded = 0
     foreach ($f in $cs) {
         $text = Remove-CsComments (Read-Text $Root $f)
         $calls = [regex]::Matches($text, $rx)
         if ($calls.Count -eq 0) { continue }
-        if ($f -ne $fence) { $bad += "$($calls[0].Groups[1].Value) in $f"; continue }
+        if ($f -ne $fence) { $bad += "$($calls[0].Groups['op'].Value) in $f"; continue }
         # Inside the fence, every structural call must be preceded, in its own method, by an early
         # refusal of Prefab entities.
         foreach ($c in $calls) {
             $start = Get-EnclosingMethodStart $text $c.Index
-            if ($start -lt 0) { $bad += "$($c.Groups[1].Value) in $f outside a method"; continue }
+            if ($start -lt 0) { $bad += "$($c.Groups['op'].Value) in $f outside a method"; continue }
             $before = $text.Substring($start, $c.Index - $start)
-            if (-not (Test-PrefabRefusal $before $c.Groups['arg'].Value)) { $bad += "$($c.Groups[1].Value) in $f without an earlier Prefab refusal" }
+            if (-not (Test-PrefabRefusal $before $c.Groups['arg'].Value)) { $bad += "$($c.Groups['op'].Value) in $f without an earlier Prefab refusal" }
             else { $guarded++ }
         }
     }
