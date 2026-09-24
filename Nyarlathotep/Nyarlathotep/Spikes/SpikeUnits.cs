@@ -47,6 +47,10 @@ internal static class SpikeUnits
 
         if (!entity.AddComponentSafe<LifeTime>()) { error = "LifeTime could not be added"; entity.DestroySafe(); return Entity.Null; }
         entity.Write(new LifeTime { Duration = lifetime, EndAction = LifeTimeEndAction.Destroy });
+        // A10: an immediate spawn has no Age, and without it LifeTime never counts down (S2 session 10: `tag 2 30`
+        // units still alive after 60 s, and 600 s units alive after 17 min).
+        if (!entity.Has<Age>() && !entity.AddComponentSafe<Age>()) { error = "Age could not be added"; entity.DestroySafe(); return Entity.Null; }
+        entity.Write(new Age { Value = 0f });
 
         if (!entity.AddComponentSafe<DestroyWhenDisabled>()) { error = "DestroyWhenDisabled could not be added"; entity.DestroySafe(); return Entity.Null; }
 

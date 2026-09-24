@@ -125,3 +125,5 @@ read the original post-mortem. `Beelz` = `..\Beelzebub Lord of Gluttony\Beelzebu
 33. Test on the local dedicated server and log results in the feature doc. Unverified = "experimental".
 34. Trace live before theorising — Beelzebub wasted eight versions on an untested theory
     (`Beelz docs/CHAIN_AUDIT.md`). Add a verbose-logging config flag early.
+
+- **LifeTime needs Age (spikes A10, 2026-09-24).** A unit made with `InstantiateEntityImmediate` has no `Age`, so a `LifeTime` written on it never expires, across restarts too. Add `Age` with the LifeTime, or spawn through `UnitSpawnerUpdateSystem.SpawnUnit` as every reference mod does. Verify expiry in game before relying on it.
