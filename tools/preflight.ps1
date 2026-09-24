@@ -986,10 +986,15 @@ function Get-ParenEnd([string]$Text, [int]$Open) {
     return $Text.Length
 }
 
-# Every method marked [Mutating] in a .cs file under Commands/, Patches/ or Services/ is a mutating method, and
-# every file declaring one is a service the gateway dispatches to; those services may call each other (plan D11:
-# "other than Logic/ActionGateway.cs and the services it dispatches to"). Any other file in those directories may
-# name a mutating method only inside the parentheses of a Gateway.Run(...) call; every named use inside such a call, in any of the
+# The services the gateway dispatches to, by name (plan D11 lists EventRuntime, SpawnTracker, WaveAction and
+# Persistence; EventStore holds the definition load). Only these may declare [Mutating] methods, and they may call
+# each other directly ("other than Logic/ActionGateway.cs and the services it dispatches to"). A [Mutating]
+# declaration anywhere else fails, so no file can exempt itself by declaring one.
+$script:DispatchedServices = @('EventRuntime', 'SpawnTracker', 'WaveAction', 'Persistence', 'EventStore') |
+    ForEach-Object { "$PkgRel/Services/$_.cs" }
+
+# Every method marked [Mutating] in a dispatched service is a mutating method. Any other file under Commands/,
+# Patches/ or Services/ may name a mutating method only inside the parentheses of a Gateway.Run(...) call; every named use inside such a call, in any of the
 # walked files, is a call site. A use is the identifier anywhere except its own declaration, so a method group
 # captured outside Gateway.Run and passed in later fails too (foundation D11, Epic D36).
 function Test-CheckGatewayOnly([string]$Root) {
@@ -1009,7 +1014,9 @@ function Test-CheckGatewayOnly([string]$Root) {
         }
     }
     if ($mutating.Count -eq 0) { return New-Result $false 'gateway: no [Mutating] method found under Commands/, Patches/ or Services/' }
-    $dispatched = @($mutating.Values | ForEach-Object { $_ } | Sort-Object -Unique)
+    $dispatched = $script:DispatchedServices
+    $strays = @($mutating.Values | ForEach-Object { $_ } | Sort-Object -Unique | Where-Object { $dispatched -notcontains $_ })
+    if ($strays) { return New-Result $false "gateway: [Mutating] declared outside the dispatched services in $($strays -join ', ')" }
     $sites = 0; $bad = @()
     foreach ($f in $files) {
         $t = $texts[$f]

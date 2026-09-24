@@ -17,7 +17,7 @@ public static class TextSink
     {
         var text = (raw ?? "").Trim();
         error = null;
-        if (text.Length is 0 or > AnnounceMax || text.Any(Forbidden))
+        if (text.Length is 0 or > AnnounceMax || text.EnumerateRunes().Any(Forbidden))
         {
             error = AnnounceRule;
             return null;
@@ -29,7 +29,7 @@ public static class TextSink
     /// (never inside a surrogate pair).</summary>
     public static string Name(string? raw)
     {
-        var kept = new string((raw ?? "").Where(c => !Forbidden(c)).ToArray()).Trim();
+        var kept = Keep(raw).Trim();
         var info = new StringInfo(kept);
         return info.LengthInTextElements <= NameMax ? kept : info.SubstringByTextElements(0, NameMax);
     }
@@ -42,16 +42,27 @@ public static class TextSink
     public static string WireValue(string? raw)
     {
         var sb = new StringBuilder();
-        foreach (var c in raw ?? "")
+        foreach (var r in Keep(raw).EnumerateRunes())
         {
-            if (Forbidden(c) || c is '=' or ';' or ':') continue;
-            sb.Append(char.IsWhiteSpace(c) ? '_' : c);
+            if (r.Value is '=' or ';' or ':') continue;
+            if (Rune.IsWhiteSpace(r)) sb.Append('_');
+            else sb.Append(r.ToString());
         }
         return sb.Length == 0 ? "-" : sb.ToString();
     }
 
-    // Control characters, format characters (bidi overrides, zero-width marks) and the Unicode line and paragraph
-    // separators: each can break a line or reorder what a reader sees.
-    static bool Forbidden(char c) => c is '<' or '>' || char.GetUnicodeCategory(c) is
+    // The text without its forbidden characters, judged per Unicode scalar so a character outside the Basic
+    // Multilingual Plane (a surrogate pair in UTF-16) is judged as the one character it is. A lone surrogate is
+    // replaced by U+FFFD by EnumerateRunes, which is harmless.
+    static string Keep(string? raw)
+    {
+        var sb = new StringBuilder();
+        foreach (var r in (raw ?? "").EnumerateRunes()) if (!Forbidden(r)) sb.Append(r.ToString());
+        return sb.ToString();
+    }
+
+    // Control characters, format characters (bidi overrides, zero-width marks, tag characters) and the Unicode line
+    // and paragraph separators: each can break a line or change what a reader sees.
+    static bool Forbidden(Rune r) => r.Value is '<' or '>' || Rune.GetUnicodeCategory(r) is
         UnicodeCategory.Control or UnicodeCategory.Format or UnicodeCategory.LineSeparator or UnicodeCategory.ParagraphSeparator;
 }

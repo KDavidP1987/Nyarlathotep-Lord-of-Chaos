@@ -37,6 +37,7 @@ public class TextSinkTests
     [InlineData("para\u2029break")]
     [InlineData("\u202Ereversed")]
     [InlineData("zero\u200Bwidth")]
+    [InlineData("tag\U000E0001\U000E0041")]
     public void Empty_multiline_control_or_markup_announcements_are_refused(string? raw)
     {
         Assert.Null(TextSink.Announcement(raw, out var error));
@@ -48,6 +49,7 @@ public class TextSinkTests
     [InlineData("<color=red>Vlad</color>", "color=redVlad/color")]
     [InlineData("Vl\nad\t", "Vlad")]
     [InlineData("\u202EdalV\u2028", "dalV")]
+    [InlineData("Vl\U000E0001ad\U000E007F", "Vlad")]
     [InlineData("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "ABCDEFGHIJKLMNOPQRST")]
     [InlineData("", "")]
     public void Names_for_chat_and_the_log_lose_markup_and_control_characters_and_are_cut_to_20(string raw, string name)
@@ -70,6 +72,7 @@ public class TextSinkTests
     [InlineData("<b>\n</b>", "b/b")]
     [InlineData("==;;::", "-")]
     [InlineData(null, "-")]
+    [InlineData("\U000E0020Bat\u202E", "Bat")]
     public void Names_for_a_wire_value_are_also_mapped(string? raw, string wire)
     {
         Assert.Equal(wire, TextSink.WireName(raw));
