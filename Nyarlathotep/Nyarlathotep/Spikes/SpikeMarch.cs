@@ -79,9 +79,9 @@ internal static class SpikeMarch
         Core.Log.LogInfo($"[nyar-spike] march g{group.Id}: {group.Units.Count} spawned, applying variant {variant}");
         foreach (var unit in group.Units)
         {
-            if (variant is 1 or 2) FollowAnchor(unit, group.Anchor);
-            else LeashToDestination(unit, destination, distance);
-            Core.Log.LogInfo($"[nyar-spike] march g{group.Id}: variant {variant} set on {unit.Index}:{unit.Version}");
+            if (!unit.Exists()) { Core.Log.LogWarning($"[nyar-spike] march g{group.Id}: {unit.Index}:{unit.Version} gone before the lever"); continue; }
+            var set = variant is 1 or 2 ? FollowAnchor(unit, group.Anchor) : LeashToDestination(unit, destination, distance);
+            if (set) Core.Log.LogInfo($"[nyar-spike] march g{group.Id}: variant {variant} set on {unit.Index}:{unit.Version}");
         }
 
         _stopRequested = false;
@@ -101,17 +101,19 @@ internal static class SpikeMarch
         anchor.Write(speeds);
     }
 
-    static void FollowAnchor(Entity unit, Entity anchor)
+    static bool FollowAnchor(Entity unit, Entity anchor)
     {
-        if (!unit.TryGetComponent<Follower>(out var follower)) { Core.Log.LogWarning($"[nyar-spike] {unit.Index} has no Follower"); return; }
+        if (!anchor.Exists()) { Core.Log.LogWarning($"[nyar-spike] anchor gone before {unit.Index} could follow it"); return false; }
+        if (!unit.TryGetComponent<Follower>(out var follower)) { Core.Log.LogWarning($"[nyar-spike] {unit.Index} has no Follower"); return false; }
         follower.Followed._Value = anchor;
         follower.ModeModifiable._Value = 0;   // as Bloodcraft FamiliarBindingSystem.cs:453-457 does for a set Followed
         unit.Write(follower);
+        return true;
     }
 
-    static void LeashToDestination(Entity unit, float3 destination, int distance)
+    static bool LeashToDestination(Entity unit, float3 destination, int distance)
     {
-        if (!unit.TryGetComponent<AggroConsumer>(out var aggro)) { Core.Log.LogWarning($"[nyar-spike] {unit.Index} has no AggroConsumer"); return; }
+        if (!unit.TryGetComponent<AggroConsumer>(out var aggro)) { Core.Log.LogWarning($"[nyar-spike] {unit.Index} has no AggroConsumer"); return false; }
         aggro.PreCombatPosition = destination;
         aggro.MaxDistanceFromPreCombatPosition = distance + 50;
         aggro.ProximityRadius = distance + 50;
@@ -122,6 +124,7 @@ internal static class SpikeMarch
             state.Value = GenericEnemyState.Return;
             unit.Write(state);
         }
+        return true;
     }
 
     static IEnumerator Mover(Group group)

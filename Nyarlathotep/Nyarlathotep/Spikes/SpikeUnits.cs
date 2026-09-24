@@ -184,7 +184,7 @@ internal static class SpikeUnits
             }
             batch++;
             Core.Log.LogInfo($"[nyar-spike] clear batch {batch}: destroyed {destroyed}, {_clearQueue.Count} left");
-            yield return new WaitForSeconds(ClearBatchSeconds);
+            if (_clearQueue.Count > 0) yield return new WaitForSeconds(ClearBatchSeconds);
         }
         _spawned.RemoveAll(e => !e.Exists());
         _draining = false;
