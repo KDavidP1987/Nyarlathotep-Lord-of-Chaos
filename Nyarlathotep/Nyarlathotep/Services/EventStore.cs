@@ -19,9 +19,17 @@ internal static class EventStore
     /// <summary>Second in Core.TryInitialize, after Persistence. Never throws.</summary>
     internal static void Initialize()
     {
-        if (!Persistence.Events.Exists()) Seed();
-        var reply = Reload();
-        Core.Log.LogInfo($"[nyar] events: {reply}");
+        try
+        {
+            if (!Persistence.Events.Exists()) Seed();
+            var reply = Reload();
+            Core.Log.LogInfo($"[nyar] events: {reply}");
+        }
+        catch (Exception ex)
+        {
+            // No definitions is a safe state: nothing can start. The admin reloads once the cause is fixed.
+            Core.Log.LogError($"[nyar] events.json load failed: {ex.Message}; no events loaded");
+        }
     }
 
     /// <summary>Loads events.json and applies it. Returns the `.nyar event reload` reply: "reloaded: &lt;v&gt; valid,
