@@ -51,6 +51,26 @@ On a test server: spawn 5 bandits 100 m from a marker. Try, in order:
 Record for each: do they arrive, how do they path, do they get stuck, do they engage on arrival, what
 happens at a wall. Write results here.
 
+## Test results
+
+### S1 march spike · 2026-09-23 to 2026-09-24 · spikes step 3 sessions 1–3 and 5–7 (throwaway save; in progress)
+
+Unit: CHAR_Bandit_Thug (-301730941), spawned `distance` m north of the admin with LifeTime 600, DestroyWhenDisabled and `CanPreventDisableWhenNoPlayersInRange.CanDisable = false`. Without that last setting, units spawned about 100 m from any player were disabled and deleted within 5 s (session 2). Open flat ground in Farbane.
+
+- [x] variant 1 (Follower.Followed = a held-still CHAR_Critter_Rat (-2072914343) at the admin): arrived no. The unit stayed at the spawn point in state Follow, then teleported beside the anchor; it never walked. Engaged on arrival no. Session 1 aborted the server (see crashes)
+- [x] variant 2 (the same rat anchor stepped 10 m/s from the spawn point to the admin): arrived no. The rat moved; the follower stayed at the spawn point (d=100.4) and jumped to about 4 m at 11 s and 51 s. Path none (teleport). Engaged on arrival no
+- [x] variant 3 (PreCombatPosition = the admin's position, leash raised, BehaviourTreeState forced to Return): arrived no. Units stayed Idle for 60 s and more at 100, 40 and 20 m; the owner saw them mill in place. Stuck at the spawn point
+- [x] variant 4 (aggro chase: AggroConsumer ProximityRadius and MaxDistanceFromPreCombatPosition and AggroModifiers radius factors = distance + 50, the admin added to AggroBuffer): walks by the game's own pathing at about 3 m/s and fights on arrival, but only from short range:
+  - 30 m: 5/5 arrived in 13 s (Idle → Combat at 5 s), engaged yes
+  - 60 m: 4/5 arrived in about 20 s; one stayed at the spawn point in state Combat
+  - 80 m: 4/10 arrived in about 30 s and engaged; 6/10 took no target and stood frozen in state Combat at 80 m for 180 s (the owner saw 4–5, sweep counted 10)
+  - 100 m (×7 runs) and 150 m: arrived no. The units enter Combat and close 6–15 m, then at about 86–94 m the game removes the admin from AggroBuffer (the admin sees a brief in-combat flag). The units then freeze in Combat or walk back to spawn. Re-adding the entry every second (A7) does not hold: the next second it is gone again, so the game clears far targets on its own update
+  - the widened ranges are not reset after spawn (the probe read 130–200 on every tick)
+- [ ] wall run: pending. Run variant 4 at 40–50 m with a player-built wall across the path
+- crashes: two server aborts ("The entity does not exist … AppendDestroyedEntityRecordError", Burst), both with follow-linked units and the rat anchor alive. Session 1 came during `march 2`; session 3 came as the owner picked up the rat after devouring a follow-linked thug. Variants 3 and 4 caused none. Follow links to non-player anchors are not used again
+- finding: a unit that loses its target freezes in state Combat until its LifeTime ends. A siege spawner needs a stuck-unit rule
+- S1 verdict: pending (wall run and the owner's design decision)
+
 ## Open questions
 
 - Should clans get a warning lead time (e.g. 60 s) before the first wave?
