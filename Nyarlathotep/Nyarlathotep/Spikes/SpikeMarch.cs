@@ -82,7 +82,12 @@ internal static class SpikeMarch
         foreach (var unit in group.Units)
         {
             if (!unit.Exists()) { Core.Log.LogWarning($"[nyar-spike] march g{group.Id}: {unit.Index}:{unit.Version} gone before the lever"); continue; }
-            var set = variant is 1 or 2 ? FollowAnchor(unit, group.Anchor) : LeashToDestination(unit, destination, distance);
+            var set = variant switch
+            {
+                1 or 2 => FollowAnchor(unit, group.Anchor),
+                3 => LeashToDestination(unit, destination, distance),
+                _ => Hunt(unit, admin, distance),
+            };
             if (set) Core.Log.LogInfo($"[nyar-spike] march g{group.Id}: variant {variant} set on {unit.Index}:{unit.Version}");
         }
 
@@ -135,6 +140,29 @@ internal static class SpikeMarch
             state.Value = GenericEnemyState.Return;
             unit.Write(state);
         }
+        return true;
+    }
+
+    /// <summary>Variant 4 (spikes A5): an aggro chase onto the admin. The aggro and leash ranges are widened to
+    /// cover the distance (TideOfWar SpawnForWar/Core.cs:389-412) and the admin is put in the unit's AggroBuffer
+    /// (Bloodcraft Utilities/Familiars.cs:826-859), so the game's own combat AI walks the unit there.</summary>
+    static bool Hunt(Entity unit, Entity target, int distance)
+    {
+        if (!target.Exists()) { Core.Log.LogWarning($"[nyar-spike] hunt target gone before {unit.Index}"); return false; }
+        if (!unit.TryGetComponent<AggroConsumer>(out var aggro)) { Core.Log.LogWarning($"[nyar-spike] {unit.Index} has no AggroConsumer"); return false; }
+        var reach = distance + 50;
+        aggro.MaxDistanceFromPreCombatPosition = reach;
+        aggro.ProximityRadius = reach;
+        aggro.Active._Value = true;
+        unit.Write(aggro);
+        if (unit.TryGetComponent<AggroModifiers>(out var modifiers))
+        {
+            modifiers.CircleRadiusFactor = new ModifiableFloat(reach);
+            modifiers.ConeRadiusFactor = new ModifiableFloat(reach);
+            unit.Write(modifiers);
+        }
+        if (!Core.EntityManager.HasComponent<AggroBuffer>(unit)) { Core.Log.LogWarning($"[nyar-spike] {unit.Index} has no AggroBuffer"); return false; }
+        Core.EntityManager.GetBuffer<AggroBuffer>(unit).Add(new AggroBuffer { Entity = target, DamageValue = 500f, Weight = 1f });
         return true;
     }
 

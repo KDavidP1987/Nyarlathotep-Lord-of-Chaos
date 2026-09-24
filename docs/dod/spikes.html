@@ -43,7 +43,7 @@ a:focus-visible { outline:3px solid var(--accent); outline-offset:2px; border-ra
 </head>
 <body>
 <h1>Spikes S1-S3, march, restart marker, carrier buff</h1>
-<p class="sub"><span class="mono">spikes</span> · in-progress · size M · parent nyarlathotep · verified 5/20 · prediction rate 91 %</p>
+<p class="sub"><span class="mono">spikes</span> · in-progress · size M · parent nyarlathotep · verified 5/20 · prediction rate 83 %</p>
 <p class="legend mono">legend: D item · A amendment · S assumption · F review finding · P proposal · W work package · n.m layer.probe</p>
 
 <h2>Work breakdown</h2>
@@ -66,11 +66,11 @@ a:focus-visible { outline:3px solid var(--accent); outline-offset:2px; border-ra
 </div>
 
 <h2>Amendments</h2>
-<h3>discovered · 2</h3>
+<h3>discovered · 3</h3>
 <div class="scroll">
 <table><caption>discovered amendments</caption>
 <thead><tr><th scope="col">id</th><th scope="col">date</th><th scope="col">layer</th><th scope="col">ops</th><th scope="col">package</th><th scope="col">why</th></tr></thead>
-<tbody><tr><td class="mono">A3</td><td class="mono">2026-09-23</td><td class="mono">4.1</td><td class="mono">~D6</td><td class="mono">—</td><td>the march anchor (variants 1 and 2) is itself a spawned spike unit, so count 10 made 11 units in one command against the 10-per-command limit; march count is now 1–9 for variants 1 and 2 and D6 checks that range (Codex cross-inspection, step 2 post-audit)</td></tr><tr><td class="mono">A4</td><td class="mono">2026-09-23</td><td class="mono">6.3</td><td class="mono">~D4</td><td class="mono">—</td><td>the owner keeps a test world (world1) at C:\VRising-LocalServer, run by the same server executable with -persistentDataPath; the plan&#39;s D4 snapshot covered only the server directory and LocalLow, so a spike touching that world would have gone unseen. D4 now snapshots and hashes C:\VRising-LocalServer and fails on any change there (&quot;owner data touched&quot;; ServerWrites bad-8)</td></tr></tbody>
+<tbody><tr><td class="mono">A3</td><td class="mono">2026-09-23</td><td class="mono">4.1</td><td class="mono">~D6</td><td class="mono">—</td><td>the march anchor (variants 1 and 2) is itself a spawned spike unit, so count 10 made 11 units in one command against the 10-per-command limit; march count is now 1–9 for variants 1 and 2 and D6 checks that range (Codex cross-inspection, step 2 post-audit)</td></tr><tr><td class="mono">A4</td><td class="mono">2026-09-23</td><td class="mono">6.3</td><td class="mono">~D4</td><td class="mono">—</td><td>the owner keeps a test world (world1) at C:\VRising-LocalServer, run by the same server executable with -persistentDataPath; the plan&#39;s D4 snapshot covered only the server directory and LocalLow, so a spike touching that world would have gone unseen. D4 now snapshots and hashes C:\VRising-LocalServer and fails on any change there (&quot;owner data touched&quot;; ServerWrites bad-8)</td></tr><tr><td class="mono">A5</td><td class="mono">2026-09-24</td><td class="mono">6.1</td><td class="mono">~D6 ~D7</td><td class="mono">—</td><td>sessions 2 and 3 showed that none of the planned march levers walks a unit: variant 1 teleports the follower to the anchor, variant 2 leaves it in place then teleports it, and variant 3 leaves it Idle; the research pass found that the only long walk in the reference mods is an aggro chase onto an entity. Variant 4 (aggro chase onto the admin) is added, march variant is 1–4, and D7 records it</td></tr></tbody>
 </table>
 </div>
 <h3>external · 2</h3>
@@ -82,11 +82,12 @@ a:focus-visible { outline:3px solid var(--accent); outline-offset:2px; border-ra
 </div>
 
 <h2>Prediction rate</h2>
-<p class="absent">no version is declared in the Log, so there is no trend — the rate is 91 %</p>
+<p class="absent">no version is declared in the Log, so there is no trend — the rate is 83 %</p>
 
 <h2>Log notes</h2>
 <p><span class="k mono">2026-09-23</span>review 2 (codex) REVISE, 9 findings; D4 snapshot compare, D13 Compile items, 1 s cooldown, D5 interleavings, failing cases for every check, D20 rollback drill · plan</p>
 <p><span class="k mono">2026-09-23</span>review 3 (codex) REVISE at the 3-round cap; F3 applied (D19 compares the Compile-item set), F6 applied (D20 range recorded before the drill, helpers-only revert drilled); taken to human review</p>
 <p><span class="k mono">2026-09-23</span>step 3 session 1: D5 partly run (tag, limit, sweep and clear worked; mid-drain checks not reachable at 0.25 s batches); `march 2` aborted the server (Burst: entity does not exist) after the first follower was set, so D12 cannot pass on this session; march lever reordered and instrumented, clear batches 1 s apart; see docs/audits/spikes.md Step 3</p>
+<p><span class="k mono">2026-09-24</span>step 3 sessions 2 and 3: D5 passed except the mid-drain `tag 1`, which the owner waived; `march 3` units were removed by DestroyWhenDisabled when far from players (fixed by CanDisable = false) and then stood Idle; variants 1 and 2 teleport; a second server abort followed the owner picking up the spike rat anchor (a pick-up critter) after a follow-linked bandit was devoured; A5 adds variant 4</p>
 </body>
 </html>
