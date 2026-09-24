@@ -439,3 +439,8 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-24 · D10 · pass · manual: every component and system type named in Spikes/*.cs and Commands/SpikeCommands.cs has a row in docs/RESEARCH_NOTES.md › Spike contracts with all four columns · none · claude
 - 2026-09-24 · D15 · pass · cmd: pwsh tools/preflight.ps1 -Paths → "paths: 348 walked, all in manifest" (after deploying build c4473bf and sessions 11–13) · aed615e · claude
 - 2026-09-24 · note · D4 compare after sessions 1–13 (client closed): "server writes: 19 created, 38 changed, 0 deleted, all in manifest, no other save"; the -AfterCleanup run follows step 8
+- 2026-09-24 · D4 · pass · cmd: pwsh tools/preflight.ps1 -ServerWrites -Compare $env:TEMP\nyarspikes-before.tsv -AfterCleanup → "server writes: 1 created, 38 changed, 0 deleted, all in manifest, no other save" · 75efa02 · claude
+- 2026-09-24 · D13 · pass · cmd: pwsh tools/preflight.ps1 → "spike code: none" · 75efa02 · claude
+- 2026-09-24 · D15 · pass · cmd: pwsh tools/preflight.ps1 -Paths → "paths: 343 walked, all in manifest" (after step 8) · 75efa02 · claude
+- 2026-09-24 · D18 · pass · manual: the no-spike build booted ("Nyarlathotep initialized"); `.nyar spike sweep` ran nothing (VCF gave no reply and the log has no spike line; the plan expected an "unknown command" reply); save-data-nyarspikes deleted and D4 -AfterCleanup clean; docs/audits/spikes.md › Post-audit › Step 8 · 75efa02 · claude
+- 2026-09-24 · D19 · pass · cmd: git diff --name-only 50e196a HEAD -- Nyarlathotep/ → "Nyarlathotep/Nyarlathotep/EntityExtensions.cs"; compile items → "compile items: 6 = base" · 75efa02 · claude

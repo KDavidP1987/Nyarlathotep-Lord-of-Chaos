@@ -166,3 +166,29 @@ yarspikes-before.tsv` at 2026-09-23 19:46:28, server stopped, 1633 files and fol
     - round 3: no remaining defect
   - Codex verdict: READY
   - dod status: verified 12/20 (D1 D2 D3 D5 D6 D7 D8 D9 D10 D11 D14 D15 D16 pass lines; D12 fail recorded for the session 1 and 3 aborts)
+
+### Step 4 · 2026-09-24 · (with step 3)
+- covered by Post-audit › Step 3: the march code and every change to it (A5–A7, A11 and the round 2 fix) were in the bd6bc0d..f4687a1 diff that Codex inspected over three rounds; in-game results in docs/features/SIEGES.md › Test results
+- Codex verdict: READY (shared with step 3)
+
+### Step 5 · 2026-09-24 · (with step 3)
+- covered by Post-audit › Step 3: the S2 code (A8–A10) was in the same inspected diff; results in docs/features/EVENT_SPAWNS.md › Test results
+- Codex verdict: READY (shared with step 3)
+
+### Step 6 · 2026-09-24 · (with step 3)
+- covered by Post-audit › Step 3 (the carrier code was in the same inspected diff); results in docs/features/FACTION_EMPOWERMENT.md › Test results
+- Codex verdict: READY (shared with step 3)
+
+### Step 7 · 2026-09-24 · aed615e
+- docs only: RESEARCH_NOTES › Spike contracts, Epic amendments A14–A16, three Status lines; `dod-index --check` 0 problems on both plans; preflight OK ("secrets: none")
+- Codex: covered by the step 9 cross-inspection of the whole child's diff, docs included
+- Codex verdict: READY (see Step 9)
+
+### Step 8 · 2026-09-24 · 75efa02
+- removal: Spikes/ and Commands/SpikeCommands.cs deleted (75efa02). Compile 0 warnings, 0 errors; preflight "spike code: none", "secrets: none"
+- D19: `git diff --name-only 50e196a HEAD -- Nyarlathotep/` → Nyarlathotep/Nyarlathotep/EntityExtensions.cs only; "compile items: 6 = base"
+- D18: deployed the no-spike build and booted the throwaway save: "Nyarlathotep initialized", 0 exceptions. The owner typed `.nyar spike sweep`: no chat reply, and no spike or exception line in the log. VCF 0.10.4 stays silent on an unknown subcommand instead of replying "unknown command" as the D18 text expected; the command is gone either way. Server stopped; save-data-nyarspikes and logs\NyarSpikes.log deleted; BepInEx.cfg InstantFlushing restored to false
+- D4 `-ServerWrites -Compare … -AfterCleanup` → "server writes: 1 created, 38 changed, 0 deleted, all in manifest, no other save"
+- D15 `-Paths` → "paths: 343 walked, all in manifest"
+- Codex read-only cross-inspection of the removal (75efa02, the 50e196a..HEAD diff, a Spike grep): no concrete defects
+- Codex verdict: READY
