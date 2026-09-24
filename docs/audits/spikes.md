@@ -137,7 +137,7 @@ yarspikes-before.tsv` at 2026-09-23 19:46:28, server stopped, 1633 files and fol
 - close-out checks (2026-09-24, f4687a1):
   - compile: `dotnet build Nyarlathotep/Nyarlathotep.sln -c Release --no-incremental -p:VRisingServerPath=C:\__nodeploy__` → 0 Warning(s), 0 Error(s)
   - preflight: PREFLIGHT OK ("secrets: none", "spike code: present, allowed while spikes is in-progress"); `-Paths` "348 walked, all in manifest"
-  - D4 `-ServerWrites -Compare`: not run yet. The owner's game client holds LocalLow files open ("not hashable"); rerun with the client closed
+  - D4 `-ServerWrites -Compare` (client closed): first run flagged config/config.vdf (Steam API connection cache, rewritten at every server launch) → manifest entry, A12; rerun "server writes: 19 created, 38 changed, 0 deleted, all in manifest, no other save"; C:\VRising-LocalServer untouched
   - /code-review (inline, on bd6bc0d..f4687a1): the variant 4 re-add is idempotent (one entry per target); every new structural edit goes through AddComponentSafe (Age, DontSaveEntity, CanPreventDisableWhenNoPlayersInRange); sweep's save groups only read; the tag `keep` argument is range-checked. No finding beyond Codex's
   - Codex read-only cross-inspection of bd6bc0d..HEAD (Nyarlathotep/), 3 rounds:
     - round 1: variants 1–2 still executable after both follow-link aborts → fixed, A11 (a91db69)

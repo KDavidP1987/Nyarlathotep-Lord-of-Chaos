@@ -81,3 +81,5 @@ external: BepInEx/interop/**
 external: logs/*.txt
 external: LocalLow/VRising/**
 external: LocalLow/VRisingServer/backtrace/**
+# the Steam API rewrites its connection-manager cache (server ping times) on every dedicated-server launch (spikes A12)
+external: config/config.vdf
