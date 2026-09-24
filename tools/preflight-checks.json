@@ -347,7 +347,8 @@
         "every [Command] and [CommandGroup] attribute in any .cs file git sees (the commands walk shared with Test-CheckCommands and -ListCommands admin)"
       ],
       "plant": {
-        "bad": "an admin-only command declared in Services/Hidden.cs, outside Commands/"
+        "bad": "an admin-only command declared in Services/Hidden.cs, outside Commands/",
+        "bad-2": "an admin-only command in the suffixed [CommandAttribute(...)] form, declared in Patches/HiddenPatch.cs"
       }
     },
     {
@@ -362,7 +363,8 @@
       ],
       "plant": {
         "bad": "the audit has no log check line for session 3",
-        "bad-2": "the audit's session 2 line shows 1 unhandled"
+        "bad-2": "the audit's session 2 line shows 1 unhandled",
+        "bad-3": "the audit's session 3 line shows 0 nyar lines"
       }
     },
     {

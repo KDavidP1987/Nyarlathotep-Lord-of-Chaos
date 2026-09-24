@@ -986,9 +986,10 @@ function Get-ParenEnd([string]$Text, [int]$Open) {
     return $Text.Length
 }
 
-# Every method marked [Mutating] in a .cs file under Commands/, Patches/ or Services/ is a mutating method; its
-# declaring file is a service the gateway dispatches to. Any other file in those directories may name such a
-# method only inside the parentheses of a Gateway.Run(...) call; every named use inside such a call, in any of the
+# Every method marked [Mutating] in a .cs file under Commands/, Patches/ or Services/ is a mutating method, and
+# every file declaring one is a service the gateway dispatches to; those services may call each other (plan D11:
+# "other than Logic/ActionGateway.cs and the services it dispatches to"). Any other file in those directories may
+# name a mutating method only inside the parentheses of a Gateway.Run(...) call; every named use inside such a call, in any of the
 # walked files, is a call site. A use is the identifier anywhere except its own declaration, so a method group
 # captured outside Gateway.Run and passed in later fails too (foundation D11, Epic D36).
 function Test-CheckGatewayOnly([string]$Root) {
@@ -1008,6 +1009,7 @@ function Test-CheckGatewayOnly([string]$Root) {
         }
     }
     if ($mutating.Count -eq 0) { return New-Result $false 'gateway: no [Mutating] method found under Commands/, Patches/ or Services/' }
+    $dispatched = @($mutating.Values | ForEach-Object { $_ } | Sort-Object -Unique)
     $sites = 0; $bad = @()
     foreach ($f in $files) {
         $t = $texts[$f]
@@ -1020,7 +1022,7 @@ function Test-CheckGatewayOnly([string]$Root) {
                 if ($declAt.ContainsKey("$f|$($u.Index)")) { continue }
                 $inside = @($spans | Where-Object { $u.Index -gt $_[0] -and $u.Index -lt $_[1] }).Count -gt 0
                 if ($inside) { $sites++ }
-                elseif ($mutating[$name] -notcontains $f) { $bad += "$name used outside Gateway.Run in $f" }
+                elseif ($dispatched -notcontains $f) { $bad += "$name used outside Gateway.Run in $f" }
             }
         }
     }
@@ -1059,8 +1061,8 @@ function Test-CheckFaultInjection([string]$Root) {
 function Get-CommandWalk([string]$Root) {
     foreach ($f in Get-CsFiles $Root) {
         $text = Remove-CsComments (Read-Text $Root $f)
-        $group = if ($text -match '\[CommandGroup\s*\(\s*(?:name\s*:\s*)?"([^"]*)"') { $Matches[1] } else { '' }
-        foreach ($m in [regex]::Matches($text, '\[Command\s*\((?<args>(?:[^()]|\((?:[^()])*\))*)\)\s*\]')) {
+        $group = if ($text -match '\[CommandGroup(?:Attribute)?\s*\(\s*(?:name\s*:\s*)?"([^"]*)"') { $Matches[1] } else { '' }
+        foreach ($m in [regex]::Matches($text, '\[Command(?:Attribute)?\s*\((?<args>(?:[^()]|\((?:[^()])*\))*)\)\s*\]')) {
             $a = $m.Groups['args'].Value
             $name = if ($a -match '^\s*(?:name\s*:\s*)?"([^"]*)"') { $Matches[1] } else { '?' }
             [pscustomobject]@{
@@ -1105,15 +1107,16 @@ function Test-CheckSessionLogs([string]$Root) {
     if ($sessions.Count -eq 0) { return New-Result $false "session logs: $slug has no sessions under $docRel › Test results" }
     $checks = @{}
     foreach ($m in [regex]::Matches($audit, '(?m)^- session (\d+) log check: (\d+) unhandled, (\d+) nyar lines')) {
-        $checks[[int]$m.Groups[1].Value] = [int]$m.Groups[2].Value
+        $checks[[int]$m.Groups[1].Value] = @([int]$m.Groups[2].Value, [int]$m.Groups[3].Value)
     }
     $missing = @($sessions | Where-Object { -not $checks.ContainsKey($_) })
-    $dirty = @($sessions | Where-Object { $checks.ContainsKey($_) -and $checks[$_] -ne 0 })
+    # A clean line has 0 unhandled and at least one [nyar line (-LogCheck fails a log without one).
+    $dirty = @($sessions | Where-Object { $checks.ContainsKey($_) -and ($checks[$_][0] -ne 0 -or $checks[$_][1] -eq 0) })
     $ok = $sessions.Count - $missing.Count - $dirty.Count
     if ($missing -or $dirty) {
         $why = @()
         if ($missing) { $why += "no log check line for session $($missing -join ', ')" }
-        if ($dirty) { $why += "unhandled exceptions in session $($dirty -join ', ')" }
+        if ($dirty) { $why += "unhandled exceptions or no nyar lines in session $($dirty -join ', ')" }
         return New-Result $false "session logs: $slug $ok/$($sessions.Count) checked ($($why -join '; '))"
     }
     return New-Result $true "session logs: $slug $ok/$($sessions.Count) checked"

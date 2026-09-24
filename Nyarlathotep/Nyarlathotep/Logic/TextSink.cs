@@ -50,5 +50,8 @@ public static class TextSink
         return sb.Length == 0 ? "-" : sb.ToString();
     }
 
-    static bool Forbidden(char c) => c is '<' or '>' || char.IsControl(c);
+    // Control characters, format characters (bidi overrides, zero-width marks) and the Unicode line and paragraph
+    // separators: each can break a line or reorder what a reader sees.
+    static bool Forbidden(char c) => c is '<' or '>' || char.GetUnicodeCategory(c) is
+        UnicodeCategory.Control or UnicodeCategory.Format or UnicodeCategory.LineSeparator or UnicodeCategory.ParagraphSeparator;
 }

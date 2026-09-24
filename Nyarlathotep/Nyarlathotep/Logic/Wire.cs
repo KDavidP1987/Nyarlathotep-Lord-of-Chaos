@@ -24,8 +24,14 @@ public static class Wire
     static readonly Regex NameRx = new("^[a-z][a-z0-9-]*$", RegexOptions.CultureInvariant);
 
     /// <summary>One line. Tags and keys are code constants ([a-z][a-z0-9-]*); a bad one throws. A token that would
-    /// take the line past <see cref="MaxBytes"/> is dropped with every token after it, never cut in half.</summary>
-    public static string Line(string tag, params (string Key, string Value)[] tokens)
+    /// take the line past <see cref="MaxBytes"/> is dropped with every token after it, never cut in half; use
+    /// <see cref="Record"/> when every token is required.</summary>
+    public static string Line(string tag, params (string Key, string Value)[] tokens) => Build(tag, tokens, required: false);
+
+    /// <summary>A line whose every token is required (the handshake, an error): it throws rather than drop one.</summary>
+    public static string Record(string tag, params (string Key, string Value)[] tokens) => Build(tag, tokens, required: true);
+
+    static string Build(string tag, (string Key, string Value)[] tokens, bool required)
     {
         if (!NameRx.IsMatch(tag)) throw new ArgumentException($"bad wire tag {tag}");
         var sb = new StringBuilder($"[NYAR:{tag}]");
@@ -35,7 +41,11 @@ public static class Wire
             if (!NameRx.IsMatch(key)) throw new ArgumentException($"bad wire key {key}");
             var token = $" {key}={TextSink.WireValue(value)}";
             var n = Encoding.UTF8.GetByteCount(token);
-            if (bytes + n > MaxBytes) break;
+            if (bytes + n > MaxBytes)
+            {
+                if (required) throw new ArgumentException($"wire line {tag} would exceed {MaxBytes} bytes at {key}");
+                break;
+            }
             sb.Append(token);
             bytes += n;
         }
@@ -45,7 +55,7 @@ public static class Wire
     public static string Bool(bool b) => b ? "1" : "0";
 
     /// <summary>`[NYAR:version]` with every key of contract §2, in its order.</summary>
-    public static string Version(VersionInfo v) => Line("version",
+    public static string Version(VersionInfo v) => Record("version",
         ("api", v.Api.ToString()), ("plugin", v.Plugin), ("ready", Bool(v.Ready)), ("admin", Bool(v.Admin)),
         ("enabled", Bool(v.Enabled)), ("killswitch", Bool(v.KillSwitch)),
         ("empower", Bool(v.Empower)), ("waves", Bool(v.Waves)), ("boss", Bool(v.Boss)), ("zones", Bool(v.Zones)),
@@ -59,6 +69,6 @@ public static class Wire
         var tokens = new List<(string, string)> { ("cmd", cmd), ("code", code.ToString().ToLowerInvariant()) };
         if (secs is { } s) tokens.Add(("secs", s.ToString()));
         if (arg is not null) tokens.Add(("arg", arg));
-        return Line("err", tokens.ToArray());
+        return Record("err", tokens.ToArray());
     }
 }

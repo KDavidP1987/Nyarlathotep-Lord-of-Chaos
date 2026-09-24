@@ -33,6 +33,10 @@ public class TextSinkTests
     [InlineData("<b>x</b>")]
     [InlineData("a > b")]
     [InlineData("<color=red>hi")]
+    [InlineData("line\u2028break")]
+    [InlineData("para\u2029break")]
+    [InlineData("\u202Ereversed")]
+    [InlineData("zero\u200Bwidth")]
     public void Empty_multiline_control_or_markup_announcements_are_refused(string? raw)
     {
         Assert.Null(TextSink.Announcement(raw, out var error));
@@ -43,6 +47,7 @@ public class TextSinkTests
     [InlineData("Vlad", "Vlad")]
     [InlineData("<color=red>Vlad</color>", "color=redVlad/color")]
     [InlineData("Vl\nad\t", "Vlad")]
+    [InlineData("\u202EdalV\u2028", "dalV")]
     [InlineData("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "ABCDEFGHIJKLMNOPQRST")]
     [InlineData("", "")]
     public void Names_for_chat_and_the_log_lose_markup_and_control_characters_and_are_cut_to_20(string raw, string name)

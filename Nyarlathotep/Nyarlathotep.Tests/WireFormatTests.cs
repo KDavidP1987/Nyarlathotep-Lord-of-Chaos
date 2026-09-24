@@ -107,6 +107,17 @@ public class WireFormatTests
         Assert.Equal("[NYAR:row]", wide);
     }
 
+    [Fact]
+    public void A_required_line_throws_rather_than_drop_a_field()
+    {
+        var huge = new string('9', 470);
+        Assert.Throws<ArgumentException>(() => Wire.Version(Sample with { Plugin = huge }));
+        Assert.Throws<ArgumentException>(() => Wire.Error(huge, WireError.BadArg, arg: "page"));
+        // The longest real values fit with every key present.
+        var line = Wire.Version(Sample with { Plugin = "10.100.1000-beta.12345" });
+        Assert.Equal(TableNames(Section("2. Handshake")).Count, line.Split(' ').Length - 1);
+    }
+
     [Theory]
     [InlineData("Version")]
     [InlineData("bad tag")]
