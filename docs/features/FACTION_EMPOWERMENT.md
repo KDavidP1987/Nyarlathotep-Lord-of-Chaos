@@ -69,11 +69,26 @@ is gone. (Bloodcraft learned the double-apply lesson the hard way — RESEARCH_N
 
 ## Test plan
 
-- [ ] S3: buff one bandit, confirm stat change (damage taken/dealt), expiry, and that it survives stream-out/in.
+- [ ] S3: buff one bandit, confirm stat change (damage taken/dealt), expiry, and that it survives stream-out/in. Stat change, expiry and stream-out/in are confirmed (Test results); damage and the restart are pending.
 - [ ] Manual trigger on Bandits; confirm count applied (log), announcement, expiry.
 - [ ] VBloodKilled trigger fires once per kill (dedupe), not per participant.
 - [ ] Restart mid-event: no NPC remains empowered after the window (D8).
 - [ ] Bloodcraft installed: familiars (Players faction) untouched.
+
+## Test results
+
+### S3 carrier spike · 2026-09-24 · spikes step 3 session 4 (build 35dfbe9, throwaway save)
+
+Carrier: `AB_Consumable_PhysicalPowerPotion_T02_Buff` (-1591883586). The prefab has LifeTime; `empower` overwrites it with the requested duration and EndAction Destroy, strips the gameplay-event components, clears the stat buffer and adds PhysicalPower +50 % and MaxHealth +100 % (MultiplyBaseAdd).
+
+- [x] inspect before: CHAR_Bandit_Hunter PhysicalPower 13.66, MaxHealth 53.8, carrier none; CHAR_Bandit_Mugger PhysicalPower 19.7, MaxHealth 127.8, carrier none
+- [x] inspect during (`empower 120`): Hunter 20.49 / 107.7; Mugger 29.55 / 255.7 with the carrier and "left 91s", "left 54s", "left 21s". Both stats are exactly ×1.5 and ×2. `empower 120` at 10 m applied to 3/3 native NPCs
+- [x] Health.Value when the buff applies: a unit at full health goes to the new full value (53.8 → 107.7, 127.8 → 255.7)
+- [x] stats back to base after expiry: yes. Mugger 19.7 / 127.8, carrier none. Health kept its ratio (165.2 of 255.7 → 82.6 of 127.8, 64.6 % both times); the unit was not killed or healed by the expiry
+- [ ] damage dealt and taken with and without the buff, in combat: the owner fought the buffed Mugger (Health 255.7 → 165.2 in about 33 s) and reports that the tests "seem to work"; a with/without damage comparison is still to be recorded
+- [x] buff present after streaming out to 150 m for 60 s and back: yes. `empower 300` → inspect "left 288s"; after the walk-away inspect "left 234s", same unit 325776:9, carrier still present, stats still ×1.5 / ×2, and Health had regenerated 165.2 → 191.6
+- [ ] state after a restart mid-buff: pending
+- S3 verdict: pending (the restart and the damage comparison)
 
 ## Open questions
 
