@@ -432,4 +432,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-24 · note · step 3 session 12: `tag 2 300 1`, AutoSave_447, hard stop, restart: 1 unit back (the saved one), "175s age 125s"; LifeTime continues across a restart
 - 2026-09-24 · D8 · pass · manual: read docs/features/EVENT_SPAWNS.md › Test results → dated S2 entry, every field present, "S2 verdict: go" (sessions 9–12) · c4473bf · claude
 - 2026-09-24 · D6 · pass · manual: every range, carrier, precedence, limit, cooldown and General.Enabled reply recorded in docs/audits/spikes.md › Post-audit › Step 3 (session 13) matches the item · c4473bf · claude
-- 2026-09-24 · D12 · fail · manual: sessions 1 and 3 aborted the server (Burst "entity does not exist" with follow-linked units and the rat anchor); every later session's log check was "0 unhandled" · c4473bf · claude
+- 2026-09-24 · D12 · fail · cmd: log check per session → sessions 1 and 3 aborted the server (Burst "entity does not exist" with follow-linked units and the rat anchor); every later session's log check was "0 unhandled" · c4473bf · claude
