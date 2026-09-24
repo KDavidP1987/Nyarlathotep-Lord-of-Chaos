@@ -1,7 +1,16 @@
 # Audit — spikes
 
 Build plan steps 1–9 of docs/dod/spikes.md. Each step has one "### Step <n>" entry under "## Pre-audit"
-and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line (D17).
+and one under "### Step 9 · 2026-09-24 · 01e47cc
+- git status: clean (0 entries), HEAD 01e47cc
+- compile: `dotnet build … -p:VRisingServerPath=C:\__nodeploy__` → 0 Warning(s), 0 Error(s)
+- preflight: PREFLIGHT OK; "spike code: none", "secrets: none", "commands: 0 admin-only, 1 public (allow-listed)"
+- dod status: spikes 16/20 verified, 0 problems. Unverified: D5 (mid-drain `tag 1` waived by the owner in session 2; the `march 2` clear check became impossible when A11 retired variant 2), D12 (fail: sessions 1 and 3 aborted), D17 and D20 (this step)
+- server: not running
+- plan read: Build plan step 9 (D17, D20), Closure checklist; D5 and D12 need the owner's decision before close
+- rollback range: <pre-child> = 3ba32a0 (parent of the step-1 commit 8f4576c); <drill base> = the commit that adds this entry, recorded in Post-audit › Step 9
+
+## Post-audit"; every post-audit entry carries a "Codex verdict:" line (D17).
 
 ## Pre-audit
 ### Step 1 · 2026-09-23 · 3ba32a0
@@ -165,7 +174,7 @@ yarspikes-before.tsv` at 2026-09-23 19:46:28, server stopped, 1633 files and fol
     - round 2: a destroyed admin entity left in AggroBuffer → the mover drops the entry and stops (f4687a1)
     - round 3: no remaining defect
   - Codex verdict: READY
-  - dod status: verified 12/20 (D1 D2 D3 D5 D6 D7 D8 D9 D10 D11 D14 D15 D16 pass lines; D12 fail recorded for the session 1 and 3 aborts)
+  - dod status: verified 12/20 (D1 D2 D3 D6 D7 D8 D9 D10 D11 D14 D15 D16 pass lines; corrected at the step 9 pre-audit: D5 was listed here but has no pass line, since its mid-drain `tag 1` check was waived and its `march 2` clear check became impossible when A11 retired variant 2; D12 fail recorded for the session 1 and 3 aborts)
 
 ### Step 4 · 2026-09-24 · (with step 3)
 - covered by Post-audit › Step 3: the march code and every change to it (A5–A7, A11 and the round 2 fix) were in the bd6bc0d..f4687a1 diff that Codex inspected over three rounds; in-game results in docs/features/SIEGES.md › Test results
