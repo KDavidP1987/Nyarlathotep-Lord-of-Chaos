@@ -127,3 +127,38 @@ EARLIER: F1 resolved — D18 now explicitly registers `Test-CheckServerWrites` w
 VERDICT: READY
 ### Dispositions
 - none · no findings
+
+## Review 8 · 2026-09-24 · codex · plan commit eb3a589 (amendments A9, A10)
+F1 blocking — Probe `4.4` is unanswered because the current D27 requires “no DontSaveEntity” while the still-actionable Baseline D27 requires `DontSaveEntity`, and current D33 conflicts similarly with Baseline D33; a context-free builder has no stated authority rule for these duplicate requirements.  
+Fix: State that the top Definition of Done plus amendments are normative and Baseline is immutable historical evidence, or update/remove the contradictory Baseline items.
+
+F2 blocking — Probe `3.3` leaves a persistence path unanswered: after the first boot sweep destroys a saved unit, one of its saved child entities could survive into the next autosave and produce an orphan only on the second restart; D27 stops after the first restart and therefore cannot verify deletion of every persisted by-product.  
+Fix: Define that despawning a marked unit must remove all owned child entities, then autosave after the completed sweep, restart a second time, require `marker sweep: 0 found`, zero tracked units, and `-LogCheck` with zero orphan errors.
+
+F3 blocking — Probe `12.4` is defeated by D33’s exception: `-SessionsOf foundation` may pass a nonzero orphan count whenever the line cites any existing amendment, so the stated command does not fail when the “no orphan errors” control is absent.  
+Fix: Require every post-A10 session to record `0 orphan errors`; preserve historical nonzero results in separately labelled pre-A10 records that the acceptance command cannot treat as passing sessions.
+
+F4 blocking — Probe `12.4` does not specify an A10-complete `Test-CheckLogCheck` fixture contract: D18 and Build step 2 still describe only BepInEx good/frame/no-nyar/empty inputs, while A10 merely says “new fixtures” without requiring a real-format server-log orphan fixture that makes the check fail.  
+Fix: Amend D18 and step 2 to name a two-log good fixture, an orphan-pattern server-log bad fixture, a non-orphan Unity-error silent fixture, and independently missing/empty BepInEx and server-log fixtures.
+
+F5 blocking — D27 is unverifiable as written: its manual procedure does not expose or inspect `Age`, `LifeTime`, `DestroyWhenDisabled`, or absence of `DontSaveEntity`, so a stranger can observe expiry and a sweep while several claimed recipe components are absent.  
+Fix: Add an explicit debug/component inspection command or integration assertion that prints and checks those four components before the save, alongside the behavioral restart evidence.
+
+F6 advisory — Scenario for probes `4.5`/`12.3`: A10 defines “orphan error” using five substrings, so an equivalent Unity entity-remap failure with different wording is counted only as a Unity error and does not fail D33.  
+Fix: Document the classifier as intentionally limited to those signatures and review every distinct Unity-error kind, or classify the broader entity-link/remap family as fatal.
+
+F7 advisory — Scenario for probe `9.1`: D21/D27 exercise 30 or 3 units, while the maximal 500-unit restart can leave the sweep draining for many ticks and expose shutdown-during-drain behavior not covered by the persistence evidence.  
+Fix: Add a restart-during-sweep case at the tracked-unit ceiling and confirm the following boot safely requeues remaining markers without duplicates.
+
+Blind score: 1 Considered—Purpose & typical use; 2 Considered—Permissions/D10/D26; 3 Gap—`3.3`; 4 Gap—`4.4`; 5 Considered—Interfaces; 6 Considered—External dependencies/D9; 7 Considered—States/D6/D16/D21; 8 Considered—Minimal stretch; 9 Considered—Maximal stretch; 10 Considered—Security/D10/D11/D14/D17; 11 Considered—UX; 12 Gap—`12.4`; 13 Considered—Performance/D24; 14 Considered—Rollout/D34/D38; 15 Considered—Out of scope.
+
+12/15 layers · 46/49 probes
+VERDICT: REVISE
+### Dispositions
+- F1 · rejected · the dod format settles it: ## Baseline is the frozen copy the report measures against and is never edited; the current Definition of Done with its amendments is what the build satisfies (Reviews 5-7 re-reviewed amended items the same way)
+- F2 · accepted · D27 adds a second restart after the drain and the next autosave: the sweep shows 0 queued, status 0 tracked, -LogCheck 0 orphan errors
+- F3 · accepted · the citation exception is gone: any orphan count above 0 fails; sessions 6 and 7, recorded before A10, keep the old line format with the server log's counts in a sub-bullet
+- F4 · accepted · D18 names the A10 fixtures of both checks (LogCheck good with a silent non-orphan Unity error, bad-4 to bad-7; SessionLogs bad-4 to bad-7)
+- F5 · accepted · `debug here` prints "recipe ok" or the missing components (LifeTime, Age, DestroyWhenDisabled, DontSaveEntity present), Logic/AdminLines.Recipe with tests; D27 requires it
+- F6 · accepted · D33: the session entry attributes every Unity error kind -LogCheck lists, which is how an entity-link failure of another wording is caught
+- F7 · rejected · the boot sweep rebuilds its queue from the markers it finds on every boot and the ledger starts empty, so a restart during a drain re-finds the remaining units without duplicates; the 500-unit ceiling is D24's performance case in step 5, not A9's persistence change

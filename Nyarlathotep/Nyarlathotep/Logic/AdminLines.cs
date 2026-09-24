@@ -30,6 +30,18 @@ public static class AdminLines
     public static string DebugUnit(string prefab, string? eventId, int? leftSeconds, int level, int health, int maxHealth, int power) =>
         $"{prefab} {eventId ?? "manual"} left {(leftSeconds is { } s ? $"{Math.Max(0, s)}s" : "NONE")} lvl {level} hp {health}/{maxHealth} pp {power}";
 
+    /// <summary>The spawn recipe as `debug here` sees it (D27): "recipe ok" when the unit has LifeTime, Age and
+    /// DestroyWhenDisabled and no DontSaveEntity (A9), otherwise "recipe" and each fault, e.g. "recipe -Age +DontSave".</summary>
+    public static string Recipe(bool lifeTime, bool age, bool destroyWhenDisabled, bool dontSave)
+    {
+        var faults = new List<string>();
+        if (!lifeTime) faults.Add("-LifeTime");
+        if (!age) faults.Add("-Age");
+        if (!destroyWhenDisabled) faults.Add("-DestroyWhenDisabled");
+        if (dontSave) faults.Add("+DontSave");
+        return faults.Count == 0 ? "recipe ok" : "recipe " + string.Join(" ", faults);
+    }
+
     /// <summary>At most <see cref="DebugMaxLines"/> lines, then "+&lt;k&gt; more"; none → "no tracked units within
     /// &lt;r&gt; m".</summary>
     public static IReadOnlyList<string> DebugReport(IReadOnlyList<string> lines, int radius)

@@ -13,10 +13,4 @@ UnityEngine.Logger:Log(LogType, Object)
 UnityEngine.Debug:LogWarning(Object)
 Unity.Entities.SystemState:ThrowIfLookupCreatedDuringUpdate()
 
-Backtrace native integration status: Cannot initialize Crashpad client
-UnityEngine.DebugLogHandler:LogFormat(LogType, Object, String, Object[])
-UnityEngine.Logger:Log(LogType, Object)
-UnityEngine.Debug:LogError(Object)
-Backtrace.Unity.BacktraceClient:Awake()
-
 Server started

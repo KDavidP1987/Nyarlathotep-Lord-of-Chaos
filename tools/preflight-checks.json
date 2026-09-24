@@ -361,16 +361,16 @@
       "inputs": [
         "docs/features/<SLUG>.md › Test results (### Session <n> headings)",
         "docs/audits/<slug>.md (- session <n> log check: lines)",
-        "the plan slug (-SessionsOf; sessionsof.txt in a fixture)",
-        "docs/dod/<slug>.md (its amendment ids, which an orphan count must cite)"
+        "the plan slug (-SessionsOf; sessionsof.txt in a fixture)"
       ],
       "plant": {
         "bad": "the audit has no log check line for session 3",
         "bad-2": "the audit's session 2 line shows 1 unhandled",
         "bad-3": "the audit's session 3 line shows 0 nyar lines",
-        "bad-4": "the audit's session 4 line shows 120 orphan errors and cites no amendment",
-        "bad-5": "the audit's session 4 line cites (A99, which the plan does not have",
-        "bad-6": "the audit's session 5 line omits the orphan count after session 4 carried it"
+        "bad-4": "the audit's session 5 line shows 120 orphan errors",
+        "bad-5": "the audit's session 5 line shows 120 orphan errors and cites amendment (A9), which does not excuse them",
+        "bad-6": "the audit's session 5 line omits the orphan count after session 4 carried it",
+        "bad-7": "the audit has a session 5 line with 3 orphan errors and a clean second line for session 5"
       }
     },
     {
@@ -387,7 +387,9 @@
         "bad-2": "a real boot log with no \"[nyar\" line (a build before the [nyar] prefix, or the wrong log)",
         "bad-3": "stack frames from our assembly indented with a tab and with two spaces, one behind a logger prefix, and a Mono frame with a space before \"(\"",
         "bad-4": "a clean BepInEx log, and a server log with two orphan errors (\"is trying to attach to Entity.Null\", \"points at buff.Target 0:0\")",
-        "bad-5": "a clean BepInEx log and no server log"
+        "bad-5": "a clean BepInEx log and no server log",
+        "bad-6": "a clean BepInEx log and an empty server log",
+        "bad-7": "a clean server log and no BepInEx log"
       }
     },
     {

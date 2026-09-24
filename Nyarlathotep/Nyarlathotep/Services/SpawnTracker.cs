@@ -211,8 +211,10 @@ internal static class SpawnTracker
             var health = unit.TryGetComponent<Health>(out var h) ? h : default;
             var power = unit.TryGetComponent<UnitStats>(out var stats) ? stats.PhysicalPower._Value : 0f;
             var flag = marked.Contains(unit) ? "" : " UNMARKED";
+            var recipe = AdminLines.Recipe(unit.Has<LifeTime>(), unit.Has<Age>(), unit.Has<DestroyWhenDisabled>(),
+                unit.Has<ProjectM.PersistenceV2.DontSaveEntity>());
             lines.Add((distance, AdminLines.DebugUnit(tracked.Prefab, tracked.EventId, left, level,
-                (int)MathF.Round(health.Value), (int)MathF.Round(health.MaxHealth._Value), (int)MathF.Round(power)) + flag));
+                (int)MathF.Round(health.Value), (int)MathF.Round(health.MaxHealth._Value), (int)MathF.Round(power)) + " " + recipe + flag));
         }
         return AdminLines.DebugReport(lines.OrderBy(l => l.Distance).Select(l => l.Line).ToList(), radius);
     }

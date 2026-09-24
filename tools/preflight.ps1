@@ -35,7 +35,8 @@
     -SessionsOf <slug>
                  : Test-CheckSessionLogs: every "### Session <n>" under docs/features/<SLUG>.md › Test results has a
                    "- session <n> log check: 0 unhandled, <s> nyar lines, 0 orphan errors, <u> unity errors" line in
-                   docs/audits/<slug>.md; a nonzero orphan count must cite an amendment "(A<n>" (foundation D33, A10).
+                   docs/audits/<slug>.md, one per session; an orphan count above 0 fails, and lines written before A10
+                   may omit both counts (foundation D33, A10).
     -ListCommands admin
                  : every admin-only command of the commands walk, one per line, then "admin commands: <n>"
                    (foundation D19); Test-CheckAdminList keeps that list equal to the commands check's count.
@@ -1178,11 +1179,11 @@ function Test-CheckAdminList([string]$Root) {
     return New-Result $true "admin list: $listed admin commands, equal to the commands check"
 }
 
-# Every "### Session <n> · <date>" under "## Test results" in docs/features/<SLUG>.md has a line
+# Every "### Session <n> · <date>" under "## Test results" in docs/features/<SLUG>.md has exactly one line
 # "- session <n> log check: 0 unhandled, <s> nyar lines, 0 orphan errors, <u> unity errors" in docs/audits/<slug>.md
-# (foundation D33). A nonzero orphan count passes only when the line cites an amendment of docs/dod/<slug>.md as
-# "(A<n>"; lines before the first one carrying the orphan count may omit both counts, later lines may not (A10).
-# A fixture names the slug in sessionsof.txt.
+# (foundation D33). Lines before the first one carrying the orphan count (written before A10) may omit both counts;
+# every later line must carry them, and an orphan count above 0 always fails. A fixture names the slug in
+# sessionsof.txt.
 function Test-CheckSessionLogs([string]$Root) {
     $slug = if (Test-IsFixture $Root) { "$(Read-Text $Root 'sessionsof.txt')".Trim() } else { $SessionsOf }
     if (-not $slug) { return New-Result $false 'session logs: no plan named (-SessionsOf <slug>)' }
@@ -1194,26 +1195,27 @@ function Test-CheckSessionLogs([string]$Root) {
     $results = [regex]::Match($doc, '(?ms)^## Test results\s*$(.*?)(?=^## |\z)')
     $sessions = if ($results.Success) { @([regex]::Matches($results.Groups[1].Value, '(?m)^### Session (\d+) · ') | ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object -Unique) } else { @() }
     if ($sessions.Count -eq 0) { return New-Result $false "session logs: $slug has no sessions under $docRel › Test results" }
-    $plan = Read-Text $Root "docs/dod/$slug.md"
-    $amendments = if ($plan) { @([regex]::Matches($plan, '(?m)^- (A\d+) · ') | ForEach-Object { $_.Groups[1].Value }) } else { @() }
-    $checks = @{}
-    foreach ($m in [regex]::Matches($audit, '(?m)^- session (\d+) log check: (\d+) unhandled, (\d+) nyar lines(?:, (\d+) orphan errors, (\d+) unity errors)?(.*)$')) {
+    $checks = @{}; $dupes = @()
+    foreach ($m in [regex]::Matches($audit, '(?m)^- session (\d+) log check: (\d+) unhandled, (\d+) nyar lines(?:, (\d+) orphan errors, (\d+) unity errors)?')) {
+        $n = [int]$m.Groups[1].Value
+        # Two lines for one session: a clean copy must not hide a dirty one (Codex A9 round 1).
+        if ($checks.ContainsKey($n)) { $dupes += $n }
         $orphans = if ($m.Groups[4].Success) { [int]$m.Groups[4].Value } else { -1 }
-        $cited = [regex]::Match($m.Groups[6].Value, '\((A\d+)\b')
-        $checks[[int]$m.Groups[1].Value] = @([int]$m.Groups[2].Value, [int]$m.Groups[3].Value, $orphans, ($cited.Success -and $amendments -contains $cited.Groups[1].Value))
+        $checks[$n] = @([int]$m.Groups[2].Value, [int]$m.Groups[3].Value, $orphans)
     }
     $missing = @($sessions | Where-Object { -not $checks.ContainsKey($_) })
     $first = @($sessions | Where-Object { $checks.ContainsKey($_) -and $checks[$_][2] -ge 0 } | Select-Object -First 1)
-    # A clean line has 0 unhandled, at least one [nyar line (-LogCheck fails a log without one), and 0 orphan errors
-    # or orphan errors explained by a cited amendment; from the first line with the orphan count on, it is required.
-    $dirty = @($sessions | Where-Object { $checks.ContainsKey($_) -and ($checks[$_][0] -ne 0 -or $checks[$_][1] -eq 0 -or ($checks[$_][2] -gt 0 -and -not $checks[$_][3])) })
+    # A clean line has 0 unhandled, at least one [nyar line (-LogCheck fails a log without one) and no orphan error.
+    $dirty = @($sessions | Where-Object { $checks.ContainsKey($_) -and ($checks[$_][0] -ne 0 -or $checks[$_][1] -eq 0 -or $checks[$_][2] -gt 0) })
     $old = @($sessions | Where-Object { $first -and $_ -gt $first[0] -and $checks.ContainsKey($_) -and $checks[$_][2] -lt 0 })
-    $ok = $sessions.Count - $missing.Count - @($dirty + $old | Sort-Object -Unique).Count
-    if ($missing -or $dirty -or $old) {
+    $dupes = @($dupes | Sort-Object -Unique)
+    $ok = $sessions.Count - $missing.Count - @($dirty + $old + $dupes | Sort-Object -Unique).Count
+    if ($missing -or $dirty -or $old -or $dupes) {
         $why = @()
         if ($missing) { $why += "no log check line for session $($missing -join ', ')" }
-        if ($dirty) { $why += "unhandled exceptions, no nyar lines or unexplained orphan errors in session $($dirty -join ', ')" }
+        if ($dirty) { $why += "unhandled exceptions, no nyar lines or orphan errors in session $($dirty -join ', ')" }
         if ($old) { $why += "no orphan count in session $($old -join ', ')" }
+        if ($dupes) { $why += "more than one log check line for session $($dupes -join ', ')" }
         return New-Result $false "session logs: $slug $ok/$($sessions.Count) checked ($($why -join '; '))"
     }
     return New-Result $true "session logs: $slug $ok/$($sessions.Count) checked"

@@ -108,5 +108,7 @@ yarfoundation-before.tsv waits for step 8 (D34), with the game client closed
 
 ### Step 4 · 2026-09-24 · (in progress)
 - session 5 log check: 0 unhandled, 27 nyar lines
-- session 6 log check: 0 unhandled, 2 nyar lines, 551 orphan errors, 120 unity errors (A9: children of DontSaveEntity units in session 5's autosave; counted from the saved server log with the A10 pattern, which -LogCheck did not yet have)
-- session 7 log check: 0 unhandled, 2 nyar lines, 15 orphan errors, 0 unity errors (A9: "Could not map an old modification source entity", left by session 5's save; the dev world's save was reset afterwards)
+- session 6 log check: 0 unhandled, 2 nyar lines
+  - before A10, which added the server log to -LogCheck: read afterwards with the A10 pattern, the server log held 551 orphan errors and 120 unity errors, all from children of DontSaveEntity units in session 5's autosave (A9)
+- session 7 log check: 0 unhandled, 2 nyar lines
+  - before A10: 15 orphan errors ("Could not map an old modification source entity", left by session 5's save, A9) and 0 unity errors; the dev world's save was reset afterwards
