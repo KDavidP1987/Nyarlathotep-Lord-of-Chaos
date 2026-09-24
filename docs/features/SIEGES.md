@@ -1,6 +1,6 @@
 # Sieges (Pillar B1)
 
-**Status:** designed, **highest risk**. Blocked on spike S1 (NPC movement). D3 and D10 resolved 2026-09-23.
+**Status:** designed, **highest risk**. Spike S1 found the movement lever (aggro chase, ≤ 60 m; Test results); D16 (2026-09-24) builds the MVP on it. D3 and D10 resolved 2026-09-23.
 
 ## Goal
 
@@ -9,9 +9,10 @@ this is the mod's most distinctive feature and its biggest unknown.
 
 ## What we know constrains it
 
-1. **Movement:** no API moves an NPC to a coordinate. Levers: `Follower.Followed` to an anchor entity,
-   `AggroConsumer.PreCombatPosition`, `AggroBuffer` targets, and raising `MaxDistanceFromPreCombatPosition`
-   + `ProximityRadius` (TideOfWar), plus the `Return`→`Follow` leash override.
+1. **Movement:** no API moves an NPC to a coordinate. Spike S1 tried four levers. Only the aggro chase walks
+   a unit: widen `AggroConsumer` and `AggroModifiers` ranges (TideOfWar) and put the target in `AggroBuffer`.
+   It works from 60 m or less. Beyond about 86 m the game drops the target on every update. Follow links
+   teleport the unit (and crashed the server twice); the leash override leaves it Idle.
 2. **Walls:** NPC pathing can't pass walls or closed doors.
 3. **Structure damage:** NPC hits deal 0 to stone unless `DealDamageEvent.MaterialModifiers.StoneStructure`
    is raised — possible only by hooking the unmanaged `DealDamageSystem` through **HookDOTS** (RaidForge).
@@ -29,7 +30,8 @@ this is the mod's most distinctive feature and its biggest unknown.
   siege); castle-heart level ≥ `MinCastleHeartLevel` when set (heart level, not gear level, which players
   can swap); the event's PvE/PvP availability allows it. Re-checked every tick; an ineligible target ends
   the siege and despawns its units.
-- Spawn waves at the territory edge (outside the walls) — DyWorld spawns ~30 units from castle centre.
+- Spawn waves outside the walls, 40–50 m from an online defender (Decision D16); DyWorld spawns ~30 units from castle centre.
+- Stuck units: a unit with no target for 15 s is re-targeted on the nearest defender, or despawned (S1 finding: a unit that loses its target freezes in Combat).
 - Behaviour `Assault`: anchor at the castle's outer perimeter; seed aggro on online defenders and
   servants in range; units that reach the wall and can't path fight whatever is exposed under vanilla rules.
 - Announce to the castle owner's clan only ("A Legion war party approaches your castle!"), plus an optional
@@ -72,6 +74,8 @@ Unit: CHAR_Bandit_Thug (-301730941), spawned `distance` m north of the admin wit
 - S1 verdict: pending (wall run and the owner's design decision)
 
 ## Open questions
+
+- A long visible march (100–300 m): hidden relay hops, or hooking the system that drops far aggro targets (HookDOTS). Deferred by D16; revisit with the Phase 2 HookDOTS decision.
 
 - Should clans get a warning lead time (e.g. 60 s) before the first wave?
 - ~~Offline-raid protection~~ — resolved by D10: online or recently online (`RecentlyOnlineHours`), admin-configurable.

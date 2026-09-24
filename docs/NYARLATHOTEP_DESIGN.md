@@ -184,6 +184,7 @@ All settled with the user on 2026-09-23 in plan mode and recorded as validated a
 | D13 | Player names on boards | Allowed on leaderboards, stat replies and digests, never positions; admins excluded by default, admin ignore list, player opt-out `.nyar stats hide` (Epic A3, S-22) |
 | D14 | Stats persistence | `stats.json`, 30 daily buckets + all-time, admin reset (Epic A6, S-23) |
 | D15 | Mod-initiated messages | Wave warnings + event banners, daily banner with digest, admin on-demand banner, private login stats, rate-limited player share; each off by default (Epic A7, S-24) |
+| D16 | How siege waves reach a castle | **Short chase** (owner, 2026-09-24, after spike S1): waves spawn outside the walls 40–50 m from an online defender and walk in on an aggro chase; the approach is conveyed by the D15 warning. Units with no target for 15 s are re-targeted on the nearest defender or despawned. A long march (hidden relay, or hooking the system that drops targets beyond about 86 m) is a later research item beside the Phase 2 HookDOTS decision |
 | P1 | Development procedure | Pre-audit / build / post-audit with Codex cross-inspection on every step (CLAUDE.md) |
 | P2 | Icon | Whole dragon artwork scaled to 256×256 (not cropped); same image as README cover |
 | P3 | First Thunderstore publication | After foundation + faction empowerment + event spawns pass in-game (~0.4.0); GitHub releases before |
