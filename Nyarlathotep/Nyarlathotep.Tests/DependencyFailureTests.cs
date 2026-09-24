@@ -217,6 +217,19 @@ public class DependencyFailureTests
         Assert.Equal(2, ok);
         Assert.Equal(new[] { "status", "purge" }, registered);
         Assert.Equal(1, log.Count("command group EventCommands failed to register"));
+
+        // A failure while discovering the groups (reflection) is contained too, keeping what registered before it.
+        var log2 = new LogLines();
+        var registered2 = new List<string>();
+        Assert.Equal(1, CommandGroups.RegisterEach(Discovery(registered2), log2.Add));
+        Assert.Equal(new[] { "status" }, registered2);
+        Assert.Equal(1, log2.Count("command discovery failed"));
+
+        static IEnumerable<(string, Action)> Discovery(List<string> into)
+        {
+            yield return ("StatusCommands", () => into.Add("status"));
+            throw new System.Reflection.ReflectionTypeLoadException([], []);
+        }
         Assert.Single(log.Lines);
     }
 }

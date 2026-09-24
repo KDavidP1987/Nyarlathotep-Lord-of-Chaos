@@ -82,6 +82,15 @@ internal sealed class Persistence : IFileStore
         else File.Move(tmp, path, true);
     }
 
+    public void PromoteNew(DataFile file)
+    {
+        var path = Path.Combine(Folder, DataPaths.FileName(file, FileVariant.Main));
+        var tmp = Path.Combine(Folder, DataPaths.FileName(file, FileVariant.Tmp));
+        Guard(path);
+        Guard(tmp);
+        File.Move(tmp, path);
+    }
+
     public void Rename(DataFile file, FileVariant from, FileVariant to)
     {
         var source = Path.Combine(Folder, DataPaths.FileName(file, from));

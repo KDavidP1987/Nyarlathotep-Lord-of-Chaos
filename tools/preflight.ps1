@@ -28,7 +28,7 @@
                    save-data-nyardev must be gone (spikes D4, foundation A1 and D34).
     -LogCheck    : Test-CheckLogCheck on the live BepInEx/LogOutput.log: prints "log check: <n> unhandled,
                    <s> nyar lines" and exits 1 when the log is missing or empty, holds a stack frame from our
-                   assembly ("   at Nyarlathotep.") or has no "[nyar" line (foundation D33). Run it after every
+                   assembly ("at Nyarlathotep." after any indentation or prefix) or has no "[nyar" line (foundation D33). Run it after every
                    in-game session, before the next boot overwrites the log.
     -AuditOf <slug>
                  : Test-CheckAuditSteps: docs/audits/<slug>.md has a pre-audit and a post-audit entry
@@ -916,7 +916,8 @@ function Test-CheckLogCheck([string]$Root) {
     }
     if ($null -eq $log -or $log -notmatch '\S') { return New-Result $false 'log check: no log (BepInEx/LogOutput.log missing or empty)' }
     $lines = $log -split '\r?\n'
-    $n = @($lines | Where-Object { $_.Contains('   at Nyarlathotep.') }).Count
+    # Any indentation or prefix: IL2CPP, Mono and logger-wrapped traces differ (foundation step 2 Codex round 1).
+    $n = @($lines | Where-Object { $_ -match '(?<![\w.])at\s+Nyarlathotep\.\w' }).Count
     $s = @($lines | Where-Object { $_.Contains('[nyar') }).Count
     if ($s -eq 0) { return New-Result $false "log check: $n unhandled, 0 nyar lines (the wrong log, or the plugin did not initialise)" }
     return New-Result ($n -eq 0) "log check: $n unhandled, $s nyar lines"

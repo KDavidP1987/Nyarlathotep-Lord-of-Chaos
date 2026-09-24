@@ -18,6 +18,8 @@ sealed class MemoryFileStore : IFileStore
     public bool PartialWrites { get; set; }
     /// <summary>Each write advances <see cref="Now"/> by this much (a slow disk).</summary>
     public TimeSpan WriteDelay { get; set; }
+    /// <summary>Runs between the .tmp write and the promote (another writer, such as a hand edit, interleaving).</summary>
+    public Action? BeforePromote { get; set; }
 
     public IEnumerable<(DataFile File, FileVariant Variant)> Keys => _files.Keys;
 
@@ -54,10 +56,21 @@ sealed class MemoryFileStore : IFileStore
     public void Promote(DataFile file, bool keepBackup)
     {
         Ops.Add($"promote {DataPaths.FileName(file, FileVariant.Main)}{(keepBackup ? " +bak" : "")}");
+        BeforePromote?.Invoke();
         if (FailPromote) throw new IOException("replace failed");
         var tmp = _files[(file, FileVariant.Tmp)];
         if (keepBackup && _files.TryGetValue((file, FileVariant.Main), out var old)) _files[(file, FileVariant.Bak)] = old;
         _files[(file, FileVariant.Main)] = tmp;
+        _files.Remove((file, FileVariant.Tmp));
+    }
+
+    public void PromoteNew(DataFile file)
+    {
+        Ops.Add($"promote-new {DataPaths.FileName(file, FileVariant.Main)}");
+        BeforePromote?.Invoke();
+        if (FailPromote) throw new IOException("replace failed");
+        if (_files.ContainsKey((file, FileVariant.Main))) throw new IOException("the file exists");
+        _files[(file, FileVariant.Main)] = _files[(file, FileVariant.Tmp)];
         _files.Remove((file, FileVariant.Tmp));
     }
 

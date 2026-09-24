@@ -50,12 +50,19 @@ public sealed class DataStore(IFileStore fs, Action<string> log)
     }
 
     /// <summary>Null on success; otherwise the error, with the main file untouched and the .tmp removed.</summary>
-    public string? WriteAtomic(DataFile file, byte[] content, bool keepBackup)
+    public string? WriteAtomic(DataFile file, byte[] content, bool keepBackup) =>
+        WriteThen(file, content, () => fs.Promote(file, keepBackup));
+
+    /// <summary>As <see cref="WriteAtomic"/>, but fails instead of replacing a main file that exists.</summary>
+    public string? WriteAtomicNew(DataFile file, byte[] content) =>
+        WriteThen(file, content, () => fs.PromoteNew(file));
+
+    string? WriteThen(DataFile file, byte[] content, Action promote)
     {
         try
         {
             fs.Write(file, FileVariant.Tmp, content);
-            fs.Promote(file, keepBackup);
+            promote();
             return null;
         }
         catch (Exception ex)
@@ -259,7 +266,7 @@ public sealed class EventsFile(DataStore store, Action<string> log)
     public string? Seed(byte[] content)
     {
         if (Exists()) return "events.json already exists";
-        return store.WriteAtomic(DataFile.Events, content, keepBackup: false);
+        return store.WriteAtomicNew(DataFile.Events, content);
     }
 
     /// <summary>An admin edit (`event set`, `enable`, `disable`): refused while read-only or when the file changed

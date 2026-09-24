@@ -95,10 +95,20 @@ public static class CommandGroups
     public static int RegisterEach(IEnumerable<(string Name, Action Register)> groups, Action<string> log)
     {
         var ok = 0;
-        foreach (var (name, register) in groups)
+        IEnumerator<(string Name, Action Register)> each;
+        try { each = groups.GetEnumerator(); }
+        catch (Exception ex) { log($"command discovery failed ({ex.Message}); no command group registered"); return 0; }
+        using (each)
         {
-            try { register(); ok++; }
-            catch (Exception ex) { log($"command group {name} failed to register ({ex.Message})"); }
+            while (true)
+            {
+                // Discovery is lazy (reflection over the assembly), so a failure can surface at any step.
+                try { if (!each.MoveNext()) break; }
+                catch (Exception ex) { log($"command discovery failed ({ex.Message}); {ok} group(s) registered before it"); break; }
+                var (name, register) = each.Current;
+                try { register(); ok++; }
+                catch (Exception ex) { log($"command group {name} failed to register ({ex.Message})"); }
+            }
         }
         return ok;
     }

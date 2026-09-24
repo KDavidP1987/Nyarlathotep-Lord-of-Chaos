@@ -319,7 +319,8 @@
       ],
       "plant": {
         "bad": "a stack frame from our assembly (\"   at Nyarlathotep.Services.EventStore.Reload()\") after an exception line",
-        "bad-2": "a real boot log with no \"[nyar\" line (a build before the [nyar] prefix, or the wrong log)"
+        "bad-2": "a real boot log with no \"[nyar\" line (a build before the [nyar] prefix, or the wrong log)",
+        "bad-3": "stack frames from our assembly indented with a tab and with two spaces, and one behind a logger prefix"
       }
     },
     {

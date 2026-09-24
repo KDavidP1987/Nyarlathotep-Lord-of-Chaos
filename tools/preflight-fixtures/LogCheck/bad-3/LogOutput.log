@@ -1,0 +1,6 @@
+[Info   :Nyarlathotep] Plugin kdpen.Nyarlathotep v0.1.0 loaded. Awaiting game data init.
+[Info   :Nyarlathotep] [nyar] events: reloaded: 0 valid, 0 disabled
+[Error  :Nyarlathotep] [nyar] something failed: System.InvalidOperationException: boom
+	at Nyarlathotep.Services.EventStore.Reload()
+  at Nyarlathotep.Core.TryInitialize(String trigger)
+[Error  :Il2CppInterop] During invoker: at Nyarlathotep.Patches.ServerStartupPatch.OnLoadState(State loadState)

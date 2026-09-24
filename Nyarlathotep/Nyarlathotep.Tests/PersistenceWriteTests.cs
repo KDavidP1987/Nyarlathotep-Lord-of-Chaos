@@ -236,6 +236,29 @@ public class PersistenceWriteTests
         Assert.Equal("events.json already exists", events.Seed(Bytes("{}")));
         Assert.Equal(SeedTests.SeedText, fs.Text(DataFile.Events, FileVariant.Main));
     }
+
+    [Fact]
+    public void The_seed_never_overwrites_a_file_that_appears_while_it_writes()
+    {
+        var (fs, store, log) = New();
+        var events = new EventsFile(store, log.Add);
+        fs.BeforePromote = () => fs.Put(DataFile.Events, FileVariant.Main, "{\"admin\":true}");
+        Assert.NotNull(events.Seed(Bytes(SeedTests.SeedText)));
+        Assert.Equal("{\"admin\":true}", fs.Text(DataFile.Events, FileVariant.Main));
+        Assert.False(fs.Exists(DataFile.Events, FileVariant.Tmp));
+    }
+
+    [Fact]
+    public void A_hand_edit_landing_during_an_admin_edit_is_kept_as_the_bak()
+    {
+        var (fs, store, log) = New();
+        fs.Put(DataFile.Events, FileVariant.Main, Json.File(Json.Event("original")));
+        var events = new EventsFile(store, log.Add);
+        var (_, stamp) = events.Load(FakeUnits.Default());
+        fs.BeforePromote = () => fs.Put(DataFile.Events, FileVariant.Main, Json.File(Json.Event("hand-edited")));
+        Assert.Null(events.WriteEdit(Bytes("{}"), stamp, out _));
+        Assert.Contains("hand-edited", fs.Text(DataFile.Events, FileVariant.Bak));
+    }
 }
 
 /// <summary>foundation D28: the embedded seed is SchemaVersion 1, valid, one example per pillar, every one disabled.</summary>
