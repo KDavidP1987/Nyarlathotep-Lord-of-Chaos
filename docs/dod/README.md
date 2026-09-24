@@ -5,10 +5,10 @@
 
 | Plan | Title | Status | Size | Verified | Baseline items | Prediction | Parent |
 |---|---|---|---|---|---|---|---|
-| [foundation](foundation.md) | Foundation engine, store, spawner, scheduler, announcer and commands | in-progress | L | 5/38 | 38 | 100 % | nyarlathotep |
+| [foundation](foundation.md) | Foundation engine, store, spawner, scheduler, announcer and commands | in-progress | L | 5/38 | 38 | 95 % | nyarlathotep |
 | [nyarlathotep](nyarlathotep.md) | Nyarlathotep, Lord of Chaos, v0.1 to v1.0 | in-progress | Epic | 11/46 | 36 | 82 % |  |
 | [spikes](spikes.md) | Spikes S1-S3, march, restart marker, carrier buff | done | M | 20/20 | 20 | 50 % | nyarlathotep |
 
-Most-missed layers — done plans: layer 6.1 (5), layer 12.3 (3), layer 13.1 (2), layer 7.2 (2), layer 4.1 (1); open plans (provisional): layer 6.1 (3), layer 5.1 (1), layer 10.1 (1), layer 3.1 (1), layer 6.3 (1).
+Most-missed layers — done plans: layer 6.1 (5), layer 12.3 (3), layer 13.1 (2), layer 7.2 (2), layer 4.1 (1); open plans (provisional): layer 6.1 (3), layer 14.4 (1), layer 5.1 (1), layer 10.1 (1), layer 3.1 (1).
 
 Store: `docs/dod`. Plans are the source of truth; this file is regenerated.

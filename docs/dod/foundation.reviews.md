@@ -120,3 +120,10 @@ EARLIER: F9 resolved — the existing owner decision governs reviewer timeout an
 VERDICT: REVISE
 ### Dispositions
 - F1 · accepted · D18 lists Test-CheckServerWrites (changed by A1) with its good, bad-9, bad-10, bad-11 and empty fixtures; A1's ops are ~D34 ~D18
+
+## Review 7 · 2026-09-24 · codex · plan commit 05f7494 (round 3 of the A1 re-review)
+EARLIER: F1 resolved — D18 now explicitly registers `Test-CheckServerWrites` with the real-format good fixture, bad-9 through bad-11, and a non-passing empty fixture under `pwsh tools/preflight.ps1 -SelfTest`.
+15/15 layers · 49/49 probes
+VERDICT: READY
+### Dispositions
+- none · no findings

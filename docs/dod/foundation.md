@@ -14,7 +14,7 @@ closed: none
 commit: 8d429fd
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
-review: pending
+review: codex
 ---
 
 # DoD: Foundation engine, store, spawner, scheduler, announcer and commands
@@ -389,6 +389,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-24 · D4 · pass · test: Nyarlathotep.Tests ScheduleTests → 12 passed (once per minute, DST repeat incl. restart, skipped hour, backward clock, downtime, daily banner, day/night edges); fails when the occurrence-key comparison is removed (8 cases) · 40505e2 · claude
 - 2026-09-24 · D5 · pass · test: Nyarlathotep.Tests EventValidationTests, ConfigClampTests, CommandArgTests → 59, 20 and 50 passed · 40505e2 · claude
 - 2026-09-24 · D6 · pass · test: Nyarlathotep.Tests IdempotencyTests → 13 passed (already active, not active, two admins, purge confirm twice, reload twice via EventCatalog, 5 s dedupe inclusive, running snapshot across reload, content-hashed stale refusal) · 40505e2 · claude
+- 2026-09-24 · note · re-review A1 · Review 7 READY (Codex rounds 5-7; 15/15 · 49/49)
 
 ## Amendments
 - A1 · 2026-09-24 · discovered · ~D34 ~D18 · layer: 14.4 · step 2 pre-audit: the plan names 127.0.0.1:9876 for in-game tests but no world to run them in; the spikes throwaway world was deleted in its step 8, and the owner's world at C:\VRising-LocalServer must never be used. Foundation (and the later children) test in a development world save-data-nyardev (server name "Nyar Dev", log logs/NyarDev.log), declared in tools/paths-manifest.txt and tools/data-inventory.json; Test-CheckServerWrites hard-codes save-data-nyarspikes as the only allowed Saves folder, so it now allows exactly save-data-nyardev (plus the untouched LocalServer) across the whole after snapshot, whatever the manifest globs say, with bad fixtures for an undeclared, a manifested and an unchanged other save (4.5: every Saves folder, not only changed ones; 12.4: bad-9..11 fail, empty is not a pass; Review 5 F1 F2 F4 F5 F7 F8). D34 names the dev world; D18 lists the changed ServerWrites check with its fixtures; Build plan step 2 and Paths walked updated

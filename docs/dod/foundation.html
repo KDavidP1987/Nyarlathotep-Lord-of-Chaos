@@ -43,7 +43,7 @@ a:focus-visible { outline:3px solid var(--accent); outline-offset:2px; border-ra
 </head>
 <body>
 <h1>Foundation engine, store, spawner, scheduler, announcer and commands</h1>
-<p class="sub"><span class="mono">foundation</span> · in-progress · size L · parent nyarlathotep · verified 5/38 · prediction rate 100 %</p>
+<p class="sub"><span class="mono">foundation</span> · in-progress · size L · parent nyarlathotep · verified 5/38 · prediction rate 95 %</p>
 <p class="legend mono">legend: D item · A amendment · S assumption · F review finding · P proposal · W work package · n.m layer.probe</p>
 
 <h2>Work breakdown</h2>
@@ -66,13 +66,20 @@ a:focus-visible { outline:3px solid var(--accent); outline-offset:2px; border-ra
 </div>
 
 <h2>Amendments</h2>
-<p class="absent">no amendment has been recorded against this plan</p>
+<h3>discovered · 1</h3>
+<div class="scroll">
+<table><caption>discovered amendments</caption>
+<thead><tr><th scope="col">id</th><th scope="col">date</th><th scope="col">layer</th><th scope="col">ops</th><th scope="col">package</th><th scope="col">why</th></tr></thead>
+<tbody><tr><td class="mono">A1</td><td class="mono">2026-09-24</td><td class="mono">14.4</td><td class="mono">~D34 ~D18</td><td class="mono">—</td><td>step 2 pre-audit: the plan names 127.0.0.1:9876 for in-game tests but no world to run them in; the spikes throwaway world was deleted in its step 8, and the owner&#39;s world at C:\VRising-LocalServer must never be used. Foundation (and the later children) test in a development world save-data-nyardev (server name &quot;Nyar Dev&quot;, log logs/NyarDev.log), declared in tools/paths-manifest.txt and tools/data-inventory.json; Test-CheckServerWrites hard-codes save-data-nyarspikes as the only allowed Saves folder, so it now allows exactly save-data-nyardev (plus the untouched LocalServer) across the whole after snapshot, whatever the manifest globs say, with bad fixtures for an undeclared, a manifested and an unchanged other save (4.5: every Saves folder, not only changed ones; 12.4: bad-9..11 fail, empty is not a pass; Review 5 F1 F2 F4 F5 F7 F8). D34 names the dev world; D18 lists the changed ServerWrites check with its fixtures; Build plan step 2 and Paths walked updated</td></tr></tbody>
+</table>
+</div>
 
 <h2>Prediction rate</h2>
-<p class="absent">no version is declared in the Log, so there is no trend — the rate is 100 %</p>
+<p class="absent">no version is declared in the Log, so there is no trend — the rate is 95 %</p>
 
 <h2>Log notes</h2>
 <p><span class="k mono">2026-09-24</span>owner decisions at planning: core SpawnWaves in foundation (Epic A17), one child in nine staged steps, audience rows xUnit and VampireCommandFramework at level new</p>
 <p><span class="k mono">2026-09-24</span>Codex rounds 1-3 REVISE; round 3 at the cap with F1 (6.2 tooling) and F3 (14.4 path trace) rejected by owner decision; author 15/15 · 49/49, Codex 12/15 · 46/49, shown side by side</p>
+<p><span class="k mono">2026-09-24</span>re-review A1 · Review 7 READY (Codex rounds 5-7; 15/15 · 49/49)</p>
 </body>
 </html>
