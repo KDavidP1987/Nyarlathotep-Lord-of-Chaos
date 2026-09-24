@@ -22,9 +22,10 @@
                    to <file> and exits.
     -ServerWrites -Compare <file> [-AfterCleanup]
                  : Test-CheckServerWrites: every file created, changed or deleted since the snapshot must
-                   match a server/external glob of tools/paths-manifest.txt, no Saves folder other than
-                   save-data-nyarspikes may be touched or exist, and with -AfterCleanup
-                   save-data-nyarspikes must be gone (spikes D4).
+                   match a server/external glob of tools/paths-manifest.txt; the only Saves folders that may
+                   exist anywhere in the after snapshot (changed or not, manifested or not) are the development
+                   world save-data-nyardev and the owner's untouched LocalServer; with -AfterCleanup
+                   save-data-nyardev must be gone (spikes D4, foundation A1 and D34).
     -AuditOf <slug>
                  : Test-CheckAuditSteps: docs/audits/<slug>.md has a pre-audit and a post-audit entry
                    with a Codex verdict for every Build plan step of docs/dod/<slug>.md (spikes D17).
@@ -42,8 +43,8 @@
     pwsh tools/preflight.ps1
     pwsh tools/preflight.ps1 -Paths
     pwsh tools/preflight.ps1 -SelfTest
-    pwsh tools/preflight.ps1 -ServerWrites -Snapshot $env:TEMP\nyarspikes-before.tsv
-    pwsh tools/preflight.ps1 -ServerWrites -Compare $env:TEMP\nyarspikes-before.tsv -AfterCleanup
+    pwsh tools/preflight.ps1 -ServerWrites -Snapshot $env:TEMP\nyarfoundation-before.tsv
+    pwsh tools/preflight.ps1 -ServerWrites -Compare $env:TEMP\nyarfoundation-before.tsv
     pwsh tools/preflight.ps1 -AuditOf spikes
 #>
 
@@ -405,7 +406,11 @@ function Test-CheckFileWrites([string]$Root) {
             $argv += $p.Substring($last, $k - $last).Trim()
             # Replace/Move/Copy take paths in every position; the rest take the path first.
             $paths = if ($m.Value -match 'File\.(Replace|Move|Copy)|Directory\.Move') { $argv } else { @($argv[0]) }
-            foreach ($a in $paths) { if ($pathVars.Count -eq 0 -or $a -notmatch $okArg) { $bad += "Persistence.cs writes to '$a', not a path from its folder" } }
+            foreach ($a in $paths) {
+                # File.Move(src, dst, true) and File.Copy's overwrite flag are not paths.
+                if ($a -match '^(overwrite\s*:\s*)?(true|false)$') { continue }
+                if ($pathVars.Count -eq 0 -or $a -notmatch $okArg) { $bad += "Persistence.cs writes to '$a', not a path from its folder" }
+            }
         }
         foreach ($m in [regex]::Matches($p, '\b(Path\.GetTempPath|Path\.GetFullPath|Environment\.\w+|Directory\.GetCurrentDirectory|AppContext\.BaseDirectory|AppDomain\.\w+|Application\.\w+Path)\b')) {
             $bad += "Persistence.cs reaches another location ($($m.Value))"
@@ -790,12 +795,14 @@ function Test-CheckSpikeCode([string]$Root) {
 
 # A snapshot line is "<path>`t<size>`t<last-write ticks>`t<sha256 or ->" for a file and
 # "<path>/`t-`t-`tdir" for a directory, so an empty folder (another save's Saves/, a leftover
-# save-data-nyarspikes/) is seen too. Paths are relative to the server directory, or "LocalLow/<path>"
+# save-data-nyardev/) is seen too. Paths are relative to the server directory, or "LocalLow/<path>"
 # under %USERPROFILE%\AppData\LocalLow\Stunlock Studios, or "LocalServer/<path>" under the owner's own test
 # server data (-LocalServerPath; its world1 must come through the spikes byte for byte, spikes A4). Contents
 # are hashed where a write matters (BepInEx/, logs/, save-data-*/, LocalLow/, LocalServer/); a file that cannot be hashed after three tries, or a folder
 # that cannot be listed, is a problem that fails the snapshot and the comparison, never a silent row.
 $script:HashedRx = '^(BepInEx/|logs/|save-data-|LocalLow/|LocalServer/)'
+# The one world tests may run in (foundation A1): the only Saves folder besides the owner's LocalServer.
+$script:DevWorld = 'save-data-nyardev'
 function Get-ServerTree {
     $rows = [System.Collections.Generic.List[string]]::new()
     $problems = [System.Collections.Generic.List[string]]::new()
@@ -872,9 +879,10 @@ function Test-CheckServerWrites([string]$Root) {
     $changed = @(& $files $after.Keys | Where-Object { $before.ContainsKey($_) -and $before[$_] -ne $after[$_] })
     $deleted = @(& $files $before.Keys | Where-Object { -not $after.ContainsKey($_) })
     $bad = @()
-    # The owner's own test server data (LocalServer/) exists by design, so it is exempt from the Saves-folder
-    # existence rule, but any created, changed or deleted file under it fails.
-    $isOtherSave = { param($p) $p -match '(^|/)Saves/' -and $p -notlike 'save-data-nyarspikes/*' -and $p -notlike 'LocalServer/*' }
+    # The allow-list is a constant, not the manifest: a server glob that covers another world never authorises
+    # it (foundation A1). The owner's own test server data (LocalServer/) exists by design, so it is exempt from
+    # the Saves-folder existence rule, but any created, changed or deleted file under it fails.
+    $isOtherSave = { param($p) $p -match '(^|/)Saves/' -and $p -notlike "$($script:DevWorld)/*" -and $p -notlike 'LocalServer/*' }
     foreach ($p in @($created + $changed + $deleted)) {
         if ($p -like 'LocalServer/*') { $bad += "owner data touched: $(Format-SafePath $p)"; continue }
         if (& $isOtherSave $p) { $bad += "another save touched: $(Format-SafePath $p)"; continue }
@@ -882,7 +890,7 @@ function Test-CheckServerWrites([string]$Root) {
     }
     $others = @($after.Keys | Where-Object { & $isOtherSave $_ } | ForEach-Object { ($_ -split '/Saves/')[0] } | Sort-Object -Unique)
     foreach ($o in $others) { $bad += "another Saves folder exists: $(Format-SafePath "$o/Saves")" }
-    if ($cleanup -and @($after.Keys | Where-Object { $_ -like 'save-data-nyarspikes/*' }).Count -gt 0) { $bad += 'save-data-nyarspikes still exists' }
+    if ($cleanup -and @($after.Keys | Where-Object { $_ -like "$($script:DevWorld)/*" }).Count -gt 0) { $bad += "$($script:DevWorld) still exists" }
     if ($bad) { return New-Result $false "server writes: $(@($bad | Sort-Object -Unique | Select-Object -First 10) -join '; ')" }
     return New-Result $true "server writes: $($created.Count) created, $($changed.Count) changed, $($deleted.Count) deleted, all in manifest, no other save"
 }

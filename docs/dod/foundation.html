@@ -73,6 +73,13 @@ a:focus-visible { outline:3px solid var(--accent); outline-offset:2px; border-ra
 <tbody><tr><td class="mono">A1</td><td class="mono">2026-09-24</td><td class="mono">14.4</td><td class="mono">~D34 ~D18</td><td class="mono">—</td><td>step 2 pre-audit: the plan names 127.0.0.1:9876 for in-game tests but no world to run them in; the spikes throwaway world was deleted in its step 8, and the owner&#39;s world at C:\VRising-LocalServer must never be used. Foundation (and the later children) test in a development world save-data-nyardev (server name &quot;Nyar Dev&quot;, log logs/NyarDev.log), declared in tools/paths-manifest.txt and tools/data-inventory.json; Test-CheckServerWrites hard-codes save-data-nyarspikes as the only allowed Saves folder, so it now allows exactly save-data-nyardev (plus the untouched LocalServer) across the whole after snapshot, whatever the manifest globs say, with bad fixtures for an undeclared, a manifested and an unchanged other save (4.5: every Saves folder, not only changed ones; 12.4: bad-9..11 fail, empty is not a pass; Review 5 F1 F2 F4 F5 F7 F8). D34 names the dev world; D18 lists the changed ServerWrites check with its fixtures; Build plan step 2 and Paths walked updated</td></tr></tbody>
 </table>
 </div>
+<h3>defect · 1</h3>
+<div class="scroll">
+<table><caption>defect amendments</caption>
+<thead><tr><th scope="col">id</th><th scope="col">date</th><th scope="col">layer</th><th scope="col">ops</th><th scope="col">package</th><th scope="col">why</th></tr></thead>
+<tbody><tr><td class="mono">A2</td><td class="mono">2026-09-24</td><td class="mono">—</td><td class="mono">—</td><td class="mono">—</td><td>step 2 build: Test-CheckFileWrites (the Epic D7 fence) read every argument of File.Move/Copy as a path, so Persistence&#39;s atomic no-backup promote File.Move(tmp, path, true) failed as &quot;writes to &#39;true&#39;&quot;; a boolean overwrite flag is now skipped and every other argument is still checked (FileWrites good is the new Persistence.cs; bad-8 moves the .tmp onto a destination not from the folder with the flag and still fails)</td></tr></tbody>
+</table>
+</div>
 
 <h2>Prediction rate</h2>
 <p class="absent">no version is declared in the Log, so there is no trend — the rate is 95 %</p>

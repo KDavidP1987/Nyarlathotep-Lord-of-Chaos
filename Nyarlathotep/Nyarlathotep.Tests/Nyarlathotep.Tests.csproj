@@ -22,5 +22,6 @@
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Include="..\Nyarlathotep\Logic\**\*.cs" Link="Logic\%(RecursiveDir)%(Filename)%(Extension)" />
+		<None Include="..\Nyarlathotep\Resources\events.default.json" Link="Resources\events.default.json" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 </Project>

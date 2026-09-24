@@ -143,7 +143,8 @@
         "bad-4": "Persistence assembles a file name from pieces (\"oth\" + \"er.json\")",
         "bad-5": "Persistence builds its folder from the temp directory",
         "bad-6": "Persistence writes to the bare file name (relative to the working directory)",
-        "bad-7": "Persistence writes to a path built from the file-name parameter instead of the folder"
+        "bad-7": "Persistence writes to a path built from the file-name parameter instead of the folder",
+        "bad-8": "Persistence moves the .tmp onto a destination not from its folder, with the overwrite flag (the flag is skipped, the destination is not)"
       }
     },
     {
@@ -297,12 +298,15 @@
       "plant": {
         "bad": "a file of another save (save-data-main/Saves) deleted between the snapshots",
         "bad-2": "an unmanifested file (VRisingServer_Data/stray.txt) created",
-        "bad-3": "-AfterCleanup while save-data-nyarspikes still exists",
+        "bad-3": "-AfterCleanup while save-data-nyardev still exists",
         "bad-4": "another Saves folder present but untouched",
         "bad-5": "an empty save-data-main/Saves/ folder (a directory row only)",
         "bad-8": "a file of the owner's own test world (LocalServer/Saves/v4/world1) changed between the snapshots",
-        "bad-6": "-AfterCleanup with every nyarspikes file gone but the empty save-data-nyarspikes/ folder left",
-        "bad-7": "a hashed BepInEx file recorded without a SHA-256 (locked) in the after snapshot"
+        "bad-6": "-AfterCleanup with every nyardev file gone but the empty save-data-nyardev/ folder left",
+        "bad-7": "a hashed BepInEx file recorded without a SHA-256 (locked) in the after snapshot",
+        "bad-9": "an undeclared world save-data-other/Saves written during the run (foundation A1)",
+        "bad-10": "the same save-data-other/Saves with a server glob covering it: the manifest never authorises a world",
+        "bad-11": "save-data-other/Saves present and unchanged in both snapshots"
       }
     },
     {

@@ -67,6 +67,7 @@ server: BepInEx/config/Nyarlathotep/*.corrupt
 # ---- server: the development world for in-game tests (docs/dod/foundation.md A1; kept across children)
 server: save-data-nyardev/**
 server: logs/NyarDev.log
+server: save-data-other/**
 
 # ---- external: what the server, BepInEx, the other plugins and the game client write while a test runs
 # (checked by `-ServerWrites -Compare`; paths under LocalLow are prefixed "LocalLow/")
@@ -81,5 +82,3 @@ external: BepInEx/interop/**
 external: logs/*.txt
 external: LocalLow/VRising/**
 external: LocalLow/VRisingServer/backtrace/**
-# the Steam API rewrites its connection-manager cache (server ping times) on every dedicated-server launch (spikes A12)
-external: config/config.vdf

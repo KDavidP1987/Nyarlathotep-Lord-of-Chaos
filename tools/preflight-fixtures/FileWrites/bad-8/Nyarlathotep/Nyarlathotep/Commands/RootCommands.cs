@@ -12,9 +12,9 @@ internal static class RootCommands
     [Command("nyar", description: "Nyarlathotep overview — what the mod does and how to get help.")]
     public static void Nyar(ChatCommandContext ctx)
     {
-        if (!Core.IsReady) { ctx.Reply("still loading"); return; }
         ctx.Reply(
             $"Nyarlathotep, Lord of Chaos (v{MyPluginInfo.PLUGIN_VERSION}) - server events: empowered factions, " +
-            "sieges, defended zones, boss reinforcements, and spawn waves. Try .nyar status.");
+            "sieges, defended zones, boss reinforcements, and spawn waves. " +
+            (Core.IsReady ? "Ready." : "Waiting for the server world to finish loading."));
     }
 }

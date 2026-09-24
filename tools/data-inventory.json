@@ -126,15 +126,15 @@
       "singleCopy": false
     },
     {
-      "artifact": "Spikes throwaway world and its log",
+      "artifact": "Development world and its log",
       "covers": [
-        "save-data-nyarspikes/**",
-        "logs/NyarSpikes.log"
+        "save-data-nyardev/**",
+        "logs/NyarDev.log"
       ],
       "location": "dedicated server directory",
       "owner": "the developer",
-      "retention": "the spikes child only; holds the owner's SteamID in Settings/adminlist.txt",
-      "deletion": "deleted in spikes Build step 8, proven by -ServerWrites -Compare -AfterCleanup",
+      "retention": "in-game tests of foundation and later children (docs/dod/foundation.md A1); holds the owner's SteamID in Settings/adminlist.txt",
+      "deletion": "deleted at the Epic's close or by the owner at any time, proven by -ServerWrites -Compare -AfterCleanup",
       "singleCopy": true
     },
     {

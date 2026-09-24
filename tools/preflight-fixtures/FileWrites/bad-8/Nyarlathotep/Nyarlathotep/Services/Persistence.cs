@@ -79,7 +79,7 @@ internal sealed class Persistence : IFileStore
         Guard(bak);
         if (!File.Exists(path)) File.Move(tmp, path);
         else if (keepBackup) File.Replace(tmp, path, bak);
-        else File.Move(tmp, path, true);
+        else File.Move(tmp, file.ToString(), true);
     }
 
     public void Rename(DataFile file, FileVariant from, FileVariant to)

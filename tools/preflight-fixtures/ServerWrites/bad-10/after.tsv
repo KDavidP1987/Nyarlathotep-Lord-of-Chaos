@@ -14,4 +14,7 @@ save-data-nyardev/	-	-	dir
 save-data-nyardev/Saves/	-	-	dir
 LocalServer/	-	-	dir
 LocalServer/Saves/	-	-	dir
-LocalServer/Saves/v4/world1/AutoSave_7.save.gz	9100	300	C1B2C3D4E5F60718293A4B5C6D7E8F90A1B2C3D4E5F60718293A4B5C6D7E8F90
+LocalServer/Saves/v4/world1/AutoSave_7.save.gz	9000	50	B1B2C3D4E5F60718293A4B5C6D7E8F90A1B2C3D4E5F60718293A4B5C6D7E8F90
+save-data-other/	-	-	dir
+save-data-other/Saves/	-	-	dir
+save-data-other/Saves/v4/other/AutoSave_3.save.gz	7000	150	C1B2C3D4E5F60718293A4B5C6D7E8F90A1B2C3D4E5F60718293A4B5C6D7E8F90

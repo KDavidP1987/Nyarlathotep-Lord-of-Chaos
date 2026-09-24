@@ -32,16 +32,23 @@ public class Plugin : BasePlugin
         int patchCount = System.Linq.Enumerable.Count(Harmony.GetPatchedMethods());
         Log.LogInfo($"Harmony patches applied: {patchCount} method(s) patched.");
 
-        CommandRegistry.RegisterAll();
+        // One registration per command class, so a class that fails is logged and the rest register (D9).
+        var groups = System.Linq.Enumerable.Select(
+            System.Linq.Enumerable.Where(typeof(Plugin).Assembly.GetTypes(), HasCommands),
+            t => (t.Name, (System.Action)(() => CommandRegistry.RegisterCommandType(t))));
+        Logic.CommandGroups.RegisterEach(groups, line => Log.LogWarning($"[nyar] {line}"));
 
         Log.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} v{MyPluginInfo.PLUGIN_VERSION} loaded. Awaiting game data init.");
     }
 
+    static bool HasCommands(System.Type type) =>
+        System.Linq.Enumerable.Any(type.GetMethods(), m => System.Reflection.CustomAttributeExtensions.GetCustomAttribute<CommandAttribute>(m) is not null);
+
     public override bool Unload()
     {
         CommandRegistry.UnregisterAssembly();
-        // TODO(foundation): end active events, despawn tracked units, and flush persistence here
-        // (see docs/NYARLATHOTEP_DESIGN.md §"Lifecycle & cleanup").
+        // TODO(foundation step 4): stop the scheduler coroutine before the flush.
+        Services.Persistence.Shutdown();
         Harmony?.UnpatchSelf();
         return true;
     }

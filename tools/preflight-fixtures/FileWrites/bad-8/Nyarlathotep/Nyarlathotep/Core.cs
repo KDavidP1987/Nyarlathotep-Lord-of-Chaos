@@ -61,11 +61,9 @@ internal static class Core
             ServerScriptMapper = server.GetExistingSystemManaged<ServerScriptMapper>();
             ServerGameSettingsSystem = server.GetExistingSystemManaged<ServerGameSettingsSystem>();
 
-            // Services in dependency order (docs/dod/foundation.md › Design › States › Startup and shutdown):
-            // Persistence → EventStore → SpawnTracker → TriggerBus → EventRuntime → Announcer → HealthMonitor
-            // → EventScheduler. Later build steps add the rest.
-            Services.Persistence.Initialize();
-            Services.EventStore.Initialize();
+            // TODO(foundation): construct services here in dependency order —
+            // SpawnTracker (+ orphan sweep of units tagged by a previous run), EventScheduler,
+            // TriggerBus, then the four feature services. See docs/NYARLATHOTEP_DESIGN.md §"Build order".
 
             IsReady = true;
             Log.LogInfo($"Nyarlathotep initialized via {trigger} (attempt #{_initAttempts}). Prefab map has {prefabSystem.SpawnableNameToPrefabGuidDictionary.Count} entries.");

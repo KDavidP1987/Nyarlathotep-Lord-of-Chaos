@@ -64,9 +64,9 @@ server: BepInEx/config/Nyarlathotep/*.json
 server: BepInEx/config/Nyarlathotep/*.bak
 server: BepInEx/config/Nyarlathotep/*.tmp
 server: BepInEx/config/Nyarlathotep/*.corrupt
-# ---- server: the spikes child's throwaway world (docs/dod/spikes.md; deleted in its step 8)
-server: save-data-nyarspikes/**
-server: logs/NyarSpikes.log
+# ---- server: the development world for in-game tests (docs/dod/foundation.md A1; kept across children)
+server: save-data-nyardev/**
+server: logs/NyarDev.log
 
 # ---- external: what the server, BepInEx, the other plugins and the game client write while a test runs
 # (checked by `-ServerWrites -Compare`; paths under LocalLow are prefixed "LocalLow/")
