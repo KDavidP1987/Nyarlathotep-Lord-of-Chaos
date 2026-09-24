@@ -38,3 +38,27 @@ checks are lines "- session <n> log check: …" (D33).
 - Codex verdict: READY (round 2)
 - in-game: none (pure logic step)
 - dod status: foundation D1, D3, D4, D5, D6 pass lines added (D2 waits for every class of D3–D16)
+
+### Step 2 · 2026-09-24 · 31cca9e
+- compile: 0 errors, 0 warnings (plugin and Nyarlathotep.Tests)
+- tests: `dotnet test Nyarlathotep/Nyarlathotep.Tests -c Release` → Passed 235, Failed 0; PersistencePathTests 12, PersistenceWriteTests 18 (incl. SeedTests), DependencyFailureTests 10
+- mutation check: removing StateStore.Flush's one-second interval and the per-streak log gate failed 2 cases; removing DataPaths.Check's `..` and reparse-point checks failed 2 cases; reverting EventsFile.Seed to an overwriting promote failed 1; unguarding RegisterEach's discovery step failed 1; restored code passes
+- preflight: exit 0; `-SelfTest` → "selftest: 20/20 checks, 3 fixtures each, 46 extra bad fixtures"; `-Paths` → "paths: 406 walked, all in manifest"
+- /code-review (inline, 8562fe3..2d4e85c): one finding, fixed in 2d4e85c: EventStore.Initialize could let an exception escape into Core.TryInitialize, so it is now wrapped and logs "events.json load failed … no events loaded"
+- session 1 log check: 0 unhandled, 3 nyar lines
+- session 2 log check: 0 unhandled, 3 nyar lines
+- session 3 log check: 0 unhandled, 2 nyar lines
+- Codex cross-inspection round 1 (2d4e85c): REVISE, 6 findings. The fixes are in 0a27e9d.
+  - (1) a junction above BepInEx/config: declined. It is the admin's deployment choice, and D7 fences the mod's file names and the data folder, which Guard checks before every access.
+  - (2) older-schema migration can't be reached: accepted as a record. Schema 1 is the first version, so the migrate branch first becomes reachable at schema 2, which brings its own legacy parser and test.
+  - (3) the seed checks, then writes: fixed with IFileStore.PromoteNew, which never overwrites.
+  - (4) a hand edit can land during an admin edit: declined with a test. File.Replace keeps the hand edit as events.json.bak.
+  - (5) command discovery ran outside the guard: fixed. The enumeration is guarded and loadable types are kept.
+  - (6) -LogCheck matched only frames indented with three spaces: fixed with a regex and fixture LogCheck/bad-3.
+- Codex cross-inspection round 2 (0a27e9d): all round 1 fixes and dispositions accepted. One new finding: the regex counted prose ("look at Nyarlathotep.Core"). Fixed in 4e3abe0 by requiring the frame's "(".
+- Codex cross-inspection round 3 (4e3abe0): one finding: Mono puts a space before "(". Fixed in 31cca9e and added to bad-3, which now counts 4 unhandled lines. The good fixture holds the prose line and passes. The live log still reads 0 unhandled.
+- Codex verdict: REVISE (round 3 of 3, at the cap). Its one finding is fixed in 31cca9e and proven by fixture LogCheck/bad-3; no finding is open.
+- in-game: sessions 1–3 in docs/features/FOUNDATION.md › Test results (first run and seed, boot with an unknown unit, boot with broken JSON)
+- dod status: D7, D8, D9 pass lines; notes on D28 (first run and empty state seen; "still loading" pending step 5) and D23 (boot half seen; the reload half is step 5)
+- open: the -ServerWrites -Compare against $env:TEMP
+yarfoundation-before.tsv waits for step 8 (D34), with the game client closed

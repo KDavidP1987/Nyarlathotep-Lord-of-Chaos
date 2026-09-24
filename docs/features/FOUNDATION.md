@@ -54,6 +54,9 @@ Build plan).
   PersistenceWriteTests, SeedTests, DependencyFailureTests).
 - Mutation check: removing the one-second interval in `StateStore.Flush` and the per-streak log gate failed 2
   cases; removing the `..` and reparse-point checks in `DataPaths.Check` failed 2 cases; restored code passes.
+- After the Codex cross-inspection fixes (31cca9e): Passed 235, Failed 0. The seed now never overwrites a file
+  that appears while it writes, and a failure during command discovery is contained. Mutations: reverting
+  `Seed` to an overwriting promote failed 1 case; unguarding the discovery step failed 1 case.
 
 ### Session 1 · 2026-09-24
 Dev world "Nyar Dev" (save-data-nyardev), created fresh, 127.0.0.1:9876, build 8865800.
