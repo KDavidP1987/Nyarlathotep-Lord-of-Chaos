@@ -396,3 +396,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-23 · version · v2.3 · Codex review 7 (third round on the v2 scope, the cap): A13 (requested) recorded; D5 D36 D37 D42 D46 revised; unreachable actors stated; taken to the owner for review
 - 2026-09-23 · note · owner confirmed hide = publication only, counting continues (S-22, Business rules 11)
 - 2026-09-23 · note · review pending → human: owner READY on v2.3 (Review 8)
+- 2026-09-24 · note · spikes A16: S3 measured the carrier by stat readings and a qualitative fight only; the faction-empowerment child measures per-hit damage dealt and taken with and without the carrier when it chooses its multipliers

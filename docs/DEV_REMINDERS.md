@@ -127,3 +127,5 @@ read the original post-mortem. `Beelz` = `..\Beelzebub Lord of Gluttony\Beelzebu
     (`Beelz docs/CHAIN_AUDIT.md`). Add a verbose-logging config flag early.
 
 - **LifeTime needs Age (spikes A10, 2026-09-24).** A unit made with `InstantiateEntityImmediate` has no `Age`, so a `LifeTime` written on it never expires, across restarts too. Add `Age` with the LifeTime, or spawn through `UnitSpawnerUpdateSystem.SpawnUnit` as every reference mod does. Verify expiry in game before relying on it.
+
+- **No follow links to non-player anchors (spikes A11, A17, 2026-09-24).** Setting `Follower.Followed` on a spawned NPC to an entity that is not a player (the spikes used a held CHAR_Critter_Rat as an anchor) aborted the server twice in Burst ("The entity does not exist … AppendDestroyedEntityRecordError"): once while further units spawned, once when the owner picked up the rat, which turns it into an inventory item and destroys the entity. The follower also teleports rather than walking. Walk units with the aggro chase instead (SIEGES.md, D16).
