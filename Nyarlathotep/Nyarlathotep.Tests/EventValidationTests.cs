@@ -67,6 +67,7 @@ public class EventValidationTests
     [InlineData("{ \"type\": \"Schedule\", \"days\": [\"Mon\"], \"times\": [\"8:00\"] }", "trigger.times must be 1-12 of HH:mm")]
     [InlineData("{ \"type\": \"GameTime\", \"phase\": \"dusk\" }", "trigger.phase must be day or night")]
     [InlineData("{ \"type\": \"VBloodKilled\", \"bosses\": [\"CHAR_Nobody\"] }", "unknown unit CHAR_Nobody")]
+    [InlineData("{ \"type\": \"VBloodKilled\", \"bosses\": [\"Boss_Known\"] }", "unknown unit Boss_Known")]
     [InlineData("{ \"type\": \"VBloodKilled\", \"bosses\": [\"any\", \"CHAR_Bandit_Tourok_VBlood\"] }", "trigger.bosses must be [\"any\"] or 1-20 CHAR_ names")]
     [InlineData("{ \"type\": \"Manual\", \"when\": 1 }", "unknown field trigger.when")]
     public void Invalid_triggers_disable_the_event(string trigger, string reason)

@@ -11,12 +11,12 @@ sealed class FakeUnits(params string[] known) : IUnitCatalog
     public bool IsDenied(string prefabName) => Denied.Contains(prefabName);
 
     public static FakeUnits Default() =>
-        new("CHAR_Bandit_Thug", "CHAR_Bandit_Deadeye", "CHAR_Undead_SkeletonSoldier_Base", "CHAR_Bandit_Tourok_VBlood");
+        new("CHAR_Bandit_Thug", "CHAR_Bandit_Deadeye", "CHAR_Undead_SkeletonSoldier_Base", "CHAR_Bandit_Tourok_VBlood", "Boss_Known");
 }
 
 static class Json
 {
-    /// <summary>A valid one-event file; <paramref name="patch"/> replaces the event object's body.</summary>
+    /// <summary>An events.json v1 file holding <paramref name="events"/>.</summary>
     public static string File(params string[] events) =>
         "{ \"SchemaVersion\": 1, \"events\": [ " + string.Join(", ", events) + " ] }";
 

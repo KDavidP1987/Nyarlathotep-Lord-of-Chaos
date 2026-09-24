@@ -242,7 +242,7 @@ public static class EventValidator
                 foreach (var x in b.EnumerateArray()) bosses.Add(Str(x, rule));
                 if (bosses.Contains("any") && bosses.Count > 1) throw new Fail(rule);
                 foreach (var boss in bosses)
-                    if (boss != "any" && !units.IsKnown(boss)) throw new Fail($"unknown unit {boss}");
+                    if (boss != "any" && (!boss.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(boss))) throw new Fail($"unknown unit {boss}");
                 return new Trigger(TriggerType.VBloodKilled, [], [], DayPhase.Night, bosses);
             }
             default:

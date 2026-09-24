@@ -34,7 +34,7 @@ public sealed class InstanceGuard
     public void Clear() => _active.Clear();
 }
 
-/// <summary>A trigger from the same source within the window fires once.</summary>
+/// <summary>A trigger from the same source within the window (inclusive) fires once.</summary>
 public sealed class TriggerDedupe(TimeSpan window)
 {
     public static readonly TimeSpan DefaultWindow = TimeSpan.FromSeconds(5);
@@ -45,7 +45,7 @@ public sealed class TriggerDedupe(TimeSpan window)
 
     public bool ShouldFire(string sourceKey, DateTime utcNow)
     {
-        if (_last.TryGetValue(sourceKey, out var at) && utcNow - at < window && utcNow >= at) return false;
+        if (_last.TryGetValue(sourceKey, out var at) && utcNow - at <= window && utcNow >= at) return false;
         _last[sourceKey] = utcNow;
         if (_last.Count > 256) Prune(utcNow);
         return true;
@@ -53,8 +53,17 @@ public sealed class TriggerDedupe(TimeSpan window)
 
     void Prune(DateTime utcNow)
     {
-        foreach (var k in _last.Where(kv => utcNow - kv.Value >= window).Select(kv => kv.Key).ToList()) _last.Remove(k);
+        foreach (var k in _last.Where(kv => utcNow - kv.Value > window).Select(kv => kv.Key).ToList()) _last.Remove(k);
     }
+}
+
+/// <summary>What identifies one version of events.json: its write time, length and SHA-256 of the content.
+/// The hash catches an edit that keeps the write time (a restored timestamp, or two writes inside the file
+/// system's timestamp resolution).</summary>
+public sealed record FileStamp(DateTime WriteUtc, long Length, string Sha256)
+{
+    public static FileStamp Of(DateTime writeUtc, byte[] content) =>
+        new(writeUtc, content.LongLength, Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(content)));
 }
 
 /// <summary>`event set`, `enable` and `disable` write events.json only when the file is the one last loaded.</summary>
@@ -62,8 +71,8 @@ public static class StaleFile
 {
     public const string Refusal = "events.json changed on disk, run .nyar event reload first";
 
-    public static string? CheckWritable(DateTime? loadedWriteUtc, DateTime? currentWriteUtc) =>
-        loadedWriteUtc is not null && loadedWriteUtc == currentWriteUtc ? null : Refusal;
+    public static string? CheckWritable(FileStamp? loaded, FileStamp? current) =>
+        loaded is not null && loaded == current ? null : Refusal;
 }
 
 public enum PurgeConfirmResult { Purge, NothingToPurge, NotArmed }
