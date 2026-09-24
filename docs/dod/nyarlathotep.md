@@ -243,7 +243,7 @@ Constraints each child inherits (a child's review checks they appear verbatim or
 - **raphael-api** — owns D38 D45; every wire line built by Logic/Wire (D37); read APIs never expose coordinates to non-admins; admin reads (events, zones) are adminOnly (D5); push events only to subscribed, connected players, with subscriptions ending on disconnect (D45); the contract document is updated in the same commit as the code and the api integer (docs/RAPHAEL_INTEGRATION_CONTRACT.md › Change discipline).
 
 ## Children
-- spikes · in-progress
+- spikes · done
 - foundation · planned
 - faction-empowerment · planned
 - event-spawns · planned
@@ -399,3 +399,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-24 · note · spikes A16: S3 measured the carrier by stat readings and a qualitative fight only; the faction-empowerment child measures per-hit damage dealt and taken with and without the carrier when it chooses its multipliers
 - 2026-09-24 · note · spikes Review 5 lessons for the foundation child: (F4) a command-driven test of refusal precedence (loading, enabled, argument, limit); (F6) the admin-only check covers indirect entry points (TriggerBus, EventScheduler, hooks), not only [Command] attributes; (F11) SpawnTracker's staged despawn is tested against a spawn issued mid-drain; (A19/A20) the BepInEx log check runs before every restart, since each boot overwrites LogOutput.log
 - 2026-09-24 · note · spikes Review 6 lessons for the foundation child: one aggregate paths control over repository, server, temporary, audit, review and plan-store paths; the concurrency test covers spawn during a drain, clear during a moving group, and two admins racing the last cap slot; a diff-based check is wrapped in a command that asserts the exact expected output and exits nonzero otherwise
+- 2026-09-24 · note · child spikes closed (docs/dod/spikes.md › Report: 20/20, prediction 50 %; verdicts S1, S2, S3 go); next child: foundation
