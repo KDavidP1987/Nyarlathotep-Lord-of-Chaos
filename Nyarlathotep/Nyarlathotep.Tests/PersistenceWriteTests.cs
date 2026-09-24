@@ -246,7 +246,7 @@ public class SeedTests
     [Fact]
     public void The_seed_validates_with_one_disabled_example_per_pillar()
     {
-        var units = new FakeUnits("CHAR_Bandit_Thug", "CHAR_Bandit_Deadeye", "CHAR_Undead_SkeletonSoldier_Base", "CHAR_Bandit_Tourok_VBlood");
+        var units = new FakeUnits("CHAR_Bandit_Thug", "CHAR_Bandit_Deadeye", "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "CHAR_Bandit_Tourok_VBlood");
         var r = EventValidator.Parse(SeedText, units);
         Assert.Null(r.FileError);
         Assert.Equal(1, r.SchemaVersion);

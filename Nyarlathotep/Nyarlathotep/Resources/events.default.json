@@ -54,7 +54,7 @@
       "durationSeconds": 900,
       "action": {
         "type": "SpawnWaves",
-        "units": [ { "prefab": "CHAR_Undead_SkeletonSoldier_Base", "count": 6 } ],
+        "units": [ { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 6 } ],
         "waves": 2, "intervalSeconds": 120, "radius": 12,
         "location": { "type": "Point", "x": -1200, "z": -800 }
       }

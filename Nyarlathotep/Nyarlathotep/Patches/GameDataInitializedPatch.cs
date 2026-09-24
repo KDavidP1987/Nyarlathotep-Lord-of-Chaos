@@ -29,3 +29,28 @@ internal static class GameDataInitializedPatch
         }
     }
 }
+
+/// <summary>
+/// The second init trigger (foundation A5): a brand-new world has no save to load, so
+/// SpawnTeamSystem_OnPersistenceLoad never runs and the mod stayed uninitialised until a restart.
+/// LoadPersistenceSystemV2.SetLoadState(SuccessfulStartup) fires on every startup, new world or not
+/// (the signal BloodyCore and RaidForge use). TryInitialize is idempotent, so whichever fires first wins.
+/// </summary>
+[HarmonyPatch(typeof(LoadPersistenceSystemV2), nameof(LoadPersistenceSystemV2.SetLoadState))]
+internal static class ServerStartupPatch
+{
+    [HarmonyPostfix]
+    public static void OnLoadState(ServerStartupState.State loadState)
+    {
+        if (Core.IsReady) return;
+        try
+        {
+            if (loadState == ServerStartupState.State.SuccessfulStartup)
+                Core.TryInitialize(nameof(ServerStartupPatch));
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"ServerStartupPatch failed: {ex}");
+        }
+    }
+}
