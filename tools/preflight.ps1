@@ -326,7 +326,7 @@ function Test-CheckStructuralEdits([string]$Root) {
     # The fenced helpers themselves (AddComponentSafe, RemoveComponentSafe, AddBufferSafe, DestroySafe) are the
     # sanctioned route and may be called anywhere.
     # DestroyUtility.Destroy*(em, entity) is the deferred destroy; its entity is the second argument (spikes A13).
-    $rx = '(?:\.(?<op>AddComponent(?!Safe\b)\w*|RemoveComponent(?!Safe\b)\w*|AddBuffer|DestroyEntity)\s*(?:<[^>]*>)?\s*\(\s*|\b(?<op>DestroyUtility\.Destroy\w*)\s*\(\s*[^,()]+,\s*)(?<arg>[^,)\s]+)'
+    $rx = '(?:\.(?<op>AddComponent(?!Safe\b)\w*|RemoveComponent(?!Safe\b)\w*|AddBuffer|DestroyEntity)\s*(?:<[^>]*>)?\s*\(\s*|\b(?<op>DestroyUtility\.Destroy\w*)\s*\(\s*(?:[^,()]|\((?:[^()]|\([^()]*\))*\))+,\s*)(?<arg>[^,)\s]+)'
     $fence = "$PkgRel/EntityExtensions.cs"
     $bad = @(); $guarded = 0
     foreach ($f in $cs) {
