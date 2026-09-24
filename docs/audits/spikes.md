@@ -121,3 +121,4 @@ yarspikes-before.tsv` at 2026-09-23 19:46:28, server stopped, 1633 files and fol
 - session 5 (2026-09-24, build 4debb17 deployed at the S3 restart): `march 4 5 100` ×5 stayed Idle at about 100 m, alive, for up to 123 s (the owner saw no units, and a brief in-combat flag each time). `march 4 5 30` walked 5/5 units to the admin in 13 s. The limit refusal fired once ("spike limit 30 (28 alive)"); `clear` destroyed 28 in 6 batches. A6 adds the variant 4 probe
 - session 6 (build 6e1a94b): the probe shows the ranges persist and the admin is pruned from AggroBuffer at about 86–94 m; 60 m arrives. A7 re-adds the entry
 - session 7 (build 98132c0): re-adding does not hold beyond about 80 m; at 80 m, 6/10 units froze in Combat. No exception in any session since the rat anchor was retired
+- session 8 (build 98132c0): wall run; the target is pruned whenever the wall breaks line of sight; S1 verdict go (D7). No exception
