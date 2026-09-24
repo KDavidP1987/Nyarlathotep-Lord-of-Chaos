@@ -1,6 +1,6 @@
 # Sieges (Pillar B1)
 
-**Status:** designed, **highest risk**. Spike S1 found the movement lever (aggro chase, ≤ 60 m; Test results); D16 (2026-09-24) builds the MVP on it. D3 and D10 resolved 2026-09-23.
+**Status:** designed, **highest risk**. Spike S1: go (2026-09-24; aggro chase ≤ 60 m with line of sight; Test results); D16 (2026-09-24) builds the MVP on it. D3 and D10 resolved 2026-09-23.
 
 ## Goal
 

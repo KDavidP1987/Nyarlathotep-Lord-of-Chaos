@@ -1,6 +1,6 @@
 # Event spawns (Pillar D)
 
-**Status:** designed, not started. Depends on Foundation + spike S2. Shares the `SpawnWaves` action with
+**Status:** designed, not started. Depends on Foundation. Spike S2: go (2026-09-24; LifeTime needs Age; Test results). Shares the `SpawnWaves` action with
 Pillars B and C — this doc defines it.
 
 ## Goal

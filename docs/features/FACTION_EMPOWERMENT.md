@@ -1,6 +1,6 @@
 # Faction empowerment (Pillar A)
 
-**Status:** designed, not started. Depends on Foundation + spike S3.
+**Status:** designed, not started. Depends on Foundation. Spike S3: go (2026-09-24; carrier recipe in Test results).
 
 ## Goal
 
