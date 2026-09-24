@@ -310,6 +310,19 @@
       }
     },
     {
+      "name": "LogCheck",
+      "function": "Test-CheckLogCheck",
+      "mode": "logcheck",
+      "fixtures": "tools/preflight-fixtures/LogCheck",
+      "inputs": [
+        "the live BepInEx/LogOutput.log of the dedicated server (LogOutput.log)"
+      ],
+      "plant": {
+        "bad": "a stack frame from our assembly (\"   at Nyarlathotep.Services.EventStore.Reload()\") after an exception line",
+        "bad-2": "a real boot log with no \"[nyar\" line (a build before the [nyar] prefix, or the wrong log)"
+      }
+    },
+    {
       "name": "AuditSteps",
       "function": "Test-CheckAuditSteps",
       "mode": "auditof",

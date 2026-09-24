@@ -26,6 +26,10 @@
                    exist anywhere in the after snapshot (changed or not, manifested or not) are the development
                    world save-data-nyardev and the owner's untouched LocalServer; with -AfterCleanup
                    save-data-nyardev must be gone (spikes D4, foundation A1 and D34).
+    -LogCheck    : Test-CheckLogCheck on the live BepInEx/LogOutput.log: prints "log check: <n> unhandled,
+                   <s> nyar lines" and exits 1 when the log is missing or empty, holds a stack frame from our
+                   assembly ("   at Nyarlathotep.") or has no "[nyar" line (foundation D33). Run it after every
+                   in-game session, before the next boot overwrites the log.
     -AuditOf <slug>
                  : Test-CheckAuditSteps: docs/audits/<slug>.md has a pre-audit and a post-audit entry
                    with a Codex verdict for every Build plan step of docs/dod/<slug>.md (spikes D17).
@@ -46,6 +50,7 @@
     pwsh tools/preflight.ps1 -ServerWrites -Snapshot $env:TEMP\nyarfoundation-before.tsv
     pwsh tools/preflight.ps1 -ServerWrites -Compare $env:TEMP\nyarfoundation-before.tsv
     pwsh tools/preflight.ps1 -AuditOf spikes
+    pwsh tools/preflight.ps1 -LogCheck
 #>
 
 [CmdletBinding()]
@@ -56,6 +61,7 @@ param(
     [string]$Snapshot,
     [string]$Compare,
     [switch]$AfterCleanup,
+    [switch]$LogCheck,              # the live BepInEx/LogOutput.log after an in-game session (foundation D33)
     [string]$AuditOf,               # plan slug: check its audit record covers every Build plan step
     [string]$ServerPath = 'C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer',
     [string]$LocalLowPath = (Join-Path $env:USERPROFILE 'AppData\LocalLow\Stunlock Studios'),
@@ -895,6 +901,27 @@ function Test-CheckServerWrites([string]$Root) {
     return New-Result $true "server writes: $($created.Count) created, $($changed.Count) changed, $($deleted.Count) deleted, all in manifest, no other save"
 }
 
+# After an in-game session (foundation D33): a stack frame from our assembly fails, and so does a log without
+# a "[nyar" line (the wrong log, or the plugin never initialised). The server may still hold the log open, so
+# it is read with shared access. A fixture holds LogOutput.log.
+function Test-CheckLogCheck([string]$Root) {
+    $log = $null
+    if (Test-IsFixture $Root) { $log = Read-Text $Root 'LogOutput.log' }
+    else {
+        $p = Join-Path $ServerPath 'BepInEx/LogOutput.log'
+        if (Test-Path -LiteralPath $p -PathType Leaf) {
+            $fs = [IO.File]::Open($p, 'Open', 'Read', 'ReadWrite')
+            try { $log = [IO.StreamReader]::new($fs).ReadToEnd() } finally { $fs.Dispose() }
+        }
+    }
+    if ($null -eq $log -or $log -notmatch '\S') { return New-Result $false 'log check: no log (BepInEx/LogOutput.log missing or empty)' }
+    $lines = $log -split '\r?\n'
+    $n = @($lines | Where-Object { $_.Contains('   at Nyarlathotep.') }).Count
+    $s = @($lines | Where-Object { $_.Contains('[nyar') }).Count
+    if ($s -eq 0) { return New-Result $false "log check: $n unhandled, 0 nyar lines (the wrong log, or the plugin did not initialise)" }
+    return New-Result ($n -eq 0) "log check: $n unhandled, $s nyar lines"
+}
+
 # The Build plan's numbered steps and, in docs/audits/<slug>.md, one "### Step <n>" entry per step under
 # a "## Pre-audit" heading and under a "## Post-audit" heading, each post-audit entry with a
 # "Codex verdict:" line. A fixture names the slug in auditof.txt.
@@ -972,7 +999,7 @@ function Invoke-SelfTest {
     foreach ($dup in @($checks | Group-Object function | Where-Object Count -gt 1)) { $problems += "function '$($dup.Name)' listed twice" }
     foreach ($c in $checks) {
         if ($c.function -ne "Test-Check$($c.name)") { $problems += "$($c.name): function must be Test-Check$($c.name)" }
-        if (@('default', 'paths', 'serverwrites', 'auditof') -notcontains $c.mode) { $problems += "$($c.name): mode '$($c.mode)' is not default, paths, serverwrites or auditof" }
+        if (@('default', 'paths', 'serverwrites', 'auditof', 'logcheck') -notcontains $c.mode) { $problems += "$($c.name): mode '$($c.mode)' is not default, paths, serverwrites, auditof or logcheck" }
         if ($c.fixtures -ne "tools/preflight-fixtures/$($c.name)") { $problems += "$($c.name): fixtures must be tools/preflight-fixtures/$($c.name)" }
         if (@($c.inputs | Where-Object { "$_" -match '\S' }).Count -eq 0) { $problems += "$($c.name): no inputs listed" }
         if (@($c.plant.PSObject.Properties).Count -eq 0) { $problems += "$($c.name): no plant descriptions" }
@@ -1029,7 +1056,7 @@ if ($ServerWrites -and $Snapshot) {
 }
 
 $manifest = Get-Manifest
-$mode = if ($Paths) { 'paths' } elseif ($ServerWrites) { 'serverwrites' } elseif ($AuditOf) { 'auditof' } else { 'default' }
+$mode = if ($Paths) { 'paths' } elseif ($ServerWrites) { 'serverwrites' } elseif ($AuditOf) { 'auditof' } elseif ($LogCheck) { 'logcheck' } else { 'default' }
 $failures = @()
 foreach ($c in @($manifest.checks | Where-Object { $_.mode -eq $mode })) {
     $r = Invoke-Check $c.function $repoRoot
