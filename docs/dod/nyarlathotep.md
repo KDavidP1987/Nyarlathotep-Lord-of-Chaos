@@ -397,3 +397,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-23 · note · owner confirmed hide = publication only, counting continues (S-22, Business rules 11)
 - 2026-09-23 · note · review pending → human: owner READY on v2.3 (Review 8)
 - 2026-09-24 · note · spikes A16: S3 measured the carrier by stat readings and a qualitative fight only; the faction-empowerment child measures per-hit damage dealt and taken with and without the carrier when it chooses its multipliers
+- 2026-09-24 · note · spikes Review 5 lessons for the foundation child: (F4) a command-driven test of refusal precedence (loading, enabled, argument, limit); (F6) the admin-only check covers indirect entry points (TriggerBus, EventScheduler, hooks), not only [Command] attributes; (F11) SpawnTracker's staged despawn is tested against a spawn issued mid-drain; (A19/A20) the BepInEx log check runs before every restart, since each boot overwrites LogOutput.log

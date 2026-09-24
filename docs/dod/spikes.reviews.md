@@ -143,4 +143,18 @@ Fix: Classify A19 as `defect` and retain the failed-evidence consequence instead
 9/15 layers · 43/49 probes
 VERDICT: REVISE
 ### Dispositions
-- pending: the owner decides (Build step 9); findings F1–F7 and F9 re-open the gating answers the owner accepted in Review 4, F8 and F13–F15 concern amendments A14–A19
+- F1 · rejected · the blind re-score counts as Gaps the six gating probes whose single-command asks F2 and F4–F7, F9 make; the owner accepted those answers in Review 4 (disproportionate for a throwaway child) and re-affirmed on 2026-09-24 that the plan changes only where a finding is confirmed; the author and reviewer lines stand side by side: author 15/15 · 49/49, reviewer 9/15 · 43/49
+- F2 · rejected · 3.3 has a single command: pwsh tools/preflight.ps1 → "data inventory: 43/43 complete" fails when any manifest glob lacks an owner, retention and deletion entry (Epic D34), and D4 -AfterCleanup fails on any residue
+- F3 · accepted · verified: the current Test-CheckStructuralEdits (with A13 and bad-10) was run on a worktree of 9ac3678, the last tree with spike code: "structural edits: fenced (4 Prefab-guarded calls in EntityExtensions.cs)"; recorded in docs/audits/spikes.md › Post-audit › Step 9
+- F4 · accepted · deferred to the foundation child: a command-driven refusal-precedence test belongs to the first child with permanent commands; Epic note 2026-09-24
+- F5 · rejected · the spike harness is deleted; dependency failure for kept code (VCF, config) is sampled by the foundation child per Epic › Interfaces
+- F6 · accepted · deferred to the foundation child: indirect entry points (TriggerBus, EventScheduler, hooks) arrive with foundation; its admin-only check must cover them; Epic note 2026-09-24
+- F7 · rejected · every preflight check the child added has good, bad and empty fixtures (D14); D19 and D20 are one-off git comparisons whose failing cases are stated in their items
+- F8 · accepted · A20: D12 is retired for D21 with manual evidence, sessions 9–11 listed as not checked
+- F9 · rejected · D15 walks repository and server paths with one command; the D20 worktree and scratch review files live under %TEMP% and are removed by the step that creates them
+- F10 · accepted · Build plan satisfies lines now cite D19 (step 2), D4 (step 3), D12 (steps 4 and 5), D1 and D4 (step 8)
+- F11 · accepted · deferred to the foundation child: the tag-or-spawn-while-draining interleaving is re-tested on SpawnTracker's staged despawn; Epic note 2026-09-24
+- F12 · accepted · Use cases › Maximal stretch: march groups count toward the same 30-unit cap
+- F13 · rejected · A14 reverses the owner's own planning decision (the mid-drain check), which is what `corrected` means; it removes scope rather than adding it, so it is not `requested`
+- F14 · rejected · A17 follows a finding the plan did not foresee (follow links abort the server); the owner authorized the rewrite; `discovered` counts it against the plan, the conservative choice
+- F15 · rejected · A19 changes D12's evidence, a plan change, and names the builder lapse in its why; kept as `discovered` so it counts against the plan rather than being excluded as `defect`

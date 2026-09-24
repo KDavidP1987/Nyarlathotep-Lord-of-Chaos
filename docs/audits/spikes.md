@@ -176,6 +176,7 @@ yarspikes-before.tsv` at 2026-09-23 19:46:28, server stopped, 1633 files and fol
   - Codex verdict: READY
   - dod status: verified 12/20 (D1 D2 D3 D6 D7 D8 D9 D10 D11 D14 D15 D16 pass lines; corrected at the step 9 pre-audit: D5 was listed here but has no pass line, since its mid-drain `tag 1` check was waived and its `march 2` clear check became impossible when A11 retired variant 2; D12 fail recorded for the session 1 and 3 aborts)
 
+- Codex verdict: READY (round 3, above)
 ### Step 4 · 2026-09-24 · (with step 3)
 - covered by Post-audit › Step 3: the march code and every change to it (A5–A7, A11 and the round 2 fix) were in the bd6bc0d..f4687a1 diff that Codex inspected over three rounds; in-game results in docs/features/SIEGES.md › Test results
 - Codex verdict: READY (shared with step 3)
@@ -191,7 +192,7 @@ yarspikes-before.tsv` at 2026-09-23 19:46:28, server stopped, 1633 files and fol
 ### Step 7 · 2026-09-24 · aed615e
 - docs only: RESEARCH_NOTES › Spike contracts, Epic amendments A14–A16, three Status lines; `dod-index --check` 0 problems on both plans; preflight OK ("secrets: none")
 - Codex: covered by the step 9 cross-inspection of the whole child's diff, docs included
-- Codex verdict: READY (see Step 9)
+- Codex verdict: REVISE at the 3-round cap (see Step 9; the docs were in each round’s diff)
 
 ### Step 8 · 2026-09-24 · 75efa02
 - removal: Spikes/ and Commands/SpikeCommands.cs deleted (75efa02). Compile 0 warnings, 0 errors; preflight "spike code: none", "secrets: none"
@@ -201,3 +202,12 @@ yarspikes-before.tsv` at 2026-09-23 19:46:28, server stopped, 1633 files and fol
 - D15 `-Paths` → "paths: 343 walked, all in manifest"
 - Codex read-only cross-inspection of the removal (75efa02, the 50e196a..HEAD diff, a Spike grep): no concrete defects
 - Codex verdict: READY
+
+### Step 9 · 2026-09-24 · 4d3f8b3 to (the close commit)
+- D20 rollback drill: `git worktree add $env:TEMP\nyar-rollback 4d3f8b3`; `git revert --no-edit 3ba32a0..4d3f8b3` → exit 0, no conflict; build → 0 Warning(s), 0 Error(s); preflight → PREFLIGHT OK; `git diff --quiet 3ba32a0 HEAD -- . ":!docs/dod/README.md"` → exit 0. Then `git reset --hard 4d3f8b3`, `git checkout 50e196a -- Nyarlathotep/Nyarlathotep/EntityExtensions.cs` (1 file, 40 deletions) → build 0 Warning(s), 0 Error(s); worktree removed
+- Codex cross-inspection of the whole child (3ba32a0..4d3f8b3, code and tooling diff plus plan, audit and feature docs), round 1 REVISE: DestroyUtility.Destroy unfenced → fixed, A13, fixture bad-9; AddBufferSafe lacks a buffer constraint → declined (IL2CPP interop buffer structs carry no managed IBufferElementData, so the constraint would reject every caller; the helper refuses Prefab and missing entities); D9 damage qualitative → A16; D18 wording → A18; step 9 pre-audit misplaced → moved; D5 and D12 status → A14, A15, A17
+- round 2 REVISE: the regex missed a parenthesised first argument → fixed, fixture bad-10 (old regex: no match; new: arg "e"); the D12 pass line overstated the record → A19 and a superseding line
+- round 3 REVISE: sessions 9–11 have no log record → A20 retires D12 for D21 (manual), sessions 9–11 listed as not checked; the owner accepted the gap on 2026-09-24
+- F3 check (Review 5): the current Test-CheckStructuralEdits run on a worktree of 9ac3678, the last tree with spike code → "structural edits: fenced (4 Prefab-guarded calls in EntityExtensions.cs)"; no unfenced structural call in the spike code
+- self-test: "selftest: 19/19 checks, 3 fixtures each, 40 extra bad fixtures"; preflight OK
+- Codex verdict: REVISE (round 3 of 3); its last finding is resolved by A20 and the owner's acceptance, and the plan's fresh re-review is recorded in docs/dod/spikes.reviews.md
