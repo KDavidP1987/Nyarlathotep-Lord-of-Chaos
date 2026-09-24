@@ -157,9 +157,10 @@ internal static class SpikeUnits
         var dontSave = new List<string>();
         foreach (var e in all.OrderBy(x => x.Index))
         {
-            var left = e.TryGetComponent<LifeTime>(out var life)
-                ? $"{math.max(0f, life.Duration - (e.TryGetComponent<Age>(out var age) ? age.Value : 0f)):0}s"
-                : "none";
+            // A9: "age -" means the unit has no Age component, so "left" is the full Duration, not a countdown.
+            var left = !e.TryGetComponent<LifeTime>(out var life) ? "none"
+                : e.TryGetComponent<Age>(out var age) ? $"{math.max(0f, life.Duration - age.Value):0}s age {age.Value:0}s"
+                : $"{life.Duration:0}s age -";
             (e.Has<ProjectM.PersistenceV2.DontSaveEntity>() ? dontSave : saved).Add($"{e.Index} {left}");
         }
         return $"saved {saved.Count} [{string.Join(", ", saved)}] dontsave {dontSave.Count} [{string.Join(", ", dontSave)}]";

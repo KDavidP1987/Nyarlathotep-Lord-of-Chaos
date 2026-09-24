@@ -174,6 +174,7 @@ Argument ranges (all arguments are integers, parsed by VCF, so no fractional, Na
 | march | distance (m) | 20–200 | 100 |
 | tag | count | 1–10 | — |
 | tag | lifetime (s) | 30–600 | 600 |
+| tag | keep | 0–1 (1 = CanPreventDisableWhenNoPlayersInRange.CanDisable false, A9) | 0 |
 | empower | seconds | 10–600 | — |
 | empower | radius (m) | 1–30 | 10 |
 | empower | carrierGuid | a PrefabGUID with Buff and LifeTime, not on the GAME_ASSETS do-not-spawn list | -1591883586 |
@@ -263,7 +264,7 @@ A server-side step stops the server before the deploying build.
 
    The build picks the anchor entity and records it in the D7 entry and D10. Run the variants in order in open ground, then run the best one with a player-built wall across the path. Record the D7 checklist in docs/features/SIEGES.md › Test results. Then run the D12 log check. · satisfies D7
 5. S2 restart. Steps, with `.nyar spike sweep` after each action:
-   1. `.nyar spike tag 6 600`. Even-numbered units also get PersistenceV2.DontSaveEntity through AddComponentSafe.
+   1. `.nyar spike tag 6 600 1`. Even-numbered units also get PersistenceV2.DontSaveEntity through AddComponentSafe; `keep 1` keeps all six enabled so DestroyWhenDisabled cannot remove them at boot (A9). Run 1 without `keep` is recorded as the DestroyWhenDisabled result.
    2. Wait for the next autosave ("PersistenceV2 - Finished Saving" in logs/NyarSpikes.log) after the tag, then stop the server with `taskkill /PID <pid> /F` (A8: the server runs without a console, so Ctrl-C is not available; S3 proved this method keeps the saved state).
    3. Start it with the step-3 line.
    4. Wait out the remaining LifeTime.
@@ -401,6 +402,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - A6 · 2026-09-24 · discovered · ~D7 · layer: 6.1 · session 5: variant 4 walked 5/5 units 30 m to the admin in 13 s (Idle → Combat at t=5 s, about 3 m/s), but at 100 m every unit stayed Idle for 120 s and more, alive, while the admin briefly showed in combat. Either the widened ranges are reset after spawn or the far aggro entry is pruned; variant 4 gains a per-second probe and re-application to tell them apart
 - A7 · 2026-09-24 · discovered · ~D7 · layer: 6.1 · session 6 probe: the widened ranges persist (prox, leash, circle and cone stay 150), so they are not reset. At 100 m the units enter Combat at t=3 s and close about 15 m, then at t=6 s the admin is pruned from AggroBuffer (entries 1 → 0) at about 86–94 m and the units walk back to spawn while still in state Combat, so the A6 re-apply (keyed on not-in-Combat) never fired. At 60 m nothing is pruned: 4/5 arrived in 20 s. The re-apply now keys on the missing AggroBuffer entry
 - A8 · 2026-09-24 · discovered · ~D8 · layer: 13.1 · the spikes server is launched in the background with no console, so the graceful Ctrl-C stop in Build step 5 is impossible; the S2 stop is a hard stop right after an autosave finishes (the S3 restart used this and kept the saved state)
+- A9 · 2026-09-24 · discovered · ~D6 ~D8 · layer: 6.1 · S2 run 1 (`tag 6 600`, then autosave, hard stop, restart) lost all six units, saved and DontSaveEntity alike, while five march units (CanDisable false) had survived the previous restart. So DestroyWhenDisabled removes tag units at boot and hides the DontSaveEntity answer. `tag` gains `keep 0-1`, and sweep shows each unit's Age, or "age -" when the unit has none, so a restart's effect on LifeTime is readable
 
 ## Log
 - 2026-09-23 · status → draft · plan
@@ -423,3 +425,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-24 · note · step 3 session 8: wall run with variant 4 at 40 m. The units stop when the wall breaks line of sight (target pruned each second), move only while the admin is visible, and neither path around nor attack the wall
 - 2026-09-24 · D7 · pass · manual: read docs/features/SIEGES.md › Test results → dated S1 entry with every field for variants 1–4 and the wall run, anchor CHAR_Critter_Rat (-2072914343), "S1 verdict: go — aggro chase …" · 320237f · claude
 - 2026-09-24 · note · step 3 session 8 crash check: the owner fed on a single marked `tag 1` thug (AB_Feed_03_Complete logged) with no exception and no crash, so the marker alone is safe. The owner's explanation of the session 3 abort: picking up a rat turns it into an inventory item, destroying the rat entity that the marker buff, the follower's Followed link and the anchor list still referenced. Session 1 aborted during `march 2` with no pickup and stays attributed to the follow link. Neither setup is used again
+- 2026-09-24 · note · step 3 session 9 (S2 run 1): the pre-tag sweep found 5 marked units from the wall run that had survived a restart ("marked 5, listed 0", 600s each), so the marker survives a restart. `tag 6 600` (3 DontSaveEntity), then AutoSave_430, hard stop and restart: sweep "marked 0, listed 0"; the owner saw no thugs

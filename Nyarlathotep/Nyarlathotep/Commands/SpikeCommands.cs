@@ -21,10 +21,10 @@ internal static class SpikeCommands
     const int MaxReplyBytes = 480;
     static DateTime _lastRun = DateTime.MinValue;
 
-    [Command("tag", adminOnly: true, usage: "<count 1-10> [lifetime 30-600]", description: "Spike: spawn and mark CHAR_Bandit_Thug around you.")]
-    public static void Tag(ChatCommandContext ctx, int count, int lifetime = 600) =>
-        Run(ctx, $"tag {count} {lifetime}", needsEnabled: true, () =>
-            Range("count", count, 1, 10) ?? Range("lifetime", lifetime, 30, SpikeUnits.MaxLifetime), count, () =>
+    [Command("tag", adminOnly: true, usage: "<count 1-10> [lifetime 30-600] [keep 0-1]", description: "Spike: spawn and mark CHAR_Bandit_Thug around you.")]
+    public static void Tag(ChatCommandContext ctx, int count, int lifetime = 600, int keep = 0) =>
+        Run(ctx, $"tag {count} {lifetime} {keep}", needsEnabled: true, () =>
+            Range("count", count, 1, 10) ?? Range("lifetime", lifetime, 30, SpikeUnits.MaxLifetime) ?? Range("keep", keep, 0, 1), count, () =>
         {
             var center = ctx.Event.SenderCharacterEntity.Read<Unity.Transforms.Translation>().Value;
             int spawned = 0, dontSave = 0;
@@ -36,10 +36,12 @@ internal static class SpikeCommands
                 var e = SpikeUnits.Spawn(SpikeMarch.Thug, at, lifetime, out var err);
                 if (!e.Exists()) { lastError = err; continue; }
                 spawned++;
+                // A9: keep=1 stops the unit being disabled (and so destroyed) when no player is near, e.g. at boot.
+                if (keep == 1) SpikeMarch.KeepEnabled(e);
                 // S2 (Build step 5): even-numbered units are also excluded from the save.
                 if (i % 2 == 0 && e.AddComponentSafe<ProjectM.PersistenceV2.DontSaveEntity>()) dontSave++;
             }
-            return $"tag: {spawned}/{count} spawned ({dontSave} DontSaveEntity), lifetime {lifetime}s, {SpikeUnits.AliveCount()} alive" +
+            return $"tag: {spawned}/{count} spawned ({dontSave} DontSaveEntity{(keep == 1 ? ", kept enabled" : "")}), lifetime {lifetime}s, {SpikeUnits.AliveCount()} alive" +
                    (lastError is null ? "" : $"; last error: {lastError}");
         });
 

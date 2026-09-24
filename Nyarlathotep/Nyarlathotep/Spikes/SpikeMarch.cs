@@ -103,7 +103,7 @@ internal static class SpikeMarch
     /// <summary>Session 2: units spawned 100 m from any player were disabled, and DestroyWhenDisabled removed them
     /// within 5 s. Marching units stay enabled (DEV_REMINDERS #14; Bloodcraft FamiliarBindingSystem.cs:602);
     /// LifeTime still bounds them.</summary>
-    static void KeepEnabled(Entity unit)
+    internal static void KeepEnabled(Entity unit)
     {
         if (!unit.Has<CanPreventDisableWhenNoPlayersInRange>() && !unit.AddComponentSafe<CanPreventDisableWhenNoPlayersInRange>()) return;
         unit.Write(new CanPreventDisableWhenNoPlayersInRange { CanDisable = new ModifiableBool(false) });
