@@ -35,16 +35,6 @@ checks are lines "- session <n> log check: …" (D33).
 - how "mutating" is identified (the plan leaves this open): a service method carries Logic's [Mutating] attribute. Test-CheckGatewayOnly collects those methods and requires every call site in Commands/, Patches/ or Services/ outside the declaring file to sit inside a Gateway.Run(...) call. EventStore.Reload (ActionKind LoadDefinitions) is marked too, so the boot load runs through the gateway as Operator.
 - Debug.FaultInjection: the cfg key is bound now, inside `#if DEBUG`, so that Test-CheckFaultInjection has a real reference to check; its consumer comes with the scheduler in step 5
 
-### Step 4 · 2026-09-24 · 8e6aeaa
-- git status: clean
-- compile: 0 errors, 0 warnings (the deploying build, so the baseline boot runs the step 3 DLL)
-- preflight: exit 0
-- dod status: foundation 15/38 verified (D1, D3-D12, D14, D15, D18, D19); `--check foundation` 0 problems, 0 warnings; review codex, no pending re-review
-- feature doc read: docs/features/FOUNDATION.md (Status: step 3 of 9; one open question, D28's "still loading", which step 5 answers); plan Business rules 2 and 7, Interfaces › game contracts, Design › Data (marker values, state.json), UX (spawn, purge, debug here), Performance; docs/RESEARCH_NOTES.md › Spike contracts; the spike recipe in git (`git show 9ac3678:Nyarlathotep/Nyarlathotep/Spikes/SpikeUnits.cs`)
-- baseline boot (session 4): the step 3 DLL on save-data-nyardev initialised in 30 s ("events: reloaded: 5 valid, 0 disabled", "Nyarlathotep initialized via GameDataInitializedPatch (attempt #1)"); server stopped with Stop-Process
-- session 4 log check: 0 unhandled, 1 nyar lines
-- decisions the plan leaves to the build: the spawn and despawn queues live in Logic/SpawnLedger with slots reserved at request time, so two requests for the last slot are settled in arrival order; `.nyar purge` and `.nyar purge confirm` are one VCF command with an optional word, as are `.nyar debug here`; pruning a dead unit from the ledger is bookkeeping of a unit the game already removed and is not a [Mutating] method; the purge lives in SpawnTracker until step 5 moves the event half to EventRuntime
-
 ## Post-audit
 ### Step 1 · 2026-09-24 · 40505e2
 - compile: 0 errors, 0 warnings (plugin and Nyarlathotep.Tests)
@@ -68,6 +58,8 @@ checks are lines "- session <n> log check: …" (D33).
 - session 1 log check: 0 unhandled, 3 nyar lines
 - session 2 log check: 0 unhandled, 3 nyar lines
 - session 3 log check: 0 unhandled, 2 nyar lines
+- session 4 log check: 0 unhandled, 2 nyar lines, 120 orphan errors, 120 unity errors (A99: children of DontSaveEntity units)
+- session 5 log check: 0 unhandled, 2 nyar lines, 0 orphan errors, 0 unity errors
 - Codex cross-inspection round 1 (2d4e85c): REVISE, 6 findings. The fixes are in 0a27e9d.
   - (1) a junction above BepInEx/config: declined. It is the admin's deployment choice, and D7 fences the mod's file names and the data folder, which Guard checks before every access.
   - (2) older-schema migration can't be reached: accepted as a record. Schema 1 is the first version, so the migrate branch first becomes reachable at schema 2, which brings its own legacy parser and test.
@@ -82,31 +74,3 @@ checks are lines "- session <n> log check: …" (D33).
 - dod status: D7, D8, D9 pass lines; notes on D28 (first run and empty state seen; "still loading" pending step 5) and D23 (boot half seen; the reload half is step 5)
 - open: the -ServerWrites -Compare against $env:TEMP
 yarfoundation-before.tsv waits for step 8 (D34), with the game client closed
-
-### Step 3 · 2026-09-24 · 40d0e30
-- compile: 0 errors, 0 warnings in Release and in Debug (the Debug build compiles the `#if DEBUG` FaultInjection key)
-- tests: `dotnet test Nyarlathotep/Nyarlathotep.Tests -c Release` → Passed 449, Failed 0; AuthorizationTests 162 (every ActionKind × actor × enabled), WireFormatTests 13, TextSinkTests 32, PrivacyTests 7
-- mutation check: each of 9 planted faults failed its class. The faults: Player granted Announce (4), System's enabled check removed (5), a denial not logged (57), wire values unmapped (5), the 480-byte cap removed (1), a handshake key dropped (1), control characters kept (6), the announcement length unchecked (1), and the status line leaking the radius (PrivacyTests, 1)
-- preflight: exit 0 with "gateway: only ActionGateway mutates (1 call sites)", "fault injection: debug-only (2 references)", "admin list: 0 admin commands, equal to the commands check"; `-SelfTest` → "selftest: 24/24 checks, 3 fixtures each, 56 extra bad fixtures"; `-SessionsOf foundation` → "session logs: foundation 3/3 checked"; `-ListCommands admin` → "admin commands: 0"; `-Paths` → "paths: 483 walked, all in manifest"
-- /code-review (inline, a4971e5..b084801): one finding, fixed in 49464d9. Remove-CsLiterals blanked whole interpolated strings, so a call inside `$"{…}"` escaped the gateway and fault-injection checks. Fixtures GatewayOnly/bad-3 and FaultInjection/bad-4.
-- Codex cross-inspection round 1 (b084801): REVISE, 5 findings. The fixes are in 6801d7a.
-  - (1) uses of a mutating method in its own declaring file were exempt: declined and aligned with the plan. D11 exempts "the services it dispatches to", which must call each other.
-  - (2) the suffixed `[CommandAttribute]` form: fixed; fixture AdminList/bad-2.
-  - (3) a session line with 0 nyar lines passed: fixed; fixture SessionLogs/bad-3.
-  - (4) required wire fields dropped on overflow: fixed. `Wire.Record` throws instead.
-  - (5) Unicode format and separator characters: fixed in TextSink.
-- Codex cross-inspection round 2 (6801d7a): REVISE, 3 findings. The fixes are in 9980886.
-  - (1) a file could exempt itself by declaring a dummy `[Mutating]`: fixed. The dispatched services are named, and a `[Mutating]` elsewhere fails (fixture GatewayOnly/bad-4).
-  - (2) interpolated text gives false matches: declined, because the error is a loud failure and never a miss.
-  - (3) supplementary-plane format characters: fixed by judging Rune scalars.
-- Codex cross-inspection round 3 (9980886): one finding. A "(" in an interpolated string's text inside `Gateway.Run` stretched the span over a later direct call. This overturned disposition (2) of round 2 as far as parenthesis matching goes.
-  - Fixed in 40d0e30: Hide-InterpolatedText masks the text and keeps the holes; the lexer takes a raw literal's `$` prefix; an unmatched span contains nothing. Fixture GatewayOnly/bad-5.
-  - Known limit, documented at the lexer: a quote nested inside a hole ends the literal early, and the unmatched-span rule makes that fail rather than pass.
-- Codex verdict: REVISE (round 3 of 3, at the cap). Its one finding is fixed in 40d0e30 and proven by fixture GatewayOnly/bad-5; no finding is open.
-- in-game: none (pure logic and tooling step)
-- dod status: D10, D11, D12, D14, D15, D18, D19 pass lines
-
-### Step 4 · 2026-09-24 · (in progress)
-- session 5 log check: 0 unhandled, 27 nyar lines
-- session 6 log check: 0 unhandled, 2 nyar lines, 551 orphan errors, 120 unity errors (A9: children of DontSaveEntity units in session 5's autosave; counted from the saved server log with the A10 pattern, which -LogCheck did not yet have)
-- session 7 log check: 0 unhandled, 2 nyar lines, 15 orphan errors, 0 unity errors (A9: "Could not map an old modification source entity", left by session 5's save; the dev world's save was reset afterwards)

@@ -18,8 +18,8 @@ namespace Nyarlathotep.Services;
 /// bookkeeping is Logic/SpawnLedger; this class does the game side:
 /// <list type="bullet">
 /// <item>the spawn recipe (spikes S2, RESEARCH_NOTES › Spike contracts): InstantiateEntityImmediate, then Age = 0 so
-/// LifeTime counts (A10), LifeTime, DestroyWhenDisabled, DontSaveEntity, a cleared DropTableBuffer and the unit marker,
-/// every structural edit through EntityExtensions;</item>
+/// LifeTime counts (A10), LifeTime, DestroyWhenDisabled, a cleared DropTableBuffer and the unit marker, every structural
+/// edit through EntityExtensions; a unit saves normally with its children, and the boot sweep despawns it (A9);</item>
 /// <item>the spawn and despawn queues, drained once per tick within MaxSpawnsPerTick and MaxDespawnsPerTick;</item>
 /// <item>the boot marker sweep, which queues every marked survivor of an earlier run for despawn (D21);</item>
 /// <item>the tracked units in state.json, for the admin and the boot log.</item>
@@ -260,7 +260,7 @@ internal static class SpawnTracker
         if (!unit.AddComponentSafe<Age>()) return Abandon(unit, "Age could not be added", out error);
         unit.Write(new Age { Value = 0f });
         if (!unit.AddComponentSafe<DestroyWhenDisabled>()) return Abandon(unit, "DestroyWhenDisabled could not be added", out error);
-        if (!unit.AddComponentSafe<ProjectM.PersistenceV2.DontSaveEntity>()) return Abandon(unit, "DontSaveEntity could not be added", out error);
+        // No DontSaveEntity (A9): it kept the unit out of the save but not its child entities, which came back as orphans.
         if (unit.Has<DropTableBuffer>()) Core.EntityManager.GetBuffer<DropTableBuffer>(unit).Clear();
 
         UnitSetup.Apply(unit, order.Tuning);

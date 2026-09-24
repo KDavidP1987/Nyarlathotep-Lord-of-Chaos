@@ -111,6 +111,32 @@ and the server kept running. events.json restored from the seed afterwards.
 Baseline boot of the step 3 DLL before step 4 (pre-audit): initialised in 30 s, "events: reloaded: 5 valid,
 0 disabled", log check 0 unhandled.
 
+### Session 5 · 2026-09-24
+Step 4 build 8e6aeaa..3470b25 (the spawner), ManualSpawnLifetimeSeconds = 60 in the dev cfg (D27, D20 unit half).
+- `.nyar spawn CHAR_Bandit_Thug` and `.nyar spawn CHAR_Bandit_Thug 3 +2 1.5 1.2`: all four attacked the owner, and
+  killed ones dropped no loot. `debug here` showed the level held (16 → 18). The multipliers did not hold (hp 54 → 57
+  instead of ×1.5, pp 14 → 14), because the game recalculates both from the level (A7). The client showed 2 of 4
+  `debug here` replies although the log has all 4 (A8).
+- The units expired on their own; `status` then showed tracked 0 (spawning 0, despawning 0), and state.json held
+  no unit.
+- `.nyar purge`, then `.nyar purge confirm`: 20 units drained in batches of 5, and `status` returned to 0. A spawn
+  during the purge cooldown replied that the cooldown is active. The second `purge confirm` ("nothing to purge")
+  was not run.
+
+### Session 6 · 2026-09-24
+Boot of a541373 (A7, A8 fixed); no in-game testing. The BepInEx log was clean, but the server log
+(logs/NyarDev.log, which -LogCheck did not read then) held 120 Unity errors. They were orphans from session 5's
+autosave: child entities of the DontSaveEntity bandits (ability groups, casts, combat and wound buffs, the marker)
+were saved without their unit ("is trying to attach to Entity.Null", "Buff … points at buff.Target 0:0",
+modifiable remap failures). The game cleaned them up. The fix is A9: units now save normally. A10 makes
+-LogCheck read the server log.
+
+### Session 7 · 2026-09-24
+Reboot of a541373, no spawns. No Unity errors, but 15 "Could not map an old modification source entity" warnings
+remained from session 5's save (A9). Because the orphans recurred, the dev world's save
+(save-data-nyardev/Saves/v4/nyardev) was deleted before session 8, keeping Settings and adminlist.txt, as the
+owner decided.
+
 ## Open questions
 
 - D28's "still loading" reply cannot be seen in game (players connect only after startup); step 5, where the

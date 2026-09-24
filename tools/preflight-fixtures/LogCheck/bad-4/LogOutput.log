@@ -1,0 +1,38 @@
+[Message: Preloader] BepInEx 6.0.0-dev - VRisingServer (9/12/2026 2:09:56 PM)
+[Message: Preloader] Built from commit 3a12d1810bf4dd5ca1635352ccf5bff5d95f987f
+[Info   :   BepInEx] System platform: Windows 10 64-bit
+[Info   :   BepInEx] Process bitness: 64-bit (x64)
+[Info   :   BepInEx] Running under Unity 2022.3.58f1
+[Info   :   BepInEx] Runtime version: 6.0.7
+[Info   :   BepInEx] Runtime information: .NET 6.0.7
+[Info   : Preloader] 0 patcher plugins loaded
+[Info   : Preloader] 0 assemblies discovered
+[Message:AssemblyPatcher] Executing 0 patch(es)
+[Message:   BepInEx] Chainloader initialized
+[Warning:Il2CppInterop] Class::Init signatures have been exhausted, using a substitute!
+[Info   :Il2CppInterop] Registered mono type Il2CppInterop.Runtime.DelegateSupport+Il2CppToMonoDelegateReference in il2cpp domain
+[Info   :   BepInEx] 5 plugins to load
+[Info   :   BepInEx] Loading [VampireCommandFramework 0.10.4]
+[Message:VampireCommandFramework] VCF Loaded: 0.10.4
+[Info   :   BepInEx] Loading [Beelzebub 0.136.0]
+[Info   : Beelzebub] Plugin kdpen.Beelzebub v0.136.0 loading...
+[Info   : Beelzebub] Harmony patches applied: 16 method(s) patched.
+[Info   : Beelzebub] Plugin kdpen.Beelzebub v0.136.0 loaded. Awaiting game data init.
+[Info   :   BepInEx] Loading [Faust 0.16.5]
+[Info   :     Faust] Plugin kdpen.Faust v0.16.5 loading...
+[Info   :     Faust] [FAUST STORE] loaded 107 session(s), 202 concurrency point(s), 45 region sample(s), 3 name(s).
+[Info   :     Faust] [FAUST HEATMAP] loaded 67 all-time cell(s) over 2 player(s), 35 daily cell(s) over 2 day(s), 530 sample(s) @ cell=25.
+[Info   :     Faust] [FAUST USAGE] loaded usage state for 1 (player,feature) pair(s).
+[Info   :     Faust] [FAUST USAGESTATS] loaded usage tallies for 13 feature(s).
+[Info   :     Faust] [FAUST CONTROL] loaded runtime overrides for 1 feature(s).
+[Info   :     Faust] [FAUST KILLS] loaded kill tallies for 1 player(s), 6 boss(es).
+[Info   :     Faust] Harmony patches applied: 4 method(s) patched.
+[Info   :     Faust] Plugin kdpen.Faust v0.16.5 loaded. Awaiting game data init.
+[Info   :   BepInEx] Loading [Nyarlathotep 0.1.0]
+[Info   :Nyarlathotep] Plugin kdpen.Nyarlathotep v0.1.0 loading...
+[Info   :Nyarlathotep] Harmony patches applied: 1 method(s) patched.
+[Info   :Nyarlathotep] Plugin kdpen.Nyarlathotep v0.1.0 loaded. Awaiting game data init.
+[Info   :Nyarlathotep] [nyar] first run: seeded events.json from the default templates (every event disabled)
+[Info   :Nyarlathotep] [nyar] events: reloaded: 5 valid, 0 disabled
+[Info   :Nyarlathotep] Nyarlathotep initialized via GameDataInitializedPatch (attempt #1). Prefab map has 14481 entries.
+[Info   :Nyarlathotep] [nyar] prose that must not count: look at Nyarlathotep.Core settings

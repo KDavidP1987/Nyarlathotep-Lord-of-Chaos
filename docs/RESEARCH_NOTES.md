@@ -80,7 +80,8 @@ for event spawns (Decision D6).
 
 → **use:** our own marker buff with a distinct magic value (Decision D4), plus finite `LifeTime` and
 `DestroyWhenDisabled` on every wave unit so orphans clean themselves up even if the mod is removed.
-Spike `DontSaveEntity`.
+Spike `DontSaveEntity`. **Result (foundation A9):** it keeps the unit out of the save but not its child entities,
+which come back as orphans, so spawned units save normally and the boot marker sweep removes them.
 
 ### Stats & buffs
 - **KindredCommands `Services/BoostedPlayerService.cs:433-509`** + `Patches/BuffSystem_Spawn_ServerPatch.cs`
@@ -187,7 +188,7 @@ One row per component and system the spike harness read or wrote (spikes D10, 20
 | Age | Value (read; set to 0 on spawned units, A10) | — | Spikes/SpikeUnits.cs (A10); Learning Mods/RaidForge/Services/RaidInterferenceService.cs:458 | observed: absent on InstantiateEntityImmediate units, present on buffs; LifeTime remaining = Duration − Age |
 | DestroyWhenDisabled | added (no fields) | — | Learning Mods/XPRising (RESEARCH_NOTES › XPRising) | observed = documented, and wider: it deletes units at boot, when players leave, and within 5 s of spawning 100 m from any player |
 | CanPreventDisableWhenNoPlayersInRange | CanDisable = ModifiableBool(false) | — | Learning Mods/Bloodcraft-main/Systems/Familiars/FamiliarBindingSystem.cs:602 | observed = documented: keeps a unit enabled far from players and through a restart, so DestroyWhenDisabled does not fire |
-| PersistenceV2.DontSaveEntity | added (no fields) | — | Learning Mods/Bloodcraft-main/Utilities/EntityQueries.cs:3259 | observed = documented: the unit is not in the next save and does not come back after a restart |
+| PersistenceV2.DontSaveEntity | added (no fields) | — | Learning Mods/Bloodcraft-main/Utilities/EntityQueries.cs:3259 | observed = documented: the unit is not in the next save and does not come back after a restart; its child entities are still saved, as orphans (foundation A9), so the foundation does not use it |
 | DropTableBuffer | cleared on spawned units | — | Spikes/SpikeUnits.cs:57 | observed = documented: killed spike units dropped nothing |
 | Buff, SpellLevel | Buff.Target read; SpellLevel.Level = 1314472274 on the marker | marker -1954355403 | Spikes/SpikeUnits.cs:67-90 | observed = documented: an IncludeDisabled | IncludeSpawnTag query on Buff + SpellLevel finds every marked unit, including after a restart |
 | CreateGameplayEventsOnSpawn, GameplayEventListeners, RemoveBuffOnGameplayEvent, RemoveBuffOnGameplayEventEntry, DestroyOnGameplayEvent | removed from the marker and carrier buffs | -1954355403, -1591883586 | Learning Mods/KindredCommands-main/Buffs.cs:54 (buff edit pattern) | observed = documented: the buffs stay inert and are not removed by combat or feeding |

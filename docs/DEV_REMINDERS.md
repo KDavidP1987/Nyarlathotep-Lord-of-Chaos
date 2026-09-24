@@ -110,7 +110,8 @@ read the original post-mortem. `Beelz` = `..\Beelzebub Lord of Gluttony\Beelzebu
     it. Use the coroutine host (`Core.StartCoroutine`) for scheduling. *(Beelz `Heartbeat.cs` header)*
 29. **Entity handles are not stable** across stream-out, relog, or restart. Persist prefab GUID + position +
     event id, never an `Entity`.
-30. **Chat:** `FixedString512Bytes` — truncate at ~480 bytes or it throws. One `ctx.Reply` per line.
+30. **Chat:** `FixedString512Bytes` — truncate at ~480 bytes or it throws. A burst of `ctx.Reply` calls loses messages on the client, so pack
+    several lines into one reply of at most 480 bytes (`AdminLines.Pack`, foundation A8).
     Broadcasts must check `User.IsConnected`. **Never broadcast player positions** (the Raphael ban).
 
 ## Compliance
@@ -129,3 +130,6 @@ read the original post-mortem. `Beelz` = `..\Beelzebub Lord of Gluttony\Beelzebu
 - **LifeTime needs Age (spikes A10, 2026-09-24).** A unit made with `InstantiateEntityImmediate` has no `Age`, so a `LifeTime` written on it never expires, across restarts too. Add `Age` with the LifeTime, or spawn through `UnitSpawnerUpdateSystem.SpawnUnit` as every reference mod does. Verify expiry in game before relying on it.
 
 - **No follow links to non-player anchors (spikes A11, A17, 2026-09-24).** Setting `Follower.Followed` on a spawned NPC to an entity that is not a player (the spikes used a held CHAR_Critter_Rat as an anchor) aborted the server twice in Burst ("The entity does not exist … AppendDestroyedEntityRecordError"): once while further units spawned, once when the owner picked up the rat, which turns it into an inventory item and destroys the entity. The follower also teleports rather than walking. Walk units with the aggro chase instead (SIEGES.md, D16).
+
+- **Never put DontSaveEntity on a spawned unit (foundation A9, 2026-09-24).** It keeps the unit out of the save, but not the unit's child entities (ability groups, casts, combat and wound buffs, our marker buff). Those are saved without their owner, and the next boot logs "is trying to attach to Entity.Null", "points at buff.Target 0:0" and modifiable remap failures; leftovers persist for more than one boot. Let units save normally; LifeTime and the boot marker sweep bound them.
+- **Unity's errors are not in BepInEx/LogOutput.log (foundation A10).** BepInEx.cfg sets `WriteUnityLog = false`; the game's own errors are only in the server's `-logFile` (logs/NyarDev.log for the dev world). `pwsh tools/preflight.ps1 -LogCheck` reads both; read every error it lists after each session.

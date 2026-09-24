@@ -1,0 +1,29 @@
+Initialize engine version: 2022.3.62f1 (unknown)
+[Subsystems] Discovering subsystems at path C:/Program Files (x86)/Steam/steamapps/common/VRisingDedicatedServer/VRisingServer_Data/UnitySubsystems
+PersistenceV2 - GameVersion of Loaded Save: 1.1.15.101082, Current GameVersion: 1.1.15.101082
+PrefabLookupMap.TryGet - Prefab with PrefabGUID -1284231421 is in an unknown state. Asset Name: -1284231421
+UnityEngine.DebugLogHandler:LogFormat(LogType, Object, String, Object[])
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:LogWarning(Object)
+ProjectM.PrefabLookupMap:TryGet(PrefabGUID, Entity&)
+
+'ProjectM.RepairVBloodProgressionSystem' creates a Lookup object (e.g. ComponentLookup) during OnUpdate. Please create this object in OnCreate instead and use type `_MyLookup.Update(ref systemState);` in OnUpdate to keep it up to date instead. This is significantly faster.
+UnityEngine.DebugLogHandler:LogFormat(LogType, Object, String, Object[])
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:LogWarning(Object)
+Unity.Entities.SystemState:ThrowIfLookupCreatedDuringUpdate()
+
+
+(Entity: Entity(323054:1), PrefabGuid: -633717863) is trying to attach to Entity.Null.
+UnityEngine.DebugLogHandler:LogFormat(LogType, Object, String, Object[])
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:LogError(Object)
+ProjectM.AttachSystem:OnUpdate()
+
+Buff 323060:1 (-1954355403) points at buff.Target 0:0 that doesn't have a BuffBuffer or doesn't exist.
+UnityEngine.DebugLogHandler:LogFormat(LogType, Object, String, Object[])
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:LogError(Object)
+ProjectM.BuffSystem_Spawn_Server:OnUpdate()
+
+Server started

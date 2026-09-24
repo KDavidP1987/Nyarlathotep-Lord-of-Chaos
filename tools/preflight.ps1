@@ -26,13 +26,16 @@
                    exist anywhere in the after snapshot (changed or not, manifested or not) are the development
                    world save-data-nyardev and the owner's untouched LocalServer; with -AfterCleanup
                    save-data-nyardev must be gone (spikes D4, foundation A1 and D34).
-    -LogCheck    : Test-CheckLogCheck on the live BepInEx/LogOutput.log: prints "log check: <n> unhandled,
-                   <s> nyar lines" and exits 1 when the log is missing or empty, holds a stack frame from our
-                   assembly ("at Nyarlathotep." after any indentation or prefix) or has no "[nyar" line (foundation D33). Run it after every
-                   in-game session, before the next boot overwrites the log.
+    -LogCheck    : Test-CheckLogCheck on the live BepInEx/LogOutput.log and the server's logs/NyarDev.log: prints
+                   "log check: <n> unhandled, <s> nyar lines, <o> orphan errors, <u> unity errors [kinds]" and exits 1
+                   when either log is missing or empty, BepInEx's holds a stack frame from our assembly ("at
+                   Nyarlathotep." after any indentation or prefix) or has no "[nyar" line, or the server log holds an
+                   orphan error from loading a save (foundation D33, A10). Run it after every in-game session, before
+                   the next boot overwrites the logs.
     -SessionsOf <slug>
                  : Test-CheckSessionLogs: every "### Session <n>" under docs/features/<SLUG>.md › Test results has a
-                   "- session <n> log check: 0 unhandled, <s> nyar lines" line in docs/audits/<slug>.md (foundation D33).
+                   "- session <n> log check: 0 unhandled, <s> nyar lines, 0 orphan errors, <u> unity errors" line in
+                   docs/audits/<slug>.md; a nonzero orphan count must cite an amendment "(A<n>" (foundation D33, A10).
     -ListCommands admin
                  : every admin-only command of the commands walk, one per line, then "admin commands: <n>"
                    (foundation D19); Test-CheckAdminList keeps that list equal to the commands check's count.
@@ -594,10 +597,13 @@ function Get-ReleaseInputs([string]$Root) {
     if (Test-IsFixture $Root) {
         $log = Read-Text $Root 'git-log.txt'
         if ($null -eq $log) { return $null }
+        # Read now: a GetNewClosure() block runs in its own module scope, which cannot see this script's
+        # functions when the script is invoked with "& ./tools/preflight.ps1".
+        $remoteTags = @((Read-Text $Root 'remote-tags.txt') -split '\r?\n' | Where-Object { $_ })
         return [pscustomobject]@{
             Log    = @($log -split '\r?\n' | Where-Object { $_ })
             Tags   = @((Read-Text $Root 'tags.txt') -split '\r?\n' | Where-Object { $_ })
-            Remote = { @((Read-Text $Root 'remote-tags.txt') -split '\r?\n' | Where-Object { $_ }) }.GetNewClosure()
+            Remote = { , $remoteTags }.GetNewClosure()
         }
     }
     $log = git -C $Root log --format='%H %s' 2>$null
@@ -909,26 +915,50 @@ function Test-CheckServerWrites([string]$Root) {
 }
 
 # After an in-game session (foundation D33): a stack frame from our assembly fails, and so does a log without
-# a "[nyar" line (the wrong log, or the plugin never initialised). The server may still hold the log open, so
-# it is read with shared access. A fixture holds LogOutput.log.
+# a "[nyar" line (the wrong log, or the plugin never initialised). The server may still hold the logs open, so
+# they are read with shared access. BepInEx.cfg sets WriteUnityLog = false, so Unity's own errors are only in the
+# server log (-logFile .\logs\NyarDev.log): an orphan error there (an entity link the game could not restore while
+# loading a save) fails too, and the Unity errors are counted and listed by kind for the reader to attribute (A10).
+# A fixture holds LogOutput.log and NyarDev.log.
+function Read-SharedText([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
+    $fs = [IO.File]::Open($Path, 'Open', 'Read', 'ReadWrite')
+    try { return [IO.StreamReader]::new($fs).ReadToEnd() } finally { $fs.Dispose() }
+}
+
+$script:OrphanPattern = 'is trying to attach to Entity\.Null|points at buff\.Target|Failed to remap Entity-field|Could not (re)?map '
+
 function Test-CheckLogCheck([string]$Root) {
-    $log = $null
-    if (Test-IsFixture $Root) { $log = Read-Text $Root 'LogOutput.log' }
+    if (Test-IsFixture $Root) { $log = Read-Text $Root 'LogOutput.log'; $server = Read-Text $Root 'NyarDev.log' }
     else {
-        $p = Join-Path $ServerPath 'BepInEx/LogOutput.log'
-        if (Test-Path -LiteralPath $p -PathType Leaf) {
-            $fs = [IO.File]::Open($p, 'Open', 'Read', 'ReadWrite')
-            try { $log = [IO.StreamReader]::new($fs).ReadToEnd() } finally { $fs.Dispose() }
-        }
+        $log = Read-SharedText (Join-Path $ServerPath 'BepInEx/LogOutput.log')
+        $server = Read-SharedText (Join-Path $ServerPath 'logs/NyarDev.log')
     }
     if ($null -eq $log -or $log -notmatch '\S') { return New-Result $false 'log check: no log (BepInEx/LogOutput.log missing or empty)' }
+    if ($null -eq $server -or $server -notmatch '\S') { return New-Result $false 'log check: no server log (logs/NyarDev.log missing or empty)' }
     $lines = $log -split '\r?\n'
     # A frame is "at Nyarlathotep.<type>.<method>(" after any indentation or prefix (IL2CPP, Mono and logger-wrapped
     # traces differ, Mono puts a space before "("); the "(" keeps prose such as "look at Nyarlathotep.Core" out (foundation step 2 Codex rounds 1-3).
     $n = @($lines | Where-Object { $_ -match '(?<![\w.])at\s+Nyarlathotep\.[\w.`+<>\[\],]*[ \t]*\(' }).Count
     $s = @($lines | Where-Object { $_.Contains('[nyar') }).Count
-    if ($s -eq 0) { return New-Result $false "log check: $n unhandled, 0 nyar lines (the wrong log, or the plugin did not initialise)" }
-    return New-Result ($n -eq 0) "log check: $n unhandled, $s nyar lines"
+    $slines = $server -split '\r?\n'
+    $o = @($slines | Where-Object { $_ -match $script:OrphanPattern }).Count
+    # A Unity error is a message, then "UnityEngine.DebugLogHandler:LogFormat", "UnityEngine.Logger:Log" and
+    # "UnityEngine.Debug:LogError"; its kind is the message's last line with numbers masked (and never a SteamID).
+    $kinds = [Collections.Generic.List[string]]::new(); $u = 0
+    for ($i = 2; $i -lt $slines.Count; $i++) {
+        if (-not $slines[$i].StartsWith('UnityEngine.Debug:LogError(')) { continue }
+        $u++
+        $j = $i - 1; while ($j -ge 0 -and $slines[$j].StartsWith('UnityEngine.')) { $j-- }
+        $msg = if ($j -ge 0) { $slines[$j] } else { '' }
+        $kind = ($msg -replace '-?\d+', 'N').Trim()
+        if ($kind.Length -gt 90) { $kind = $kind.Substring(0, 90) + '...' }
+        if (-not $kinds.Contains($kind)) { $kinds.Add($kind) }
+    }
+    $line = "log check: $n unhandled, $s nyar lines, $o orphan errors, $u unity errors"
+    if ($kinds.Count) { $line += " [$(@($kinds | Select-Object -First 5) -join ' | ')$(if ($kinds.Count -gt 5) { " | +$($kinds.Count - 5) kinds" })]" }
+    if ($s -eq 0) { return New-Result $false "$line (the wrong log, or the plugin did not initialise)" }
+    return New-Result ($n -eq 0 -and $o -eq 0) $line
 }
 
 # The Build plan's numbered steps and, in docs/audits/<slug>.md, one "### Step <n>" entry per step under
@@ -1149,8 +1179,10 @@ function Test-CheckAdminList([string]$Root) {
 }
 
 # Every "### Session <n> · <date>" under "## Test results" in docs/features/<SLUG>.md has a line
-# "- session <n> log check: 0 unhandled, <s> nyar lines" in docs/audits/<slug>.md (foundation D33). A fixture names
-# the slug in sessionsof.txt.
+# "- session <n> log check: 0 unhandled, <s> nyar lines, 0 orphan errors, <u> unity errors" in docs/audits/<slug>.md
+# (foundation D33). A nonzero orphan count passes only when the line cites an amendment of docs/dod/<slug>.md as
+# "(A<n>"; lines before the first one carrying the orphan count may omit both counts, later lines may not (A10).
+# A fixture names the slug in sessionsof.txt.
 function Test-CheckSessionLogs([string]$Root) {
     $slug = if (Test-IsFixture $Root) { "$(Read-Text $Root 'sessionsof.txt')".Trim() } else { $SessionsOf }
     if (-not $slug) { return New-Result $false 'session logs: no plan named (-SessionsOf <slug>)' }
@@ -1162,18 +1194,26 @@ function Test-CheckSessionLogs([string]$Root) {
     $results = [regex]::Match($doc, '(?ms)^## Test results\s*$(.*?)(?=^## |\z)')
     $sessions = if ($results.Success) { @([regex]::Matches($results.Groups[1].Value, '(?m)^### Session (\d+) · ') | ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object -Unique) } else { @() }
     if ($sessions.Count -eq 0) { return New-Result $false "session logs: $slug has no sessions under $docRel › Test results" }
+    $plan = Read-Text $Root "docs/dod/$slug.md"
+    $amendments = if ($plan) { @([regex]::Matches($plan, '(?m)^- (A\d+) · ') | ForEach-Object { $_.Groups[1].Value }) } else { @() }
     $checks = @{}
-    foreach ($m in [regex]::Matches($audit, '(?m)^- session (\d+) log check: (\d+) unhandled, (\d+) nyar lines')) {
-        $checks[[int]$m.Groups[1].Value] = @([int]$m.Groups[2].Value, [int]$m.Groups[3].Value)
+    foreach ($m in [regex]::Matches($audit, '(?m)^- session (\d+) log check: (\d+) unhandled, (\d+) nyar lines(?:, (\d+) orphan errors, (\d+) unity errors)?(.*)$')) {
+        $orphans = if ($m.Groups[4].Success) { [int]$m.Groups[4].Value } else { -1 }
+        $cited = [regex]::Match($m.Groups[6].Value, '\((A\d+)\b')
+        $checks[[int]$m.Groups[1].Value] = @([int]$m.Groups[2].Value, [int]$m.Groups[3].Value, $orphans, ($cited.Success -and $amendments -contains $cited.Groups[1].Value))
     }
     $missing = @($sessions | Where-Object { -not $checks.ContainsKey($_) })
-    # A clean line has 0 unhandled and at least one [nyar line (-LogCheck fails a log without one).
-    $dirty = @($sessions | Where-Object { $checks.ContainsKey($_) -and ($checks[$_][0] -ne 0 -or $checks[$_][1] -eq 0) })
-    $ok = $sessions.Count - $missing.Count - $dirty.Count
-    if ($missing -or $dirty) {
+    $first = @($sessions | Where-Object { $checks.ContainsKey($_) -and $checks[$_][2] -ge 0 } | Select-Object -First 1)
+    # A clean line has 0 unhandled, at least one [nyar line (-LogCheck fails a log without one), and 0 orphan errors
+    # or orphan errors explained by a cited amendment; from the first line with the orphan count on, it is required.
+    $dirty = @($sessions | Where-Object { $checks.ContainsKey($_) -and ($checks[$_][0] -ne 0 -or $checks[$_][1] -eq 0 -or ($checks[$_][2] -gt 0 -and -not $checks[$_][3])) })
+    $old = @($sessions | Where-Object { $first -and $_ -gt $first[0] -and $checks.ContainsKey($_) -and $checks[$_][2] -lt 0 })
+    $ok = $sessions.Count - $missing.Count - @($dirty + $old | Sort-Object -Unique).Count
+    if ($missing -or $dirty -or $old) {
         $why = @()
         if ($missing) { $why += "no log check line for session $($missing -join ', ')" }
-        if ($dirty) { $why += "unhandled exceptions or no nyar lines in session $($dirty -join ', ')" }
+        if ($dirty) { $why += "unhandled exceptions, no nyar lines or unexplained orphan errors in session $($dirty -join ', ')" }
+        if ($old) { $why += "no orphan count in session $($old -join ', ')" }
         return New-Result $false "session logs: $slug $ok/$($sessions.Count) checked ($($why -join '; '))"
     }
     return New-Result $true "session logs: $slug $ok/$($sessions.Count) checked"
