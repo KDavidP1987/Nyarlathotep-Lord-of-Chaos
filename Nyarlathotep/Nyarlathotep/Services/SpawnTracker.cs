@@ -288,19 +288,25 @@ internal static class SpawnTracker
             All = new[] { ComponentType.ReadOnly(Il2CppType.Of<Buff>()), ComponentType.ReadOnly(Il2CppType.Of<SpellLevel>()) },
             Options = EntityQueryOptions.IncludeDisabled | EntityQueryOptions.IncludeSpawnTag
         });
-        var buffs = query.ToEntityArray(Allocator.Temp);
         try
         {
-            foreach (var buff in buffs)
+            var buffs = query.ToEntityArray(Allocator.Temp);
+            try
             {
-                if (!Markers.IsOurs(buff.Read<SpellLevel>().Level)) continue;
-                var target = buff.Read<Buff>().Target;
-                if (target.Exists()) result.Add(target);
+                foreach (var buff in buffs)
+                {
+                    if (!Markers.IsOurs(buff.Read<SpellLevel>().Level)) continue;
+                    var target = buff.Read<Buff>().Target;
+                    if (target.Exists()) result.Add(target);
+                }
+            }
+            finally
+            {
+                buffs.Dispose();
             }
         }
         finally
         {
-            buffs.Dispose();
             query.Dispose();
         }
         return result;

@@ -225,6 +225,22 @@ public class SpawnLedgerTests
     }
 
     [Fact]
+    public void Marked_survivors_hold_their_slots_until_they_are_despawned()
+    {
+        var l = Ledger(maxTracked: 5, despawnsPerTick: 2);
+        for (long k = 1; k <= 4; k++) l.QueueDespawn(k);
+        Assert.Equal(4, l.Occupied);
+        var r = Ask(l, 3);
+        Assert.Equal(1, r.Queued);
+        Assert.Equal("skipped by MaxTrackedUnits: 2 of 3", r.Skipped);
+        Assert.True(l.Forget(3));                                  // a survivor that died meanwhile frees its slot
+        Assert.Equal(4, l.Occupied);
+        while (l.TakeDespawns().Count > 0) { }
+        SpawnAll(l);
+        Assert.Equal(1, l.Occupied);
+    }
+
+    [Fact]
     public void LifeTime_is_event_end_plus_grace_and_the_event_end_wins()
     {
         var end = Now.AddMinutes(10);

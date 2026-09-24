@@ -45,6 +45,7 @@ public sealed class SpawnLedger(LedgerLimits limits)
     readonly HashSet<long> _inFlight = [];
     readonly Queue<long> _despawnQueue = new();
     readonly HashSet<long> _queued = [];
+    readonly HashSet<long> _survivors = [];
     long _nextTicket;
 
     public LedgerLimits Limits => limits;
@@ -52,8 +53,9 @@ public sealed class SpawnLedger(LedgerLimits limits)
     /// <summary>Units spawned and still tracked.</summary>
     public int Tracked => _tracked.Count;
 
-    /// <summary>Slots held: tracked units plus orders waiting or being spawned. The MaxTrackedUnits cap counts these.</summary>
-    public int Occupied => _tracked.Count + _spawnQueue.Count + _inFlight.Count;
+    /// <summary>Slots held: tracked units, orders waiting or being spawned, and marked survivors waiting for their
+    /// despawn. The MaxTrackedUnits cap counts these, so a boot with survivors cannot double the live count.</summary>
+    public int Occupied => _tracked.Count + _spawnQueue.Count + _inFlight.Count + _survivors.Count;
 
     public int PendingSpawns => _spawnQueue.Count + _inFlight.Count;
     public int PendingDespawns => _despawnQueue.Count;
@@ -122,6 +124,7 @@ public sealed class SpawnLedger(LedgerLimits limits)
     public bool QueueDespawn(long key)
     {
         if (!_queued.Add(key)) return false;
+        if (!_tracked.ContainsKey(key)) _survivors.Add(key);
         _despawnQueue.Enqueue(key);
         return true;
     }
@@ -136,16 +139,18 @@ public sealed class SpawnLedger(LedgerLimits limits)
             var key = _despawnQueue.Dequeue();
             _queued.Remove(key);
             _tracked.Remove(key);
+            _survivors.Remove(key);
             batch.Add(key);
         }
         return batch;
     }
 
-    /// <summary>A tracked unit the game removed (died, expired, disabled): it leaves the ledger and any queue slot.
-    /// False when it was not tracked.</summary>
+    /// <summary>A tracked unit or queued survivor the game removed (died, expired, disabled): it leaves the ledger and
+    /// any queue slot. False when the ledger did not hold it.</summary>
     public bool Forget(long key)
     {
-        if (!_tracked.Remove(key)) return false;
+        if (!_tracked.Remove(key) && !_survivors.Remove(key)) return false;
+        _survivors.Remove(key);
         if (_queued.Remove(key))
         {
             var rest = _despawnQueue.Where(k => k != key).ToList();
