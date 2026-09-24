@@ -39,6 +39,46 @@ public static class AdminLines
         return [.. lines.Take(DebugMaxLines), $"+{lines.Count - DebugMaxLines} more"];
     }
 
+    /// <summary>Joins <paramref name="lines"/> with newlines into as few messages of at most <paramref name="maxBytes"/>
+    /// UTF-8 bytes as fit, never splitting a line; a single line longer than the cap is cut at a whole character.
+    /// Chat drops a burst of separate replies (A8).</summary>
+    public static IReadOnlyList<string> Pack(IReadOnlyList<string> lines, int maxBytes = Wire.MaxBytes)
+    {
+        var messages = new List<string>();
+        var current = new System.Text.StringBuilder();
+        var bytes = 0;
+        foreach (var raw in lines)
+        {
+            var line = Cut(raw, maxBytes);
+            var size = System.Text.Encoding.UTF8.GetByteCount(line);
+            if (current.Length > 0 && bytes + 1 + size > maxBytes)
+            {
+                messages.Add(current.ToString());
+                current.Clear();
+                bytes = 0;
+            }
+            if (current.Length > 0) { current.Append('\n'); bytes++; }
+            current.Append(line);
+            bytes += size;
+        }
+        if (current.Length > 0) messages.Add(current.ToString());
+        return messages;
+    }
+
+    static string Cut(string line, int maxBytes)
+    {
+        if (System.Text.Encoding.UTF8.GetByteCount(line) <= maxBytes) return line;
+        var sb = new System.Text.StringBuilder();
+        var bytes = 0;
+        foreach (var r in line.EnumerateRunes())
+        {
+            if (bytes + r.Utf8SequenceLength > maxBytes) break;
+            sb.Append(r.ToString());
+            bytes += r.Utf8SequenceLength;
+        }
+        return sb.ToString();
+    }
+
     /// <summary>The log line for a mutating admin command (Security › Personal data): BepInEx overwrites the log on
     /// each boot, and audit records never quote it.</summary>
     public static string AdminRan(string name, ulong platformId, string command) =>

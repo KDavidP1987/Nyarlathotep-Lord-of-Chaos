@@ -265,7 +265,7 @@ internal static class SpawnTracker
 
         UnitSetup.Apply(unit, order.Tuning);
 
-        if (!TryMark(unit, out error)) return Abandon(unit, error, out error);
+        if (!TryMark(unit, order.Tuning, out error)) return Abandon(unit, error, out error);
         return unit;
     }
 
@@ -303,8 +303,9 @@ internal static class SpawnTracker
     }
 
     /// <summary>The unit marker: our own buff on the unit, made inert, living as long as the unit, carrying
-    /// SpellLevel.Level = Markers.Unit so the boot sweep finds it after a restart (spikes S2).</summary>
-    static bool TryMark(Entity unit, out string error)
+    /// SpellLevel.Level = Markers.Unit so the boot sweep finds it after a restart (spikes S2), and the unit's Health and
+    /// PhysicalPower multipliers (A7).</summary>
+    static bool TryMark(Entity unit, UnitTuning tuning, out string error)
     {
         error = null;
         if (!Core.ServerGameManager.TryInstantiateBuffEntityImmediate(unit, unit, MarkerBuff, out Entity buff) || !buff.Exists())
@@ -317,7 +318,8 @@ internal static class SpawnTracker
         buff.RemoveComponentSafe<RemoveBuffOnGameplayEvent>();
         buff.RemoveComponentSafe<RemoveBuffOnGameplayEventEntry>();
         buff.RemoveComponentSafe<DestroyOnGameplayEvent>();
-        if (buff.Has<ModifyUnitStatBuff_DOTS>()) Core.EntityManager.GetBuffer<ModifyUnitStatBuff_DOTS>(buff).Clear();
+        // The potion's own stat bonus is replaced by the requested multipliers (none by default), A7.
+        if (!UnitSetup.StatModifiers(buff, tuning)) { error = "stat modifiers could not be set on the marker"; return false; }
         if (buff.Has<LifeTime>()) buff.Write(new LifeTime { Duration = 0f, EndAction = LifeTimeEndAction.None });
         if (!buff.AddComponentSafe<SpellLevel>()) { error = "SpellLevel could not be added to the marker"; return false; }
         buff.Write(new SpellLevel { Level = Markers.Unit });

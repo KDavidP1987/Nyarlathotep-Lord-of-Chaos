@@ -293,6 +293,20 @@ public class SpawnLedgerTests
     }
 
     [Fact]
+    public void Replies_are_packed_into_few_messages_under_the_byte_cap_without_splitting_a_line()
+    {
+        var lines = Enumerable.Range(0, 21).Select(i => $"CHAR_Bandit_Thug manual left {i}s lvl 18 hp 57/57 pp 14").ToList();
+        var messages = AdminLines.Pack(lines);
+        Assert.True(messages.Count < lines.Count);
+        Assert.All(messages, m => Assert.True(System.Text.Encoding.UTF8.GetByteCount(m) <= 480));
+        Assert.Equal(lines, messages.SelectMany(m => m.Split('\n')));
+        Assert.Equal(["a\nb"], AdminLines.Pack(["a", "b"]));
+        Assert.Empty(AdminLines.Pack([]));
+        var huge = AdminLines.Pack([new string('\u00e9', 400)]).Single();   // 800 bytes, cut at a whole character
+        Assert.Equal(240, huge.Length);
+    }
+
+    [Fact]
     public void The_unit_marker_is_registered()
     {
         Assert.Equal(1314472274, Markers.Unit);

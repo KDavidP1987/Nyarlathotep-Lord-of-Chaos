@@ -10,7 +10,8 @@ namespace Nyarlathotep.Services;
 /// </summary>
 internal static class UnitSetup
 {
-    /// <summary>Make it fight, then the level, Health and PhysicalPower. Returns a short note of what changed, for the
+    /// <summary>Make it fight, then the level. Health and PhysicalPower ride on the marker buff (<see cref="StatModifiers"/>),
+    /// because the game recalculates both from the level after a spawn (A7). Returns a short note of what changed, for the
     /// verbose log. [Mutating], so a call from anywhere but the dispatched services fails the gateway check.</summary>
     [Mutating]
     internal static string Apply(Entity unit, UnitTuning tuning)
@@ -33,19 +34,33 @@ internal static class UnitSetup
             unit.Write(unitLevel);
         }
 
-        if (tuning.Health != 1f && unit.TryGetComponent<Health>(out var health))
-        {
-            health.MaxHealth._Value *= tuning.Health;
-            health.Value = health.MaxHealth._Value;
-            unit.Write(health);
-        }
-
-        if (tuning.Power != 1f && unit.TryGetComponent<UnitStats>(out var stats))
-        {
-            stats.PhysicalPower._Value *= tuning.Power;
-            unit.Write(stats);
-        }
-
         return $"level {(level < 0 ? "prefab" : level.ToString())}, hp x{tuning.Health:0.##}, power x{tuning.Power:0.##}";
     }
+
+    /// <summary>Writes the Health and PhysicalPower multipliers into <paramref name="markerBuff"/>'s stat modifiers
+    /// (MultiplyBaseAdd, value multiplier - 1), replacing the buff prefab's own. The modifiers live and die with the
+    /// unit's marker, the mechanism spikes S3 proved on the carrier (A7). False when the buffer is missing and cannot
+    /// be added.</summary>
+    [Mutating]
+    internal static bool StatModifiers(Entity markerBuff, UnitTuning tuning)
+    {
+        if (!markerBuff.Has<ModifyUnitStatBuff_DOTS>() && !markerBuff.AddBufferSafe<ModifyUnitStatBuff_DOTS>()) return false;
+        var mods = Core.EntityManager.GetBuffer<ModifyUnitStatBuff_DOTS>(markerBuff);
+        mods.Clear();
+        if (tuning.Health != 1f) mods.Add(Modifier(UnitStatType.MaxHealth, tuning.Health - 1f));
+        if (tuning.Power != 1f) mods.Add(Modifier(UnitStatType.PhysicalPower, tuning.Power - 1f));
+        return true;
+    }
+
+    static ModifyUnitStatBuff_DOTS Modifier(UnitStatType stat, float value) => new()
+    {
+        StatType = stat,
+        ModificationType = ModificationType.MultiplyBaseAdd,
+        Value = value,
+        Modifier = 1,
+        IncreaseByStacks = false,
+        ValueByStacks = 0,
+        Priority = 0,
+        Id = ModificationIDs.Create().NewModificationId(),
+    };
 }
