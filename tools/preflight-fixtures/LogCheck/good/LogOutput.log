@@ -35,3 +35,4 @@
 [Info   :Nyarlathotep] [nyar] first run: seeded events.json from the default templates (every event disabled)
 [Info   :Nyarlathotep] [nyar] events: reloaded: 5 valid, 0 disabled
 [Info   :Nyarlathotep] Nyarlathotep initialized via GameDataInitializedPatch (attempt #1). Prefab map has 14481 entries.
+[Info   :Nyarlathotep] [nyar] prose that must not count: look at Nyarlathotep.Core settings
