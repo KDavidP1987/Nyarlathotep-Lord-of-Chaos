@@ -14,7 +14,7 @@ closed: none
 commit: 8d429fd
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
-review: pending
+review: codex
 ---
 
 # DoD: Foundation engine, store, spawner, scheduler, announcer and commands
@@ -415,6 +415,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-24 · note · D20 unit half seen in sessions 5 and 10 (purge queued 20 then 5 units and drained them in batches of at most 5; a second confirm replied "nothing to purge"; a spawn in the cooldown was refused); the event half needs step 5's EventRuntime
 - 2026-09-24 · note · step 4 post-audit: Codex rounds 1-3 on the step 4 diff (final REVISE at the cap, its finding fixed in 3470b25); A9/A10 code rounds 1-3 ending READY (3006c89); plan re-review Reviews 8-10 ending REVISE at the cap with its one blocking finding fixed in a566b20 and not yet re-reviewed, so review stays pending; docs/audits/foundation.md › Post-audit › Step 4
 - 2026-09-24 · note · re-review A9 A10 A12 · Review 11 (extra round past the cap, owner-approved) REVISE: the three earlier findings resolved; its new blocking F1 fixed by A13 (the owner chose enforcement), F2 and F3 advisory accepted; review stays pending until a reviewer reads A13
+- 2026-09-24 · note · re-review A9 A10 A12 A13 · Review 12 (confirmation of A13, owner-approved) READY, 15/15 layers · 49/49 probes; three new advisories rejected with reasons in docs/dod/foundation.reviews.md; review codex
 
 ## Amendments
 - A1 · 2026-09-24 · discovered · ~D34 ~D18 · layer: 14.4 · step 2 pre-audit: the plan names 127.0.0.1:9876 for in-game tests but no world to run them in; the spikes throwaway world was deleted in its step 8, and the owner's world at C:\VRising-LocalServer must never be used. Foundation (and the later children) test in a development world save-data-nyardev (server name "Nyar Dev", log logs/NyarDev.log), declared in tools/paths-manifest.txt and tools/data-inventory.json; Test-CheckServerWrites hard-codes save-data-nyarspikes as the only allowed Saves folder, so it now allows exactly save-data-nyardev (plus the untouched LocalServer) across the whole after snapshot, whatever the manifest globs say, with bad fixtures for an undeclared, a manifested and an unchanged other save (4.5: every Saves folder, not only changed ones; 12.4: bad-9..11 fail, empty is not a pass; Review 5 F1 F2 F4 F5 F7 F8). D34 names the dev world; D18 lists the changed ServerWrites check with its fixtures; Build plan step 2 and Paths walked updated

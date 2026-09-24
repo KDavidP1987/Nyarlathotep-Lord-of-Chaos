@@ -45,6 +45,16 @@ checks are lines "- session <n> log check: …" (D33).
 - session 4 log check: 0 unhandled, 1 nyar lines
 - decisions the plan leaves to the build: the spawn and despawn queues live in Logic/SpawnLedger with slots reserved at request time, so two requests for the last slot are settled in arrival order; `.nyar purge` and `.nyar purge confirm` are one VCF command with an optional word, as are `.nyar debug here`; pruning a dead unit from the ledger is bookkeeping of a unit the game already removed and is not a [Mutating] method; the purge lives in SpawnTracker until step 5 moves the event half to EventRuntime
 
+### Step 5 · 2026-09-24 · a30f343
+- git status: clean after the A13 commit (a30f343); Review 12 recorded on top
+- compile: 0 errors, 0 warnings (the deploying build of the step 4 code); dotnet test: 470 passed
+- preflight: exit 0; -SelfTest 24/24 checks, 3 fixtures each, 69 extra bad fixtures
+- dod status: foundation 18/40 verified; `--check foundation` 0 problems, 0 warnings; review codex (Review 12 READY, 15/15 layers · 49/49 probes)
+- feature doc read: docs/features/FOUNDATION.md (Status set to step 5 of 9; the one open question, D28's "still loading", resolved by A12/D39); plan Interfaces, Design › Data, States, Permissions, UX and Performance read for the engine
+- baseline boot (session 11): the step 4 DLL initialised; the boot sweep queued 5 marked units from the last pre-purge autosave of session 10 and destroyed 5 of 5; stopped after "Finished Saving"
+- session 11 log check: 0 unhandled, 3 nyar lines, 0 orphan errors, 0 unity errors
+- decisions the plan leaves to the build: step 4's temporary tick is replaced by EventScheduler; D21's restart test uses a wave prefab other than CHAR_Bandit_Thug (Review 11 F2)
+
 ## Post-audit
 ### Step 1 · 2026-09-24 · 40505e2
 - compile: 0 errors, 0 warnings (plugin and Nyarlathotep.Tests)

@@ -1,6 +1,6 @@
 # Foundation — the event engine
 
-**Status:** in build (docs/dod/foundation.md, step 3 of 9). Ships in 0.2.0. Nothing here is enabled by
+**Status:** in build (docs/dod/foundation.md, step 5 of 9). Ships in 0.2.0. Nothing here is enabled by
 default: pillar switches are off, seeded events are disabled, announcement switches are off.
 
 ## What it provides
@@ -160,7 +160,14 @@ ended, 5 units queued, 0 spawns cancelled, cooldown 60s" and "despawn batch: 5 o
 from Beelzebub and Il2CppInterop; the server log held only the game's baseline warnings (PrefabLookupMap,
 RepairVBloodProgressionSystem, Crashpad), the same as on the fresh world.
 
+### Session 11 · 2026-09-24
+Step 5 baseline boot of the step 4 code (A13 changed only tools). "boot sweep: 5 marked units queued for despawn
+(0 listed in state.json)" then "despawn batch: 5 of 5 destroyed": session 10's purged units, back from the last
+autosave before the purge, because the server was stopped without a final save. The sweep caught them as designed
+(D21), with 0 orphan errors and 0 Unity errors. The server was stopped after the next "Finished Saving". Warnings:
+Beelzebub and Il2CppInterop in the BepInEx log; the game's baseline warnings in the server log.
+
 ## Open questions
 
-- D28's "still loading" reply cannot be seen in game (players connect only after startup); step 5, where the
-  command classes are built, decides how it is evidenced.
+None open. D28's "still loading" reply, which cannot be seen in game, is proven by a static check instead
+(A12, D39: Test-CheckReadyGuard, built in step 5).

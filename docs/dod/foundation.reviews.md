@@ -255,3 +255,26 @@ VERDICT: REVISE
 - F1 · accepted · the owner chose to enforce it (A13): -LogCheck lists every Unity error kind, Test-CheckSessionLogs fails a line with Unity errors that lists no kinds, leaves a kind without a '  - unity "<kind>": game|ours' sub-bullet, or attributes one to ours without citing an amendment; fixtures bad-10 to bad-12, each caught by a mutation of its rule. Also closes the gap Review 10 F2 pointed at: a Nyarlathotep-caused kind of any wording must be attributed to ours and carry an amendment
 - F2 · accepted · no DoD change: step 5's restart test (D21) spawns its wave from a unit prefab other than CHAR_Bandit_Thug, so the boot sweep is seen on a second unit type
 - F3 · accepted · D40 (A13): TriggerActivationTests covers enabled and disabled definitions for every automatic trigger kind
+
+## Review 12 · 2026-09-24 · codex · plan commit a30f343 (confirmation of A13, owner-approved)
+F1 advisory — Probe `7.3`: a crash or exception after unit creation but before marker attachment can leave a saved, unmarked unit that the boot sweep cannot discover.
+Fix: Make incomplete spawn setup despawn the unit, and add a fault case between instantiation and marker attachment.
+
+F2 advisory — Probe `4.3`: changing the server’s time zone can reinterpret persisted local occurrence keys, potentially suppressing or repeating a Schedule occurrence.
+Fix: Document occurrence-key behavior after a time-zone change and add a corresponding Schedule test.
+
+F3 advisory — Probe `9.2`: the marker sweep assumes no other mod can use the same inert buff and magic `SpellLevel` value; a collision could despawn another mod’s unit.
+Fix: Document collision handling or require an additional ownership discriminator in the sweep query.
+
+EARLIER: F1 resolved — D33 now requires every listed Unity error kind to have a matching attribution, rejects unattributed or unlisted kinds and uncited “ours” attributions, and D18 supplies bad-10 through bad-12 fixtures.
+
+EARLIER: F2 not resolved — D21 using a prefab other than `CHAR_Bandit_Thug` adds useful diversity, but neither the DoD nor the supplied disposition establishes that its saved child or marker topology is materially different; accepting this without a DoD change is tolerable only because the finding remains advisory.
+
+EARLIER: F3 resolved — D40 parameterizes activation across Schedule, GameTime, and VBloodKilled and fails for either a disabled start or a missing automatic-trigger case.
+
+15/15 layers · 49/49 probes
+VERDICT: READY
+### Dispositions
+- F1 · rejected · already built: SpawnTracker.Instantiate discards the unit when Prepare throws (Services/SpawnTracker.cs, "never leave a half-set unit behind"), and instantiation, recipe and marker run in one call on the main thread, so no autosave falls between them; a unit left by a process crash inside that call also carries LifeTime and DestroyWhenDisabled once Prepare has begun
+- F2 · rejected · a server time-zone change is an operator action outside the plan's clock cases; the occurrence key is the local date and HH:mm, so at worst one occurrence is fired or skipped, within Business rules 5 (downtime is not replayed); no DoD change
+- F3 · rejected · the Epic's Interfaces row "Other mods' units" already states the marker magic values are ours; a collision needs another mod to write SpellLevel 1314472274 on the same inert potion buff, and its units would then be ours to sweep by that contract
