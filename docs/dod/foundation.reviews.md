@@ -104,3 +104,19 @@ VERDICT: REVISE
 - F7 · accepted · with F4
 - F8 · accepted · with F1 and F2 (bad-10)
 - F9 · rejected · with F3
+
+## Review 6 · 2026-09-24 · codex · plan commit 74b4871 (round 2 of the A1 re-review)
+F1 blocking · Probe 12.4 remains unanswered for the amended `Test-CheckServerWrites`: Build step 2 specifies good, bad-9, bad-10, bad-11, and empty fixtures, but D18’s authoritative list of checks covered by `pwsh tools/preflight.ps1 -SelfTest` still omits `Test-CheckServerWrites`, so a stranger cannot verify that the manifested-other-save and unchanged-other-save cases are actually registered and executed. — add `Test-CheckServerWrites` to D18 and its self-test manifest, explicitly requiring the real-format good fixture, bad-9 through bad-11, and an empty fixture whose result is not a pass.
+EARLIER: F1 resolved — D34 now requires both `-Paths` and `-ServerWrites -Compare`, with save-folder authorization independent of manifest coverage.
+EARLIER: F2 not resolved — step 2 describes the fixtures, but D18 still excludes `Test-CheckServerWrites` from the self-tested checks.
+EARLIER: F3 resolved — the recorded owner decision keeps tooling dependencies fail-closed and outside A1’s scope.
+EARLIER: F4 resolved — D34 now checks the complete after-snapshot Saves-folder set, including unchanged and manifested folders.
+EARLIER: F5 resolved — step 2 names the server root, working directory, launch and stop procedure, and `$env:TEMP\nyarfoundation-before.tsv`.
+EARLIER: F6 resolved — A1 records the discovered missing-world gap and makes one reversible retained-world choice with a defined deletion point.
+EARLIER: F7 resolved — bad-11 and D34 cover an unrelated unchanged Saves folder.
+EARLIER: F8 resolved — bad-10 proves that a broad manifest glob cannot authorize another save identity.
+EARLIER: F9 resolved — the existing owner decision governs reviewer timeout and malformed-output handling; A1 changes no tooling dependency.
+14/15 layers · 48/49 probes
+VERDICT: REVISE
+### Dispositions
+- F1 · accepted · D18 lists Test-CheckServerWrites (changed by A1) with its good, bad-9, bad-10, bad-11 and empty fixtures; A1's ops are ~D34 ~D18
