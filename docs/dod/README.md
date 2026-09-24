@@ -5,7 +5,7 @@
 
 | Plan | Title | Status | Size | Verified | Baseline items | Prediction | Parent |
 |---|---|---|---|---|---|---|---|
-| [foundation](foundation.md) | Foundation engine, store, spawner, scheduler, announcer and commands | in-progress | L | 0/38 | 38 | 100 % | nyarlathotep |
+| [foundation](foundation.md) | Foundation engine, store, spawner, scheduler, announcer and commands | in-progress | L | 5/38 | 38 | 100 % | nyarlathotep |
 | [nyarlathotep](nyarlathotep.md) | Nyarlathotep, Lord of Chaos, v0.1 to v1.0 | in-progress | Epic | 11/46 | 36 | 82 % |  |
 | [spikes](spikes.md) | Spikes S1-S3, march, restart marker, carrier buff | done | M | 20/20 | 20 | 50 % | nyarlathotep |
 

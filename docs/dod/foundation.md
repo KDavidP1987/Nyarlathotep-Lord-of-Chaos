@@ -383,3 +383,8 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-24 · note · Codex rounds 1-3 REVISE; round 3 at the cap with F1 (6.2 tooling) and F3 (14.4 path trace) rejected by owner decision; author 15/15 · 49/49, Codex 12/15 · 46/49, shown side by side
 - 2026-09-24 · status → ready · approve · review: human
 - 2026-09-24 · status → in-progress · start
+- 2026-09-24 · D1 · pass · cmd: dotnet build Nyarlathotep/Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__ → "0 Warning(s)" and "0 Error(s)" (plugin and Nyarlathotep.Tests) · 40505e2 · claude
+- 2026-09-24 · D3 · pass · test: Nyarlathotep.Tests ControlPrecedenceTests → 40 passed (32-case conflict matrix, no-exception, wave clamps, unit expiry); fails when the purge and General.Enabled checks are swapped (8 cases) · 40505e2 · claude
+- 2026-09-24 · D4 · pass · test: Nyarlathotep.Tests ScheduleTests → 12 passed (once per minute, DST repeat incl. restart, skipped hour, backward clock, downtime, daily banner, day/night edges); fails when the occurrence-key comparison is removed (8 cases) · 40505e2 · claude
+- 2026-09-24 · D5 · pass · test: Nyarlathotep.Tests EventValidationTests, ConfigClampTests, CommandArgTests → 59, 20 and 50 passed · 40505e2 · claude
+- 2026-09-24 · D6 · pass · test: Nyarlathotep.Tests IdempotencyTests → 13 passed (already active, not active, two admins, purge confirm twice, reload twice via EventCatalog, 5 s dedupe inclusive, running snapshot across reload, content-hashed stale refusal) · 40505e2 · claude
