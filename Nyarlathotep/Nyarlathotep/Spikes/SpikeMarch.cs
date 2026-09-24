@@ -224,7 +224,9 @@ internal static class SpikeMarch
                 }
                 Core.Log.LogInfo($"[nyar-spike] march g{group.Id} t={second}s alive {alive} arrived {arrived}: {string.Join(", ", parts)}");
 
-                // Variant 4 (A6): probe the first living unit, then re-apply the hunt to every unit not yet in combat.
+                // Variant 4 (A6, A7): probe the first living unit, then re-apply the hunt to every unit. Session 6
+                // showed the game prunes a target beyond about 86 m while the unit stays in Combat, so the
+                // re-apply keys on the missing AggroBuffer entry (Hunt adds one only when absent), not on the state.
                 if (group.Variant == 4)
                 {
                     foreach (var u in group.Units)
@@ -235,8 +237,7 @@ internal static class SpikeMarch
                     }
                     if (group.Target.Exists())
                         foreach (var u in group.Units)
-                            if (u.Exists() && (!u.TryGetComponent<BehaviourTreeState>(out var bt) || bt.Value != GenericEnemyState.Combat))
-                                Hunt(u, group.Target, group.Distance);
+                            if (u.Exists()) Hunt(u, group.Target, group.Distance);
                 }
                 if (alive == 0 || arrived == alive)
                 {
