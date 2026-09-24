@@ -34,6 +34,7 @@ internal static class SpawnTracker
     static readonly Dictionary<long, Entity> _entities = new();
     static readonly Dictionary<long, StateUnit> _stateUnits = new();
     static readonly System.Random _random = new();
+    static readonly FailureStreak _destroyFaults = new();
 
     internal static SpawnLedger Ledger => _ledger;
 
@@ -162,13 +163,32 @@ internal static class SpawnTracker
 
         var despawns = _ledger.TakeDespawns();
         var destroyed = 0;
+        var retried = 0;
         foreach (var key in despawns)
         {
-            if (_entities.TryGetValue(key, out var unit) && unit.Exists() && unit.DestroySafe()) destroyed++;
-            Release(key);
+            if (!_entities.TryGetValue(key, out var unit) || !unit.Exists()) { Release(key); continue; }
+            bool ok;
+            try { ok = unit.DestroySafe(); }
+            catch (Exception ex)
+            {
+                ok = false;
+                if (_destroyFaults.Fail()) Core.Log.LogError($"[nyar] despawn failed: {ex.Message}; the unit stays queued");
+            }
+            if (ok)
+            {
+                _destroyFaults.Ok();
+                destroyed++;
+                Release(key);
+            }
+            else
+            {
+                // Still alive: back in the queue for a later tick, holding its MaxTrackedUnits slot, never dropped.
+                _ledger.QueueDespawn(key);
+                retried++;
+            }
         }
         if (despawns.Count > 0)
-            Core.Log.LogInfo($"[nyar] despawn batch: {destroyed} of {despawns.Count} destroyed, {_ledger.PendingDespawns} left");
+            Core.Log.LogInfo($"[nyar] despawn batch: {destroyed} of {despawns.Count} destroyed, {retried} requeued, {_ledger.PendingDespawns} left");
 
         Persistence.State.Flush();
     }

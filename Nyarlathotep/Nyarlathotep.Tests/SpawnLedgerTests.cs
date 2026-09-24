@@ -241,6 +241,21 @@ public class SpawnLedgerTests
     }
 
     [Fact]
+    public void A_despawn_that_failed_can_be_requeued_and_keeps_its_slot()
+    {
+        var l = Ledger(maxTracked: 2, despawnsPerTick: 5);
+        Ask(l, 2);
+        var keys = SpawnAll(l);
+        l.Purge();
+        var batch = l.TakeDespawns();
+        Assert.Equal(0, l.Occupied);
+        Assert.True(l.QueueDespawn(batch[0]));                   // its destroy failed: back in the queue
+        Assert.Equal(1, l.Occupied);
+        Assert.Equal(1, Ask(l, 2).Queued);
+        Assert.Equal([batch[0]], l.TakeDespawns());
+    }
+
+    [Fact]
     public void LifeTime_is_event_end_plus_grace_and_the_event_end_wins()
     {
         var end = Now.AddMinutes(10);
