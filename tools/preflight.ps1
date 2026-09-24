@@ -35,8 +35,8 @@
     -SessionsOf <slug>
                  : Test-CheckSessionLogs: every "### Session <n>" under docs/features/<SLUG>.md › Test results has a
                    "- session <n> log check: 0 unhandled, <s> nyar lines, 0 orphan errors, <u> unity errors" line in
-                   docs/audits/<slug>.md, one per session; an orphan count above 0 fails, and lines written before A10
-                   may omit both counts (foundation D33, A10).
+                   docs/audits/<slug>.md, one per session; only sessions after A10 count (at least one), an orphan
+                   count above 0 fails them, and pre-A10 sessions are listed with their orphan errors named (D33, A10).
     -ListCommands admin
                  : every admin-only command of the commands walk, one per line, then "admin commands: <n>"
                    (foundation D19); Test-CheckAdminList keeps that list equal to the commands check's count.
@@ -1181,10 +1181,10 @@ function Test-CheckAdminList([string]$Root) {
 
 # Every "### Session <n> · <date>" under "## Test results" in docs/features/<SLUG>.md has exactly one line
 # "- session <n> log check: 0 unhandled, <s> nyar lines, 0 orphan errors, <u> unity errors" in docs/audits/<slug>.md
-# (foundation D33). Lines before the first one carrying the orphan count (written before A10) may omit both counts;
-# every later line must carry them, and so must every session after the plan's last pre-A10 session (below; a plan
-# not listed has none, Codex A9 round 2). An orphan count above 0 always fails. A fixture names the slug in
-# sessionsof.txt.
+# (foundation D33). Only sessions after the plan's last pre-A10 session (below; a plan not listed has none) count as
+# checked, and there must be at least one. Pre-A10 lines may omit both counts and give the server log's orphan count
+# in a "  - before A10" sub-bullet; they are listed with any orphan errors named, never counted as clean (Review 10).
+# From the first line carrying the counts on, every line must carry them. A fixture names the slug in sessionsof.txt.
 $script:SessionsBeforeA10 = @{ 'foundation' = 7 }
 
 function Test-CheckSessionLogs([string]$Root) {
@@ -1199,31 +1199,39 @@ function Test-CheckSessionLogs([string]$Root) {
     $sessions = if ($results.Success) { @([regex]::Matches($results.Groups[1].Value, '(?m)^### Session (\d+) · ') | ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object -Unique) } else { @() }
     if ($sessions.Count -eq 0) { return New-Result $false "session logs: $slug has no sessions under $docRel › Test results" }
     $checks = @{}; $dupes = @()
-    foreach ($m in [regex]::Matches($audit, '(?m)^- session (\d+) log check: (\d+) unhandled, (\d+) nyar lines(?:, (\d+) orphan errors, (\d+) unity errors)?')) {
+    $pattern = '(?m)^- session (\d+) log check: (\d+) unhandled, (\d+) nyar lines(?:, (\d+) orphan errors, (\d+) unity errors)?[^\r\n]*(?:\r?\n  - before A10[^\r\n]*?\b(\d+) orphan errors)?'
+    foreach ($m in [regex]::Matches($audit, $pattern)) {
         $n = [int]$m.Groups[1].Value
         # Two lines for one session: a clean copy must not hide a dirty one (Codex A9 round 1).
         if ($checks.ContainsKey($n)) { $dupes += $n }
         $orphans = if ($m.Groups[4].Success) { [int]$m.Groups[4].Value } else { -1 }
-        $checks[$n] = @([int]$m.Groups[2].Value, [int]$m.Groups[3].Value, $orphans)
+        $before = if ($m.Groups[6].Success) { [int]$m.Groups[6].Value } else { 0 }
+        $checks[$n] = @([int]$m.Groups[2].Value, [int]$m.Groups[3].Value, $orphans, $before)
     }
+    $cutoff = if ($script:SessionsBeforeA10.ContainsKey($slug)) { $script:SessionsBeforeA10[$slug] } else { 0 }
+    $pre = @($sessions | Where-Object { $_ -le $cutoff })
+    $post = @($sessions | Where-Object { $_ -gt $cutoff })
     $missing = @($sessions | Where-Object { -not $checks.ContainsKey($_) })
     $first = @($sessions | Where-Object { $checks.ContainsKey($_) -and $checks[$_][2] -ge 0 } | Select-Object -First 1)
-    # A clean line has 0 unhandled, at least one [nyar line (-LogCheck fails a log without one) and no orphan error.
-    $dirty = @($sessions | Where-Object { $checks.ContainsKey($_) -and ($checks[$_][0] -ne 0 -or $checks[$_][1] -eq 0 -or $checks[$_][2] -gt 0) })
-    $cutoff = if ($script:SessionsBeforeA10.ContainsKey($slug)) { $script:SessionsBeforeA10[$slug] } else { 0 }
+    # Every line needs 0 unhandled and at least one [nyar line (-LogCheck fails a log without one); after A10 also no
+    # orphan error and both counts.
+    $dirty = @($sessions | Where-Object { $checks.ContainsKey($_) -and ($checks[$_][0] -ne 0 -or $checks[$_][1] -eq 0 -or ($_ -gt $cutoff -and $checks[$_][2] -gt 0)) })
     $old = @($sessions | Where-Object { $checks.ContainsKey($_) -and $checks[$_][2] -lt 0 -and ($_ -gt $cutoff -or ($first -and $_ -gt $first[0])) })
-    $legacy = @($sessions | Where-Object { $checks.ContainsKey($_) -and $checks[$_][2] -lt 0 }).Count - $old.Count
     $dupes = @($dupes | Sort-Object -Unique)
-    $ok = $sessions.Count - $missing.Count - @($dirty + $old + $dupes | Sort-Object -Unique).Count
-    if ($missing -or $dirty -or $old -or $dupes) {
+    $bad = @($dirty + $old + $dupes | Sort-Object -Unique)
+    $ok = @($post | Where-Object { $checks.ContainsKey($_) -and $bad -notcontains $_ }).Count
+    $preOrphans = @($pre | Where-Object { $checks.ContainsKey($_) -and ([math]::Max($checks[$_][2], 0) + $checks[$_][3]) -gt 0 })
+    $preNote = if ($pre.Count) { "; $($pre.Count) before A10 not counted$(if ($preOrphans) { " (orphan errors in session $($preOrphans -join ', '))" })" } else { '' }
+    if ($missing -or $bad -or $post.Count -eq 0) {
         $why = @()
+        if ($post.Count -eq 0) { $why += "no session after A10 (session $cutoff)" }
         if ($missing) { $why += "no log check line for session $($missing -join ', ')" }
         if ($dirty) { $why += "unhandled exceptions, no nyar lines or orphan errors in session $($dirty -join ', ')" }
         if ($old) { $why += "no orphan count in session $($old -join ', ')" }
         if ($dupes) { $why += "more than one log check line for session $($dupes -join ', ')" }
-        return New-Result $false "session logs: $slug $ok/$($sessions.Count) checked ($($why -join '; '))"
+        return New-Result $false "session logs: $slug $ok/$($post.Count) checked after A10$preNote ($($why -join '; '))"
     }
-    return New-Result $true "session logs: $slug $ok/$($sessions.Count) checked$(if ($legacy) { " ($legacy before A10, server log not checked)" })"
+    return New-Result $true "session logs: $slug $ok/$($post.Count) checked after A10$preNote"
 }
 
 # ---------------------------------------------------------------- runner

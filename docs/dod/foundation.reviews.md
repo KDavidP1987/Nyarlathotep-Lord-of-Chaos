@@ -204,3 +204,31 @@ VERDICT: REVISE
 - F3 · accepted · the pre-A10 sessions are named (foundation 1–7) and the check's pass line says "(<k> before A10, server log not checked)", so they never read as server-log-clean; Codex's code round 2 asked for the same cutoff (fixture bad-8)
 - F4 · rejected · with Review 8 F6: D33 has the session entry attribute every Unity error kind -LogCheck lists, which is the reviewed list that catches a new wording; failing closed on every unknown kind would fail sessions on the game's own errors
 - F5 · rejected · with Review 8 F7
+
+## Review 10 · 2026-09-24 · codex · plan commit 3006c89 (round 3 of the A9/A10 re-review, the cap)
+F1 blocking — Probe `12.4` remains unanswered for pre-A10 sessions: D33 permits their orphan count only in a sub-bullet, while `-SessionsOf foundation` fails only from the main log-check line; therefore known-dirty session 6 can contribute to `<n>/<n> checked`, and a stranger cannot verify “Session logs clean” from the stated command.
+Fix: Make `Test-CheckSessionLogs` parse each permitted pre-A10 sub-bullet and fail when its orphan count is nonzero, with a self-test fixture reproducing that exact historical format.
+
+F2 advisory — Probes `4.5`/`12.3`: an equivalent entity-remap failure using wording outside the five literals is merely counted and attributed as a Unity error, so D27 can report “0 orphan errors” despite evidence of a Nyarlathotep-caused orphan.
+Fix: Require attributed Unity error kinds to be classified as game-caused or Nyarlathotep-caused, and make `-SessionsOf` fail any Nyarlathotep-caused entity/remap kind without failing unrelated game errors.
+
+F3 advisory — Probe `9.1`: the plan explains that each boot reconstructs the marker queue, but no evidence interrupts the 500-unit drain with another restart; a defect affecting disabled or already-queued entities could therefore pass D21, D24 and D27.
+Fix: Extend the 500-unit run to stop during the drain, restart, and verify the remaining marked units are rediscovered, fully drained, and absent after the following autosave/restart.
+
+EARLIER: F1 resolved — the current Definition of Done explicitly says it supersedes the frozen Baseline wherever they differ, removing the A9/A10 authority conflict.
+
+EARLIER: F2 resolved — the rejection is reasonable: the marker sweep is expressly scoped to marked survivors, while an otherwise valid unit missing its marker remains bounded by its own persisted LifeTime, Age and DestroyWhenDisabled components.
+
+EARLIER: F3 not resolved — the newly named pre-A10 sessions and explanatory suffix identify the exception but still allow a nonzero orphan count in the required sub-bullet to pass `-SessionsOf`.
+
+EARLIER: F4 not resolved — attributing every Unity error kind improves visibility, but nothing makes an attributed Nyarlathotep remap/orphan error with different wording fail.
+
+EARLIER: F5 not resolved — rebuilding the queue explains the intended recovery and D24 covers performance, but neither command verifies a restart while the maximal drain is actually in progress.
+
+14/15 layers · 48/49 probes
+
+VERDICT: REVISE
+### Dispositions
+- F1 · accepted · with the reviewer's second fix: only sessions after foundation's session 7 count as checked (at least one is required), the pre-A10 sub-bullet's orphan count is parsed and every pre-A10 session with orphan errors is named in the line ("7 before A10 not counted (orphan errors in session 6, 7)"); fixture bad-9 has no post-A10 session. Made after the round cap, so no reviewer has seen it
+- F2 · rejected · with Review 8 F6 and Review 9 F4: the attribution D33 requires is where a Nyarlathotep-caused kind of another wording is found, and it is then an unhandled finding recorded by amendment; a machine rule over unknown wordings would have to guess
+- F3 · rejected · with Review 8 F7 and Review 9 F5

@@ -82,7 +82,7 @@ and the server kept running. events.json restored from the seed afterwards.
 ### Session 4 · 2026-09-24
 Boot after session 3's autosave; the server log held orphan errors from units saved without their children (A9).
 
-### Session 5 · 2026-09-24
+### Session 8 · 2026-09-25
 Reboot; no orphan errors.
 
 ## Open questions

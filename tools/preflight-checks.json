@@ -367,11 +367,12 @@
         "bad": "the audit has no log check line for session 3",
         "bad-2": "the audit's session 2 line shows 1 unhandled",
         "bad-3": "the audit's session 3 line shows 0 nyar lines",
-        "bad-4": "the audit's session 5 line shows 120 orphan errors",
-        "bad-5": "the audit's session 5 line shows 120 orphan errors and cites amendment (A9), which does not excuse them",
-        "bad-6": "the audit's session 5 line omits the orphan count after session 4 carried it",
-        "bad-7": "the audit has a session 5 line with 3 orphan errors and a clean second line for session 5",
-        "bad-8": "every line uses the old format, including session 8, after foundation's last pre-A10 session 7"
+        "bad-4": "the audit's session 8 line shows 120 orphan errors",
+        "bad-5": "the audit's session 8 line shows 120 orphan errors and cites amendment (A9), which does not excuse them",
+        "bad-6": "the audit's session 8 line omits the orphan count after session 4 carried it",
+        "bad-7": "the audit has a session 8 line with 3 orphan errors and a clean second line for session 8",
+        "bad-8": "every line uses the old format, including session 8, after foundation's last pre-A10 session 7",
+        "bad-9": "every session is before A10 (sessions 1-4), so none is checked"
       }
     },
     {

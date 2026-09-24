@@ -60,7 +60,7 @@ checks are lines "- session <n> log check: …" (D33).
 - session 3 log check: 0 unhandled, 2 nyar lines
 - session 4 log check: 0 unhandled, 2 nyar lines
   - before A10 the server log was not checked; read afterwards it held 120 orphan errors (A9)
-- session 5 log check: 0 unhandled, 2 nyar lines, 120 orphan errors, 120 unity errors (A9: children of DontSaveEntity units)
+- session 8 log check: 0 unhandled, 2 nyar lines, 120 orphan errors, 120 unity errors (A9: children of DontSaveEntity units)
 - Codex cross-inspection round 1 (2d4e85c): REVISE, 6 findings. The fixes are in 0a27e9d.
   - (1) a junction above BepInEx/config: declined. It is the admin's deployment choice, and D7 fences the mod's file names and the data folder, which Guard checks before every access.
   - (2) older-schema migration can't be reached: accepted as a record. Schema 1 is the first version, so the migrate branch first becomes reachable at schema 2, which brings its own legacy parser and test.
