@@ -48,7 +48,7 @@ internal static class SpikeCommands
     [Command("march", adminOnly: true, usage: "<variant 1-4> [count 1-10, 1-9 with an anchor] [distance 20-200]", description: "Spike S1: spawn a group north of you and try to walk it to you.")]
     public static void March(ChatCommandContext ctx, int variant, int count = 5, int distance = 100) =>
         Run(ctx, $"march {variant} {count} {distance}", needsEnabled: true, () =>
-            Range("variant", variant, 1, 4) ?? Range("count", count, 1, variant >= 3 ? 10 : 9) ?? Range("distance", distance, 20, 200),
+            Range("variant", variant, 1, 4) ?? Retired(variant) ?? Range("count", count, 1, variant >= 3 ? 10 : 9) ?? Range("distance", distance, 20, 200),
             count + (variant is 1 or 2 ? 1 : 0),
             () => SpikeMarch.Start(ctx.Event.SenderCharacterEntity, variant, count, distance));
 
@@ -101,6 +101,11 @@ internal static class SpikeCommands
         }
         catch (Exception ex) { Fail(ctx, name, ex); }
     }
+
+    /// <summary>Spikes A11: variants 1 and 2 link units to a rat anchor through Follower.Followed; both server aborts
+    /// (sessions 1 and 3) involved that link, so they are refused before anything spawns.</summary>
+    static string Retired(int variant) =>
+        variant is 1 or 2 ? $"variant {variant} is retired (follow links aborted the server)" : null;
 
     static string Range(string arg, int value, int min, int max) =>
         value < min || value > max ? $"{arg} must be {min}-{max}" : null;
