@@ -68,7 +68,7 @@ public class Plugin : BasePlugin
     public override bool Unload()
     {
         CommandRegistry.UnregisterAssembly();
-        // TODO(foundation step 4): stop the scheduler coroutine before the flush.
+        Core.StopTick();
         Services.Persistence.Shutdown();
         Harmony?.UnpatchSelf();
         return true;

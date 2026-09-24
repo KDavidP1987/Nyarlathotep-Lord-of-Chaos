@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using BepInEx.Configuration;
+using Nyarlathotep.Logic;
 
 namespace Nyarlathotep.Config;
 
@@ -22,10 +24,12 @@ internal static class Settings
     public static ConfigEntry<bool> EventSpawnsEnabled { get; private set; }
 
     // ---- Safety caps (server-wide; protect tick time and the save file) ----
-    public static ConfigEntry<int> MaxTrackedUnits { get; private set; }
-    public static ConfigEntry<int> MaxUnitsPerWave { get; private set; }
-    public static ConfigEntry<int> MaxConcurrentEvents { get; private set; }
+    // Every Limits-section key of Logic/Limits, bound and clamped to its range at load (D5). Read through Limit().
+    static readonly Dictionary<string, int> _limits = new();
     public static ConfigEntry<bool> AnnounceEvents { get; private set; }
+
+    /// <summary>The loaded, clamped value of <paramref name="limit"/>; its default before Initialize.</summary>
+    public static int Limit(IntLimit limit) => _limits.TryGetValue(limit.Name, out var v) ? v : limit.Default;
 
 #if DEBUG
     // ---- Debug builds only (foundation D25): a Release DLL has no such key and ignores it in the cfg ----
@@ -50,16 +54,35 @@ internal static class Settings
         EventSpawnsEnabled = config.Bind("Pillars", "EventSpawns", false,
             "Admin-scheduled or command-triggered wave spawns into chosen areas.");
 
-        MaxTrackedUnits = config.Bind("Limits", "MaxTrackedUnits", 150,
+        BindLimit(config, Limits.MaxTrackedUnits,
             "Hard cap on mod-spawned units alive at once across all events. New spawns are skipped past this cap.");
-        MaxUnitsPerWave = config.Bind("Limits", "MaxUnitsPerWave", 20,
+        BindLimit(config, Limits.MaxUnitsPerWave,
             "Hard cap on units in a single wave, regardless of what an event definition requests.");
-        MaxConcurrentEvents = config.Bind("Limits", "MaxConcurrentEvents", 3,
+        BindLimit(config, Limits.MaxConcurrentEvents,
             "How many events (of any pillar) may be active at the same time.");
+        BindLimit(config, Limits.MaxSpawnsPerTick,
+            "Most units spawned in one server tick; a larger wave spreads over the next ticks.");
+        BindLimit(config, Limits.MaxDespawnsPerTick,
+            "Most units despawned in one server tick (many destroys in one frame can crash the server).");
+        BindLimit(config, Limits.GraceSeconds,
+            "Seconds an event's units outlive the event's end before they expire.");
+        BindLimit(config, Limits.PurgeCooldownSeconds,
+            "After .nyar purge confirm, seconds during which no event starts and no unit is spawned.");
+        BindLimit(config, Limits.ManualSpawnLifetimeSeconds,
+            "Lifetime in seconds of a unit spawned with .nyar spawn.");
 
 #if DEBUG
         FaultInjection = config.Bind("Debug", "FaultInjection", "",
             "Debug builds only. An event id (its tick throws) or hook:<name> (that hook reports unavailable). Empty: off.");
 #endif
+    }
+
+    static void BindLimit(ConfigFile config, IntLimit limit, string description)
+    {
+        var entry = config.Bind(limit.Section, limit.Key, limit.Default,
+            $"{description} Range {limit.Min}-{limit.Max}; a value outside it is clamped at load.");
+        var (value, log) = limit.Clamp(entry.Value);
+        if (log is not null) Plugin.PluginLog.LogWarning($"[nyar] {log}");
+        _limits[limit.Name] = value;
     }
 }

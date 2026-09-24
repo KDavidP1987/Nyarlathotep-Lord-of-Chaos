@@ -66,9 +66,14 @@ internal static class Core
             // → EventScheduler. Later build steps add the rest.
             Services.Persistence.Initialize();
             Services.EventStore.Initialize();
+            Services.SpawnTracker.Initialize();
 
             IsReady = true;
             Log.LogInfo($"Nyarlathotep initialized via {trigger} (attempt #{_initAttempts}). Prefab map has {prefabSystem.SpawnableNameToPrefabGuidDictionary.Count} entries.");
+
+            Services.SpawnTracker.BootSweep();
+            // Temporary 1 s tick for the spawn and despawn queues; step 5's EventScheduler replaces it.
+            _tick = StartCoroutine(TickLoop());
         }
         catch (System.Exception ex)
         {
@@ -78,6 +83,34 @@ internal static class Core
         {
             _initInProgress = false;
         }
+    }
+
+    static Coroutine _tick;
+    static readonly Logic.FailureStreak _tickFaults = new();
+
+    static IEnumerator TickLoop()
+    {
+        var wait = new WaitForSeconds(1f);
+        while (true)
+        {
+            yield return wait;
+            try
+            {
+                Services.SpawnTracker.Tick();
+                _tickFaults.Ok();
+            }
+            catch (System.Exception ex)
+            {
+                if (_tickFaults.Fail()) Log.LogError($"[nyar] tick failed: {ex.Message}; retrying every second");
+            }
+        }
+    }
+
+    /// <summary>Plugin.Unload: stop the tick before the final state flush.</summary>
+    internal static void StopTick()
+    {
+        if (_tick is not null && _monoBehaviour != null) _monoBehaviour.StopCoroutine(_tick);
+        _tick = null;
     }
 
     static World FindServerWorld()

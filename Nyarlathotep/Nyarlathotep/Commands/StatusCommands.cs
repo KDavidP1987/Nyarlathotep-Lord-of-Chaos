@@ -13,5 +13,10 @@ internal static class StatusCommands
     {
         if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }
         foreach (var line in Messages.Status(EventStore.Catalog.Running, DateTime.UtcNow)) ctx.Reply(line);
+        if (ctx.IsAdmin)
+        {
+            var ledger = SpawnTracker.Ledger;
+            ctx.Reply(AdminLines.Tracked(ledger.Tracked, ledger.PendingSpawns, ledger.PendingDespawns));
+        }
     }
 }

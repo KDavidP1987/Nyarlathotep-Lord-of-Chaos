@@ -1038,8 +1038,9 @@ function Get-ParenEnd([string]$Text, [int]$Open) {
 # The services the gateway dispatches to, by name (plan D11 lists EventRuntime, SpawnTracker, WaveAction and
 # Persistence; EventStore holds the definition load). Only these may declare [Mutating] methods, and they may call
 # each other directly ("other than Logic/ActionGateway.cs and the services it dispatches to"). A [Mutating]
-# declaration anywhere else fails, so no file can exempt itself by declaring one.
-$script:DispatchedServices = @('EventRuntime', 'SpawnTracker', 'WaveAction', 'Persistence', 'EventStore') |
+# declaration anywhere else fails, so no file can exempt itself by declaring one. UnitSetup is SpawnTracker's setup
+# step for a unit it has just spawned (foundation step 4); its Apply is [Mutating], so only these services call it.
+$script:DispatchedServices = @('EventRuntime', 'SpawnTracker', 'UnitSetup', 'WaveAction', 'Persistence', 'EventStore') |
     ForEach-Object { "$PkgRel/Services/$_.cs" }
 
 # Every method marked [Mutating] in a dispatched service is a mutating method. Any other file under Commands/,

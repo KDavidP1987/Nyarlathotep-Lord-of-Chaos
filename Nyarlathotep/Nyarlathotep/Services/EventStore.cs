@@ -74,7 +74,7 @@ internal static class EventStore
 
     /// <summary>Unit names from PrefabCollectionSystem; denied are the name-based do-not-spawn list plus prefabs
     /// carrying DropInInventoryOnSpawn (docs/GAME_ASSETS.md › Do-not-spawn list).</summary>
-    sealed class PrefabUnitCatalog : IUnitCatalog
+    internal sealed class PrefabUnitCatalog : IUnitCatalog
     {
         public bool IsKnown(string prefabName) =>
             Core.PrefabCollectionSystem.SpawnableNameToPrefabGuidDictionary.ContainsKey(prefabName);
