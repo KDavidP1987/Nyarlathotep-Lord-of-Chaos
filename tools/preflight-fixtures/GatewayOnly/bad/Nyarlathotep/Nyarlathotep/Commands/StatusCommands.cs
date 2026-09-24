@@ -12,6 +12,7 @@ internal static class StatusCommands
     public static void Status(ChatCommandContext ctx)
     {
         if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }
+        EventStore.Reload();
         foreach (var line in Messages.Status(EventStore.Catalog.Running, DateTime.UtcNow)) ctx.Reply(line);
     }
 }

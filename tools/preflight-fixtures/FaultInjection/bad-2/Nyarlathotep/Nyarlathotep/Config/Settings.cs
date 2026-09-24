@@ -57,7 +57,7 @@ internal static class Settings
         MaxConcurrentEvents = config.Bind("Limits", "MaxConcurrentEvents", 3,
             "How many events (of any pillar) may be active at the same time.");
 
-#if DEBUG
+#if !DEBUG
         FaultInjection = config.Bind("Debug", "FaultInjection", "",
             "Debug builds only. An event id (its tick throws) or hook:<name> (that hook reports unavailable). Empty: off.");
 #endif

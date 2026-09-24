@@ -310,6 +310,60 @@
       }
     },
     {
+      "name": "GatewayOnly",
+      "function": "Test-CheckGatewayOnly",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/GatewayOnly",
+      "inputs": [
+        "every .cs file under Nyarlathotep/Nyarlathotep/Commands/, Patches/ and Services/ (the [Mutating] declarations and every use of their names)"
+      ],
+      "plant": {
+        "bad": "Commands/StatusCommands.cs calls EventStore.Reload() directly, outside Gateway.Run",
+        "bad-2": "Patches/GameDataInitializedPatch.cs captures EventStore.Reload as a delegate outside Gateway.Run and passes it in later"
+      }
+    },
+    {
+      "name": "FaultInjection",
+      "function": "Test-CheckFaultInjection",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/FaultInjection",
+      "inputs": [
+        "every .cs file git sees (each FaultInjection reference and the #if/#else/#endif around it)"
+      ],
+      "plant": {
+        "bad": "Config/Settings.cs reads FaultInjection in a property outside any #if",
+        "bad-2": "the cfg bind of FaultInjection sits under #if !DEBUG",
+        "bad-3": "the cfg bind of FaultInjection sits in the #else branch of #if DEBUG"
+      }
+    },
+    {
+      "name": "AdminList",
+      "function": "Test-CheckAdminList",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/AdminList",
+      "inputs": [
+        "every [Command] and [CommandGroup] attribute in any .cs file git sees (the commands walk shared with Test-CheckCommands and -ListCommands admin)"
+      ],
+      "plant": {
+        "bad": "an admin-only command declared in Services/Hidden.cs, outside Commands/"
+      }
+    },
+    {
+      "name": "SessionLogs",
+      "function": "Test-CheckSessionLogs",
+      "mode": "sessionsof",
+      "fixtures": "tools/preflight-fixtures/SessionLogs",
+      "inputs": [
+        "docs/features/<SLUG>.md › Test results (### Session <n> headings)",
+        "docs/audits/<slug>.md (- session <n> log check: lines)",
+        "the plan slug (-SessionsOf; sessionsof.txt in a fixture)"
+      ],
+      "plant": {
+        "bad": "the audit has no log check line for session 3",
+        "bad-2": "the audit's session 2 line shows 1 unhandled"
+      }
+    },
+    {
       "name": "LogCheck",
       "function": "Test-CheckLogCheck",
       "mode": "logcheck",

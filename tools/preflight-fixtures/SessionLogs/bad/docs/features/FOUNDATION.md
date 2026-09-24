@@ -1,6 +1,6 @@
 # Foundation — the event engine
 
-**Status:** in build (docs/dod/foundation.md, step 3 of 9). Ships in 0.2.0. Nothing here is enabled by
+**Status:** in build (docs/dod/foundation.md, step 2 of 9). Ships in 0.2.0. Nothing here is enabled by
 default: pillar switches are off, seeded events are disabled, announcement switches are off.
 
 ## What it provides
@@ -27,20 +27,6 @@ The shared engine every pillar builds on:
   is renamed `state.json.corrupt` and an empty state used; a newer SchemaVersion loads read-only; state.json is
   written at most once per second, and a failing write is retried every second with one log line per streak.
 - **First run** seeds events.json from `Resources/events.default.json`: one example per pillar, every one disabled.
-- **One door for changes** (step 3): every mutating operation is an ActionKind run through `Logic/ActionGateway`.
-  Admin may run every kind; the operator's file load runs as Operator; the scheduler and triggers (System) may only
-  start and end enabled definitions; players get none in this child. A denial is logged as "gateway: denied <kind>
-  for <actor>". A service method that changes something is marked `[Mutating]`, and preflight fails when one is
-  called outside `Gateway.Run`.
-- **Wire lines for Raphael** (step 3): `Logic/Wire` builds `[NYAR:<tag>] key=value …` lines of at most 480 bytes,
-  including the `[NYAR:version]` handshake with every key of docs/RAPHAEL_INTEGRATION_CONTRACT.md §2 (the command
-  that sends it comes in step 6).
-- **Clean text** (step 3): `.nyar announce` text must be 1-200 characters with no `<`, `>` or control characters;
-  player and clan names lose those characters and are cut to 20; in a wire value spaces become `_` and `=`, `;`,
-  `:` are removed.
-- **No positions in player lines** (step 3): every player reply and announcement comes from `Logic/Messages`, whose
-  builders take no position or radius, and whose templates use only {faction}, {minutes}, {event}, {zone}, {wave},
-  {waves}.
 
 Later steps add the spawner, the scheduler and runtime, the announcer and the admin commands (see the plan's
 Build plan).
@@ -49,11 +35,9 @@ Build plan).
 
 | Area | Files |
 |---|---|
-| Pure logic (no game types; compiled into the tests) | `Nyarlathotep/Nyarlathotep/Logic/` — Model, Validation, Limits, CommandArgs, Schedule, Precedence, Idempotency, EventCatalog, Dependency, Paths, IFileStore, DataStore, Hooks, ActionGateway, Wire, TextSink, Messages |
+| Pure logic (no game types; compiled into the tests) | `Nyarlathotep/Nyarlathotep/Logic/` — Model, Validation, Limits, CommandArgs, Schedule, Precedence, Idempotency, EventCatalog, Dependency, Paths, IFileStore, DataStore, Hooks |
 | Files and definitions | `Services/Persistence.cs` (disk), `Services/EventStore.cs` (seed, load, reload), `Resources/events.default.json` |
-| Gateway | `Services/Gateway.cs` (the one `ActionGateway`; `Gateway.Run` wraps every `[Mutating]` call) |
 | Startup | `Patches/GameDataInitializedPatch.cs` — the save-loaded trigger and, for a brand-new world, `ServerStartupPatch` (A5) |
-| Preflight checks (step 3) | `tools/preflight.ps1` — GatewayOnly, FaultInjection, AdminList (`-ListCommands admin`), SessionLogs (`-SessionsOf <slug>`) |
 | Unit tests | `Nyarlathotep/Nyarlathotep.Tests/` (xUnit 2.9.3, Microsoft.NET.Test.Sdk 17.8.0, net6.0) |
 
 ## Test results
@@ -73,14 +57,6 @@ Build plan).
 - After the Codex cross-inspection fixes (31cca9e): Passed 235, Failed 0. The seed now never overwrites a file
   that appears while it writes, and a failure during command discovery is contained. Mutations: reverting
   `Seed` to an overwriting promote failed 1 case; unguarding the discovery step failed 1 case.
-
-### 2026-09-24 · step 3 · unit tests
-- `dotnet test Nyarlathotep/Nyarlathotep.Tests -c Release` → Passed 440, Failed 0 (adds AuthorizationTests,
-  WireFormatTests, TextSinkTests, PrivacyTests; the authorization matrix is every ActionKind × actor × enabled).
-- Mutation check: each of 9 planted faults failed its class. The faults: Player granted Announce, System's enabled
-  check removed, a denial not logged, wire values unmapped, the 480-byte cap removed, a handshake key dropped,
-  control characters kept, the announcement length unchecked, and the status line leaking the radius.
-- `pwsh tools/preflight.ps1 -SelfTest` → "selftest: 24/24 checks, 3 fixtures each, 50 extra bad fixtures".
 
 ### Session 1 · 2026-09-24
 Dev world "Nyar Dev" (save-data-nyardev), created fresh, 127.0.0.1:9876, build 8865800.

@@ -30,6 +30,12 @@
                    <s> nyar lines" and exits 1 when the log is missing or empty, holds a stack frame from our
                    assembly ("at Nyarlathotep." after any indentation or prefix) or has no "[nyar" line (foundation D33). Run it after every
                    in-game session, before the next boot overwrites the log.
+    -SessionsOf <slug>
+                 : Test-CheckSessionLogs: every "### Session <n>" under docs/features/<SLUG>.md › Test results has a
+                   "- session <n> log check: 0 unhandled, <s> nyar lines" line in docs/audits/<slug>.md (foundation D33).
+    -ListCommands admin
+                 : every admin-only command of the commands walk, one per line, then "admin commands: <n>"
+                   (foundation D19); Test-CheckAdminList keeps that list equal to the commands check's count.
     -AuditOf <slug>
                  : Test-CheckAuditSteps: docs/audits/<slug>.md has a pre-audit and a post-audit entry
                    with a Codex verdict for every Build plan step of docs/dod/<slug>.md (spikes D17).
@@ -51,6 +57,8 @@
     pwsh tools/preflight.ps1 -ServerWrites -Compare $env:TEMP\nyarfoundation-before.tsv
     pwsh tools/preflight.ps1 -AuditOf spikes
     pwsh tools/preflight.ps1 -LogCheck
+    pwsh tools/preflight.ps1 -SessionsOf foundation
+    pwsh tools/preflight.ps1 -ListCommands admin
 #>
 
 [CmdletBinding()]
@@ -63,6 +71,9 @@ param(
     [switch]$AfterCleanup,
     [switch]$LogCheck,              # the live BepInEx/LogOutput.log after an in-game session (foundation D33)
     [string]$AuditOf,               # plan slug: check its audit record covers every Build plan step
+    [string]$SessionsOf,            # plan slug: check every in-game session has a clean log check line (foundation D33)
+    [ValidateSet('', 'admin')]
+    [string]$ListCommands = '',     # 'admin': print every admin-only command, then "admin commands: <n>" (foundation D19)
     [string]$ServerPath = 'C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer',
     [string]$LocalLowPath = (Join-Path $env:USERPROFILE 'AppData\LocalLow\Stunlock Studios'),
     [string]$LocalServerPath = 'C:\VRising-LocalServer'
@@ -255,18 +266,12 @@ function Test-CheckPillarDefaults([string]$Root) {
 $script:PublicCommands = @('nyar', 'status', 'help', 'me', 'top', 'hide', 'show', 'version', 'sub')   # Epic D5 (A4)
 
 function Test-CheckCommands([string]$Root) {
-    $cs = Get-CsFiles $Root
     $admin = 0; $public = 0; $bad = @()
-    foreach ($f in $cs) {
-        $text = Remove-CsComments (Read-Text $Root $f)
-        foreach ($m in [regex]::Matches($text, '\[Command\s*\((?<args>(?:[^()]|\((?:[^()])*\))*)\)\s*\]')) {
-            $a = $m.Groups['args'].Value
-            $name = if ($a -match '^\s*(?:name\s*:\s*)?"([^"]*)"') { $Matches[1] } else { '?' }
-            if ($f -notlike "$PkgRel/Commands/*") { $bad += "$name outside Commands/ ($f)"; continue }
-            if ($a -match 'adminOnly\s*:\s*true') { $admin++ }
-            elseif ($script:PublicCommands -contains $name) { $public++ }
-            else { $bad += "$name not adminOnly ($f)" }
-        }
+    foreach ($c in @(Get-CommandWalk $Root)) {
+        if (-not $c.InCommands) { $bad += "$($c.Name) outside Commands/ ($($c.File))"; continue }
+        if ($c.Admin) { $admin++ }
+        elseif ($script:PublicCommands -contains $c.Name) { $public++ }
+        else { $bad += "$($c.Name) not adminOnly ($($c.File))" }
     }
     if ($admin + $public + $bad.Count -eq 0) { return New-Result $false 'commands: none found' }
     if ($bad) { return New-Result $false "commands: $($bad -join '; ')" }
@@ -953,6 +958,163 @@ function Test-CheckAuditSteps([string]$Root) {
     return New-Result ($np -eq $steps.Count -and $nq -eq $steps.Count -and $nc -eq $steps.Count) $line
 }
 
+# ---------------------------------------------------------------- checks: the foundation child (foundation D11, D17-D19, D33)
+
+# Every string and char literal blanked to "" / '' after comments are removed, so an identifier or a
+# directive inside a literal never counts.
+function Remove-CsLiterals([string]$Text) {
+    if (-not $Text) { return $Text }
+    return $script:CsLexRx.Replace((Remove-CsComments $Text), {
+        param($m)
+        if ($m.Groups['c'].Success) { return "''" }
+        if ($m.Groups['lc'].Success -or $m.Groups['bc'].Success) { return $m.Value }
+        return '""'
+    })
+}
+
+# Index of the ")" matching the "(" at $Open, or the text's end.
+function Get-ParenEnd([string]$Text, [int]$Open) {
+    $depth = 0
+    for ($i = $Open; $i -lt $Text.Length; $i++) {
+        if ($Text[$i] -eq '(') { $depth++ }
+        elseif ($Text[$i] -eq ')') { $depth--; if ($depth -eq 0) { return $i } }
+    }
+    return $Text.Length
+}
+
+# Every method marked [Mutating] in a .cs file under Commands/, Patches/ or Services/ is a mutating method; its
+# declaring file is a service the gateway dispatches to. Any other file in those directories may name such a
+# method only inside the parentheses of a Gateway.Run(...) call; every named use inside such a call, in any of the
+# walked files, is a call site. A use is the identifier anywhere except its own declaration, so a method group
+# captured outside Gateway.Run and passed in later fails too (foundation D11, Epic D36).
+function Test-CheckGatewayOnly([string]$Root) {
+    $dirs = @("$PkgRel/Commands/", "$PkgRel/Patches/", "$PkgRel/Services/")
+    $files = @(Get-CsFiles $Root | Where-Object { $f = $_; @($dirs | Where-Object { $f.StartsWith($_) }).Count -gt 0 })
+    $texts = @{}
+    foreach ($f in $files) { $texts[$f] = Remove-CsLiterals (Read-Text $Root $f) }
+    $decl = '\[Mutating\]\s*(?:\[[^\]]*\]\s*)*(?:(?:public|internal|private|protected|static|override|virtual|async|sealed)\s+)+[\w<>\[\],.? ]+?\s+(\w+)\s*\('
+    $mutating = @{}    # name -> declaring files
+    $declAt = @{}      # "<file>|<index>" of each declaration's name
+    foreach ($f in $files) {
+        foreach ($m in [regex]::Matches($texts[$f], $decl)) {
+            $n = $m.Groups[1].Value
+            if (-not $mutating.ContainsKey($n)) { $mutating[$n] = @() }
+            $mutating[$n] += $f
+            $declAt["$f|$($m.Groups[1].Index)"] = $true
+        }
+    }
+    if ($mutating.Count -eq 0) { return New-Result $false 'gateway: no [Mutating] method found under Commands/, Patches/ or Services/' }
+    $sites = 0; $bad = @()
+    foreach ($f in $files) {
+        $t = $texts[$f]
+        $spans = @(foreach ($g in [regex]::Matches($t, '\bGateway\s*\.\s*Run\s*\(')) {
+            $open = $g.Index + $g.Length - 1
+            , @($open, (Get-ParenEnd $t $open))
+        })
+        foreach ($name in $mutating.Keys) {
+            foreach ($u in [regex]::Matches($t, "\b$name\b")) {
+                if ($declAt.ContainsKey("$f|$($u.Index)")) { continue }
+                $inside = @($spans | Where-Object { $u.Index -gt $_[0] -and $u.Index -lt $_[1] }).Count -gt 0
+                if ($inside) { $sites++ }
+                elseif ($mutating[$name] -notcontains $f) { $bad += "$name used outside Gateway.Run in $f" }
+            }
+        }
+    }
+    if ($bad) { return New-Result $false "gateway: $(@($bad | Select-Object -Unique) -join '; ')" }
+    return New-Result $true "gateway: only ActionGateway mutates ($sites call sites)"
+}
+
+# Every "FaultInjection" in a .cs file (comments and literals aside) lies inside an "#if DEBUG" branch, so a
+# Release DLL has no such key and no code reading it (foundation D17, D25; Epic D25). Nested #if blocks are
+# tracked; the #else or #elif branch of "#if DEBUG" is not debug-only.
+function Test-CheckFaultInjection([string]$Root) {
+    $cs = Get-CsFiles $Root
+    if ($cs.Count -eq 0) { return New-Result $false 'fault injection: no source files found' }
+    $refs = 0; $bad = @()
+    foreach ($f in $cs) {
+        $stack = New-Object System.Collections.Generic.List[bool]   # per open #if: is this branch DEBUG-only
+        $lineNo = 0
+        foreach ($line in ((Remove-CsLiterals (Read-Text $Root $f)) -split '\r?\n')) {
+            $lineNo++
+            $d = $line.Trim()
+            if ($d -match '^#\s*if\s+(.+)$') { $stack.Add($Matches[1].Trim() -eq 'DEBUG'); continue }
+            if ($d -match '^#\s*(else|elif)\b') { if ($stack.Count) { $stack[$stack.Count - 1] = $false }; continue }
+            if ($d -match '^#\s*endif\b') { if ($stack.Count) { $stack.RemoveAt($stack.Count - 1) }; continue }
+            $n = [regex]::Matches($line, '\bFaultInjection\b').Count
+            if ($n -eq 0) { continue }
+            $refs += $n
+            if (-not $stack.Contains($true)) { $bad += "$f line $lineNo" }
+        }
+    }
+    if ($bad) { return New-Result $false "fault injection: outside #if DEBUG at $($bad -join ', ')" }
+    return New-Result $true "fault injection: debug-only ($refs references)"
+}
+
+# The commands walk shared by the commands check, the admin list and -ListCommands: every [Command] in any .cs
+# file git sees, with its full chat form (the file's [CommandGroup] name, if any, then the command name).
+function Get-CommandWalk([string]$Root) {
+    foreach ($f in Get-CsFiles $Root) {
+        $text = Remove-CsComments (Read-Text $Root $f)
+        $group = if ($text -match '\[CommandGroup\s*\(\s*(?:name\s*:\s*)?"([^"]*)"') { $Matches[1] } else { '' }
+        foreach ($m in [regex]::Matches($text, '\[Command\s*\((?<args>(?:[^()]|\((?:[^()])*\))*)\)\s*\]')) {
+            $a = $m.Groups['args'].Value
+            $name = if ($a -match '^\s*(?:name\s*:\s*)?"([^"]*)"') { $Matches[1] } else { '?' }
+            [pscustomobject]@{
+                Name       = $name
+                Full       = '.' + ((@($group, $name) | Where-Object { $_ }) -join ' ')
+                Admin      = $a -match 'adminOnly\s*:\s*true'
+                File       = $f
+                InCommands = $f -like "$PkgRel/Commands/*"
+            }
+        }
+    }
+}
+
+# The admin list (-ListCommands admin) holds every admin-only command of the walk, wherever it is declared; the
+# commands check counts only those under Commands/. The two counts must be equal, so an admin command declared
+# anywhere else fails here even when it is admin-only (foundation D19).
+function Test-CheckAdminList([string]$Root) {
+    $walk = @(Get-CommandWalk $Root)
+    if ($walk.Count -eq 0) { return New-Result $false 'admin list: no commands found' }
+    $listed = @($walk | Where-Object Admin).Count
+    $counted = @($walk | Where-Object { $_.Admin -and $_.InCommands }).Count
+    if ($listed -ne $counted) {
+        $outside = @($walk | Where-Object { $_.Admin -and -not $_.InCommands } | ForEach-Object { "$($_.Full) ($($_.File))" })
+        return New-Result $false "admin list: $listed listed but the commands check counts $counted; outside Commands/: $($outside -join '; ')"
+    }
+    return New-Result $true "admin list: $listed admin commands, equal to the commands check"
+}
+
+# Every "### Session <n> · <date>" under "## Test results" in docs/features/<SLUG>.md has a line
+# "- session <n> log check: 0 unhandled, <s> nyar lines" in docs/audits/<slug>.md (foundation D33). A fixture names
+# the slug in sessionsof.txt.
+function Test-CheckSessionLogs([string]$Root) {
+    $slug = if (Test-IsFixture $Root) { "$(Read-Text $Root 'sessionsof.txt')".Trim() } else { $SessionsOf }
+    if (-not $slug) { return New-Result $false 'session logs: no plan named (-SessionsOf <slug>)' }
+    $docRel = "docs/features/$($slug.ToUpperInvariant().Replace('-', '_')).md"
+    $doc = Read-Text $Root $docRel
+    $audit = Read-Text $Root "docs/audits/$slug.md"
+    if ($null -eq $doc) { return New-Result $false "session logs: $docRel not found" }
+    if ($null -eq $audit) { return New-Result $false "session logs: docs/audits/$slug.md not found" }
+    $results = [regex]::Match($doc, '(?ms)^## Test results\s*$(.*?)(?=^## |\z)')
+    $sessions = if ($results.Success) { @([regex]::Matches($results.Groups[1].Value, '(?m)^### Session (\d+) · ') | ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object -Unique) } else { @() }
+    if ($sessions.Count -eq 0) { return New-Result $false "session logs: $slug has no sessions under $docRel › Test results" }
+    $checks = @{}
+    foreach ($m in [regex]::Matches($audit, '(?m)^- session (\d+) log check: (\d+) unhandled, (\d+) nyar lines')) {
+        $checks[[int]$m.Groups[1].Value] = [int]$m.Groups[2].Value
+    }
+    $missing = @($sessions | Where-Object { -not $checks.ContainsKey($_) })
+    $dirty = @($sessions | Where-Object { $checks.ContainsKey($_) -and $checks[$_] -ne 0 })
+    $ok = $sessions.Count - $missing.Count - $dirty.Count
+    if ($missing -or $dirty) {
+        $why = @()
+        if ($missing) { $why += "no log check line for session $($missing -join ', ')" }
+        if ($dirty) { $why += "unhandled exceptions in session $($dirty -join ', ')" }
+        return New-Result $false "session logs: $slug $ok/$($sessions.Count) checked ($($why -join '; '))"
+    }
+    return New-Result $true "session logs: $slug $ok/$($sessions.Count) checked"
+}
+
 # ---------------------------------------------------------------- runner
 
 function Get-Manifest {
@@ -1001,7 +1163,7 @@ function Invoke-SelfTest {
     foreach ($dup in @($checks | Group-Object function | Where-Object Count -gt 1)) { $problems += "function '$($dup.Name)' listed twice" }
     foreach ($c in $checks) {
         if ($c.function -ne "Test-Check$($c.name)") { $problems += "$($c.name): function must be Test-Check$($c.name)" }
-        if (@('default', 'paths', 'serverwrites', 'auditof', 'logcheck') -notcontains $c.mode) { $problems += "$($c.name): mode '$($c.mode)' is not default, paths, serverwrites, auditof or logcheck" }
+        if (@('default', 'paths', 'serverwrites', 'auditof', 'logcheck', 'sessionsof') -notcontains $c.mode) { $problems += "$($c.name): mode '$($c.mode)' is not default, paths, serverwrites, auditof, logcheck or sessionsof" }
         if ($c.fixtures -ne "tools/preflight-fixtures/$($c.name)") { $problems += "$($c.name): fixtures must be tools/preflight-fixtures/$($c.name)" }
         if (@($c.inputs | Where-Object { "$_" -match '\S' }).Count -eq 0) { $problems += "$($c.name): no inputs listed" }
         if (@($c.plant.PSObject.Properties).Count -eq 0) { $problems += "$($c.name): no plant descriptions" }
@@ -1057,8 +1219,15 @@ if ($ServerWrites -and $Snapshot) {
     exit 0
 }
 
+if ($ListCommands -eq 'admin') {
+    $admins = @(Get-CommandWalk $repoRoot | Where-Object Admin | Sort-Object Full)
+    $admins | ForEach-Object { Write-Host $_.Full }
+    Write-Host "admin commands: $($admins.Count)"
+    exit 0
+}
+
 $manifest = Get-Manifest
-$mode = if ($Paths) { 'paths' } elseif ($ServerWrites) { 'serverwrites' } elseif ($AuditOf) { 'auditof' } elseif ($LogCheck) { 'logcheck' } else { 'default' }
+$mode = if ($Paths) { 'paths' } elseif ($ServerWrites) { 'serverwrites' } elseif ($AuditOf) { 'auditof' } elseif ($LogCheck) { 'logcheck' } elseif ($SessionsOf) { 'sessionsof' } else { 'default' }
 $failures = @()
 foreach ($c in @($manifest.checks | Where-Object { $_.mode -eq $mode })) {
     $r = Invoke-Check $c.function $repoRoot

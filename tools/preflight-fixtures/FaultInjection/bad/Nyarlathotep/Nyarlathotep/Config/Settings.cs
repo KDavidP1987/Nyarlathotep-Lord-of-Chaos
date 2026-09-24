@@ -32,6 +32,8 @@ internal static class Settings
     public static ConfigEntry<string> FaultInjection { get; private set; }
 #endif
 
+    static bool FaultArmed => FaultInjection?.Value is { Length: > 0 };
+
     public static void Initialize(ConfigFile config)
     {
         Enabled = config.Bind("General", "Enabled", true,

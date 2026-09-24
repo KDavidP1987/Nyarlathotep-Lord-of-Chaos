@@ -56,7 +56,7 @@ checks are lines "- session <n> log check: …" (D33).
 - preflight: exit 0; `-SelfTest` → "selftest: 20/20 checks, 3 fixtures each, 46 extra bad fixtures"; `-Paths` → "paths: 406 walked, all in manifest"
 - /code-review (inline, 8562fe3..2d4e85c): one finding, fixed in 2d4e85c: EventStore.Initialize could let an exception escape into Core.TryInitialize, so it is now wrapped and logs "events.json load failed … no events loaded"
 - session 1 log check: 0 unhandled, 3 nyar lines
-- session 2 log check: 0 unhandled, 3 nyar lines
+- session 2 log check: 1 unhandled, 3 nyar lines
 - session 3 log check: 0 unhandled, 2 nyar lines
 - Codex cross-inspection round 1 (2d4e85c): REVISE, 6 findings. The fixes are in 0a27e9d.
   - (1) a junction above BepInEx/config: declined. It is the admin's deployment choice, and D7 fences the mod's file names and the data folder, which Guard checks before every access.
