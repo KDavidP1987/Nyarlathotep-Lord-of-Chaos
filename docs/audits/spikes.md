@@ -89,3 +89,19 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - Codex verdict: REVISE at the 3-round cap. Every finding from the final round was applied and rebuilt clean. There is no further Codex round; the owner reviews this record
 - in-game: not yet. The harness runs first in step 3, on the throwaway save
 - dod status: D1, D2, D3, D16 verified on dec14e1 (see the plan Log)
+
+### Step 3 · 2026-09-23 · (in progress)
+- snapshot: `-ServerWrites -Snapshot $env:TEMP
+yarspikes-before.tsv` at 2026-09-23 19:46:28, server stopped, 1633 files and folders (85 under LocalServer/)
+- setup: save-data-nyarspikes\Settingsdminlist.txt written (one line, the owner's SteamID; not quoted here); step-2 build deployed (Nyarlathotep.dll 45056 bytes); default host settings (port 9876)
+- launch: the server started from this session has no console, so Ctrl-C cannot stop it cleanly and BepInEx's buffered disk log was lost on the first two stops. BepInEx/config/BepInEx.cfg `[Logging.Disk] InstantFlushing` set false → true for the spike sessions; restored to false in step 8
+- boot (20:43): "Nyarlathotep initialized via GameDataInitializedPatch (attempt #1)" beside Beelzebub, Faust and Uriel; no error lines
+- session 1 (owner in game, 20:45–21:00), D5 sequence:
+  - `tag 10` ×3 → "10/10 spawned … 10 alive", "… 20 alive", "… 30 alive". The owner saw only about 20 at once: the engine log shows the owner's client sending dozens of ChangeHealthOfClosestToPositionDebugEvent admin events (the admin kill tool), so units were being killed as they came. Kills lower the alive count, so two more `tag 10` were admitted ("30 alive", "28 alive") before "spike limit 30 (22 alive)" ×3
+  - `sweep` → "marked 14, listed 14, faults 0"; `clear` → batch 1 ran in the command frame ("destroyed 5, 1 left"), reply "clear: 6 queued, 5 per batch", batch 2 finished 0.25 s later; the second `clear` → "nothing to clear". The drain was too fast for the mid-drain checks
+  - `tag 1` ×2, `clear` → "clear: 1 queued", done
+  - `march 2` → the anchor (CHAR_Critter_Rat) and the first CHAR_Bandit_Thug spawned and were logged; the server then aborted before the second unit's spawn line: "System.ArgumentException: The entity does not exist … EntityComponentStore::AppendDestroyedEntityRecordError … thrown from a job compiled with Burst … burst will now abort the Application". No Nyarlathotep stack frame (Burst abort)
+- findings and changes (fix build, not yet re-run):
+  - the abort happened inside `march 2`, between setting the first unit's Follower.Followed to the anchor and spawning the second unit. The march now spawns the whole group first and then applies the lever, sets Follower.ModeModifiable to 0 as Bloodcraft does for a set Followed, and logs each step ("anchor … held still", "<n> spawned, applying variant", "variant <v> set on <id>") so a repeat pinpoints the failing step. Only the player character prefab carries FollowerBuffer, so native NPCs follow without one and no buffer is added
+  - clear batches now run 1 s apart (still at most 5 destroys per frame), so a person can type a second `clear` and a `tag 1` mid-drain
+  - session 2 re-runs D5 without the admin kill tool, then isolates S1: `march 3` (no Follower) first, then `march 1 1`, then `march 2`

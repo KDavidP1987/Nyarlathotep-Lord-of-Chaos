@@ -64,16 +64,24 @@ internal static class SpikeMarch
             group.Anchor = SpikeUnits.Spawn(AnchorUnit, anchorAt, MarchLifetime, out var err);
             if (!group.Anchor.Exists()) return $"spike failed: anchor: {err}";
             HoldStill(group.Anchor);
+            Core.Log.LogInfo($"[nyar-spike] march g{group.Id}: anchor {group.Anchor.Index}:{group.Anchor.Version} held still");
         }
 
+        // Spawn the whole group first, then apply the lever, so no unit is spawned while another already
+        // follows the anchor (session 1 aborted inside `march 2` between the first and second spawn).
         for (int i = 0; i < count; i++)
         {
             var offset = new float3((i % 5 - 2) * 1.5f, 0, (i / 5) * 1.5f);
             var unit = SpikeUnits.Spawn(Thug, spawnPoint + offset, MarchLifetime, out var err);
             if (!unit.Exists()) { Core.Log.LogWarning($"[nyar-spike] march unit {i} not spawned: {err}"); continue; }
             group.Units.Add(unit);
+        }
+        Core.Log.LogInfo($"[nyar-spike] march g{group.Id}: {group.Units.Count} spawned, applying variant {variant}");
+        foreach (var unit in group.Units)
+        {
             if (variant is 1 or 2) FollowAnchor(unit, group.Anchor);
             else LeashToDestination(unit, destination, distance);
+            Core.Log.LogInfo($"[nyar-spike] march g{group.Id}: variant {variant} set on {unit.Index}:{unit.Version}");
         }
 
         _stopRequested = false;
@@ -97,6 +105,7 @@ internal static class SpikeMarch
     {
         if (!unit.TryGetComponent<Follower>(out var follower)) { Core.Log.LogWarning($"[nyar-spike] {unit.Index} has no Follower"); return; }
         follower.Followed._Value = anchor;
+        follower.ModeModifiable._Value = 0;   // as Bloodcraft FamiliarBindingSystem.cs:453-457 does for a set Followed
         unit.Write(follower);
     }
 

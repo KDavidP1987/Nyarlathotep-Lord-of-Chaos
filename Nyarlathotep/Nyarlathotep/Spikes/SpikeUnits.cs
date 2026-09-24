@@ -25,7 +25,7 @@ internal static class SpikeUnits
     public const int MaxAlive = 30;
     public const int MaxLifetime = 600;
     const int ClearPerBatch = 5;                             // at most 5 destroys in any one frame (DEV_REMINDERS #8)
-    const float ClearBatchSeconds = 0.25f;                   // slow enough for a second `clear` to land mid-drain (D5)
+    const float ClearBatchSeconds = 1f;                      // slow enough for a person to type a second `clear` mid-drain (D5)
 
     static readonly List<Entity> _spawned = new();
     static readonly Queue<Entity> _clearQueue = new();

@@ -407,3 +407,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-23 · D2 · pass · cmd: pwsh tools/preflight.ps1 → "commands: 6 admin-only, 1 public (allow-listed)" · dec14e1 · claude
 - 2026-09-23 · D3 · pass · cmd: pwsh tools/preflight.ps1 → "structural edits: fenced (3 Prefab-guarded calls in EntityExtensions.cs)" · dec14e1 · claude
 - 2026-09-23 · D16 · pass · cmd: pwsh tools/preflight.ps1 → "secrets: none (331 files scanned)" · dec14e1 · claude
+- 2026-09-23 · note · step 3 session 1: D5 partly run (tag, limit, sweep and clear worked; mid-drain checks not reachable at 0.25 s batches); `march 2` aborted the server (Burst: entity does not exist) after the first follower was set, so D12 cannot pass on this session; march lever reordered and instrumented, clear batches 1 s apart; see docs/audits/spikes.md Step 3
