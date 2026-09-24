@@ -917,8 +917,8 @@ function Test-CheckLogCheck([string]$Root) {
     if ($null -eq $log -or $log -notmatch '\S') { return New-Result $false 'log check: no log (BepInEx/LogOutput.log missing or empty)' }
     $lines = $log -split '\r?\n'
     # A frame is "at Nyarlathotep.<type>.<method>(" after any indentation or prefix (IL2CPP, Mono and logger-wrapped
-    # traces differ); the "(" keeps prose such as "look at Nyarlathotep.Core" out (foundation step 2 Codex rounds 1-2).
-    $n = @($lines | Where-Object { $_ -match '(?<![\w.])at\s+Nyarlathotep\.[\w.`+<>\[\],]*\(' }).Count
+    # traces differ, Mono puts a space before "("); the "(" keeps prose such as "look at Nyarlathotep.Core" out (foundation step 2 Codex rounds 1-3).
+    $n = @($lines | Where-Object { $_ -match '(?<![\w.])at\s+Nyarlathotep\.[\w.`+<>\[\],]*[ \t]*\(' }).Count
     $s = @($lines | Where-Object { $_.Contains('[nyar') }).Count
     if ($s -eq 0) { return New-Result $false "log check: $n unhandled, 0 nyar lines (the wrong log, or the plugin did not initialise)" }
     return New-Result ($n -eq 0) "log check: $n unhandled, $s nyar lines"

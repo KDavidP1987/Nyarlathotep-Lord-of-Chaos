@@ -4,3 +4,4 @@
 	at Nyarlathotep.Services.EventStore.Reload()
   at Nyarlathotep.Core.TryInitialize(String trigger)
 [Error  :Il2CppInterop] During invoker: at Nyarlathotep.Patches.ServerStartupPatch.OnLoadState(State loadState)
+  at Nyarlathotep.Services.Outer+Inner.Foo[T] (System.Int32 value) [0x00000] in <00000000000000000000000000000000>:0
