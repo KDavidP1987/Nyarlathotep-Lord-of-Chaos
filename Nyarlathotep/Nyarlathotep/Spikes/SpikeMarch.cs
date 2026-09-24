@@ -171,6 +171,14 @@ internal static class SpikeMarch
         return true;
     }
 
+    static void DropTarget(Entity unit, Entity target)
+    {
+        if (!Core.EntityManager.HasComponent<AggroBuffer>(unit)) return;
+        var buffer = Core.EntityManager.GetBuffer<AggroBuffer>(unit);
+        for (int i = buffer.Length - 1; i >= 0; i--)
+            if (buffer[i].Entity == target) buffer.RemoveAt(i);
+    }
+
     /// <summary>Spikes A6: at 100 m variant 4 units stayed Idle while at 30 m they chased. One line per second
     /// for the group's first unit tells apart "our ranges were reset after spawn" from "the aggro entry was
     /// pruned": the live AggroConsumer and AggroModifiers values and whether the target is still in AggroBuffer.</summary>
@@ -236,8 +244,19 @@ internal static class SpikeMarch
                         break;
                     }
                     if (group.Target.Exists())
+                    {
                         foreach (var u in group.Units)
                             if (u.Exists()) Hunt(u, group.Target, group.Distance);
+                    }
+                    else
+                    {
+                        // Step 3 Codex round 2: the admin entity is gone, so drop our entry for it and stop hunting.
+                        foreach (var u in group.Units)
+                            if (u.Exists()) DropTarget(u, group.Target);
+                        Core.Log.LogInfo($"[nyar-spike] march g{group.Id}: target gone, hunt stopped");
+                        _groups.Remove(group);
+                        yield break;
+                    }
                 }
                 if (alive == 0 || arrived == alive)
                 {
