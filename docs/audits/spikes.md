@@ -35,6 +35,27 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - baseline boot: BepInEx/LogOutput.log of the owner's last boot (2026-09-23 19:32) with the deployed v0.1.0 scaffold: "Nyarlathotep initialized via GameDataInitializedPatch (attempt #1)", loaded beside VCF 0.10.4, Beelzebub 0.136.0, Faust 0.16.5 and Uriel 0.20.0; 0 lines matching error or exception
 - server: not running
 
+### Step 4 · 2026-09-24 · (with step 3)
+- recorded retrospectively: the S1 march sessions (1–3, 5–8) ran inside step 3's session series with the same server, build pipeline and checks. Each session began from the state recorded under Post-audit › Step 3: tree committed, compile 0/0, preflight OK, the server boot log checked for "Nyarlathotep initialized" and 0 exceptions
+
+### Step 5 · 2026-09-24 · (with step 3)
+- recorded retrospectively: the S2 restart sessions (9–12) ran inside step 3's series; A8 (stop after autosave) and A9 (tag keep) were recorded before the code they changed was built
+
+### Step 6 · 2026-09-24 · (with step 3)
+- recorded retrospectively: the S3 carrier session (4) and its mid-buff restart ran inside step 3's series on build 35dfbe9, whose compile and preflight are recorded under Post-audit › Step 2 and Step 3
+
+### Step 7 · 2026-09-24 · aed615e
+- git status: clean; compile 0/0; preflight OK; dod status spikes 10/20 before the contracts table
+- read: docs/RESEARCH_NOTES.md sections, docs/dod/nyarlathotep.md › Amendments (A1–A13) and Child constraints, the three feature docs' Status lines
+
+### Step 8 · 2026-09-24 · e51b808
+- git status: clean (0 entries), HEAD e51b808
+- compile: `dotnet build … -p:VRisingServerPath=C:\__nodeploy__` → 0 Warning(s), 0 Error(s)
+- preflight: first run failed with "data inventory: 'config/config.vdf' has no entry" (the A12 manifest path) → inventory entry added; rerun "data inventory: 43/43 complete", PREFLIGHT OK, "spike code: present, allowed while spikes is in-progress"; `-SelfTest` 19/19
+- dod status: spikes 12/20 verified, 0 problems
+- server: not running; the owner's game client closed
+- plan read: Build plan step 8 (D13, D15, D18, D19), Rollout › Rollback; step-2 parent for D19 is 50e196a
+
 ## Post-audit
 ### Step 1 · 2026-09-23 · (this commit)
 - compile / preflight: 0 errors, 0 warnings (no C# change); `pwsh tools/preflight.ps1` exit 0 with "spike code: none"; `-SelfTest -Verbose` → "selftest: 19/19 checks, 3 fixtures each, 36 extra bad fixtures", every bad fixture failing for its planted reason; `-Paths` → "paths: 296 walked, all in manifest"

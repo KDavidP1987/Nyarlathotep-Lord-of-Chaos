@@ -167,6 +167,17 @@
       "retention": "theirs",
       "deletion": "not ours to delete; the paths can contain a SteamID and are never quoted in audit records",
       "singleCopy": false
+    },
+    {
+      "artifact": "Steam API connection cache",
+      "covers": [
+        "config/config.vdf"
+      ],
+      "location": "dedicated server directory",
+      "owner": "the Steam API inside the server process (rewritten at every launch; spikes A12)",
+      "retention": "theirs",
+      "deletion": "not ours to delete; listed so a before/after compare can tell it apart from this mod's writes",
+      "singleCopy": false
     }
   ]
 }
