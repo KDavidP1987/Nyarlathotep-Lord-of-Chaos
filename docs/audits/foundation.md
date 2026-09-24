@@ -106,9 +106,23 @@ yarfoundation-before.tsv waits for step 8 (D34), with the game client closed
 - in-game: none (pure logic and tooling step)
 - dod status: D10, D11, D12, D14, D15, D18, D19 pass lines
 
-### Step 4 · 2026-09-24 · (in progress)
+### Step 4 · 2026-09-24 · a566b20
+- compile: 0 errors, 0 warnings (Release, deploying build of acc8c3d for sessions 8-10)
+- tests: `dotnet test Nyarlathotep/Nyarlathotep.Tests -c Release` → Passed 470, Failed 0
+- mutation check: 9 planted SpawnLedger faults each failed SpawnLedgerTests (caps removed, budgets exceeded, release twice, mid-drain spawn lost or drained, reservations uncounted, grace ignored), plus Pack (A8) and Recipe (the DontSave fault dropped) each caught
+- preflight: exit 0 with "structural edits: fenced (4 Prefab-guarded calls in EntityExtensions.cs)" and "gateway: only ActionGateway mutates (5 call sites)"; `-SelfTest` → "selftest: 24/24 checks, 3 fixtures each, 66 extra bad fixtures", also under `& ./tools/preflight.ps1` (A11); `-SessionsOf foundation` → "session logs: foundation 3/3 checked after A10; 7 before A10 not counted (orphan errors in session 6, 7)"
+- /code-review (inline, 0194a2d..d71831f): the tick now starts before the boot sweep, a missing LifeTime shows "left NONE", the death patch logs once per failure streak
+- Codex cross-inspection, step 4 rounds 1-3: round 1 (survivors hold MaxTrackedUnits slots; marker query disposed on every path; tick-through-gateway declined, accepted in round 2) fixed in edd786a; round 2 (a failed despawn dropped from the ledger) fixed in 4f63f43; round 3 (failed-spawn cleanup could leak a unit) fixed in 3470b25
+- Codex cross-inspection, A9/A10 rounds 1-3: round 1 (duplicate session lines; first citation only) fixed in acc8c3d; round 2 (old-format lines could pass forever) fixed in b986f77; round 3 READY
+- plan re-review for A9/A10 (docs/dod/foundation.reviews.md Reviews 8-10): REVISE at the round cap; every blocking finding accepted and fixed, the last (pre-A10 sessions counted as clean) in a566b20, after the cap and not yet seen by a reviewer; advisories on the orphan pattern and a 500-unit restart mid-drain declined with reasons
+- Codex verdict: READY (A9/A10 code round 3); the step 4 diff ended REVISE at round 3 with its one finding fixed in 3470b25; the plan re-review is still pending
+- in-game: sessions 5 and 8-10 (D27, the D20 unit half, A7, A8, A9); log checks above
+- dod status: D16, D18, D27, D33 pass lines; D20 unit half noted; Epic D6 re-logged
 - session 5 log check: 0 unhandled, 27 nyar lines
 - session 6 log check: 0 unhandled, 2 nyar lines
   - before A10, which added the server log to -LogCheck: read afterwards with the A10 pattern, the server log held 551 orphan errors and 120 unity errors, all from children of DontSaveEntity units in session 5's autosave (A9)
 - session 7 log check: 0 unhandled, 2 nyar lines
   - before A10: 15 orphan errors ("Could not map an old modification source entity", left by session 5's save, A9) and 0 unity errors; the dev world's save was reset afterwards
+- session 8 log check: 0 unhandled, 10 nyar lines, 0 orphan errors, 0 unity errors
+- session 9 log check: 0 unhandled, 3 nyar lines, 0 orphan errors, 0 unity errors
+- session 10 log check: 0 unhandled, 8 nyar lines, 0 orphan errors, 0 unity errors

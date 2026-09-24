@@ -137,6 +137,29 @@ remained from session 5's save (A9). Because the orphans recurred, the dev world
 (save-data-nyardev/Saves/v4/nyardev) was deleted before session 8, keeping Settings and adminlist.txt, as the
 owner decided.
 
+### Session 8 · 2026-09-24
+Build acc8c3d (A9: no DontSaveEntity; `debug here` shows the recipe) on the reset world; fresh-world boot with 0
+orphan errors and 0 Unity errors; ManualSpawnLifetimeSeconds back at 300.
+- `.nyar spawn CHAR_Bandit_Thug` and `.nyar spawn CHAR_Bandit_Thug 3 +2 1.5 1.2`; `debug here` gave all 4 lines in
+  one message (A8), each "recipe ok". Tuned units: lvl 18, hp 86/86, pp 17; the plain one lvl 16, hp 54, pp 14.
+  Against session 5's untuned level-18 bandit (hp 57, pp 14) that is ×1.51 and ×1.21, so the A7 multipliers hold.
+- One unit killed: no loot. `status` showed the other 3 tracked. Autosaves ran with the 3 alive; the server was
+  stopped (restart 1).
+
+### Session 9 · 2026-09-24
+Boot after restart 1: "boot sweep: 3 marked units queued for despawn (3 listed in state.json)", then "despawn batch: 3
+of 3 destroyed". The server log held 0 orphan errors, so the saved units and their children loaded whole (A9). In
+game the bandits were gone and `status` showed nothing tracked. Two autosaves ran after the drain; state.json held
+no unit; the server was stopped (restart 2).
+
+### Session 10 · 2026-09-24
+Boot after restart 2: "boot sweep: 0 marked units queued" and 0 orphan errors, so nothing of ours survived into the
+second save. `.nyar spawn CHAR_Bandit_Thug 5`, then `.nyar purge` and `.nyar purge confirm`: "purge: 0 events
+ended, 5 units queued, 0 spawns cancelled, cooldown 60s" and "despawn batch: 5 of 5 destroyed". A second
+`purge confirm` replied "nothing to purge", and `status` showed nothing tracked. Warnings in the BepInEx log came only
+from Beelzebub and Il2CppInterop; the server log held only the game's baseline warnings (PrefabLookupMap,
+RepairVBloodProgressionSystem, Crashpad), the same as on the fresh world.
+
 ## Open questions
 
 - D28's "still loading" reply cannot be seen in game (players connect only after startup); step 5, where the
