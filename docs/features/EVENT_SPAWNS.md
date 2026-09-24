@@ -65,3 +65,24 @@ trigger, or by command. "Every night at 22:00 three waves of Cursed spawn at the
 - [ ] Run far away → `DestroyWhenDisabled` cleans up.
 - [ ] Restart mid-wave → boot sweep removes survivors (S2).
 - [ ] 3 waves on schedule, caps respected, announcements correct.
+
+## Test results
+
+### S2 restart spike · 2026-09-24 · spikes step 3 sessions 9–11 (throwaway save; in progress)
+
+Units: CHAR_Bandit_Thug from `.nyar spike tag`, marked by the inert AB_Consumable_PhysicalPowerPotion_T01_Buff carrying SpellLevel 1314472274, with LifeTime (EndAction Destroy) and DestroyWhenDisabled. Even-numbered units also carry PersistenceV2.DontSaveEntity. `keep 1` sets CanPreventDisableWhenNoPlayersInRange.CanDisable = false. Restarts are a hard stop right after an autosave finishes (spikes A8).
+
+- [x] sweep before the restart (run 2, `tag 6 600 1`): "marked 6, listed 6, faults 0 | saved 3 […] dontsave 3 […]"
+- [x] sweep after the restart (AutoSave_433): "marked 3, listed 0, faults 3: … not listed | saved 3 […] dontsave 0 []". "not listed" is expected, since the in-memory list is lost on restart
+- [x] marker survives restart: yes. The query found every surviving unit by its marker alone, in run 2 and for 5 march units after an earlier restart
+- [x] DontSaveEntity units present after restart: 0 of 3. DontSaveEntity works
+- [x] DestroyWhenDisabled removed units once no player was near: yes, three ways:
+  - run 1 (`tag 6 600` without keep): all 6 were gone after the restart, removed at boot
+  - `tag 4 600` with the owner 200 m away for 2–3 min: all 4 gone, with 589 s of LifeTime still left
+  - session 2: units spawned 100 m from any player were gone within 5 s
+
+  Units that must outlive a player's absence need CanDisable = false and must then be bounded some other way
+- [x] LifeTime without a restart: a unit made with InstantiateEntityImmediate has no Age, so LifeTime never ran. Units lived past 600 s, and `tag 2 30` units were still alive at 60 s. With Age added at spawn (spikes A10), `tag 2 30` showed "21s … age 9s" and was gone by 60 s
+- [ ] LifeTime after restart (continued, reset or gone), with Age: pending
+- [ ] load errors: none in any boot so far ("exception" count 0 in BepInEx/LogOutput.log after every restart)
+- S2 verdict: pending (LifeTime across a restart with Age)
