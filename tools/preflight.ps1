@@ -1182,8 +1182,11 @@ function Test-CheckAdminList([string]$Root) {
 # Every "### Session <n> · <date>" under "## Test results" in docs/features/<SLUG>.md has exactly one line
 # "- session <n> log check: 0 unhandled, <s> nyar lines, 0 orphan errors, <u> unity errors" in docs/audits/<slug>.md
 # (foundation D33). Lines before the first one carrying the orphan count (written before A10) may omit both counts;
-# every later line must carry them, and an orphan count above 0 always fails. A fixture names the slug in
+# every later line must carry them, and so must every session after the plan's last pre-A10 session (below; a plan
+# not listed has none, Codex A9 round 2). An orphan count above 0 always fails. A fixture names the slug in
 # sessionsof.txt.
+$script:SessionsBeforeA10 = @{ 'foundation' = 7 }
+
 function Test-CheckSessionLogs([string]$Root) {
     $slug = if (Test-IsFixture $Root) { "$(Read-Text $Root 'sessionsof.txt')".Trim() } else { $SessionsOf }
     if (-not $slug) { return New-Result $false 'session logs: no plan named (-SessionsOf <slug>)' }
@@ -1207,7 +1210,9 @@ function Test-CheckSessionLogs([string]$Root) {
     $first = @($sessions | Where-Object { $checks.ContainsKey($_) -and $checks[$_][2] -ge 0 } | Select-Object -First 1)
     # A clean line has 0 unhandled, at least one [nyar line (-LogCheck fails a log without one) and no orphan error.
     $dirty = @($sessions | Where-Object { $checks.ContainsKey($_) -and ($checks[$_][0] -ne 0 -or $checks[$_][1] -eq 0 -or $checks[$_][2] -gt 0) })
-    $old = @($sessions | Where-Object { $first -and $_ -gt $first[0] -and $checks.ContainsKey($_) -and $checks[$_][2] -lt 0 })
+    $cutoff = if ($script:SessionsBeforeA10.ContainsKey($slug)) { $script:SessionsBeforeA10[$slug] } else { 0 }
+    $old = @($sessions | Where-Object { $checks.ContainsKey($_) -and $checks[$_][2] -lt 0 -and ($_ -gt $cutoff -or ($first -and $_ -gt $first[0])) })
+    $legacy = @($sessions | Where-Object { $checks.ContainsKey($_) -and $checks[$_][2] -lt 0 }).Count - $old.Count
     $dupes = @($dupes | Sort-Object -Unique)
     $ok = $sessions.Count - $missing.Count - @($dirty + $old + $dupes | Sort-Object -Unique).Count
     if ($missing -or $dirty -or $old -or $dupes) {
@@ -1218,7 +1223,7 @@ function Test-CheckSessionLogs([string]$Root) {
         if ($dupes) { $why += "more than one log check line for session $($dupes -join ', ')" }
         return New-Result $false "session logs: $slug $ok/$($sessions.Count) checked ($($why -join '; '))"
     }
-    return New-Result $true "session logs: $slug $ok/$($sessions.Count) checked"
+    return New-Result $true "session logs: $slug $ok/$($sessions.Count) checked$(if ($legacy) { " ($legacy before A10, server log not checked)" })"
 }
 
 # ---------------------------------------------------------------- runner
