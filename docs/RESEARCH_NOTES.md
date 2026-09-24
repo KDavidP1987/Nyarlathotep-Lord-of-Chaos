@@ -174,6 +174,36 @@ Get-ChildItem "$ref\Prefabs" -Filter 'CHAR_*' | Sort-Object Name | % {
 [IO.File]::WriteAllLines("$ref\unit_index.tsv", $rows)
 ```
 
+## Spike contracts (VampireReferenceAssemblies 1.1.12)
+
+One row per component and system the spike harness read or wrote (spikes D10, 2026-09-24; game 1.1.15.101082). "Documented" means the recipe's source; "observed" is what the spike sessions saw.
+
+| Component / system | Fields touched | Prefab GUIDs | Source (path:line) | Observed vs documented |
+|---|---|---|---|---|
+| ServerGameManager.InstantiateEntityImmediate | spawns a unit from a prefab GUID | CHAR_Bandit_Thug -301730941, CHAR_Critter_Rat -2072914343 | Spikes/SpikeUnits.cs:42 | observed ≠ documented: the unit has no Age, so a LifeTime written on it never expires (A10). Every reference mod spawns through UnitSpawnerUpdateSystem.SpawnUnit (Learning Mods/KindredCommands-main/Services/UnitSpawnerService.cs:29) |
+| ServerGameManager.TryInstantiateBuffEntityImmediate | applies a buff prefab to a unit and returns the buff entity | marker AB_Consumable_PhysicalPowerPotion_T01_Buff -1954355403; carrier AB_Consumable_PhysicalPowerPotion_T02_Buff -1591883586 | Spikes/SpikeUnits.cs:67, Spikes/SpikeCarrier.cs:47 | observed = documented: the buff exists on return and can be edited in the same frame |
+| Translation, LastTranslation | Value (spawn position; variant 2 anchor steps) | — | Spikes/SpikeUnits.cs:45, Spikes/SpikeMarch.cs:211 | observed = documented for spawning. Writing Translation on a live unit moves it without walking (variant 2 anchor) |
+| LifeTime | Duration, EndAction (Destroy on units and carriers) | — | Learning Mods/KindredCommands-main/Services/UnitSpawnerService.cs:115 | observed ≠ documented: counts only when the entity has Age; with Age it is saved and keeps counting across a restart (S2) |
+| Age | Value (read; set to 0 on spawned units, A10) | — | Spikes/SpikeUnits.cs (A10); Learning Mods/RaidForge/Services/RaidInterferenceService.cs:458 | observed: absent on InstantiateEntityImmediate units, present on buffs; LifeTime remaining = Duration − Age |
+| DestroyWhenDisabled | added (no fields) | — | Learning Mods/XPRising (RESEARCH_NOTES › XPRising) | observed = documented, and wider: it deletes units at boot, when players leave, and within 5 s of spawning 100 m from any player |
+| CanPreventDisableWhenNoPlayersInRange | CanDisable = ModifiableBool(false) | — | Learning Mods/Bloodcraft-main/Systems/Familiars/FamiliarBindingSystem.cs:602 | observed = documented: keeps a unit enabled far from players and through a restart, so DestroyWhenDisabled does not fire |
+| PersistenceV2.DontSaveEntity | added (no fields) | — | Learning Mods/Bloodcraft-main/Utilities/EntityQueries.cs:3259 | observed = documented: the unit is not in the next save and does not come back after a restart |
+| DropTableBuffer | cleared on spawned units | — | Spikes/SpikeUnits.cs:57 | observed = documented: killed spike units dropped nothing |
+| Buff, SpellLevel | Buff.Target read; SpellLevel.Level = 1314472274 on the marker | marker -1954355403 | Spikes/SpikeUnits.cs:67-90 | observed = documented: an IncludeDisabled | IncludeSpawnTag query on Buff + SpellLevel finds every marked unit, including after a restart |
+| CreateGameplayEventsOnSpawn, GameplayEventListeners, RemoveBuffOnGameplayEvent, RemoveBuffOnGameplayEventEntry, DestroyOnGameplayEvent | removed from the marker and carrier buffs | -1954355403, -1591883586 | Learning Mods/KindredCommands-main/Buffs.cs:54 (buff edit pattern) | observed = documented: the buffs stay inert and are not removed by combat or feeding |
+| ModifyUnitStatBuff_DOTS | buffer cleared, then PhysicalPower +0.5 and MaxHealth +1.0, MultiplyBaseAdd | -1591883586 | Spikes/SpikeCarrier.cs:58-75 | observed = documented: stats apply at once and revert on expiry, keeping the Health ratio |
+| UnitStats, Health | PhysicalPower, MaxHealth, Value (read only) | — | Spikes/SpikeCarrier.cs:94-95 | observed = documented |
+| FactionReference, VBloodUnit, PlayerCharacter, DestroyTag | read to pick native NPCs | — | Spikes/SpikeCarrier.cs:139-150 | observed ≠ intended: the filter admitted CHAR_Bandit_Prisoner_Villager_Female; the pillar must exclude prisoners and non-combatants (Epic A15) |
+| DropInInventoryOnSpawn | read on carrier prefabs (do-not-spawn check) | — | Spikes/SpikeCarrier.cs:33 | observed = documented |
+| AggroConsumer | ProximityRadius, MaxDistanceFromPreCombatPosition, Active; PreCombatPosition (variant 3) | — | Learning Mods/TideOfWar/SpawnForWar/Core.cs:395-398 | observed ≠ documented: the ranges hold, but the game drops a target beyond about 86 m or out of line of sight (S1). PreCombatPosition plus a Return override leaves the unit Idle |
+| AggroModifiers | CircleRadiusFactor, ConeRadiusFactor | — | Learning Mods/TideOfWar/SpawnForWar/Core.cs:400-403 | observed: the values hold; they do not extend the prune distance |
+| AggroBuffer | entry {Entity = admin, DamageValue 500, Weight 1} | — | Learning Mods/Bloodcraft-main/Utilities/Familiars.cs:826-859 | observed = documented within about 60 m with line of sight: the unit enters Combat and walks there at about 3 m/s. Beyond that the entry is removed every update |
+| BehaviourTreeState | Value read; set to Return (variant 3) | — | Spikes/SpikeMarch.cs:140 | observed: the forced Return did not move the unit; a unit that loses its target stays in Combat |
+| Follower | Followed, ModeModifiable = 0 | anchor -2072914343 | Learning Mods/Bloodcraft-main/Systems/Familiars/FamiliarBindingSystem.cs:453-457 | observed ≠ documented: the follower teleports and does not walk; with a non-player anchor two sessions aborted the server (entity does not exist). Only the player prefab has FollowerBuffer |
+| AiMoveSpeeds | Walk, Run, Circle, Return = 0 (anchor held still) | -2072914343 | Spikes/SpikeMarch.cs:114 | observed = documented: the anchor stood still |
+| PrefabGUID | read | all of the above | Spikes/SpikeCarrier.cs:112 | observed = documented |
+| DestroyUtility | Destroy (through EntityExtensions.DestroySafe, 5 per batch) | — | Nyarlathotep/Nyarlathotep/EntityExtensions.cs:69 | observed = documented: staged clears of 30 units in 6 batches, no errors |
+
 ## Sources
 
 Public repos (copies in `Learning Mods/`): BloodyBoss (github.com/oscarpedrero/BloodyBoss, 2.1.5),
