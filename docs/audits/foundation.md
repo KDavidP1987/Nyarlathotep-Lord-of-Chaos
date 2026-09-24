@@ -35,6 +35,16 @@ checks are lines "- session <n> log check: …" (D33).
 - how "mutating" is identified (the plan leaves this open): a service method carries Logic's [Mutating] attribute. Test-CheckGatewayOnly collects those methods and requires every call site in Commands/, Patches/ or Services/ outside the declaring file to sit inside a Gateway.Run(...) call. EventStore.Reload (ActionKind LoadDefinitions) is marked too, so the boot load runs through the gateway as Operator.
 - Debug.FaultInjection: the cfg key is bound now, inside `#if DEBUG`, so that Test-CheckFaultInjection has a real reference to check; its consumer comes with the scheduler in step 5
 
+### Step 4 · 2026-09-24 · 8e6aeaa
+- git status: clean
+- compile: 0 errors, 0 warnings (the deploying build, so the baseline boot runs the step 3 DLL)
+- preflight: exit 0
+- dod status: foundation 15/38 verified (D1, D3-D12, D14, D15, D18, D19); `--check foundation` 0 problems, 0 warnings; review codex, no pending re-review
+- feature doc read: docs/features/FOUNDATION.md (Status: step 3 of 9; one open question, D28's "still loading", which step 5 answers); plan Business rules 2 and 7, Interfaces › game contracts, Design › Data (marker values, state.json), UX (spawn, purge, debug here), Performance; docs/RESEARCH_NOTES.md › Spike contracts; the spike recipe in git (`git show 9ac3678:Nyarlathotep/Nyarlathotep/Spikes/SpikeUnits.cs`)
+- baseline boot (session 4): the step 3 DLL on save-data-nyardev initialised in 30 s ("events: reloaded: 5 valid, 0 disabled", "Nyarlathotep initialized via GameDataInitializedPatch (attempt #1)"); server stopped with Stop-Process
+- session 4 log check: 0 unhandled, 1 nyar lines
+- decisions the plan leaves to the build: the spawn and despawn queues live in Logic/SpawnLedger with slots reserved at request time, so two requests for the last slot are settled in arrival order; `.nyar purge` and `.nyar purge confirm` are one VCF command with an optional word, as are `.nyar debug here`; pruning a dead unit from the ledger is bookkeeping of a unit the game already removed and is not a [Mutating] method; the purge lives in SpawnTracker until step 5 moves the event half to EventRuntime
+
 ## Post-audit
 ### Step 1 · 2026-09-24 · 40505e2
 - compile: 0 errors, 0 warnings (plugin and Nyarlathotep.Tests)

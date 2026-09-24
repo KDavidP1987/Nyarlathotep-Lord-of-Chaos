@@ -107,6 +107,10 @@ Boot with a comma removed on line 30 of events.json (D23, boot half): log "event
 20; the last valid set stays (0 events)" — the exact line and column of the planted fault; the mod initialised
 and the server kept running. events.json restored from the seed afterwards.
 
+### Session 4 · 2026-09-24
+Baseline boot of the step 3 DLL before step 4 (pre-audit): initialised in 30 s, "events: reloaded: 5 valid,
+0 disabled", log check 0 unhandled.
+
 ## Open questions
 
 - D28's "still loading" reply cannot be seen in game (players connect only after startup); step 5, where the
