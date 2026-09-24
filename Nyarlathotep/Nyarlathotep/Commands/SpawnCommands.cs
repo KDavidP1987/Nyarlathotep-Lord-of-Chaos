@@ -72,7 +72,11 @@ internal static class SpawnCommands
         var r = CommandArgs.Radius(radius);
         if (r.Error is not null) { ctx.Reply(r.Error); return; }
         if (!ctx.Event.SenderCharacterEntity.TryGetComponent<Translation>(out var at)) { ctx.Reply("your position could not be read"); return; }
-        foreach (var line in SpawnTracker.DebugHere(at.Value, r.Value)) ctx.Reply(line);
+        foreach (var line in SpawnTracker.DebugHere(at.Value, r.Value))
+        {
+            ctx.Reply(line);
+            Core.Log.LogInfo($"[nyar] debug: {line}");     // no position in the line; kept for the test record
+        }
     }
 
     static void LogAdmin(ChatCommandContext ctx, string command) =>

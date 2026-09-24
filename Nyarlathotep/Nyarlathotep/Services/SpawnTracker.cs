@@ -141,7 +141,7 @@ internal static class SpawnTracker
             var key = KeyOf(unit);
             if (!_ledger.Confirm(order, key, now))
             {
-                unit.DestroySafe();
+                Discard(unit);
                 continue;
             }
             _entities[key] = unit;
@@ -242,7 +242,7 @@ internal static class SpawnTracker
         try { return Prepare(unit, order, out error); }
         catch
         {
-            unit.DestroySafe();                 // never leave a half-set unit behind
+            Discard(unit);                      // never leave a half-set unit behind
             throw;
         }
     }
@@ -272,8 +272,34 @@ internal static class SpawnTracker
     static Entity Abandon(Entity unit, string why, out string error)
     {
         error = why;
-        unit.DestroySafe();
+        Discard(unit);
         return Entity.Null;
+    }
+
+    /// <summary>Destroys a unit that failed its recipe or lost its order. Never throws. A unit that cannot be
+    /// destroyed now is queued as a survivor (holding its MaxTrackedUnits slot) and retried each tick, so no spawned
+    /// entity is ever left outside the ledger.</summary>
+    static void Discard(Entity unit)
+    {
+        try
+        {
+            if (!unit.Exists() || unit.DestroySafe()) return;
+        }
+        catch (Exception ex)
+        {
+            if (_destroyFaults.Fail()) Core.Log.LogError($"[nyar] discarding a failed spawn failed: {ex.Message}; queued for despawn");
+        }
+        try
+        {
+            if (!unit.Exists()) return;
+            var key = KeyOf(unit);
+            _entities[key] = unit;
+            _ledger.QueueDespawn(key);
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[nyar] a failed spawn could not be queued for despawn: {ex.Message}; its LifeTime or the boot sweep removes it");
+        }
     }
 
     /// <summary>The unit marker: our own buff on the unit, made inert, living as long as the unit, carrying
