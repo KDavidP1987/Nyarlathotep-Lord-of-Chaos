@@ -162,3 +162,45 @@ VERDICT: REVISE
 - F5 · accepted · `debug here` prints "recipe ok" or the missing components (LifeTime, Age, DestroyWhenDisabled, DontSaveEntity present), Logic/AdminLines.Recipe with tests; D27 requires it
 - F6 · accepted · D33: the session entry attributes every Unity error kind -LogCheck lists, which is how an entity-link failure of another wording is caught
 - F7 · rejected · the boot sweep rebuilds its queue from the markers it finds on every boot and the ledger starts empty, so a restart during a drain re-finds the remaining units without duplicates; the 500-unit ceiling is D24's performance case in step 5, not A9's persistence change
+
+## Review 9 · 2026-09-24 · codex · plan commit acc8c3d (round 2 of the A9/A10 re-review)
+1. F1 blocking — Probe `4.4` remains unanswered because the current D27/A9 forbids `DontSaveEntity` while Baseline D27 requires it, and current D33/A10 conflicts with Baseline D33; the document never states that current DoD plus amendments supersede the still-checkboxed Baseline, so a context-free builder lacks an authority rule.  
+Fix: State that `## Baseline` is immutable historical text and non-actionable, and that the current DoD as modified by amendments is authoritative.
+
+2. F2 advisory — Probe `4.5` scenario: the boot sweep derives “every surviving unit” from surviving marker-buff entities, so a saved unit whose marker child is absent or damaged is invisible to the sweep; D27 samples three intact recipes but does not define or detect this reverse-orphan case.  
+Fix: Define whether an unmarked surviving Nyarlathotep spawn is possible and, if so, add an independent durable identity or a negative restart fixture proving parent and marker persistence are inseparable.
+
+3. F3 advisory — Probe `12.4` scenario: D33 permits pre-A10 session lines to omit orphan counts and place the server-log result in a sub-bullet, but its stated `-SessionsOf` failure contract does not say that a nonzero orphan count in that sub-bullet fails; a historically dirty session can therefore contribute to `<n>/<n> checked`.  
+Fix: Require `Test-CheckSessionLogs` to parse legacy sub-bullets and fail on nonzero orphan counts, or explicitly exclude pre-A10 sessions from the clean-session numerator.
+
+4. F4 advisory — Probes `4.5`/`12.3` scenario: the five literal orphan substrings still miss an equivalent Unity entity-remap failure with different wording, which is counted only as a Unity error and does not fail D33.  
+Fix: Define orphan detection structurally or maintain a reviewed error-kind allow-list so unknown entity-link/remap error kinds fail closed.
+
+5. F5 advisory — Probe `9.1` scenario: the maximal 500-unit restart can leave the boot sweep draining for many ticks, but D21/D27 exercise only 30/3 units and never stop the server during that drain; repeated restart during cleanup can therefore leave persistence behavior unverified.  
+Fix: Extend the 500-unit run with restart-during-drain and post-autosave restart observations.
+
+EARLIER: F1 not resolved — A9/A10 update the current items, but no explicit rule makes the contradictory Baseline non-actionable.
+
+EARLIER: F2 resolved — D27 now drains after the first restart, waits for the next autosave, and performs a second restart with zero queued units and zero orphan errors.
+
+EARLIER: F3 resolved — D33 now fails nonzero orphan counts, and D18 includes a bad SessionLogs fixture whose line cites an amendment.
+
+EARLIER: F4 resolved — D18 now specifies paired real-format BepInEx/server-log fixtures, including server-log orphan failures, missing and empty logs, and a non-orphan Unity-error silent case.
+
+EARLIER: F5 resolved — `.nyar debug here` now reports “recipe ok” only when LifeTime, Age and DestroyWhenDisabled are present and DontSaveEntity is absent, backed by tested `Logic/AdminLines.Recipe`.
+
+EARLIER: F6 not resolved — orphan classification remains limited to five literal substrings.
+
+EARLIER: F7 not resolved — the 500-unit evidence measures tick performance but still does not exercise restart or shutdown during a maximal drain.
+
+Blind coverage: 1 Considered—Purpose; 2 Considered—Permissions/D10/D26; 3 Considered—Data/D7–D9/D27/D34; 4 Gap—Business rules, probe 4.4; 5 Considered—Interfaces/D5/D8/D12/D27/D29; 6 Considered—Dependencies/D1/D9/D23/D25/D31; 7 Considered—States/D6/D16/D20/D21/D28; 8 Considered—Minimal stretch/D17/D27/D28; 9 Considered—Maximal stretch/D5/D6/D14/D16/D22/D24/D26; 10 Considered—Security/D10/D11/D14/D15/D17/D26; 11 Considered—UX/D17/D19/D23/D26/D29/D30; 12 Considered—Failure & observability/D2/D18/D22/D23/D25/D31/D33; 13 Considered—Performance/D5/D16/D22/D24; 14 Considered—Rollout/D8/D17/D20/D34/D37/D38; 15 Considered—Out of scope.
+
+14/15 layers · 48/49 probes
+
+VERDICT: REVISE
+### Dispositions
+- F1 · accepted · the Definition of Done now opens with the authority rule: its items as amended are what the build satisfies; the Baseline section is frozen at approval, never built to, and loses where it differs
+- F2 · rejected · a saved unit whose marker is missing still carries its own saved LifeTime, Age and DestroyWhenDisabled, so it expires or is destroyed without the sweep; the marker is the sweep's finder, not the only bound (D27's "recipe ok" shows all three per unit)
+- F3 · accepted · the pre-A10 sessions are named (foundation 1–7) and the check's pass line says "(<k> before A10, server log not checked)", so they never read as server-log-clean; Codex's code round 2 asked for the same cutoff (fixture bad-8)
+- F4 · rejected · with Review 8 F6: D33 has the session entry attribute every Unity error kind -LogCheck lists, which is the reviewed list that catches a new wording; failing closed on every unknown kind would fail sessions on the game's own errors
+- F5 · rejected · with Review 8 F7
