@@ -321,7 +321,8 @@
         "bad": "Commands/StatusCommands.cs calls EventStore.Reload() directly, outside Gateway.Run",
         "bad-2": "Patches/GameDataInitializedPatch.cs captures EventStore.Reload as a delegate outside Gateway.Run and passes it in later",
         "bad-3": "Commands/StatusCommands.cs calls EventStore.Reload() inside an interpolated string's hole",
-        "bad-4": "Commands/StatusCommands.cs declares a dummy [Mutating] method to exempt itself, then calls EventStore.Reload() directly"
+        "bad-4": "Commands/StatusCommands.cs declares a dummy [Mutating] method to exempt itself, then calls EventStore.Reload() directly",
+        "bad-5": "Commands/StatusCommands.cs has a \"(\" in an interpolated string inside Gateway.Run, then calls EventStore.Reload() directly after it"
       }
     },
     {

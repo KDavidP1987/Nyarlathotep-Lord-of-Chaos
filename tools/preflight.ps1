@@ -119,9 +119,11 @@ function Read-Text([string]$Root, [string]$Rel) {
 # Remove // line comments and /* */ block comments so documentation never counts as a call. One
 # left-to-right regex lexes string and char literals too (raw """…""", verbatim @"…", interpolated
 # $"…", regular "…", '…'), so "//" or "/*" inside a literal never swallows the code after it. Literals
-# are kept as written; a block comment becomes one space so it cannot join two tokens.
+# are kept as written; a block comment becomes one space so it cannot join two tokens. A raw literal's "$"
+# prefix belongs to it, so $$"""…""" is one literal. Known limit: a quote nested inside an interpolation hole
+# ($"{(a ? "x" : "y")}") ends the literal early; Get-ParenEnd then fails safe (see there).
 $script:CsLexRx = [regex]::new(
-    '(?<raw>(?<q>"{3,})[\s\S]*?\k<q>)|(?<vs>(?:@\$?|\$@)"(?:[^"]|"")*")|(?<s>\$?"(?:[^"\\\n]|\\.)*")|(?<c>''(?:[^''\\\n]|\\.)*'')|(?<lc>//[^\n]*)|(?<bc>/\*[\s\S]*?(?:\*/|\z))')
+    '(?<raw>\$*(?<q>"{3,})[\s\S]*?\k<q>)|(?<vs>(?:@\$?|\$@)"(?:[^"]|"")*")|(?<s>\$?"(?:[^"\\\n]|\\.)*")|(?<c>''(?:[^''\\\n]|\\.)*'')|(?<lc>//[^\n]*)|(?<bc>/\*[\s\S]*?(?:\*/|\z))')
 function Remove-CsComments([string]$Text) {
     if (-not $Text) { return $Text }
     return $script:CsLexRx.Replace($Text, {
@@ -960,9 +962,56 @@ function Test-CheckAuditSteps([string]$Root) {
 
 # ---------------------------------------------------------------- checks: the foundation child (foundation D11, D17-D19, D33)
 
-# Every plain string and char literal blanked to "" / '' after comments are removed, so an identifier or a
-# directive inside a literal never counts. An interpolated string ($"…", $@"…", @$"…", $"""…""") is kept
-# whole: its holes are code, so a call inside one still counts (its text may give a harmless extra match).
+# An interpolated string literal with its text masked to spaces and its holes kept: the holes are code, so a
+# call inside one still counts, while a "(" or a name in the text can neither unbalance a parenthesis span nor
+# count as a use (step 3 Codex rounds 2-3). Handles $"…", $@"…", @$"…" and raw $$"""…""" (a hole opens with as
+# many "{" as the literal has "$"). Inside a hole a nested string's text is masked too. Newlines are kept, so line
+# numbers still match the source.
+function Hide-InterpolatedText([string]$Lit) {
+    $i = 0; $dollars = 0; $verbatim = $false
+    while ($i -lt $Lit.Length -and ($Lit[$i] -eq '$' -or $Lit[$i] -eq '@')) { if ($Lit[$i] -eq '$') { $dollars++ } else { $verbatim = $true }; $i++ }
+    $q = 0; while ($i + $q -lt $Lit.Length -and $Lit[$i + $q] -eq '"') { $q++ }
+    $raw = $q -ge 3
+    $quote = if ($raw) { $q } else { 1 }
+    $end = $Lit.Length - $quote
+    $sb = [Text.StringBuilder]::new()
+    [void]$sb.Append($Lit.Substring(0, $i + $quote))
+    $need = if ($raw) { $dollars } else { 1 }
+    $j = $i + $quote
+    while ($j -lt $end) {
+        $c = $Lit[$j]
+        if ($c -eq '{') {
+            $run = 0; while ($j + $run -lt $end -and $Lit[$j + $run] -eq '{') { $run++ }
+            if ((-not $raw) -and $run -ge 2 -and $run % 2 -eq 0) { [void]$sb.Append(' ' * $run); $j += $run; continue }   # {{ escapes
+            if ($run -lt $need) { [void]$sb.Append(' ' * $run); $j += $run; continue }
+            [void]$sb.Append('{' * $run); $j += $run
+            # the hole: copy code up to the "}" that closes it, masking any string nested inside it
+            $depth = 1; $inStr = $false
+            while ($j -lt $end -and $depth -gt 0) {
+                $h = $Lit[$j]
+                if ($inStr) {
+                    if ($h -eq '\') { [void]$sb.Append('  '); $j += 2; continue }
+                    if ($h -eq '"') { $inStr = $false; [void]$sb.Append('"') } else { [void]$sb.Append($(if ($h -eq "`n" -or $h -eq "`r") { $h } else { ' ' })) }
+                    $j++; continue
+                }
+                if ($h -eq '"') { $inStr = $true }
+                elseif ($h -eq '{') { $depth++ }
+                elseif ($h -eq '}') { $depth--; if ($depth -eq 0) { break } }
+                [void]$sb.Append($h); $j++
+            }
+            while ($j -lt $end -and $Lit[$j] -eq '}') { [void]$sb.Append('}'); $j++ }
+            continue
+        }
+        if ((-not $raw) -and (-not $verbatim) -and $c -eq '\') { [void]$sb.Append('  '); $j += 2; continue }
+        [void]$sb.Append($(if ($c -eq "`n" -or $c -eq "`r") { $c } else { ' ' }))
+        $j++
+    }
+    [void]$sb.Append($Lit.Substring([Math]::Max($end, $j)))
+    return $sb.ToString()
+}
+
+# Every plain string and char literal blanked to "" / '' after comments are removed, so an identifier, a "(" or a
+# directive inside a literal never counts. An interpolated string keeps its holes (Hide-InterpolatedText).
 function Remove-CsLiterals([string]$Text) {
     if (-not $Text) { return $Text }
     $clean = Remove-CsComments $Text
@@ -970,20 +1019,20 @@ function Remove-CsLiterals([string]$Text) {
         param($m)
         if ($m.Groups['c'].Success) { return "''" }
         if ($m.Groups['lc'].Success -or $m.Groups['bc'].Success) { return $m.Value }
-        $interpolated = $m.Value.StartsWith('$') -or $m.Value.StartsWith('@$') -or ($m.Index -gt 0 -and $clean[$m.Index - 1] -eq '$')
-        if ($interpolated) { return $m.Value }
+        if ($m.Value.StartsWith('$') -or $m.Value.StartsWith('@$')) { return Hide-InterpolatedText $m.Value }
         return '""'
     })
 }
 
-# Index of the ")" matching the "(" at $Open, or the text's end.
+# Index of the ")" matching the "(" at $Open, or -1 when it is unmatched. An unmatched span contains nothing, so
+# a use after it counts as outside Gateway.Run: the check fails rather than passes when parsing goes wrong.
 function Get-ParenEnd([string]$Text, [int]$Open) {
     $depth = 0
     for ($i = $Open; $i -lt $Text.Length; $i++) {
         if ($Text[$i] -eq '(') { $depth++ }
         elseif ($Text[$i] -eq ')') { $depth--; if ($depth -eq 0) { return $i } }
     }
-    return $Text.Length
+    return -1
 }
 
 # The services the gateway dispatches to, by name (plan D11 lists EventRuntime, SpawnTracker, WaveAction and
@@ -1027,7 +1076,7 @@ function Test-CheckGatewayOnly([string]$Root) {
         foreach ($name in $mutating.Keys) {
             foreach ($u in [regex]::Matches($t, "\b$name\b")) {
                 if ($declAt.ContainsKey("$f|$($u.Index)")) { continue }
-                $inside = @($spans | Where-Object { $u.Index -gt $_[0] -and $u.Index -lt $_[1] }).Count -gt 0
+                $inside = @($spans | Where-Object { $_[1] -ge 0 -and $u.Index -gt $_[0] -and $u.Index -lt $_[1] }).Count -gt 0
                 if ($inside) { $sites++ }
                 elseif ($dispatched -notcontains $f) { $bad += "$name used outside Gateway.Run in $f" }
             }
