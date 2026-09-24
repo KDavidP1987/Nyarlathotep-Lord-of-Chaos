@@ -10,10 +10,12 @@
 ## Audience
 - who · project owner
 - default · working
-- asked · 2026-09-23
+- asked · 2026-09-24
 - BepInEx/Harmony · working
 - C# · working
 - IL2CPP interop · working
 - PowerShell · working
 - Thunderstore packaging · working
 - Unity ECS · working
+- VampireCommandFramework · new
+- xUnit · new
