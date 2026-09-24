@@ -158,3 +158,29 @@ VERDICT: REVISE
 - F13 · rejected · A14 reverses the owner's own planning decision (the mid-drain check), which is what `corrected` means; it removes scope rather than adding it, so it is not `requested`
 - F14 · rejected · A17 follows a finding the plan did not foresee (follow links abort the server); the owner authorized the rewrite; `discovered` counts it against the plan, the conservative choice
 - F15 · rejected · A19 changes D12's evidence, a plan change, and names the builder lapse in its why; kept as `discovered` so it counts against the plan rather than being excluded as `defect`
+
+## Review 6 · 2026-09-24 · codex · plan commit 0c6ea37 (re-review round 2, after Review 5)
+F1 [advisory] Gating commands are identifiable for 2.1/10.1 (`pwsh tools/preflight.ps1`, D2), 3.3 (Epic D34 plus D4), 10.3 (D16), 12.4 (D14), and 14.3 (D20), but 4.4 and 6.2 remain manual/deferred, while 14.4 is split across D4/D15/D17/D20 rather than having one command; these are accepted owner decisions or additional implementation work, not unresolved policy decisions.
+Fix: In the foundation child, add the already-recorded refusal-precedence and dependency-failure commands; optionally add one aggregate paths control covering repository, server, temporary, audit, review, and plan-store paths.
+
+F2 [advisory] Three concrete 7.2 scenarios remain unexercised after A14–A15: tag or march arriving during a drain, clear interrupting a moving march group, and two admins racing the final available unit slot; the prose decides all three, but current D5 only stages a second clear.
+Fix: Carry these scenarios into the foundation child’s staged SpawnTracker/admin-command concurrency test, as the Epic notes already require.
+
+F3 [advisory] D10’s manual procedure tells a stranger to enumerate types in spike source “before step 8 deletes them,” but at close those files no longer exist and the item does not identify the historical commit/tree to inspect.
+Fix: Amend D10’s evidence pointer to name the recorded last spike-code commit or preserved source listing used for the completed comparison.
+
+F4 [advisory] D19 describes extra or empty diff output as failure, but its shown `git diff --name-only` command itself exits successfully for both; verification depends on a human comparing output to the prose rather than the stated command enforcing the condition.
+Fix: Wrap the diff in a PowerShell assertion that requires exactly the one expected path and exits nonzero otherwise.
+
+F5 [advisory] A14 is not honestly classified as `corrected`: it records an owner-requested waiver removing a planned concurrency check, not correction of an erroneous observation under Business rules 6.
+Fix: Reclassify A14 as `requested`; A13 and A15–A20 are reasonably classified as discovered/corrected consequences, with A19–A20 conservatively counted against the plan.
+
+EARLIER: all resolved
+15/15 layers · 49/49 probes
+VERDICT: READY
+### Dispositions
+- F1 · accepted · the refusal-precedence and dependency-failure commands are recorded for the foundation child (Epic note 2026-09-24); the aggregate paths control is added to the same note
+- F2 · accepted · the three interleavings (spawn during a drain, clear during a moving group, two admins racing the last slot) are carried to the foundation child's SpawnTracker concurrency test (Epic note)
+- F3 · accepted · Log note names 9ac3678 as the last tree with spike code, the tree D10's comparison and the F3 check used
+- F4 · accepted · D19 passed with its second, asserting command ("compile items: 6 = base") and the diff output read against the one expected path; the foundation child wraps such diffs in an asserting command (Epic note)
+- F5 · rejected · A14 reverses the owner's own planned check, which is the lifecycle definition of `corrected`; `requested` is for new scope, and A14 removes scope; `corrected` also keeps it counted against the plan

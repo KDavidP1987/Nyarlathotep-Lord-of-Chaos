@@ -14,7 +14,7 @@ closed: none
 commit: 4761cec
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
-review: pending
+review: codex
 ---
 
 # DoD: Spikes S1-S3, march, restart marker, carrier buff
@@ -461,3 +461,5 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-24 · D21 · pass · manual: after A20, docs/audits/spikes.md › Post-audit › Step 3: session 4 "no exception"; sessions 5–6 covered by the session 7 note "no exception in any session since the rat anchor was retired"; sessions 7 and 8 "no exception"; session 12 log check "0 unhandled"; session 13 "log check: 0 unhandled, 5 spike lines"; sessions 1 and 3 crashed under follow links (retired, A11; cause in docs/DEV_REMINDERS.md); sessions 9–11 not checked · a01f19b · claude
 - 2026-09-24 · D20 · pass · cmd: rollback drill on 3ba32a0..4d3f8b3 → revert exit 0, both builds "0 Error(s)", "PREFLIGHT OK", diff exit 0 (docs/audits/spikes.md › Post-audit › Step 9) · 4d3f8b3 · claude
 - 2026-09-24 · D17 · pass · cmd: pwsh tools/preflight.ps1 -AuditOf spikes → "audit steps: spikes 9/9 pre, 9/9 post, 9/9 Codex verdicts" · (this commit) · claude
+- 2026-09-24 · note · 9ac3678 is the last tree with spike code; D10's type comparison and the Review 5 F3 check (widened structural-edit check → "fenced (4 Prefab-guarded calls)") read that tree
+- 2026-09-24 · note · re-review A18 A20 · Review 6 READY
