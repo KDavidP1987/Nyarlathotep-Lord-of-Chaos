@@ -124,3 +124,12 @@ yarspikes-before.tsv` at 2026-09-23 19:46:28, server stopped, 1633 files and fol
 - session 8 (build 98132c0): wall run; the target is pruned whenever the wall breaks line of sight; S1 verdict go (D7). No exception
 - session 8 crash check: fed on a marked `tag 1` thug, no crash and no exception; marker-only units are safe to feed on. Session 3 cause (owner): a picked-up rat becomes an inventory item, so the rat entity is destroyed under live references
 - S2 support (A8): `tag` adds PersistenceV2.DontSaveEntity to even-numbered units; `sweep` appends the saved and DontSaveEntity groups with each unit's remaining LifeTime
+- sessions 9–12: S2 go (docs/features/EVENT_SPAWNS.md › Test results). A9 (tag keep) and A10 (Age beside LifeTime) were found and fixed on the way. D12 log check after session 12: 0 unhandled
+- session 13 (D6, build c4473bf), replies from BepInEx/LogOutput.log:
+  - ranges: `tag 0`/`tag 11` "count must be 1-10"; `tag 1 29`/`tag 1 601` "lifetime must be 30-600"; `tag 1 30 2` "keep must be 0-1"; `march 0`/`march 5` "variant must be 1-4"; `march 4 0`/`march 4 11` "count must be 1-10"; `march 1 10` "count must be 1-9"; `march 4 5 19`/`march 4 5 201` "distance must be 20-200"; `empower 9`/`empower 601` "seconds must be 10-600"; `empower 30 0`/`empower 30 31` "radius must be 1-30"; `inspect 0`/`inspect 31` "radius must be 1-30"
+  - carriers: `empower 30 10 12345` "carrier 12345: unknown prefab"; `empower 30 10 1227555070` "prefab Buff_InCombat_Npc_Elite lacks LifeTime"
+  - precedence and limits: after `tag 10` ×3 ("30 alive"), `tag 0` "count must be 1-10" (the argument wins over the limit) and `tag 1` "spike limit 30 (30 alive)"
+  - cooldown: `inspect` twice quickly, second "spike cooldown (234 ms)" (and again "267 ms")
+  - clear has no cooldown: `clear` "clear: 30 queued, 5 per batch", then "clear in progress (25 left)", "(15 left)", "(10 left)"
+  - General.Enabled = false, restart: `tag 0` "General.Enabled is false" (Enabled wins over the argument); `clear` "nothing to clear", `sweep` "marked 0, listed 0, faults 0" and `inspect` "no native NPC within 10 m" all ran; `march 4` "General.Enabled is false". Enabled restored to true afterwards
+  - D12 log check: "log check: 0 unhandled, 5 spike lines"; no exception in any boot since session 3
