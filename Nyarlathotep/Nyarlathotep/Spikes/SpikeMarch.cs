@@ -31,6 +31,8 @@ internal static class SpikeMarch
         public int Variant;
         public float3 Destination;
         public Entity Anchor;
+        public Entity Target;      // variant 4: the admin
+        public int Distance;
         public readonly List<Entity> Units = new();
     }
 
@@ -56,7 +58,7 @@ internal static class SpikeMarch
     {
         var destination = admin.Read<Translation>().Value;
         var spawnPoint = destination + new float3(0, 0, distance);
-        var group = new Group { Id = ++_nextId, Variant = variant, Destination = destination };
+        var group = new Group { Id = ++_nextId, Variant = variant, Destination = destination, Target = admin, Distance = distance };
 
         if (variant is 1 or 2)
         {
@@ -162,8 +164,33 @@ internal static class SpikeMarch
             unit.Write(modifiers);
         }
         if (!Core.EntityManager.HasComponent<AggroBuffer>(unit)) { Core.Log.LogWarning($"[nyar-spike] {unit.Index} has no AggroBuffer"); return false; }
-        Core.EntityManager.GetBuffer<AggroBuffer>(unit).Add(new AggroBuffer { Entity = target, DamageValue = 500f, Weight = 1f });
+        var buffer = Core.EntityManager.GetBuffer<AggroBuffer>(unit);
+        for (int i = 0; i < buffer.Length; i++)
+            if (buffer[i].Entity == target) return true;   // re-applied by the mover (A6): one entry per target
+        buffer.Add(new AggroBuffer { Entity = target, DamageValue = 500f, Weight = 1f });
         return true;
+    }
+
+    /// <summary>Spikes A6: at 100 m variant 4 units stayed Idle while at 30 m they chased. One line per second
+    /// for the group's first unit tells apart "our ranges were reset after spawn" from "the aggro entry was
+    /// pruned": the live AggroConsumer and AggroModifiers values and whether the target is still in AggroBuffer.</summary>
+    static string HuntProbe(Entity unit, Entity target)
+    {
+        var a = unit.TryGetComponent<AggroConsumer>(out var aggro)
+            ? $"prox={aggro.ProximityRadius:0} leash={aggro.MaxDistanceFromPreCombatPosition:0} active={aggro.Active._Value}"
+            : "no AggroConsumer";
+        var m = unit.TryGetComponent<AggroModifiers>(out var mods)
+            ? $"circle={mods.CircleRadiusFactor._Value:0.##} cone={mods.ConeRadiusFactor._Value:0.##}"
+            : "no AggroModifiers";
+        int entries = 0;
+        bool hasTarget = false;
+        if (Core.EntityManager.HasComponent<AggroBuffer>(unit))
+        {
+            var buffer = Core.EntityManager.GetBuffer<AggroBuffer>(unit);
+            entries = buffer.Length;
+            for (int i = 0; i < buffer.Length; i++) if (buffer[i].Entity == target) hasTarget = true;
+        }
+        return $"{unit.Index} {a} {m} aggro entries {entries} target {(hasTarget ? "yes" : "no")}";
     }
 
     static IEnumerator Mover(Group group)
@@ -196,6 +223,21 @@ internal static class SpikeMarch
                     parts.Add($"{u.Index} d={d:0.0} {st}");
                 }
                 Core.Log.LogInfo($"[nyar-spike] march g{group.Id} t={second}s alive {alive} arrived {arrived}: {string.Join(", ", parts)}");
+
+                // Variant 4 (A6): probe the first living unit, then re-apply the hunt to every unit not yet in combat.
+                if (group.Variant == 4)
+                {
+                    foreach (var u in group.Units)
+                    {
+                        if (!u.Exists()) continue;
+                        Core.Log.LogInfo($"[nyar-spike] march g{group.Id} t={second}s probe {HuntProbe(u, group.Target)}");
+                        break;
+                    }
+                    if (group.Target.Exists())
+                        foreach (var u in group.Units)
+                            if (u.Exists() && (!u.TryGetComponent<BehaviourTreeState>(out var bt) || bt.Value != GenericEnemyState.Combat))
+                                Hunt(u, group.Target, group.Distance);
+                }
                 if (alive == 0 || arrived == alive)
                 {
                     Core.Log.LogInfo($"[nyar-spike] march g{group.Id} done after {second}s ({arrived}/{alive} arrived)");
