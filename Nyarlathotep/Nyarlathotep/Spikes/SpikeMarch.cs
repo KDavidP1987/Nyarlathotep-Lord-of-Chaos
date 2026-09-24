@@ -64,6 +64,7 @@ internal static class SpikeMarch
             group.Anchor = SpikeUnits.Spawn(AnchorUnit, anchorAt, MarchLifetime, out var err);
             if (!group.Anchor.Exists()) return $"spike failed: anchor: {err}";
             HoldStill(group.Anchor);
+            KeepEnabled(group.Anchor);
             Core.Log.LogInfo($"[nyar-spike] march g{group.Id}: anchor {group.Anchor.Index}:{group.Anchor.Version} held still");
         }
 
@@ -75,6 +76,7 @@ internal static class SpikeMarch
             var unit = SpikeUnits.Spawn(Thug, spawnPoint + offset, MarchLifetime, out var err);
             if (!unit.Exists()) { Core.Log.LogWarning($"[nyar-spike] march unit {i} not spawned: {err}"); continue; }
             group.Units.Add(unit);
+            KeepEnabled(unit);
         }
         Core.Log.LogInfo($"[nyar-spike] march g{group.Id}: {group.Units.Count} spawned, applying variant {variant}");
         foreach (var unit in group.Units)
@@ -89,6 +91,15 @@ internal static class SpikeMarch
         Core.StartCoroutine(Mover(group));
         var anchorNote = group.Anchor.Exists() ? $", anchor {group.Anchor.Index}:{group.Anchor.Version} {AnchorUnit._Value}" : "";
         return $"march g{group.Id} variant {variant}: {group.Units.Count} units {distance} m north{anchorNote}";
+    }
+
+    /// <summary>Session 2: units spawned 100 m from any player were disabled, and DestroyWhenDisabled removed them
+    /// within 5 s. Marching units stay enabled (DEV_REMINDERS #14; Bloodcraft FamiliarBindingSystem.cs:602);
+    /// LifeTime still bounds them.</summary>
+    static void KeepEnabled(Entity unit)
+    {
+        if (!unit.Has<CanPreventDisableWhenNoPlayersInRange>() && !unit.AddComponentSafe<CanPreventDisableWhenNoPlayersInRange>()) return;
+        unit.Write(new CanPreventDisableWhenNoPlayersInRange { CanDisable = new ModifiableBool(false) });
     }
 
     static void HoldStill(Entity anchor)
