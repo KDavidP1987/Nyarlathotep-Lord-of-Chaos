@@ -51,6 +51,22 @@ public static class TextSink
         return sb.Length == 0 ? "-" : sb.ToString();
     }
 
+    /// <summary><paramref name="text"/> cut to at most <paramref name="maxBytes"/> UTF-8 bytes, never inside a
+    /// character, so it fits the game's 512-byte chat string.</summary>
+    public static string CutToBytes(string text, int maxBytes)
+    {
+        if (Encoding.UTF8.GetByteCount(text) <= maxBytes) return text;
+        var sb = new StringBuilder();
+        var bytes = 0;
+        foreach (var r in text.EnumerateRunes())
+        {
+            if (bytes + r.Utf8SequenceLength > maxBytes) break;
+            sb.Append(r.ToString());
+            bytes += r.Utf8SequenceLength;
+        }
+        return sb.ToString();
+    }
+
     // The text without its forbidden characters, judged per Unicode scalar so a character outside the Basic
     // Multilingual Plane (a surrogate pair in UTF-16) is judged as the one character it is. A lone surrogate is
     // replaced by U+FFFD by EnumerateRunes, which is harmless.

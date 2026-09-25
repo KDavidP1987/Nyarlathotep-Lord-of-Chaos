@@ -26,12 +26,23 @@ internal static class Settings
     // ---- Safety caps (server-wide; protect tick time and the save file) ----
     // Every Limits-section key of Logic/Limits, bound and clamped to its range at load (D5). Read through Limit().
     static readonly Dictionary<string, int> _limits = new();
-    public static ConfigEntry<bool> AnnounceEvents { get; private set; }
 
     /// <summary>The loaded, clamped value of <paramref name="limit"/>; its default before Initialize.</summary>
     public static int Limit(IntLimit limit) => _limits.TryGetValue(limit.Name, out var v) ? v : limit.Default;
 
+    // ---- Announcements (foundation step 6, Epic D41): every switch off by default ----
+    public static ConfigEntry<bool> WaveWarnings { get; private set; }
+    public static ConfigEntry<bool> EventBanners { get; private set; }
+    public static ConfigEntry<bool> DailyBanner { get; private set; }
+    public static ConfigEntry<bool> LoginStats { get; private set; }
+    public static ConfigEntry<bool> PlayerShare { get; private set; }
+    /// <summary>Announcements.WarningOffsets as loaded: 1-5 values of 5-3600 s, sorted descending.</summary>
+    public static IReadOnlyList<int> WarningOffsets { get; private set; } = Limits.DefaultWarningOffsets;
+    /// <summary>Announcements.DailyBannerTime as loaded, server-local.</summary>
+    public static System.TimeOnly DailyBannerTime { get; private set; } = new(20, 0);
+
     // ---- Debug ----
+    public static ConfigEntry<bool> VerboseLogging { get; private set; }
     public static ConfigEntry<bool> TimingLog { get; private set; }
 
 #if DEBUG
@@ -43,8 +54,8 @@ internal static class Settings
     {
         Enabled = config.Bind("General", "Enabled", true,
             "Master switch. When false, no events run and no units are spawned.");
-        AnnounceEvents = config.Bind("General", "AnnounceEvents", true,
-            "Broadcast a server-wide chat message when an event starts or ends.");
+        // General.AnnounceEvents (0.1.0) is retired in favour of Announcements.EventBanners (S-8); BepInEx keeps an
+        // old line in the file as an orphan, which nothing reads.
 
         EmpowermentEnabled = config.Bind("Pillars", "FactionEmpowerment", false,
             "Timed faction empowerment (NPC 'blood moon'): scheduled or trigger-driven buffs on every NPC of a faction.");
@@ -74,6 +85,33 @@ internal static class Settings
         BindLimit(config, Limits.ManualSpawnLifetimeSeconds,
             "Lifetime in seconds of a unit spawned with .nyar spawn.");
 
+        WaveWarnings = config.Bind("Announcements", "WaveWarnings", false,
+            "Server-wide warning before each wave of an event whose events.json entry has announce.warnings true.");
+        EventBanners = config.Bind("Announcements", "EventBanners", false,
+            "Server-wide line when an event starts and when it ends (the event's own announce text, or a stock line).");
+        DailyBanner = config.Bind("Announcements", "DailyBanner", false,
+            "Server-wide line once a day at DailyBannerTime naming the scheduled events still to come that day.");
+        LoginStats = config.Bind("Announcements", "LoginStats", false,
+            "Private stats line on login. Reserved: it takes effect when player stats arrive in a later version.");
+        PlayerShare = config.Bind("Announcements", "PlayerShare", false,
+            "Let players share a leaderboard line server-wide. Reserved: it takes effect with player stats in a later version.");
+        var offsets = config.Bind("Announcements", "WarningOffsets", "300,60,10",
+            "Seconds before a wave at which its warning fires: 1-5 comma-separated values, each 5-3600.");
+        var (parsedOffsets, offsetsLog) = Limits.ParseWarningOffsets(offsets.Value);
+        if (offsetsLog is not null) Plugin.PluginLog.LogWarning($"[nyar] {offsetsLog}");
+        WarningOffsets = parsedOffsets;
+        var bannerTime = config.Bind("Announcements", "DailyBannerTime", "20:00",
+            "Server-local time of the daily banner, HH:mm.");
+        var (parsedTime, timeLog) = Limits.ParseDailyBannerTime(bannerTime.Value);
+        if (timeLog is not null) Plugin.PluginLog.LogWarning($"[nyar] {timeLog}");
+        DailyBannerTime = parsedTime;
+        BindLimit(config, Limits.ShareCooldownSeconds,
+            "Seconds a player waits between two shares.");
+        BindLimit(config, Limits.ShareMaxPerMinute,
+            "Most player shares the whole server passes in any minute.");
+
+        VerboseLogging = config.Bind("Debug", "VerboseLogging", false,
+            "Log each unit spawned and despawned, and each announcement sent.");
         TimingLog = config.Bind("Debug", "TimingLog", false,
             "Log the scheduler tick's average and maximum duration once a minute.");
 

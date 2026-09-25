@@ -1,6 +1,6 @@
 # Foundation — the event engine
 
-**Status:** in build (docs/dod/foundation.md, step 5 of 9). Ships in 0.2.0. Nothing here is enabled by
+**Status:** in build (docs/dod/foundation.md, step 6 of 9). Ships in 0.2.0. Nothing here is enabled by
 default: pillar switches are off, seeded events are disabled, announcement switches are off.
 
 ## What it provides
@@ -34,8 +34,8 @@ The shared engine every pillar builds on:
   for <actor>". A service method that changes something is marked `[Mutating]`, and preflight fails when one is
   called outside `Gateway.Run`.
 - **Wire lines for Raphael** (step 3): `Logic/Wire` builds `[NYAR:<tag>] key=value …` lines of at most 480 bytes,
-  including the `[NYAR:version]` handshake with every key of docs/RAPHAEL_INTEGRATION_CONTRACT.md §2 (the command
-  that sends it comes in step 6).
+  including the `[NYAR:version]` handshake with every key of docs/RAPHAEL_INTEGRATION_CONTRACT.md §2, sent by
+  `.nyar api version` (step 6; anyone may run it, `admin` is the server's view of the caller).
 - **Clean text** (step 3): `.nyar announce` text must be 1-200 characters with no `<`, `>` or control characters;
   player and clan names lose those characters and are cut to 20; in a wire value spaces become `_` and `=`, `;`,
   `:` are removed.
@@ -43,16 +43,30 @@ The shared engine every pillar builds on:
   builders take no position or radius, and whose templates use only {faction}, {minutes}, {event}, {zone}, {wave},
   {waves}.
 
-Later steps add the spawner, the scheduler and runtime, the announcer and the admin commands (see the plan's
-Build plan).
+- **Announcements** (step 6): each kind has its own [Announcements] switch, all off by default. WaveWarnings warns
+  before each wave after the first of an event whose events.json entry says `announce.warnings: true`, at each of
+  WarningOffsets (300,60,10 s; an offset longer than the time left is skipped; under a minute the line says "almost
+  here"). EventBanners sends a start and an end line (the event's own `announce` text, or a stock line; a purge sends
+  none). DailyBanner names, once a day at DailyBannerTime, the enabled scheduled events still to come that day, and
+  sends nothing when there are none (A19; the stats child adds the digest). `.nyar announce <text>` broadcasts
+  whatever the switches say. Server-wide lines leave one a second from a queue of 20; a full queue drops its oldest
+  informational line, or its oldest wave warning when it holds only warnings, with a log line. LoginStats and
+  PlayerShare are bound but take effect with the stats child; their limits (share cooldown and server-wide rate,
+  login once per connect) are built and tested.
+- **Health** (step 6): every 10 minutes the log gets "nyar health: <n> events, <m> tracked, degraded: <list>", and an
+  admin who connects while a hook is unavailable or a pillar's event was cancelled after its faults gets one private
+  line saying so (not again on a reconnect within 60 s). `Patches/UserConnectPatch` is the login hook.
+- **Retired key**: General.AnnounceEvents (0.1.0) is gone in favour of Announcements.EventBanners (default off);
+  BepInEx leaves the old line in the cfg, where nothing reads it.
 
 ## Code map
 
 | Area | Files |
 |---|---|
-| Pure logic (no game types; compiled into the tests) | `Nyarlathotep/Nyarlathotep/Logic/` — Model, Validation, Limits, CommandArgs, Schedule, Precedence, Idempotency, EventCatalog, Dependency, Paths, IFileStore, DataStore, Hooks, ActionGateway, Wire, TextSink, Messages |
+| Pure logic (no game types; compiled into the tests) | `Nyarlathotep/Nyarlathotep/Logic/` — Model, Validation, Limits, CommandArgs, Schedule, Precedence, Idempotency, EventCatalog, Dependency, Paths, IFileStore, DataStore, Hooks, ActionGateway, Wire, TextSink, Messages, AnnouncerCore |
 | Files and definitions | `Services/Persistence.cs` (disk), `Services/EventStore.cs` (seed, load, reload), `Resources/events.default.json` |
 | Gateway | `Services/Gateway.cs` (the one `ActionGateway`; `Gateway.Run` wraps every `[Mutating]` call) |
+| Messages and health (step 6) | `Services/Announcer.cs`, `Services/HealthMonitor.cs`, `Patches/UserConnectPatch.cs`, `Commands/MessageCommands.cs` (`announce`, `api version`) |
 | Startup | `Patches/GameDataInitializedPatch.cs` — the save-loaded trigger and, for a brand-new world, `ServerStartupPatch` (A5) |
 | Preflight checks (step 3) | `tools/preflight.ps1` — GatewayOnly, FaultInjection, AdminList (`-ListCommands admin`), SessionLogs (`-SessionsOf <slug>`) |
 | Unit tests | `Nyarlathotep/Nyarlathotep.Tests/` (xUnit 2.9.3, Microsoft.NET.Test.Sdk 17.8.0, net6.0) |

@@ -19,7 +19,7 @@ internal static class StatusCommands
         {
             var ledger = SpawnTracker.Ledger;
             ctx.Reply(AdminLines.Tracked(ledger.Tracked, ledger.PendingSpawns, ledger.PendingDespawns));
-            var degraded = TriggerBus.Hooks.Unavailable.Select(h => $"hook {h}").Concat(EventRuntime.Degraded).ToList();
+            var degraded = HealthMonitor.Degraded();
             if (degraded.Count > 0) ctx.Reply($"degraded: {string.Join(", ", degraded)}");
         }
     }

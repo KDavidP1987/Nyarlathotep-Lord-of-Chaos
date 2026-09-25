@@ -96,6 +96,8 @@ public sealed class StateDocument
     /// <summary>Each event's last start, for conditions.cooldownMinutes across restarts.</summary>
     public Dictionary<string, DateTime> LastStart { get; set; } = new(StringComparer.Ordinal);
     public DateTime? PurgeUntilUtc { get; set; }
+    /// <summary>The daily banner's last occurrence key, "yyyy-MM-dd HH:mm" server-local (A18).</summary>
+    public string? DailyBanner { get; set; }
 
     static readonly JsonSerializerOptions Options = new()
     {

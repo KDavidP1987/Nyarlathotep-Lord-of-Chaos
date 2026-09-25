@@ -54,10 +54,19 @@ public static class Messages
         "Wave {wave} of {waves} of the {event} arrives in {minutes} min.",
     ];
 
+    /// <summary>A warning less than a minute ahead, where "in {minutes} min" would overstate it.</summary>
+    public static readonly IReadOnlyList<string> WaveImminentPool =
+    [
+        "Wave {wave} of {waves} of the {event} is almost here.",
+    ];
+
     public static readonly IReadOnlyList<string> DailyBannerPool =
     [
         "Tonight: {event}.",
     ];
+
+    /// <summary>Most event names one daily banner lists; the rest are counted.</summary>
+    public const int DailyBannerMaxNames = 5;
 
     /// <summary>Every pool, by name, for the template checks.</summary>
     public static IReadOnlyDictionary<string, IReadOnlyList<string>> Pools() => new Dictionary<string, IReadOnlyList<string>>
@@ -65,6 +74,7 @@ public static class Messages
         [nameof(EventStartPool)] = EventStartPool,
         [nameof(EventEndPool)] = EventEndPool,
         [nameof(WaveWarningPool)] = WaveWarningPool,
+        [nameof(WaveImminentPool)] = WaveImminentPool,
         [nameof(DailyBannerPool)] = DailyBannerPool,
     };
 
@@ -107,9 +117,25 @@ public static class Messages
     public static string EndBanner(EventDefinition def, int pick) =>
         Render(Choose(def.Announce.End, EventEndPool, pick), MessageContext.For(def, 0, def.Action?.Waves ?? 0));
 
-    /// <summary>The warning before wave <paramref name="wave"/>, <paramref name="secondsUntil"/> ahead.</summary>
+    /// <summary>The warning before wave <paramref name="wave"/>, <paramref name="secondsUntil"/> ahead: in whole
+    /// minutes, rounded up, from a minute ahead; "almost here" under a minute.</summary>
     public static string WaveWarning(EventDefinition def, int wave, int secondsUntil, int pick) =>
-        Render(Choose([], WaveWarningPool, pick), MessageContext.For(def, (secondsUntil + 59) / 60, wave));
+        Render(Choose([], secondsUntil >= 60 ? WaveWarningPool : WaveImminentPool, pick),
+            MessageContext.For(def, (secondsUntil + 59) / 60, wave));
+
+    /// <summary>The daily banner naming <paramref name="names"/> (A19): at most <see cref="DailyBannerMaxNames"/>, fewer
+    /// when the line would pass <see cref="Wire.MaxBytes"/>, then "and &lt;k&gt; more".</summary>
+    public static string DailyBannerText(IReadOnlyList<string> names, int pick)
+    {
+        var template = Choose([], DailyBannerPool, pick);
+        for (var n = Math.Min(names.Count, DailyBannerMaxNames); ; n--)
+        {
+            var shown = string.Join(", ", names.Take(n));
+            if (names.Count > n) shown += n == 0 ? $"{names.Count} events" : $" and {names.Count - n} more";
+            var line = Render(template, new MessageContext(shown, "-", 0, 0, 0, "-"));
+            if (n == 0 || System.Text.Encoding.UTF8.GetByteCount(line) <= Wire.MaxBytes) return line;
+        }
+    }
 
     static string Choose(IReadOnlyList<string> own, IReadOnlyList<string> pool, int pick)
     {

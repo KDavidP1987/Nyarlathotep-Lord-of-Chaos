@@ -42,10 +42,11 @@
 
 ---
 
-## 2. Handshake — `.nyar api version` — PLANNED (api 1)
+## 2. Handshake — `.nyar api version` — IMPLEMENTED (api 1, Nyarlathotep 0.2.0)
 
 Raphael probes it on login with its usual back-off (every 4 s, up to 12 attempts) and shows the NYAR tab group
-only after an answer with `ready=1`. The answer is one line (wrapped here for reading):
+only after an answer with `ready=1`. Before the server world has loaded, the command replies the plain line
+`still loading` like every `.nyar` command; treat it as no answer and probe again. The answer is one line (wrapped here for reading):
 
 ```
 [NYAR:version] api=1 plugin=0.2.0 ready=1 admin=0 enabled=1 killswitch=0

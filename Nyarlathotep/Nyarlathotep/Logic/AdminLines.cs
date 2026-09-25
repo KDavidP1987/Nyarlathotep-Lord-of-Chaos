@@ -22,6 +22,10 @@ public static class AdminLines
 
     public static string Purged(int events, int units) => $"purged: {events} events, {units} units queued";
 
+    /// <summary>The private line an admin gets on connecting while something is degraded (D31).</summary>
+    public static string DegradedNotice(IReadOnlyCollection<string> degraded) =>
+        $"nyar: degraded: {string.Join(", ", degraded)} (see .nyar status and the server log)";
+
     public static string Tracked(int tracked, int pendingSpawns, int pendingDespawns) =>
         $"tracked units: {tracked} (spawning {pendingSpawns}, despawning {pendingDespawns})";
 

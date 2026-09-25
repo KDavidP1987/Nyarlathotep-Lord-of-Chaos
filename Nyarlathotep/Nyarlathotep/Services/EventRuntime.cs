@@ -94,6 +94,7 @@ internal static class EventRuntime
         Persistence.State.Document.Instances.Add(new StateInstance(id, active.Instance.StartedUtc, active.Instance.EndsUtc, "active"));
         Persistence.State.MarkDirty();
         Core.Log.LogInfo($"[nyar] event {id} started by {trigger} (ends {active.Instance.EndsUtc:u})");
+        Announcer.EventStarted(active.Instance);
         return $"event {id} started";
     }
 
@@ -114,6 +115,7 @@ internal static class EventRuntime
         doc.Instances.Clear();
         doc.PurgeUntilUtc = DateTime.UtcNow.AddSeconds(cooldown);
         Persistence.State.MarkDirty();
+        Announcer.Purged();
         Core.Log.LogWarning($"[nyar] purge: {events.Count} events ended, {queued} units queued, {cancelled} spawns cancelled, cooldown {cooldown}s");
         return AdminLines.Purged(events.Count, queued);
     }
@@ -130,6 +132,7 @@ internal static class EventRuntime
             SpawnTracker.EndEventUnits(ended.Id, DateTime.MinValue);
             RemoveInstance(ended.Id);
             Core.Log.LogInfo($"[nyar] event {ended.Id} ended ({ended.WavesSpawned} of {ended.Definition.Action?.Waves ?? 0} waves)");
+            Announcer.EventEnded(ended.Definition);
         }
         foreach (var cleanup in Engine.DueCleanups(now))
         {
@@ -165,6 +168,7 @@ internal static class EventRuntime
         var (queued, cancelled) = SpawnTracker.EndEventUnits(id, DateTime.MaxValue);
         RemoveInstance(id);
         Core.Log.LogWarning($"[nyar] event {id} {why}: {queued} units queued, {cancelled} spawns cancelled");
+        Announcer.EventEnded(ended.Definition);
         return true;
     }
 

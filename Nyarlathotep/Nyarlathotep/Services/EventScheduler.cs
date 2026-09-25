@@ -9,8 +9,8 @@ namespace Nyarlathotep.Services;
 
 /// <summary>
 /// The one-second tick (foundation D24, D25; Design › Startup: last in Core.TryInitialize, replacing step 4's temporary
-/// tick). Each tick runs its phases in order: the spawn and despawn queues, the triggers, the events, then the state.json
-/// flush. Every phase has its own try/catch, logged once per failure streak, so a fault in one never stops the others,
+/// tick). Each tick runs its phases in order: the spawn and despawn queues, the triggers, the events, the announcement
+/// queue, the health line, then the state.json flush. Every phase has its own try/catch, logged once per failure streak, so a fault in one never stops the others,
 /// and an event's own fault is counted inside EventRuntime (D25). Nothing ticks before Core.IsReady (D28). With
 /// Debug.TimingLog the tick's average and maximum are logged once a minute (D24).
 /// </summary>
@@ -48,6 +48,8 @@ internal static class EventScheduler
         Phase("spawn queues", SpawnTracker.Tick);
         Phase("triggers", () => TriggerBus.Tick(now));
         Phase("events", () => EventRuntime.Tick(now));
+        Phase("announcements", () => Announcer.Tick(now));
+        Phase("health", () => HealthMonitor.Tick(now));
         Phase("state flush", () => Persistence.State.Flush());
         watch.Stop();
         if (Settings.TimingLog.Value && _timer.Add(watch.Elapsed.TotalMilliseconds, now) is { } line)

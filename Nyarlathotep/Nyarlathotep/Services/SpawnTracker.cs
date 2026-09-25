@@ -163,6 +163,8 @@ internal static class SpawnTracker
             Persistence.State.Document.Units.Add(stateUnit);
             Persistence.State.MarkDirty();
             spawned++;
+            if (Settings.VerboseLogging.Value)
+                Core.Log.LogInfo($"[nyar] spawned {order.Prefab} for {order.EventId ?? "manual"} (lifetime {order.LifetimeSeconds}s)");
         }
         if (spawns.Count > 0)
             Core.Log.LogInfo($"[nyar] spawn batch: {spawned} of {spawns.Count} spawned, {_ledger.PendingSpawns} waiting");
@@ -191,6 +193,8 @@ internal static class SpawnTracker
             {
                 _destroyFaults.Ok();
                 destroyed++;
+                if (Settings.VerboseLogging.Value && _stateUnits.TryGetValue(key, out var gone))
+                    Core.Log.LogInfo($"[nyar] despawned {gone.Prefab} of {gone.EventId}");
                 Release(key);
             }
             else

@@ -89,4 +89,16 @@ public class TextSinkTests
         Assert.True(wire.IndexOfAny(new[] { '<', '>', '\n', '=', ';', ':', ' ' }) < 0);
         Assert.True(chat.Length <= TextSink.NameMax);
     }
+
+    [Fact]
+    public void A_line_is_cut_to_the_chat_byte_limit_never_inside_a_character()
+    {
+        Assert.Equal("short", TextSink.CutToBytes("short", 480));
+        var han = new string('漢', 200);            // 600 bytes
+        var cut = TextSink.CutToBytes(han, 480);
+        Assert.Equal(160, cut.Length);                   // 480 / 3
+        var emoji = "ab" + "😀";                 // 2 + 4 bytes
+        Assert.Equal("ab", TextSink.CutToBytes(emoji, 5));
+        Assert.Equal(emoji, TextSink.CutToBytes(emoji, 6));
+    }
 }

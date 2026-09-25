@@ -1074,7 +1074,8 @@ function Get-ParenEnd([string]$Text, [int]$Open) {
 # each other directly ("other than Logic/ActionGateway.cs and the services it dispatches to"). A [Mutating]
 # declaration anywhere else fails, so no file can exempt itself by declaring one. UnitSetup is SpawnTracker's setup
 # step for a unit it has just spawned (foundation step 4); its Apply is [Mutating], so only these services call it.
-$script:DispatchedServices = @('EventRuntime', 'SpawnTracker', 'UnitSetup', 'WaveAction', 'Persistence', 'EventStore') |
+# Announcer runs ActionKind.Announce (`.nyar announce`, foundation step 6).
+$script:DispatchedServices = @('EventRuntime', 'SpawnTracker', 'UnitSetup', 'WaveAction', 'Persistence', 'EventStore', 'Announcer') |
     ForEach-Object { "$PkgRel/Services/$_.cs" }
 
 # Every method marked [Mutating] in a dispatched service is a mutating method. Any other file under Commands/,

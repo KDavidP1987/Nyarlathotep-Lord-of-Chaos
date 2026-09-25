@@ -79,8 +79,7 @@ internal static class TriggerBus
         Gateway.Run(ActionKind.StartEvent, Actor.System, () => EventRuntime.StartEvent(def.Id, trigger, Actor.System, null), def.Startable);
 
     /// <summary>A hook is available when what it attaches to exists: the DeathEvent patch applied, the DayNightCycle
-    /// singleton present, the ServerBootstrapSystem login patch applied (it comes with the Announcer in step 6; until then
-    /// the hook reports unavailable). In a Debug build,
+    /// singleton present, the ServerBootstrapSystem login patch (Patches/UserConnectPatch) applied. In a Debug build,
     /// Debug.FaultInjection = hook:&lt;name&gt; makes that hook report unavailable (D31).</summary>
     sealed class Registry : IHookRegistry
     {

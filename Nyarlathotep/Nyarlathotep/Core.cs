@@ -63,12 +63,14 @@ internal static class Core
 
             // Services in dependency order (docs/dod/foundation.md › Design › States › Startup and shutdown):
             // Persistence → EventStore → SpawnTracker → TriggerBus → EventRuntime → Announcer → HealthMonitor
-            // → EventScheduler. Step 6 adds the Announcer and the HealthMonitor.
+            // → EventScheduler.
             Services.Persistence.Initialize();
             Services.EventStore.Initialize();
             Services.SpawnTracker.Initialize();
             Services.TriggerBus.Initialize();
             Services.EventRuntime.Initialize();
+            Services.Announcer.Initialize();
+            Services.HealthMonitor.Initialize();
             // The scheduler starts before the sweep, so a sweep that throws never leaves the queues without a tick; it
             // does nothing until IsReady.
             Services.EventScheduler.Start();

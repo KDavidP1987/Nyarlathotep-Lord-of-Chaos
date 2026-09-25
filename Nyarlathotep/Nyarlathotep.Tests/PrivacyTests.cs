@@ -50,6 +50,9 @@ public class PrivacyTests
         [nameof(Messages.EventEndPool)] = () => Messages.EventEndPool,
         [nameof(Messages.WaveWarningPool)] = () => Messages.WaveWarningPool,
         [nameof(Messages.DailyBannerPool)] = () => Messages.DailyBannerPool,
+        [nameof(Messages.WaveImminentPool)] = () => Messages.WaveImminentPool,
+        [nameof(Messages.DailyBannerMaxNames)] = () => [Messages.DailyBannerMaxNames.ToString()],
+        [nameof(Messages.DailyBannerText)] = () => Enumerable.Range(0, 3).Select(p => Messages.DailyBannerText(Running.Select(r => r.Definition.Name).ToList(), p)),
     };
 
     static IEnumerable<string> Members() =>

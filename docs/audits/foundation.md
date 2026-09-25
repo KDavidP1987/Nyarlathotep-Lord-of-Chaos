@@ -55,6 +55,15 @@ checks are lines "- session <n> log check: …" (D33).
 - session 11 log check: 0 unhandled, 3 nyar lines, 0 orphan errors, 0 unity errors
 - decisions the plan leaves to the build: step 4's temporary tick is replaced by EventScheduler; D21's restart test uses a wave prefab other than CHAR_Bandit_Thug (Review 11 F2)
 
+### Step 6 · 2026-09-25 · b9ca273
+- git status: clean at b9ca273 (0 changes)
+- compile: 0 errors, 0 warnings (Release, no deploy); dotnet test: 503 passed
+- preflight: exit 0; -SelfTest 25/25 checks, 3 fixtures each, 73 extra bad fixtures
+- dod status: foundation 27/40 verified; `--check foundation` 0 problems, 0 warnings
+- feature doc read: docs/features/FOUNDATION.md (Status set to step 6 of 9; Open questions none); plan D13, D14, D30-D32, Business rules, Design › Data, UX (cfg keys, commands), Failure & observability, Performance (queue of 20) and docs/RAPHAEL_INTEGRATION_CONTRACT.md §2 read
+- baseline boot: session 16 (547dc3b, the current code); session 16 log check: 0 unhandled, 0 orphan errors, 0 unity errors
+- decisions the plan leaves to the build, recorded before building: A18 (state.json gains the daily banner's occurrence key), A19 (the daily banner names the day's remaining scheduled events until the stats digest); warnings apply to waves after the first (wave 1 comes at the start); a warning under a minute says "almost here" (a pool line, same placeholders); `.nyar api version` keeps D39's IsReady guard, so a probe before ready gets "still loading" (contract §2 says so)
+
 ## Post-audit
 ### Step 1 · 2026-09-24 · 40505e2
 - compile: 0 errors, 0 warnings (plugin and Nyarlathotep.Tests)
