@@ -47,7 +47,7 @@ internal static class Announcer
     {
         if (!Settings.EventBanners.Value) return;
         var minutes = (int)Math.Ceiling((instance.EndsUtc - instance.StartedUtc).TotalMinutes);
-        _queue.Enqueue(new QueuedLine(Messages.StartBanner(instance.Definition, minutes, _random.Next()), LineKind.Info, instance.Definition.Id));
+        _queue.Enqueue(new QueuedLine(Messages.StartBanner(instance.Definition, minutes, _random.Next()), LineKind.Info, instance.Definition.Id), DateTime.UtcNow);
     }
 
     /// <summary>EventRuntime: an event ended (expired, stopped or cancelled). Its unsent warnings go; with EventBanners on,
@@ -56,7 +56,7 @@ internal static class Announcer
     {
         _queue.DropWarnings(def.Id);
         if (!Settings.EventBanners.Value) return;
-        _queue.Enqueue(new QueuedLine(Messages.EndBanner(def, _random.Next()), LineKind.Info, def.Id));
+        _queue.Enqueue(new QueuedLine(Messages.EndBanner(def, _random.Next()), LineKind.Info, def.Id), DateTime.UtcNow);
     }
 
     /// <summary>The purge ends every event without banners; unsent warnings go.</summary>
@@ -67,7 +67,7 @@ internal static class Announcer
     [Mutating]
     internal static string AdminAnnounce(string text)
     {
-        _queue.Enqueue(new QueuedLine(text, LineKind.Info));
+        _queue.Enqueue(new QueuedLine(text, LineKind.Info), DateTime.UtcNow);
         return _queue.Count <= 1 ? "announced" : $"announced (queued behind {_queue.Count - 1})";
     }
 
@@ -75,7 +75,6 @@ internal static class Announcer
     /// out.</summary>
     internal static void Tick(DateTime now)
     {
-        _queue.DropExpired(now);
         QueueWarnings(now);
         if (Settings.DailyBanner.Value) QueueDailyBanner(now);
         if (_queue.Next(now) is not { } line) return;
@@ -96,7 +95,7 @@ internal static class Announcer
                 var left = UpcomingWave.SecondsLeft(next.AtUtc, now);
                 if (_warnings.Due(key, left) is null) continue;
                 _queue.Enqueue(new QueuedLine(Messages.WaveWarning(active.Definition, next.Wave, left, _random.Next()),
-                    LineKind.Warning, active.Id, next.AtUtc));
+                    LineKind.Warning, active.Id, next.AtUtc), now);
             }
         }
         _warnings.Keep(live);
@@ -109,7 +108,7 @@ internal static class Announcer
         if (names is null) return;
         Persistence.State.MarkDirty();
         if (names.Count == 0) { Core.Log.LogInfo("[nyar] daily banner: nothing scheduled today"); return; }
-        _queue.Enqueue(new QueuedLine(Messages.DailyBannerText(names, _random.Next()), LineKind.Info));
+        _queue.Enqueue(new QueuedLine(Messages.DailyBannerText(names, _random.Next()), LineKind.Info), now);
         Core.Log.LogInfo($"[nyar] daily banner queued: {names.Count} events");
     }
 

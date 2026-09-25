@@ -245,7 +245,7 @@ public class AnnouncerTests
     public void Lines_leave_at_most_one_per_second()
     {
         var queue = new AnnounceQueue(_ => { });
-        foreach (var i in Enumerable.Range(1, 3)) queue.Enqueue(new QueuedLine($"line {i}", LineKind.Info));
+        foreach (var i in Enumerable.Range(1, 3)) queue.Enqueue(new QueuedLine($"line {i}", LineKind.Info), T0);
         Assert.Equal("line 1", queue.Next(T0)?.Text);
         Assert.Null(queue.Next(T0.AddSeconds(0.99)));
         Assert.Equal("line 2", queue.Next(T0.AddSeconds(1))?.Text);
@@ -259,11 +259,11 @@ public class AnnouncerTests
         var log = new List<string>();
         var queue = new AnnounceQueue(log.Add);
         Assert.Equal(20, AnnounceQueue.Capacity);
-        queue.Enqueue(new QueuedLine("warn 0", LineKind.Warning, "raid"));
-        foreach (var i in Enumerable.Range(1, 19)) queue.Enqueue(new QueuedLine($"info {i}", LineKind.Info));
+        queue.Enqueue(new QueuedLine("warn 0", LineKind.Warning, "raid"), T0);
+        foreach (var i in Enumerable.Range(1, 19)) queue.Enqueue(new QueuedLine($"info {i}", LineKind.Info), T0);
         Assert.Equal(20, queue.Count);
         Assert.Empty(log);                                  // 20 fit
-        queue.Enqueue(new QueuedLine("warn 20", LineKind.Warning, "raid"));
+        queue.Enqueue(new QueuedLine("warn 20", LineKind.Warning, "raid"), T0);
         Assert.Equal(20, queue.Count);
         Assert.Contains("dropped the oldest informational line: info 1", Assert.Single(log));
         Assert.Equal("warn 0", queue.Next(T0)?.Text);   // no warning dropped while an informational line was queued
@@ -274,9 +274,9 @@ public class AnnouncerTests
     {
         var log = new List<string>();
         var queue = new AnnounceQueue(log.Add);
-        foreach (var i in Enumerable.Range(0, 20)) queue.Enqueue(new QueuedLine($"warn {i}", LineKind.Warning, "raid"));
+        foreach (var i in Enumerable.Range(0, 20)) queue.Enqueue(new QueuedLine($"warn {i}", LineKind.Warning, "raid"), T0);
         Assert.Empty(log);
-        queue.Enqueue(new QueuedLine("warn 20", LineKind.Warning, "raid"));
+        queue.Enqueue(new QueuedLine("warn 20", LineKind.Warning, "raid"), T0);
         Assert.Equal(20, queue.Count);
         Assert.Contains("dropped the oldest wave warning: warn 0", Assert.Single(log));
         Assert.Equal("warn 1", queue.Next(T0)?.Text);
@@ -287,9 +287,9 @@ public class AnnouncerTests
     {
         var log = new List<string>();
         var queue = new AnnounceQueue(log.Add);
-        queue.Enqueue(new QueuedLine("banner", LineKind.Info));
-        queue.Enqueue(new QueuedLine("wave 2 in 10 s", LineKind.Warning, "raid", T0.AddSeconds(1)));
-        queue.Enqueue(new QueuedLine("later", LineKind.Info));
+        queue.Enqueue(new QueuedLine("banner", LineKind.Info), T0);
+        queue.Enqueue(new QueuedLine("wave 2 in 10 s", LineKind.Warning, "raid", T0.AddSeconds(1)), T0);
+        queue.Enqueue(new QueuedLine("later", LineKind.Info), T0);
         Assert.Equal("banner", queue.Next(T0)?.Text);
         Assert.Equal("later", queue.Next(T0.AddSeconds(1))?.Text);   // the wave came at T0 + 1 s
         Assert.Contains("dropped 1 line(s)", Assert.Single(log));
@@ -301,10 +301,9 @@ public class AnnouncerTests
     {
         var log = new List<string>();
         var queue = new AnnounceQueue(log.Add);
-        queue.Enqueue(new QueuedLine("old warn", LineKind.Warning, "raid", T0));
-        foreach (var i in Enumerable.Range(1, 19)) queue.Enqueue(new QueuedLine($"info {i}", LineKind.Info));
-        Assert.Equal(1, queue.DropExpired(T0.AddSeconds(1)));
-        queue.Enqueue(new QueuedLine("info 20", LineKind.Info));
+        queue.Enqueue(new QueuedLine("old warn", LineKind.Warning, "raid", T0), T0);
+        foreach (var i in Enumerable.Range(1, 19)) queue.Enqueue(new QueuedLine($"info {i}", LineKind.Info), T0);
+        queue.Enqueue(new QueuedLine("info 20", LineKind.Info), T0.AddSeconds(1));   // the warning expired at T0
         Assert.Equal(20, queue.Count);
         Assert.DoesNotContain(log, l => l.Contains("queue full"));
         Assert.Equal("info 1", queue.Next(T0.AddSeconds(1))?.Text);
@@ -314,9 +313,9 @@ public class AnnouncerTests
     public void An_ended_event_takes_its_unsent_warnings_with_it()
     {
         var queue = new AnnounceQueue(_ => { });
-        queue.Enqueue(new QueuedLine("raid warn", LineKind.Warning, "raid"));
-        queue.Enqueue(new QueuedLine("siege warn", LineKind.Warning, "siege"));
-        queue.Enqueue(new QueuedLine("raid banner", LineKind.Info, "raid"));
+        queue.Enqueue(new QueuedLine("raid warn", LineKind.Warning, "raid"), T0);
+        queue.Enqueue(new QueuedLine("siege warn", LineKind.Warning, "siege"), T0);
+        queue.Enqueue(new QueuedLine("raid banner", LineKind.Info, "raid"), T0);
         Assert.Equal(1, queue.DropWarnings("raid"));
         Assert.Equal(1, queue.DropWarnings());
         Assert.Equal("raid banner", queue.Next(T0)?.Text);

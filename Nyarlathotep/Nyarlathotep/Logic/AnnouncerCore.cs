@@ -28,8 +28,10 @@ public sealed class AnnounceQueue(Action<string> log)
 
     public int Count => _lines.Count;
 
-    public void Enqueue(QueuedLine line)
+    /// <summary>Queues <paramref name="line"/>; expired lines go first, so only a live line is ever dropped for room.</summary>
+    public void Enqueue(QueuedLine line, DateTime utcNow)
     {
+        DropExpired(utcNow);
         if (_lines.Count >= Capacity)
         {
             var i = _lines.FindIndex(l => l.Kind == LineKind.Info);
@@ -42,7 +44,7 @@ public sealed class AnnounceQueue(Action<string> log)
     }
 
     /// <summary>Drops the lines past their <see cref="QueuedLine.NotAfterUtc"/>, with a log line, so they neither
-    /// leave late nor hold a slot a live line needs. The Announcer runs it before queueing each tick.</summary>
+    /// leave late nor hold a slot a live line needs. <see cref="Enqueue"/> and <see cref="Next"/> run it first.</summary>
     public int DropExpired(DateTime utcNow)
     {
         var stale = _lines.RemoveAll(l => l.NotAfterUtc is { } t && t <= utcNow);
