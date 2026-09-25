@@ -279,6 +279,25 @@ public class SpawnLedgerTests
         Assert.Equal(expected, SpawnLedger.DrainMarginSeconds(maxTracked, perTick));
 
     [Fact]
+    public void The_grace_cleanup_takes_the_end_ticks_units_and_leaves_a_restarts()
+    {
+        // A17 end to end: a unit of "raid" spawned in the tick it ended, then a restart inside the grace spawns another;
+        // the cleanup, bounded at the restart's start by EventEngine, queues only the ended instance's unit.
+        var end = Now.AddMinutes(10);
+        var restart = end.AddSeconds(10);
+        var l = Ledger();
+        Ask(l, 1, "raid");
+        var old = Assert.Single(l.TakeSpawns());
+        Assert.True(l.Confirm(old, 1, end));                   // spawned at EndsUtc
+        Ask(l, 1, "raid");
+        var fresh = Assert.Single(l.TakeSpawns());
+        Assert.True(l.Confirm(fresh, 2, restart.AddSeconds(1)));
+        Assert.Equal((1, 0), l.EndEvent("raid", restart, cancelOrders: false));
+        Assert.Equal([1L], l.TakeDespawns());
+        Assert.True(l.IsTracked(2));
+    }
+
+    [Fact]
     public void An_event_unit_outlives_the_drain_of_a_full_queue()
     {
         // A16: a full ledger queued at end + grace and drained at the budget is empty before its units' LifeTime ends.

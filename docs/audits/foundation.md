@@ -150,5 +150,16 @@ yarfoundation-before.tsv waits for step 8 (D34), with the game client closed
 - session 13 log check: 0 unhandled, 146 nyar lines, 0 orphan errors, 0 unity errors (D29 V Blood, D23 reloads, D20 schedule in the cooldown, D21 setup)
 - session 14 log check: 0 unhandled, 36 nyar lines, 0 orphan errors, 0 unity errors (D21 boot, D22)
 - tools/ingame: the comment lines of both helpers had a path's "\n" turned into a line break, which left a bare line Python could not parse; fixed, with the `cool` and `d21` markers and a `d22` mode added
-- open (next session): session 15 is a Debug build for D25 and D24's 150- and 500-unit runs. Then D19/D39/D40 pass lines, `dod status foundation`, commit
+- session 15 log check: 0 unhandled, 438 nyar lines, 0 orphan errors, 0 unity errors (Debug build; errors only the three injected faults)
+
+### A16 / A17 · 2026-09-25 · 2b82be3, 94f1d1e
+- trigger: session 15 saw the game's LifeTime remove a 500-unit event's units ahead of the 5-per-tick queue; the owner chose option A (A16, design D17)
+- compile: 0 errors, 0 warnings (Release and Debug)
+- tests: `dotnet test Nyarlathotep/Nyarlathotep.sln` → Passed 503, Failed 0
+- mutation check: 8 planted faults each failed a test (no margin, margin ignoring the per-tick budget, margin ignoring MaxTrackedUnits, margin on a shorter own lifetime; cleanup bounded at EndsUtc, a restart not bounding, a restart bounding every event, the ledger cutoff removed)
+- preflight: exit 0
+- /code-review (inline): the late-order comment in EventRuntime still holds (a late order would outlive its due time); no finding
+- Codex cross-inspection round 1: first run could not read the repository (its sandbox rejected every command) and returned REVISE without findings; rerun with the diff and files pasted: REVISE. F1 in-flight orders across a purge or end rejected (SpawnTracker.Tick confirms or fails every order in the loop that takes it); F2 end-tick units outside the grace cleanup accepted and fixed (A17, defect); F3 the drain test does not model runtime timing, partly accepted (engine tests for the end tick; runtime timing checked in game); F4 D16 in ## Baseline still states the old rule, rejected (Baseline is frozen)
+- Codex verdict: READY (round 2); its advisories fixed: the ledger summary's "confirmed later" wording, and a ledger test that runs the end tick and a restart end to end
+- open: an in-game check that an ended event's units drain in batches of 5 to "0 left" (session 16), D16 re-passed, then D19/D39/D40 pass lines and `dod status foundation`
 

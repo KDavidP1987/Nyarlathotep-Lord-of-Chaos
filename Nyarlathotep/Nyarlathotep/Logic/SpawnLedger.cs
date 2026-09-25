@@ -33,8 +33,8 @@ public sealed record SpawnRequestResult(int Queued, string? Skipped);
 /// and the loser gets "skipped by MaxTrackedUnits".</item>
 /// <item>Spawns and despawns leave their queues at most the per-tick budget at a time.</item>
 /// <item>A despawn is released once: a key is queued at most once and leaves the ledger when released.</item>
-/// <item>A purge queues what is tracked at that moment and cancels the waiting spawns; a unit confirmed later is
-/// tracked but not in the draining batch.</item>
+/// <item>A purge queues what is tracked at that moment and cancels the waiting spawns; a unit spawned by a later
+/// request is tracked but not in the draining batch.</item>
 /// </list>
 /// Every caller runs on the server main thread (Design › States › Concurrency), so there are no locks.
 /// </summary>
