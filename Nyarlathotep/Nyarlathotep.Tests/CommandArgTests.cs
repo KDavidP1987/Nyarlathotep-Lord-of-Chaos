@@ -126,7 +126,7 @@ public class CommandArgTests
     [InlineData("action.radius", "2", null)]
     [InlineData("conditions.chancePercent", "0", "conditions.chancePercent must be 1-100")]
     [InlineData("name", "Night raid", null)]
-    [InlineData("name", "<b>x</b>", "name must be 1-40 characters, no < > or control characters")]
+    [InlineData("name", "<b>x</b>", "name must be 1-40 characters, no angle brackets or control characters")]
     [InlineData("trigger.type", "Manual", "field trigger.type is not settable; edit events.json and reload")]
     public void Settable_fields(string field, string value, string? error)
     {

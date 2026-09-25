@@ -92,7 +92,7 @@ public static class CommandArgs
         {
             "name" => value is not null && EventValidator.IsPlainText(value, 40)
                 ? Arg<object>.Of(value)
-                : Arg<object>.Bad("name must be 1-40 characters, no < > or control characters"),
+                : Arg<object>.Bad("name must be 1-40 characters, no angle brackets or control characters"),
             "durationSeconds" => IntIn(field, value, 30, 7200),
             "conditions.minPlayers" => IntIn(field, value, 0, 100),
             "conditions.cooldownMinutes" => IntIn(field, value, 0, 10080),

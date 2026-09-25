@@ -10,7 +10,7 @@ public static class TextSink
 {
     public const int AnnounceMax = 200;
     public const int NameMax = 20;
-    public const string AnnounceRule = "announce: 1-200 characters, no < > or control characters";
+    public const string AnnounceRule = "announce: 1-200 characters, no angle brackets or control characters";
 
     /// <summary>The trimmed text, or null with <paramref name="error"/> set to <see cref="AnnounceRule"/>.</summary>
     public static string? Announcement(string? raw, out string? error)

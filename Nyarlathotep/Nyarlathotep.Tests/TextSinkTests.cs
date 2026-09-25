@@ -41,7 +41,7 @@ public class TextSinkTests
     public void Empty_multiline_control_or_markup_announcements_are_refused(string? raw)
     {
         Assert.Null(TextSink.Announcement(raw, out var error));
-        Assert.Equal("announce: 1-200 characters, no < > or control characters", error);
+        Assert.Equal("announce: 1-200 characters, no angle brackets or control characters", error);
     }
 
     [Theory]
@@ -118,5 +118,20 @@ public class TextSinkTests
         // "commands: .a, .b" is 16 bytes and would need its comma when .c goes to the next line: 17 does not fit in 16.
         Assert.Equal(["commands: .a,", ".b, .c"], Messages.CommandList([".c", ".b", ".a"], maxBytes: 16));
         Assert.All(Messages.CommandList([".a", new string('x', 40)], maxBytes: 16), l => Assert.True(l.Length <= 16, l));
+    }
+
+    /// <summary>foundation A20: the game's chat reads "&lt; &gt;" as a rich-text tag, so a refusal that names the
+    /// forbidden characters by showing them loses words. The rule lines name them in words.</summary>
+    [Fact]
+    public void A_refusal_names_the_forbidden_characters_without_showing_them()
+    {
+        Assert.Null(TextSink.Announcement("<b>x</b>", out var announce));
+        var name = CommandArgs.SettableValue("name", "<b>x</b>").Error;
+        foreach (var line in new[] { announce!, name! })
+        {
+            Assert.DoesNotContain('<', line);
+            Assert.DoesNotContain('>', line);
+            Assert.Contains("angle brackets", line);
+        }
     }
 }

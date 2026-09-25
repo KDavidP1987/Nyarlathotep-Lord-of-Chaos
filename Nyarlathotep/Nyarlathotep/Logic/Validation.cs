@@ -128,9 +128,9 @@ public static class EventValidator
                 if (!EventKeys.Contains(p.Name)) throw new Fail($"unknown field {p.Name}");
 
             if (id is null || !IdRx.IsMatch(id)) throw new Fail("id must be 1-32 of a-z 0-9 -");
-            var name = Required(e, "name", "name must be 1-40 characters, no < > or control characters");
+            var name = Required(e, "name", "name must be 1-40 characters, no angle brackets or control characters");
             if (name.ValueKind != JsonValueKind.String || !IsPlainText(name.GetString()!, 40))
-                throw new Fail("name must be 1-40 characters, no < > or control characters");
+                throw new Fail("name must be 1-40 characters, no angle brackets or control characters");
             var enabledEl = Required(e, "enabled", "enabled must be true or false");
             if (enabledEl.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) throw new Fail("enabled must be true or false");
             var pillar = ParsePillar(Required(e, "pillar", "pillar is required"));
@@ -354,7 +354,7 @@ public static class EventValidator
 
     static IReadOnlyList<string> Lines(JsonElement v, string field)
     {
-        var rule = $"{field} must be 0-5 lines of 1-200 characters, no < > or control characters";
+        var rule = $"{field} must be 0-5 lines of 1-200 characters, no angle brackets or control characters";
         if (v.ValueKind != JsonValueKind.Array || v.GetArrayLength() > 5) throw new Fail(rule);
         var list = new List<string>();
         foreach (var x in v.EnumerateArray())
