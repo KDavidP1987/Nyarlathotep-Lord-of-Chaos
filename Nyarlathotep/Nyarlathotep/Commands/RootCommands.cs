@@ -18,7 +18,7 @@ internal static class RootCommands
     {
         if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }
         ctx.Reply(Messages.Overview(MyPluginInfo.PLUGIN_VERSION));
-        ctx.Reply(Messages.CommandList(All.Where(c => ctx.IsAdmin || !c.AdminOnly).Select(c => c.Text)));
+        foreach (var line in Messages.CommandList(All.Where(c => ctx.IsAdmin || !c.AdminOnly).Select(c => c.Text))) ctx.Reply(line);
     }
 
     static List<(string Text, bool AdminOnly)> _all;

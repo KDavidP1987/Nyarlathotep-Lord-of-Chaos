@@ -101,4 +101,21 @@ public class TextSinkTests
         Assert.Equal("ab", TextSink.CutToBytes(emoji, 5));
         Assert.Equal(emoji, TextSink.CutToBytes(emoji, 6));
     }
+
+    [Fact]
+    public void The_command_list_splits_at_the_chat_byte_limit_and_never_cuts_a_command()
+    {
+        var commands = Enumerable.Range(0, 60).Select(i => $".nyar command{i:D2} with a longer name").ToList();
+        var lines = Messages.CommandList(commands);
+        Assert.True(lines.Count > 1);
+        Assert.All(lines, l => Assert.True(System.Text.Encoding.UTF8.GetByteCount(l) <= Wire.MaxBytes, l));
+        Assert.StartsWith("commands: ", lines[0]);
+        Assert.All(lines.Take(lines.Count - 1), l => Assert.EndsWith(",", l));
+        var listed = lines.Select((l, i) => (i == 0 ? l["commands: ".Length..] : l).TrimEnd(','))
+            .SelectMany(l => l.Split(", ")).ToList();
+        Assert.Equal(commands.OrderBy(c => c, StringComparer.Ordinal), listed);
+        Assert.Equal(["commands: .a, .b"], Messages.CommandList([".b", ".a"]));
+        // "commands: .a, .b" is 16 bytes and would need its comma when .c goes to the next line: 17 does not fit in 16.
+        Assert.Equal(["commands: .a,", ".b, .c"], Messages.CommandList([".c", ".b", ".a"], maxBytes: 16));
+    }
 }

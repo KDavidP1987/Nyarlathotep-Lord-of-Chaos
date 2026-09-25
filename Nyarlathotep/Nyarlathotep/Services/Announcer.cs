@@ -26,7 +26,7 @@ internal static class Announcer
     static readonly LoginGate _logins = new();
     static Broadcaster _broadcaster = new(new GameUsers(), _ => { });
     static readonly FailureStreak _privateFaults = new();
-    static readonly List<(Entity User, DateTime DueUtc)> _notices = new();
+    static readonly List<(Entity User, ulong PlatformId, DateTime DueUtc)> _notices = new();
 
     /// <summary>A private login line waits this long, so it reaches a client that has finished loading.</summary>
     static readonly TimeSpan NoticeDelay = TimeSpan.FromSeconds(10);
@@ -119,28 +119,29 @@ internal static class Announcer
 
     /// <summary>Patches/UserConnectPatch: a user connected. An admin (adminauth'd, or on the admin list) connecting
     /// while something is degraded gets one private line <see cref="NoticeDelay"/> later, not again on a reconnect
-    /// within 60 s (D31).</summary>
+    /// within 60 s (D31). Nothing is queued when nothing is degraded at the connect (Codex 331bb3f F3).</summary>
     internal static void UserConnected(Entity userEntity)
     {
         if (!userEntity.Exists() || !userEntity.Has<User>()) return;   // a stale approved-user entry: nothing to greet
         var user = Core.EntityManager.GetComponentData<User>(userEntity);
         if (!_logins.ShouldGreet(user.PlatformId, DateTime.UtcNow)) return;
-        if (!IsAdmin(user)) return;
-        _notices.Add((userEntity, DateTime.UtcNow + NoticeDelay));
+        if (!IsAdmin(user) || HealthMonitor.Degraded().Count == 0) return;
+        _notices.Add((userEntity, user.PlatformId, DateTime.UtcNow + NoticeDelay));
     }
 
-    // The degraded list is read when the notice leaves, so a notice due after everything recovered is not sent.
+    // The degraded list is read when the notice leaves, so a notice due after everything recovered is not sent; the
+    // recipient must still be the same player and still an admin (Codex 331bb3f F2).
     static void SendDueNotices(DateTime now)
     {
         for (var i = _notices.Count - 1; i >= 0; i--)
         {
-            var (entity, due) = _notices[i];
+            var (entity, platformId, due) = _notices[i];
             if (due > now) continue;
             _notices.RemoveAt(i);
             if (!entity.Exists() || !entity.Has<User>()) continue;
             var user = Core.EntityManager.GetComponentData<User>(entity);
             var degraded = HealthMonitor.Degraded();
-            if (!user.IsConnected || degraded.Count == 0) continue;
+            if (!user.IsConnected || user.PlatformId != platformId || !IsAdmin(user) || degraded.Count == 0) continue;
             SendPrivate(user, AdminLines.DegradedNotice(degraded));
             Core.Log.LogInfo($"[nyar] degraded notice sent to admin {TextSink.Name(user.CharacterName.ToString())}");
         }

@@ -38,7 +38,7 @@ public class PrivacyTests
     static readonly Dictionary<string, Func<IEnumerable<string>>> Cases = new()
     {
         [nameof(Messages.Overview)] = () => [Messages.Overview("0.2.0")],
-        [nameof(Messages.CommandList)] = () => [Messages.CommandList([".nyar", ".nyar status", ".nyar api version"])],
+        [nameof(Messages.CommandList)] = () => Messages.CommandList([".nyar", ".nyar status", ".nyar api version"]),
         [nameof(Messages.Status)] = () => Messages.Status(Running, Now).Concat(Messages.Status([], Now)),
         [nameof(Messages.Render)] = () => AllTemplates().Select(t => Messages.Render(t, MessageContext.For(PlantedDefinition(), 5, 2))),
         [nameof(Messages.StartBanner)] = () => Running.SelectMany(r => Enumerable.Range(0, 3).Select(p => Messages.StartBanner(r.Definition, 10, p))),

@@ -173,3 +173,15 @@ yarfoundation-before.tsv waits for step 8 (D34), with the game client closed
 - session 16 log check: 0 unhandled, 73 nyar lines, 0 orphan errors, 0 unity errors; t-150's 150 units drained 5 a tick to "0 left"
 - dod: D16 re-passed after A16/A17; D19, D39, D40 pass lines; step 5 in-game list complete
 
+
+### Step 6 · 2026-09-25 · build 20b503c, READY at 5859b60
+- compile: 0 errors, 0 warnings (Release and Debug)
+- tests: `dotnet test Nyarlathotep/Nyarlathotep.sln` → Passed 529, Failed 0
+- mutation check: 22 planted faults each failed a test. Logic/AnnouncerCore: an offset longer than the time left not skipped, every crossed offset fired, a warning fired at or after the wave, a warning fired twice, a wave past the event's end, the daily banner without its key, on any weekday, naming past events, naming disabled events; share without cooldown, without the server cap, a refused share counted; login greeting every connect; the health line every tick; the queue without spacing, without the cap, dropping a warning first. Round 1 fixes: a capacity of 21, no stale-warning drop, no pruning in ShareLimiter and LoginGate. Round 3: Enqueue without DropExpired
+- preflight: exit 0; `-SelfTest` → "selftest: 26/26 checks, 3 fixtures each, 74 extra bad fixtures" (AnnouncementDefaults added in 331bb3f)
+- /code-review (inline): a warning still queued when its wave arrives would be sent late; fixed with QueuedLine.NotAfterUtc (dropped at the wave time) and a test
+- Codex cross-inspection round 1 REVISE: F1 `.nyar announce` limited to 16 unquoted words, partly accepted (VCF 0.10.4 has no remainder argument; the usage says to quote longer text); F2 keep General.AnnounceEvents as an alias, rejected (S-8's alias is its fallback, and migrating 0.1.0's `true` would turn warnings on, against Epic D41); F3 unbounded per-player maps, accepted (pruned on each call, `Tracked` tested); F4 the User read without checks at login, accepted (Exists/Has guard); F5 the capacity tests would pass with a larger queue, accepted (tests pin 20)
+- Codex round 2 REVISE: an expired warning could hold a queue slot while a live line was dropped; fixed with DropExpired before the full-queue drop
+- Codex round 3 REVISE: a caller outside the tick could still meet expired lines; Enqueue now runs DropExpired itself
+- Codex verdict: READY (round 4, 5859b60)
+- 331bb3f (step 7 prep: the announcement-defaults preflight check, `.nyar` listing the caller's commands, the degraded notice 10 s after login): compile, 529 tests, preflight and selftest as above

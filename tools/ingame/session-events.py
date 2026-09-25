@@ -2,7 +2,7 @@
 # Modes: boot (test events, schedules parked on Mon 04:00), go (schedules relative to now), d23a (boot's events plus one
 # with an unknown unit), d23b (the same file with a comma removed), restore-valid (d23a again), cool (the last valid file
 # with t-cool due every minute from now+2 to now+13, so a purge right after it has due times inside its cooldown). State in
-# %TEMP%/nyar-session.
+# %TEMP%/nyar-session. s17a/s17b: session 17 (see the mode's comment).
 import json, sys, datetime, io, os
 CFG = r"C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer\BepInEx\config\Nyarlathotep\events.json"
 HERE = os.environ.get("NYAR_SESSION_DIR") or os.path.join(os.environ["TEMP"], "nyar-session")
@@ -97,6 +97,23 @@ elif mode == "drain":
         "durationSeconds": 180, "action": a})
     write(doc)
     print("drain: t-150 at", hhmm(now + datetime.timedelta(minutes=3)))
+elif mode in ("s17a", "s17b"):
+    # session 17 (foundation step 6/7): t-warn is 3 waves of 1, 90 s apart, 240 s, warnings on, at a Point. s17a fires it
+    # by Schedule at argv[2] (HH:MM, today) and adds t-tonight at 23:55 for the daily banner to name; s17b makes it
+    # Manual (an admin starts it) after the first-run seed has been read.
+    now = datetime.datetime.now()
+    warn = {"id": "t-warn", "name": "Test warnings", "enabled": True, "pillar": "spawns", "durationSeconds": 240,
+            "announce": {"warnings": True}, "action": point(unit(1), waves=3, interval=90, radius=6)}
+    if mode == "s17a":
+        warn["trigger"] = {"type": "Schedule", "days": [now.strftime("%a")], "times": [sys.argv[2]]}
+        tonight = {"id": "t-tonight", "name": "Test tonight", "enabled": True, "pillar": "spawns", "durationSeconds": 60,
+                   "trigger": {"type": "Schedule", "days": [now.strftime("%a")], "times": ["23:55"]}, "action": point(unit(1))}
+        doc = {"SchemaVersion": 1, "events": [warn, tonight]}
+    else:
+        warn["trigger"] = {"type": "Manual"}
+        doc = {"SchemaVersion": 1, "events": [warn]}
+    write(doc)
+    print(mode, "written", sys.argv[2] if len(sys.argv) > 2 else "")
 elif mode == "restore-valid":
     write(json.load(open(os.path.join(HERE, "d23a.json"))))
     print("valid d23a restored")
