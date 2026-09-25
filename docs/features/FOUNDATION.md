@@ -191,6 +191,40 @@ PurgeCooldownSeconds 240, Debug.TimingLog on). Seen:
   unknown state", all while PersistenceV2 loaded the save, before "Startup Completed" and before the mod
   initializes, with GUIDs outside the prefab dump: the game's.
 
+### Session 13 · 2026-09-25
+Release build of cb1749f (reload logs its outcome), session 12's config. The steps were ordered so that only the one
+meant to fall in the purge cooldown does: V Blood first, then the reloads, then a `cool` marker that gives t-cool a
+due time every minute for 12 minutes, the purge right after it, and the restart last, armed by a `d21` marker.
+- D29, V Blood: "trigger: VBloodKilled CHAR_Bandit_Chaosarrow_VBlood" then "event t-vblood started by VBloodKilled
+  CHAR_Bandit_Chaosarrow_VBlood" once; `.nyar status` showed "Test V Blood: 1 min left". With session 12 this completes
+  all four triggers.
+- D23, reload half: a file with t-badunit (CHAR_Not_A_Real_Unit) logged "event t-badunit: unknown unit
+  CHAR_Not_A_Real_Unit" and "events: reloaded: 6 valid, 1 disabled"; `.nyar event list` showed the six and "t-badunit
+  disabled: unknown unit CHAR_Not_A_Real_Unit", as did `event info`. The same file with a comma removed replied and
+  logged "events.json rejected: line 7 position 7; the last valid set stays (7 events)", and the list was unchanged.
+  Two of three `event list` replies right after that did not show in chat (nothing in the log; A8's dropped replies).
+- D20, the rest: "purge: 2 events ended, 31 units queued, 0 spawns cancelled, cooldown 240s", despawn batches of 5 to
+  0 left, `.nyar status` 0 active events and 0 tracked units; then "event t-cool not started by Schedule … 08:53:
+  purge cooldown active" for 08:53, 08:54, 08:55 and 08:56, and "event t-cool started by Schedule … 08:57" once the
+  cooldown ended at 08:56:15.
+- D21 setup: t-manual (30 units at the admin) started after the cooldown; the watcher stopped the server right after
+  the next "Finished Saving" with state.json listing 2 instances and 31 units.
+- Log check: 0 unhandled, 146 nyar lines, 0 orphan errors, 0 unity errors. Warnings: the known UserConnect,
+  Beelzebub and Il2CppInterop lines, and the test's own (t-badunit, the rejected file, the purge); the server log's
+  452 matches are the 226 PrefabLookupMap save-load warnings (two lines each), all before the mod starts.
+
+### Session 14 · 2026-09-25
+Same build; caps set to MaxUnitsPerWave 5, MaxTrackedUnits 8, MaxConcurrentEvents 1 (which does not touch the boot
+sweep), and only manual events enabled, with t-caps asking for 2 waves of 20.
+- D21: "event t-manual cancelled by restart", "event t-cool cancelled by restart", "boot marker sweep: 31 found, 31
+  queued for despawn (31 listed in state.json)", despawn batches of 5 to 0 left; state.json then held no instance and
+  no unit, and `.nyar status` showed no active events and 0 tracked units.
+- D22: "wave 1: clamped by MaxUnitsPerWave: 20 -> 5", 5 spawned; "wave 2: clamped by MaxUnitsPerWave: 20 -> 5" and
+  "skipped by MaxTrackedUnits: 2 of 5", 3 spawned; `.nyar status` 8 tracked; with t-caps running `.nyar event start
+  t-manual` replied "skipped by MaxConcurrentEvents"; `event stop t-caps` queued the 8 and drained them.
+- Log check: 0 unhandled, 36 nyar lines, 0 orphan errors, 0 unity errors; the server log's only errors are the
+  save-load PrefabLookupMap lines. The test config was restored afterwards.
+
 ## Open questions
 
 None open. D28's "still loading" reply, which cannot be seen in game, is proven by a static check instead

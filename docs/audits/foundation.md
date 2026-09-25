@@ -147,5 +147,8 @@ yarfoundation-before.tsv waits for step 8 (D34), with the game client closed
 - Codex verdict: READY (round 2)
 - decisions the plan leaves to the build: conditions gate automatic starts only; a natural end cancels waiting orders at the end and queues units at end + grace; a stop or fault queues them at once; Point locations spawn at y = 0; `.nyar event` is one command with a verb; Debug.TimingLog is a release cfg key; the boot line reads "boot marker sweep: <k> found, <k> queued" (D21)
 - session 12 log check: 0 unhandled, 340 nyar lines, 0 orphan errors, 0 unity errors
-- open (next session): session 13 redoes D23 (both reloads), the D29 V Blood start (kill outside the purge cooldown), D20's schedule inside the cooldown, and the D21 restart (auto-stop after an autosave); session 14 checks D21 at boot and runs D22 (MaxUnitsPerWave 5, MaxTrackedUnits 8, MaxConcurrentEvents 1); session 15 is a Debug build for D25 and D24's 150- and 500-unit runs. Then D19/D39/D40 pass lines, `dod status foundation`, commit
+- session 13 log check: 0 unhandled, 146 nyar lines, 0 orphan errors, 0 unity errors (D29 V Blood, D23 reloads, D20 schedule in the cooldown, D21 setup)
+- session 14 log check: 0 unhandled, 36 nyar lines, 0 orphan errors, 0 unity errors (D21 boot, D22)
+- tools/ingame: the comment lines of both helpers had a path's "\n" turned into a line break, which left a bare line Python could not parse; fixed, with the `cool` and `d21` markers and a `d22` mode added
+- open (next session): session 15 is a Debug build for D25 and D24's 150- and 500-unit runs. Then D19/D39/D40 pass lines, `dod status foundation`, commit
 

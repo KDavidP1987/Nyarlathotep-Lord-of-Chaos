@@ -1,7 +1,8 @@
 # In-game session helper: writes the dev server's events.json for foundation's step 5 tests.
-# Modes: boot (test events, schedules parked on Mon 04:00), go (schedules relative to now), d23a (adds an event with an
-# unknown unit), d23b (the same file with a comma removed), restore-valid (d23a again). State in %TEMP%
-yar-session.
+# Modes: boot (test events, schedules parked on Mon 04:00), go (schedules relative to now), d23a (boot's events plus one
+# with an unknown unit), d23b (the same file with a comma removed), restore-valid (d23a again), cool (the last valid file
+# with t-cool due every minute from now+2 to now+13, so a purge right after it has due times inside its cooldown). State in
+# %TEMP%/nyar-session.
 import json, sys, datetime, io, os
 CFG = r"C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer\BepInEx\config\Nyarlathotep\events.json"
 HERE = os.environ.get("NYAR_SESSION_DIR") or os.path.join(os.environ["TEMP"], "nyar-session")
@@ -36,7 +37,7 @@ elif mode == "go":
     json.dump(doc, open(os.path.join(HERE, "go.json"), "w"), indent=2)
     print("go: t-sched at", hhmm(sched), "t-cool", cool)
 elif mode == "d23a":
-    doc = json.load(open(os.path.join(HERE, "go.json")))
+    doc = build("Mon", ["04:00"], ["04:30"])
     doc["events"].append({"id": "t-badunit", "name": "Test unknown unit", "enabled": True, "pillar": "spawns", "trigger": {"type": "Manual"}, "durationSeconds": 60, "action": point([{"prefab": "CHAR_Not_A_Real_Unit", "count": 1}])})
     json.dump(doc, open(os.path.join(HERE, "d23a.json"), "w"), indent=2)
     write(doc)
@@ -49,6 +50,25 @@ elif mode == "d23b":
     lines[i] = lines[i].rstrip(",")
     write(None, "\n".join(lines))
     print("d23b written: comma removed on line", i + 1)
+elif mode == "cool":
+    src = os.path.join(HERE, "d23a.json")
+    doc = json.load(open(src)) if os.path.exists(src) else build("Mon", ["04:00"], ["04:30"])
+    now = datetime.datetime.now().replace(second=0, microsecond=0)
+    cool = [hhmm(now + datetime.timedelta(minutes=2 + k)) for k in range(12)]
+    ev = next(e for e in doc["events"] if e["id"] == "t-cool")
+    ev["trigger"] = {"type": "Schedule", "days": [now.strftime("%a")], "times": cool}
+    write(doc)
+    json.dump(doc, open(os.path.join(HERE, "cool.json"), "w"), indent=2)
+    print("cool: t-cool", cool)
+elif mode == "d22":
+    # caps test (D22): only manual events enabled, so MaxConcurrentEvents 1 is taken by nothing automatic
+    doc = build("Mon", ["04:00"], ["04:30"])
+    for e in doc["events"]:
+        if e["trigger"]["type"] != "Manual": e["enabled"] = False
+    doc["events"].append({"id": "t-caps", "name": "Test caps", "enabled": True, "pillar": "spawns", "trigger": {"type": "Manual"}, "durationSeconds": 120,
+        "action": {"type": "SpawnWaves", "units": unit(20), "waves": 2, "intervalSeconds": 20, "radius": 8, "location": {"type": "Admin"}}})
+    write(doc)
+    print("d22 written")
 elif mode == "restore-valid":
     write(json.load(open(os.path.join(HERE, "d23a.json"))))
     print("valid d23a restored")
