@@ -99,8 +99,9 @@ public sealed class ActiveEvent(RunningInstance instance, string trigger, (float
 public sealed record WaveDue(ActiveEvent Event, int Wave, int Waves);
 
 /// <summary>The units of an event that ended are queued for despawn at <see cref="DueUtc"/> (its end + GraceSeconds);
-/// only units spawned before <see cref="SpawnedBefore"/> belong to that instance, so a restart of the same event inside
-/// the grace keeps its new units.</summary>
+/// only units spawned before <see cref="SpawnedBefore"/> belong to that instance. It is unbounded until the same event
+/// starts again inside the grace, and then that start's time, so the restart keeps its new units and a unit spawned in
+/// the tick the event ended still belongs to the ended instance (A17).</summary>
 public sealed record Cleanup(string EventId, DateTime SpawnedBefore, DateTime DueUtc);
 
 /// <summary>The running events (D6, D16, D25, Business rules 2 and 8). A start reads the current definition set; the
@@ -136,6 +137,9 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
         if (error is not null) return error;
         _active[id] = new ActiveEvent(instance!, trigger, origin);
         Starts[id] = utcNow;
+        for (var i = 0; i < _cleanups.Count; i++)                   // the ended instance's units are all older (A17)
+            if (_cleanups[i].EventId == id && _cleanups[i].SpawnedBefore > utcNow)
+                _cleanups[i] = _cleanups[i] with { SpawnedBefore = utcNow };
         return null;
     }
 
@@ -173,7 +177,7 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
         foreach (var a in ended)
         {
             Remove(a.Id);
-            _cleanups.Add(new Cleanup(a.Id, a.Instance.EndsUtc, a.Instance.EndsUtc.AddSeconds(graceSeconds)));
+            _cleanups.Add(new Cleanup(a.Id, DateTime.MaxValue, a.Instance.EndsUtc.AddSeconds(graceSeconds)));
         }
         return ended;
     }

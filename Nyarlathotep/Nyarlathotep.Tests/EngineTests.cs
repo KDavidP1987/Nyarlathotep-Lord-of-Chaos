@@ -87,8 +87,21 @@ public class EngineTests
         Assert.Empty(e.Catalog.Running);
         Assert.Empty(e.DueCleanups(T0.AddSeconds(629)));
         var c = Assert.Single(e.DueCleanups(T0.AddSeconds(630)));
-        Assert.Equal(new Cleanup("raid", T0.AddSeconds(600), T0.AddSeconds(630)), c);
+        Assert.Equal(new Cleanup("raid", DateTime.MaxValue, T0.AddSeconds(630)), c);   // A17: the end tick's spawns too
         Assert.Empty(e.DueCleanups(T0.AddSeconds(700)));        // once
+    }
+
+    [Fact]
+    public void A_restart_inside_the_grace_bounds_the_ended_instances_cleanup_at_its_start()
+    {
+        var e = Engine(Json.Event("raid"), Json.Event("other"));
+        e.Start("raid", "manual", T0, Open());
+        e.Start("other", "manual", T0, Open());
+        e.Expire(T0.AddSeconds(600), 30);
+        Assert.Null(e.Start("raid", "manual", T0.AddSeconds(610), Open()));
+        Assert.Equal(new Cleanup("raid", T0.AddSeconds(610), T0.AddSeconds(630)),
+            Assert.Single(e.PendingCleanups, c => c.EventId == "raid"));
+        Assert.Equal(DateTime.MaxValue, Assert.Single(e.PendingCleanups, c => c.EventId == "other").SpawnedBefore);
     }
 
     [Fact]

@@ -106,8 +106,8 @@ public sealed class SpawnLedger(LedgerLimits limits)
     }
 
     /// <summary>The order spawned as <paramref name="key"/>: its slot becomes a tracked unit. False when the order
-    /// was not in flight (cancelled by a purge meanwhile) or the key is already tracked; the caller then despawns the
-    /// entity itself.</summary>
+    /// is not in flight or the key is already tracked; the caller then despawns the entity itself. SpawnTracker confirms
+    /// or fails every order in the tick that takes it, so none is in flight when a purge or an event end runs.</summary>
     public bool Confirm(SpawnOrder order, long key, DateTime utcNow)
     {
         if (!_inFlight.Remove(order.Ticket)) return false;
@@ -173,8 +173,8 @@ public sealed class SpawnLedger(LedgerLimits limits)
 
     /// <summary>An event's end (Business rules 2): queues its tracked units spawned before <paramref name="spawnedBefore"/>
     /// and, with <paramref name="cancelOrders"/>, cancels its waiting orders. Returns the units newly queued and the orders
-    /// cancelled. An order already in flight is confirmed later and then lives out its own LifeTime. The despawn after
-    /// the grace passes false: a restart of the same event inside the grace owns the orders waiting then.</summary>
+    /// cancelled. The despawn after the grace passes false: a restart of the same event inside the grace owns the
+    /// orders waiting then.</summary>
     public (int Queued, int Cancelled) EndEvent(string eventId, DateTime spawnedBefore, bool cancelOrders = true)
     {
         var cancelled = 0;
