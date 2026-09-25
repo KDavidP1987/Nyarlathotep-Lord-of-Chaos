@@ -124,8 +124,9 @@ internal static class Announcer
     {
         if (!userEntity.Exists() || !userEntity.Has<User>()) return;   // a stale approved-user entry: nothing to greet
         var user = Core.EntityManager.GetComponentData<User>(userEntity);
-        if (!_logins.ShouldGreet(user.PlatformId, DateTime.UtcNow)) return;
+        // The reconnect gate is consulted last, so a connect that queues nothing does not use it up (Codex round 2).
         if (!IsAdmin(user) || HealthMonitor.Degraded().Count == 0) return;
+        if (!_logins.ShouldGreet(user.PlatformId, DateTime.UtcNow)) return;
         _notices.Add((userEntity, user.PlatformId, DateTime.UtcNow + NoticeDelay));
     }
 

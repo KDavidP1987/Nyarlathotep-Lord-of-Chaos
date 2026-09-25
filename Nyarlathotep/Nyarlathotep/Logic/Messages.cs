@@ -85,7 +85,7 @@ public static class Messages
 
     /// <summary>The commands lines of `.nyar` (D26): the ones the caller may run, as given, sorted, "commands: " first.
     /// A new line starts before a command that would take a line past <paramref name="maxBytes"/>, so no command is cut
-    /// (Codex 331bb3f F1).</summary>
+    /// unless it alone is longer than a line (Codex 331bb3f F1, round 2).</summary>
     public static IReadOnlyList<string> CommandList(IEnumerable<string> commands, int maxBytes = Wire.MaxBytes)
     {
         var lines = new List<string>();
@@ -103,7 +103,7 @@ public static class Messages
             empty = false;
         }
         lines.Add(line);
-        return lines;
+        return [.. lines.Select(l => TextSink.CutToBytes(l, maxBytes))];   // a single command longer than a line is cut
     }
 
     /// <summary>`.nyar status` for anyone: one line per running event, name and minutes left, or "No active

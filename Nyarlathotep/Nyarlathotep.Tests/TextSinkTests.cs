@@ -117,5 +117,6 @@ public class TextSinkTests
         Assert.Equal(["commands: .a, .b"], Messages.CommandList([".b", ".a"]));
         // "commands: .a, .b" is 16 bytes and would need its comma when .c goes to the next line: 17 does not fit in 16.
         Assert.Equal(["commands: .a,", ".b, .c"], Messages.CommandList([".c", ".b", ".a"], maxBytes: 16));
+        Assert.All(Messages.CommandList([".a", new string('x', 40)], maxBytes: 16), l => Assert.True(l.Length <= 16, l));
     }
 }
