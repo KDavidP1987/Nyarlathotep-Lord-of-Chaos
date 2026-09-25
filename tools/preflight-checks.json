@@ -93,6 +93,19 @@
       }
     },
     {
+      "name": "AnnouncementDefaults",
+      "function": "Test-CheckAnnouncementDefaults",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/AnnouncementDefaults",
+      "inputs": [
+        "Nyarlathotep/Nyarlathotep/Config/Settings.cs [Announcements] bool Bind defaults"
+      ],
+      "plant": {
+        "bad": "EventBanners Bind default set to true",
+        "bad-2": "the PlayerShare Bind removed (4 switches)"
+      }
+    },
+    {
       "name": "Commands",
       "function": "Test-CheckCommands",
       "mode": "default",

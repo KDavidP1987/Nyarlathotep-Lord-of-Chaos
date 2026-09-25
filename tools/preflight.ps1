@@ -271,6 +271,22 @@ function Test-CheckPillarDefaults([string]$Root) {
     return New-Result $true "pillar defaults: all off ($($binds.Count) switches, $($templates.Count) templates)"
 }
 
+# Every bool Bind in [Announcements] of Config/Settings.cs defaults to false, and the section binds the five switches
+# WaveWarnings, EventBanners, DailyBanner, LoginStats and PlayerShare (Epic D41, foundation D17).
+$script:AnnouncementSwitches = @('WaveWarnings', 'EventBanners', 'DailyBanner', 'LoginStats', 'PlayerShare')
+
+function Test-CheckAnnouncementDefaults([string]$Root) {
+    $settings = Read-Text $Root "$PkgRel/Config/Settings.cs"
+    if ($null -eq $settings) { return New-Result $false 'announcement defaults: Config/Settings.cs not found' }
+    $binds = [regex]::Matches((Remove-CsComments $settings), 'Bind\(\s*"Announcements"\s*,\s*"([^"]+)"\s*,\s*(true|false)\b')
+    $names = @($binds | ForEach-Object { $_.Groups[1].Value })
+    $missing = @($script:AnnouncementSwitches | Where-Object { $names -notcontains $_ })
+    if ($missing) { return New-Result $false "announcement defaults: switch not bound: $($missing -join ', ')" }
+    $on = @($binds | Where-Object { $_.Groups[2].Value -ne 'false' } | ForEach-Object { $_.Groups[1].Value })
+    if ($on) { return New-Result $false "announcement defaults: ON by default: $($on -join ', ')" }
+    return New-Result $true "announcement defaults: all off ($($binds.Count) switches)"
+}
+
 $script:PublicCommands = @('nyar', 'status', 'help', 'me', 'top', 'hide', 'show', 'version', 'sub')   # Epic D5 (A4)
 
 function Test-CheckCommands([string]$Root) {

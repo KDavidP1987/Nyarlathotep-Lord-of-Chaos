@@ -83,6 +83,10 @@ public static class Messages
         $"Nyarlathotep, Lord of Chaos (v{version}) - server events: empowered factions, " +
         "sieges, defended zones, boss reinforcements, and spawn waves. Try .nyar status.";
 
+    /// <summary>The commands line of `.nyar` (D26): the ones the caller may run, as given, sorted.</summary>
+    public static string CommandList(IEnumerable<string> commands) =>
+        "commands: " + string.Join(", ", commands.OrderBy(c => c, StringComparer.Ordinal));
+
     /// <summary>`.nyar status` for anyone: one line per running event, name and minutes left, or "No active
     /// events.".</summary>
     public static IReadOnlyList<string> Status(IEnumerable<RunningInstance> running, DateTime utcNow)
