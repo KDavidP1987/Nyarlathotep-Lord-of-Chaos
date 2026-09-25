@@ -197,14 +197,28 @@ public sealed class SpawnLedger(LedgerLimits limits)
 
     public bool AnythingToPurge => Purgeable > 0;
 
+    /// <summary>Slack added to the drain time in <see cref="DrainMarginSeconds"/> (A16).</summary>
+    public const int DrainSlackSeconds = 60;
+
+    /// <summary>How long the budgeted queue needs, at worst, to despawn every tracked unit, plus
+    /// <see cref="DrainSlackSeconds"/>: ceil(maxTracked / maxDespawnsPerTick) one-second ticks + 60 s (A16).</summary>
+    public static int DrainMarginSeconds(int maxTracked, int maxDespawnsPerTick)
+    {
+        var perTick = Math.Max(1, maxDespawnsPerTick);
+        return (Math.Max(0, maxTracked) + perTick - 1) / perTick + DrainSlackSeconds;
+    }
+
     /// <summary>A unit's LifeTime in seconds (Business rules 2): a `.nyar spawn` unit lives
-    /// <paramref name="manualLifetimeSeconds"/>; an event's unit lives min(its own lifetime, event end + grace − now),
-    /// at least 1 s.</summary>
+    /// <paramref name="manualLifetimeSeconds"/>. An event's unit is due for despawn at min(its own lifetime, event end
+    /// + grace); when the event end decides that, its LifeTime runs <paramref name="drainMarginSeconds"/> past it, so
+    /// the budgeted queue removes it and LifeTime is only the backstop if the mod stops (A16). At least 1 s.</summary>
     public static int LifetimeSeconds(DateTime utcNow, DateTime? eventEndUtc, int? unitLifetimeSeconds, int graceSeconds,
-        int manualLifetimeSeconds)
+        int manualLifetimeSeconds, int drainMarginSeconds)
     {
         if (eventEndUtc is null) return manualLifetimeSeconds;
+        var byEvent = eventEndUtc.Value.AddSeconds(graceSeconds);
         var expiry = Precedence.UnitExpiryUtc(utcNow, unitLifetimeSeconds, eventEndUtc.Value, graceSeconds);
+        if (expiry == byEvent) expiry = expiry.AddSeconds(drainMarginSeconds);
         return Math.Max(1, (int)Math.Ceiling((expiry - utcNow).TotalSeconds));
     }
 

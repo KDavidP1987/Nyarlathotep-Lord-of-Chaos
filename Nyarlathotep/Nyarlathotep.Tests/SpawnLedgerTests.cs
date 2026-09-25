@@ -256,14 +256,43 @@ public class SpawnLedgerTests
     }
 
     [Fact]
-    public void LifeTime_is_event_end_plus_grace_and_the_event_end_wins()
+    public void LifeTime_is_the_due_time_plus_the_drain_margin_and_the_event_end_wins()
     {
         var end = Now.AddMinutes(10);
-        Assert.Equal(630, SpawnLedger.LifetimeSeconds(Now, end, null, 30, 300));
-        Assert.Equal(120, SpawnLedger.LifetimeSeconds(Now, end, 120, 30, 300));
-        Assert.Equal(630, SpawnLedger.LifetimeSeconds(Now, end, 7200, 30, 300));
-        Assert.Equal(1, SpawnLedger.LifetimeSeconds(end.AddMinutes(5), end, null, 30, 300));
-        Assert.Equal(300, SpawnLedger.LifetimeSeconds(Now, null, null, 30, 300));
+        var margin = SpawnLedger.DrainMarginSeconds(150, 5);                // 30 ticks + 60 s
+        Assert.Equal(90, margin);
+        Assert.Equal(630 + 90, SpawnLedger.LifetimeSeconds(Now, end, null, 30, 300, margin));
+        Assert.Equal(120, SpawnLedger.LifetimeSeconds(Now, end, 120, 30, 300, margin));      // its own shorter lifetime
+        Assert.Equal(630 + 90, SpawnLedger.LifetimeSeconds(Now, end, 7200, 30, 300, margin));
+        Assert.Equal(630 + 90, SpawnLedger.LifetimeSeconds(Now, end, 630, 30, 300, margin));  // a tie is the event's
+        Assert.Equal(1, SpawnLedger.LifetimeSeconds(end.AddMinutes(5), end, null, 30, 300, margin));
+        Assert.Equal(300, SpawnLedger.LifetimeSeconds(Now, null, null, 30, 300, margin));
+    }
+
+    [Theory]
+    [InlineData(1, 20, 61)]
+    [InlineData(150, 5, 90)]
+    [InlineData(151, 5, 91)]
+    [InlineData(500, 1, 560)]
+    [InlineData(500, 20, 85)]
+    public void The_drain_margin_covers_a_full_queue_at_the_budget(int maxTracked, int perTick, int expected) =>
+        Assert.Equal(expected, SpawnLedger.DrainMarginSeconds(maxTracked, perTick));
+
+    [Fact]
+    public void An_event_unit_outlives_the_drain_of_a_full_queue()
+    {
+        // A16: a full ledger queued at end + grace and drained at the budget is empty before its units' LifeTime ends.
+        var end = Now.AddMinutes(10);
+        var l = Ledger(maxTracked: 12, perWave: 12, spawnsPerTick: 12, despawnsPerTick: 5);
+        var lifetime = SpawnLedger.LifetimeSeconds(Now, end, null, 30, 300,
+            SpawnLedger.DrainMarginSeconds(l.Limits.MaxTracked, l.Limits.DespawnsPerTick));
+        Assert.Equal(12, Ask(l, 12, "raid").Queued);
+        Assert.Equal(12, SpawnAll(l).Count);
+        Assert.Equal((12, 0), l.EndEvent("raid", DateTime.MaxValue));
+        var ticks = 0;
+        for (; l.PendingDespawns > 0; ticks++) Assert.True(l.TakeDespawns().Count <= l.Limits.DespawnsPerTick);
+        Assert.Equal(3, ticks);
+        Assert.True(end.AddSeconds(30 + ticks) < Now.AddSeconds(lifetime));
     }
 
     [Fact]

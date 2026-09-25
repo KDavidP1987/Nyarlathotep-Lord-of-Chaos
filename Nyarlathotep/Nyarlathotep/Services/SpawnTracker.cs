@@ -87,7 +87,7 @@ internal static class SpawnTracker
 
         var angle = _random.NextDouble() * 2 * Math.PI;
         var lifetime = SpawnLedger.LifetimeSeconds(DateTime.UtcNow, null, null, Settings.Limit(Limits.GraceSeconds),
-            Settings.Limit(Limits.ManualSpawnLifetimeSeconds));
+            Settings.Limit(Limits.ManualSpawnLifetimeSeconds), 0);
         var result = _ledger.Request(prefab, null, count, lifetime, tuning, i =>
         {
             var (x, z) = SpawnLedger.Around(at.x, at.z, PlaceRadius, i, count, angle);
