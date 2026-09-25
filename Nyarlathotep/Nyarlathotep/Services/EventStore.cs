@@ -24,8 +24,7 @@ internal static class EventStore
         {
             if (!Persistence.Events.Exists()) Seed();
             // The boot load is the operator's file, so it runs as Operator (D10).
-            var reply = Gateway.Run(ActionKind.LoadDefinitions, Actor.Operator, Reload);
-            Core.Log.LogInfo($"[nyar] events: {reply}");
+            Gateway.Run(ActionKind.LoadDefinitions, Actor.Operator, Reload);            // Reload logs its outcome
         }
         catch (Exception ex)
         {
@@ -48,7 +47,9 @@ internal static class EventStore
         }
         foreach (var line in result.Log) Core.Log.LogWarning($"[nyar] {line}");
         var disabled = result.Log.Count;
-        return $"reloaded: {Catalog.Current.All.Count - disabled} valid, {disabled} disabled";
+        var reply = $"reloaded: {Catalog.Current.All.Count - disabled} valid, {disabled} disabled";
+        Core.Log.LogInfo($"[nyar] events: {reply}");                           // at boot and on every `.nyar event reload`
+        return reply;
     }
 
     /// <summary>`.nyar event set`, `enable` and `disable`: changes one field of event <paramref name="id"/> in events.json

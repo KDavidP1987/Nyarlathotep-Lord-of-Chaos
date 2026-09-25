@@ -167,6 +167,30 @@ autosave before the purge, because the server was stopped without a final save. 
 (D21), with 0 orphan errors and 0 Unity errors. The server was stopped after the next "Finished Saving". Warnings:
 Beelzebub and Il2CppInterop in the BepInEx log; the game's baseline warnings in the server log.
 
+### Session 12 · 2026-09-24
+Step 5 engine, Release build of 32c11b5, test events written by tools/ingame (t-manual 2 waves of 15 CHAR_Bandit_Deadeye
+at the admin, t-sched and its disabled twin, t-night, t-vblood, t-cool; every pillar on, MaxConcurrentEvents 5,
+PurgeCooldownSeconds 240, Debug.TimingLog on). Seen:
+- D29, three of four triggers: "event t-sched started by Schedule 2026-09-24 23:43" once, t-sched-twin never;
+  "event t-night started by GameTime night" once on each of 12 night edges (the server ran about 3.5 h before the
+  session; each night one start, each followed by "ended", the grace despawn and "despawn batch: 2 of 2");
+  "event t-manual started by manual", and a second start replied "already active". The V Blood kill
+  ("trigger: VBloodKilled CHAR_Forest_Wolf_VBlood") fell inside the purge cooldown, so t-vblood logged "not started
+  … purge cooldown active": the refusal is right, the start is still to be seen.
+- Waves: "wave 1/2: 15 units queued" and "wave 2/2" 20 s later, each spawned in batches of 10 then 5
+  (MaxSpawnsPerTick 10); after the end, "15 units queued for despawn after the grace" and batches of 5
+  (MaxDespawnsPerTick 5).
+- D20, event half: with t-manual (30 units) and t-sched running, `purge confirm` logged "purge: 2 events ended, 32
+  units queued, 0 spawns cancelled, cooldown 240s", despawn batches of at most 5 to 0 left, and a second confirm was
+  a no-op; manual and V Blood starts in the cooldown were refused. Not yet seen: a schedule due inside the cooldown.
+- D23: not exercised. After the d23a and d23b markers no `.nyar event reload` ran, and a successful admin reload
+  logged nothing anyway (only the boot load did); EventStore.Reload now logs its outcome every time.
+- D24, idle: "tick timing: avg 0.234 ms" in the first idle minute (target under 1 ms; the 5-minute runs are open).
+- Warnings: the UserConnect hook reports unavailable until step 6 patches it; Beelzebub and Il2CppInterop in the
+  BepInEx log; in the server log 226 Unity warnings "PrefabLookupMap.TryGet - Prefab with PrefabGUID … is in an
+  unknown state", all while PersistenceV2 loaded the save, before "Startup Completed" and before the mod
+  initializes, with GUIDs outside the prefab dump: the game's.
+
 ## Open questions
 
 None open. D28's "still loading" reply, which cannot be seen in game, is proven by a static check instead

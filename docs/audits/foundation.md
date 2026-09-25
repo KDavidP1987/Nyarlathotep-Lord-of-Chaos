@@ -136,3 +136,16 @@ yarfoundation-before.tsv waits for step 8 (D34), with the game client closed
 - session 8 log check: 0 unhandled, 10 nyar lines, 0 orphan errors, 0 unity errors
 - session 9 log check: 0 unhandled, 3 nyar lines, 0 orphan errors, 0 unity errors
 - session 10 log check: 0 unhandled, 8 nyar lines, 0 orphan errors, 0 unity errors
+
+### Step 5 · 2026-09-24 · in progress (build 32c11b5)
+- compile: 0 errors, 0 warnings (Release and Debug)
+- tests: `dotnet test Nyarlathotep/Nyarlathotep.sln` → Passed 495, Failed 0
+- mutation check: 13 planted engine faults each failed a test (the D40 enabled filter, minPlayers, cooldown, chance and window bounds, a wave after the end, the fault limit, grace, expiry, the EndEvent cutoff and order cancel, VBlood "any", the LastStart getter)
+- preflight: exit 0 with "ready guard: 6/6 commands start with the IsReady guard" and "gateway: only ActionGateway mutates (14 call sites)"; `-SelfTest` → "selftest: 25/25 checks, 3 fixtures each, 73 extra bad fixtures"; each ReadyGuard bad fixture fails on its planted command
+- /code-review (inline): the grace cleanup cancelled a restarted instance's waiting orders; fixed with cancelOrders: false and a test
+- Codex cross-inspection round 1 REVISE: late orders after a natural end (fixed: cancelled at expiry), cooldown not persisted (fixed, A15), Point starts needing the admin's position (fixed), UserConnect reported available without its patch (fixed), an exception outside the phases stopping the tick (fixed); dispatched services calling each other rejected (D11 allows it; the gateway check passes). Round 2 READY
+- Codex verdict: READY (round 2)
+- decisions the plan leaves to the build: conditions gate automatic starts only; a natural end cancels waiting orders at the end and queues units at end + grace; a stop or fault queues them at once; Point locations spawn at y = 0; `.nyar event` is one command with a verb; Debug.TimingLog is a release cfg key; the boot line reads "boot marker sweep: <k> found, <k> queued" (D21)
+- session 12 log check: 0 unhandled, 340 nyar lines, 0 orphan errors, 0 unity errors
+- open (next session): session 13 redoes D23 (both reloads), the D29 V Blood start (kill outside the purge cooldown), D20's schedule inside the cooldown, and the D21 restart (auto-stop after an autosave); session 14 checks D21 at boot and runs D22 (MaxUnitsPerWave 5, MaxTrackedUnits 8, MaxConcurrentEvents 1); session 15 is a Debug build for D25 and D24's 150- and 500-unit runs. Then D19/D39/D40 pass lines, `dod status foundation`, commit
+
