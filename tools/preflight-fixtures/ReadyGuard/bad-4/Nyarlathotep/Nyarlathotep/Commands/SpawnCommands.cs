@@ -16,7 +16,7 @@ internal static class SpawnCommands
     [Command("spawn", usage: "<unit> [count] [level|+n|-n] [hp] [power]", description: "Spawn tracked units around you.", adminOnly: true)]
     public static void Spawn(ChatCommandContext ctx, string unit, string count = "", string level = "", string hp = "", string power = "")
     {
-        if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }
+        if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); }
         var n = CommandArgs.Count(count, Settings.Limit(Limits.MaxUnitsPerWave));
         var lv = CommandArgs.Level(level);
         var hpx = CommandArgs.Multiplier("hp", hp);

@@ -1182,6 +1182,39 @@ function Test-CheckAdminList([string]$Root) {
     return New-Result $true "admin list: $listed admin commands, equal to the commands check"
 }
 
+# Every [Command] method, in any .cs file git sees, has as its first statement
+# "if (!Core.IsReady) { <ctx>.Reply(Messages.StillLoading); return; }", <ctx> being its first parameter, so a command
+# typed before the mod is ready replies "still loading" and does nothing (foundation D39, A12). Literals and comments
+# are blanked first, so a "(" in a description cannot move the parameter list; an expression body fails.
+function Test-CheckReadyGuard([string]$Root) {
+    $n = 0; $bad = @()
+    $guard = '\G\s*if\s*\(\s*!\s*Core\s*\.\s*IsReady\s*\)\s*\{\s*{0}\s*\.\s*Reply\s*\(\s*Messages\s*\.\s*StillLoading\s*\)\s*;\s*return\s*;\s*\}'
+    foreach ($f in Get-CsFiles $Root) {
+        $t = Remove-CsLiterals (Read-Text $Root $f)
+        foreach ($m in [regex]::Matches($t, '\[Command(?:Attribute)?\s*\((?:[^()]|\((?:[^()])*\))*\)\s*\]')) {
+            $n++
+            $at = $m.Index + $m.Length
+            $skip = [regex]::new('\G\s*(?:\[(?:[^\[\]]|\[[^\]]*\])*\]\s*)*').Match($t, $at)
+            $open = $t.IndexOf('(', $skip.Index + $skip.Length)
+            $name = if ($open -gt 0 -and $t.Substring($at, $open - $at) -match '(\w+)\s*$') { $Matches[1] } else { '?' }
+            $close = if ($open -gt 0) { Get-ParenEnd $t $open } else { -1 }
+            if ($close -lt 0) { $bad += "$f ${name}: no parameter list"; continue }
+            $params = $t.Substring($open + 1, $close - $open - 1)
+            if ($params -notmatch '^\s*(?:this\s+)?[\w.<>]+\s+(\w+)') { $bad += "$f ${name}: no context parameter"; continue }
+            $ctx = $Matches[1]
+            $brace = [regex]::new('\G\s*\{').Match($t, $close + 1)
+            if (-not $brace.Success) { $bad += "$f ${name}: no block body"; continue }
+            $rx = [regex]::new($guard.Replace('{0}', [regex]::Escape($ctx)))
+            if (-not $rx.Match($t, $brace.Index + $brace.Length).Success) {
+                $bad += "$f ${name}: first statement is not the IsReady guard"
+            }
+        }
+    }
+    if ($n -eq 0) { return New-Result $false 'ready guard: no commands found' }
+    if ($bad) { return New-Result $false "ready guard: $($n - $bad.Count)/$n commands start with the IsReady guard; $($bad -join '; ')" }
+    return New-Result $true "ready guard: $n/$n commands start with the IsReady guard"
+}
+
 # Every "### Session <n> · <date>" under "## Test results" in docs/features/<SLUG>.md has exactly one line
 # "- session <n> log check: 0 unhandled, <s> nyar lines, 0 orphan errors, <u> unity errors" in docs/audits/<slug>.md
 # (foundation D33). Only sessions after the plan's last pre-A10 session (below; a plan not listed has none) count as

@@ -95,8 +95,8 @@ Patterns inherited: `Core`/`IsReady` gate and coroutine host (Faust), registry-i
   in-game via `.nyar zone add <name> <radius>` at the admin's position.
 - **`BepInEx/config/Nyarlathotep/state.json`** (planned): active event instances (id, start, end), tracked
   units (for the boot sweep), per-event cooldown timestamps.
-- Live edits: `.nyar event reload` re-reads JSON; `.nyar event set <id> k=v,k=v` for quick tweaks (Faust
-  `ConfigEditor` pattern — VCF 0.10 splits on spaces).
+- Live edits: `.nyar event reload` re-reads JSON; `.nyar event set <id> <field> <value>` edits one validated
+  field and reloads (VCF 0.10 splits on spaces, so a value with spaces is quoted).
 
 ## 6. Commands
 
@@ -107,10 +107,10 @@ it. **Who:** *anyone*, or *admin* (VCF `adminOnly`, Epic D5). **Child:** the chi
 |---|---|---|---|
 | `.nyar` | anyone | Overview and the commands the caller may run | foundation |
 | `.nyar status` | anyone | Active events and time left; tracked-unit count for admins; never positions | foundation |
-| `.nyar event list` / `info <id>` | admin | Definitions and their state | foundation |
-| `.nyar event start <id>` / `stop <id>` | admin | Manual trigger / early end | foundation |
+| `.nyar event list [page]` / `info <id>` | admin | Definitions, 10 per page, enabled or why disabled, running; one event's trigger, action and time left | foundation |
+| `.nyar event start <id>` / `stop <id>` | admin | Manual trigger (an `Admin` location spawns around you) / early end, units despawned | foundation |
 | `.nyar event enable\|disable <id>` | admin | Toggle without editing JSON | foundation |
-| `.nyar event set <id> <field> <value>` | admin | Edit one validated field | foundation |
+| `.nyar event set <id> <field> <value>` | admin | Edit one validated field: `name`, `durationSeconds`, `conditions.minPlayers\|cooldownMinutes\|chancePercent`, `action.waves\|intervalSeconds\|radius` | foundation |
 | `.nyar event reload` | admin | Re-read events.json | foundation |
 | `.nyar spawn <unit> [count] [level] [hp×] [power×]` | admin | One-off test spawn through the full pipeline | foundation |
 | `.nyar purge [confirm]` | admin | Kill switch: end everything, despawn all tracked units (two-step) | foundation |

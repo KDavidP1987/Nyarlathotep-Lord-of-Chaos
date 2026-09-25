@@ -354,6 +354,22 @@
       }
     },
     {
+      "name": "ReadyGuard",
+      "function": "Test-CheckReadyGuard",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/ReadyGuard",
+      "inputs": [
+        "every [Command] method in any .cs file git sees (its first parameter and the first statement of its body)"
+      ],
+      "plant": {
+        "bad": "Commands/RootCommands.cs: the guard removed from .nyar",
+        "bad-2": "Commands/EventCommands.cs: a statement runs before the guard",
+        "bad-3": "Commands/StatusCommands.cs: the guard replies Messages.NoActiveEvents",
+        "bad-4": "Commands/SpawnCommands.cs: the guard of .nyar spawn does not return",
+        "bad-5": "Commands/RootCommands.cs: the guard is commented out"
+      }
+    },
+    {
       "name": "SessionLogs",
       "function": "Test-CheckSessionLogs",
       "mode": "sessionsof",

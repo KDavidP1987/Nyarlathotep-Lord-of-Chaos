@@ -63,19 +63,20 @@ internal static class Core
 
             // Services in dependency order (docs/dod/foundation.md › Design › States › Startup and shutdown):
             // Persistence → EventStore → SpawnTracker → TriggerBus → EventRuntime → Announcer → HealthMonitor
-            // → EventScheduler. Later build steps add the rest.
+            // → EventScheduler. Step 6 adds the Announcer and the HealthMonitor.
             Services.Persistence.Initialize();
             Services.EventStore.Initialize();
             Services.SpawnTracker.Initialize();
+            Services.TriggerBus.Initialize();
+            Services.EventRuntime.Initialize();
+            // The scheduler starts before the sweep, so a sweep that throws never leaves the queues without a tick; it
+            // does nothing until IsReady.
+            Services.EventScheduler.Start();
+            try { Services.SpawnTracker.BootSweep(); }
+            catch (System.Exception ex) { Log.LogError($"[nyar] boot sweep failed: {ex.Message}; marked survivors expire on their own LifeTime"); }
 
             IsReady = true;
             Log.LogInfo($"Nyarlathotep initialized via {trigger} (attempt #{_initAttempts}). Prefab map has {prefabSystem.SpawnableNameToPrefabGuidDictionary.Count} entries.");
-
-            // Temporary 1 s tick for the spawn and despawn queues; step 5's EventScheduler replaces it. It starts before
-            // the sweep, so a sweep that throws never leaves the queues without a tick.
-            _tick = StartCoroutine(TickLoop());
-            try { Services.SpawnTracker.BootSweep(); }
-            catch (System.Exception ex) { Log.LogError($"[nyar] boot sweep failed: {ex.Message}; marked survivors expire on their own LifeTime"); }
         }
         catch (System.Exception ex)
         {
@@ -85,34 +86,6 @@ internal static class Core
         {
             _initInProgress = false;
         }
-    }
-
-    static Coroutine _tick;
-    static readonly Logic.FailureStreak _tickFaults = new();
-
-    static IEnumerator TickLoop()
-    {
-        var wait = new WaitForSeconds(1f);
-        while (true)
-        {
-            yield return wait;
-            try
-            {
-                Services.SpawnTracker.Tick();
-                _tickFaults.Ok();
-            }
-            catch (System.Exception ex)
-            {
-                if (_tickFaults.Fail()) Log.LogError($"[nyar] tick failed: {ex.Message}; retrying every second");
-            }
-        }
-    }
-
-    /// <summary>Plugin.Unload: stop the tick before the final state flush.</summary>
-    internal static void StopTick()
-    {
-        if (_tick is not null && _monoBehaviour != null) _monoBehaviour.StopCoroutine(_tick);
-        _tick = null;
     }
 
     static World FindServerWorld()
@@ -145,4 +118,10 @@ internal static class Core
     /// <summary>Run a managed coroutine on the server's main thread (wrapped for Il2Cpp).</summary>
     public static Coroutine StartCoroutine(IEnumerator routine) =>
         MonoBehaviour.StartCoroutine(routine.WrapToIl2Cpp());
+
+    /// <summary>Stops a coroutine started by <see cref="StartCoroutine"/>; nothing when the host is gone.</summary>
+    public static void StopCoroutine(Coroutine routine)
+    {
+        if (_monoBehaviour != null) _monoBehaviour.StopCoroutine(routine);
+    }
 }

@@ -65,12 +65,13 @@ public class Plugin : BasePlugin
         }
     }
 
+    // foundation Design › Startup and shutdown: stop the tick, flush state.json once, unpatch, unregister the commands.
     public override bool Unload()
     {
-        CommandRegistry.UnregisterAssembly();
-        Core.StopTick();
+        Services.EventScheduler.Stop();
         Services.Persistence.Shutdown();
         Harmony?.UnpatchSelf();
+        CommandRegistry.UnregisterAssembly();
         return true;
     }
 }

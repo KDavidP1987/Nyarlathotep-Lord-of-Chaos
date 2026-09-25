@@ -202,13 +202,15 @@ public class PersistenceWriteTests
         doc.Instances.Add(new StateInstance("raid", Zones.Utc(2026, 9, 24, 20, 0), Zones.Utc(2026, 9, 24, 20, 10), "Active"));
         doc.Units.Add(new StateUnit("raid", "CHAR_Bandit_Thug", -1200.5f, -800f, Zones.Utc(2026, 9, 24, 20, 1)));
         doc.LastFired["raid"] = new LastFired("2026-09-24 16:00", Zones.Utc(2026, 9, 24, 20, 0));
+        doc.LastStart["raid"] = Zones.Utc(2026, 9, 24, 20, 0);
         var text = System.Text.Encoding.UTF8.GetString(doc.Serialize());
-        foreach (var key in new[] { "\"SchemaVersion\": 1", "\"instances\"", "\"units\"", "\"lastFired\"", "\"purgeUntilUtc\"", "\"occurrence\"", "\"eventId\"" })
+        foreach (var key in new[] { "\"SchemaVersion\": 1", "\"instances\"", "\"units\"", "\"lastFired\"", "\"lastStart\"", "\"purgeUntilUtc\"", "\"occurrence\"", "\"eventId\"" })
             Assert.Contains(key, text);
         var back = StateDocument.TryParse(doc.Serialize())!;
         Assert.Equal(doc.Instances, back.Instances);
         Assert.Equal(doc.Units, back.Units);
         Assert.Equal(doc.LastFired["raid"], back.LastFired["raid"]);
+        Assert.Equal(doc.LastStart["raid"], back.LastStart["raid"]);
         Assert.Equal(doc.PurgeUntilUtc, back.PurgeUntilUtc);
     }
 

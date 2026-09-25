@@ -31,6 +31,9 @@ internal static class Settings
     /// <summary>The loaded, clamped value of <paramref name="limit"/>; its default before Initialize.</summary>
     public static int Limit(IntLimit limit) => _limits.TryGetValue(limit.Name, out var v) ? v : limit.Default;
 
+    // ---- Debug ----
+    public static ConfigEntry<bool> TimingLog { get; private set; }
+
 #if DEBUG
     // ---- Debug builds only (foundation D25): a Release DLL has no such key and ignores it in the cfg ----
     public static ConfigEntry<string> FaultInjection { get; private set; }
@@ -70,6 +73,9 @@ internal static class Settings
             "After .nyar purge confirm, seconds during which no event starts and no unit is spawned.");
         BindLimit(config, Limits.ManualSpawnLifetimeSeconds,
             "Lifetime in seconds of a unit spawned with .nyar spawn.");
+
+        TimingLog = config.Bind("Debug", "TimingLog", false,
+            "Log the scheduler tick's average and maximum duration once a minute.");
 
 #if DEBUG
         FaultInjection = config.Bind("Debug", "FaultInjection", "",

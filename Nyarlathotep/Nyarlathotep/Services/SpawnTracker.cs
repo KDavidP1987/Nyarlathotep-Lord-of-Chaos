@@ -57,11 +57,12 @@ internal static class SpawnTracker
     internal static void BootSweep()
     {
         var marked = MarkedUnits();
+        var queued = 0;
         foreach (var unit in marked)
         {
             var key = KeyOf(unit);
             _entities[key] = unit;
-            _ledger.QueueDespawn(key);
+            if (_ledger.QueueDespawn(key)) queued++;
         }
         var listed = Persistence.State.Document.Units.Count;
         if (listed > 0)
@@ -69,7 +70,7 @@ internal static class SpawnTracker
             Persistence.State.Document.Units.Clear();
             Persistence.State.MarkDirty();
         }
-        Core.Log.LogInfo($"[nyar] boot sweep: {marked.Count} marked units queued for despawn ({listed} listed in state.json)");
+        Core.Log.LogInfo($"[nyar] boot marker sweep: {marked.Count} found, {queued} queued for despawn ({listed} listed in state.json)");
     }
 
     /// <summary>`.nyar spawn`: queues <paramref name="count"/> units of <paramref name="prefab"/> around
@@ -96,21 +97,32 @@ internal static class SpawnTracker
         return AdminLines.Spawned(result.Queued, prefab, result.Skipped);
     }
 
-    /// <summary>The kill switch (D20): ends every running event, cancels waiting spawns, queues every tracked unit and
-    /// starts the PurgeCooldownSeconds window. Step 5 moves the event half to EventRuntime.</summary>
+    /// <summary>A wave's units for event <paramref name="eventId"/>: <paramref name="count"/> of them at places
+    /// <paramref name="first"/>.. of <paramref name="total"/> on a circle of <paramref name="radius"/> around
+    /// <paramref name="center"/>. WaveAction has sized the wave already, so the ledger's own caps only guard.</summary>
     [Mutating]
-    internal static string Purge()
+    internal static int RequestWave(string prefab, string eventId, int count, int lifetimeSeconds, float3 center, float radius,
+        int first, int total, double angle)
     {
-        var events = EventStore.Catalog.Running.Count;
-        EventStore.Catalog.EndAll();
-        var (queued, cancelled) = _ledger.Purge();
-        var cooldown = Settings.Limit(Limits.PurgeCooldownSeconds);
-        Persistence.State.Document.Instances.Clear();
-        Persistence.State.Document.PurgeUntilUtc = DateTime.UtcNow.AddSeconds(cooldown);
-        Persistence.State.MarkDirty();
-        Core.Log.LogWarning($"[nyar] purge: {events} events ended, {queued} units queued, {cancelled} spawns cancelled, cooldown {cooldown}s");
-        return AdminLines.Purged(events, queued);
+        var result = _ledger.Request(prefab, eventId, count, lifetimeSeconds, UnitTuning.None, i =>
+        {
+            var (x, z) = SpawnLedger.Around(center.x, center.z, radius, first + i, total, angle);
+            return (x, center.y, z);
+        });
+        if (result.Skipped is not null) Core.Log.LogWarning($"[nyar] event {eventId} {prefab}: {result.Skipped}");
+        return result.Queued;
     }
+
+    /// <summary>An event ended (stop, faults, or its grace ran out): its units spawned before <paramref name="spawnedBefore"/>
+    /// are queued for despawn and, on a stop or fault, its waiting orders are cancelled (Business rules 2).</summary>
+    [Mutating]
+    internal static (int Queued, int Cancelled) EndEventUnits(string eventId, DateTime spawnedBefore, bool cancelOrders = true) =>
+        _ledger.EndEvent(eventId, spawnedBefore, cancelOrders);
+
+    /// <summary>The kill switch's unit half (D20): cancels waiting spawns and queues every tracked unit. EventRuntime.Purge
+    /// ends the events and starts the cooldown.</summary>
+    [Mutating]
+    internal static (int Queued, int Cancelled) PurgeUnits() => _ledger.Purge();
 
     /// <summary>A unit died (Patches/DeathEventPatch). A tracked one leaves the ledger; anything else is ignored.</summary>
     internal static void Died(Entity unit)
@@ -119,7 +131,8 @@ internal static class SpawnTracker
         if (_ledger.Forget(key)) Release(key);
     }
 
-    /// <summary>One tick (1 s): spawn a batch, prune units the game removed, despawn a batch, flush state.json.</summary>
+    /// <summary>The scheduler's first phase each second: spawn a batch, prune units the game removed, despawn a batch.
+    /// EventScheduler flushes state.json at the end of the tick.</summary>
     internal static void Tick()
     {
         var now = DateTime.UtcNow;
@@ -189,8 +202,6 @@ internal static class SpawnTracker
         }
         if (despawns.Count > 0)
             Core.Log.LogInfo($"[nyar] despawn batch: {destroyed} of {despawns.Count} destroyed, {retried} requeued, {_ledger.PendingDespawns} left");
-
-        Persistence.State.Flush();
     }
 
     /// <summary>`.nyar debug here`: one line per tracked unit within <paramref name="radius"/> m of

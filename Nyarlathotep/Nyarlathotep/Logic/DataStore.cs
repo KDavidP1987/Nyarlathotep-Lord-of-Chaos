@@ -93,6 +93,8 @@ public sealed class StateDocument
     public List<StateInstance> Instances { get; set; } = [];
     public List<StateUnit> Units { get; set; } = [];
     public Dictionary<string, LastFired> LastFired { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>Each event's last start, for conditions.cooldownMinutes across restarts.</summary>
+    public Dictionary<string, DateTime> LastStart { get; set; } = new(StringComparer.Ordinal);
     public DateTime? PurgeUntilUtc { get; set; }
 
     static readonly JsonSerializerOptions Options = new()

@@ -171,6 +171,26 @@ public sealed class SpawnLedger(LedgerLimits limits)
         return (_despawnQueue.Count, cancelled);
     }
 
+    /// <summary>An event's end (Business rules 2): queues its tracked units spawned before <paramref name="spawnedBefore"/>
+    /// and, with <paramref name="cancelOrders"/>, cancels its waiting orders. Returns the units newly queued and the orders
+    /// cancelled. An order already in flight is confirmed later and then lives out its own LifeTime. The despawn after
+    /// the grace passes false: a restart of the same event inside the grace owns the orders waiting then.</summary>
+    public (int Queued, int Cancelled) EndEvent(string eventId, DateTime spawnedBefore, bool cancelOrders = true)
+    {
+        var cancelled = 0;
+        if (cancelOrders && _spawnQueue.Count > 0)
+        {
+            var keep = _spawnQueue.Where(o => o.EventId != eventId).ToList();
+            cancelled = _spawnQueue.Count - keep.Count;
+            _spawnQueue.Clear();
+            foreach (var o in keep) _spawnQueue.Enqueue(o);
+        }
+        var queued = 0;
+        foreach (var u in _tracked.Values.Where(u => u.EventId == eventId && u.SpawnedUtc < spawnedBefore).ToList())
+            if (QueueDespawn(u.Key)) queued++;
+        return (queued, cancelled);
+    }
+
     /// <summary>What a purge would still take: tracked units not yet queued for despawn, plus waiting orders. Units
     /// already draining are purged already, so a second `.nyar purge confirm` finds nothing (D20).</summary>
     public int Purgeable => _tracked.Keys.Count(k => !_queued.Contains(k)) + _spawnQueue.Count + _inFlight.Count;
