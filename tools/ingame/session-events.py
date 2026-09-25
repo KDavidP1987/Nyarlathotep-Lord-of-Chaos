@@ -85,6 +85,18 @@ elif mode == "perf":
                       sched("t-fault", "zones", 30, 120, 2, 1), sched("t-other", "sieges", 30, 120, 2, 1)]
     write(doc)
     print("perf: t-150", at(8), "t-500", at(18), "t-fault/t-other", at(30))
+elif mode == "drain":
+    # session 16 (A16), unattended: t-150 (10 waves of 15 at a Point) at now+3 for 3 min; at end + grace its 150 units
+    # must drain 5 a tick to "0 left", well before their LifeTime (due + 90 s at the default caps).
+    now = datetime.datetime.now().replace(second=0, microsecond=0)
+    doc = build("Mon", ["04:00"], ["04:30"])
+    for e in doc["events"]: e["enabled"] = False
+    a = point(unit(15), waves=10, interval=10, radius=30)
+    doc["events"].append({"id": "t-150", "name": "t-150", "enabled": True, "pillar": "spawns",
+        "trigger": {"type": "Schedule", "days": [now.strftime("%a")], "times": [hhmm(now + datetime.timedelta(minutes=3))]},
+        "durationSeconds": 180, "action": a})
+    write(doc)
+    print("drain: t-150 at", hhmm(now + datetime.timedelta(minutes=3)))
 elif mode == "restore-valid":
     write(json.load(open(os.path.join(HERE, "d23a.json"))))
     print("valid d23a restored")

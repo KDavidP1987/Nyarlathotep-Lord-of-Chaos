@@ -248,6 +248,16 @@ scheduled Point events enabled (tools/ingame `perf` mode): idle to 09:18, t-150 
 - Log check: 0 unhandled, 438 nyar lines, 0 orphan errors, 0 unity errors; errors are only the three injected
   faults. The Release build and the test config were restored afterwards.
 
+### Session 16 · 2026-09-25
+Release build of 547dc3b (A16, A17), unattended, session 12's config (MaxTrackedUnits 150, MaxDespawnsPerTick 5), only
+t-150 enabled (tools/ingame `drain` mode: 10 waves of 15 at a Point, 14:02-14:05).
+- A16: the last wave logged "lifetime 210s", which ends at end + 30 s grace + 90 s margin; "event t-150: 150 units
+  queued for despawn after the grace", then 30 batches "5 of 5 destroyed" from 145 left to "0 left", each exactly 5
+  fewer: the budget removed every unit, the game's LifeTime none.
+- The server was stopped after the next "Finished Saving", so the save holds none of the drained units.
+- Log check: 0 unhandled, 73 nyar lines, 0 orphan errors, 0 unity errors; warnings only the known UserConnect,
+  Beelzebub and Il2CppInterop lines; no server-log errors beyond the save-load PrefabLookupMap lines.
+
 ## Open questions
 
 None open. D28's "still loading" reply, which cannot be seen in game, is proven by a static check instead

@@ -161,5 +161,6 @@ yarfoundation-before.tsv waits for step 8 (D34), with the game client closed
 - /code-review (inline): the late-order comment in EventRuntime still holds (a late order would outlive its due time); no finding
 - Codex cross-inspection round 1: first run could not read the repository (its sandbox rejected every command) and returned REVISE without findings; rerun with the diff and files pasted: REVISE. F1 in-flight orders across a purge or end rejected (SpawnTracker.Tick confirms or fails every order in the loop that takes it); F2 end-tick units outside the grace cleanup accepted and fixed (A17, defect); F3 the drain test does not model runtime timing, partly accepted (engine tests for the end tick; runtime timing checked in game); F4 D16 in ## Baseline still states the old rule, rejected (Baseline is frozen)
 - Codex verdict: READY (round 2); its advisories fixed: the ledger summary's "confirmed later" wording, and a ledger test that runs the end tick and a restart end to end
-- open: an in-game check that an ended event's units drain in batches of 5 to "0 left" (session 16), D16 re-passed, then D19/D39/D40 pass lines and `dod status foundation`
+- session 16 log check: 0 unhandled, 73 nyar lines, 0 orphan errors, 0 unity errors; t-150's 150 units drained 5 a tick to "0 left"
+- dod: D16 re-passed after A16/A17; D19, D39, D40 pass lines; step 5 in-game list complete
 
