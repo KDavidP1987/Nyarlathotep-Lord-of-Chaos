@@ -11,8 +11,9 @@ namespace Nyarlathotep.Logic;
 public enum LineKind { Info, Warning }
 
 /// <summary>One server-wide line waiting to leave. <see cref="EventId"/> ties a warning to its event, so the event's
-/// end takes its unsent warnings with it.</summary>
-public sealed record QueuedLine(string Text, LineKind Kind, string? EventId = null);
+/// end takes its unsent warnings with it; a line still queued at <see cref="NotAfterUtc"/> (a warning's wave time) is
+/// dropped rather than sent late.</summary>
+public sealed record QueuedLine(string Text, LineKind Kind, string? EventId = null, DateTime? NotAfterUtc = null);
 
 /// <summary>Server-wide lines leave at most one per second from a queue of at most <see cref="Capacity"/>. A full queue
 /// drops its oldest informational line, or, when every line is a wave warning, its oldest warning (the newer warning
@@ -40,11 +41,14 @@ public sealed class AnnounceQueue(Action<string> log)
         _lines.Add(line);
     }
 
-    /// <summary>The next line to send, or null when the queue is empty or the last one left less than a second ago.</summary>
+    /// <summary>The next line to send, or null when the queue is empty or the last one left less than a second ago.
+    /// Lines past their <see cref="QueuedLine.NotAfterUtc"/> are dropped with a log line.</summary>
     public QueuedLine? Next(DateTime utcNow)
     {
-        if (_lines.Count == 0) return null;
         if (_lastSent is { } last && utcNow - last < Spacing) return null;
+        var stale = _lines.RemoveAll(l => l.NotAfterUtc is { } t && t <= utcNow);
+        if (stale > 0) log($"announce: dropped {stale} line(s) that could no longer leave in time");
+        if (_lines.Count == 0) return null;
         var line = _lines[0];
         _lines.RemoveAt(0);
         _lastSent = utcNow;
@@ -142,9 +146,14 @@ public sealed class ShareLimiter(int cooldownSeconds, int maxPerMinute)
     readonly Dictionary<ulong, DateTime> _last = new();
     readonly Queue<DateTime> _recent = new();
 
+    /// <summary>Players whose cooldown is still running; older entries are dropped on each call.</summary>
+    public int Tracked => _last.Count;
+
     /// <summary>Null when the share passes (and is counted), else the one-line reason.</summary>
     public string? TryShare(ulong player, DateTime utcNow)
     {
+        foreach (var done in _last.Where(p => utcNow - p.Value >= TimeSpan.FromSeconds(cooldownSeconds)).Select(p => p.Key).ToList())
+            _last.Remove(done);
         if (_last.TryGetValue(player, out var last) && utcNow - last < TimeSpan.FromSeconds(cooldownSeconds))
             return $"share: wait {Math.Ceiling((last.AddSeconds(cooldownSeconds) - utcNow).TotalSeconds)} s";
         while (_recent.Count > 0 && utcNow - _recent.Peek() >= Minute) _recent.Dequeue();
@@ -163,8 +172,12 @@ public sealed class LoginGate
     public static readonly TimeSpan Quiet = TimeSpan.FromSeconds(60);
     readonly Dictionary<ulong, DateTime> _lastConnect = new();
 
+    /// <summary>Players connected within the quiet window; older entries are dropped on each call.</summary>
+    public int Tracked => _lastConnect.Count;
+
     public bool ShouldGreet(ulong player, DateTime utcNow)
     {
+        foreach (var old in _lastConnect.Where(p => utcNow - p.Value >= Quiet).Select(p => p.Key).ToList()) _lastConnect.Remove(old);
         var greet = !_lastConnect.TryGetValue(player, out var last) || utcNow - last >= Quiet;
         _lastConnect[player] = utcNow;
         return greet;

@@ -94,7 +94,8 @@ internal static class Announcer
                 live.Add(key);
                 var left = UpcomingWave.SecondsLeft(next.AtUtc, now);
                 if (_warnings.Due(key, left) is null) continue;
-                _queue.Enqueue(new QueuedLine(Messages.WaveWarning(active.Definition, next.Wave, left, _random.Next()), LineKind.Warning, active.Id));
+                _queue.Enqueue(new QueuedLine(Messages.WaveWarning(active.Definition, next.Wave, left, _random.Next()),
+                    LineKind.Warning, active.Id, next.AtUtc));
             }
         }
         _warnings.Keep(live);
@@ -115,6 +116,7 @@ internal static class Announcer
     /// while something is degraded gets one private line, not again on a reconnect within 60 s (D31).</summary>
     internal static void UserConnected(Entity userEntity)
     {
+        if (!userEntity.Exists() || !userEntity.Has<User>()) return;   // a stale approved-user entry: nothing to greet
         var user = Core.EntityManager.GetComponentData<User>(userEntity);
         if (!_logins.ShouldGreet(user.PlatformId, DateTime.UtcNow)) return;
         var degraded = HealthMonitor.Degraded();

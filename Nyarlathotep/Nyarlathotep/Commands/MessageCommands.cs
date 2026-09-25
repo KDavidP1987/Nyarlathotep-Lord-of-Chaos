@@ -7,12 +7,12 @@ using VampireCommandFramework;
 namespace Nyarlathotep.Commands;
 
 /// <summary>`.nyar announce &lt;text&gt;` (foundation Design › UX; D14, D30). Admin-only; the broadcast runs through the
-/// gateway (D10, D11). VCF 0.10 has no remainder argument, so the words arrive as separate arguments and are joined;
-/// quoted text arrives as one.</summary>
+/// gateway (D10, D11). VCF 0.10 has no remainder argument, so up to 16 words arrive as separate arguments and are
+/// joined; longer text is quoted and arrives as one argument (Codex step 6 F1).</summary>
 [CommandGroup("nyar")]
 internal static class MessageCommands
 {
-    [Command("announce", usage: "<text>", description: "Broadcast a line to every connected player.", adminOnly: true)]
+    [Command("announce", usage: "<text> (quote text of more than 16 words)", description: "Broadcast a line to every connected player.", adminOnly: true)]
     public static void Announce(ChatCommandContext ctx, string w1 = "", string w2 = "", string w3 = "", string w4 = "",
         string w5 = "", string w6 = "", string w7 = "", string w8 = "", string w9 = "", string w10 = "", string w11 = "",
         string w12 = "", string w13 = "", string w14 = "", string w15 = "", string w16 = "")

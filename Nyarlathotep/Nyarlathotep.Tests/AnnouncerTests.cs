@@ -225,6 +225,18 @@ public class AnnouncerTests
         Assert.False(gate.ShouldGreet(7, T0.AddSeconds(89)));   // 59 s after the last connect
         Assert.True(gate.ShouldGreet(7, T0.AddSeconds(149)));   // 60 s after it
         Assert.True(gate.ShouldGreet(8, T0.AddSeconds(149)));   // per player
+        Assert.True(gate.ShouldGreet(9, T0.AddSeconds(500)));
+        Assert.Equal(1, gate.Tracked);                            // 7 and 8 left the quiet window
+    }
+
+    [Fact]
+    public void Share_state_forgets_players_whose_cooldown_ran_out()
+    {
+        var limiter = new ShareLimiter(300, 20);
+        foreach (var p in Enumerable.Range(1, 10)) Assert.Null(limiter.TryShare((ulong)p, T0));
+        Assert.Equal(10, limiter.Tracked);
+        Assert.Null(limiter.TryShare(99, T0.AddSeconds(300)));
+        Assert.Equal(1, limiter.Tracked);
     }
 
     // ---- queue ----
@@ -246,10 +258,13 @@ public class AnnouncerTests
     {
         var log = new List<string>();
         var queue = new AnnounceQueue(log.Add);
+        Assert.Equal(20, AnnounceQueue.Capacity);
         queue.Enqueue(new QueuedLine("warn 0", LineKind.Warning, "raid"));
         foreach (var i in Enumerable.Range(1, 19)) queue.Enqueue(new QueuedLine($"info {i}", LineKind.Info));
+        Assert.Equal(20, queue.Count);
+        Assert.Empty(log);                                  // 20 fit
         queue.Enqueue(new QueuedLine("warn 20", LineKind.Warning, "raid"));
-        Assert.Equal(AnnounceQueue.Capacity, queue.Count);
+        Assert.Equal(20, queue.Count);
         Assert.Contains("dropped the oldest informational line: info 1", Assert.Single(log));
         Assert.Equal("warn 0", queue.Next(T0)?.Text);   // no warning dropped while an informational line was queued
     }
@@ -259,10 +274,26 @@ public class AnnouncerTests
     {
         var log = new List<string>();
         var queue = new AnnounceQueue(log.Add);
-        foreach (var i in Enumerable.Range(0, 21)) queue.Enqueue(new QueuedLine($"warn {i}", LineKind.Warning, "raid"));
-        Assert.Equal(AnnounceQueue.Capacity, queue.Count);
+        foreach (var i in Enumerable.Range(0, 20)) queue.Enqueue(new QueuedLine($"warn {i}", LineKind.Warning, "raid"));
+        Assert.Empty(log);
+        queue.Enqueue(new QueuedLine("warn 20", LineKind.Warning, "raid"));
+        Assert.Equal(20, queue.Count);
         Assert.Contains("dropped the oldest wave warning: warn 0", Assert.Single(log));
         Assert.Equal("warn 1", queue.Next(T0)?.Text);
+    }
+
+    [Fact]
+    public void A_warning_still_queued_when_its_wave_arrives_is_dropped_not_sent_late()
+    {
+        var log = new List<string>();
+        var queue = new AnnounceQueue(log.Add);
+        queue.Enqueue(new QueuedLine("banner", LineKind.Info));
+        queue.Enqueue(new QueuedLine("wave 2 in 10 s", LineKind.Warning, "raid", T0.AddSeconds(1)));
+        queue.Enqueue(new QueuedLine("later", LineKind.Info));
+        Assert.Equal("banner", queue.Next(T0)?.Text);
+        Assert.Equal("later", queue.Next(T0.AddSeconds(1))?.Text);   // the wave came at T0 + 1 s
+        Assert.Contains("dropped 1 line(s)", Assert.Single(log));
+        Assert.Equal(0, queue.Count);
     }
 
     [Fact]
