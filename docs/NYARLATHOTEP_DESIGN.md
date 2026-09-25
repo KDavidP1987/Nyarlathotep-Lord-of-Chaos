@@ -71,7 +71,7 @@ Patterns inherited: `Core`/`IsReady` gate and coroutine host (Faust), registry-i
 
 ## 4. Lifecycle & cleanup (the part that must never be wrong)
 
-1. **Spawn:** `InstantiateEntityImmediate` → `UnitSetup` → set finite `LifeTime` (event end + grace) and
+1. **Spawn:** `InstantiateEntityImmediate` → `UnitSetup` → set finite `LifeTime` (event end + grace + the despawn queue's drain time, D17) and
    `DestroyWhenDisabled` → apply marker buff → register in `SpawnTracker` (session `HashSet` + persisted
    event id/prefab/position) → spawn visual 0.25 s later.
 2. **Run:** caps checked before every spawn; units that die are pruned via the death hook.
@@ -185,6 +185,7 @@ All settled with the user on 2026-09-23 in plan mode and recorded as validated a
 | D14 | Stats persistence | `stats.json`, 30 daily buckets + all-time, admin reset (Epic A6, S-23) |
 | D15 | Mod-initiated messages | Wave warnings + event banners, daily banner with digest, admin on-demand banner, private login stats, rate-limited player share; each off by default (Epic A7, S-24) |
 | D16 | How siege waves reach a castle | **Short chase** (owner, 2026-09-24, after spike S1): waves spawn outside the walls 40–50 m from an online defender and walk in on an aggro chase; the approach is conveyed by the D15 warning. Units with no target for 15 s are re-targeted on the nearest defender or despawned. A long march (hidden relay, or hooking the system that drops targets beyond about 86 m) is a later research item beside the Phase 2 HookDOTS decision |
+| D17 | Who removes an ended event's units | **The despawn budget** (owner, 2026-09-25, foundation A16, after session 15): units are queued at event end + grace and drained at MaxDespawnsPerTick; LifeTime is set to that time + ceil(MaxTrackedUnits / MaxDespawnsPerTick) s + 60 s, a backstop for when the mod stops, so the game's lifetime system no longer removes a large event's units all at once |
 | P1 | Development procedure | Pre-audit / build / post-audit with Codex cross-inspection on every step (CLAUDE.md) |
 | P2 | Icon | Whole dragon artwork scaled to 256×256 (not cropped); same image as README cover |
 | P3 | First Thunderstore publication | After foundation + faction empowerment + event spawns pass in-game (~0.4.0); GitHub releases before |

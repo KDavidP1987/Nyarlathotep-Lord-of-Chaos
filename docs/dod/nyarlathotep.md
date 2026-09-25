@@ -88,7 +88,7 @@ All pillars on, MaxConcurrentEvents events running at once, MaxTrackedUnits unit
 Inherited by every child (each child plan restates the rules it touches):
 1. **Precedence, highest first:** kill switch (`.nyar purge confirm`) > General.Enabled=false > the pillar switch > Limits caps in kdpen.Nyarlathotep.cfg > the event definition's own values (D27). A cap clamps silently for the player and loudly in the log (D14). An exception to a cap is only possible by the admin changing the cap in the cfg file, and never beyond the hard ceilings in rule 9.
 2. **One empowerment per faction at a time:** a second empowerment on a faction already empowered is rejected with a log line; the faction-empowerment child owns the item that tests it.
-3. **Durations are hard:** everything an event created is reverted or despawned at its end; a unit's LifeTime is event end + GraceSeconds (default 30).
+3. **Durations are hard:** everything an event created is reverted or despawned at its end; a unit is queued for despawn at event end + GraceSeconds (default 30) and removed within the despawn budget, and its LifeTime is only the backstop, set past the queue's drain time (foundation A16).
 4. **Spawned units:** level delta clamped to ±5 by default (D29); modifiers scale from the prefab baseline, never the live value, so re-application never compounds.
 5. **Every X sets:**
    - "every NPC of a faction" is an EntityQuery over PrefabGUID+FactionReference+Health+UnitStats with IncludeDisabled|IncludeSpawnTag, minus entities with the Prefab component, minus our own units, minus Faction_Players*; units that stream in after the sweep are caught by the 15 s re-sweep (S-8).
@@ -403,3 +403,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-24 · note · child spikes closed (docs/dod/spikes.md › Report: 20/20, prediction 50 %; verdicts S1, S2, S3 go); next child: foundation
 - 2026-09-24 · D7 · pass · cmd: pwsh tools/preflight.ps1 → "file writes: fenced (8 calls in Services/Persistence.cs, no path parameter, constant names)"; the fence fails on FileWrites bad-1..bad-8 in -SelfTest · 31cca9e · claude
 - 2026-09-24 · D6 · pass · cmd: pwsh tools/preflight.ps1 → "structural edits: fenced (4 Prefab-guarded calls in EntityExtensions.cs)" with SpawnTracker present (foundation step 4) · a566b20 · claude
+- 2026-09-25 · note · rule 3 reworded for foundation A16 (owner chose option A): LifeTime moves past the despawn queue's drain time so the budget, not the game's lifetime system, removes an ended event's units; no Epic D-item changes

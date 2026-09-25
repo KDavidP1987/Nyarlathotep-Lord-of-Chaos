@@ -69,6 +69,22 @@ elif mode == "d22":
         "action": {"type": "SpawnWaves", "units": unit(20), "waves": 2, "intervalSeconds": 20, "radius": 8, "location": {"type": "Admin"}}})
     write(doc)
     print("d22 written")
+elif mode == "perf":
+    # session 15 (Debug build, D24 + D25), unattended: idle until now+8, t-150 (10 waves of 15) at now+8 for 8 min,
+    # t-500 (10 waves of 50; needs MaxTrackedUnits 500, MaxUnitsPerWave 50) at now+18 for 8 min, then t-fault
+    # (Debug.FaultInjection = t-fault) and t-other at now+30. Every other event disabled.
+    now = datetime.datetime.now().replace(second=0, microsecond=0)
+    day = now.strftime("%a")
+    at = lambda m: [hhmm(now + datetime.timedelta(minutes=m))]
+    def sched(id, pillar, m, dur, per, waves):
+        a = point(unit(per), waves=waves, interval=10, radius=30)
+        return {"id": id, "name": id, "enabled": True, "pillar": pillar, "trigger": {"type": "Schedule", "days": [day], "times": at(m)}, "durationSeconds": dur, "action": a}
+    doc = build("Mon", ["04:00"], ["04:30"])
+    for e in doc["events"]: e["enabled"] = False
+    doc["events"] += [sched("t-150", "spawns", 8, 480, 15, 10), sched("t-500", "spawns", 18, 480, 50, 10),
+                      sched("t-fault", "zones", 30, 120, 2, 1), sched("t-other", "sieges", 30, 120, 2, 1)]
+    write(doc)
+    print("perf: t-150", at(8), "t-500", at(18), "t-fault/t-other", at(30))
 elif mode == "restore-valid":
     write(json.load(open(os.path.join(HERE, "d23a.json"))))
     print("valid d23a restored")

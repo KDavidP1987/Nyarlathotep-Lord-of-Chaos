@@ -15,7 +15,8 @@ The shared engine every pillar builds on:
   position; an invalid event is disabled with one reason naming its field; cfg values outside their range are
   clamped at load with a log line.
 - **Precedence**: purge > General.Enabled > the pillar switch > Limits caps > the definition. No command,
-  trigger or definition field can exceed a cap. A unit never outlives its event end + GraceSeconds.
+  trigger or definition field can exceed a cap. A unit is queued for despawn at its event end + GraceSeconds and removed within the despawn budget; its LifeTime is a
+  backstop past the queue's drain time (A16).
 - **Schedules** on the server-local clock, fired once per occurrence (local date + HH:mm) — including across
   a daylight-saving repeat and a restart — and never replayed after downtime. GameTime triggers fire on the
   day/night edge.
@@ -224,6 +225,28 @@ sweep), and only manual events enabled, with t-caps asking for 2 waves of 20.
   t-manual` replied "skipped by MaxConcurrentEvents"; `event stop t-caps` queued the 8 and drained them.
 - Log check: 0 unhandled, 36 nyar lines, 0 orphan errors, 0 unity errors; the server log's only errors are the
   save-load PrefabLookupMap lines. The test config was restored afterwards.
+
+### Session 15 · 2026-09-25
+Debug build of bb03f7e, unattended: MaxTrackedUnits 500, MaxUnitsPerWave 50, Debug.FaultInjection = t-fault, only
+scheduled Point events enabled (tools/ingame `perf` mode): idle to 09:18, t-150 (10 waves of 15) 09:18-09:26, t-500
+(10 waves of 50) 09:28-09:36, t-fault and t-other at 09:40. No player was near the Point.
+- Boot: "boot marker sweep: 8 found, 8 queued for despawn (0 listed in state.json)": session 14's t-caps units, back
+  from the last autosave before their drain (the server was stopped without a final save, as in session 11).
+- D24, first five minutes of each phase: idle avg 0.041, 0.048, 0.048, 0.047, 0.072 ms = 0.051 ms (target < 1);
+  150 units 10.724 (spawning; one 129 ms tick), 0.596, 0.209, 0.268, 0.137 ms = 2.39 ms (target < 5), steady state
+  0.14-0.6 ms; 500 units 2.426, 7.667, 3.490 (spawning), 0.388, 0.343 ms = 2.86 ms (target < 15), steady state about
+  0.3 ms. One 150-unit minute logged 52 ticks instead of about 60.
+- D25: "event t-fault tick failed (1/3): Debug.FaultInjection", (2/3), (3/3), then "event t-fault cancelled after 3
+  faults: 0 units queued" (the fault fires before its first wave); t-other logged "wave 1/1: 2 units queued" between
+  the faults and ran to its end; `.nyar status` afterwards: "degraded: hook UserConnect, zones (event t-fault
+  faulted)".
+- Finding: after t-150 and t-500 ended, "left" in the despawn batches fell faster than 5 a tick (485, 410, 305, 215,
+  120, 35) and no "0 left" line followed: the units' LifeTime ends at end + grace, the same moment the budgeted queue
+  starts, so the game's lifetime system removed most of them (about 90 a second) and the death hook pruned them from
+  the queue. Nothing leaked (`.nyar status` 0 tracked), but the despawn budget was not what staged the removal. The
+  owner chose to move LifeTime past the queue's drain time (A18).
+- Log check: 0 unhandled, 438 nyar lines, 0 orphan errors, 0 unity errors; errors are only the three injected
+  faults. The Release build and the test config were restored afterwards.
 
 ## Open questions
 
