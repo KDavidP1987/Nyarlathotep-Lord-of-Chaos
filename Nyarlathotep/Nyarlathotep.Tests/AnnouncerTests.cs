@@ -297,6 +297,20 @@ public class AnnouncerTests
     }
 
     [Fact]
+    public void An_expired_warning_gives_up_its_slot_before_a_live_line_is_dropped()
+    {
+        var log = new List<string>();
+        var queue = new AnnounceQueue(log.Add);
+        queue.Enqueue(new QueuedLine("old warn", LineKind.Warning, "raid", T0));
+        foreach (var i in Enumerable.Range(1, 19)) queue.Enqueue(new QueuedLine($"info {i}", LineKind.Info));
+        Assert.Equal(1, queue.DropExpired(T0.AddSeconds(1)));
+        queue.Enqueue(new QueuedLine("info 20", LineKind.Info));
+        Assert.Equal(20, queue.Count);
+        Assert.DoesNotContain(log, l => l.Contains("queue full"));
+        Assert.Equal("info 1", queue.Next(T0.AddSeconds(1))?.Text);
+    }
+
+    [Fact]
     public void An_ended_event_takes_its_unsent_warnings_with_it()
     {
         var queue = new AnnounceQueue(_ => { });

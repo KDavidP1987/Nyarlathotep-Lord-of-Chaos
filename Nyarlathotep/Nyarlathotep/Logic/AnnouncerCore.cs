@@ -41,13 +41,21 @@ public sealed class AnnounceQueue(Action<string> log)
         _lines.Add(line);
     }
 
-    /// <summary>The next line to send, or null when the queue is empty or the last one left less than a second ago.
-    /// Lines past their <see cref="QueuedLine.NotAfterUtc"/> are dropped with a log line.</summary>
-    public QueuedLine? Next(DateTime utcNow)
+    /// <summary>Drops the lines past their <see cref="QueuedLine.NotAfterUtc"/>, with a log line, so they neither
+    /// leave late nor hold a slot a live line needs. The Announcer runs it before queueing each tick.</summary>
+    public int DropExpired(DateTime utcNow)
     {
-        if (_lastSent is { } last && utcNow - last < Spacing) return null;
         var stale = _lines.RemoveAll(l => l.NotAfterUtc is { } t && t <= utcNow);
         if (stale > 0) log($"announce: dropped {stale} line(s) that could no longer leave in time");
+        return stale;
+    }
+
+    /// <summary>The next line to send, or null when the queue is empty or the last one left less than a second ago.
+    /// Expired lines are dropped first.</summary>
+    public QueuedLine? Next(DateTime utcNow)
+    {
+        DropExpired(utcNow);
+        if (_lastSent is { } last && utcNow - last < Spacing) return null;
         if (_lines.Count == 0) return null;
         var line = _lines[0];
         _lines.RemoveAt(0);

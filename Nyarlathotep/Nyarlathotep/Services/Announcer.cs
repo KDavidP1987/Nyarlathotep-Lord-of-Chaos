@@ -75,6 +75,7 @@ internal static class Announcer
     /// out.</summary>
     internal static void Tick(DateTime now)
     {
+        _queue.DropExpired(now);
         QueueWarnings(now);
         if (Settings.DailyBanner.Value) QueueDailyBanner(now);
         if (_queue.Next(now) is not { } line) return;
