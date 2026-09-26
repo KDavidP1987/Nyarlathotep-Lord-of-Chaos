@@ -128,8 +128,7 @@ physicalPower 1.5 and maxHealth 1.5: fe-short (Sat 12:28, 60 s) and fe-long (Sat
 - [x] mid-window stop at 12:40 (fe-long due to end 12:51, several autosaves after its apply), hard stop as in the rollback drill
 - [x] boot 2 (12:40): "event fe-long cancelled by restart (it was due to end 2026-09-26 16:51:00Z)" and "boot carrier sweep: 40 found, 40 queued for removal" (k = 40 > 0); the removals ran, then the next autosave (12:43) before the stop
 - [x] boot 3 (12:43): "boot carrier sweep: 0 found, 0 queued for removal"
-- [x] `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s1, … deleted)"; the fe1 backups in %TEMP%
-yar-session archived to the session scratchpad; `-Paths` clean
+- [x] `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s1, … deleted)"; the fe1 backups in %TEMP%\nyar-session archived to the session scratchpad; `-Paths` clean
 - logs: each boot's BepInEx log has only the three known warnings (Beelzebub TUNE ×2, Il2CppInterop Class::Init); the Unity log's 226 "PrefabLookupMap.TryGet - Prefab with PrefabGUID <n> is in an unknown state" warnings all fall between the save load and "Startup Completed" (one per GUID, from the save), 0 after it, 0 exceptions
 - not covered here: the stop and purge paths (owner, Session 2); S-7 is decided after Session 2
 
@@ -191,6 +190,71 @@ with no matched pair, or one outside the tolerance, fails D15 and goes to a `dis
 numbers must differ by ×1.5 ±10 %. S-7 needs an "empower tick: 200 removals (batch 200)" line in the
 purge drain with no error; if the query totals of example-empowerment and fe-big stay under 200, S-7's 200-removal clause
 is recorded as unsettled and brought to the owner before step 6.
+
+### Session 2 · 2026-09-26 · faction-empowerment step 5 (build 7400fc6, dev world nyardev, with the owner)
+
+Owner at Rufus the Foreman's lumber camp, 17:19–17:47. The owner skipped the damage top-up, so the damage
+comparison moves to Session 3. Chat lines are from the owner's notes; log lines are from BepInEx/LogOutput.log.
+
+- [x] step 2 `.nyar event list`: page 1/1, all six events enabled with pillar and trigger (example-empowerment,
+  fe-big, fe-expire, fe-second, fe-spawns, fe-vblood vbloodkilled any)
+- [x] steps 4 and 7, D14: 10 native rows each, nearest first, "carrier none … other stat buffs 0" before, then
+  "carrier example-empowerment left 869s type Replace stacks 1 incr False end Destroy mark ok strip ok mods
+  PhysicalPower:MultiplyBaseAdd:0.5,SpellPower:MultiplyBaseAdd:0.5,MaxHealth:MultiplyBaseAdd:1,
+  PrimaryAttackSpeed:MultiplyBaseAdd:0.5,AbilityAttackSpeed:MultiplyBaseAdd:0.5,MovementSpeed:MultiplyBaseAdd:0.5 other
+  stat buffs 0" (D4: the recipe read back from the live carrier, the mods list entry for entry equal to
+  EmpowerStatsTests' expected order for the event's five stats)
+- [x] step 6: "event example-empowerment started", banner "The Bandits rally begins."; log "query 90 of 90 faction
+  entities", "sweep 88 applied, 2 skipped (vblood 2)"; Rufus (CHAR_Bandit_Foreman_VBlood) reads "carrier none"
+- D15 readings, all rows "other stat buffs 0", same prefab and level:
+  - hp max ×2.0: Thug and Hunter 54 → 108, Mugger 128 → 256, Thief 122 → 243 (display rounding of 121.5 → 243),
+    Wolf 61 → 121, Woodcutter 51 → 101 (bases 60.5 and 50.5 displayed rounded); all within ±1 %
+  - pp and sp ×1.5: 13.659 → 20.488, 12.884 → 19.327, 18.5 → 27.75, 19.697 → 29.545, 11.494 → 17.241 (Rascal)
+  - aspd ×1.5: 1 → 1.5 on every row
+  - mspd ×1.5: the reading is the unit's live speed (idle, walking or chasing), so pairs are taken in the same state:
+    the step 10 (carried) and step 12 (plain) readings of the same aggroed units give Hunter d 9m 3.75 / 2.5, Wolf
+    8.25 / 5.5, Thief 5.25 / 3.5, Mugger 4.5 / 3, Rascal 4.8 / 3.2, all exactly ×1.5; the step 4 → 7 pairs differ
+    because the bandits aggroed in between (Thug 1 → 4.8)
+  - only the Hunter at d 9m keeps its distance in steps 4 and 7 (±1 m); the other pairs match by prefab and level,
+    whose base stats are identical per prefab
+  - not recorded: the damage numbers (steps 5 and 8) and the owner's by-eye view of attack and move speed; both
+    move to Session 3, so D15 stays open
+- [x] step 9: "faction Bandits already empowered by example-empowerment" (log: "event fe-second not started by manual")
+- step 10, D16 respawn: after the owner killed Woodcutters and Thugs, the log has mid-window sweeps "sweep 1 applied,
+  86 skipped (vblood 2 carried 84)", then 1, 1 and 2 more, so units that appeared during the window were carried; the
+  17:36 reading shows two Rascals with "left 201s" and "left 199s". The owner could not tell a respawn from a
+  wandering bandit and did not poll every 5 s, and the BepInEx log has no timestamps, so the 15 s bound is not
+  measured; retried in Session 3
+- [x] step 11: "Bandits rally: 3 min left"
+- [x] step 12: "event example-empowerment stopped", banner "The Bandits fall quiet. Bandits rally has ended."; log
+  "89 carriers queued for removal (stopped)", "stopped: 89 removed, 0 left to expire", "empower tick: 89 removals
+  (batch 200), 0 still queued" (one tick), the revert sample "pp 17.24 -> 11.49, hp max 106.11 -> 53.05"; the debug
+  rows 5 s later all "carrier none" with base stats
+- [x] step 13: three events started, banners "The Bandits stir: Bandits rally has begun." (Messages.cs picks one of
+  its start lines) and "The Undead, Militia, Legion, Blackfangs, Gloomrot stir: The world stirs has begun."; fe-big
+  "query 91 of 91", "sweep 89 applied"; fe-spawns spawned 3 CHAR_Bandit_Thug (lifetime 720s); `.nyar status` listed
+  three events and "tracked units: 3"; the late sweeps skipped "ours 3", so our own spawns are never carried
+- [x] step 14, D18 purge: "purge ends 3 events and despawns 3 units; run .nyar purge confirm within 30 s", then
+  "purged: 3 events, 3 units queued"; log "despawn batch: 3 of 3 destroyed", "example-empowerment stopped: 94
+  removed", "fe-big stopped: 91 removed", "empower tick: 185 removals (batch 200), 0 still queued", both revert
+  samples; `.nyar status` "No active events.", "tracked units: 0"; the debug rows all "carrier none" with base stats
+- step 15: not run. The dev cfg still held PurgeCooldownSeconds = 240 from an earlier session and the steps said to
+  wait 2 minutes, so all four starts of fe-expire (17:41–17:44) replied "purge cooldown active", as they should
+  (a step error, not a mod fault; A7 records the fix). The natural end is covered by step 16.
+- [x] step 16: Rufus killed; "trigger: VBloodKilled CHAR_Bandit_Foreman_VBlood", "event fe-vblood started by
+  VBloodKilled …", "sweep 84 applied, 2 skipped (dead 1 vblood 1)", banner "The Bandits avenge their boss begins.",
+  `.nyar status` "Bandits avenge their boss: 2 min left"; at its end "event fe-vblood ended (84 carriers expire with
+  it)", "The Bandits fall quiet. Bandits avenge their boss has ended." and the revert sample "hp max 79.58 -> 53.05"
+  (natural end back to base)
+- [x] D19 tick timing (Debug.TimingLog): the highest average is 2.105 ms (max 111 ms, the tick of the 88-carrier
+  sweep); 1.481 ms with three events; 0.414 ms over the purge drain; every average under 5 ms
+- S-7: the 89- and 185-removal ticks reverted every stat with no error or warning; 200 was not reached (about 185
+  units were loaded around one player). Owner decision 1B (plan mode 2026-09-26): destroy is accepted as safe at
+  scale, and Session 3 sets EmpowerBatchPerTick = 50 so its purge shows the cap splitting a drain in game
+- logs: the BepInEx log has the three known warnings plus the two expected nyar warnings (the stop and the purge);
+  the Unity log's 226 PrefabLookupMap "unknown state" lines all come before "Startup Completed"; 0 exceptions.
+  `pwsh tools/preflight.ps1 -LogCheck` → "log check: 0 unhandled, 575 nyar lines, 0 orphan errors, 0 unity errors"
+- [x] `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s2, … deleted)"
 
 ## Open questions
 

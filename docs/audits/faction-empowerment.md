@@ -90,4 +90,5 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 ## Sessions
 - session 1 log check: 0 unhandled, 48 nyar lines, 0 orphan errors, 0 unity errors
   - boot 1 (12:25–12:40): "log check: 0 unhandled, 33 nyar lines, 0 orphan errors, 0 unity errors"; boot 2 (12:40–12:43): 9 nyar lines, otherwise the same; boot 3 (12:43): 6 nyar lines, otherwise the same; each run before the next boot
-
+- session 2 log check: 0 unhandled, 575 nyar lines, 0 orphan errors, 0 unity errors
+  - one boot (13:06–17:47), owner connected 17:19–17:47; run after the stop and before any restart; BepInEx log: three known warnings plus the stop and purge warnings; Unity log: 226 PrefabLookupMap lines, all before "Startup Completed"; then "snapshot restored; hashes equal (s2, … deleted)"

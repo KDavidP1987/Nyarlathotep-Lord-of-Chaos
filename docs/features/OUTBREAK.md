@@ -1,4 +1,4 @@
-# Outbreak (planned child)
+# Outbreak: undead and Dracul hordes (planned child)
 
 > **Status:** planned. The owner asked for this on 2026-09-26, and it is in the Epic as child `outbreak` after
 > sieges (docs/dod/nyarlathotep.md, A24). **Nothing here is designed yet.** The questions below are for the
@@ -18,6 +18,17 @@ theirs. The point is to rely on the player base to stop the horde.
 - **Respawns:** optionally, respawning NPCs also come back undead.
 - **Levels:** the undead scale to each region's NPC levels, and to what they can overpower there.
 - **Players:** the event exists to make the player base fight back.
+
+## Second variant: the Dracul horde (owner, 2026-09-26)
+
+- **Source:** Dracula's forces instead of the undead. The horde emanates from where Dracula and his generals are
+  (the main story's final boss and his castle), and every enemy it defeats is replaced by Dracul troops.
+- **Goal:** the same as the undead outbreak; the players fight back against the horde.
+- **Bosses in both variants:** some bosses of the horde's type join it as copies that follow the troops and help
+  take over the map, in the undead outbreak and in the Dracul horde alike.
+- **Planning consequence:** outbreak is one event type with a horde profile (which faction, which units, which
+  bosses, where it starts), and undead and Dracul are its first two profiles, rather than two separate features.
+  Boss copies are spawned units (tracked, capped, despawned like any other), never the world's own V Bloods.
 
 ## Constraints it inherits
 
@@ -39,4 +50,6 @@ theirs. The point is to rely on the player base to stop the horde.
 - Win and lose conditions: what the players must do to end it, what "the server is undead" means, and what
   happens then.
 - What players see: announcements, a progress readout, and Raphael rows.
+- Horde profiles: which Dracul units and generals the Dracul horde uses, and which bosses each profile may copy;
+  boss copies must not count as V Blood kills or unlock V Blood rewards.
 - Interaction with castles and sieges.
