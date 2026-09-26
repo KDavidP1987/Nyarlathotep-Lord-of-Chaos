@@ -1,6 +1,6 @@
 # Raphael api — the machine interface
 
-**Status:** in development (docs/dod/raphael-api-core.md, step 2 of 6 done, post-audit READY). Ships in 0.3.0 as api 2.
+**Status:** in development (docs/dod/raphael-api-core.md, step 3 of 6 built, in post-audit). Ships in 0.3.0 as api 2.
 
 ## What it provides
 
@@ -14,7 +14,10 @@ says what Nyarlathotep implements and how it was tested.
 - **`.nyar api events [page]`** (admin): one `[NYAR:def]` row per definition, 10 per page, then
   `[NYAR:end] cmd=events page=<cur>/<total> count=`.
 - **`.nyar api sub on|off`** (anyone): push lines `[NYAR:ev]` for event start and end, waves, wave warnings, the
-  kill switch and config changes. Subscriptions live in memory only.
+  kill switch and config changes. Subscriptions live in memory only, at most 128, and end on `sub off`, a
+  disconnect, being found offline at a send, or a restart. Lines wait in a queue of 50 (oldest dropped) and leave
+  5 a tick. `wave-warn` is pushed only when the chat warning would fire (WaveWarnings on, the event's
+  announce.warnings true, at the WarningOffsets).
 
 ## Code map
 
@@ -23,7 +26,11 @@ says what Nyarlathotep implements and how it was tested.
 | `Logic/Wire.cs` | Line builders: grammar, 480-byte cap, the tag builders |
 | `Logic/Paging.cs` | Contract §4 paging: page parsing, the end line, badarg |
 | `Logic/ApiLines.cs` | The `status` and `events` rows from the engine's state |
-| `Commands/ApiCommands.cs` | `.nyar api version`, `status` and `events` (`sub` comes with the push in step 3) |
+| `Logic/Subscriptions.cs` | The subscription set: on, off, disconnect, the offline prune, delivery, count-only log lines |
+| `Logic/PushQueue.cs` | The six push lines, the queue of 50, and PushHub: the guarded entry points and the push tick |
+| `Services/Pusher.cs` | The one PushHub; called by EventRuntime, WaveAction, EventStore and the scheduler's push phase |
+| `Patches/UserDisconnectPatch.cs` | Ends the leaving user's subscription (hook UserDisconnect) |
+| `Commands/ApiCommands.cs` | `.nyar api version`, `status`, `events` and `sub` |
 
 ## Test results
 
@@ -49,6 +56,20 @@ says what Nyarlathotep implements and how it was tested.
 - `pwsh tools/preflight.ps1 -SelfTest`: 27/27 checks (WireContract good, bad to bad-5 and empty; AdminList bad-2 the
   swapped two-group file; Secrets bad-3 `gh auth token` in a tools/ script).
 - `pwsh tools/preflight.ps1 -AuthSuite`: fails only on ".nyar api sub not found once", as expected until step 3 (A1).
+
+### 2026-09-25 · step 3 · unit tests and checks
+- `dotnet test Nyarlathotep/Nyarlathotep.Tests`: 683 passed, 0 failed (SubscriptionTests, PushTests, the push cases
+  of ApiAccessTests, and the HookUserDisconnect and PushDelivery cases of DependencyFailureTests added).
+- Mutation check: 12 mutants of Logic/Subscriptions.cs and Logic/PushQueue.cs (no collapse, the newest dropped, 6
+  lines a tick, either S-1 gate ignored, an end keeping its wave-warn, a 129th id, no offline prune, a disconnect
+  keeping the entry, an id in the log, an unguarded entry point, a skipped line kept) each fail at least one test.
+- `pwsh tools/preflight.ps1`: "wire contract: 7 tags, 4 api commands, all documented (api 2)"; "gateway: only
+  ActionGateway mutates"; "ready guard: 11/11"; PREFLIGHT OK.
+- `pwsh tools/preflight.ps1 -AuthSuite`: "auth suite: pass (tests, commands, admin list, gateway)".
+- `pwsh tools/preflight.ps1 -SelfTest`: 27/27 checks; WireContract bad-9 (sub missing while the table marks it
+  IMPLEMENTED) fails.
+- Not testable outside the game, checked in step 4's session: the service wiring (a failed reload, enable, disable
+  or set pushes no config-changed; the disconnect patch applies and ends a subscription).
 
 ## Open questions
 

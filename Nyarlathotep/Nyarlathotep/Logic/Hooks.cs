@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Nyarlathotep.Logic;
 
 /// <summary>The game hooks this child depends on (Interfaces › External).</summary>
-public enum Hook { DeathEvent, DayNight, UserConnect }
+public enum Hook { DeathEvent, DayNight, UserConnect, UserDisconnect }
 
 /// <summary>Attaches one hook to the game. The service side checks that the patched system or singleton exists;
 /// the tests use a fake that throws. A throw means the hook is unavailable.</summary>

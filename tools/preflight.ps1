@@ -1139,7 +1139,8 @@ function Get-ParenEnd([string]$Text, [int]$Open) {
 # declaration anywhere else fails, so no file can exempt itself by declaring one. UnitSetup is SpawnTracker's setup
 # step for a unit it has just spawned (foundation step 4); its Apply is [Mutating], so only these services call it.
 # Announcer runs ActionKind.Announce (`.nyar announce`, foundation step 6).
-$script:DispatchedServices = @('EventRuntime', 'SpawnTracker', 'UnitSetup', 'WaveAction', 'Persistence', 'EventStore', 'Announcer') |
+# Pusher runs ActionKind.Subscribe (`.nyar api sub`, raphael-api-core step 3).
+$script:DispatchedServices = @('EventRuntime', 'SpawnTracker', 'UnitSetup', 'WaveAction', 'Persistence', 'EventStore', 'Announcer', 'Pusher') |
     ForEach-Object { "$PkgRel/Services/$_.cs" }
 
 # Every method marked [Mutating] in a dispatched service is a mutating method. Any other file under Commands/,
@@ -1290,6 +1291,14 @@ function Test-CheckWireContract([string]$Root) {
         $status, $api = $rows[$item]
         if ($status -ne 'IMPLEMENTED') { $bad += "$item is $status in the contract"; continue }
         if ($api -notmatch '^\d+$' -or ($docApi -ge 0 -and [int]$api -gt $docApi)) { $bad += "$item has api '$api' in the contract" }
+    }
+    # The reverse direction (A4): every tag and command the table marks IMPLEMENTED exists in the plugin, so the
+    # contract never promises Raphael a line or a command the server does not have.
+    foreach ($key in @($rows.Keys | Sort-Object)) {
+        if ($rows[$key][0] -ne 'IMPLEMENTED') { continue }
+        $kind, $name = $key -split ' ', 2
+        $present = if ($kind -eq 'tag') { $tags.ContainsKey($name) } else { $apiCmds -contains $name }
+        if (-not $present) { $bad += "$key is IMPLEMENTED in the contract but not in the plugin" }
     }
     if ($bad) { return New-Result $false "wire contract: $(@($bad | Select-Object -Unique) -join '; ')" }
     return New-Result $true "wire contract: $($tags.Count) tags, $($apiCmds.Count) api commands, all documented (api $codeApi)"

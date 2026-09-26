@@ -162,8 +162,9 @@ After `sub on`, the server pushes lines to that player until `sub off`, a discon
 [NYAR:ev] type=wave-warn id=ashfall secs=60 wave=2
 ```
 - `type` ∈ `event-start | event-end | wave-warn | wave | killswitch | config-changed`.
-- `id` names the event.
-- `secs` is the time until the wave, or the event's length.
+- `id` names the event; it is `-` for `killswitch` and `config-changed`.
+- `secs` is the event's length for `event-start`, the time until the wave for `wave-warn`, the purge cooldown for
+  `killswitch`, and 0 for `event-end`, `wave` and `config-changed`. `wave=<n>` follows it on `wave` and `wave-warn`.
 - `config-changed` asks Raphael to re-read `version` and `events`; it has no other payload.
 - Siege events go only to subscribers who are members of the target clan, and to admins.
 - The subscribe command answers `[NYAR:ok] cmd=sub on=1` (`on=0` for `sub off`); any other argument answers

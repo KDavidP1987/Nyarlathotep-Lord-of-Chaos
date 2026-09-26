@@ -62,7 +62,7 @@ internal static class Core
             ServerGameSettingsSystem = server.GetExistingSystemManaged<ServerGameSettingsSystem>();
 
             // Services in dependency order (docs/dod/foundation.md › Design › States › Startup and shutdown):
-            // Persistence → EventStore → SpawnTracker → TriggerBus → EventRuntime → Announcer → HealthMonitor
+            // Persistence → EventStore → SpawnTracker → TriggerBus → EventRuntime → Announcer → Pusher → HealthMonitor
             // → EventScheduler.
             Services.Persistence.Initialize();
             Services.EventStore.Initialize();
@@ -70,6 +70,7 @@ internal static class Core
             Services.TriggerBus.Initialize();
             Services.EventRuntime.Initialize();
             Services.Announcer.Initialize();
+            Services.Pusher.Initialize();
             Services.HealthMonitor.Initialize();
             // The scheduler starts before the sweep, so a sweep that throws never leaves the queues without a tick; it
             // does nothing until IsReady.

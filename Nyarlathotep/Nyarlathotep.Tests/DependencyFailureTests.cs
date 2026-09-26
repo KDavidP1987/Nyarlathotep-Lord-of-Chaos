@@ -15,8 +15,10 @@ public class DependencyFailureTests
         [Dependency.HookDeathEvent] = () => HookFault(Hook.DeathEvent, TriggerType.VBloodKilled),
         [Dependency.HookDayNight] = () => HookFault(Hook.DayNight, TriggerType.GameTime),
         [Dependency.HookUserConnect] = () => HookFault(Hook.UserConnect, null),
+        [Dependency.HookUserDisconnect] = DisconnectHook,
         [Dependency.ConnectedUsers] = ConnectedUsers,
         [Dependency.CommandRegistration] = CommandRegistration,
+        [Dependency.PushDelivery] = PushDelivery,
     };
 
     public static TheoryData<Dependency> All()
@@ -182,6 +184,55 @@ public class DependencyFailureTests
         }
         foreach (var t in Enum.GetValues<TriggerType>())
             Assert.Equal(t != blocked, hooks.AllowsTrigger(t));
+    }
+
+    /// <summary>raphael-api-core D21: the disconnect hook unavailable is logged once, and a subscriber who left is
+    /// still removed by the offline prune at the next push.</summary>
+    static void DisconnectHook()
+    {
+        HookFault(Hook.UserDisconnect, null);
+        var log = new LogLines();
+        var users = new FakeUsers();
+        var hub = new PushHub(users, [60], log.Add);
+        hub.Subscribe(1);
+        hub.Subscribe(2);
+        users.Online.Remove(2);                                   // left, and no hook told the hub
+        hub.ConfigChanged();
+        Assert.Equal(1, hub.Tick(DateTime.UtcNow, [], waveWarnings: false));
+        Assert.False(hub.Subscriptions.Contains(2));
+        Assert.Equal(1, log.Count("push: 1 subscribed (offline)"));
+    }
+
+    /// <summary>raphael-api-core D21: a user list that throws skips the line without keeping it and logs once per
+    /// streak; a recipient that throws is skipped while the others receive; an entry point that throws is caught,
+    /// logged once per streak, and the caller goes on.</summary>
+    static void PushDelivery()
+    {
+        var log = new LogLines();
+        var users = new FakeUsers { FailList = true };
+        var hub = new PushHub(users, [60], log.Add);
+        hub.Subscribe(1);
+        hub.Subscribe(3);
+        for (var i = 0; i < 3; i++)
+        {
+            hub.ConfigChanged();
+            Assert.Equal(0, hub.Tick(DateTime.UtcNow, [], waveWarnings: false));
+        }
+        Assert.Equal(0, hub.Queue.Count);                         // the skipped lines are not kept
+        Assert.Equal(1, log.Count("push: user list unavailable"));
+
+        users.FailList = false;
+        users.Unreachable.Add(1);
+        hub.Wave("raid", 1);
+        hub.Wave("raid", 2);
+        Assert.Equal(2, hub.Tick(DateTime.UtcNow, [], waveWarnings: false));
+        Assert.Equal(new[] { 3UL, 3UL }, users.Sent.Select(s => s.Id));
+        Assert.Equal(1, log.Count("push: a subscriber could not be reached"));
+
+        for (var i = 0; i < 3; i++) hub.EventStarted(null!);    // an entry point that throws
+        Assert.Equal(1, log.Count("push: event-start failed"));
+        hub.EventEnded("raid");                                   // the others still work
+        Assert.Equal(1, hub.Queue.Count);
     }
 
     static void ConnectedUsers()

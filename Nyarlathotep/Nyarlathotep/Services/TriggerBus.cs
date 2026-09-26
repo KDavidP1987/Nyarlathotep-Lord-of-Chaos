@@ -79,7 +79,7 @@ internal static class TriggerBus
         Gateway.Run(ActionKind.StartEvent, Actor.System, () => EventRuntime.StartEvent(def.Id, trigger, Actor.System, null), def.Startable);
 
     /// <summary>A hook is available when what it attaches to exists: the DeathEvent patch applied, the DayNightCycle
-    /// singleton present, the ServerBootstrapSystem login patch (Patches/UserConnectPatch) applied. In a Debug build,
+    /// singleton present, the ServerBootstrapSystem connect and disconnect patches (Patches/UserConnectPatch, UserDisconnectPatch) applied. In a Debug build,
     /// Debug.FaultInjection = hook:&lt;name&gt; makes that hook report unavailable (D31).</summary>
     sealed class Registry : IHookRegistry
     {
@@ -100,10 +100,19 @@ internal static class TriggerBus
                     if (_dayNight.CalculateEntityCount() != 1) throw new InvalidOperationException("DayNightCycle singleton not found");
                     break;
                 case Hook.UserConnect:
-                    if (!Plugin.Harmony.GetPatchedMethods().Any(m => m.DeclaringType == typeof(ServerBootstrapSystem)))
-                        throw new InvalidOperationException("ServerBootstrapSystem.OnUserConnected is not patched");
+                    RequirePatched(nameof(ServerBootstrapSystem.OnUserConnected));
+                    break;
+                case Hook.UserDisconnect:
+                    RequirePatched(nameof(ServerBootstrapSystem.OnUserDisconnected));
                     break;
             }
+        }
+
+        // Each login hook checks its own method, so one applied patch never reports the other available.
+        static void RequirePatched(string method)
+        {
+            if (!Plugin.Harmony.GetPatchedMethods().Any(m => m.DeclaringType == typeof(ServerBootstrapSystem) && m.Name == method))
+                throw new InvalidOperationException($"ServerBootstrapSystem.{method} is not patched");
         }
 
         static string SystemName(Hook hook) => hook switch

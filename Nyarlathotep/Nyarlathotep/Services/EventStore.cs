@@ -49,6 +49,7 @@ internal static class EventStore
         var disabled = result.Log.Count;
         var reply = $"reloaded: {Catalog.Current.All.Count - disabled} valid, {disabled} disabled";
         Core.Log.LogInfo($"[nyar] events: {reply}");                           // at boot and on every `.nyar event reload`
+        Pusher.ConfigChanged();                                                // set, enable and disable succeed through here
         return reply;
     }
 

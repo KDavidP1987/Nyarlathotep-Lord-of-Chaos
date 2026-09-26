@@ -25,6 +25,15 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - server: not running; step 2 has no in-game test
 - found on the way: AdminList/bad-2 already existed (the suffixed-attribute plant), so it moves to bad-3 and D11's two-group fixture takes bad-2 as the plan names it; a mislabelled command changes no count, so the admin-list check now also requires every walked command to begin a command documented in docs/NYARLATHOTEP_DESIGN.md § 6, which is what makes AdminList/bad-2 fail
 
+### Step 3 · 2026-09-25 · 3ccf6bc
+- git status: clean
+- compile: 0 errors, 0 warnings
+- tests: 649 passed
+- preflight: exit 0 ("PREFLIGHT OK"); -AuditOf raphael-api-core 2/6 as expected; -AuthSuite fails only on `.nyar api sub` not found, expected until this step (A1)
+- dod status: raphael-api-core 6/22 verified (D1–D4, D9, D14); review human, not pending (A3 and A4 name no gating probe)
+- feature doc read: docs/features/RAPHAEL_API.md (Status: step 2 of 6 done, post-audit READY; Open questions: none); plan D5–D7, D12, D21, Build plan step 3, Business rules 1, 8–10, Interfaces, Design › States and Permissions, Failure & observability; contract § Push events; Services/Announcer.cs (WarningClock, UpcomingWave, GameUsers), Logic/Hooks.cs (Broadcaster, IUserSource), Services/EventRuntime.cs, WaveAction.cs, EventStore.cs, EventScheduler.cs, TriggerBus.cs, Patches/UserConnectPatch.cs
+- server: not running; step 3's in-game checks run in step 4's session
+
 ## Post-audit
 ### Step 1 · 2026-09-25 · 6437b90
 - compile: 0 errors, 0 warnings (plugin and Nyarlathotep.Tests)

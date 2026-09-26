@@ -6,7 +6,8 @@ namespace Nyarlathotep.Tests;
 /// <summary>raphael-api-core D7 (row cases): every status and definition row built for a player and for an admin.
 /// Each row carries exactly the keys the contract lists for its tag, so a key added under any name fails; a player's
 /// row carries units=-.
-/// `api events` itself is admin-only through VCF (preflight commands check and -AuthSuite).</summary>
+/// `api events` itself is admin-only through VCF (preflight commands check and -AuthSuite). The push cases hold every
+/// push line and sub reply to its keys, and a push to subscribed, connected players only.</summary>
 public class ApiAccessTests
 {
     static readonly DateTime Now = new(2026, 9, 25, 12, 0, 0, DateTimeKind.Utc);
@@ -62,6 +63,46 @@ public class ApiAccessTests
             if (!row.StartsWith("[NYAR:event]")) continue;
             Assert.Equal(isAdmin ? "12" : "-", Regex.Match(row, " units=([^ ]+)").Groups[1].Value);
         }
+    }
+
+    /// <summary>D7 (push cases): a push line is the same for a player and an admin, so none may carry units, a
+    /// coordinate, a radius or a player; each is exactly type, id, secs and, for the wave types, wave. The sub replies
+    /// carry cmd and on, or the err keys.</summary>
+    [Fact]
+    public void Every_push_line_and_sub_reply_carries_exactly_its_contract_keys()
+    {
+        var log = new LogLines();
+        var hub = new PushHub(new FakeUsers(), [60], log.Add);
+        var w = World();
+        hub.EventStarted(w.Active[0].Instance);
+        hub.Wave(w.Active[0].Id, 2);
+        hub.EventEnded(w.Active[1].Id);
+        hub.Purged(300);
+        hub.ConfigChanged();
+        hub.Queue.Enqueue(PushLines.WaveWarn(w.Active[0].Id, 2, 60));   // after the purge, which drops waiting warnings
+        Assert.Equal(6, hub.Queue.Count);
+        foreach (var line in hub.Queue.Lines.Select(l => l.Text))
+        {
+            var withWave = line.Contains("type=wave", StringComparison.Ordinal);
+            Assert.Equal(withWave ? ["type", "id", "secs", "wave"] : ["type", "id", "secs"], Keys(line));
+            Assert.DoesNotContain("1520", line);
+        }
+        Assert.Equal(["cmd", "on"], Keys(hub.Subscribe(7)));
+        Assert.Equal(["cmd", "on"], Keys(hub.Unsubscribe(7)));
+        Assert.Equal(["cmd", "code", "arg"], Keys(Wire.Error("sub", WireError.BadArg, arg: "state")));
+    }
+
+    /// <summary>D7: Subscriptions.Deliver reaches only ids that are both subscribed and connected.</summary>
+    [Fact]
+    public void A_push_reaches_only_subscribed_connected_players()
+    {
+        var users = new FakeUsers();                              // online: 1, 2, 3
+        var hub = new PushHub(users, [60], _ => { });
+        hub.Subscribe(1);
+        hub.Subscribe(9);                                         // subscribed, not connected
+        hub.ConfigChanged();
+        hub.Tick(Now, [], waveWarnings: false);
+        Assert.Equal(new[] { 1UL }, users.Sent.Select(s => s.Id));
     }
 
     [Fact]

@@ -383,7 +383,8 @@
         "bad-5": "Wire.Line(tag, …) with a variable tag in Commands/ApiCommands.cs",
         "bad-6": "Commands/ApiCommands.cs imports Wire under a global::-qualified alias written with spaces (using W = global :: Nyarlathotep . Logic . Wire;) and calls W.Line with a variable tag",
         "bad-7": "Wire.Line(\"x\", …) with a literal tag the contract's table does not list, in Commands/ApiCommands.cs",
-        "bad-8": "Commands/ApiCommands.cs imports Wire under an escaped alias (using @class = Nyarlathotep.Logic.Wire;) and calls @class.Line with a variable tag"
+        "bad-8": "Commands/ApiCommands.cs imports Wire under an escaped alias (using @class = Nyarlathotep.Logic.Wire;) and calls @class.Line with a variable tag",
+        "bad-9": "Commands/ApiCommands.cs without the sub command, which the contract's table marks IMPLEMENTED (the reverse direction, A4)"
       }
     },
     {

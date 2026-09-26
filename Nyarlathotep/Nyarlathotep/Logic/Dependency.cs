@@ -14,8 +14,10 @@ public enum Dependency
     HookDeathEvent,
     HookDayNight,
     HookUserConnect,
+    HookUserDisconnect,
     ConnectedUsers,
     CommandRegistration,
+    PushDelivery,
 }
 
 /// <summary>What one dependency's failure is allowed to affect, and what the mod does about it.</summary>
@@ -32,7 +34,9 @@ public static class DependencyPolicy
         [Dependency.HookDeathEvent] = new("pruning and VBloodKilled triggers", "mark the hook unavailable and disable its pillar"),
         [Dependency.HookDayNight] = new("GameTime triggers", "mark the hook unavailable and disable GameTime triggers"),
         [Dependency.HookUserConnect] = new("login notices", "mark the hook unavailable; admins see the degraded notice in status"),
+        [Dependency.HookUserDisconnect] = new("push unsubscribe on disconnect", "mark the hook unavailable; the offline prune at the next push removes the entry"),
         [Dependency.ConnectedUsers] = new("the one send", "skip that recipient, one log line per failure streak"),
         [Dependency.CommandRegistration] = new("the one command group", "log the group that failed; the rest register"),
+        [Dependency.PushDelivery] = new("the one push line, subscriber or entry point", "skip it, one log line per failure streak; the event tick and the other subscribers go on"),
     };
 }

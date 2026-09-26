@@ -169,8 +169,8 @@ internal static class Announcer
         }
     }
 
-    /// <summary>The connected users, read once per send (Logic/IUserSource).</summary>
-    sealed class GameUsers : IUserSource
+    /// <summary>The connected users, read once per send (Logic/IUserSource). Services/Pusher keeps its own.</summary>
+    internal sealed class GameUsers : IUserSource
     {
         readonly Dictionary<ulong, User> _users = new();
 
