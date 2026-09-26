@@ -266,11 +266,15 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
         _events.Remove(eventId);
         var carriers = _byUnit.Values.Where(c => c.EventId == eventId).ToList();
         var tally = new EndWatchTally(eventId, carriers.Count, due);
+        // The watch stays ordered by due time, so an entry not yet due never holds back a later-ending event's due one.
+        var after = _watch.Last;
+        while (after is not null && after.Value.Tally.Due > due) after = after.Previous;
         foreach (var c in carriers)
         {
             _byUnit.Remove(c.Unit);
             _removing[c.Unit] = _removing.GetValueOrDefault(c.Unit) + 1;
-            _watch.AddLast((c.Buff, c.Unit, tally));
+            var entry = (c.Buff, c.Unit, tally);
+            after = after is null ? _watch.AddFirst(entry) : _watch.AddAfter(after, entry);
         }
     }
 

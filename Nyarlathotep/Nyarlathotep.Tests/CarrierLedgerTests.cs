@@ -199,6 +199,24 @@ public class CarrierLedgerTests
     }
 
     [Fact]
+    public void An_event_ended_later_but_due_earlier_is_checked_at_its_own_due_time()
+    {
+        var ops = FakeCarrierOps.WithBandits(2);
+        var rig = new Rig(ops);
+        rig.Ledger.Start("late", Bandits with { IncludeUnits = [] }, T0.AddSeconds(600), T0);
+        rig.Tick(T0, 200, "late");
+        rig.Ledger.End("late");                                      // due T0 + 605
+        ops.Units[10] = FakeCarrierOps.Bandit();
+        rig.Ledger.Start("early", Bandits, T0.AddSeconds(60), T0);
+        rig.Tick(T0.AddSeconds(1), 200, "early");                   // the free unit 10 gets early's carrier
+        rig.Ledger.End("early");                                     // due T0 + 65, ended second
+        rig.Ledger.BeginTick(200, T0.AddSeconds(65));
+        Assert.Equal(2, rig.Ledger.Watched);                         // late's two still wait
+        Assert.Contains("empower early ended: 1 carriers outlived the end, queued for removal", rig.Log);
+        Assert.Null(rig.Ledger.CarrierOf(10));
+    }
+
+    [Fact]
     public void Carriers_that_end_on_time_need_no_removal_and_no_line()
     {
         var rig = Ended(20, out var end);

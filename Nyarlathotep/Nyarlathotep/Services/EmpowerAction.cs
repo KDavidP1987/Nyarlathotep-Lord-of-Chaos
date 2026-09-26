@@ -168,14 +168,11 @@ internal static class EmpowerAction
     /// one tick after the unit is seen without a carrier.</summary>
     static void Samples()
     {
+        // A sample is marked logged only after its read and line succeed, so a throwing read retries next tick.
         foreach (var s in _samples.Values.Where(s => !s.Logged))
         {
-            s.Logged = true;
-            if (!s.Unit.Exists()) continue;
-            var (pp, hp) = Read(s.Unit);
-            Log($"empower {s.EventId} sample {s.Prefab}: pp {s.Pp:0.##} -> {pp:0.##}, hp max {s.Hp:0.##} -> {hp:0.##}");
-            s.Pp = pp;
-            s.Hp = hp;
+            if (!s.Unit.Exists()) { s.Logged = true; continue; }
+            ApplyLine(s);
         }
         for (var i = _reverts.Count - 1; i >= 0; i--)
         {
@@ -183,11 +180,7 @@ internal static class EmpowerAction
             if (!s.Unit.Exists()) { _reverts.RemoveAt(i); continue; }
             if (!s.Logged)
             {
-                s.Logged = true;
-                var (ap, ah) = Read(s.Unit);
-                Log($"empower {s.EventId} sample {s.Prefab}: pp {s.Pp:0.##} -> {ap:0.##}, hp max {s.Hp:0.##} -> {ah:0.##}");
-                s.Pp = ap;
-                s.Hp = ah;
+                ApplyLine(s);
                 continue;
             }
             if (!s.Ready)
@@ -199,6 +192,15 @@ internal static class EmpowerAction
             Log($"empower {s.EventId} sample {s.Prefab}: pp {s.Pp:0.##} -> {pp:0.##}, hp max {s.Hp:0.##} -> {hp:0.##}");
             _reverts.RemoveAt(i);
         }
+    }
+
+    static void ApplyLine(Sample s)
+    {
+        var (pp, hp) = Read(s.Unit);
+        Log($"empower {s.EventId} sample {s.Prefab}: pp {s.Pp:0.##} -> {pp:0.##}, hp max {s.Hp:0.##} -> {hp:0.##}");
+        s.Pp = pp;
+        s.Hp = hp;
+        s.Logged = true;
     }
 
     /// <summary>The unit's carrier: the buff the ledger tracks on it, else a T02 potion buff carrying the carrier marker
@@ -517,7 +519,8 @@ internal static class EmpowerAction
                 buff.Write(new LifeTime { Duration = recipe.LifeTimeSeconds, EndAction = Enum.Parse<LifeTimeEndAction>(recipe.EndAction) });
                 if (!buff.AddComponentSafe<Age>()) throw new InvalidOperationException("Age could not be added");
                 buff.Write(new Age { Value = 0f });
-                if (Core.EntityManager.HasBuffer<ModifyUnitStatBuff_DOTS>(buff)) Core.EntityManager.GetBuffer<ModifyUnitStatBuff_DOTS>(buff).Clear();
+                if (!buff.AddBufferSafe<ModifyUnitStatBuff_DOTS>()) throw new InvalidOperationException("the stat buffer could not be added");
+                Core.EntityManager.GetBuffer<ModifyUnitStatBuff_DOTS>(buff).Clear();
             }
             catch
             {
