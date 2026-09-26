@@ -134,13 +134,12 @@ The sibling’s Empower contract is referenced and sequenced behind release 0.4.
 
 VERDICT: REVISE
 ### Dispositions
-Review 3 is the last of the three rounds; the plan stops here and the findings go to the owner (decision 2A). The dispositions
-below are the author's proposals, applied only after the owner decides.
-- F1 · accepted · pending owner: S-13's owner kick-off stays, and the Epic amendment of D47 ("unattended after an owner kick-off") is recorded once the owner confirms S-13
-- F2 · accepted · pending owner: build step 1 adds docs/dod/event-library.md to tools/preflight-checks.json dataTables, with fixture DataInventory/bad-el that drops one of its rows' inventory entries
-- F3 · accepted · pending owner: delete writes events.json first; clearing the state.json cooldown row after it is retried on the next save and logged "delete <id>: cooldown row left, cleared on the next save"; the reply names it; a LibraryDependencyFailureTests case fails the second write
-- F4 · accepted · pending owner: ControlCaseTests reflects over every class D-items cite for a new control, CommandArgTests, ConfigChangedTests, AuthorizationTests, ContractDocTests and ControlPrecedenceTests included, the new cases named by the convention
-- F5 · accepted · pending owner: -Paths gains the child's declared-path list (the plan's Rollout › Paths walked, parsed), and a path this child's build creates that the list omits fails even when a broad manifest glob covers it; fixture Paths/bad-undeclared
-- F6 · accepted · pending owner: Design › States says a delete undone from .bak comes back without its former cooldown
-- F7 · accepted · pending owner: Session 2's non-admin walk adds template list, template info and pillar list
-- F8 · accepted · pending owner: D27 names the creating forms (template use, event new, event copy), each tested at 200 → 201, and set and delete confirm tested separately at capacity
+The owner accepted F1–F8 on 2026-09-26 in plan mode (decisions 1A, 2A, 3A); they are applied in the plan revision that goes to Review 4.
+- F1 · accepted · S-13's owner kick-off stays, and the Epic amendment of D47 ("unattended after an owner kick-off") is recorded (Epic A22, owner decision 1A)
+- F2 · accepted · build step 1 adds docs/dod/event-library.md to tools/preflight-checks.json dataTables, with fixture DataInventory/bad-el that drops one of its rows' inventory entries
+- F3 · accepted · delete writes events.json first; clearing the state.json cooldown row after it is retried on the next save and logged "delete <id>: cooldown row left, cleared on the next save"; the reply names it; a LibraryDependencyFailureTests case fails the second write
+- F4 · accepted · ControlCaseTests reflects over every class D-items cite for a new control, CommandArgTests, ConfigChangedTests, AuthorizationTests, ContractDocTests and ControlPrecedenceTests included, the new cases named by the convention
+- F5 · accepted · -Paths gains the child's declared-path list (the plan's Rollout › Paths walked, parsed), and a path this child's build creates that the list omits fails even when a broad manifest glob covers it; fixture Paths/bad-undeclared
+- F6 · accepted · Design › States says a delete undone from .bak comes back without its former cooldown
+- F7 · accepted · Session 2's non-admin walk adds template list, template info and pillar list
+- F8 · accepted · D27 names the creating forms (template use, event new, event copy), each tested at 200 → 201, and set and delete confirm tested separately at capacity
