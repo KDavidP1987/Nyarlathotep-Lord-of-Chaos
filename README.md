@@ -3,16 +3,16 @@
 <p align="center"><img src="docs/img/nyarlathotep-cover.jpg" alt="Nyarlathotep, Lord of Chaos" width="512"></p>
 
 A server-side BepInEx IL2CPP plugin for V Rising that adds admin-configured, event-driven NPC behaviour.
-0.2.0 ships the event engine with spawn-wave events, wave warnings and banners, and a kill switch; timed
+0.2.x ships the event engine with spawn-wave events, wave warnings and banners, and a kill switch; timed
 faction empowerment, castle sieges, defended zones, boss-fight reinforcements, spawn modifiers and
 leaderboards are planned, one release each. The companion client Raphael reads a machine-readable API.
 
-0.2.0 is a public beta. Every pillar and automatic announcement starts disabled; admins opt in. The 0.1.0 key
+0.2.x is a public beta. Every pillar and automatic announcement starts disabled; admins opt in. The 0.1.0 key
 `General.AnnounceEvents` is retired and ignored; the `[Announcements]` switches replace it.
 
 ## Status
 
-**v0.2.0.** See [`CHANGELOG.md`](CHANGELOG.md) for what ships and [`docs/dod/`](docs/dod/) for the
+**v0.2.1.** See [`CHANGELOG.md`](CHANGELOG.md) for what ships and [`docs/dod/`](docs/dod/) for the
 build plan.
 
 ## How it works

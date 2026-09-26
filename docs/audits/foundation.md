@@ -250,3 +250,6 @@ yarfoundation-before.tsv "20 created, 38 changed, 0 deleted, all in manifest, no
 - session 21 log check: 0 unhandled, 16 nyar lines, 0 orphan errors, 0 unity errors (Boot B, from copies taken before the restart; Boot C: 0 unhandled, 10 nyar lines, 0 orphan errors, 0 unity errors)
 - in game: A21 in session 20 (10 own-lifetime units left 1 a tick through the queue, t-end the same), A22 in session 21 (the boot sweep found all 5 saved units)
 - Codex verdict: READY (round 4)
+- session 22 log check: 0 unhandled, 6 nyar lines, 0 orphan errors, 0 unity errors
+- release 0.2.1 (the closing review's fixes): the six surfaces moved together, preflight "version: 0.2.1 (csproj = thunderstore.toml)", "changelogs: 0.2.1 in both"; Codex review of the surfaces round 1 REVISE (the Thunderstore changelog overstated the scope and said a unit "can always be found"), both reworded, round 2 READY
+- tcli build: Nyarlathotep/Nyarlathotep/build/kdpen-Nyarlathotep-0.2.1.zip SHA-256 5411f1ce8eb25e04444ac5959491ec4bcbfd46de652646c4d148e09f95e73992

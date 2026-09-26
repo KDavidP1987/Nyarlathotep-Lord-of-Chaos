@@ -6,7 +6,7 @@ A **server-side** event layer for V Rising. Admins stage NPC events the base gam
 enemies on a schedule, at nightfall or after a V Blood falls, with warnings and banners for players, and in
 later releases empowered factions, castle sieges, defended zones and boss-fight adds.
 
-> **Public beta (0.2.0).** Every pillar and automatic announcement is off by default; no event runs until an
+> **Public beta (0.2.1).** Every pillar and automatic announcement is off by default; no event runs until an
 > admin turns on its pillar and enables it.
 
 ## What it does

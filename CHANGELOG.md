@@ -3,6 +3,25 @@
 The complete technical history. The concise, player-facing changelog that ships to Thunderstore lives at
 `Nyarlathotep/Nyarlathotep/CHANGELOG.md`. Public beta from 0.2.0; features stay experimental until validated on live servers.
 
+## [0.2.1] - 2026-09-25
+
+Fixes from the foundation child's closing review (Codex whole-child cross-inspection, `docs/audits/foundation.md`
+› Post-audit › Step 9). Foundation closes at 40/40 items verified.
+
+- **Every unit despawns through the budget (A21).** 0.2.0 pushed a unit's `LifeTime` past the despawn queue's drain
+  only when the event end decided its due time (A16), so a unit whose own `unitLifetimeSeconds` or
+  `ManualSpawnLifetimeSeconds` decided it was removed by the game's lifetime system, one spawn batch per frame,
+  outside `MaxDespawnsPerTick`. Every tracked unit now carries a due time (`SpawnLedger.Lifetime`: min(own lifetime,
+  event end + `GraceSeconds`), or the manual lifetime); `SpawnLedger.QueueDue` moves due units into the budgeted
+  queue each tick, earliest first; `LifeTime` is due time + ceil(`MaxTrackedUnits` / `MaxDespawnsPerTick`) s + 60 s
+  for every unit, only a backstop. Session 20: 10 units with a 30 s lifetime left 1 a tick at `MaxDespawnsPerTick`
+  1. The wave log line now reads "due in <n>s, lifetime <m>s".
+- **Marker first (A22).** `SpawnTracker.Prepare` sets the marker buff (its `SpellLevel` record first) before any
+  other fallible step and attempts `LifeTime` and `Age` even when marking fails, so a unit whose setup and destroy
+  both fail keeps the boot sweep's record or its lifetime. Session 21: a kill after an autosave with 5 units alive,
+  then "boot marker sweep: 5 found, 5 queued".
+- 539 tests.
+
 ## [0.2.0] - 2026-09-25
 
 First public beta: the foundation child of the DoD Epic (`docs/dod/foundation.md`, 34/40 items verified at

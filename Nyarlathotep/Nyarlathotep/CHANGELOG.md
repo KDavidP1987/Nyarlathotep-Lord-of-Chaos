@@ -2,6 +2,14 @@
 
 Public beta. Event pillars and automatic announcements default off; admins opt in per feature.
 
+## 0.2.1 (2026-09-25)
+
+- **Paced removal for every spawned unit.** Units with their own lifetime (`unitLifetimeSeconds`) and `.nyar spawn`
+  units now leave a few per tick through `MaxDespawnsPerTick`, like event units, instead of all at once when their
+  timer ends. Their timer now only matters if the mod stops.
+- **Safer spawning.** A new unit gets its cleanup marker before any other setup, and its timer even if marking
+  fails, so a unit whose setup goes wrong is still removed after a restart or when its timer ends.
+
 ## 0.2.0 (2026-09-25)
 
 First public beta: the event engine.

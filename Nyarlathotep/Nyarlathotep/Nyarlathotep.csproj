@@ -4,12 +4,12 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<AssemblyName>Nyarlathotep</AssemblyName>
 		<RootNamespace>Nyarlathotep</RootNamespace>
-		<Version>0.2.0</Version>
+		<Version>0.2.1</Version>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<LangVersion>12.0</LangVersion>
 		<BepInExPluginGuid>kdpen.Nyarlathotep</BepInExPluginGuid>
 		<BepInExPluginName>Nyarlathotep</BepInExPluginName>
-		<Description>Nyarlathotep, Lord of Chaos: a server-side event engine for V Rising. 0.2.0 runs admin-configured NPC spawn-wave events with warnings, banners and a kill switch; faction empowerment, sieges, defended zones and boss reinforcements are planned.</Description>
+		<Description>Nyarlathotep, Lord of Chaos: a server-side event engine for V Rising. 0.2.1 runs admin-configured NPC spawn-wave events with warnings, banners and a kill switch; faction empowerment, sieges, defended zones and boss reinforcements are planned.</Description>
 		<Authors>kdpen</Authors>
 		<Copyright>Copyright © 2026 Kristopher Penland</Copyright>
 		<PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>

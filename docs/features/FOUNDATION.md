@@ -1,6 +1,6 @@
 # Foundation — the event engine
 
-**Status:** released in 0.2.0, the first public beta (docs/dod/foundation.md, step 8 of 9; step 9 closes the plan). Nothing here is enabled by
+**Status:** released in 0.2.0, the first public beta, with the closing review's fixes in 0.2.1 (docs/dod/foundation.md, 40/40 verified, closed after step 9). Nothing here is enabled by
 default: pillar switches are off, seeded events are disabled, announcement switches are off.
 
 ## What it provides
@@ -384,6 +384,16 @@ fails), unattended, same config, two boots.
 - Log check, Boot B (from the copies taken before the restart): 0 unhandled, 16 nyar lines, 0 orphan errors, 0 unity
   errors. Boot C: 0 unhandled, 10 nyar lines, 0 orphan errors, 0 unity errors. Warnings only Il2CppInterop and
   Beelzebub, plus the 226 PrefabLookupMap lines. The config and events.json were restored afterwards.
+
+### Session 22 · 2026-09-25
+Release build of the 0.2.1 release tree, unattended boot on the restored config; no player connected.
+- "Plugin kdpen.Nyarlathotep v0.2.1 loaded", "events: reloaded: 6 valid, 0 disabled", "triggers: all hooks
+  available", "announcements: all off".
+- "boot marker sweep: 5 found, 5 queued for despawn (0 listed in state.json)", then "5 of 5 destroyed, 0 left".
+  Session 21's Boot C had drained t-mark's units but was killed before an autosave, so the world save still held
+  them while state.json already listed none. The marker sweep, not state.json, found them.
+- Log check: 0 unhandled, 6 nyar lines, 0 orphan errors, 0 unity errors; warnings only Il2CppInterop and
+  Beelzebub, plus the 226 PrefabLookupMap lines.
 
 ## Open questions
 
