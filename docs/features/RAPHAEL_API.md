@@ -100,8 +100,8 @@ lifetime 30 s, 300 s event) and t-end (6 units, 60 s) at 22:42.
 - Stopped after the next "Finished Saving" (AutoSave_413, 22:47:39), so the saved world holds no event unit.
 - `-LogCheck`: 0 unhandled, 28 nyar lines, 0 orphan errors, 0 unity errors. Every [Warning] line read: Il2CppInterop
   "Class::Init signatures have been exhausted" and two Beelzebub TUNE lines (sibling mods, the same every boot); the
-  server log's 226 PrefabLookupMap "unknown state" warnings all come before "Startup Completed", as in foundation
-  session 12. No error line.
+  server log's 226 PrefabLookupMap warnings (224 "unknown state", 2 "converted but does not exist") all come before
+  "Startup Completed", as in foundation session 12. No error line.
 
 ## Open questions
 

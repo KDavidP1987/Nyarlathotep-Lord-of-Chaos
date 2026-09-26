@@ -424,7 +424,7 @@
       "mode": "sessionsof",
       "fixtures": "tools/preflight-fixtures/SessionLogs",
       "inputs": [
-        "docs/features/<SLUG>.md › Test results (### Session <n> headings)",
+        "the feature docs tools/preflight-checks.json childDocs maps the slug to (else docs/features/<SLUG>.md) › Test results (### Session <n> headings)",
         "docs/audits/<slug>.md (- session <n> log check: lines)",
         "the plan slug (-SessionsOf; sessionsof.txt in a fixture)"
       ],
@@ -440,7 +440,8 @@
         "bad-9": "every session is before A10 (sessions 1-4), so none is checked",
         "bad-10": "the audit's session 8 line lists a Unity error kind with no unity sub-bullet attributing it",
         "bad-11": "the audit's session 8 line shows 1 unity error and lists no kinds",
-        "bad-12": "the audit's session 8 kind is attributed to ours without citing an amendment"
+        "bad-12": "the audit's session 8 kind is attributed to ours without citing an amendment",
+        "bad-13": "tools/preflight-checks.json maps the slug to a second doc whose session 99 has no log check line (A8: every mapped doc is read)"
       }
     },
     {

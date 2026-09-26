@@ -1396,13 +1396,21 @@ $script:SessionsBeforeA10 = @{ 'foundation' = 7 }
 function Test-CheckSessionLogs([string]$Root) {
     $slug = if (Test-IsFixture $Root) { "$(Read-Text $Root 'sessionsof.txt')".Trim() } else { $SessionsOf }
     if (-not $slug) { return New-Result $false 'session logs: no plan named (-SessionsOf <slug>)' }
-    $docRel = "docs/features/$($slug.ToUpperInvariant().Replace('-', '_')).md"
-    $doc = Read-Text $Root $docRel
+    # The feature docs are the ones childDocs maps the slug to; the slug-derived name only without a mapping (A8).
+    $mt = Read-Text $Root 'tools/preflight-checks.json'
+    $mapped = if ($mt) { @(($mt | ConvertFrom-Json).childDocs.$slug | Where-Object { $_ }) } else { @() }
+    $docRels = if ($mapped.Count) { $mapped } else { @("docs/features/$($slug.ToUpperInvariant().Replace('-', '_')).md") }
     $audit = Read-Text $Root "docs/audits/$slug.md"
-    if ($null -eq $doc) { return New-Result $false "session logs: $docRel not found" }
+    $sessions = @()
+    foreach ($docRel in $docRels) {
+        $doc = Read-Text $Root $docRel
+        if ($null -eq $doc) { return New-Result $false "session logs: $docRel not found" }
+        $results = [regex]::Match($doc, '(?ms)^## Test results\s*$(.*?)(?=^## |\z)')
+        if ($results.Success) { $sessions += @([regex]::Matches($results.Groups[1].Value, '(?m)^### Session (\d+) · ') | ForEach-Object { [int]$_.Groups[1].Value }) }
+    }
+    $docRel = $docRels -join ', '
     if ($null -eq $audit) { return New-Result $false "session logs: docs/audits/$slug.md not found" }
-    $results = [regex]::Match($doc, '(?ms)^## Test results\s*$(.*?)(?=^## |\z)')
-    $sessions = if ($results.Success) { @([regex]::Matches($results.Groups[1].Value, '(?m)^### Session (\d+) · ') | ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object -Unique) } else { @() }
+    $sessions = @($sessions | Sort-Object -Unique)
     if ($sessions.Count -eq 0) { return New-Result $false "session logs: $slug has no sessions under $docRel › Test results" }
     $checks = @{}; $dupes = @(); $unattributed = @()
     $pattern = '(?m)^- session (\d+) log check: (\d+) unhandled, (\d+) nyar lines(?:, (\d+) orphan errors, (\d+) unity errors)?(?<rest>[^\r\n]*)(?:\r?\n  - before A10[^\r\n]*?\b(\d+) orphan errors)?'
@@ -1436,6 +1444,7 @@ function Test-CheckSessionLogs([string]$Root) {
     $ok = @($post | Where-Object { $checks.ContainsKey($_) -and $bad -notcontains $_ }).Count
     $preOrphans = @($pre | Where-Object { $checks.ContainsKey($_) -and ([math]::Max($checks[$_][2], 0) + $checks[$_][3]) -gt 0 })
     $preNote = if ($pre.Count) { "; $($pre.Count) before A10 not counted$(if ($preOrphans) { " (orphan errors in session $($preOrphans -join ', '))" })" } else { '' }
+    $after = if ($cutoff) { ' after A10' } else { '' }
     if ($missing -or $bad -or $post.Count -eq 0) {
         $why = @()
         if ($post.Count -eq 0) { $why += "no session after A10 (session $cutoff)" }
@@ -1444,9 +1453,9 @@ function Test-CheckSessionLogs([string]$Root) {
         if ($old) { $why += "no orphan count in session $($old -join ', ')" }
         if ($dupes) { $why += "more than one log check line for session $($dupes -join ', ')" }
         if ($unattributed) { $why += "unity error kinds not listed or not attributed in session $($unattributed -join ', ')" }
-        return New-Result $false "session logs: $slug $ok/$($post.Count) checked after A10$preNote ($($why -join '; '))"
+        return New-Result $false "session logs: $slug $ok/$($post.Count) checked$after$preNote ($($why -join '; '))"
     }
-    return New-Result $true "session logs: $slug $ok/$($post.Count) checked after A10$preNote"
+    return New-Result $true "session logs: $slug $ok/$($post.Count) checked$after$preNote"
 }
 
 # ---------------------------------------------------------------- runner

@@ -86,3 +86,15 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - amendments: A5 (discovered, 5.3: push values, own-method hook checks, dependency rows, bad-9), A6 (discovered, 12.4: transitions reported where they happen; prune at the cap), A7 (discovered, 12.4: the reload and edit flows in Logic)
 - in-game: none in this step; step 4's session covers D12, the gateway path of `sub`, and the EventStore delegates
 - dod status: D5, D6, D7, D8, D10, D11, D21 pass lines added; D12, D13, D22 wait for steps 4 and 5
+
+### Step 4 · 2026-09-25 · 8bcb4bd
+- compile: 0 errors, 0 warnings; deployed c744f1b's build (Release) to the dev server; no code changed in this step
+- preflight: exit 0 ("PREFLIGHT OK")
+- session 1: docs/features/RAPHAEL_API.md › Test results › Session 1 — "triggers: all hooks available" (UserDisconnect included), "push: ready", a21's t-own and t-end spawned 16 units and drained them to "0 left"; the boot sweep drained 5 units the previous save held; stopped after "Finished Saving"
+- session 1 log check: 0 unhandled, 28 nyar lines, 0 orphan errors, 0 unity errors
+- warnings read: Il2CppInterop Class::Init and two Beelzebub TUNE lines (BepInEx); 226 PrefabLookupMap warnings in the server log, all before "Startup Completed" (the game's save load). None from this mod.
+- /code-review: not run; the step changes only the audit and the feature doc (no code)
+- Codex cross-inspection round 1 (8bcb4bd): 4 non-blocking confirmations — the record matches the log; the step meets Build plan step 4 (TriggerBus's "all hooks available" requires the disconnect patch); moving the player-dependent step 3 checks to Session 2 changes test allocation, not scope, and step 5 covers D12; every warning is outside the mod. It counted 224 "unknown state" lines: the record now names both kinds (224 + 2 = 226)
+- Codex verdict: READY (round 1)
+- amendments: none
+- dod status: D20 waits for steps 5 and 6 (every step and session); 13/22 verified
