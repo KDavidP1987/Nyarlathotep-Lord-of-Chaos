@@ -10,6 +10,9 @@
     "foundation": [
       "docs/features/FOUNDATION.md"
     ],
+    "raphael-api-core": [
+      "docs/features/RAPHAEL_API.md"
+    ],
     "faction-empowerment": [
       "docs/features/FACTION_EMPOWERMENT.md"
     ],

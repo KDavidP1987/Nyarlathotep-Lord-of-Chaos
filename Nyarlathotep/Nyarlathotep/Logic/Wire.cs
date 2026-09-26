@@ -63,6 +63,45 @@ public static class Wire
         ("annwarn", Bool(v.AnnWarn)), ("annbanner", Bool(v.AnnBanner)), ("anndaily", Bool(v.AnnDaily)),
         ("annlogin", Bool(v.AnnLogin)), ("annshare", Bool(v.AnnShare)));
 
+    /// <summary>A definition name on the wire: mapped, then cut to this many UTF-8 bytes (raphael-api-core Business
+    /// rules 5), so no name pushes a later key off its line.</summary>
+    public const int NameBytes = 64;
+
+    /// <summary>A validation reason on the wire: mapped, then cut to this many UTF-8 bytes.</summary>
+    public const int ReasonBytes = 120;
+
+    /// <summary><paramref name="raw"/> mapped by <see cref="TextSink.WireValue"/> and cut on a character boundary.</summary>
+    public static string Cut(string? raw, int maxBytes) => TextSink.CutToBytes(TextSink.WireValue(raw), maxBytes);
+
+    /// <summary>`[NYAR:event]`, one `api status` row (contract §3 status).</summary>
+    public static string Event(string id, string kind, string name, string state, string faction, int left, string wave, int? units) =>
+        Record("event", ("id", id), ("kind", kind), ("name", Cut(name, NameBytes)), ("state", state), ("faction", faction),
+            ("left", left.ToString()), ("wave", wave), ("units", units?.ToString() ?? "-"));
+
+    /// <summary>`[NYAR:def]`, one `api events` row (contract §3 events).</summary>
+    public static string Def(string id, string name, bool enabled, string trigger, string action, int duration, string state, string? reason) =>
+        Record("def", ("id", id), ("name", Cut(name, NameBytes)), ("enabled", Bool(enabled)), ("trigger", trigger),
+            ("action", action), ("duration", duration.ToString()), ("state", state), ("reason", reason is null ? "-" : Cut(reason, ReasonBytes)));
+
+    /// <summary>`[NYAR:end] cmd= count=` after an unpaged read (contract §4).</summary>
+    public static string End(string cmd, int count) => Record("end", ("cmd", cmd), ("count", count.ToString()));
+
+    /// <summary>`[NYAR:end] cmd= page=&lt;cur&gt;/&lt;total&gt; count=` after a paged read (contract §4).</summary>
+    public static string EndPaged(string cmd, int page, int total, int count) =>
+        Record("end", ("cmd", cmd), ("page", $"{page}/{total}"), ("count", count.ToString()));
+
+    /// <summary>`[NYAR:ok] cmd=&lt;cmd&gt; …`, the acknowledgement of a command that changes only a subscription.</summary>
+    public static string Ok(string cmd, params (string Key, string Value)[] tokens) =>
+        Record("ok", new[] { ("cmd", cmd) }.Concat(tokens).ToArray());
+
+    /// <summary>`[NYAR:ev] type= id= secs= [wave=]`, one push line (contract §3 push events).</summary>
+    public static string Ev(string type, string id, int secs, int? wave = null)
+    {
+        var tokens = new List<(string, string)> { ("type", type), ("id", id), ("secs", secs.ToString()) };
+        if (wave is { } w) tokens.Add(("wave", w.ToString()));
+        return Record("ev", tokens.ToArray());
+    }
+
     /// <summary>`[NYAR:err] cmd=&lt;cmd&gt; code=&lt;code&gt; [secs=] [arg=]` (contract §4).</summary>
     public static string Error(string cmd, WireError code, int? secs = null, string? arg = null)
     {

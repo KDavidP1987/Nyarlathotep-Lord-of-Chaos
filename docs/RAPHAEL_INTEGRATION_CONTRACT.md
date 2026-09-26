@@ -161,6 +161,14 @@ After `sub on`, the server pushes lines to that player until `sub off`, a discon
 | `ratelimit` | A share limit was hit; `secs` is the time until the next share is allowed. |
 | `cooldown` | The kill-switch cooldown is active; `secs` is the time left. |
 
+Examples — the end of page 1 of 3 of a 24-row read, the end of an unpaged read, a bad page and a subscription:
+```
+[NYAR:end] cmd=events page=1/3 count=24
+[NYAR:end] cmd=status count=2
+[NYAR:err] cmd=events code=badarg arg=page
+[NYAR:ok] cmd=sub on=1
+```
+
 ---
 
 ## 5. Admin actions and player actions (human commands, not wire)

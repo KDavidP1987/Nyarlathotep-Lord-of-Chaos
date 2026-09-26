@@ -118,6 +118,95 @@ public class WireFormatTests
         Assert.Equal(TableNames(Section("2. Handshake")).Count, line.Split(' ').Length - 1);
     }
 
+    /// <summary>Every example line of the contract's code blocks for the tags raphael-api-core builds.</summary>
+    static List<string> Examples(string tag) =>
+        Regex.Matches(Contract, @"(?ms)^```\r?\n(.*?)^```").SelectMany(m => m.Groups[1].Value.Split('\n'))
+            .Select(l => l.TrimEnd('\r')).Where(l => l.StartsWith($"[NYAR:{tag}] ", StringComparison.Ordinal)).ToList();
+
+    static Dictionary<string, string> Tokens(string line) =>
+        line.Split(' ').Skip(1).ToDictionary(t => t[..t.IndexOf('=')], t => t[(t.IndexOf('=') + 1)..]);
+
+    /// <summary>The builder's line for the example's values. Keys are read by name, so a builder that adds, drops or
+    /// reorders a key produces a line that differs from the example.</summary>
+    static string Rebuild(string tag, Dictionary<string, string> t)
+    {
+        int? Opt(string key) => t.TryGetValue(key, out var v) && v != "-" ? int.Parse(v) : null;
+        switch (tag)
+        {
+            case "event":
+                return Wire.Event(t["id"], t["kind"], t["name"], t["state"], t["faction"], int.Parse(t["left"]), t["wave"], Opt("units"));
+            case "def":
+                return Wire.Def(t["id"], t["name"], t["enabled"] == "1", t["trigger"], t["action"], int.Parse(t["duration"]), t["state"],
+                    t["reason"] == "-" ? null : t["reason"]);
+            case "end":
+                if (!t.TryGetValue("page", out var page)) return Wire.End(t["cmd"], int.Parse(t["count"]));
+                var parts = page.Split('/');
+                return Wire.EndPaged(t["cmd"], int.Parse(parts[0]), int.Parse(parts[1]), int.Parse(t["count"]));
+            case "err":
+                return Wire.Error(t["cmd"], Enum.Parse<WireError>(t["code"], ignoreCase: true), Opt("secs"), t.GetValueOrDefault("arg"));
+            case "ok":
+                // The only ok line of api 2 is the subscription's.
+                return Wire.Ok(t["cmd"], ("on", t["on"]));
+            case "ev":
+                return Wire.Ev(t["type"], t["id"], int.Parse(t["secs"]), Opt("wave"));
+            default:
+                throw new ArgumentException(tag);
+        }
+    }
+
+    [Theory]
+    [InlineData("event")]
+    [InlineData("def")]
+    [InlineData("end")]
+    [InlineData("err")]
+    [InlineData("ok")]
+    [InlineData("ev")]
+    public void Every_contract_example_of_a_built_tag_is_what_the_builder_sends(string tag)
+    {
+        var examples = Examples(tag);
+        Assert.NotEmpty(examples);
+        foreach (var example in examples)
+        {
+            var built = Rebuild(tag, Tokens(example));
+            AssertWellFormed(built);
+            Assert.Equal(example, built);
+        }
+    }
+
+    [Fact]
+    public void Both_end_forms_are_documented()
+    {
+        var ends = Examples("end");
+        Assert.Contains(ends, l => l.Contains(" page="));
+        Assert.Contains(ends, l => !l.Contains(" page="));
+    }
+
+    [Fact]
+    public void A_long_multibyte_name_or_reason_is_cut_and_every_key_survives()
+    {
+        var id = new string('a', 32);
+        var name = string.Concat(Enumerable.Repeat("\U0001D54F", 200));   // 200 four-byte characters
+        var reason = name;
+
+        var ev = Wire.Event(id, "waves", name, "active", "-", int.MaxValue, "999/999", int.MaxValue);
+        AssertWellFormed(ev);
+        Assert.Equal(["id", "kind", "name", "state", "faction", "left", "wave", "units"], Tokens(ev).Keys);
+        Assert.Equal(Wire.NameBytes, Encoding.UTF8.GetByteCount(Tokens(ev)["name"]));
+
+        var def = Wire.Def(id, name, true, "vbloodkilled", "waves", int.MaxValue, "disabled", reason);
+        AssertWellFormed(def);
+        Assert.Equal(["id", "name", "enabled", "trigger", "action", "duration", "state", "reason"], Tokens(def).Keys);
+        Assert.Equal(Wire.ReasonBytes, Encoding.UTF8.GetByteCount(Tokens(def)["reason"]));
+        Assert.DoesNotContain('�', def);   // never cut inside a character
+    }
+
+    [Fact]
+    public void A_name_is_mapped_before_it_is_cut()
+    {
+        var def = Wire.Def("raid", "a=b c;d:e", true, "manual", "waves", 60, "idle", null);
+        Assert.Contains(" name=ab_cde ", def);
+    }
+
     [Theory]
     [InlineData("Version")]
     [InlineData("bad tag")]
