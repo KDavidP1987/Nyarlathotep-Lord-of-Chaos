@@ -213,3 +213,53 @@ VERDICT: REVISE
 - F2 · accepted · +D29: tools/rollback-gate.ps1 runs the repository drill (D25, saved as tools/repo-rollback-drill.ps1), the N-1 drill (D23) and the snapshot selftest (D28), printing "rollback gate: 3/3" only when all pass; its -SelfTest has 5 stub cases; it is the single 14.3 evidence command and step 7 runs it before and after the push
 - F3 · accepted · D26's -Paths also fails on a leftover %TEMP%\nyar-snap-* or nyar-rollback-* folder, a leftover git worktree, and a remote tag or GitHub release not declared by a remote-tag:/remote-release: line of tools/paths-manifest.txt; fixtures Paths/bad-temp, bad-worktree, bad-remote
 - F4 · accepted · a withdrawn Bloodcraft or KindredCommands version is replaced only by an external amendment naming the exact version before installation, and D18 runs against it
+
+## Review 5 · 2026-09-26 · codex · plan commit c5423e7
+
+EARLIER: all resolved
+
+F1 [blocking] Probe 3.3 remains unanswered for temporary evidence artifacts: the Design › Data inventory omits D24’s `%TEMP%\nyar-rel-*` download, D25’s `%TEMP%\nyar-rollback-*` worktree, and the rollback drill’s saved configuration, so their owner, retention, deletion, and copy count are unspecified and D26 cannot detect the omission because it checks only rows already present.
+Fix: Add each temporary/worktree/saved-config artifact to Design › Data and `tools/data-inventory.json`, including location, owner, retention/deletion, and copies; make the inventory check derive the expected artifacts from the Build plan or paths manifest.
+
+F2 [blocking] Probe 14.4 remains unanswered for D24’s `%TEMP%\nyar-rel-*` directory: Paths walked does not name it and D26’s `-Paths` detects only `nyar-snap-*` and `nyar-rollback-*`, so an interrupted release download can leave an unmanifested directory without failing the gating command.
+Fix: Add `%TEMP%\nyar-rel-*` to Paths walked and the manifest policy, make `preflight.ps1 -Paths` fail on a leftover instance, and add a `Paths/bad-rel` fixture spelling the real directory name.
+
+F3 [blocking] Probe 12.4 remains unanswered by its single gating command: `pwsh tools/preflight.ps1 -SelfTest` exercises preflight fixtures, but it does not run or verify the failing/silent/empty behavior of the repository drill, rollback gate, snapshot selftest, filtered unit-test controls, release download/hash check, or manual/session checks; a stranger could remove those negative cases while D22 still passes.
+Fix: Provide one umbrella evidence command for 12.4 that invokes every introduced check and verifies its bad, good/silent, and empty case—or narrow its asserted scope and add a meta-selftest that fails whenever a declared check lacks registered negative, silent, and empty fixtures.
+
+1. Purpose & typical use — Considered. “Purpose & typical use” answers 1.1–1.3: admin/player roles and frequency, desired outcome, and coexistence with the foundation, SpawnWaves, Blood Moon, companion mods, and Raphael.
+
+2. Actors & permissions — Considered. “Design › Permissions,” D21, D5, and D6 answer 2.1–2.3, including player, admin, System, Operator, Raphael, other mods and unauthenticated clients; denial behavior; and server/event ownership and re-entry.
+
+3. Inputs, outputs & data — Gap. D1/D12 answer 3.1, D10/D11/D16 answer 3.2, and D2/D23 plus Design › Data answer 3.4. Probe 3.3 is incomplete because several temporary and rollback artifacts acknowledged by the Build plan lack the required persistence record.
+
+4. Business rules & invariants — Considered. “Business rules” and D3–D8 answer 4.1–4.5: exact modifier calculations, carrier and uniqueness invariants, hard duration rules, inherited precedence, and enumerated query/apply/removal/marker/session/path sets.
+
+5. Internal interfaces — Considered. “Interfaces › Internal” answers 5.1–5.3 with concrete symbols and paths, affected behavior, failure consequences, and enumerated JSON, wire, and marker contracts consistent with the pasted current-code recon targets.
+
+6. External dependencies & contracts — Considered. The dependency table and D15/D18/D20 answer 6.1–6.3. Versions, sampled game records, failure behavior and test-mode isolation are decided. The withdrawn-mod case now requires an exact replacement version by amendment before installation.
+
+7. States & lifecycle — Considered. “Design › States,” D5–D7, D11 and D17 answer 7.1–7.3, including empty/loading/partial/error states, main-thread concurrency, contested starts, stale entities, stop, restart and reload behavior.
+
+8. Minimal stretch — Considered. “Use cases › Minimal stretch,” D1, D16 and D17 answer 8.1–8.2 for the disabled default, smallest valid definition, empty faction, and one-time cleanup.
+
+9. Maximal stretch — Considered. “Use cases › Maximal stretch,” D1, D5, D6, D12, D19 and D21 answer 9.1–9.3 for thousands of NPCs, bounded hostile configuration, unauthorized players, duplicate triggers and repeated sweeps.
+
+10. Security & privacy — Considered. “Security,” D1, D10, D11, D21 and D22 answer 10.1–10.4. Authorization covers direct and indirect paths; catalog/range validation bounds inputs; credential storage and logging are stated; and entity-only telemetry avoids personal data.
+
+11. Design & UX — Considered. “Design › UX,” D6, D10, D13, D14, D16 and D24 answer 11.1–11.4: discovery, real-chat feedback and empty results, text accessibility constraints, activation evidence, and unrelated should-not-activate cases.
+
+12. Failure handling & observability — Gap. “Failure & observability,” D1, D6, D7, D11, D14, D16, D20 and D26 answer 12.1–12.3. Probe 12.4 is not enforceable by its named single command across all checks the plan introduces.
+
+13. Performance & scale — Considered. “Performance,” D1, D5 and D19 answer 13.1–13.2 with the under-5-ms budget, identified hot path, bounded batches and queries, source cases, behavior at each bound and excluded valid cases.
+
+14. Rollout & compatibility — Gap. “Rollout,” D2, D11, D22–D25 and D27–D29 answer 14.1–14.3, including the now-unified repository/N-1/snapshot rollback command and committed range. Probe 14.4 misses the release-download temporary path.
+
+15. Out of scope — Considered. “Out of scope” answers 15.1–15.2 with explicit exclusions and named future plans or owning children.
+
+12/15 layers · 46/49 probes
+VERDICT: REVISE
+### Dispositions
+- F1 · accepted · Design › Data gains rows for %TEMP%\nyar-rel-* (release download), %TEMP%\nyar-rollback-* (rollback worktree) and %TEMP%\nyar-drill-* (drill saved config) with owner, retention, deletion and copies; the inventory check derives its expected set from the `temp:` globs of tools/paths-manifest.txt too, with fixture DataInventory/bad-temp
+- F2 · accepted · -Paths fails on any leftover %TEMP%\nyar-* folder, the manifest declares nyar-snap-*, nyar-rel-*, nyar-rollback-*, nyar-drill-* as `temp:` lines, fixture Paths/bad-rel spells the real name; D24's download moves into tools/release-verify.ps1 with its own -SelfTest
+- F3 · accepted · D22's -SelfTest also runs an `externalSelfTests` registry in tools/preflight-checks.json (rollback drill, snapshot, rollback gate, release verify, repository drill with its new -SelfTest, unit tests), fails when an entry lacks a bad, good or empty case or when a tools script declaring -SelfTest is unregistered (fixtures SelfTestRegistry/bad, bad-2); the 12.4 matrix row names it as the single command
