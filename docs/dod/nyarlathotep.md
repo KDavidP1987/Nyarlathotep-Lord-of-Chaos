@@ -408,3 +408,26 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-24 · D6 · pass · cmd: pwsh tools/preflight.ps1 → "structural edits: fenced (4 Prefab-guarded calls in EntityExtensions.cs)" with SpawnTracker present (foundation step 4) · a566b20 · claude
 - 2026-09-25 · note · rule 3 reworded for foundation A16 (owner chose option A): LifeTime moves past the despawn queue's drain time so the budget, not the game's lifetime system, removes an ended event's units; no Epic D-item changes
 - 2026-09-25 · note · A18: first Thunderstore publication moves to foundation 0.2.0 (public beta), owner-approved in plan mode
+- 2026-09-25 · D2 · pass · cmd: dotnet build Nyarlathotep/Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__ → "0 Warning(s)", "0 Error(s)" (plugin and Nyarlathotep.Tests, 0.2.1) · 8b405a0 · claude
+- 2026-09-25 · D3 · pass · cmd: pwsh tools/preflight.ps1 → PREFLIGHT OK with "version: 0.2.1 (csproj = thunderstore.toml)", "changelogs: 0.2.1 in both" · 8b405a0 · claude
+- 2026-09-25 · D11 · pass · manual: foundation D20 (docs/features/FOUNDATION.md › Test results › Sessions 12-13): the spawn half, "purge: 2 events ended, 31 units queued", batches of at most MaxDespawnsPerTick to 0 left, a second confirm "nothing to purge"; the faction-empowerment child reruns this item with both events · 8b405a0 · claude
+- 2026-09-25 · D13 · pass · manual: foundation D21 (Sessions 13-14): a 30-unit event across a restart, "boot marker sweep: 31 found, 31 queued for despawn", drained to 0; again in sessions 21-22 with the A22 marker order ("5 found, 5 queued") · 8b405a0 · claude
+- 2026-09-25 · D14 · pass · manual: foundation D22 (Session 14): "clamped by MaxUnitsPerWave: 20 -> 5", "skipped by MaxTrackedUnits: 2 of 5", 5 then 3 units · 8b405a0 · claude
+- 2026-09-25 · D15 · pass · manual: foundation D23 (Sessions 12-13): an unknown unit disabled with its reason on reload, a broken file "rejected: line 7 position 7" with the last valid set kept, the server ticking · 8b405a0 · claude
+- 2026-09-25 · D20 · pass · cmd: cd Nyarlathotep/Nyarlathotep && tcli build → "Successfully built kdpen-Nyarlathotep-0.2.1", build/kdpen-Nyarlathotep-0.2.1.zip (SHA-256 5411f1ce…3992, equal to the GitHub release asset) · 8b405a0 · claude
+- 2026-09-25 · D21 · pass · cmd: pwsh tools/preflight.ps1 → "release tags: 2/2" (v0.2.0, v0.2.1 annotated and pushed) · 8b405a0 · claude
+- 2026-09-25 · D24 · pass · manual: foundation D24 (Session 15): idle 0.051 ms, 150 units 2.39 ms, 500 units 2.86 ms averages over 5 minutes · 8b405a0 · claude
+- 2026-09-25 · D25 · pass · manual: foundation D25 (Session 15): "event t-fault cancelled after 3 faults", the other event ran on, the degraded pillar in `.nyar status`; preflight "fault injection: debug-only (4 references)" · 8b405a0 · claude
+- 2026-09-25 · D26 · pass · manual: foundation D26 (Sessions 17-18): every admin command refused without adminauth ("[vcf] [denied] event"), status unchanged, events.json SHA-256 unchanged · 8b405a0 · claude
+- 2026-09-25 · D27 · pass · test: Nyarlathotep.Tests ControlPrecedenceTests → 40 passed (foundation D3) · 8b405a0 · claude
+- 2026-09-25 · D28 · pass · test: Nyarlathotep.Tests ScheduleTests → 12 passed (foundation D4) · 8b405a0 · claude
+- 2026-09-25 · D29 · pass · test: Nyarlathotep.Tests EventValidationTests → 59 passed (foundation D5) · 8b405a0 · claude
+- 2026-09-25 · D30 · pass · test: Nyarlathotep.Tests IdempotencyTests → 13 passed (foundation D6) · 8b405a0 · claude
+- 2026-09-25 · D31 · pass · test: Nyarlathotep.Tests PersistencePathTests → 12 passed (foundation D7) · 8b405a0 · claude
+- 2026-09-25 · D35 · pass · test: Nyarlathotep.Tests DependencyFailureTests → 10 passed (foundation D9) · 8b405a0 · claude
+- 2026-09-25 · D41 · pass · cmd: pwsh tools/preflight.ps1 → "announcement defaults: all off (5 switches)" · 8b405a0 · claude
+- 2026-09-25 · D42 · pass · test: Nyarlathotep.Tests AnnouncerTests → 25 passed (foundation D13: offsets, daily banner, shares, login gate, queue) · 8b405a0 · claude
+- 2026-09-25 · D44 · pass · test: Nyarlathotep.Tests TextSinkTests → 35 passed (foundation D14, after A19/A20) · 8b405a0 · claude
+- 2026-09-25 · note · foundation closes its part of D16, D36 and D37 without checking them: D16's leaderboard and hide rules come with stats, D36's Player row with stats, D37's paged reads and error lines with raphael-api (PrivacyTests 7, AuthorizationTests 162, WireFormatTests 13 pass for what exists)
+- 2026-09-25 · note · foundation A21 extends Business rules 3 to every unit (a unit is queued at its due time, LifeTime is the backstop), released in 0.2.1
+- 2026-09-25 · note · Build plan step 13's tools/rollback-drill.ps1 (D32) was not created with 0.2.0; it needs two tags and first runs from 0.3.0, so the event-spawns child writes it in its release step
