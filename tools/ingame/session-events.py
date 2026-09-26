@@ -2,7 +2,7 @@
 # Modes: boot (test events, schedules parked on Mon 04:00), go (schedules relative to now), d23a (boot's events plus one
 # with an unknown unit), d23b (the same file with a comma removed), restore-valid (d23a again), cool (the last valid file
 # with t-cool due every minute from now+2 to now+13, so a purge right after it has due times inside its cooldown). State in
-# %TEMP%/nyar-session. s17a/s17b: session 17 (see the mode's comment).
+# %TEMP%/nyar-session. s17a/s17b: session 17; rac2: raphael-api-core session 2 (see each mode's comment).
 import json, sys, datetime, io, os
 CFG = r"C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer\BepInEx\config\Nyarlathotep\events.json"
 HERE = os.environ.get("NYAR_SESSION_DIR") or os.path.join(os.environ["TEMP"], "nyar-session")
@@ -142,6 +142,24 @@ elif mode == "a22":
          "trigger": {"type": "Schedule", "days": [now.strftime("%a")], "times": at}, "action": point(unit(5), radius=6)}]}
     write(doc)
     print("a22: t-mark at", at[0])
+elif mode == "rac2":
+    # raphael-api-core session 2 (step 5, owner): the 5 seeded examples with example-spawns enabled and shortened to 2
+    # waves 40 s apart (the D13 event, at the admin); t-150 (10 waves of 15, 20 s apart, warnings on, at a Point) for D22;
+    # t-spare (disabled) for the enable, disable and set pushes; t-fill-1..4 (disabled) so `api events 2` has a row
+    # (11 definitions). Every trigger is Manual or parked, so nothing starts on its own.
+    seed = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "Nyarlathotep", "Nyarlathotep", "Resources", "events.default.json")
+    doc = json.load(io.open(os.path.normpath(seed), encoding="utf-8-sig"))
+    for e in doc["events"]:
+        if e["id"] == "example-spawns":
+            e["enabled"] = True; e["durationSeconds"] = 120; e["action"]["waves"] = 2; e["action"]["intervalSeconds"] = 40
+    t150 = point(unit(15), waves=10, interval=20, radius=30)
+    doc["events"].append({"id": "t-150", "name": "Test 150", "enabled": True, "pillar": "spawns", "trigger": {"type": "Manual"},
+                          "durationSeconds": 300, "announce": {"warnings": True}, "action": t150})
+    for id in ["t-spare"] + [f"t-fill-{k}" for k in range(1, 5)]:
+        doc["events"].append({"id": id, "name": id, "enabled": False, "pillar": "spawns", "trigger": {"type": "Manual"},
+                              "durationSeconds": 60, "action": point(unit(1))})
+    write(doc)
+    print("rac2 written:", len(doc["events"]), "definitions")
 elif mode == "restore-valid":
     write(json.load(open(os.path.join(HERE, "d23a.json"))))
     print("valid d23a restored")

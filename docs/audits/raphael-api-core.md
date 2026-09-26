@@ -42,6 +42,16 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - feature doc read: docs/features/RAPHAEL_API.md (Status: step 3 of 6 done, post-audit READY; Open questions: none; step 3 results name the checks for the step 4 and 5 sessions); plan Build plan step 4, D20
 - server: not running; dev config General.Enabled true, TimingLog true, WaveWarnings false, MaxDespawnsPerTick 5; the session uses tools/ingame/session-events.py mode `a21` (t-own and t-end at now+3)
 
+### Step 5 · 2026-09-25 · 6cb8346
+- git status: clean but tools/ingame/session-events.py (mode `rac2`, committed with this entry)
+- compile: 0 errors, 0 warnings
+- preflight: exit 0 ("PREFLIGHT OK"); -SessionsOf raphael-api-core "1/1 checked"; -AuditOf 4/6 as expected
+- dod status: raphael-api-core 13/22 verified; review human, not pending (A8 names no gating probe)
+- feature doc read: docs/features/RAPHAEL_API.md (Status: step 4 of 6 done; Open questions: none; the step 3 checks moved to Session 2); plan D5, D6, D12, D13, D22, Build plan step 5
+- baseline boot: Session 1 (c744f1b, the same plugin code), log check clean
+- session config: `session-events.py rac2` (11 definitions: the 5 examples with example-spawns enabled, 2 waves 40 s apart, 120 s; t-150 10 waves of 15, 20 s apart, 300 s, warnings on; t-spare and t-fill-1..4 disabled); dev cfg WaveWarnings false → true for D22 (copy of the previous cfg kept in %TEMP%); TimingLog true
+- plugin version: the session build is `-p:Version=0.3.0` so `api version` reads the release number D13 names; step 6 bumps the six surfaces without a code change
+
 ## Post-audit
 ### Step 1 · 2026-09-25 · 6437b90
 - compile: 0 errors, 0 warnings (plugin and Nyarlathotep.Tests)

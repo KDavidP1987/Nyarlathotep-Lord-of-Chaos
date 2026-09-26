@@ -103,6 +103,38 @@ lifetime 30 s, 300 s event) and t-end (6 units, 60 s) at 22:42.
   server log's 226 PrefabLookupMap warnings (224 "unknown state", 2 "converted but does not exist") all come before
   "Startup Completed", as in foundation session 12. No error line.
 
+### Session 2 · 2026-09-25
+Step 5, the owner at 127.0.0.1:9876 ("Nyar Dev"). Session config: `session-events.py rac2`, WaveWarnings on, TimingLog
+on, the plugin built with `-p:Version=0.3.0`.
+
+Steps given to the owner (D12, D13, D22 and the step 3 checks):
+0. In the mod manager, switch Raphael off for this session, so the `[NYAR:` lines stay visible in chat.
+1. Direct Connect to 127.0.0.1:9876 ("Nyar Dev") and load in. Open the console (`~`) and run `adminauth`.
+2. `.nyar api version` → expect `[NYAR:version] api=2 plugin=0.3.0 …admin=1…`.
+3. `.nyar api status` → expect the end line with count=0 (no event runs).
+4. `.nyar api events`, then `.nyar api events 2`, then `.nyar api events x` → 10 def rows and an end line; 1 row
+   (the 11th) and an end line; a `[NYAR:err] … code=badarg` line.
+5. `.nyar api sub on` → `[NYAR:ok] cmd=sub on=1`.
+6. `.nyar event reload` → the reload reply and one `[NYAR:ev] type=config-changed id=- secs=0`.
+7. `.nyar event enable t-spare`, then `.nyar event disable t-spare`, then `.nyar event set t-spare durationSeconds 90`
+   → each reply followed by one config-changed line.
+8. `.nyar event set nope durationSeconds 90` → a refusal and no config-changed line.
+9. `.nyar event start example-spawns` → `type=event-start id=example-spawns secs=120`, `type=wave … wave=1`; 7
+   bandits spawn around you (fight them or step away). While it runs, `.nyar api status` → one row for
+   example-spawns. About 40 s later `type=wave … wave=2`; about 2 minutes after the start `type=event-end`.
+10. Wait 40 s after the event-end line, then `.nyar api status` → count=0.
+11. `.nyar purge confirm` → `type=killswitch id=- secs=240`.
+12. `.nyar api sub off` → `on=0`; then `.nyar event reload` → the reply only, no `[NYAR:ev]` line.
+13. `.nyar api sub on`, then quit to the main menu (disconnect). Wait 10 s, Direct Connect to 127.0.0.1:9876 again,
+    run `adminauth` in the console, do NOT run `sub on`, and run `.nyar event reload` → the reply only, no `[NYAR:ev]`
+    line.
+14. At least 4 minutes after step 11 (the purge cooldown): `.nyar api sub on`, then `.nyar event start t-150`. It
+    spawns 10 waves of 15 far from you over 3 minutes and ends at 5 minutes: expect wave-warn lines (secs=10) before
+    waves 2–10, wave lines 1–10 and event-end, plus the chat warnings. About 1 and 3 minutes in, run
+    `.nyar api status` and `.nyar api events`, and note whether each reply appears within about a second.
+15. After t-150's event-end, `.nyar api sub off`, then disconnect. Send back what each step showed (screenshots are
+    fine), and anything unexpected.
+
 ## Open questions
 
 None.
