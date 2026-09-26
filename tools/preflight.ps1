@@ -509,25 +509,38 @@ $script:SecretPatterns = @(
     '(TCLI_AUTH_TOK[E]N|GH_TOK[E]N)\s*[=:]\s*\S+'
 )
 
-# A tools/ script may not read a credential or the environment beyond an allow-list (raphael-api-core D10, A4):
-# these patterns are checked, case-insensitively, in every script under tools/ (fixtures aside in the real repository).
-# The environment is reachable only as the $env variable with one of the names below; any other name, the environment
-# drive in any cmdlet (Get-Item, Get-ChildItem -LiteralPath, gci, dir, Get-Content …), .NET's environment reads,
-# Python's and Node's environment objects fail, as do the gh credential command (gh or gh.exe), the POSIX
-# environment printer and the tcli token variable's name. Each pattern and this comment are written so that their own
-# text does not match, so this file passes its own rule.
+# A tools/ script may not read a credential or the environment beyond an allow-list (raphael-api-core D10, A4). The
+# rule counts, not spells: in a PowerShell script every reference to the environment drive (the drive name followed by
+# a colon, in any cmdlet, variable or braced variable) must be an allowed read, $env or ${env} with a name below; in a
+# Python script every environ or getenv token must be an allowed os read; in a Node script every env token must be an
+# allowed process read; so an import, alias or destructuring leaves a token over and fails. In every script .NET's
+# environment reads, the gh credential command (gh or gh.exe), the POSIX environment printer and the tcli token
+# variable's name fail. This comment and the patterns are written so that their own text passes the rule.
 $script:ToolsEnvAllowed = 'TEMP|TMP|USERPROFILE|LOCALAPPDATA|APPDATA|SteamAppId|NYAR_SESSION_DIR'
 $script:ToolsCredentialPatterns = @(
     '\bgh(?:\.exe)?["'']?\s+auth\s+token\b',
     '\bprint[e]nv\b',
-    '(?<![$\w])en[v]:',
-    "\`$env:(?!(?:$script:ToolsEnvAllowed)\b)[\w{]",
     'GetEnvironmentVariabl[e]',
-    "\bos\.enviro[n]\b(?!\s*(?:\.get\s*\(|\[)\s*[`"'](?:$script:ToolsEnvAllowed)[`"'])",
-    "\bos\.gete[n]v\s*\((?!\s*[`"'](?:$script:ToolsEnvAllowed)[`"'])",
-    "\bprocess\.en[v]\b(?!\.(?:$script:ToolsEnvAllowed)\b)",
     'TCLI_AUTH_TOK[E]N'
 )
+# Per language: the token that reaches the environment, and the one form of it that is an allowed read.
+$script:ToolsEnvRules = @(
+    @{ Ext = @('.ps1', '.psm1'); Any = '(?i)\ben[v]:'; Allowed = "(?i)\`$(?:en[v]:(?:$script:ToolsEnvAllowed)\b|\{en[v]:(?:$script:ToolsEnvAllowed)\})" },
+    @{ Ext = @('.py'); Any = '\b(?:enviro[n]|gete[n]v)\b'; Allowed = "\bos\.(?:enviro[n](?:\.get\s*\(|\[)|gete[n]v\s*\()\s*[`"'](?:$script:ToolsEnvAllowed)[`"']" },
+    @{ Ext = @('.mjs', '.js'); Any = '\ben[v]\b'; Allowed = "\bprocess\.en[v]\.(?:$script:ToolsEnvAllowed)\b" }
+)
+
+# The first credential or environment access in a tools/ script that is not allowed, or $null.
+function Find-ToolsEnvAccess([string]$Ext, [string]$Text) {
+    foreach ($p in $script:ToolsCredentialPatterns) { if ($Text -match $p) { return $Matches[0] } }
+    foreach ($r in $script:ToolsEnvRules) {
+        if ($r.Ext -notcontains $Ext) { continue }
+        $any = [regex]::Matches($Text, $r.Any).Count
+        $ok = [regex]::Matches($Text, $r.Allowed).Count
+        if ($any -gt $ok) { return "$($any - $ok) environment access(es) outside the allow-list" }
+    }
+    return $null
+}
 $script:ScriptExt = @('.ps1', '.psm1', '.mjs', '.js', '.py', '.sh', '.cmd', '.bat')
 $script:BinaryExt = @('.png', '.jpg', '.jpeg', '.gif', '.dll', '.pdb', '.exe', '.ico')
 
@@ -570,7 +583,8 @@ function Test-CheckSecrets([string]$Root) {
         if (Find-Secret $t) { $hits += $f }
         if ($ext -eq '.cs' -and (Remove-CsComments $t) -match 'Environment\.GetEnvironmentVariabl[e]') { $hits += "$f (reads the environment)" }
         if ($f -like 'tools/*' -and $f -notlike 'tools/preflight-fixtures/*' -and $script:ScriptExt -contains $ext) {
-            foreach ($p in $script:ToolsCredentialPatterns) { if ($t -match $p) { $hits += "$f (reads a credential or the environment: $($Matches[0]))"; break } }
+            $why = Find-ToolsEnvAccess $ext $t
+            if ($why) { $hits += "$f (reads a credential or the environment: $why)" }
         }
     }
     # The index can hold content the working tree no longer shows (a token staged or committed, then
@@ -1240,7 +1254,7 @@ function Test-CheckWireContract([string]$Root) {
         }
         # Wire is reached only as "Wire." outside its own file: an alias (using W = …Wire;) or a static import
         # (using static …Wire;) would hide a call from this check, so either fails (A4).
-        if ($f -ne $wireRel -and $code -match '(?m)^\s*(?:global\s+)?using\s+(?:static\s+[\w.]*\bWire\s*;|\w+\s*=\s*[\w.]*\bWire\s*;)') {
+        if ($f -ne $wireRel -and $code -match '(?m)^\s*(?:global\s+)?using\s+(?:static\s+[\w.:]*\bWire\s*;|\w+\s*=\s*[\w.:]*\bWire\s*;)') {
             $bad += "an alias or static import of Wire in $f"
         }
         $rx = if ($f -eq $wireRel) { '(?<![\w.])(?<!string\s)(?<m>Record|Line)\s*\(' } else { '\bWire\s*\.\s*(?<m>Record|Line)\s*\(' }
