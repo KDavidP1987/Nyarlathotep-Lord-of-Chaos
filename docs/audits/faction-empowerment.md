@@ -54,6 +54,14 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - feature doc read: docs/features/FACTION_EMPOWERMENT.md › Test results › Session 2 steps (Codex round 6 READY); plan step 5, D4, D14, D15, D16, D18, D19, S-7
 - baseline boot: the Session 2 boot of the 7400fc6 build, after `pwsh tools/dev-snapshot.ps1 -Save s2` and `session-events.py fe2`; its log check is the Session 2 record's first line
 
+### Step 6 · 2026-09-26 · f706fe6
+- git status: clean after the step 5 records (f706fe6)
+- compile: 0 errors, 0 warnings; tests: 869 passed
+- preflight: PREFLIGHT OK
+- dod status: faction-empowerment 19/30 verified; A7 (+D30) recorded before its build
+- feature doc read: docs/features/FACTION_EMPOWERMENT.md › Test results › Session 2 (the carried-over checks) and Build plan step 6; D15, D16, D18, D26, D28, D30
+- baseline boot: the Session 2 boot of 7400fc6 (log check "0 unhandled, 575 nyar lines, 0 orphan errors, 0 unity errors"); the server is stopped and the s2 snapshot restored
+
 ## Post-audit
 ### Step 1 · 2026-09-26 · 0559d4c → 23f2ba4 → 5ca6812
 - compile / preflight: 0 errors, 0 warnings; 848 tests passed; PREFLIGHT OK; dod --check 0 problems, 0 warnings
@@ -86,6 +94,13 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - Codex verdict: READY (round 6) — round 1 REVISE: a restore deleted live files before noticing a corrupted copy (blocking), the save missed files added mid-copy and empty directories, the selftest skipped A5's restore refusals; round 2 REVISE: earlier entries not re-read after later ones copied (fixed), fe2's wider cfg footprint (rejected as a defect: required by D18/D19, backed up, restored by the snapshot; documented); round 3 REVISE: a Dir entry replaced by a file passed the pre-check (fixed, selftest case added); round 4 REVISE: the Session 2 steps left the respawn bound, the natural-end read-back and S-7's 200-removal tick unobservable → amendment A6 (verbose removal-per-tick line), fe-expire, fe-big, 5 s debug polling; round 5 REVISE: D15's five stats not compared on matched rows → the steps pin the owner's spot and state the comparison; round 6: READY, no findings. Every round's log: 0 "blocked by policy"
 - in-game: Session 1 (unattended) passed, recorded in docs/features/FACTION_EMPOWERMENT.md › Test results › Session 1 and under Sessions below; the A6 line is first seen in Session 2
 - dod status: 16/29 verified (D17 added from Session 1); D28's selftest passes and its "each session records the restored line" clause completes after Session 3
+
+### Step 5 · 2026-09-26 · 7400fc6 (the Session 2 build) → 8e26984 → f706fe6
+- compile / preflight: 0 errors, 0 warnings; 869 tests passed; PREFLIGHT OK; dod --check 0 problems
+- in-game: Session 2 with the owner (docs/features/FACTION_EMPOWERMENT.md › Test results › Session 2); D4, D14 and D19 pass; D15, D16 and D18 stay open with their remaining checks in Build plan step 6; S-7 validated (owner decision 1B, 185 removals in one tick); A7 adds D30 (cooldown reply names time left) from the owner's four "purge cooldown active" replies; the step 15 miss was a step error (the dev cfg held PurgeCooldownSeconds = 240), fixed by session-events mode fe3
+- /code-review: the step's diff is records only (no source change); checked by the Codex cross-inspection below against the log
+- Codex verdict: READY (round 2) — round 1 REVISE: the natural end was claimed as a full D16 pass from one sample line without a debug read-back (blocking → carried to Session 3 as an in-game read-back), and three wording fixes (timing highest average qualified to the empowerment interval with the boot-wide 2.481 ms, hp rounding, movement-speed pairs called matched rows rather than the same units); round 2: EARLIER all resolved, no findings. Log excerpts sent with the SteamID redacted; 0 blocked reads
+- dod status: 19/30 verified (D4, D14, D19 added; D30 new)
 
 ## Sessions
 - session 1 log check: 0 unhandled, 48 nyar lines, 0 orphan errors, 0 unity errors
