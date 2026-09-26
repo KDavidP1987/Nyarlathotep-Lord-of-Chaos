@@ -207,12 +207,14 @@ comparison moves to Session 3. Chat lines are from the owner's notes; log lines 
 - [x] step 6: "event example-empowerment started", banner "The Bandits rally begins."; log "query 90 of 90 faction
   entities", "sweep 88 applied, 2 skipped (vblood 2)"; Rufus (CHAR_Bandit_Foreman_VBlood) reads "carrier none"
 - D15 readings, all rows "other stat buffs 0", same prefab and level:
-  - hp max ×2.0: Thug and Hunter 54 → 108, Mugger 128 → 256, Thief 122 → 243 (display rounding of 121.5 → 243),
-    Wolf 61 → 121, Woodcutter 51 → 101 (bases 60.5 and 50.5 displayed rounded); all within ±1 %
+  - hp max ×2.0: Thug and Hunter 54 → 108, Mugger 128 → 256, Thief 122 → 243,
+    Wolf 61 → 121, Woodcutter 51 → 101; the displays are rounded, so the plain maxima are near 121.5, 60.5 and 50.5
+    and their doubles display as 243, 121 and 101; all within ±1 %
   - pp and sp ×1.5: 13.659 → 20.488, 12.884 → 19.327, 18.5 → 27.75, 19.697 → 29.545, 11.494 → 17.241 (Rascal)
   - aspd ×1.5: 1 → 1.5 on every row
   - mspd ×1.5: the reading is the unit's live speed (idle, walking or chasing), so pairs are taken in the same state:
-    the step 10 (carried) and step 12 (plain) readings of the same aggroed units give Hunter d 9m 3.75 / 2.5, Wolf
+    the step 10 (carried) and step 12 (plain) readings of matched same-prefab, same-level rows in comparable aggro
+    movement states (the rows carry no entity id) give Hunter d 9m 3.75 / 2.5, Wolf
     8.25 / 5.5, Thief 5.25 / 3.5, Mugger 4.5 / 3, Rascal 4.8 / 3.2, all exactly ×1.5; the step 4 → 7 pairs differ
     because the bandits aggroed in between (Thug 1 → 4.8)
   - only the Hunter at d 9m keeps its distance in steps 4 and 7 (±1 m); the other pairs match by prefab and level,
@@ -245,9 +247,10 @@ comparison moves to Session 3. Chat lines are from the owner's notes; log lines 
   VBloodKilled …", "sweep 84 applied, 2 skipped (dead 1 vblood 1)", banner "The Bandits avenge their boss begins.",
   `.nyar status` "Bandits avenge their boss: 2 min left"; at its end "event fe-vblood ended (84 carriers expire with
   it)", "The Bandits fall quiet. Bandits avenge their boss has ended." and the revert sample "hp max 79.58 -> 53.05"
-  (natural end back to base)
-- [x] D19 tick timing (Debug.TimingLog): the highest average is 2.105 ms (max 111 ms, the tick of the 88-carrier
-  sweep); 1.481 ms with three events; 0.414 ms over the purge drain; every average under 5 ms
+  (the natural-end sample is back to base; no `.nyar debug here` was taken after the end, so complete carrier removal
+  at a natural end is not yet shown in game and is retried in Session 3)
+- [x] D19 tick timing (Debug.TimingLog): the highest average during the empowerment interval is 2.105 ms (max 111 ms,
+  the tick of the 88-carrier sweep; the boot-wide highest, before any event, is 2.481 ms); 1.481 ms with three events; 0.414 ms over the purge drain; every average under 5 ms
 - S-7: the 89- and 185-removal ticks reverted every stat with no error or warning; 200 was not reached (about 185
   units were loaded around one player). Owner decision 1B (plan mode 2026-09-26): destroy is accepted as safe at
   scale, and Session 3 sets EmpowerBatchPerTick = 50 so its purge shows the cap splitting a drain in game
