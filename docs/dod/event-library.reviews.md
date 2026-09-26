@@ -212,3 +212,69 @@ The owner accepted F1–F7 on 2026-09-26 in plan mode (option A); they are appli
 - F6 · accepted · S-11 is relabelled a dependency contract gated by D15 (a cfg write that rewrites comments or other keys fails D15 and stops the build for an amendment)
 - F7 · accepted · ControlCaseTests reads a control → case-name table (bad, good, empty per control) and requires those exact tests, not just prefixes
 
+## Review 5 · 2026-09-26 · codex · plan: revision 4 (0f6042b); file access confirmed (0 blocked reads)
+Confirmed read-only inspection of at least `docs/dod/event-library.md` and `Nyarlathotep/Nyarlathotep/Logic/CommandArgs.cs`, plus the requested Epic, sibling plan, code, tooling, profile, resources, manifest, and reference data; I did not read `docs/dod/event-library.reviews.md`.
+
+1. **F1 — blocking — Probe 3.3:** The persistence inventory omits the `events.json.tmp` intermediate created by every new definition-writing command, including its ownership, retention, and cleanup after interrupted or failed promotion; D30 only checks rows that already exist, so its command cannot fail when this artifact’s lifecycle is undocumented.  
+   **Fix:** Add the `.tmp` artifact to Design › Data and `tools/data-inventory.json`, decide that it is deleted after a failed write or by the next load’s stale-temp cleanup, and make `pwsh tools/preflight.ps1` fail when that row or policy is absent.
+
+2. **F2 — blocking — Probe 6.2:** The VCF dependency row handles malformed arguments but never decides what happens when VCF is missing or incompatible, despite VCF being the authorization and command-ingress boundary; neither D17 nor D18 fails if the hard dependency declaration disappears.  
+   **Fix:** State that missing/incompatible VCF prevents plugin loading before any command is registered, and add one evidence command—naturally `pwsh tools/preflight.ps1 -AuthSuite`—that fails when the pinned hard dependency or compatible version constraint is absent.
+
+3. **F3 — blocking — Probe 12.4:** D31 cannot prove “every control this child adds” has bad/good/empty cases: `ControlCases.Table` is self-declared, so an entirely omitted control with no correspondingly named test is invisible to reflection and the proposed evidence command can still pass.  
+   **Fix:** Define an authoritative, enumerable control list—such as one control identifier for every applicable D-item `fails when` clause—and make `ControlCaseTests` compare that list bidirectionally with `ControlCases.Table`, failing on a missing control.
+
+4. **F4 — advisory — Probe 11.2:** D21 says every new chat line is rendered, but its fixed walk omits several distinct replies, including invalid/unavailable templates, malformed field values, stale/newer-schema refusal, write uncertainty, cfg-save failure, expired confirmation, and the 200/1 MB limits.  
+   **Fix:** Either narrow D21 and the UX claim to the listed smoke replies or add representative real-chat cases for every distinct formatter/reply path.
+
+5. **F5 — advisory — Probe 4.1:** S-5 calls changing the fifteen-boss set a “one-line edit,” but D2, Business rules 2, S-5, and possibly recorded expected values must remain synchronized; the fallback is therefore not as cheap as stated.  
+   **Fix:** Describe the fallback as a coordinated plan/catalog/test expectation amendment before release.
+
+6. **F6 — advisory — Probe 9.2:** The abuse cases test 400-character names in prose, but D9/D10’s stated automated failures cover forbidden characters and collection bounds without explicitly covering oversized otherwise-valid identifiers.  
+   **Fix:** Add an oversized `CHAR_…` and `Faction_…` case to `CommandArgTests`, or state that the validator intentionally writes then disables such catalog-unknown names.
+
+### Blind layer scoring
+
+1. **Considered — 1.1–1.3:** Purpose & typical use answers role/frequency/request, outcome, and coexistence.
+2. **Considered — 2.1–2.3:** Design › Permissions and D8/D17/D22 decide actors, denial, and server/admin ownership.
+3. **Gap — 3.1–3.4:** D4–D16 answer inputs, outputs, and migration/compatibility, but 3.3 misses the write intermediate identified in F1.
+4. **Considered — 4.1–4.5:** Business rules 1–9 and D2/D8/D12–D16/D20/D25/D30 specify policies, invariants, temporal behavior, precedence, and enumerated every-X sets.
+5. **Considered — 5.1–5.3:** Interfaces names read/write symbols, consequences, and the existing JSON/chat/Raphael contracts.
+6. **Gap — 6.1–6.3:** The dependency table and test-mode paragraph answer 6.1 and 6.3, but 6.2 omits VCF absence/incompatibility and an enforcing command.
+7. **Considered — 7.1–7.3:** Design › States covers empty/loading/error states, serialized concurrency, stale edits, cancellation, undo, and restart re-entry.
+8. **Considered — 8.1–8.2:** Minimal stretch covers list-only use, skeleton creation, empty catalogs, one-time use, deletion, backup, and cooldown cleanup.
+9. **Considered — 9.1–9.3:** Maximal stretch and D27 decide capacity, misuse, repeated use, duplicates, and idempotency.
+10. **Considered — 10.1–10.4:** Security plus D17/D18/D22 cover authorization, JSON-safe construction, absence of secrets, and location/log data.
+11. **Considered — 11.1–11.4:** Design › UX decides discovery, feedback, chat accessibility, activation, and should-not-activate cases; F4 is an evidence-strength advisory.
+12. **Gap — 12.1–12.4:** Failure & observability answers user recovery, logs, and operational detection, but D31’s self-declared universe leaves 12.4 unenforced.
+13. **Considered — 13.1–13.2:** Performance provides tick/write budgets, bounds, source cases, boundary behavior, and excluded valid cases.
+14. **Considered — 14.1–14.4:** Rollout specifies shipping/off switches, compatibility, exact rollback range and post-write rollback, and a stepwise path inventory.
+15. **Considered — 15.1–15.2:** Out of scope names explicit exclusions and destination child slugs.
+
+The Epic inheritance is otherwise present: the child references and restates the event-library constraint, hard-duration rule, precedence, every-X computation, admin authorization, disabled catalogue/copies, ConfigEntry persistence, validator/Persistence route, and the A22 owner-kick-off amendment. Recon also confirmed the cited pillar keys, current `StartBlocker` ordering, existing `WriteEdit`/`LoadedStamp` route, 200-definition and 1 MiB limits, admin-only event command, five disabled defaults, and all listed unit/faction strings in `unit_index.tsv`.
+
+Gating commands:
+
+- 2.1 / 10.1: `pwsh tools/preflight.ps1 -AuthSuite`
+- 3.3: `pwsh tools/preflight.ps1` — presently incomplete per F1
+- 4.4: filtered `ReadinessTests` and `ControlPrecedenceTests`
+- 6.2: filtered dependency-failure tests plus `preflight.ps1 -SelfTest` — presently incomplete per F2
+- 10.3: `pwsh tools/preflight.ps1 -SelfTest`
+- 12.4: ControlCase test filter plus `preflight.ps1 -SelfTest` — presently incomplete per F3
+- 14.3: `pwsh tools/rollback-gate.ps1 -From v0.4.0 -To v0.5.0`
+- 14.4: `pwsh tools/preflight.ps1 -Paths -DeclaredOf event-library`
+
+12/15 layers · 46/49 probes
+
+VERDICT: REVISE
+
+### Dispositions
+Review 5 is not READY; by the owner's option A the findings go back to the owner. The dispositions below are the
+author's proposals, applied only after the owner decides.
+- F1 · accepted · pending owner: Design › Data and tools/data-inventory.json gain the events.json.tmp row (owner Persistence; deleted after a failed write, and a stale one removed with a log line at the next load); pwsh tools/preflight.ps1's data-inventory check fails when that row is absent (fixture DataInventory/bad-tmp)
+- F2 · accepted · pending owner: VCF is a hard BepInDependency, so a missing or incompatible VCF stops the plugin loading before any command is registered; -AuthSuite fails when Plugin.cs lacks the hard dependency or the csproj lacks the pinned 0.10.* reference (fixture Auth/bad-novcf)
+- F3 · accepted · pending owner: the authoritative control list is the plan's own D-items: every test or cmd item with a fails-when clause is one control id (D<n>); ControlCaseTests compares that list, parsed from docs/dod/event-library.md, with ControlCases.Table in both directions and fails on a control missing from either
+- F4 · accepted · pending owner: D21 is narrowed to the listed smoke replies seen in real chat, and every other reply is covered by its formatter's unit test (the UX claim says so)
+- F5 · accepted · pending owner: S-5's fallback reads "a coordinated amendment of D2, Business rules 2, the catalogue and TemplateLibraryTests' expected set before release"
+- F6 · accepted · pending owner: CommandArgTests adds a 400-character CHAR_ and Faction_ value, each refused with the existing length rule
+
