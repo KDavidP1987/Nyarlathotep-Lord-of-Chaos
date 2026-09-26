@@ -196,8 +196,7 @@ the release tag exists. Dev world only; the drill saves and restores the plugin 
   counts differ from N's.
 - Run C passed: range v0.2.0..v0.2.1 17 paths, all in the manifest; both releases read "6 valid, 0 disabled";
   v0.2.0 logged "boot marker sweep: 0 found, 0 queued for despawn (1 listed in state.json)" and "event drill-mark
-  cancelled by restart"; the config and DLL restored byte for byte; no worktree or %TEMP%
-yar-drill-* left.
+  cancelled by restart"; the config and DLL restored byte for byte; no worktree or %TEMP%\nyar-drill-* left.
 - The boots of runs A and B before their last one were not log-checked on their own (each boot overwrites the log);
   runs B's and C's last boots were: 0 unhandled, 6 nyar lines, 0 orphan errors, 0 unity errors. Their [Warning] lines:
   Il2CppInterop Class::Init and the two Beelzebub TUNE lines; run B's also the name warning above. Run D (Session 4)

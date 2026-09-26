@@ -121,8 +121,7 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - dod status: D1, D2, D3, D16 verified on dec14e1 (see the plan Log)
 
 ### Step 3 · 2026-09-23 to 2026-09-24 · f4687a1
-- snapshot: `-ServerWrites -Snapshot $env:TEMP
-yarspikes-before.tsv` at 2026-09-23 19:46:28, server stopped, 1633 files and folders (85 under LocalServer/)
+- snapshot: `-ServerWrites -Snapshot $env:TEMP\nyarspikes-before.tsv` at 2026-09-23 19:46:28, server stopped, 1633 files and folders (85 under LocalServer/)
 - setup: save-data-nyarspikes\Settingsdminlist.txt written (one line, the owner's SteamID; not quoted here); step-2 build deployed (Nyarlathotep.dll 45056 bytes); default host settings (port 9876)
 - launch: the server started from this session has no console, so Ctrl-C cannot stop it cleanly and BepInEx's buffered disk log was lost on the first two stops. BepInEx/config/BepInEx.cfg `[Logging.Disk] InstantFlushing` set false → true for the spike sessions; restored to false in step 8
 - boot (20:43): "Nyarlathotep initialized via GameDataInitializedPatch (attempt #1)" beside Beelzebub, Faust and Uriel; no error lines

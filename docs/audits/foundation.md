@@ -126,8 +126,7 @@ checks are lines "- session <n> log check: …" (D33).
 - Codex verdict: REVISE (round 3 of 3, at the cap). Its one finding is fixed in 31cca9e and proven by fixture LogCheck/bad-3; no finding is open.
 - in-game: sessions 1–3 in docs/features/FOUNDATION.md › Test results (first run and seed, boot with an unknown unit, boot with broken JSON)
 - dod status: D7, D8, D9 pass lines; notes on D28 (first run and empty state seen; "still loading" pending step 5) and D23 (boot half seen; the reload half is step 5)
-- open: the -ServerWrites -Compare against $env:TEMP
-yarfoundation-before.tsv waits for step 8 (D34), with the game client closed
+- open: the -ServerWrites -Compare against $env:TEMP\nyarfoundation-before.tsv waits for step 8 (D34), with the game client closed
 
 ### Step 3 · 2026-09-24 · 40d0e30
 - compile: 0 errors, 0 warnings in Release and in Debug (the Debug build compiles the `#if DEBUG` FaultInjection key)
@@ -224,8 +223,7 @@ yarfoundation-before.tsv waits for step 8 (D34), with the game client closed
 
 ### Step 8 · 2026-09-25 · release tree (versions 0.2.0)
 - compile: 0 errors, 0 warnings (Release, deployed); tests Passed 531, Failed 0
-- preflight: exit 0 except "release tags", which needs the release commit (rerun after it below); -Paths "576 walked, all in manifest" after adding tools/ingame/**; -ServerWrites -Compare %TEMP%
-yarfoundation-before.tsv "20 created, 38 changed, 0 deleted, all in manifest, no other save"
+- preflight: exit 0 except "release tags", which needs the release commit (rerun after it below); -Paths "576 walked, all in manifest" after adding tools/ingame/**; -ServerWrites -Compare %TEMP%\nyarfoundation-before.tsv "20 created, 38 changed, 0 deleted, all in manifest, no other save"
 - tcli build (after the review's README and csproj edits): kdpen-Nyarlathotep-0.2.0.zip, SHA-256 27847f928d413c5e762ce962f4dca94fd3678ee9be0e1827a98fae99ba27c436 (icon, README, manifest, BepInEx/plugins/Nyarlathotep.dll, CHANGELOG, LICENSE); the first build's b7d2cd0b… was superseded
 - six surfaces: csproj and thunderstore.toml 0.2.0; both changelogs have 0.2.0 with the retired General.AnnounceEvents key; both READMEs describe 0.2.0 (the Thunderstore page marks spawn-wave events and announcements 0.2.0, every other pillar in development); the Thunderstore description rewritten to what 0.2.0 does
 - session 19 log check: 0 unhandled, 5 nyar lines, 0 orphan errors, 0 unity errors
