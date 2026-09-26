@@ -154,3 +154,7 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 ### Session 6 · 2026-09-26 (step 6 drill after the push)
 - session 6 log check: 0 unhandled, 5 nyar lines, 0 orphan errors, 0 unity errors
   - the last boot (v0.2.1); the v0.3.0 boots read 6 and 10 nyar lines, 0 unhandled, 0 orphan, 0 unity
+
+### Session 7 · 2026-09-26 (step 6 drill after A13)
+- session 7 log check: 0 unhandled, 5 nyar lines, 0 orphan errors, 0 unity errors
+  - the last boot (v0.2.1); the v0.3.0 boots read 6 and 15 nyar lines, 0 unhandled, 0 orphan, 0 unity; no plugin DLL and a hidden config file planted, both restored as they were

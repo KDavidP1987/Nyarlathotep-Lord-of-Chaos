@@ -1,6 +1,6 @@
 # Raphael api — the machine interface
 
-**Status:** in development (docs/dod/raphael-api-core.md, step 6 of 6: released as 0.3.0 (GitHub pre-release); Sessions 1–5 clean). Ships in 0.3.0 as api 2.
+**Status:** in development (docs/dod/raphael-api-core.md, step 6 of 6: released as 0.3.0 (GitHub pre-release); Sessions 1–7 clean). Ships in 0.3.0 as api 2.
 
 ## What it provides
 
@@ -232,6 +232,17 @@ current script. Same range line; "boot v0.3.0 (seed): log check: 0 unhandled, 6 
 both read '6 valid, 0 disabled'; "rollback drill: pass". The same run of D18's command on the pushed tag:
 "rollback: clean" (539 tests; v0.2.1's preflight OK). /code-review then found four drill defects (A13); Session 7
 reruns the fixed script.
+
+### Session 7 · 2026-09-26
+Step 6, unattended: the drill with A13's fixes, on a dev server set up for the two cases A13 fixes: the plugin DLL
+moved aside (a server without Nyarlathotep) and a hidden file `.drill-hidden` planted in BepInEx/config/Nyarlathotep/.
+- drill-mark scheduled past the boot timeout (09:36, seven minutes out) and fired; "boot v0.3.0 (seed): log check: 0
+  unhandled, 6 nyar lines, …"; "boot v0.3.0 (drill-mark): … 15 nyar lines …"; "boot v0.2.1: … 5 nyar lines …"; both read
+  '6 valid, 0 disabled'; "restored the saved state (no plugin DLL) and config"; "rollback drill: pass".
+- After the drill: no Nyarlathotep.dll in BepInEx/plugins (the N-1 DLL was removed), and `.drill-hidden` was back with
+  its content. Then the planted file was removed and the DLL put back: config and DLL hashes equal the copies taken
+  before the session.
+- [Warning] lines: Il2CppInterop Class::Init and the two Beelzebub TUNE lines. No error line.
 
 ## Open questions
 
