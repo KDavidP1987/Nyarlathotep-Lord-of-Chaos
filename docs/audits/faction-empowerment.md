@@ -17,6 +17,16 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - found on the way: Markers.IsOurs is the boot sweep's despawn filter (Services/SpawnTracker.cs MarkedUnits), so adding Carrier to Markers.All must not make IsOurs match a carrier, or step 1 alone would despawn empowered native NPCs at the next boot; IsOurs becomes `KindOf(level) == MarkerKind.Unit` in this step, before step 2 routes the boot sweep through SweepPlan (D7)
 - step order: the shipped template (Resources/events.default.json, listed under step 2) moves into step 1, because the pairing rule of D1/D2 disables the old SpawnWaves example-empowerment and the step's TemplateTests read the shipped file; no design change
 
+### Step 2 · 2026-09-26 · 9584149
+- git status: clean after 9584149 except the plan edit recording A3 (below), committed with this entry
+- compile: 0 errors, 0 warnings
+- tests: 848 passed
+- preflight: exit 0 ("PREFLIGHT OK")
+- dod status: faction-empowerment 7/29 verified; review codex (Review 8 READY), not pending (A3 is layer 5.2, not gating)
+- feature doc read: docs/features/FACTION_EMPOWERMENT.md (Status: step 1 of 7 done); plan step 2, D2, D7, D8, D9, D13, D14, D20, D21, D22, D26, Business rules 1, 5, 6, 9; Services/EventRuntime.cs, SpawnTracker.cs (BootSweep, TryMark, MarkedUnits, DebugHere), WaveAction.cs, EventStore.cs (PrefabUnitCatalog), EntityExtensions.cs, Patches/DeathEventPatch.cs, Services/UnitSetup.cs; tools/preflight.ps1 Test-CheckStructuralEdits and tools/preflight-checks.json StructuralEdits
+- server: not running; step 2 has no in-game test (Session 1 is step 4)
+- found on the way: EntityExtensions.DestroySafe already calls DestroyUtility.Destroy (unit despawn), and StructuralEdits/bad-2 to bad-10 already exist, so D8's fence and fixture names as written would fail the real tree and collide; recorded as A3 (discovered, ~D8 ~D22, layer 5.2) before any step 2 code
+
 ## Post-audit
 ### Step 1 · 2026-09-26 · 0559d4c → 23f2ba4 → 5ca6812
 - compile / preflight: 0 errors, 0 warnings; 848 tests passed; PREFLIGHT OK; dod --check 0 problems, 0 warnings
