@@ -84,3 +84,63 @@ VERDICT: REVISE
 - F5 · accepted · deferred: owner decision on S-13 at round 3; the Epic amendment of D47 ("unattended after an owner kick-off") is recorded after it; the Epic is not edited from this child
 - F6 · accepted · Design › States › 7.2 and D14: commands and ticks are serial; a start dispatched before the off runs and the off then ends it through the S-7 path, and an off processed first means the start is not made and `event list` shows `off (pillar)`; both orders are PillarSwitchTests Ordering cases
 - F7 · accepted · a review-tooling defect, not a plan change: this run's Codex sandbox blocked every file read; Review 3 runs with file access (codex flag features.experimental_windows_sandbox=true)
+
+## Review 3 · 2026-09-26 · codex · plan: revision 2 (31f11c9); file access confirmed (0 blocked reads)
+I read `docs/dod/event-library.md` and `Nyarlathotep/Nyarlathotep/Logic/CommandArgs.cs`, plus the requested Epic, sibling, code, configuration, resource, tooling, profile, and reference-data files; I did not read `docs/dod/event-library.reviews.md`.
+
+1. Purpose & typical use — Considered (1.1–1.3): `Purpose & typical use`.
+2. Actors & permissions — Considered (2.1–2.3): `Design › Permissions`, D17, D22.
+3. Inputs, outputs & data — Gap (3.3); 3.1, 3.2 and 3.4 are answered by `Design › Data`, D4–D16 and D29.
+4. Business rules & invariants — Gap (4.1); 4.2–4.5 are answered by `Business rules`, D1, D12–D16, D20 and D30.
+5. Internal interfaces — Considered (5.1–5.3): `Interfaces › Internal`, D1, D3, D10, D12, D14 and D20.
+6. External dependencies & contracts — Gap (6.2); 6.1 and 6.3 are answered by `Interfaces › External`, D3, D15, D24, D25 and D30.
+7. States & lifecycle — Considered (7.1–7.3): `Design › States`, D3, D4, D8, D12, D14, D16, D23 and D26.
+8. Minimal stretch — Considered (8.1–8.2): `Use cases › Minimal stretch`, D4–D8.
+9. Maximal stretch — Considered (9.1–9.3): `Use cases › Maximal stretch`, D5, D8–D11, D14, D22 and D27.
+10. Security & privacy — Considered (10.1–10.4): `Security`, D9–D12, D17, D18 and D22.
+11. Design & UX — Considered (11.1–11.4): `Design › UX`, D4, D16, D20, D21, D23, D25 and D28. N/A is correctly unavailable because the chat interface is human-facing.
+12. Failure handling & observability — Gap (12.4); 12.1–12.3 are answered by `Failure & observability`, D3, D14, D16, D19, D21, D25 and D30.
+13. Performance & scale — Considered (13.1–13.2): `Performance`, D5, D12, D25 and D27.
+14. Rollout & compatibility — Gap (14.4); 14.1–14.3 are answered by `Rollout`, D18, D28 and D29.
+15. Out of scope — Considered (15.1–15.2): `Out of scope`.
+
+F1 · **blocking — probe 4.1:** Epic D47 still requires a four-hour soak “unattended,” while this child requires owner-triggered V Blood kills and spawn starts; the stated pending amendment is not in the authoritative Epic, so the acceptance policy currently conflicts.  
+Fix: amend Epic D47 to say “unattended after an owner kick-off,” then retain the child’s explicit kick-off procedure and reference the amended wording.
+
+F2 · **blocking — probe 3.3:** D30’s claimed persistence command cannot verify every `Design › Data` row because `Test-CheckDataInventory` only reads plans listed in `preflight-checks.json.dataTables`, and the Build plan never adds `docs/dod/event-library.md` to that list.  
+Fix: add this plan to `dataTables` and add a selftest fixture that removes one event-library artifact row’s inventory mapping; `pwsh tools/preflight.ps1` must then fail.
+
+F3 · **blocking — probe 6.2:** concrete partial-failure scenario: delete successfully commits events.json but clearing or persisting the state.json cooldown row fails; D8 promises both disappear, while D19 specifies no ordering, recovery, retry, or reply for that internal dependency failure.  
+Fix: decide and test an atomicity/recovery contract—for example, commit the definition deletion, retain/retry the orphan cooldown removal safely, and report/log the degraded result—or make the whole operation rollback consistently.
+
+F4 · **blocking — probe 12.4:** D31 does not enforce the matrix’s claim for every introduced test control: `CommandArgTests`, `ConfigChangedTests`, `AuthorizationTests`, `ContractDocTests`, and `ControlPrecedenceTests` are used by D9, D10, D12, D16, D17 and D20 but are absent from `ControlCaseTests`’ reflected class set. A stranger can run the stated command successfully while those controls lack failing, silent, or empty cases.  
+Fix: include every introduced control-bearing class in the reflected inventory, or give each excluded class its own named failing/silent/empty enforcement command and fixture.
+
+F5 · **blocking — probe 14.4:** `pwsh tools/preflight.ps1 -Paths` cannot prove the plan’s path inventory is complete: broad manifest entries such as `tracked: docs/dod/*.md`, `tracked: tools/*.ps1`, and `tracked: Nyarlathotep/Nyarlathotep/**` allow an omitted new path to pass without appearing under `Rollout › Paths walked`.  
+Fix: add a check that extracts the child’s declared paths and fails on a build-created, review-created, generated, remote, server, or temporary path absent from that declaration; plant such an omitted-but-broadly-manifested path in its failing fixture.
+
+F6 · **advisory — probe 7.3:** concrete correction scenario: restoring events.json from `.bak` after delete does not restore the cooldown row that D8 removed, so “Undo of a delete is the .bak” is only a definition restore and changes the event’s temporal state.  
+Fix: state that rollback intentionally starts without its former cooldown, or provide a coupled state restoration procedure.
+
+F7 · **advisory — probes 2.2 and 10.1:** concrete unauthorized scenario: D22 says “every new command” is refused in game but its manual list omits the read-only `template list`, `template info`, and `pillar list` commands, so their actual VCF refusal path is not exercised.  
+Fix: add those three forms to Session 2’s non-admin walk, or narrow D22’s claim to mutating commands and rely explicitly on D17 for the remaining forms.
+
+F8 · **advisory — probe 13.2:** D27 says “the 200th definition is written and the 201st refused” after listing `set` and `delete confirm`, although those operations do not increase definition count; the fixture/action responsible for each boundary assertion is ambiguous.  
+Fix: name which creating operation writes definition 200, test all three creating forms at 200, and test non-creating operations independently at capacity.
+
+The sibling’s Empower contract is referenced and sequenced behind release 0.4.0. Recon also confirms the current validator’s v1 shape, 1 MB and 200-definition limits; the existing `CommandArgs` whitelist; the five `[Pillars]` ConfigEntries; the referenced unit/faction identifiers; and the existing DefinitionEditor stamp/write/reload seam. Every Build-plan step cites D-items, and every layer graded Considered from 2–14 maps to at least one D-item, but the gating evidence defects above prevent readiness.
+
+10/15 layers · 44/49 probes
+
+VERDICT: REVISE
+### Dispositions
+Review 3 is the last of the three rounds; the plan stops here and the findings go to the owner (decision 2A). The dispositions
+below are the author's proposals, applied only after the owner decides.
+- F1 · accepted · pending owner: S-13's owner kick-off stays, and the Epic amendment of D47 ("unattended after an owner kick-off") is recorded once the owner confirms S-13
+- F2 · accepted · pending owner: build step 1 adds docs/dod/event-library.md to tools/preflight-checks.json dataTables, with fixture DataInventory/bad-el that drops one of its rows' inventory entries
+- F3 · accepted · pending owner: delete writes events.json first; clearing the state.json cooldown row after it is retried on the next save and logged "delete <id>: cooldown row left, cleared on the next save"; the reply names it; a LibraryDependencyFailureTests case fails the second write
+- F4 · accepted · pending owner: ControlCaseTests reflects over every class D-items cite for a new control, CommandArgTests, ConfigChangedTests, AuthorizationTests, ContractDocTests and ControlPrecedenceTests included, the new cases named by the convention
+- F5 · accepted · pending owner: -Paths gains the child's declared-path list (the plan's Rollout › Paths walked, parsed), and a path this child's build creates that the list omits fails even when a broad manifest glob covers it; fixture Paths/bad-undeclared
+- F6 · accepted · pending owner: Design › States says a delete undone from .bak comes back without its former cooldown
+- F7 · accepted · pending owner: Session 2's non-admin walk adds template list, template info and pillar list
+- F8 · accepted · pending owner: D27 names the creating forms (template use, event new, event copy), each tested at 200 → 201, and set and delete confirm tested separately at capacity
