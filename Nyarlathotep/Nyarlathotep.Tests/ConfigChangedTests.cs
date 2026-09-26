@@ -5,7 +5,7 @@ namespace Nyarlathotep.Tests;
 /// <summary>raphael-api-core D6 (A7): `.nyar event reload`, `set`, `enable` and `disable` push config-changed exactly
 /// when they apply a load, and never on a failure. Logic/DefinitionEditor is the flow Services/EventStore runs, here
 /// over an in-memory events.json.</summary>
-public class ConfigChangedTests
+public partial class ConfigChangedTests
 {
     const string ConfigChanged = "[NYAR:ev] type=config-changed id=- secs=0";
 

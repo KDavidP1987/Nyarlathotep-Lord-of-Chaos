@@ -43,7 +43,7 @@ public sealed class DefinitionEditor(EventsFile file, IFileStore files, EventCat
         if (error is not null) return error;
 
         var reload = Reload(units);
-        var done = path == "enabled" ? $"event {id} {((bool)value ? "enabled" : "disabled")}" : $"event {id} {path} = {value}";
+        var done = path == "enabled" ? $"event {id} {((bool)value ? "enabled" : "disabled")}" : $"event {id} {path} = {Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)}";
         info($"{done}; {reload}");
         if (!reload.StartsWith("reloaded", StringComparison.Ordinal)) return $"{done}; {reload}";
         return catalog.Current.Find(id)?.DisabledReason is { } reason ? $"{done}; now disabled: {reason}" : done;

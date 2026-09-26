@@ -1,6 +1,10 @@
 # Faction empowerment (Pillar A)
 
-**Status:** designed, not started. Depends on Foundation. Spike S3: go (2026-09-24; carrier recipe in Test results).
+**Status:** in build (docs/dod/faction-empowerment.md, approved 2026-09-26). Step 1 of 7 done: the Empower action's
+schema and pairing rule, eligibility, the carrier recipe and ledger, the boot-sweep split, the one-per-faction rule,
+{faction} in messages and the stat fields of `event set`, all pure logic under unit test (audit:
+docs/audits/faction-empowerment.md). Next: step 2, the service that applies carriers in game. Spike S3: go (2026-09-24;
+carrier recipe in Test results).
 
 ## Goal
 
@@ -68,6 +72,21 @@ is gone. (Bloodcraft learned the double-apply lesson the hard way — RESEARCH_N
 - Performance: a server has thousands of NPCs. Batch the sweep across ticks (e.g. 200 units/tick).
 
 ## Test plan
+
+The plan's D-items are authoritative (docs/dod/faction-empowerment.md); this list maps them to where they are checked.
+
+- Unit tests, `dotnet test Nyarlathotep/Nyarlathotep.Tests` (step 1): EventValidationTests and TemplateTests (D1, D2),
+  EmpowerEligibilityTests (D3), EmpowerStatsTests and CarrierRecipeTests (D4), CarrierLedgerTests (D5), EngineTests (D6,
+  D9), SweepPlanTests (D7), AnnouncerTests (D10), CommandArgTests and ConfigChangedTests (D12), DeathRuleTests and
+  TriggerActivationTests (D13), DependencyFailureTests (D20).
+- Session 1, unattended (step 4): two Schedule-triggered Empower events on Faction_Bandits, one ending by expiry and one
+  cut by a server stop; sample stat lines and both boot carrier-sweep lines (D17).
+- Session 2, with the owner (step 5): debug readings per stat, damage numbers, respawn catch-up, stop, the second-event
+  refusal, a V Blood kill, purge with both kinds of event running, tick timing (D14–D16, D18, D19).
+- Session 3, with the owner (step 6): Bloodcraft familiar and KindredCommands spawnnpc coexistence, then the uninstall
+  steps (D18).
+
+Earlier checklist:
 
 - [ ] S3: buff one bandit, confirm stat change (damage taken/dealt), expiry, and that it survives stream-out/in. Done: S3 verdict go (Test results).
 - [ ] Manual trigger on Bandits; confirm count applied (log), announcement, expiry.

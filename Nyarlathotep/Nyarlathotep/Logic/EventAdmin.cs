@@ -20,8 +20,9 @@ public static class EventsEditor
     };
 
     /// <summary>The new file text, or null with the reply line in <paramref name="error"/>. <paramref name="path"/> is
-    /// "enabled", "name", "durationSeconds", "conditions.&lt;key&gt;" or "action.&lt;key&gt;"; a missing conditions
-    /// object is created, a missing action is an error.</summary>
+    /// "enabled", "name", "durationSeconds", "conditions.&lt;key&gt;", "action.&lt;key&gt;" or "action.stats.&lt;stat&gt;";
+    /// a missing conditions or stats object is created, a missing action is an error. A field of the other action type
+    /// is refused, and so is a stat set that would leave no stat above 1.0 (faction-empowerment D12).</summary>
     public static string? Apply(string text, string id, string path, object value, out string? error)
     {
         error = null;
@@ -37,27 +38,35 @@ public static class EventsEditor
         {
             bool b => JsonValue.Create(b),
             int i => JsonValue.Create(i),
+            decimal m => JsonValue.Create(m),
             string s => (JsonNode?)JsonValue.Create(s),
             _ => null,
         };
         if (node is null) { error = $"{path} has an unsupported value"; return null; }
 
-        var dot = path.IndexOf('.');
-        if (dot < 0)
+        var actionType = ev["action"] is JsonObject act && act["type"] is JsonValue tv && tv.TryGetValue<string>(out var t) ? t : null;
+        var isStat = path.StartsWith("action.stats.", StringComparison.Ordinal);
+        if (isStat && actionType != "Empower") { error = $"{path} is not a field of a {actionType ?? "missing"} action"; return null; }
+        if (CommandArgs.WaveFields.Contains(path) && actionType == "Empower") { error = $"{path} is not a field of an Empower action"; return null; }
+
+        var parts = path.Split('.');
+        JsonObject target = ev;
+        for (var i = 0; i < parts.Length - 1; i++)
         {
-            ev[path] = node;
-        }
-        else
-        {
-            var parent = path[..dot];
-            var key = path[(dot + 1)..];
-            if (ev[parent] is not JsonObject obj)
+            if (target[parts[i]] is not JsonObject child)
             {
-                if (parent != "conditions") { error = $"event {id} has no {parent}"; return null; }
-                obj = new JsonObject();
-                ev[parent] = obj;
+                if (parts[i] is not ("conditions" or "stats")) { error = $"event {id} has no {parts[i]}"; return null; }
+                child = new JsonObject();
+                target[parts[i]] = child;
             }
-            obj[key] = node;
+            target = child;
+        }
+        target[parts[^1]] = node;
+
+        if (isStat && !target.Any(p => p.Value is JsonValue v && v.TryGetValue<decimal>(out var m) && m > 1.0m))
+        {
+            error = "action.stats must raise at least one stat above 1.0";
+            return null;
         }
         return root.ToJsonString(Write) + Environment.NewLine;
     }
@@ -95,6 +104,22 @@ public static class EventLines
             $"conditions: minPlayers {c.MinPlayers}, cooldown {c.CooldownMinutes} min, chance {c.ChancePercent}%, " +
             $"window {(c.Window is { } w ? $"{w.From:HH\\:mm}-{w.To:HH\\:mm}" : "none")}, mode {Lower(c.Mode)}",
         };
+        if (d.Empower is { } emp)
+        {
+            var s = emp.Stats;
+            var raised = new (string Name, double Value)[]
+                {
+                    ("physicalPower", s.PhysicalPower), ("spellPower", s.SpellPower), ("maxHealth", s.MaxHealth),
+                    ("attackSpeed", s.AttackSpeed), ("moveSpeed", s.MoveSpeed),
+                }
+                .Where(x => x.Value > 1.0)
+                .Select(x => FormattableString.Invariant($"{x.Name} x{x.Value:0.##}"));
+            lines.Add("action: empower " + string.Join(", ", emp.Factions.Select(FactionDenyList.ShortName)) +
+                (emp.IncludeUnits.Count > 0 ? $", also {string.Join(", ", emp.IncludeUnits)}" : "") +
+                (emp.ExcludeUnits.Count > 0 ? $", not {string.Join(", ", emp.ExcludeUnits)}" : "") +
+                (emp.IncludeVBloods ? ", V Bloods included" : "") +
+                ": " + string.Join(", ", raised));
+        }
         if (d.Action is { } a)
         {
             var where = a.Location.Type == LocationType.Admin ? "at the admin" : FormattableString.Invariant($"at {a.Location.X:0.#} {a.Location.Z:0.#}");
@@ -104,7 +129,8 @@ public static class EventLines
         }
         lines.Add(active is null
             ? "not running"
-            : $"running: started by {active.Trigger}, {Math.Max(0, (int)Math.Ceiling((active.Instance.EndsUtc - utcNow).TotalSeconds))}s left, wave {active.WavesSpawned}/{d.Action?.Waves ?? 0}");
+            : $"running: started by {active.Trigger}, {Math.Max(0, (int)Math.Ceiling((active.Instance.EndsUtc - utcNow).TotalSeconds))}s left" +
+              (d.Empower is null ? $", wave {active.WavesSpawned}/{d.Action?.Waves ?? 0}" : ""));
         return lines;
     }
 

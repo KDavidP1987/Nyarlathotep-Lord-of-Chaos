@@ -47,13 +47,33 @@ public sealed record SpawnWavesAction(
     Location Location,
     int? UnitLifetimeSeconds);
 
+/// <summary>The Empower action's multipliers (faction-empowerment S-1): each 1.0–3.0 of the base value, 1.0 meaning
+/// unchanged, at least one above 1.0.</summary>
+public sealed partial record EmpowerStats(
+    double PhysicalPower = 1.0,
+    double SpellPower = 1.0,
+    double MaxHealth = 1.0,
+    double AttackSpeed = 1.0,
+    double MoveSpeed = 1.0);
+
+/// <summary>An Empower action (faction-empowerment D1): every NPC of <see cref="Factions"/>, plus the units named in
+/// <see cref="IncludeUnits"/>, minus <see cref="ExcludeUnits"/>, gets a carrier buff with <see cref="Stats"/> while the
+/// event runs. V Bloods only with <see cref="IncludeVBloods"/>.</summary>
+public sealed record EmpowerAction(
+    IReadOnlyList<string> Factions,
+    IReadOnlyList<string> IncludeUnits,
+    IReadOnlyList<string> ExcludeUnits,
+    bool IncludeVBloods,
+    EmpowerStats Stats);
+
 public sealed record Announce(IReadOnlyList<string> Start, IReadOnlyList<string> End, bool Warnings)
 {
     public static readonly Announce None = new([], [], false);
 }
 
 /// <summary>One definition as loaded. <see cref="DisabledReason"/> is set when validation disabled it;
-/// the definition is then kept for `.nyar event list` but never started.</summary>
+/// the definition is then kept for `.nyar event list` but never started. A valid definition carries exactly one action:
+/// a SpawnWaves <see cref="Action"/> or an <see cref="Empower"/> (faction-empowerment D1, D2).</summary>
 public sealed record EventDefinition(
     string Id,
     string Name,
@@ -64,7 +84,8 @@ public sealed record EventDefinition(
     int DurationSeconds,
     SpawnWavesAction? Action,
     Announce Announce,
-    string? DisabledReason = null)
+    string? DisabledReason = null,
+    EmpowerAction? Empower = null)
 {
     public bool Startable => Enabled && DisabledReason is null;
 }

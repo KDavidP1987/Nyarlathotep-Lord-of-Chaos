@@ -3,7 +3,7 @@ using Nyarlathotep.Logic;
 namespace Nyarlathotep.Tests;
 
 /// <summary>foundation D5: events.json v1 validation.</summary>
-public class EventValidationTests
+public partial class EventValidationTests
 {
     static LoadResult Load(string text) => EventValidator.Parse(text, FakeUnits.Default());
 
@@ -82,7 +82,8 @@ public class EventValidationTests
 
     public static IEnumerable<object[]> InvalidActions() =>
     [
-        ["\"action\": { \"type\": \"Empower\" }", "unknown action type Empower"],
+        ["\"action\": { \"type\": \"Heal\" }", "unknown action type Heal"],
+        ["\"action\": { \"type\": \"Empower\" }", "action Empower needs pillar empowerment"],
         [Action(units: "[]"), "action.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-50 }"],
         [Action(units: "[ { \"prefab\": \"CHAR_Nobody\", \"count\": 1 } ]"), "unknown unit CHAR_Nobody"],
         [Action(units: "[ { \"prefab\": \"CHAR_Mount_Horse_Vampire\", \"count\": 1 } ]"), "unit CHAR_Mount_Horse_Vampire is deny-listed"],

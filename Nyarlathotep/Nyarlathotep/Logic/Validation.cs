@@ -30,6 +30,44 @@ public static class UnitDenyList
         || name.Contains("MicroPOI", StringComparison.Ordinal);
 }
 
+/// <summary>What the validator needs to know about factions (faction-empowerment D1): the game's Faction_* prefab
+/// names. The service layer backs it with PrefabCollectionSystem; tests back it with a fixed set.</summary>
+public interface IFactionCatalog
+{
+    bool IsKnown(string factionName);
+}
+
+/// <summary>A catalog that knows no faction: every Empower definition checked against it is disabled.</summary>
+public sealed class NoFactions : IFactionCatalog
+{
+    public static readonly NoFactions Instance = new();
+    public bool IsKnown(string factionName) => false;
+}
+
+/// <summary>Factions no Empower action may name or reach (faction-empowerment D1, D3, Business rules 4): players and
+/// their servants and derived factions (Faction_Players*), traders (Faction_Traders*), critters, prisoners and
+/// Faction_Ignored. The prefixes cover the derived factions of Reference Data/unit_index.tsv
+/// (Faction_Players_Castle_Prisoners, Faction_Players_Mutant, Faction_Players_Shapeshift_Human, Faction_Traders_T01,
+/// Faction_Traders_T02).</summary>
+public static class FactionDenyList
+{
+    static readonly HashSet<string> Exact = new(StringComparer.Ordinal)
+    {
+        "Faction_Critters",
+        "Faction_World_Prisoners",
+        "Faction_Ignored",
+    };
+
+    public static bool IsDenied(string faction) =>
+        Exact.Contains(faction)
+        || faction.StartsWith("Faction_Players", StringComparison.Ordinal)
+        || faction.StartsWith("Faction_Traders", StringComparison.Ordinal);
+
+    /// <summary>"Faction_Legion" → "Legion"; a name without the prefix is returned unchanged.</summary>
+    public static string ShortName(string faction) =>
+        faction.StartsWith("Faction_", StringComparison.Ordinal) ? faction["Faction_".Length..] : faction;
+}
+
 public sealed class LoadResult
 {
     /// <summary>Set when the whole file is rejected; <see cref="Set"/> is then empty.</summary>
@@ -60,8 +98,11 @@ public static class EventValidator
     static readonly HashSet<string> EventKeys = new(StringComparer.Ordinal)
     { "id", "name", "enabled", "pillar", "trigger", "conditions", "durationSeconds", "action", "announce" };
 
-    public static LoadResult Parse(string text, IUnitCatalog units)
+    /// <summary>Parses events.json. <paramref name="factions"/> checks Empower factions; when null, a unit catalog that
+    /// is also an <see cref="IFactionCatalog"/> serves, otherwise no faction is known.</summary>
+    public static LoadResult Parse(string text, IUnitCatalog units, IFactionCatalog? factions = null)
     {
+        factions ??= units as IFactionCatalog ?? NoFactions.Instance;
         var bytes = System.Text.Encoding.UTF8.GetByteCount(text);
         if (bytes > MaxFileBytes)
             return new LoadResult { FileError = $"events.json is {bytes} bytes, over the {MaxFileBytes} byte limit" };
@@ -100,7 +141,7 @@ public static class EventValidator
             foreach (var e in events.EnumerateArray())
             {
                 index++;
-                var def = ParseEvent(e, index, units);
+                var def = ParseEvent(e, index, units, factions);
                 if (def.DisabledReason is null && !seen.Add(def.Id))
                     def = def with { DisabledReason = "duplicate id" };
                 else if (def.DisabledReason is not null && IdRx.IsMatch(def.Id))
@@ -114,7 +155,7 @@ public static class EventValidator
 
     sealed class Fail(string reason) : Exception(reason);
 
-    static EventDefinition ParseEvent(JsonElement e, int index, IUnitCatalog units)
+    static EventDefinition ParseEvent(JsonElement e, int index, IUnitCatalog units, IFactionCatalog factions)
     {
         var fallbackId = $"#{index}";
         if (e.ValueKind != JsonValueKind.Object)
@@ -137,9 +178,10 @@ public static class EventValidator
             var trigger = ParseTrigger(Required(e, "trigger", "trigger is required"), units);
             var conditions = e.TryGetProperty("conditions", out var c) ? ParseConditions(c) : new Conditions();
             var duration = Int(Required(e, "durationSeconds", "durationSeconds must be 30-7200"), 30, 7200, "durationSeconds must be 30-7200");
-            var action = ParseAction(Required(e, "action", "action is required"), trigger, units);
+            var (action, empower) = ParseAction(Required(e, "action", "action is required"), pillar, trigger, units, factions);
             var announce = e.TryGetProperty("announce", out var a) ? ParseAnnounce(a) : Announce.None;
-            return new EventDefinition(id, name.GetString()!, enabledEl.GetBoolean(), pillar, trigger, conditions, duration, action, announce);
+            return new EventDefinition(id, name.GetString()!, enabledEl.GetBoolean(), pillar, trigger, conditions, duration, action, announce,
+                Empower: empower);
         }
         catch (Fail f)
         {
@@ -283,11 +325,100 @@ public static class EventValidator
         return r;
     }
 
-    static SpawnWavesAction ParseAction(JsonElement a, Trigger trigger, IUnitCatalog units)
+    /// <summary>The action by its type, exactly one of the pair set. The pairing rule (faction-empowerment D2) is checked
+    /// on the type, before the action's own fields: pillar empowerment takes an Empower action and an Empower action
+    /// needs pillar empowerment.</summary>
+    static (SpawnWavesAction? Waves, EmpowerAction? Empower) ParseAction(JsonElement a, Pillar pillar, Trigger trigger,
+        IUnitCatalog units, IFactionCatalog factions)
     {
         if (a.ValueKind != JsonValueKind.Object) throw new Fail("action must be an object with a type");
         var type = a.TryGetProperty("type", out var ty) && ty.ValueKind == JsonValueKind.String ? ty.GetString()! : "";
-        if (type != "SpawnWaves") throw new Fail($"unknown action type {type}");
+        switch (type)
+        {
+            case "SpawnWaves":
+                if (pillar == Pillar.Empowerment) throw new Fail("pillar empowerment takes an Empower action");
+                return (ParseSpawnWaves(a, trigger, units), null);
+            case "Empower":
+                if (pillar != Pillar.Empowerment) throw new Fail("action Empower needs pillar empowerment");
+                return (null, ParseEmpower(a, units, factions));
+            default:
+                throw new Fail($"unknown action type {type}");
+        }
+    }
+
+    public const int MaxFactions = 5;
+    public const int MaxUnitList = 20;
+    public const double MinStat = 1.0;
+    public const double MaxStat = 3.0;
+
+    /// <summary>The stat keys of an Empower action, in the order they are listed and applied.</summary>
+    public static readonly IReadOnlyList<string> StatKeys = ["physicalPower", "spellPower", "maxHealth", "attackSpeed", "moveSpeed"];
+
+    static EmpowerAction ParseEmpower(JsonElement a, IUnitCatalog units, IFactionCatalog factions)
+    {
+        OnlyKeys(a, "action", "type", "factions", "includeUnits", "excludeUnits", "includeVBloods", "stats");
+
+        const string factionsRule = "action.factions must be 1-5 distinct Faction_ names";
+        var f = Required(a, "factions", factionsRule);
+        if (f.ValueKind != JsonValueKind.Array || f.GetArrayLength() is < 1 or > MaxFactions) throw new Fail(factionsRule);
+        var factionList = new List<string>();
+        foreach (var x in f.EnumerateArray())
+        {
+            var name = Str(x, factionsRule);
+            if (factionList.Contains(name)) throw new Fail(factionsRule);
+            if (FactionDenyList.IsDenied(name)) throw new Fail($"faction {name} is deny-listed");
+            if (!name.StartsWith("Faction_", StringComparison.Ordinal) || !factions.IsKnown(name)) throw new Fail($"unknown faction {name}");
+            factionList.Add(name);
+        }
+
+        var include = UnitList(a, "includeUnits", units, refuseDenied: true);
+        var exclude = UnitList(a, "excludeUnits", units, refuseDenied: false);
+
+        var vbloods = false;
+        if (a.TryGetProperty("includeVBloods", out var vb))
+        {
+            if (vb.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) throw new Fail("action.includeVBloods must be true or false");
+            vbloods = vb.GetBoolean();
+        }
+
+        const string statsRule = "action.stats must be an object of physicalPower, spellPower, maxHealth, attackSpeed, moveSpeed";
+        var st = Required(a, "stats", statsRule);
+        if (st.ValueKind != JsonValueKind.Object) throw new Fail(statsRule);
+        var values = new Dictionary<string, double>(StringComparer.Ordinal);
+        foreach (var p in st.EnumerateObject())
+        {
+            if (!StatKeys.Contains(p.Name)) throw new Fail($"unknown field action.stats.{p.Name}");
+            if (p.Value.ValueKind != JsonValueKind.Number || !p.Value.TryGetDouble(out var v) || double.IsNaN(v) || v < MinStat || v > MaxStat)
+                throw new Fail($"action.stats.{p.Name} must be a number 1.0-3.0");
+            values[p.Name] = v;
+        }
+        if (!values.Values.Any(v => v > MinStat)) throw new Fail("action.stats must raise at least one stat above 1.0");
+        double Get(string key) => values.TryGetValue(key, out var v) ? v : MinStat;
+        var stats = new EmpowerStats(Get("physicalPower"), Get("spellPower"), Get("maxHealth"), Get("attackSpeed"), Get("moveSpeed"));
+        return new EmpowerAction(factionList, include, exclude, vbloods, stats);
+    }
+
+    /// <summary>includeUnits or excludeUnits: 0-20 distinct known CHAR_ names, default []; includeUnits also refuses
+    /// deny-listed units.</summary>
+    static IReadOnlyList<string> UnitList(JsonElement a, string key, IUnitCatalog units, bool refuseDenied)
+    {
+        if (!a.TryGetProperty(key, out var v)) return [];
+        var rule = $"action.{key} must be 0-20 distinct CHAR_ names";
+        if (v.ValueKind != JsonValueKind.Array || v.GetArrayLength() > MaxUnitList) throw new Fail(rule);
+        var list = new List<string>();
+        foreach (var x in v.EnumerateArray())
+        {
+            var prefab = Str(x, rule);
+            if (list.Contains(prefab)) throw new Fail(rule);
+            if (refuseDenied && (UnitDenyList.IsDenied(prefab) || units.IsDenied(prefab))) throw new Fail($"unit {prefab} is deny-listed");
+            if (!prefab.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(prefab)) throw new Fail($"unknown unit {prefab}");
+            list.Add(prefab);
+        }
+        return list;
+    }
+
+    static SpawnWavesAction ParseSpawnWaves(JsonElement a, Trigger trigger, IUnitCatalog units)
+    {
         OnlyKeys(a, "action", "type", "units", "waves", "intervalSeconds", "radius", "location", "unitLifetimeSeconds");
 
         const string unitsRule = "action.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-50 }";

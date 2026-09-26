@@ -8,6 +8,35 @@ namespace Nyarlathotep.Logic;
 // (waves due, faults, end, the despawn after the grace). Services/EventRuntime, TriggerBus and WaveAction drive it
 // on the server main thread, so there are no locks.
 
+/// <summary>Which action a definition runs (faction-empowerment D9). None only for a definition validation disabled.</summary>
+public enum EventActionKind { None, Waves, Empower }
+
+public static class EventActions
+{
+    /// <summary>Waves for a SpawnWaves action, Empower for an Empower action. EventRuntime dispatches on it.</summary>
+    public static EventActionKind ActionKindOf(EventDefinition def) =>
+        def.Empower is not null ? EventActionKind.Empower
+        : def.Action is not null ? EventActionKind.Waves
+        : EventActionKind.None;
+
+    /// <summary>One empowerment per faction (faction-empowerment D6, Business rules 3): the reason
+    /// <paramref name="def"/> may not start while <paramref name="active"/> run, or null. The first shared faction is
+    /// named by its short name, else the first shared include unit; active events are checked in id order.</summary>
+    public static string? EmpowerClash(EventDefinition def, IEnumerable<ActiveEvent> active)
+    {
+        if (def.Empower is not { } mine) return null;
+        foreach (var a in active.OrderBy(a => a.Id, StringComparer.Ordinal))
+        {
+            if (a.Definition.Empower is not { } theirs) continue;
+            var faction = mine.Factions.FirstOrDefault(f => theirs.Factions.Contains(f));
+            if (faction is not null) return $"faction {FactionDenyList.ShortName(faction)} already empowered by {a.Id}";
+            var unit = mine.IncludeUnits.FirstOrDefault(u => theirs.IncludeUnits.Contains(u));
+            if (unit is not null) return $"unit {unit} already empowered by {a.Id}";
+        }
+        return null;
+    }
+}
+
 /// <summary>What the conditions of a definition are checked against when a trigger fires.</summary>
 public sealed record ConditionContext(int Players, GameMode ServerMode, TimeOnly LocalNow, DateTime UtcNow, DateTime? LastStartUtc, int Roll);
 
@@ -129,7 +158,8 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
     public DateTime? LastStartUtc(string id) => Starts.TryGetValue(id, out var t) ? t : null;
 
     /// <summary>Starts the current definition <paramref name="id"/>. The reply on refusal, highest first: "unknown event",
-    /// "already active", then the controls of <see cref="Precedence.StartBlocker"/>.</summary>
+    /// "already active", the controls of <see cref="Precedence.StartBlocker"/>, then one empowerment per faction
+    /// (<see cref="EventActions.EmpowerClash"/>).</summary>
     public string? Start(string id, string trigger, DateTime utcNow, ControlState controls, (float X, float Y, float Z)? origin = null)
     {
         var def = catalog.Current.Find(id);
@@ -137,6 +167,8 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
         if (_active.ContainsKey(id)) return "already active";
         var blocker = Precedence.StartBlocker(def, controls);
         if (blocker is not null) return blocker;
+        var clash = EventActions.EmpowerClash(def, _active.Values);
+        if (clash is not null) return clash;
         if (def.Action?.Location.Type == LocationType.Admin && origin is null) return $"event {id} spawns at the admin: start it with .nyar event start";
         var error = catalog.TryStart(id, utcNow, out var instance);
         if (error is not null) return error;
@@ -179,14 +211,16 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
     }
 
     /// <summary>Removes the events whose end has come and schedules their units' despawn after the grace
-    /// (Business rules 2).</summary>
+    /// (Business rules 2). Only a Waves event has units, so only it gets a cleanup: an Empower event has no ending phase
+    /// (faction-empowerment D9).</summary>
     public IReadOnlyList<ActiveEvent> Expire(DateTime utcNow, int graceSeconds)
     {
         var ended = _active.Values.Where(a => a.Instance.EndsUtc <= utcNow).ToList();
         foreach (var a in ended)
         {
             Remove(a.Id);
-            _cleanups.Add(new Cleanup(a.Id, DateTime.MaxValue, a.Instance.EndsUtc.AddSeconds(graceSeconds)));
+            if (EventActions.ActionKindOf(a.Definition) == EventActionKind.Waves)
+                _cleanups.Add(new Cleanup(a.Id, DateTime.MaxValue, a.Instance.EndsUtc.AddSeconds(graceSeconds)));
             Push?.EventEnded(a.Id);
         }
         return ended;

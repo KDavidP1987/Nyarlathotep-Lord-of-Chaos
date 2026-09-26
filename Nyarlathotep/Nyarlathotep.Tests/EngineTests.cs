@@ -4,7 +4,7 @@ namespace Nyarlathotep.Tests;
 
 /// <summary>foundation step 5: the engine's pure half (waves, end and grace, faults, conditions, wave sizing,
 /// the events.json editor and the admin lines).</summary>
-public class EngineTests
+public partial class EngineTests
 {
     static readonly DateTime T0 = Zones.Utc(2026, 9, 24, 20, 0);
 

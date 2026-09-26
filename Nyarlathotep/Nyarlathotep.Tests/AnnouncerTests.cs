@@ -4,7 +4,7 @@ namespace Nyarlathotep.Tests;
 
 /// <summary>foundation D13 (Epic D42): wave warnings, the daily banner clock (A18, A19), share limits, the login gate,
 /// the one-per-second queue of 20, and the health clock (D31).</summary>
-public class AnnouncerTests
+public partial class AnnouncerTests
 {
     static readonly TimeZoneInfo Zone = Zones.UsEastLike;
     static readonly DateTime T0 = Zones.Utc(2026, 9, 24, 20, 0);

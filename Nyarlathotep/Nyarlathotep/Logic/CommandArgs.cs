@@ -80,9 +80,29 @@ public static class CommandArgs
             : Arg<int>.Bad("radius must be 5-100");
     }
 
-    /// <summary>`event set` whitelist (foundation S-10): field → validator of the new value.</summary>
+    /// <summary>The settable stat fields of an Empower action (faction-empowerment D12).</summary>
+    public static readonly IReadOnlyList<string> StatFields = EventValidator.StatKeys.Select(k => "action.stats." + k).ToList();
+
+    /// <summary>The settable fields of a SpawnWaves action, refused on an Empower definition.</summary>
+    public static readonly IReadOnlyList<string> WaveFields = ["action.waves", "action.intervalSeconds", "action.radius"];
+
+    /// <summary>A stat multiplier: 1.0–3.0 with at most two decimals, '.' as the separator (invariant culture). The value
+    /// is a decimal, so 1.3 is written to events.json as 1.3.</summary>
+    public static Arg<object> Stat(string field, string? text)
+    {
+        var rule = $"{field} must be 1.0-3.0 with at most two decimals";
+        if (string.IsNullOrEmpty(text) || text.Length > 6) return Arg<object>.Bad(rule);
+        var dot = text.IndexOf('.');
+        if (dot == 0 || (dot > 0 && (text.Length - dot - 1 is < 1 or > 2))) return Arg<object>.Bad(rule);
+        if (!decimal.TryParse(text, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var m)) return Arg<object>.Bad(rule);
+        return m is >= 1.0m and <= 3.0m ? Arg<object>.Of(m) : Arg<object>.Bad(rule);
+    }
+
+    /// <summary>`event set` whitelist (foundation S-10): field → validator of the new value. Whether the field fits the
+    /// event's action type is checked on the file by EventsEditor.</summary>
     public static Arg<object> SettableValue(string field, string? value)
     {
+        if (StatFields.Contains(field)) return Stat(field, value);
         static Arg<object> IntIn(string f, string? v, int min, int max) =>
             int.TryParse(v, NumberStyles.None, CultureInfo.InvariantCulture, out var i) && i >= min && i <= max
                 ? Arg<object>.Of(i)

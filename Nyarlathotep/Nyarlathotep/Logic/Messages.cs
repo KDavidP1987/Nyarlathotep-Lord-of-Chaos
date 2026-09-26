@@ -8,11 +8,14 @@ namespace Nyarlathotep.Logic;
 /// it can carry one (foundation D15, Epic D16).</summary>
 public sealed record MessageContext(string Event, string Faction, int Minutes, int Wave, int Waves, string Zone)
 {
-    /// <summary>The context of <paramref name="def"/>: its faction is the second part of its first unit's prefab name
-    /// (CHAR_Bandit_Thug → Bandit), or "-".</summary>
+    /// <summary>The context of <paramref name="def"/>. Its faction: for an Empower action the short names of its factions
+    /// joined by ", " (Faction_Legion, Faction_Bandits → "Legion, Bandits", faction-empowerment D10); otherwise the
+    /// second part of the first unit's prefab name (CHAR_Bandit_Thug → Bandit), or "-".</summary>
     public static MessageContext For(EventDefinition def, int minutes, int wave) => new(
         def.Name,
-        FactionOf(def.Action?.Units.FirstOrDefault()?.Prefab),
+        def.Empower is { } empower
+            ? string.Join(", ", empower.Factions.Select(FactionDenyList.ShortName))
+            : FactionOf(def.Action?.Units.FirstOrDefault()?.Prefab),
         minutes,
         wave,
         def.Action?.Waves ?? 0,

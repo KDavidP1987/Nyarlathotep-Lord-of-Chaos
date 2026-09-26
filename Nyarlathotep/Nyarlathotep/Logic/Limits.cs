@@ -28,13 +28,15 @@ public static class Limits
     public static readonly IntLimit GraceSeconds = new("Limits", "GraceSeconds", 30, 0, 600);
     public static readonly IntLimit PurgeCooldownSeconds = new("Limits", "PurgeCooldownSeconds", 60, 0, 3600);
     public static readonly IntLimit ManualSpawnLifetimeSeconds = new("Limits", "ManualSpawnLifetimeSeconds", 300, 30, 3600);
+    /// <summary>Carrier operations per tick, applies and removals together, removals first (faction-empowerment D5).</summary>
+    public static readonly IntLimit EmpowerBatchPerTick = new("Limits", "EmpowerBatchPerTick", 200, 50, 1000);
     public static readonly IntLimit ShareCooldownSeconds = new("Announcements", "ShareCooldownSeconds", 300, 10, 86400);
     public static readonly IntLimit ShareMaxPerMinute = new("Announcements", "ShareMaxPerMinute", 3, 1, 20);
 
     public static readonly IReadOnlyList<IntLimit> All =
     [
         MaxTrackedUnits, MaxUnitsPerWave, MaxConcurrentEvents, MaxSpawnsPerTick, MaxDespawnsPerTick,
-        GraceSeconds, PurgeCooldownSeconds, ManualSpawnLifetimeSeconds, ShareCooldownSeconds, ShareMaxPerMinute,
+        GraceSeconds, PurgeCooldownSeconds, ManualSpawnLifetimeSeconds, EmpowerBatchPerTick, ShareCooldownSeconds, ShareMaxPerMinute,
     ];
 
     /// <summary>Announcements.WarningOffsets: 1–5 integers of 5–3600 s, deduplicated, sorted descending.

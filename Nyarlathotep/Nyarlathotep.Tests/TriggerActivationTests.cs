@@ -4,7 +4,7 @@ namespace Nyarlathotep.Tests;
 
 /// <summary>foundation D40 (A13): for every automatic trigger kind an enabled definition is reached by its trigger and a
 /// disabled twin is not; the enabled check is TriggerRouter.Candidates, shared by every kind.</summary>
-public class TriggerActivationTests
+public partial class TriggerActivationTests
 {
     // Friday 2026-09-25 20:00 UTC.
     static readonly DateTime Now = Zones.Utc(2026, 9, 25, 20, 0);

@@ -4,7 +4,7 @@ namespace Nyarlathotep.Tests;
 
 /// <summary>foundation D9: every member of Logic/Dependency has a policy row and a fault case; a fault stays in its
 /// scope, keeps in-memory state, logs once per streak and never throws.</summary>
-public class DependencyFailureTests
+public partial class DependencyFailureTests
 {
     static readonly IReadOnlyDictionary<Dependency, Action> Cases = new Dictionary<Dependency, Action>
     {

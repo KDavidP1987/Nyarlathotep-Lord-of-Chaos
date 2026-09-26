@@ -3,7 +3,7 @@ using Nyarlathotep.Logic;
 namespace Nyarlathotep.Tests;
 
 /// <summary>foundation D5: command arguments of wrong arity, type or range get one line "&lt;arg&gt; must be &lt;rule&gt;".</summary>
-public class CommandArgTests
+public partial class CommandArgTests
 {
     [Theory]
     [InlineData(0, 1, 1, "arguments must be 1")]
