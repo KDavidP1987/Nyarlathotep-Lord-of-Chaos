@@ -52,3 +52,12 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - Codex verdict: READY (round 3) — round 1 REVISE: Leads failed open on a missing target, Samples() outside the scheduler catch, any T02 potion buff taken for a carrier, RemoveBuffSafe's TryRemoveBuff reason unchecked (fixed e477d29, fixture bad-14); round 2 REVISE: a sample marked logged before its read, Create cleared but did not establish the stat buffer, the watch processed from its head could hold back a due entry (fixed d5889b0); rounds 1–2 (and step 1's three rounds) ran with a Codex sandbox that blocked every file read, found in round 2's log and fixed with `-c features.experimental_windows_sandbox=true` (reads work, writes still denied); round 3 read the files and inspected steps 1–2 whole (ee36a7d..HEAD): READY, no findings
 - in-game: none (Session 1 is step 4)
 - dod status: 13/29 verified (D1, D2, D3, D5 re-verified after A4, D6, D7, D8, D9, D10, D12, D13, D20, D21); D4 and D14 wait for Session 2's read-back, D22 for the api 3 wire line (step 3) and the externalSelfTests registry (step 4)
+
+### Step 3 · 2026-09-26 · 0f9c6d6 → 82d2aaf → 7f1bd1c
+- compile / preflight: 0 errors, 0 warnings; 868 tests passed; PREFLIGHT OK with "wire contract: 7 tags, 4 api commands, all documented (api 3)"; -SelfTest pass (WireContract good and bad-3 re-copied at api 3); dod --check 0 problems
+- mutation checks: the empower branch of ApiLines.Status disabled fails 6 tests; the Faction_ prefix kept fails 4
+- /code-review (0f9c6d6): the row's worst-case length was unbounded by any test → The_largest_empower_row_fits_the_line_limit (82d2aaf, then corrected in 7f1bd1c to five distinct allowed factions); the empower admin count comes from EmpowerAction.CarriersOf, so a waves event's tracked-unit count is unchanged; no other findings
+- Codex verdict: READY (round 2, file access confirmed) — round 1 REVISE: the contract promised tolerance of unknown keys only while api 3 first sends kind=empower, and the handoff both said "no change" and asked for a rendering change (contract §1 now states value tolerance and that kind=empower was listed since api 2; the handoff gates empower rendering on api>=3); the size test repeated one faction (now five distinct, non-denied)
+- in-game: none (step 3 is the wire shape; Session 2 reads `.nyar api status` in game)
+- dod status: 15/29 verified (D1, D2, D3, D5, D6, D7, D8, D9, D10, D11, D12, D13, D20, D21, D27)
+
