@@ -20,8 +20,10 @@
          disabled", the same counts N logged; state.json: "(<n> listed in state.json)" with n ≥ 1; stats.json:
          reported absent while no release writes it); and "marker sweep".
       After each boot it runs `preflight.ps1 -LogCheck` on that boot's logs and prints the "log check:" line.
-      6. Always (finally): stops the server, restores the saved DLL and config, checks the restored config equals the
-         saved one byte for byte, and removes the worktrees and the temp folder.
+      6. Always (finally): stops the server if the drill started one (a refusal never stops a running server), puts
+         back exactly what was there (the DLL or its absence, the config folder or its absence, hidden files
+         included), checks the DLL's and the config's hashes against the saved ones, and removes the worktrees and the
+         temp folder; on a mismatch the temp folder and its saved copy are kept (A13, A14).
     Prints "rollback drill: pass", or "rollback drill: fail — <stage>" and exits 1. It never prints pass on a
     missing log line. Dev world only: the owner's world is never touched.
 
@@ -122,6 +124,7 @@ function Stop-Server {
 # Boots the dev world and returns its BepInEx log once "Nyarlathotep initialized" appears (after $ExtraSeconds more).
 function Invoke-Boot([string]$Stage, [int]$ExtraSeconds) {
     $started = Get-Date
+    $script:booted = $true   # from here on the finally stops the server (A14: a refusal never stops one it did not start)
     $env:SteamAppId = '1604030'
     Start-Process -FilePath (Join-Path $ServerDir 'VRisingServer.exe') -WorkingDirectory $ServerDir -ArgumentList '-persistentDataPath .\save-data-nyardev -serverName "Nyar Dev" -saveName nyardev -logFile .\logs\NyarDev.log' | Out-Null
     $deadline = $started.AddSeconds($BootTimeoutSeconds)
@@ -151,7 +154,7 @@ function Get-FolderHashes([string]$Dir) {
     })
 }
 
-$tmp = $null; $saved = $false; $hadDll = $true; $result = $null
+$tmp = $null; $saved = $false; $booted = $false; $hadDll = $true; $hadConfig = $true; $dllHash = $null; $result = $null
 try {
     if (Get-Process VRisingServer -ErrorAction SilentlyContinue) { Fail 'a VRisingServer process is running; stop it first' }
     $refusal = Get-LeftoverRefusal $env:TEMP
@@ -192,8 +195,12 @@ try {
     New-Item -ItemType Directory -Path (Join-Path $save 'config') -Force | Out-Null
     # Hidden files included (-Force); a server without the plugin gets none back (raphael-api-core A13).
     $hadDll = Test-Path -LiteralPath $PluginDll
-    if ($hadDll) { Copy-Item -LiteralPath $PluginDll -Destination (Join-Path $save 'Nyarlathotep.dll') }
-    if (Test-Path -LiteralPath $ConfigDir) { Get-ChildItem -LiteralPath $ConfigDir -Force | Copy-Item -Destination (Join-Path $save 'config') -Recurse -Force }
+    if ($hadDll) {
+        Copy-Item -LiteralPath $PluginDll -Destination (Join-Path $save 'Nyarlathotep.dll')
+        $dllHash = (Get-FileHash -LiteralPath $PluginDll -Algorithm SHA256).Hash
+    }
+    $hadConfig = Test-Path -LiteralPath $ConfigDir
+    if ($hadConfig) { Get-ChildItem -LiteralPath $ConfigDir -Force | Copy-Item -Destination (Join-Path $save 'config') -Recurse -Force }
     $savedHashes = Get-FolderHashes (Join-Path $save 'config')
     $saved = $true
     if (Test-Path -LiteralPath $ConfigDir) { Get-ChildItem -LiteralPath $ConfigDir -Force | Remove-Item -Recurse -Force }
@@ -260,16 +267,25 @@ try {
 catch [DrillFailure] { $result = "fail — $($_.Exception.Message)" }
 catch { $result = "fail — $($_.Exception.Message)" }
 finally {
-    Stop-Server
+    if ($booted) { Stop-Server }
     if ($saved) {
+        # Put back exactly what was there: the DLL or its absence, the config folder or its absence (A13, A14).
         $savedDll = Join-Path $tmp 'saved\Nyarlathotep.dll'
-        if (Test-Path -LiteralPath $savedDll) { Copy-Item -LiteralPath $savedDll -Destination $PluginDll -Force }
-        elseif (-not $hadDll) { Remove-Item -LiteralPath $PluginDll -Force -ErrorAction SilentlyContinue }
-        if (Test-Path -LiteralPath $ConfigDir) { Get-ChildItem -LiteralPath $ConfigDir -Force | Remove-Item -Recurse -Force } else { New-Item -ItemType Directory -Path $ConfigDir | Out-Null }
-        Get-ChildItem -LiteralPath (Join-Path $tmp 'saved\config') -Force -ErrorAction SilentlyContinue | Copy-Item -Destination $ConfigDir -Recurse -Force
-        $restored = Get-FolderHashes $ConfigDir
-        if (Compare-Object @($savedHashes) @($restored)) { $result = 'fail — the restored config differs from the saved one (the copy is kept in the temp folder)'; $tmp = $null }
-        else { Write-Host "restored the saved $(if ($hadDll) { 'plugin DLL' } else { 'state (no plugin DLL)' }) and config" }
+        if ($hadDll) { Copy-Item -LiteralPath $savedDll -Destination $PluginDll -Force -ErrorAction SilentlyContinue }
+        else { Remove-Item -LiteralPath $PluginDll -Force -ErrorAction SilentlyContinue }
+        if (Test-Path -LiteralPath $ConfigDir) { Get-ChildItem -LiteralPath $ConfigDir -Force | Remove-Item -Recurse -Force }
+        if ($hadConfig) {
+            if (-not (Test-Path -LiteralPath $ConfigDir)) { New-Item -ItemType Directory -Path $ConfigDir | Out-Null }
+            Get-ChildItem -LiteralPath (Join-Path $tmp 'saved\config') -Force -ErrorAction SilentlyContinue | Copy-Item -Destination $ConfigDir -Recurse -Force
+        }
+        elseif (Test-Path -LiteralPath $ConfigDir) { Remove-Item -LiteralPath $ConfigDir -Recurse -Force }
+        $wrong = @()
+        if ($hadDll) { if (-not (Test-Path -LiteralPath $PluginDll) -or (Get-FileHash -LiteralPath $PluginDll -Algorithm SHA256).Hash -ne $dllHash) { $wrong += 'plugin DLL' } }
+        elseif (Test-Path -LiteralPath $PluginDll) { $wrong += 'plugin DLL (none before the drill)' }
+        if ($hadConfig) { if (Compare-Object @($savedHashes) @(Get-FolderHashes $ConfigDir)) { $wrong += 'config' } }
+        elseif (Test-Path -LiteralPath $ConfigDir) { $wrong += 'config folder (none before the drill)' }
+        if ($wrong) { $result = "fail — the restored $($wrong -join ' and ') differs from the saved state (the copy is kept in the temp folder)"; $tmp = $null }
+        else { Write-Host "restored the saved $(if ($hadDll) { 'plugin DLL' } else { 'state (no plugin DLL)' }) and $(if ($hadConfig) { 'config' } else { 'state (no config folder)' }); hashes equal" }
     }
     if ($tmp -and (Test-Path -LiteralPath $tmp)) {
         foreach ($wt in @(Get-ChildItem -LiteralPath $tmp -Directory -Filter 'wt-*' -ErrorAction SilentlyContinue)) { git -C $Repo worktree remove --force $wt.FullName 2>&1 | Out-Null }

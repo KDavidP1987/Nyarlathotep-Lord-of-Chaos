@@ -1,6 +1,6 @@
 # Raphael api — the machine interface
 
-**Status:** in development (docs/dod/raphael-api-core.md, step 6 of 6: released as 0.3.0 (GitHub pre-release); Sessions 1–7 clean). Ships in 0.3.0 as api 2.
+**Status:** in development (docs/dod/raphael-api-core.md, step 6 of 6: released as 0.3.0 (GitHub pre-release); Sessions 1–8 clean). Ships in 0.3.0 as api 2.
 
 ## What it provides
 
@@ -242,6 +242,19 @@ moved aside (a server without Nyarlathotep) and a hidden file `.drill-hidden` pl
 - After the drill: no Nyarlathotep.dll in BepInEx/plugins (the N-1 DLL was removed), and `.drill-hidden` was back with
   its content. Then the planted file was removed and the DLL put back: config and DLL hashes equal the copies taken
   before the session.
+- [Warning] lines: Il2CppInterop Class::Init and the two Beelzebub TUNE lines. No error line.
+
+### Session 8 · 2026-09-26
+Step 6, unattended: the drill with A14's fixes, in two parts.
+- Part 1, a refusal must not touch a running server: the dev server booted ("Nyarlathotep initialized" after 16 s),
+  then the drill ran: "rollback drill: fail — a VRisingServer process is running; stop it first", and the same server
+  process was still running afterwards. It was then stopped and log-checked: 0 unhandled, 5 nyar lines, 0 orphan
+  errors, 0 unity errors.
+- Part 2, a dev server without BepInEx/config/Nyarlathotep/ (the folder moved aside): "boot v0.3.0 (seed): log check:
+  0 unhandled, 6 nyar lines, …"; "boot v0.3.0 (drill-mark): … 15 nyar lines …"; "boot v0.2.1: … 5 nyar lines …"; both
+  read '6 valid, 0 disabled'; "restored the saved plugin DLL and state (no config folder); hashes equal"; "rollback
+  drill: pass". Afterwards the folder was absent and the DLL's SHA-256 unchanged; the folder was then moved back, equal to
+  the copy taken before Session 7.
 - [Warning] lines: Il2CppInterop Class::Init and the two Beelzebub TUNE lines. No error line.
 
 ## Open questions

@@ -248,8 +248,8 @@
       ],
       "location": "%TEMP%\\nyar-drill-* (tools/rollback-drill.ps1) and %TEMP%\\nyar-rollback-* (the D18 repository drill)",
       "owner": "the drill",
-      "retention": "for one run: removed in its finally; a crash leaves them and the next run removes leftovers first",
-      "deletion": "automatic, or delete the folders and run `git worktree prune`",
+      "retention": "for one run: removed in its finally; a crash or a restore mismatch leaves them. The next run removes a leftover without saved\\ and refuses while one holds saved\\, the only copy of the dev server DLL and config (A11)",
+      "deletion": "automatic; a folder holding saved\\ is deleted by hand only after its DLL and config are restored, then `git worktree prune`",
       "singleCopy": true
     }
   ]

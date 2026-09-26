@@ -158,3 +158,8 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 ### Session 7 · 2026-09-26 (step 6 drill after A13)
 - session 7 log check: 0 unhandled, 5 nyar lines, 0 orphan errors, 0 unity errors
   - the last boot (v0.2.1); the v0.3.0 boots read 6 and 15 nyar lines, 0 unhandled, 0 orphan, 0 unity; no plugin DLL and a hidden config file planted, both restored as they were
+
+### Session 8 · 2026-09-26 (step 6 drill after A14)
+- session 8 log check: 0 unhandled, 5 nyar lines, 0 orphan errors, 0 unity errors
+  - part 1's boot (the server the drill refused to touch) and part 2's last boot (v0.2.1) read the same; part 2's v0.3.0 boots 6 and 15 nyar lines, 0 unhandled, 0 orphan, 0 unity
+- exception to D20's per-boot rule, recorded once: in Session 3 the boots of practice runs A and B before their last one were overwritten before a log check (see Session 3). Their logs cannot be recovered; every boot since Session 4 is checked by the drill itself
