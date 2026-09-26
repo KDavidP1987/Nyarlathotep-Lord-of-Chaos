@@ -46,6 +46,14 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - baseline boot: no server running; the last logs (09:59) give "log check: 0 unhandled, 5 nyar lines, 0 orphan errors, 0 unity errors"; their 3 warning lines are Beelzebub's TUNE notices and Il2CppInterop's "Class::Init signatures have been exhausted", none from Nyarlathotep
 - found on the way: the tooling agent added -Restore refusals and a copy hash check beyond D28 → amendment A5 before the tooling is committed or run
 
+### Step 5 · 2026-09-26 · 80df420
+- git status: clean after the step 4 post-audit commit (80df420)
+- compile: 0 errors, 0 warnings; tests: 869 passed
+- preflight: PREFLIGHT OK; -SelfTest 27/27; dev-snapshot and drill selftests 6/6
+- dod status: faction-empowerment 16/29 verified; amendment A6 recorded before its build (7400fc6)
+- feature doc read: docs/features/FACTION_EMPOWERMENT.md › Test results › Session 2 steps (Codex round 6 READY); plan step 5, D4, D14, D15, D16, D18, D19, S-7
+- baseline boot: the Session 2 boot of the 7400fc6 build, after `pwsh tools/dev-snapshot.ps1 -Save s2` and `session-events.py fe2`; its log check is the Session 2 record's first line
+
 ## Post-audit
 ### Step 1 · 2026-09-26 · 0559d4c → 23f2ba4 → 5ca6812
 - compile / preflight: 0 errors, 0 warnings; 848 tests passed; PREFLIGHT OK; dod --check 0 problems, 0 warnings
