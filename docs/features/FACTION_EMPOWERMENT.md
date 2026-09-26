@@ -262,8 +262,9 @@ comparison moves to Session 3. Chat lines are from the owner's notes; log lines 
 ### Session 3 · faction-empowerment step 6 (with the owner) — steps
 
 Setup (Claude, before the owner connects): `pwsh tools/dev-snapshot.ps1 -Save s3`, Release build deployed,
-`python tools/ingame/session-events.py fe3` (fe2's events plus fe-u-empower, Bandits pp 1.5 and maxHealth 2.0 for 300 s, and
-fe-u-spawns, 3 Bandit Thugs at the admin for 300 s with unitLifetimeSeconds 240; fe2's cfg keys plus
+`python tools/ingame/session-events.py fe3` (fe2's events plus fe-u-empower, Bandits pp 1.5 and maxHealth 2.0 for 900 s, and
+fe-u-spawns, 3 Bandit Thugs at the admin for 900 s with unitLifetimeSeconds 840, both far longer than the wait for the
+next autosave (the server's AutoSaveInterval is 120 s); fe2's cfg keys plus
 Limits.PurgeCooldownSeconds = 60 and Limits.EmpowerBatchPerTick = 50). Bloodcraft 1.13.22 and KindredCommands 2.5.8 from
 Thunderstore are copied into BepInEx/plugins; one boot writes Bloodcraft's cfg, in which Claude sets only
 `[Familiars] FamiliarSystem = true` (every other Bloodcraft system is off by default), then the server boots again on world
@@ -287,10 +288,12 @@ Part 1 (owner, about 25 minutes; server **127.0.0.1:9876**, Direct Connect, worl
 7. Run `.fam t` (your familiar leaves). Let a Bandit Thug hit you 3 more times with the same gear. **Note the 3 damage
    numbers** (expected about 1.5× step 3). **Note separately** whether they attack faster (time between swings) and whether they move or chase faster than before step 6.
 8. Kill 2 or 3 bandits and stay within about 40 m. When one reappears, run `.nyar debug here 40` at once and again every
-   5 seconds until its row shows "carrier example-empowerment". If none has reappeared after 3 minutes, run
+   5 seconds until its row shows "carrier example-empowerment". Wait up to 10 minutes for a real respawn. Only if none has
+   reappeared by then, run
    `.spawnnpc CHAR_Bandit_Scout 1` instead (a new native bandit appearing mid-event, which the sweep treats exactly like a
    respawn), then at once `.nyar debug here 40` and again every 5 seconds until the Scout's row shows "carrier
-   example-empowerment"; then kill the Scout. Note which of the two you timed.
+   example-empowerment"; then kill the Scout. Note which of the two you timed (a Scout timing is recorded as an equivalent
+   of D16's respawn clause and needs an amendment before D16 is checked).
 9. Walk about 40 m away from the camp, so no camp bandit is within 25 m of you. Run `.nyar event start fe-big`, then `.nyar event start fe-spawns` (3 Bandit Thugs appear around you), then
    `.spawnnpc CHAR_Bandit_Thug 2` (KindredCommands; 2 more Thugs). Wait 30 seconds and run `.nyar status`. **Note the
    fe-spawns line**: it should count 3 units, not 5.
@@ -308,11 +311,11 @@ Part 1 (owner, about 25 minutes; server **127.0.0.1:9876**, Direct Connect, worl
     `.nyar event start fe-u-spawns` (3 Thugs appear). Do not kill them: keep about 30 m from them (keep moving if they
     chase you) and stay connected, so they stay loaded and are saved. Within about 5 minutes the server stops and
     disconnects you (Claude's watcher stops it right after the next autosave). Tell Claude **"part 1 done"** with your
-    notes from steps 3, 4, 5, 6, 7, 8, 9 and 10.
+    notes from steps 3 to 12 (the debug rows are also in the log).
 
-Between the parts (Claude, about 20 minutes, no player needed; Epic D12): Claude's watcher sees fe-u-spawns start, waits for
+Between the parts (Claude, about 25 minutes, no player needed; Epic D12): Claude's watcher sees fe-u-spawns start, waits for
 the next autosave after it and hard-stops the server mid-window (the carriers and the 3 Thugs are in that save); Claude deletes BepInEx/plugins/Nyarlathotep.dll, boots,
-waits 10 minutes (longer than fe-u-empower's 300 s and the units' 240 s) plus the next autosave, hard-stops, reinstalls the
+waits 16 minutes (longer than fe-u-empower's 900 s and the units' 840 s) plus the next autosave, hard-stops, reinstalls the
 DLL with General.Enabled = false, boots, and reads "boot marker sweep: 0 found" in the log. Claude then tells the owner
 the server is up again.
 
