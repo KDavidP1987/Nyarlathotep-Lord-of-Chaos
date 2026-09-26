@@ -120,3 +120,54 @@ VERDICT: REVISE
 - F5 · accepted · D24's download is a complete command: a unique scratch folder, the exact asset path hashed, the folder removed in finally
 - F6 · accepted · D27's file evidence adds "faction=<names joined by ','>", "faction=Legion,Bandits" and "units=<NPCs holding the event's empowerment>"; the contract's §3 text stays D11's ContractDocTests
 - F7 · accepted · step 4 now schedules fe-short (60 s, natural expiry, reverted sample line) and fe-long (1200 s, stopped mid-window)
+
+## Review 3 · 2026-09-26 · codex · plan commit 43a9296
+
+EARLIER: all resolved
+
+F1 [blocking] Probe 6.1 is unanswered: Bloodcraft and KindredCommands are identified only as their “current Thunderstore releases,” while git, gh, GitHub, and Codex also lack concrete versions and quota/cost decisions, so the external contract cannot be reproduced later.
+Fix: pin or record the tested versions for every dependency and state quota/cost as a value or explicitly “none/not applicable.”
+
+F2 [blocking] Probe 4.2 has contradictory ownership invariants: D3 promises ownership uses only game components and “never another mod’s data,” but S-8’s fallback permits adding a Bloodcraft-specific component and temporarily avoiding the familiar’s faction.
+Fix: choose one invariant-preserving fallback—either fail closed using game-owned evidence only, or explicitly approve and specify the Bloodcraft contract as a dependency.
+
+F3 [blocking] D4 is unverifiable for probe 5.2: `CarrierRecipeTests` can prove the pure recipe, but the stated evidence cannot prove that `Services/EmpowerAction.cs` writes exactly that recipe into the actual carrier.
+Fix: add an injectable carrier-write seam or a static/integration check whose evidence command fails when the service omits or changes any recipe field.
+
+F4 [blocking] D8 is unverifiable for probe 4.5: the shown structural-edits command permits `DestroyUtility.Destroy*` anywhere inside `EntityExtensions.cs`, so it does not prove the claimed control that carrier removal occurs only through `RemoveBuffSafe`.
+Fix: make the check identify the enclosing method and fail unless carrier destruction is inside `RemoveBuffSafe`, with bad fixtures for another method in `EntityExtensions.cs`.
+
+F5 [blocking] Probe 14.3 remains incomplete for Session 3: D28 snapshots the plugin directory and only Nyarlathotep’s config paths, yet D18 claims restoration removes Bloodcraft and KindredCommands “and their configs”; third-party configuration files elsewhere under `BepInEx/config` are neither captured nor removed by the specified snapshot.
+Fix: snapshot and restore the complete relevant config tree, or enumerate both mods’ exact config paths and add round-trip fixtures proving newly installed DLLs and configs are removed.
+
+F6 [blocking] Probe 14.3 does not give exact rollback steps for the pushed `v0.4.0` tag and GitHub prerelease created by D24; D25 reverts the repository tree, but the published tag, release, and asset remain live.
+Fix: state and drill the release rollback policy and commands—such as deleting/yanking the prerelease and tag or publishing a designated rollback release—including what happens after users have downloaded 0.4.0.
+
+Layer rescore:
+
+1. Considered — Purpose & typical use  
+2. Considered — Design › Permissions and D21  
+3. Considered — Design › Data and D1/D11/D17/D23/D26  
+4. Gap — Business rules and S-8 conflict on probe 4.2  
+5. Considered — Interfaces › Internal  
+6. Gap — Interfaces › External lacks reproducible dependency versions for 6.1  
+7. Considered — Design › States  
+8. Considered — Use cases › Minimal stretch  
+9. Considered — Use cases › Maximal stretch  
+10. Considered — Security  
+11. Considered — Design › UX  
+12. Considered — Failure & observability and its selftest/control matrices  
+13. Considered — Performance  
+14. Gap — Rollout › Rollback omits parts of the live-install and published-release rollback  
+15. Considered — Out of scope  
+
+12/15 layers · 46/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · the dependency table pins Bloodcraft 1.13.24, KindredCommands 2.5.8, git 2.53.0, gh 2.92.0, codex-cli 0.151.0, BepInEx 6.0.0-be.733, VampireReferenceAssemblies 1.1.12-r99041-b2, each with its quota and cost ("free", "none")
+- F2 · accepted · one invariant: Ownership.Decide reads game components plus any mod contract declared in the dependency table (none today); S-8's fallback is a discovered amendment declaring Bloodcraft 1.13.24's familiar component as a versioned contract, read fail-closed, with D3 and D20 cases, and the release waits for it
+- F3 · accepted · D4's recipe is read back from the live carrier by D14's debug row ("type Replace stacks 1 end Destroy mark ok"), recorded in Session 2; the service's single writer takes only the CarrierRecipe object
+- F4 · accepted · D8's structural check allows DestroyUtility.Destroy only inside RemoveBuffSafe's body (enclosing method found by signature and braces); fixture StructuralEdits/bad-3 moves the call into EntityExtensions.DestroySafe
+- F5 · accepted · D28 snapshots the whole BepInEx/plugins and BepInEx/config trees; restore removes files added since and verifies no unlisted file remains; -SelfTest adds a DLL and a cfg after the save and expects both removed
+- F6 · accepted · Rollout › Rollback gains a published-release policy: tags and releases are never deleted (Epic S-19), a bad 0.4.0 is withdrawn with the exact `gh release edit` command and fixed forward by 0.4.1, the owner withdraws the Thunderstore version, and servers that downloaded 0.4.0 follow the server rollback
