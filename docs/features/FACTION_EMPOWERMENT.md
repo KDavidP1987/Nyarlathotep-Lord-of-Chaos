@@ -1,12 +1,12 @@
 # Faction empowerment (Pillar A)
 
-**Status:** in build (docs/dod/faction-empowerment.md, approved 2026-09-26). Step 1 of 7 done: the Empower action's
+**Status:** in build (docs/dod/faction-empowerment.md, approved 2026-09-26). Steps 1–2 of 7 done: the Empower action's
 schema and pairing rule, eligibility, the carrier recipe and ledger, the boot-sweep split, the one-per-faction rule,
 {faction} in messages and the stat fields of `event set`, all pure logic under unit test (audit:
-docs/audits/faction-empowerment.md). Step 2 built: Services/EmpowerAction.cs applies and removes carriers in game
+docs/audits/faction-empowerment.md). Step 2 (post-audited, Codex READY): Services/EmpowerAction.cs applies and removes carriers in game
 through the ledger, EventRuntime dispatches Empower events, the boot sweep removes leftover carriers without touching
 their NPCs, `.nyar debug here` lists native NPCs with their carrier read back, and the V Blood trigger needs
-VBloodConsumeSource. Not yet run on a server: Session 1 is step 4. Spike S3: go (2026-09-24; carrier recipe in Test
+VBloodConsumeSource. A carrier still present 5 s after its event's natural end is queued for removal (A4). Not yet run on a server: Session 1 is step 4. Spike S3: go (2026-09-24; carrier recipe in Test
 results).
 
 ## Goal

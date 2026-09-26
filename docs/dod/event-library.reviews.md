@@ -48,3 +48,39 @@ VERDICT: REVISE
 - F9 · accepted · S-7's and S-8's fallbacks list what changes (Logic planner and tests, services, reply text, §6 and ContractDocTests, feature doc, both READMEs) and require an amendment of D14 or D10 first
 - F10 · accepted · D8 and Design › States: A arms, B deletes, A confirms → "unknown event <id>"; pending confirmations are per admin and expire after 30 s ("no delete pending for <id>"); both are in D8's fails-when
 - F11 · accepted · D12 states the reply "events.json would exceed 1 MB; nothing written" and its fails-when requires the over-limit fixture to leave events.json's SHA-256 unchanged; Performance › Bounds says the same
+
+## Review 2 · 2026-09-26 · codex · plan: revision 1 (uncommitted)
+F1 `blocking` — Probe `6.2` does not decide what happens when `ConfigFile.Save()` partially changes or truncates the cfg before throwing; D19 merely restores the in-memory value while claiming the pillar is unchanged.
+Fix: Specify and test recovery from a partially written cfg—restore verified original bytes atomically or reload the actual persisted value before reporting the result.
+
+F2 `blocking` — Probe `12.4` lacks a single evidence command that fails when the failing/silent/empty cases for the introduced unit-test controls are absent; `preflight.ps1 -SelfTest` covers registered preflight/external fixtures, not the D1–D14/D16/D19/D20/D27 test cases summarized only in prose.
+Fix: Register a meta-selftest that mutates or substitutes each introduced control fixture and fails on missing failure, silent, or zero-case behavior, then make that selftest part of the stated `12.4` evidence command.
+
+F3 `blocking` — D20 is unverifiable by its stated evidence: `ContractDocTests` compares declared command forms, but generic `.nyar event set` declarations cannot prove that §6 lists every widened field accepted by D9–D11.
+Fix: Expose the settable-field contract as enumerable code data and have `ContractDocTests` compare every documented field and permission against it, or narrow D20 and add explicit manual/file evidence for the field table.
+
+F4 `blocking` — D21 claims every new command does everything in D4–D16, but its manual evidence samples only one field from each family and does not exercise all forms, bounds, refusals, pagination, duplicate IDs, stale writes, or precedence; a stranger cannot verify the item from the stated Session 2 record.
+Fix: Narrow D21 to the explicitly enumerated in-game smoke cases, leaving exhaustive behavior to the cited automated items, or provide a complete executable session matrix covering every claim D21 retains.
+
+F5 `advisory` — Probe `4.1` currently has conflicting authorities: the Epic still says “unattended,” while this child requires an owner kick-off in S-13 and step 5; the prompt supplies the intended amendment, but the governing document has not recorded it.
+Fix: Amend Epic D47 to “unattended after an owner kick-off” before approval and retain the child’s explicit reference to that amended decision.
+
+F6 `advisory` — Probe `7.2` says scheduler ticks and commands are serial but does not state the observable ordering when a due start and `.nyar pillar <name> off` occur in the same main-thread cycle.
+Fix: Record whether an already-dispatched start may occur before the off command ends it, and add that ordering case to `PillarSwitchTests`.
+
+F7 `advisory` — Repository recon could not be completed in this review run: the managed read-only policy rejected even `rg --files`, so claims about current symbols, settings keys, catalogs, TSV names, and preflight behavior remain uncorroborated rather than verified.
+Fix: Re-run the review in a sandbox that permits read-only repository commands before changing the plan from draft to approved.
+
+Layer grades: 1 Considered — Purpose & typical use; 2 Considered — Design › Permissions; 3 Considered — Design › Data and D5–D15/D30; 4 Considered — Business rules; 5 Considered — Interfaces › Internal; 6 Gap — External dependencies leaves `6.2` partial-write behavior undecided; 7 Considered — Design › States; 8 Considered — Use cases › Minimal stretch; 9 Considered — Use cases › Maximal stretch; 10 Considered — Security; 11 Considered — Design › UX; 12 Gap — Failure & observability does not satisfy `12.4`; 13 Considered — Performance; 14 Considered — Rollout; 15 Considered — Out of scope. No layer qualifies as N/A.
+
+13/15 layers · 47/49 probes
+
+VERDICT: REVISE
+### Dispositions
+- F1 · accepted · pillar switches set only ConfigEntry.Value and BepInEx saves (S-11, D14); after a save that throws, ConfigFile.Reload re-reads the file and memory is set to what it holds (a missing or unparsable key reads as off); the reply is "pillar <name> could not be saved; the file says <on|off>" (D19); PillarSwitchTests SaveFailure uses a fake store that truncates the file and then throws, and one that writes the line and then throws; the cfg-writes check now fails on any ConfigFile.Save call (D18)
+- F2 · accepted · +D31: test methods of the seven new classes are named `<Control>_fails_when_<input>`, `<Control>_empty_<input>` or `<Control>_passes_<input>`, and ControlCaseTests reflects over them and requires all three per control; the 12.4 gating row is one line, `dotnet test` over ControlCaseTests and the seven named classes plus `pwsh tools/preflight.ps1 -SelfTest` for the script checks
+- F3 · accepted · Logic/CommandArgs.cs exposes SettableFields (name → family → permission), SettableValue accepts exactly those, §6 gains a field table, and ContractDocTests compares it with SettableFields both ways (D20)
+- F4 · accepted · D21 is narrowed to "Authoring smoke in game", a numbered list of 17 in-game cases, each with its command, the expected reply and its cited item; exhaustive behaviour stays with the automated items D4-D16
+- F5 · accepted · deferred: owner decision on S-13 at round 3; the Epic amendment of D47 ("unattended after an owner kick-off") is recorded after it; the Epic is not edited from this child
+- F6 · accepted · Design › States › 7.2 and D14: commands and ticks are serial; a start dispatched before the off runs and the off then ends it through the S-7 path, and an off processed first means the start is not made and `event list` shows `off (pillar)`; both orders are PillarSwitchTests Ordering cases
+- F7 · accepted · a review-tooling defect, not a plan change: this run's Codex sandbox blocked every file read; Review 3 runs with file access (codex flag features.experimental_windows_sandbox=true)
