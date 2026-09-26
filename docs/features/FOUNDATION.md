@@ -272,6 +272,81 @@ t-150 enabled (tools/ingame `drain` mode: 10 waves of 15 at a Point, 14:02-14:05
 - Log check: 0 unhandled, 73 nyar lines, 0 orphan errors, 0 unity errors; warnings only the known UserConnect,
   Beelzebub and Il2CppInterop lines; no server-log errors beyond the save-load PrefabLookupMap lines.
 
+### Session 17 · 2026-09-25
+Two boots of a Debug build with Debug.FaultInjection = hook:DeathEventListenerSystem and VerboseLogging on. The owner
+connected with the Raphael client.
+
+Boot A: build 331bb3f. WaveWarnings, EventBanners and DailyBanner were on, DailyBannerTime was 16:55, and the admin
+list was empty. tools/ingame `s17a` scheduled t-warn every 10 minutes from 16:35 (3 waves of 1 Bandit Deadeye, 90 s
+apart, 240 s, announce.warnings true) and t-tonight at 23:55.
+- D26/D31, non-admin: `.nyar` replied with the overview and "commands: .nyar, .nyar api version, .nyar status".
+  `.nyar status` replied "No active events.". No degraded notice arrived.
+- D30, the 16:35 run with the owner the only player connected. Each line was logged as "announced to 1":
+  - "The Test warnings begins."
+  - "Wave 2 of 3 of the Test warnings arrives in 1 min." then "… is almost here."
+  - the same two lines for wave 3
+  - "The Bandit fall quiet. Test warnings has ended."
+  - The 300 s offset was skipped because wave 2 was 90 s away at the start.
+  - The 3 units despawned after the grace ("3 of 3 destroyed, 0 left").
+- The 16:45 and 16:55 runs repeated the pattern with 0 players connected ("announced to 0").
+- Daily banner at 16:55: "daily banner queued: 2 events", then "Tonight: Test warnings, Test tonight." one second
+  after that run's start banner. state.json holds "dailyBanner": "2026-09-25 16:55".
+- D31: health lines "nyar health: 0 events, 0 tracked, degraded: hook DeathEvent" 10 minutes apart. Boot B logged
+  12 more at the same interval.
+- D32, non-admin: Raphael consumes every `[NYAR:` line, so `.nyar api version` showed nothing in chat. The client log
+  (Thunderstore Mod Manager profile Default) reads "[Nyar] Nyarlathotep detected (api=1, plugin=0.1.0, admin=0)".
+  Session 18 shows the raw lines.
+- The server was stopped by process kill after the 16:55 run. The last autosave held that run's 3 units, and Boot B's
+  boot sweep found and despawned them ("boot marker sweep: 3 found, 3 queued", then "3 of 3 destroyed").
+
+Boot B: build 3126518. The admin list was restored, the three switches were off, and BepInEx/config/Nyarlathotep/
+was moved aside.
+- D28: "first run: seeded events.json from the default templates (every event disabled)".
+  - The file holds SchemaVersion 1 and 5 example events, each "enabled": false.
+  - `.nyar status` replied "No active events.".
+  - "events: reloaded: 5 valid, 0 disabled" counts events rejected by validation, not events switched off.
+- D31, admin before `adminauth` (on the admin list): "nyar: degraded: hook DeathEvent (see .nyar status and the
+  server log)" about 10 s after load-in.
+  - A reconnect after more than 70 s sent it again.
+  - An immediate third connect sent none: 2 "degraded notice sent" lines for 3 connects.
+- D26, before `adminauth`:
+  - `.nyar` listed the 3 public commands.
+  - `.nyar event list|reload|start example-spawns|enable example-spawns|set example-spawns durationSeconds 60`,
+    `.nyar spawn CHAR_Bandit_Thug 1`, `.nyar purge confirm`, `.nyar debug here` and `.nyar announce hello` each
+    ran nothing: no "ran" log line, and no reply was shown because Raphael's SuppressCommandFrameworkErrors hides
+    VCF's "[denied]" (session 18 shows it).
+  - `.nyar status` replied "No active events." both before and after.
+  - SHA-256 of events.json, the folder's only file, was 5b614cd6… both before the owner connected and at the first
+    admin "ran" line.
+- After `adminauth`:
+  - `.nyar` listed ".nyar, .nyar announce, .nyar api version, .nyar debug, .nyar event, .nyar purge, .nyar spawn,
+    .nyar status".
+  - D30: `.nyar announce hello everyone` replied "announced" and the owner saw "hello everyone" ("announced to 1").
+  - `.nyar announce <b>x</b>` was refused, but the reply read "…, no  or control characters": the chat took "< >"
+    for a tag (A20, fixed in 8f974b0).
+- D30, switches off: t-warn from tools/ingame `s17b` (Manual) ran 3 waves after `.nyar event reload` ("reloaded: 1
+  valid, 0 disabled") and `.nyar event start t-warn` ("event t-warn started"). It sent no announcement: no
+  "announced" log line, and nothing appeared in chat for more than 4 minutes. Its units despawned after the grace.
+- Log check: Boot A "0 unhandled, 116 nyar lines, 0 orphan errors, 0 unity errors", Boot B "0 unhandled, 229 nyar
+  lines, 0 orphan errors, 0 unity errors".
+  - BepInEx warnings: only Il2CppInterop, Beelzebub and the injected DeathEvent fault.
+  - Server log: the 226 PrefabLookupMap "unknown state" warnings, all before "Startup Completed" (session 12).
+- Afterwards the folder and cfg were restored, and events were parked with tools/ingame `boot`.
+
+### Session 18 · 2026-09-25
+Release build of 8f974b0 (A20), with the config restored. The owner connected with Raphael switched off, so
+`[NYAR:` and VCF lines stay visible.
+- D32, before `adminauth`: "[NYAR:version] api=1 plugin=0.1.0 ready=1 admin=0 enabled=1 killswitch=0 empower=1
+  waves=1 boss=1 zones=1 sieges=1 stats=0 annwarn=0 annbanner=0 anndaily=0 annlogin=0 annshare=0". Every key of
+  docs/RAPHAEL_INTEGRATION_CONTRACT.md §2 is present, in order. The pillars read 1 because of session 12's test
+  config.
+- D26: `.nyar event list` as a non-admin replied "[vcf] [denied] event".
+- D32, after `adminauth`: the same line with admin=1.
+- A20: `.nyar announce <b>x</b>` replied "announce: 1-200 characters, no angle brackets or control characters".
+- The boot sweep found and despawned Boot B's 3 autosaved units. The health line read "degraded: none".
+- Log check: 0 unhandled, 20 nyar lines, 0 orphan errors, 0 unity errors. Warnings: only Il2CppInterop and
+  Beelzebub, plus the same 226 save-load PrefabLookupMap lines.
+
 ## Open questions
 
 None open. D28's "still loading" reply, which cannot be seen in game, is proven by a static check instead
