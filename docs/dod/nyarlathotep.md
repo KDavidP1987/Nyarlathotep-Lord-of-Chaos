@@ -244,7 +244,7 @@ Constraints each child inherits (a child's review checks they appear verbatim or
 
 ## Children
 - spikes · done
-- foundation · planned
+- foundation · done
 - faction-empowerment · planned
 - event-spawns · planned
 - stats · planned
@@ -431,3 +431,6 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-25 · note · foundation closes its part of D16, D36 and D37 without checking them: D16's leaderboard and hide rules come with stats, D36's Player row with stats, D37's paged reads and error lines with raphael-api (PrivacyTests 7, AuthorizationTests 162, WireFormatTests 13 pass for what exists)
 - 2026-09-25 · note · foundation A21 extends Business rules 3 to every unit (a unit is queued at its due time, LifeTime is the backstop), released in 0.2.1
 - 2026-09-25 · note · Build plan step 13's tools/rollback-drill.ps1 (D32) was not created with 0.2.0; it needs two tags and first runs from 0.3.0, so the event-spawns child writes it in its release step
+- 2026-09-25 · D17 · pass · cmd: pwsh tools/preflight.ps1 → "audits: 2/2 done children recorded" (spikes, foundation) · 37c7dfe · claude
+- 2026-09-25 · D18 · pass · cmd: pwsh tools/preflight.ps1 → "feature results: 2/2" · 37c7dfe · claude
+- 2026-09-25 · note · child foundation closed (docs/dod/foundation.md › Report: 40/40, prediction 63 %, released 0.2.0 and 0.2.1); next child: event-spawns
