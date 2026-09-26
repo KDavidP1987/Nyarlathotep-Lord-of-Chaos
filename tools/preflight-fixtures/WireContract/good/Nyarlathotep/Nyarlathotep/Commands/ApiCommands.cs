@@ -39,6 +39,10 @@ internal static class ApiCommands
             ? SpawnTracker.Ledger.Units.Where(u => u.EventId is not null).GroupBy(u => u.EventId!)
                 .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal)
             : new Dictionary<string, int>();
+        // An Empower event's admin count is the NPCs holding its carrier (faction-empowerment D11).
+        if (ctx.IsAdmin)
+            foreach (var a in EventRuntime.Engine.Active.Where(a => a.Definition.Empower is not null))
+                units[a.Id] = Services.EmpowerAction.CarriersOf(a.Id);
         foreach (var line in ApiLines.Status(EventRuntime.Engine.Active, EventRuntime.Engine.PendingCleanups,
                      EventStore.Catalog.Current, units, ctx.IsAdmin, DateTime.UtcNow))
             ctx.Reply(line);

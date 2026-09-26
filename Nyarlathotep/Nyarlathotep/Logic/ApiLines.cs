@@ -37,8 +37,9 @@ public static class ApiLines
     };
 
     /// <summary>`api status`: one row per active event, then one per event whose units still wait out the grace
-    /// (state=ending), then `[NYAR:end] cmd=status count=`. <paramref name="unitsByEvent"/> counts tracked units per
-    /// event id; the count is shown only when <paramref name="isAdmin"/>.</summary>
+    /// (state=ending), then `[NYAR:end] cmd=status count=`. <paramref name="unitsByEvent"/> counts, per event id, the
+    /// tracked units of a waves event and the NPCs holding an Empower event's carrier; the count is shown only when
+    /// <paramref name="isAdmin"/>. An Empower row (api 3, faction-empowerment D11) carries its factions and wave=-.</summary>
     public static IReadOnlyList<string> Status(IEnumerable<ActiveEvent> active, IEnumerable<Cleanup> cleanups, DefinitionSet current,
         IReadOnlyDictionary<string, int> unitsByEvent, bool isAdmin, DateTime utcNow)
     {
@@ -48,8 +49,10 @@ public static class ApiLines
         {
             activeIds.Add(a.Id);
             var def = a.Definition;
-            rows.Add(Wire.Event(a.Id, Kind(def.Pillar), def.Name, "active", "-", SecondsLeft(a.Instance.EndsUtc, utcNow),
-                $"{a.WavesSpawned}/{def.Action?.Waves ?? 0}", Units(a.Id)));
+            rows.Add(def.Empower is { } emp
+                ? Wire.Event(a.Id, "empower", def.Name, "active", Factions(emp), SecondsLeft(a.Instance.EndsUtc, utcNow), "-", Units(a.Id))
+                : Wire.Event(a.Id, Kind(def.Pillar), def.Name, "active", "-", SecondsLeft(a.Instance.EndsUtc, utcNow),
+                    $"{a.WavesSpawned}/{def.Action?.Waves ?? 0}", Units(a.Id)));
         }
         // One ending row per event id, for its latest cleanup still in the future; an id that is active again shows
         // only its active row, and a cleanup already due (removed on this tick) shows none.
@@ -65,6 +68,11 @@ public static class ApiLines
 
         int? Units(string id) => isAdmin ? (unitsByEvent.TryGetValue(id, out var n) ? n : 0) : null;
     }
+
+    /// <summary>The faction value of an Empower row: each faction without its "Faction_" prefix, as a wire value, joined
+    /// by ',' (e.g. Legion,Bandits).</summary>
+    public static string Factions(EmpowerAction action) =>
+        string.Join(",", action.Factions.Select(f => TextSink.WireValue(f.StartsWith("Faction_", StringComparison.Ordinal) ? f[8..] : f)));
 
     /// <summary>`api events`: one row per definition of <paramref name="set"/>, in id order. reason is sent only with
     /// state=disabled: the validation error, or "disabled" for a definition switched off.</summary>

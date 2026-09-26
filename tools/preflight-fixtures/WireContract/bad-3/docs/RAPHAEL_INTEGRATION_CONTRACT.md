@@ -10,11 +10,13 @@
 > **IMPLEMENTED (api N)**. Build against IMPLEMENTED only. A PLANNED shape can still change before it ships;
 > once it is IMPLEMENTED it only grows (§7).
 >
-> **Current api:** 2
+> **Current api:** 3
 >
 > api 1 shipped with the `foundation` release (0.2.0): the handshake. api 2 ships with the `raphael-api-core`
 > release (0.3.0): `status`, `events` and the push subscription. `me`, `top` and `zones` stay PLANNED until the
 > child that fills them (stats, defended-zones) ships; each bumps the api (the Epic plan, `docs/dod/nyarlathotep.md`, A20).
+> api 3 ships with the `faction-empowerment` release (0.4.0): `status` rows of `kind=empower` (§3). It adds no tag or
+> key; the change log (§9) lists every api.
 
 ### Tags and commands
 
@@ -101,7 +103,7 @@ command that changes them.
 
 All live under `.nyar api …`. Paged commands take an optional 1-based `[page]` (§4).
 
-### `status` — active events (anyone) — IMPLEMENTED (api 2)
+### `status` — active events (anyone) — IMPLEMENTED (api 3)
 `.nyar api status` sends one row per active event, then `[NYAR:end] cmd=status count=<n>` (unpaged):
 ```
 [NYAR:event] id=ashfall kind=waves name=Ashfall_Raid state=active faction=Undead left=412 wave=2/3 units=18
@@ -110,6 +112,12 @@ All live under `.nyar api …`. Paged commands take an optional 1-based `[page]`
 - `state` ∈ `scheduled | active | ending`. api 2 sends `active`, and `ending` for an event that has ended while its
   units wait out the grace (`left` = seconds until they despawn, `wave=-`).
 - `faction` is `-` for waves events; `wave` is `<spawned>/<total>`.
+- An empower row (api 3) carries `faction=<names joined by ','>`: each faction of the event without its `Faction_`
+  prefix, e.g. `faction=Legion,Bandits`; its `wave` is `-`, and its admin `units` is the number of NPCs holding the
+  event's empowerment. An empower event has no `ending` row.
+```
+[NYAR:event] id=legion-surge kind=empower name=Legion_Surge state=active faction=Legion,Bandits left=1500 wave=- units=42
+```
 - `left` is the number of seconds left.
 - `units` is sent to admins only; players get `units=-`.
 - A siege row goes only to members of the target clan and to admins.
@@ -193,7 +201,7 @@ After `sub on`, the server pushes lines to that player until `sub off`, a discon
 
 | Code | Meaning |
 |---|---|
-| `notready` | Reserved, never sent in api 2: before the world is ready every command replies the plain line `still loading`, and no player can connect before then. |
+| `notready` | Reserved, never sent (api 2 and 3): before the world is ready every command replies the plain line `still loading`, and no player can connect before then. |
 | `noaccess` | Reserved. Admin-only commands are refused by VCF before the mod runs, with VCF's own human-readable line, so Raphael shows admin panels only when `version` says `admin=1`. |
 | `disabled` | The pillar, the stats or the mod is switched off. |
 | `notfound` | Unknown event id, zone or stat. |
@@ -283,3 +291,11 @@ Gate the panels on the handshake:
 | # | Date | Request | Status |
 |---|---|---|---|
 | — | — | none yet | — |
+
+## 9. Change log
+
+| Api | Release | Change |
+|---|---|---|
+| 1 | 0.2.0 (foundation) | The handshake: `.nyar api version`, tag `version`. |
+| 2 | 0.3.0 (raphael-api-core) | `status`, `events` and `sub`; tags `event`, `def`, `end`, `err`, `ok`, `ev`; paging and errors (§4). |
+| 3 | 0.4.0 (faction-empowerment) | `status` rows of `kind=empower`: `faction=<names joined by ','>`, `wave=-`, admin `units` = NPCs holding the event's empowerment. No new tag or key. |

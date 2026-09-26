@@ -121,7 +121,7 @@ Gating, from the handshake:
 
 ## api 3 (faction empowerment)
 
-PLANNED for Nyarlathotep 0.4.0 (docs/dod/faction-empowerment.md, D11). No new tag or key: api 3 fills values that
+IMPLEMENTED in Nyarlathotep 0.4.0 (docs/dod/faction-empowerment.md, D11; contract §3 and §9). No new tag or key: api 3 fills values that
 api 2 already defines.
 - A status row of `kind=empower` carries `faction=<names joined by ','>` (e.g. `faction=Legion,Bandits`, the
   `Faction_` prefix removed), `wave=-`, and for admins `units=<NPCs holding the event's empowerment>`.

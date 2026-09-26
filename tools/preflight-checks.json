@@ -400,7 +400,7 @@
       "plant": {
         "bad": "the ev tag row removed from the contract's Tags and commands table",
         "bad-2": "the events command row marked PLANNED",
-        "bad-3": "Wire.Api 3 against the contract's current api 2",
+        "bad-3": "Wire.Api 2 against the real contract's current api 3 (faction-empowerment step 3)",
         "bad-4": "a \"[NYAR:x] note=bypass\" literal replied from Commands/ApiCommands.cs",
         "bad-5": "Wire.Line(tag, …) with a variable tag in Commands/ApiCommands.cs",
         "bad-6": "Commands/ApiCommands.cs imports Wire under a global::-qualified alias written with spaces (using W = global :: Nyarlathotep . Logic . Wire;) and calls W.Line with a variable tag",

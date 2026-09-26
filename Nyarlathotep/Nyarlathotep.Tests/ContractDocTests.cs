@@ -31,7 +31,7 @@ public class ContractDocTests
         var m = Regex.Match(Contract, @"\*\*Current api:\*\* (\d+)");
         Assert.True(m.Success);
         Assert.Equal(Wire.Api, int.Parse(m.Groups[1].Value));
-        Assert.Equal(2, Wire.Api);
+        Assert.Equal(3, Wire.Api);   // faction-empowerment D11
     }
 
     [Theory]
@@ -66,7 +66,7 @@ public class ContractDocTests
     }
 
     [Theory]
-    [InlineData("`status`", "IMPLEMENTED (api 2)")]
+    [InlineData("`status`", "IMPLEMENTED (api 3)")]
     [InlineData("`events`", "IMPLEMENTED (api 2)")]
     [InlineData("Push events", "IMPLEMENTED (api 2)")]
     [InlineData("4. Paging", "IMPLEMENTED (api 2)")]
@@ -76,13 +76,26 @@ public class ContractDocTests
     public void Section_headings_carry_their_status(string heading, string status) =>
         Assert.EndsWith(status, Heading(heading));
 
+    /// <summary>faction-empowerment D11: §3 status documents the empower row's three values, and the change log lists api 3.</summary>
+    [Fact]
+    public void Status_documents_the_empower_row_and_the_change_log_lists_api_3()
+    {
+        var status = Regex.Match(Contract, @"(?ms)^### `status`.*?(?=^### )").Value;
+        var flat = Regex.Replace(status, @"\s+", " ");
+        Assert.Contains("An empower row (api 3) carries `faction=<names joined by ','>`", flat);
+        Assert.Contains("its `wave` is `-`, and its admin `units` is the number of NPCs holding the event's empowerment", flat);
+        Assert.Contains("kind=empower name=Legion_Surge state=active faction=Legion,Bandits left=1500 wave=- units=42", flat);
+        var log = Regex.Match(Contract, @"(?ms)^## 9\. Change log.*").Value;
+        Assert.Matches(@"(?m)^\| 3 \| 0\.4\.0 \(faction-empowerment\) \| `status` rows of `kind=empower`", log);
+    }
+
     [Fact]
     public void The_fairness_and_notready_rules_are_stated()
     {
         var flat = Regex.Replace(Contract, @"\s+", " ");
         Assert.Contains("a push never tells a subscriber more than chat or `.nyar status` tells every player", flat);
         Assert.Contains("`wave-warn` is pushed only when the chat warning would fire", flat);
-        Assert.Contains("| `notready` | Reserved, never sent in api 2", flat);
+        Assert.Contains("| `notready` | Reserved, never sent (api 2 and 3)", flat);
     }
 
     /// <summary>The command forms of the design doc's § 6 table: each backticked form in a row's first cell, its words up

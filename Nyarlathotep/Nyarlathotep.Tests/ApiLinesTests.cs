@@ -47,6 +47,46 @@ public class ApiLinesTests
         Assert.Equal("[NYAR:end] cmd=status count=1", reply[^1]);
     }
 
+    // ---- faction-empowerment D11: empower rows at api 3. ----
+
+    static EventDefinition EmpowerDef(string id, params string[] factions) =>
+        Def(id, pillar: Pillar.Empowerment, name: "Legion Surge", noAction: true) with
+        {
+            Empower = new EmpowerAction(factions, [], [], false, new EmpowerStats(PhysicalPower: 1.5)),
+        };
+
+    [Fact]
+    public void An_empower_row_carries_its_factions_no_wave_and_the_admin_carrier_count()
+    {
+        var d = EmpowerDef("legion-surge", "Faction_Legion", "Faction_Bandits");
+        var reply = Status([Running(d, 0, 1500)], [], new DefinitionSet([d]), isAdmin: true, new() { ["legion-surge"] = 42 });
+        Assert.Equal("[NYAR:event] id=legion-surge kind=empower name=Legion_Surge state=active faction=Legion,Bandits left=1500 wave=- units=42", reply[0]);
+        Assert.Equal(EventKeys, Keys(reply[0]));
+    }
+
+    [Fact]
+    public void A_player_sees_an_empower_row_without_a_count()
+    {
+        var d = EmpowerDef("legion-surge", "Faction_Legion");
+        var reply = Status([Running(d, 0, 100)], [], new DefinitionSet([d]), isAdmin: false, new() { ["legion-surge"] = 42 });
+        Assert.Equal("-", Value(reply[0], "units"));
+        Assert.Equal("Legion", Value(reply[0], "faction"));
+        Assert.Equal("-", Value(reply[0], "wave"));
+    }
+
+    [Theory]
+    [InlineData("Faction_Bad Name", "Bad_Name")]
+    [InlineData("Faction_a=b;c:d", "abcd")]
+    [InlineData("Legion", "Legion")]
+    public void A_faction_value_holds_no_space_equals_semicolon_or_colon(string faction, string expected)
+    {
+        var d = EmpowerDef("x", faction);
+        var reply = Status([Running(d, 0, 100)], [], new DefinitionSet([d]), isAdmin: true);
+        var value = Value(reply[0], "faction");
+        Assert.Equal(expected, value);
+        Assert.DoesNotMatch("[ =;:]", value);
+    }
+
     [Fact]
     public void A_player_gets_no_unit_count()
     {

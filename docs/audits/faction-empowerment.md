@@ -27,6 +27,15 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - server: not running; step 2 has no in-game test (Session 1 is step 4)
 - found on the way: EntityExtensions.DestroySafe already calls DestroyUtility.Destroy (unit despawn), and StructuralEdits/bad-2 to bad-10 already exist, so D8's fence and fixture names as written would fail the real tree and collide; recorded as A3 (discovered, ~D8 ~D22, layer 5.2) before any step 2 code
 
+### Step 3 · 2026-09-26 · 31f11c9
+- git status: clean at 31f11c9 (step 2 post-audit)
+- compile: 0 errors, 0 warnings
+- tests: 861 passed
+- preflight: exit 0 ("PREFLIGHT OK"; "wire contract: 7 tags, 4 api commands, all documented (api 2)")
+- dod status: faction-empowerment 13/29 verified; review not pending
+- feature doc read: docs/features/FACTION_EMPOWERMENT.md (Status: steps 1–2 done); plan step 3, D11, D22 (wire line), D27; Logic/ApiLines.cs, Logic/Wire.cs, Commands/ApiCommands.cs; docs/RAPHAEL_INTEGRATION_CONTRACT.md §3 and §7 (it has no change log section yet, which D11 names: step 3 adds "## 9. Change log"); docs/RAPHAEL_HANDOFF.md (its "## api 3 (faction empowerment)" section was written at planning, marked PLANNED); ContractDocTests, WireFormatTests, ApiLinesTests; tools/preflight-fixtures/WireContract
+- server: not running; step 3 has no in-game test
+
 ## Post-audit
 ### Step 1 · 2026-09-26 · 0559d4c → 23f2ba4 → 5ca6812
 - compile / preflight: 0 errors, 0 warnings; 848 tests passed; PREFLIGHT OK; dod --check 0 problems, 0 warnings
