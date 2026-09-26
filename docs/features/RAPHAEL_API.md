@@ -27,15 +27,17 @@ says what Nyarlathotep implements and how it was tested.
 ## Test results
 
 ### 2026-09-25 · step 1 · unit tests
-- `dotnet test Nyarlathotep/Nyarlathotep.Tests`: 591 passed, 0 failed (52 new).
+- `dotnet test Nyarlathotep/Nyarlathotep.Tests`: 600 passed, 0 failed (61 new, after the post-audit fixes).
 - ApiLinesTests (D1, D2): status rows in contract order, units for admins only, ending rows for events waiting out
   the grace (latest cleanup, one row per id, none for an id active again), the four definition states, reasons
-  mapped to the wire grammar.
+  mapped to the wire grammar and sent only with state=disabled, a duplicate id never active, an action named
+  for a definition without one, no ending row for a cleanup already due.
 - PagingTests (D3): "0", "-1", "+1", " 1", "x", "1.5", "99999999999", "2147483648" and a non-ASCII digit are badarg;
   empty is page=1/1 count=0; page 2 of 10 rows is the end line alone; page 2 of 11 rows is the eleventh row.
 - WireFormatTests (D4): every contract example line of event, def, end, err, ok and ev equals what the builder
   sends for the same values; a 32-character id with a 200-character name and reason of 4-byte characters keeps
-  every key, the name cut to 64 bytes and the reason to 120. api=2 is asserted in step 2, when Wire.Api moves.
+  every key, the name cut to 64 bytes and the reason to 120. Examples are read from the section that documents each tag, and
+  the optional forms (paged end, err with secs and with arg, ev with wave) must each have one. api=2 is asserted in step 2, when Wire.Api moves.
 
 ## Open questions
 

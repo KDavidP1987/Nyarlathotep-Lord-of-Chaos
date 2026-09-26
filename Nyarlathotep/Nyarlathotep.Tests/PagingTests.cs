@@ -66,5 +66,6 @@ public class PagingTests
     [InlineData(10, 1)]
     [InlineData(11, 2)]
     [InlineData(24, 3)]
+    [InlineData(int.MaxValue, 214748365)]
     public void Pages_is_at_least_1(int count, int pages) => Assert.Equal(pages, Paging.Pages(count));
 }

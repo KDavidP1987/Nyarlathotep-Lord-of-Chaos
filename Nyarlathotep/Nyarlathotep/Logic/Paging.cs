@@ -20,7 +20,7 @@ public static class Paging
     }
 
     /// <summary>The number of pages: at least 1, so an empty result is page 1/1.</summary>
-    public static int Pages(int count) => Math.Max(1, (count + PageSize - 1) / PageSize);
+    public static int Pages(int count) => Math.Max(1, count / PageSize + (count % PageSize == 0 ? 0 : 1));
 
     /// <summary>The reply for <paramref name="rawPage"/> of <paramref name="rows"/>: that page's rows then the end line;
     /// a page past the last is the end line alone; a bad page is `[NYAR:err] cmd= code=badarg arg=page` alone.</summary>

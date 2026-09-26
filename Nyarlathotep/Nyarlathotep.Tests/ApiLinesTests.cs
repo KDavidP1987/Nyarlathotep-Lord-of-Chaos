@@ -12,9 +12,9 @@ public class ApiLinesTests
         new([new UnitEntry("CHAR_Bandit_Thug", 5)], 3, 60, 10, new Location(LocationType.Point, -1200.5f, -800f), null);
 
     static EventDefinition Def(string id, TriggerType trigger = TriggerType.Manual, bool enabled = true, string? reason = null,
-        Pillar pillar = Pillar.Spawns, string name = "Bandit raid") =>
-        new(id, name, enabled, pillar, new Trigger(trigger, [], [], DayPhase.Night, []), new Conditions(), 600, Action,
-            Announce.None, reason);
+        Pillar pillar = Pillar.Spawns, string name = "Bandit raid", bool noAction = false) =>
+        new(id, name, enabled, pillar, new Trigger(trigger, [], [], DayPhase.Night, []), new Conditions(), 600,
+            noAction ? null : Action, Announce.None, reason);
 
     static ActiveEvent Running(EventDefinition d, int waves, int secondsLeft) =>
         new(new RunningInstance(d, Now.AddSeconds(-30), Now.AddSeconds(secondsLeft)), "manual", null) { WavesSpawned = waves };
@@ -165,9 +165,46 @@ public class ApiLinesTests
     }
 
     [Fact]
-    public void An_event_active_while_now_disabled_by_a_reload_shows_active()
+    public void A_running_event_since_switched_off_is_active_with_no_reason()
     {
         var d = Def("raid", enabled: false);
-        Assert.Equal("active", ApiLines.State(d, new HashSet<string> { "raid" }));
+        var row = Assert.Single(ApiLines.Definitions(new DefinitionSet([d]), new HashSet<string> { "raid" }));
+        Assert.Equal("active", Value(row, "state"));
+        Assert.Equal("-", Value(row, "reason"));
+    }
+
+    [Fact]
+    public void A_duplicate_id_row_stays_disabled_while_the_first_runs()
+    {
+        var first = Def("raid");
+        var dup = Def("raid", reason: "id: duplicate of an earlier event");
+        var rows = ApiLines.Definitions(new DefinitionSet([first, dup]), new HashSet<string> { "raid" });
+        Assert.Equal(["active", "disabled"], rows.Select(r => Value(r, "state")));
+        Assert.Equal("id_duplicate_of_an_earlier_event", Value(rows[1], "reason"));
+    }
+
+    [Theory]
+    [InlineData(Pillar.Spawns, "waves")]
+    [InlineData(Pillar.Empowerment, "empower")]
+    [InlineData(Pillar.Boss, "boss")]
+    [InlineData(Pillar.Sieges, "siege")]
+    [InlineData(Pillar.Zones, "waves")]
+    public void A_definition_without_an_action_still_names_a_contract_action(Pillar pillar, string action)
+    {
+        var d = Def("broken", pillar: pillar, reason: "action: missing", noAction: true);
+        var row = Assert.Single(ApiLines.Definitions(new DefinitionSet([d]), new HashSet<string>()));
+        Assert.Equal($"[NYAR:def] id=broken name=Bandit_raid enabled=1 trigger=manual action={action} duration=600 state=disabled reason=action_missing", row);
+    }
+
+    [Fact]
+    public void A_cleanup_already_due_has_no_ending_row()
+    {
+        var d = Def("ashfall");
+        var set = new DefinitionSet([d]);
+        Assert.Equal(["[NYAR:end] cmd=status count=0"], Status([], [new Cleanup("ashfall", Now.AddSeconds(-60), Now)], set, isAdmin: false));
+        var mixed = Status([], [new Cleanup("ashfall", Now.AddSeconds(-60), Now.AddSeconds(30)), new Cleanup("ashfall", Now.AddSeconds(-90), Now.AddSeconds(-1))],
+            set, isAdmin: false);
+        Assert.Equal(2, mixed.Count);
+        Assert.Equal("30", Value(mixed[0], "left"));
     }
 }

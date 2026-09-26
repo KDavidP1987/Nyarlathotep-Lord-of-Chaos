@@ -118,9 +118,26 @@ public class WireFormatTests
         Assert.Equal(TableNames(Section("2. Handshake")).Count, line.Split(' ').Length - 1);
     }
 
-    /// <summary>Every example line of the contract's code blocks for the tags raphael-api-core builds.</summary>
+    /// <summary>The part of the contract that documents each tag raphael-api-core builds: its examples are read there
+    /// and nowhere else.</summary>
+    static readonly Dictionary<string, string> DocumentedIn = new()
+    {
+        ["event"] = "### `status`", ["def"] = "### `events`", ["ev"] = "### Push events",
+        ["end"] = "## 4.", ["err"] = "## 4.", ["ok"] = "## 4.",
+    };
+
+    /// <summary>From <paramref name="heading"/> to the next heading of its level or above, or the next rule.</summary>
+    static string Part(string heading)
+    {
+        var stop = heading.StartsWith("### ") ? "#{2,3} " : "## ";
+        var m = Regex.Match(Contract, $@"(?ms)^{Regex.Escape(heading)}.*?(?=^{stop}|^---|\z)");
+        Assert.True(m.Success, $"contract part {heading} not found");
+        return m.Value;
+    }
+
+    /// <summary>Every example line of the code blocks in the part that documents <paramref name="tag"/>.</summary>
     static List<string> Examples(string tag) =>
-        Regex.Matches(Contract, @"(?ms)^```\r?\n(.*?)^```").SelectMany(m => m.Groups[1].Value.Split('\n'))
+        Regex.Matches(Part(DocumentedIn[tag]), @"(?ms)^```\r?\n(.*?)^```").SelectMany(m => m.Groups[1].Value.Split('\n'))
             .Select(l => l.TrimEnd('\r')).Where(l => l.StartsWith($"[NYAR:{tag}] ", StringComparison.Ordinal)).ToList();
 
     static Dictionary<string, string> Tokens(string line) =>
@@ -174,11 +191,22 @@ public class WireFormatTests
     }
 
     [Fact]
-    public void Both_end_forms_are_documented()
+    public void Every_optional_form_is_documented()
     {
         var ends = Examples("end");
         Assert.Contains(ends, l => l.Contains(" page="));
         Assert.Contains(ends, l => !l.Contains(" page="));
+        var errs = Examples("err");
+        Assert.Contains(errs, l => l.Contains(" secs="));
+        Assert.Contains(errs, l => l.Contains(" arg="));
+        Assert.Contains(Examples("ev"), l => l.Contains(" wave="));
+    }
+
+    [Fact]
+    public void An_error_with_both_optional_keys_sends_secs_before_arg()
+    {
+        Assert.Equal("[NYAR:err] cmd=top code=ratelimit secs=45 arg=page", Wire.Error("top", WireError.RateLimit, secs: 45, arg: "page"));
+        Assert.Equal("[NYAR:ev] type=event-end id=ashfall secs=0", Wire.Ev("event-end", "ashfall", 0));
     }
 
     [Fact]
