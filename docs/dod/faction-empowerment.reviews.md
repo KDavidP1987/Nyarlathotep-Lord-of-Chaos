@@ -322,3 +322,43 @@ VERDICT: REVISE
 - F3 · accepted · D22's -SelfTest runs the Secrets check against its fixtures and then on the real tracked tree, failing on any finding; the 10.3 matrix row names that one command
 - F4 · accepted · D14 adds "other stat buffs <k>", and D15 uses only subjects showing 0, so the × multiplier oracle holds
 - F5 · accepted · D3's tests add the derived factions Faction_Players_Castle_Prisoners, Faction_Players_Mutant and Faction_Players_Shapeshift_Human (from unit_index.tsv) as denied units and a rejected `factions` entry
+
+## Review 7 · 2026-09-26 · codex · plan commit 6d5502e
+
+EARLIER: all resolved
+
+F1 [advisory] D5/D16 do not reconcile the “within 15 s” late-arrival promise with a sweep that remains unfinished for longer than 15 s: a unit spawning just after the snapshot cannot enter another sweep until the current one completes (4.3, 7.3, 13.2).
+Fix: State the bound as “15 s plus completion of the current sweep and its batch turn,” or reserve capacity/start a follow-up snapshot so the literal 15-second bound holds.
+
+F2 [advisory] D1’s fails-when list does not exercise several declared input controls, including malformed optional arrays/booleans, duplicate or 21st include/exclude units, and duplicate exclusions (3.1).
+Fix: Add representative negative cases for each declared shape, cardinality, type, and distinctness rule to EventValidationTests.
+
+F3 [advisory] The `Faction_Traders*` prefix rule is declared but lacks a derived-faction case comparable to the newly added `Faction_Players_*` cases; `Faction_Traders_T01` or `_T02` is the minimal missed scenario (4.2).
+Fix: Add validation and eligibility cases proving a derived `Faction_Traders_*` value is denied, including when its unit is named in `includeUnits`.
+
+F4 [advisory] The plan revision identity is inconsistent: the supplied Round 7 revision is commit `6d5502e`, while the plan header records `commit: 90c2ec4`, leaving the eventual review record ambiguous (14.4).
+Fix: Update the plan’s commit metadata or explicitly record that `6d5502e` supersedes the header value before saving the review.
+
+1. Purpose & typical use — Considered. “Purpose & typical use” answers role/frequency and request phrase, intended outcome, and coexistence/replacement (1.1–1.3).
+2. Actors & permissions — Considered. “Design › Permissions,” D21, D5 and D6 enumerate all actors and paths, unauthorized behavior, shared definition ownership, contested carriers, stopping and reopening (2.1–2.3).
+3. Inputs, outputs & data — Considered. D1/D12, D10/D11/D16, “Design › Data,” D17/D26 and D2/D23 decide validation, outputs and side effects, retention/deletion/copies, and migration behavior (3.1–3.4).
+4. Business rules & invariants — Considered. “Business rules” with D3–D8, D16 and D26 gives calculations, invariants, temporal behavior, inherited precedence, exception authority and every-X derivations (4.1–4.5).
+5. Internal interfaces — Considered. “Interfaces › Internal” names read and write symbols, consequences, and enumerated action, wire and marker contracts (5.1–5.3).
+6. External dependencies & contracts — Considered. The dependency table, D15/D18/D20/D24/D25 and §6.3 cover versions, sampled inputs, failure behavior and production separation (6.1–6.3).
+7. States & lifecycle — Considered. “Design › States” and D5/D6/D17 describe empty/loading/partial/error states, serialized concurrency, cancellation, stale entities and restart/re-entry (7.1–7.3).
+8. Minimal stretch — Considered. “Use cases › Minimal stretch,” D1, D16 and D17 cover disabled/default, one-item, empty-faction and one-time use (8.1–8.2).
+9. Maximal stretch — Considered. “Use cases › Maximal stretch,” D1/D5/D6/D12/D19/D21 cover volume, abuse, unauthorized use, duplicates and repeated activation (9.1–9.3).
+10. Security & privacy — Considered. “Security,” D21, D1/D10/D12, D22 and D11 cover direct and indirect authorization, unsafe inputs, credential handling and absence of personal data (10.1–10.4).
+11. Design & UX — Considered. “Design › UX,” D10/D13/D14/D16/D24 cover discovery, feedback, real-chat rendering, accessibility and positive/negative activation paths (11.1–11.4).
+12. Failure handling & observability — Considered. “Failure & observability,” D1/D6/D7/D11/D14/D20/D22/D23/D26/D29 and both matrices cover user recovery, diagnostic context, production detection and failing/silent/empty evidence cases (12.1–12.4).
+13. Performance & scale — Considered. “Performance,” D5 and D19 state the latency budget, hot path, bounds, source cases and excluded valid cases (13.1–13.2).
+14. Rollout & compatibility — Considered. “Rollout,” D22–D29 and “Paths walked” specify disabled shipping, compatibility, exact repository/server/published rollback and all walked/generated/remote/review paths (14.1–14.4).
+15. Out of scope — Considered. “Out of scope” explicitly lists exclusions and names the plans or children receiving deferred work (15.1–15.2).
+
+15/15 layers · 49/49 probes
+VERDICT: READY
+### Dispositions
+- F1 · accepted · D16's late-arrival bound reads "by the next sweep: within 15 s plus the unfinished sweep's remaining batch turns (at most 15 s + ceil(m / EmpowerBatchPerTick) ticks, Epic S-8)"
+- F2 · accepted · D1's EventValidationTests add string-typed arrays, a non-boolean includeVBloods, a duplicate or 21st include/exclude unit, an unknown excludeUnits name and derived deny-listed factions
+- F3 · accepted · D1 and D3 add Faction_Traders_T01 and Faction_Traders_T02 (both in unit_index.tsv) as denied, including a unit named in includeUnits
+- F4 · rejected · advisory — the frontmatter `commit:` is the commit the recon read (dod plan-template), not the plan revision; each review heading records the plan commit it reviewed, which identifies the reviewed revision
