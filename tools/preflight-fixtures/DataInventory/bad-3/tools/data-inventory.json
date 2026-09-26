@@ -212,7 +212,7 @@
       ],
       "location": "server memory (Logic/PushQueue)",
       "owner": "the mod",
-      "retention": "until sent (5 lines a tick), dropped oldest-first past 50, or a restart",
+      "retention": "",
       "deletion": "automatic; a restart empties it",
       "singleCopy": true
     },

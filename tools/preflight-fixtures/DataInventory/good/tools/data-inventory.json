@@ -64,7 +64,10 @@
       "owner": "developer",
       "retention": "overwritten by each build; the GitHub release asset is the kept copy",
       "deletion": "delete dist/ and build/",
-      "singleCopy": false
+      "singleCopy": false,
+      "rows": [
+        "raphael-api-core › Release zip"
+      ]
     },
     {
       "artifact": "OS, editor and scratch noise",
@@ -123,19 +126,26 @@
       "owner": "server admin (events, zones); the mod (state, stats, .tmp, .corrupt)",
       "retention": "events/zones until deleted, one .bak kept; state rewritten at most once per second; stats (SteamIDs, character names, per-player counters) keeps 30 daily buckets plus all-time totals until `.nyar stats reset` or deletion; .tmp deleted on boot; .corrupt kept until the next corruption",
       "deletion": "delete the folder for a full removal (README Uninstall)",
-      "singleCopy": false
+      "singleCopy": false,
+      "rows": [
+        "raphael-api-core › Dev world and mod data"
+      ]
     },
     {
-      "artifact": "Spikes throwaway world and its log",
+      "artifact": "Development world and its log",
       "covers": [
-        "save-data-nyarspikes/**",
-        "logs/NyarSpikes.log"
+        "save-data-nyardev/**",
+        "logs/NyarDev.log"
       ],
       "location": "dedicated server directory",
       "owner": "the developer",
-      "retention": "the spikes child only; holds the owner's SteamID in Settings/adminlist.txt",
-      "deletion": "deleted in spikes Build step 8, proven by -ServerWrites -Compare -AfterCleanup",
-      "singleCopy": true
+      "retention": "in-game tests of foundation and later children (docs/dod/foundation.md A1); holds the owner's SteamID in Settings/adminlist.txt",
+      "deletion": "deleted at the Epic's close or by the owner at any time, proven by -ServerWrites -Compare -AfterCleanup",
+      "singleCopy": true,
+      "rows": [
+        "raphael-api-core › Server logs",
+        "raphael-api-core › Dev world and mod data"
+      ]
     },
     {
       "artifact": "Server, BepInEx and other plugins' own files",
@@ -154,7 +164,10 @@
       "owner": "the server operator and those plugins (not this mod)",
       "retention": "theirs; LogOutput.log is overwritten each boot",
       "deletion": "not ours to delete; listed so a before/after compare can tell them apart from this mod's writes",
-      "singleCopy": false
+      "singleCopy": false,
+      "rows": [
+        "raphael-api-core › Server logs"
+      ]
     },
     {
       "artifact": "Game client and crash-reporter data",
@@ -167,6 +180,77 @@
       "retention": "theirs",
       "deletion": "not ours to delete; the paths can contain a SteamID and are never quoted in audit records",
       "singleCopy": false
+    },
+    {
+      "artifact": "Steam API connection cache",
+      "covers": [
+        "config/config.vdf"
+      ],
+      "location": "dedicated server directory",
+      "owner": "the Steam API inside the server process (rewritten at every launch; spikes A12)",
+      "retention": "theirs",
+      "deletion": "not ours to delete; listed so a before/after compare can tell it apart from this mod's writes",
+      "singleCopy": false
+    },
+    {
+      "artifact": "Raphael push subscriptions",
+      "covers": [],
+      "rows": [
+        "raphael-api-core › Subscription set"
+      ],
+      "location": "server memory (Services/Pusher, Logic/Subscriptions)",
+      "owner": "the mod",
+      "retention": "until `.nyar api sub off`, a disconnect, the offline prune or a restart; at most 128 SteamIDs",
+      "deletion": "automatic; a restart empties it",
+      "singleCopy": true
+    },
+    {
+      "artifact": "Raphael push queue",
+      "covers": [],
+      "rows": [
+        "raphael-api-core › Push queue"
+      ],
+      "location": "server memory (Logic/PushQueue)",
+      "owner": "the mod",
+      "retention": "until sent (5 lines a tick), dropped oldest-first past 50, or a restart",
+      "deletion": "automatic; a restart empties it",
+      "singleCopy": true
+    },
+    {
+      "artifact": "Project documents in git",
+      "covers": [],
+      "rows": [
+        "raphael-api-core › Contract, handoff, feature doc, audit, plan, reviews"
+      ],
+      "location": "the repository (docs/, tools/, READMEs, changelogs)",
+      "owner": "project owner",
+      "retention": "forever in git history",
+      "deletion": "only through a commit; history keeps every version",
+      "singleCopy": true
+    },
+    {
+      "artifact": "Test and preflight fixtures",
+      "covers": [],
+      "rows": [
+        "raphael-api-core › Test and preflight fixtures"
+      ],
+      "location": "tools/preflight-fixtures/**, tools/rollback-drill-fixtures/** (tracked)",
+      "owner": "project owner",
+      "retention": "forever in git history",
+      "deletion": "only through a commit",
+      "singleCopy": true
+    },
+    {
+      "artifact": "Rollback drill worktrees and saved config",
+      "covers": [],
+      "rows": [
+        "raphael-api-core › Drill worktrees and saved config"
+      ],
+      "location": "%TEMP%\nyar-drill-* (tools/rollback-drill.ps1) and %TEMP%\nyar-rollback-* (the D18 repository drill)",
+      "owner": "the drill",
+      "retention": "for one run: removed in its finally; a crash leaves them and the next run removes leftovers first",
+      "deletion": "automatic, or delete the folders and run `git worktree prune`",
+      "singleCopy": true
     }
   ]
 }

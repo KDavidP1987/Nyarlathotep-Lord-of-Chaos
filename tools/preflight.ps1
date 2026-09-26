@@ -744,8 +744,25 @@ function Test-CheckDataInventory([string]$Root) {
     foreach ($r in $required) {
         if (-not ($entries | Where-Object { @($_.covers) -contains $r })) { $bad += "'$r' has no entry" }
     }
+    # Every row of the Design › Data artifact table of each plan preflight-checks.json lists under dataTables needs an
+    # entry naming it in rows as "<slug> › <artifact>" (raphael-api-core D19).
+    $rows = @()
+    $mt = Read-Text $Root 'tools/preflight-checks.json'
+    $tables = if ($mt) { @(($mt | ConvertFrom-Json).dataTables | Where-Object { $_ }) } else { @() }
+    foreach ($planRel in $tables) {
+        $plan = Read-Text $Root $planRel
+        $slug = [IO.Path]::GetFileNameWithoutExtension($planRel)
+        $data = if ($plan) { [regex]::Match($plan, '(?ms)^### Data[ \t]*\r?$(.*?)(?=^##)') } else { $null }
+        $table = if ($data -and $data.Success) { [regex]::Match($data.Groups[1].Value, '(?m)^\| Artifact \|[^\r\n]*\r?\n\|[-| ]+\|[ \t]*\r?\n((?:\|[^\r\n]*\r?\n?)+)') } else { $null }
+        if ($null -eq $table -or -not $table.Success) { $bad += "$planRel has no Design › Data artifact table"; continue }
+        foreach ($line in @($table.Groups[1].Value -split '\r?\n' | Where-Object { $_ -match '^\|' })) {
+            $name = ($line -split '\|')[1].Trim()
+            $rows += "$slug › $name"
+            if (-not ($entries | Where-Object { @($_.rows) -contains "$slug › $name" })) { $bad += "$slug row '$name' has no entry" }
+        }
+    }
     if ($bad) { return New-Result $false "data inventory: $($bad -join '; ')" }
-    return New-Result $true "data inventory: $($required.Count)/$($required.Count) complete"
+    return New-Result $true "data inventory: $($entries.Count) entries; $($required.Count)/$($required.Count) globs and files, $($rows.Count)/$($rows.Count) plan rows"
 }
 
 # Walked paths as "<kind> <path>" (kind tracked|ignored|server).

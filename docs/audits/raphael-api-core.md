@@ -52,6 +52,15 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - session config: `session-events.py rac2` (11 definitions: the 5 examples with example-spawns enabled, 2 waves 40 s apart, 120 s; t-150 10 waves of 15, 20 s apart, 300 s, warnings on; t-spare and t-fill-1..4 disabled); dev cfg WaveWarnings false → true for D22 (copy of the previous cfg kept in %TEMP%); TimingLog true
 - plugin version: the session build is `-p:Version=0.3.0` so `api version` reads the release number D13 names; step 6 bumps the six surfaces without a code change
 
+### Step 6 · 2026-09-26 · dda8ba9
+- git status: clean
+- compile: 0 errors, 0 warnings
+- preflight: exit 0 ("PREFLIGHT OK", "release tags: 2/2", "data inventory: 43/43 complete"); -Paths "684 walked, all in manifest"; -AuditOf 5/6; -SessionsOf "2/2 checked"
+- dod status: raphael-api-core 16/22 verified; D15–D20 open (step 6)
+- feature doc read: docs/features/RAPHAEL_API.md (Status: step 5 of 6 done; Open questions: none); plan D15–D20, Build plan step 6, Design › Data, Rollout, Failure & observability (drill rows); Epic D32, D38, D45
+- server: not running; the deployed DLL is the 0.3.0 session build; tcli at ~/.dotnet/tools
+- drill design (D16, the plan leaves the "schema line" open): no boot line names a schema, so a file N wrote counts as read by N-1 when its load line is present and no "SchemaVersion … is newer … read-only" warning is logged — events.json "events: reloaded: <v> valid, <x> disabled", state.json "(<n> listed in state.json)" in the marker-sweep line, stats.json reported absent. The drill empties BepInEx/config/Nyarlathotep/ (saved first) so N seeds events.json and writes state.json itself, then edits one event name, stops, and boots N-1
+
 ## Post-audit
 ### Step 1 · 2026-09-25 · 6437b90
 - compile: 0 errors, 0 warnings (plugin and Nyarlathotep.Tests)

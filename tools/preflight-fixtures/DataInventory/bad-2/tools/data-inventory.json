@@ -208,7 +208,7 @@
       "artifact": "Raphael push queue",
       "covers": [],
       "rows": [
-        "raphael-api-core › Push queue"
+        "raphael-api-core › Push queue (renamed)"
       ],
       "location": "server memory (Logic/PushQueue)",
       "owner": "the mod",
