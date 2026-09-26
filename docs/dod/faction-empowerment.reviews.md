@@ -362,3 +362,48 @@ VERDICT: READY
 - F2 · accepted · D1's EventValidationTests add string-typed arrays, a non-boolean includeVBloods, a duplicate or 21st include/exclude unit, an unknown excludeUnits name and derived deny-listed factions
 - F3 · accepted · D1 and D3 add Faction_Traders_T01 and Faction_Traders_T02 (both in unit_index.tsv) as denied, including a unit named in includeUnits
 - F4 · rejected · advisory — the frontmatter `commit:` is the commit the recon read (dod plan-template), not the plan revision; each review heading records the plan commit it reviewed, which identifies the reviewed revision
+
+## Review 8 · 2026-09-26 · codex · plan commit 88a2f52
+
+EARLIER: all resolved
+
+New findings: none. The Round 8 edits correctly address the three accepted advisories. The pasted code excerpts also support the plan’s recon claims and proposed change points; no new discrepancy changes readiness.
+
+1. **Purpose & typical use — Considered (1.1–1.3).** `Purpose & typical use` identifies admins and players, the timed faction-empowerment outcome, and coexistence with the foundation, SpawnWaves, Blood Moon, companion mods, and Raphael.
+
+2. **Actors & permissions — Considered (2.1–2.3).** `Design › Permissions`, the actor matrix, D5, D6, and D21 define every reachable actor, unauthorized behavior, server-owned definitions, carrier ownership, contention, and restart after stopping. Gating command: `pwsh tools/preflight.ps1 -AuthSuite`.
+
+3. **Inputs, outputs & data — Considered (3.1–3.4).** D1/D12 specify input shapes and validation; D10/D11/D16 specify outputs and side effects; `Design › Data` plus D26 inventory every persistent, temporary, remote, and in-memory artifact; D2/D23 and `Rollout › Compatibility` cover migration. Gating command: `pwsh tools/preflight.ps1`.
+
+4. **Business rules & invariants — Considered (4.1–4.5).** `Business rules`, D3–D8, D16, and D26 define calculations, uniqueness, hard duration behavior, inherited precedence, and all applicable every-X sets and their enumeration methods. Gating command: `dotnet test Nyarlathotep/Nyarlathotep.Tests --filter FullyQualifiedName~EngineTests`.
+
+5. **Internal interfaces — Considered (5.1–5.3).** `Interfaces › Internal` enumerates read symbols, changed modules and failure consequences, plus the complete action, status-row, and marker contracts. The excerpts confirm that Model, Validation, Engine, ApiLines, Messages, Markers, EventRuntime, and SpawnTracker are genuine change points rather than already-present behavior.
+
+6. **External dependencies & contracts — Considered (6.1–6.3).** The dependency table gives versions, cost/quota, sampled record types, failure behavior, and companion-mod contracts; D20 handles malformed or throwing runtime dependencies; test-only behavior is restricted to the dev server and Debug builds. Gating command: `dotnet test Nyarlathotep/Nyarlathotep.Tests --filter FullyQualifiedName~DependencyFailureTests`.
+
+7. **States & lifecycle — Considered (7.1–7.3).** `Design › States` covers empty, first-run, loading, partial and error states; main-thread concurrency and competing starts; stale entities, cancellation, restart re-entry, reload, and configuration correction.
+
+8. **Minimal stretch — Considered (8.1–8.2).** `Use cases › Minimal stretch` covers the disabled default, a one-faction/one-stat definition, empty factions, one-time use, cleanup, boot recovery, and absence of additional persistent state.
+
+9. **Maximal stretch — Considered (9.1–9.3).** `Use cases › Maximal stretch`, D1, D5, D6, D12, D13, D19, and D21 cover thousands of NPCs, bounded hostile/admin input, authorization misuse, duplicate starts, duplicate trigger delivery, repeated sweeps, and repeated stops.
+
+10. **Security & privacy — Considered (10.1–10.4).** `Security`, D1, D10, D11, D21, and D22 cover all direct and indirect authorization paths, injection boundaries, credential storage and logging, and the absence of personal or positional data. Gating commands: `pwsh tools/preflight.ps1 -AuthSuite` and `pwsh tools/preflight.ps1 -SelfTest`.
+
+11. **Design & UX — Considered (11.1–11.4).** `Design › UX`, D6, D10, D13, D14, D16, and D24 cover discovery, real-chat feedback, empty and failure messages, accessibility constraints, activation triggers, observable activation, and unrelated should-not-activate cases.
+
+12. **Failure handling & observability — Considered (12.1–12.4).** `Failure & observability`, its selftest matrix, D7, D14, D16, D20, D22, D23, D26, and D29 define operator-visible failures, diagnostic context, production detection, test seams, bad/good/empty fixtures, and command-level failure evidence. Gating command: `pwsh tools/preflight.ps1 -SelfTest`.
+
+13. **Performance & scale — Considered (13.1–13.2).** `Performance`, D1, D5, and D19 identify the hot path, under-5-ms budget, query cost, operation budget, configuration bounds, their source cases, behavior at each bound, and excluded valid cases.
+
+14. **Rollout & compatibility — Considered (14.1–14.4).** `Rollout`, `Paths walked`, D23–D29 cover disabled-by-default shipping, shutdown ownership, backward compatibility, exact repository/server/published rollback procedures, post-write rollback, the complete release range, and repository, server, temporary, generated, review, plan, tag, and release paths. Gating commands: `pwsh tools/rollback-gate.ps1 -From v0.3.0 -To v0.4.0` and `pwsh tools/preflight.ps1 -Paths`.
+
+15. **Out of scope — Considered (15.1–15.2).** `Out of scope` explicitly excludes adjacent functionality and assigns every deferred capability to a named future child or workspace.
+
+The child carries forward all required Epic decisions: carrier-only mutation, `BuffType.Replace`, remaining-seconds `LifeTime`, the complete exclusion policy, S-8 late arrivals, Business rules 1–5, and ownership of the Business-rule-2 implementation. It also adds player-visible API state, specifies the new status-row values and documentation, and raises `Wire.Api` and the contract to API 3. Every Considered layer 2–14 maps to at least one evidence-bearing D-item, and each Build-plan step names the D-items it satisfies.
+
+15/15 layers · 49/49 probes
+
+VERDICT: READY
+### Dispositions
+
+(no findings)

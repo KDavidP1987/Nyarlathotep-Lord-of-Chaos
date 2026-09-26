@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review — Faction empowerment — timed carrier buffs on every NPC of a faction</title>
+<style>
+:root { color-scheme: light dark; --bg:#fbfbfa; --fg:#1b1b1a; --dim:#55534e; --line:#d9d7d1; --card:#ffffff;
+  --ok:#1b5e3a; --warn:#7a4a00; --accent:#1f4f82; }
+@media (prefers-color-scheme: dark) { :root { --bg:#16181a; --fg:#eceae5; --dim:#a8a49c; --line:#33363a;
+  --card:#1e2124; --ok:#7fd8a4; --warn:#e8b765; --accent:#8fbde8; } }
+* { box-sizing: border-box; }
+/* plan text carries long unbroken tokens — a review-page URL in a Log note, a path, a hostile string with no
+   space in it — and at 375 px one of those is what pushes the document wider than the window (D20) */
+body, p, td, th, li, caption { overflow-wrap: anywhere; }
+body { margin:0; padding:1.5rem 1rem 4rem; background:var(--bg); color:var(--fg); max-width:60rem;
+  font:16px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+h1 { font-size:1.5rem; line-height:1.25; margin:0 0 .25rem; }
+h2 { font-size:1.15rem; margin:2.25rem 0 .5rem; padding-bottom:.25rem; border-bottom:1px solid var(--line); }
+h3 { font-size:1rem; margin:1.25rem 0 .35rem; color:var(--dim); }
+p { margin:.4rem 0; }
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.9em; }
+.sub { color:var(--dim); margin:0 0 1rem; }
+.absent { color:var(--dim); font-style:italic; }
+.legend { color:var(--dim); }
+.scroll { overflow-x:auto; }
+table { border-collapse:collapse; width:100%; min-width:32rem; }
+caption { text-align:left; color:var(--dim); padding:.25rem 0; }
+th, td { text-align:left; vertical-align:top; padding:.35rem .5rem; border-bottom:1px solid var(--line); }
+th { color:var(--dim); font-weight:600; white-space:nowrap; }
+td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+tr:target td { background:var(--card); outline:2px solid var(--accent); }
+ul.tree { list-style:none; margin:0; padding:0; }
+ul.tree li { padding:.2rem 0; border-bottom:1px solid var(--line); display:flex; gap:.5rem; flex-wrap:wrap; }
+ul.tree li span.pkg { font-weight:600; }
+ul.tree li.lvl2 { padding-left:1.25rem; }
+ul.tree li .pct { margin-left:auto; font-variant-numeric:tabular-nums; color:var(--dim); }
+a { color:var(--accent); }
+a:focus-visible { outline:3px solid var(--accent); outline-offset:2px; border-radius:2px; }
+.k { display:inline-block; min-width:5.5rem; color:var(--dim); }
+.done { color:var(--ok); } .open { color:var(--warn); }
+ol.said { margin:.25rem 0 .75rem; padding-left:1.25rem; }
+ol.said li { padding:.15rem 0; }
+.declared { border-left:3px solid var(--warn); padding:.35rem .6rem; margin:.5rem 0; color:var(--fg); }
+</style>
+</head>
+<body>
+<h1>Review — Faction empowerment — timed carrier buffs on every NPC of a faction</h1>
+
+<p class="sub"><span class="mono">faction-empowerment</span> · ready · size L · parent nyarlathotep · 29 item(s)</p>
+
+<p class="legend mono">legend: D item · A amendment · S assumption · F review finding · P proposal · W work package · n.m layer.probe</p>
+
+<p class="legend">Every probe of this plan's rubric is below with the plan's own answer. The author's own marking is not on this page — form your own before you look at theirs.</p>
+
+<h2 id="L1">1. Purpose &amp; typical use</h2>
+<p class="absent">the plan writes no numbered sentences under Purpose &amp; typical use for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 1</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">1.1</td><td>Who uses it (role, frequency) and the one sentence they would say when they want it.</td><td><span class="open">no answer</span></td></tr><tr><td class="mono">1.2</td><td>The job it does for them — the outcome, not the mechanism.</td><td><span class="open">no answer</span></td></tr><tr><td class="mono">1.3</td><td>What exists today that it replaces, extends, or must coexist with.</td><td><span class="open">no answer</span></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L2">2. Actors &amp; permissions</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 2</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">2.1 ⛔</td><td>Every actor that can reach it (including unauthenticated, service accounts, admins) and what each may do.</td><td><a href="#D21">D21</a></td></tr><tr><td class="mono">2.2</td><td>What happens on the unauthorized path — silent deny, error, redirect, audit entry.</td><td><a href="#D21">D21</a></td></tr><tr><td class="mono">2.3</td><td>Ownership: who may see, change, or delete what someone else created, and what happens when ownership changes hands — a holder replaced mid-flight, a closed thing legitimately reopened.</td><td><a href="#D5">D5</a> <a href="#D6">D6</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L3">3. Inputs, outputs &amp; data</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 3</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">3.1</td><td>Every input: shape, limits, validation, and the response to invalid input.</td><td><a href="#D1">D1</a> <a href="#D12">D12</a></td></tr><tr><td class="mono">3.2</td><td>Every output and side effect, including what other systems receive.</td><td><a href="#D11">D11</a> <a href="#D16">D16</a> <a href="#D10">D10</a></td></tr><tr><td class="mono">3.3 ⛔</td><td>Persistence: what is stored, where, who owns it, how long it is kept, how it is deleted — for every artifact the feature produces, including by-products (logs, working directories, intermediates), and which of them exist only once.</td><td><a href="#D26">D26</a> <a href="#D17">D17</a></td></tr><tr><td class="mono">3.4</td><td>Migration of existing data, if the shape changes.</td><td><a href="#D2">D2</a> <a href="#D23">D23</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L4">4. Business rules &amp; invariants</h2>
+<h3>What the plan says under “Business rules”</h3>
+<ol class="said"><li>**Carriers only (Epic constraint):** a native NPC is changed only by our carrier buff: AB_Consumable_PhysicalPowerPotion_T02_Buff (-1591883586, spikes S3), made inert, its stat buffer cleared and refilled, with Buff.BuffType = Replace and MaxStacks 1 (the Epic&#39;s BuffType.Replace rule), SpellLevel = Markers.Carrier, and LifeTime = the seconds left with EndAction Destroy, every value from CarrierRecipe (D4). Nothing writes UnitStats or Health on a native NPC. Re-applying never stacks: Replace refreshes rather than stacks, and a carried unit is skipped anyway (D5).</li><li>**Stats (S-1):** physicalPower, spellPower, maxHealth, attackSpeed and moveSpeed, each a multiplier 1.0-3.0 of the base value (MultiplyBaseAdd, value − 1, D4). There are no weakening values. A stat that proves inert in game is removed by amendment (D15).</li><li>**One empowerment per faction** (Epic Business rules 2, D6): two active Empower events never share a faction or an include unit. A unit that both an event&#39;s faction and another event&#39;s includeUnits could reach keeps the first carrier (&quot;carried&quot;, D3, D5).</li><li>**Who is empowered** (Epic Business rules 5, D3): computed per unit from facts at sweep time. It never touches player-faction units, traders, critters, prisoners, Faction_Ignored, our own units, player-owned units (familiars, servants), prefab entities or dead units, and touches V Bloods only with includeVBloods.</li><li>**Durations are hard** (Epic Business rules 3): - Every carrier&#39;s LifeTime ends by the event&#39;s end. - Stop, fault cancel and purge remove carriers through the per-tick budget (D5, D8). - A restart removes every carrier found at boot (S-11, D7, D17). - If the mod is gone, LifeTime still ends each carrier within durationSeconds, at most 7200 s (Epic D12).</li><li>**Budget (13.2):** at most EmpowerBatchPerTick carrier operations per tick, applies and removals together, with removals first (D5).</li><li>**Precedence (4.4, Epic Business rules 1):** purge &gt; General.Enabled &gt; the pillar switch &gt; MaxConcurrentEvents &gt; the definition&#39;s own state &gt; the one-per-faction rule (D6). Settings.cs is authoritative for the numbers (Epic Business rules 10). The owner decides exceptions by changing the cfg within its ranges.</li><li>**Temporal (4.3):** - LifeTime is set from the server&#39;s UTC clock at each apply. - A reload never changes a running event: it keeps the definition it started with (foundation D6). So a `set` on its stats applies at the next start. - A cfg change takes effect at restart.</li><li>**Every-X sets (4.5, profile note):** - **Every NPC of a faction:** an EntityQuery over PrefabGUID + FactionReference + Health + UnitStats, IncludeDisabled | IncludeSpawnTag (the Epic&#39;s Business rules 5 definition), filtered by D3. An entity of the faction without UnitStats has no stats for a carrier to raise, and one without Health is not a combatant (a prop or a spawner), so both are excluded by definition. The exclusion is made visible: each event&#39;s first sweep also counts the faction&#39;s entities over PrefabGUID + FactionReference alone and logs &quot;empower &lt;id&gt;: query &lt;n&gt; of &lt;m&gt; faction entities&quot; (D16), so a combatant lacking one component would show as a gap between n and m, and Session 2 names the prefabs of that gap from a verbose list. - It misses a unit created after the query runs. The 15 s re-sweep catches it (Epic S-8), and D16 checks a respawn. - The query snapshot is taken when a sweep starts, so a unit destroyed before its turn is dropped (D5). - **Every path that applies a carrier:** the start sweep and the re-sweep, both through CarrierLedger (D5). - **Every path that removes one:** - LifeTime expiry (the game, D16); - EventRuntime.End for stop and fault cancel (D9); - EventRuntime.Purge (D18); - SpawnTracker.BootSweep (D7, D17); - the unit&#39;s own death, which destroys its buffs: the ledger drops the entry when its buff is gone (D5). No other path exists. A reload leaves running instances alone, and a cfg change waits for the restart. - **Every marker value:** Markers.All, used by BootSweep through SweepPlan (D7). - **Every structural call:** the preflight walk of tracked and untracked .cs files (D8). - **Every session:** -SessionsOf (D26). - **Every path:** -Paths, run last in step 7 (D26).</li></ol>
+<div class="scroll">
+<table><caption>probes of layer 4</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">4.1</td><td>Calculations, thresholds, and policies stated precisely enough to write a test from, and which document is authoritative for a threshold stated in two places.</td><td><a href="#D4">D4</a> <a href="#D5">D5</a></td></tr><tr><td class="mono">4.2</td><td>Invariants that must never be violated (uniqueness, ordering, balance, totals).</td><td><a href="#D6">D6</a> <a href="#D5">D5</a> <a href="#D7">D7</a></td></tr><tr><td class="mono">4.3</td><td>Temporal rules — time zones, cut-offs, expiry, retroactive changes.</td><td><a href="#D5">D5</a> <a href="#D17">D17</a></td></tr><tr><td class="mono">4.4 ⛔</td><td>Precedence when rules conflict, and who decides an exception.</td><td><a href="#D6">D6</a></td></tr><tr><td class="mono">4.5</td><td>(rubric 2) “Every X” sets: for every rule of the form “every X”, how X is computed, what valid content the computation misses, who checks the computation — and, when a tool derives X (a grep, a diff, a directory walk), whether that tool can see every member at the moment it runs: a file not yet tracked, a file this build creates, a path the tool excludes.</td><td><a href="#D3">D3</a> <a href="#D5">D5</a> <a href="#D7">D7</a> <a href="#D8">D8</a> <a href="#D26">D26</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L5">5. Internal interfaces</h2>
+<p class="absent">the plan writes no numbered sentences under Interfaces for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 5</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">5.1</td><td>What it reads from other features/modules, with paths or symbols.</td><td><a href="#D3">D3</a> <a href="#D14">D14</a></td></tr><tr><td class="mono">5.2</td><td>What it writes to or changes about other features, and what breaks there if this is wrong.</td><td><a href="#D7">D7</a> <a href="#D9">D9</a> <a href="#D20">D20</a></td></tr><tr><td class="mono">5.3</td><td>Shared types, events, schemas or contracts it introduces or alters — each field enumerated against what the code emits or reads, not against the prose that describes it.</td><td><a href="#D1">D1</a> <a href="#D11">D11</a> <a href="#D7">D7</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L6">6. External dependencies &amp; contracts</h2>
+<p class="absent">the plan writes no numbered sentences under Interfaces for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 6</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">6.1</td><td>Every external API, service, package, or vendor it depends on — version, quota, cost — and every input contract sampled across all its record types, not only the ones the feature expects.</td><td><a href="#D15">D15</a> <a href="#D18">D18</a> <a href="#D13">D13</a></td></tr><tr><td class="mono">6.2 ⛔</td><td>Behaviour when each dependency is slow, down, rate-limited, or returns garbage, including internal collaborators — sibling agents and your own tools.</td><td><a href="#D20">D20</a></td></tr><tr><td class="mono">6.3</td><td>Sandbox / test-mode behaviour and how it is kept out of production.</td><td><a href="#D22">D22</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L7">7. States &amp; lifecycle</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 7</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">7.1</td><td>Empty, first-run, loading, partial, and error states.</td><td><a href="#D1">D1</a> <a href="#D16">D16</a> <a href="#D11">D11</a></td></tr><tr><td class="mono">7.2</td><td>Concurrent use — two users, two tabs, a retry racing the original — and which of these actors is you: the planner, the orchestrator, the build tooling.</td><td><a href="#D6">D6</a> <a href="#D5">D5</a></td></tr><tr><td class="mono">7.3</td><td>Stale data, cancel, undo, and re-entry after interruption, and what a correction invalidates.</td><td><a href="#D5">D5</a> <a href="#D17">D17</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L8">8. Minimal stretch</h2>
+<p class="absent">the plan writes no numbered sentences under Use cases for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 8</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">8.1</td><td>The least a user can do: empty input, one item, defaults only, skipping optional steps.</td><td><a href="#D1">D1</a> <a href="#D16">D16</a></td></tr><tr><td class="mono">8.2</td><td>The feature used once and never again — does anything leak, linger, or nag.</td><td><a href="#D16">D16</a> <a href="#D17">D17</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L9">9. Maximal stretch</h2>
+<p class="absent">the plan writes no numbered sentences under Use cases for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 9</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">9.1</td><td>Volume: 100× the expected count, size, or rate — what degrades and how.</td><td><a href="#D5">D5</a> <a href="#D19">D19</a></td></tr><tr><td class="mono">9.2</td><td>Abuse and misuse: hostile input, automation, the clever workaround a power user will try.</td><td><a href="#D1">D1</a> <a href="#D6">D6</a> <a href="#D12">D12</a> <a href="#D21">D21</a></td></tr><tr><td class="mono">9.3</td><td>Repeated or parallel use of the same action — idempotency, duplicates, double-submit.</td><td><a href="#D5">D5</a> <a href="#D6">D6</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L10">10. Security &amp; privacy</h2>
+<p class="absent">the plan writes no numbered sentences under Security for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 10</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">10.1 ⛔</td><td>Authorization checked on every path, including indirect ones (jobs, webhooks, exports) — and an allowed program&#39;s options that change what runs (`git --upload-pack`, `npm --script-shell`, `node --require`) are the same boundary as the program itself.</td><td><a href="#D21">D21</a></td></tr><tr><td class="mono">10.2</td><td>Injection and unsafe content on every input that reaches a query, shell, template, or URL.</td><td><a href="#D1">D1</a> <a href="#D10">D10</a></td></tr><tr><td class="mono">10.3 ⛔</td><td>Secrets and credentials: where they live, how they rotate, what must never be logged.</td><td><a href="#D22">D22</a></td></tr><tr><td class="mono">10.4</td><td>Personal data: what is collected, minimised, exposed in logs or exports, and the audit trail.</td><td><a href="#D11">D11</a> <a href="#D10">D10</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L11">11. Design &amp; UX</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 11</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">11.1</td><td>Where it lives in the product and how a user discovers it.</td><td><a href="#D24">D24</a> <a href="#D14">D14</a></td></tr><tr><td class="mono">11.2</td><td>Feedback: progress, success, failure, and empty-result messaging in the product&#39;s voice.</td><td><a href="#D16">D16</a> <a href="#D10">D10</a> <a href="#D14">D14</a></td></tr><tr><td class="mono">11.3</td><td>Accessibility (keyboard, screen reader, contrast) and small-screen behaviour.</td><td>plain chat lines under 480 bytes with no meaning carried by colour</td></tr><tr><td class="mono">11.4</td><td>(rubric 2) Activation: how the feature is invoked or activated when nobody asks for it — a trigger, a pointer line, a hook, a schedule — and what shows it was; the should-not-activate cases are unrelated to the feature&#39;s purpose, never adjacent to it — an agent that has just finished an adjacent task invokes it for a good reason.</td><td><a href="#D13">D13</a> <a href="#D6">D6</a> <a href="#D16">D16</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L12">12. Failure handling &amp; observability</h2>
+<p class="absent">the plan writes no numbered sentences under Failure &amp; observability for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 12</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">12.1</td><td>What the user sees for each failure class, and what they can do next.</td><td><a href="#D1">D1</a> <a href="#D6">D6</a> <a href="#D20">D20</a></td></tr><tr><td class="mono">12.2</td><td>What is logged or measured, with enough context to debug without reproducing.</td><td><a href="#D16">D16</a> <a href="#D7">D7</a> <a href="#D20">D20</a></td></tr><tr><td class="mono">12.3</td><td>How you would know in production that it is broken — the alert or the dashboard.</td><td><a href="#D14">D14</a> <a href="#D11">D11</a> <a href="#D26">D26</a></td></tr><tr><td class="mono">12.4 ⛔</td><td>(rubric 2) Failing case: for every check the plan introduces, the input that makes it report a failure, the input it must stay silent on, and what it prints on an empty input — which must not read as a pass; one evidence command per gating probe, able to fail for its stated `fails when`; and a selftest fixture spells what the real input spells and plants the state the real run produces, never a corrected copy of either.</td><td><a href="#D22">D22</a> <a href="#D23">D23</a> <a href="#D29">D29</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L13">13. Performance &amp; scale</h2>
+<p class="absent">the plan writes no numbered sentences under Performance for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 13</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">13.1</td><td>The latency or throughput budget, and the hot path that decides it.</td><td><a href="#D19">D19</a></td></tr><tr><td class="mono">13.2</td><td>Limits and pagination — what is bounded and what happens at the bound, the case a limit came from, and the valid case it excludes.</td><td><a href="#D5">D5</a> <a href="#D1">D1</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L14">14. Rollout &amp; compatibility</h2>
+<p class="absent">the plan writes no numbered sentences under Rollout for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 14</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">14.1</td><td>How it ships: flag, staged, all at once; who can turn it off.</td><td><a href="#D24">D24</a> <a href="#D22">D22</a></td></tr><tr><td class="mono">14.2</td><td>Backward compatibility with existing clients, data, and integrations.</td><td><a href="#D2">D2</a> <a href="#D11">D11</a> <a href="#D27">D27</a></td></tr><tr><td class="mono">14.3 ⛔</td><td>Rollback: the exact steps to undo it, whether they are still possible after data has been written, and the commit range they cover when the change is committed more than once.</td><td><a href="#D29">D29</a> <a href="#D25">D25</a> <a href="#D23">D23</a> <a href="#D28">D28</a></td></tr><tr><td class="mono">14.4 ⛔</td><td>(rubric 2) Paths walked: every path the change ships, writes or regenerates, found by walking the Build plan step by step — generated indexes, tooling, fixtures, notes, ignored and generated files, the shipped files a release has to touch, the paths the review process itself writes (review pages, re-review records) and the plan store itself.</td><td><a href="#D26">D26</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L15">15. Out of scope</h2>
+<p class="absent">the plan writes no numbered sentences under Out of scope for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 15</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">15.1</td><td>What was explicitly considered and excluded, so a builder does not fill the gap by guessing.</td><td><span class="open">no answer</span></td></tr><tr><td class="mono">15.2</td><td>What is deferred to a later item, and the slug or issue it lives in.</td><td><span class="open">no answer</span></td></tr></tbody>
+</table>
+</div>
+
+<h2>Items in full</h2>
+
+<h3 id="D1"><span class="mono">D1</span> Empower action validated</h3>
+<p>events.json accepts `&quot;action&quot;: { &quot;type&quot;: &quot;Empower&quot;, &quot;factions&quot;: [...], &quot;includeUnits&quot;: [...], &quot;excludeUnits&quot;: [...], &quot;includeVBloods&quot;: bool, &quot;stats&quot;: {...} }` with exactly those keys (factions and stats required, the others optional with defaults [], [], false). factions: 1-5 distinct names, each known to the faction catalog (IFactionCatalog, the game&#39;s Faction_* prefab names) and not on the faction deny list (Faction_Players*, Faction_Traders*, Faction_Critters, Faction_World_Prisoners, Faction_Ignored). includeUnits and excludeUnits: 0-20 distinct CHAR_ names known to IUnitCatalog; includeUnits also refuses UnitDenyList entries. stats: keys among physicalPower, spellPower, maxHealth, attackSpeed, moveSpeed, each a number 1.0-3.0, at least one above 1.0. A `visual` key or any other key is unknown. Each failure disables the event with one reason naming the field</p>
+<p class="mono">test: Nyarlathotep.Tests EventValidationTests (fails when: an unknown, deny-listed, duplicate or sixth faction, an unknown or deny-listed include unit, a stat of 0.9, 3.01 or a string, a stats object raising nothing, a `visual` key or an unknown stat name is accepted; factions or includeUnits given as a string, includeVBloods given as &quot;true&quot; or 1, a duplicate or 21st includeUnits or excludeUnits entry, an unknown excludeUnits name, or a derived deny-listed faction (Faction_Traders_T01, Faction_Players_Mutant) is accepted; or a valid Empower definition is disabled)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D2"><span class="mono">D2</span> Pillar and action pair</h3>
+<p>a definition with pillar empowerment must have an Empower action and an Empower action must have pillar empowerment; otherwise it is disabled with &quot;pillar empowerment takes an Empower action&quot; or &quot;action Empower needs pillar empowerment&quot;. Resources/events.default.json ships example-empowerment as a disabled Empower definition on Faction_Bandits (VBloodKilled any, durationSeconds 600, physicalPower 1.3, spellPower 1.3, maxHealth 1.5, attackSpeed 1.15, moveSpeed 1.1) and its four other templates unchanged</p>
+<p class="mono">test: Nyarlathotep.Tests EventValidationTests and TemplateTests (fails when: SpawnWaves under pillar empowerment or Empower under pillar spawns loads startable, the shipped template does not validate, or it ships enabled)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D3"><span class="mono">D3</span> Eligibility rule</h3>
+<p>Logic/Empowerment.cs `Eligibility.Decide(UnitFacts, EmpowerAction)` returns Apply or Skip(reason) from facts the service reads per unit: prefab name, faction name, IsPrefab, IsDead, HasVBloodUnit, IsOurs (a unit marker), OwnedByPlayer (from `Ownership.Decide`, over the game&#39;s own components plus any mod contract declared in the dependency table, of which there are none today: Follower.Followed or EntityOwner.Owner is a player character or a player&#39;s servant, or the unit&#39;s Team is a player team; any of these present but unresolvable counts as owned, so absent, renamed or malformed data from Bloodcraft or KindredCommands fails closed) and CarrierOf (the event id whose carrier it already holds, or none). Apply only when: not a prefab, not dead, not ours, not player-owned, faction not on the deny list, (faction in factions or prefab in includeUnits), prefab not in excludeUnits, not a V Blood unless includeVBloods, and no carrier. Skip reasons are prefab, dead, ours, owned, denied, other, excluded, vblood and carried</p>
+<p class="mono">test: Nyarlathotep.Tests EmpowerEligibilityTests (fails when: any one of those facts flipped from the Apply case still gives Apply, an includeUnits unit of another faction is skipped, an excludeUnits unit of the faction is applied, a Faction_Players unit named in includeUnits is applied, a unit of a derived faction (Faction_Players_Castle_Prisoners, Faction_Players_Mutant, Faction_Players_Shapeshift_Human, from unit_index.tsv) is not denied by the Faction_Players* prefix, a Faction_Traders_T01 or Faction_Traders_T02 unit is not denied by the Faction_Traders* prefix, including when named in includeUnits, or a validation of `factions: [&quot;Faction_Players_Mutant&quot;]` is not rejected, or Ownership.Decide returns not-owned for an unresolvable owner, followed entity or team)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D4"><span class="mono">D4</span> Carrier recipe and stat map</h3>
+<p>`CarrierRecipe.For(stats, secondsLeft)` (Logic) gives every value the service writes on a new carrier: Buff.BuffType = Replace (ProjectM.BuffType is Parallel, Replace or Block), MaxStacks = 1, IncreaseStacks = false, SpellLevel = Markers.Carrier, LifeTime = secondsLeft with EndAction Destroy, the gameplay-event components to strip (CreateGameplayEventsOnSpawn, GameplayEventListeners, RemoveBuffOnGameplayEvent, RemoveBuffOnGameplayEventEntry, DestroyOnGameplayEvent), and the modifiers; Services/EmpowerAction.cs writes exactly the recipe&#39;s values. `EmpowerStats.Modifiers(stats)` gives one entry per stat above 1.0, each MultiplyBaseAdd with value = multiplier − 1: physicalPower → PhysicalPower, spellPower → SpellPower, maxHealth → MaxHealth, attackSpeed → PrimaryAttackSpeed and AbilityAttackSpeed, moveSpeed → MovementSpeed; a stat at 1.0 gives no entry</p>
+<p class="mono">test: Nyarlathotep.Tests EmpowerStatsTests and CarrierRecipeTests and Session 2&#39;s `.nyar debug here` rows (D14) read every written field back from a live carrier and show &quot;type Replace stacks 1 incr False end Destroy mark ok strip ok&quot; and a mods list equal, entry for entry, to EmpowerStats.Modifiers of the event&#39;s stats (compared in the session record against the unit test&#39;s expected list), which fails when Services/EmpowerAction.cs omits or changes any recipe field, leaves a gameplay-event component, or writes other modifiers; the service&#39;s single writer takes the CarrierRecipe object and nothing else (fails when: the recipe&#39;s BuffType is not Replace, MaxStacks is not 1, EndAction is not Destroy, a strip entry is missing, a stat maps to another UnitStatType name, a value is not multiplier − 1, attackSpeed gives other than two entries, or a 1.0 stat gives an entry)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D5"><span class="mono">D5</span> Carrier ledger</h3>
+<p>Logic/Empowerment.cs `CarrierLedger` holds carriers by unit key and event id and plans every carrier operation. An event&#39;s sweep is queued at its start and again every 15 s (Epic S-8) while it is active; a queued sweep is processed at most EmpowerBatchPerTick units per tick (Limits, default 200, range 50-1000), and a new sweep of the same event is not queued while one is unfinished. Each Apply is given LifeTime = the fractional seconds until the event&#39;s end, and no Apply is made when less than 1 s is left, so no carrier outlives the end; a unit already holding any of our carriers is skipped (&quot;carried&quot;), so the first event keeps it. Stop, fault cancel and purge drop the event&#39;s queued sweep (no later tick applies for it) and queue its carriers for removal; a natural end queues nothing (the carriers expire on their LifeTime in the same second). Removals share the same per-tick budget as applies, removals first. An entry whose unit or buff no longer exists is dropped without an operation</p>
+<p class="mono">test: Nyarlathotep.Tests CarrierLedgerTests (fails when: a tick performs more than the budget, a sweep is queued twice while unfinished, a carrier&#39;s LifeTime exceeds the seconds left, an Apply is made with 0.99 s left, a stop mid-sweep is followed by an Apply, a carried unit gets a second carrier, a natural end queues removals, a stop leaves a carrier unqueued, a vanished entity is operated on, or a stop with no throwing removal takes more than ceil(n / EmpowerBatchPerTick) + 1 ticks)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D6"><span class="mono">D6</span> One empowerment per faction</h3>
+<p>(Epic Business rules 2) EventEngine.Start refuses an Empower definition whose factions or includeUnits intersect those of an active Empower event with &quot;faction &lt;short name&gt; already empowered by &lt;id&gt;&quot; (or &quot;unit &lt;prefab&gt; already empowered by &lt;id&gt;&quot;); EventRuntime logs it as every refused start (&quot;event &lt;id&gt; not started by &lt;trigger&gt;: …&quot;); the refusal comes after the controls of Precedence.StartBlocker, so purge, General.Enabled, the pillar switch and MaxConcurrentEvents still win</p>
+<p class="mono">test: Nyarlathotep.Tests EngineTests (fails when: two Empower events sharing a faction or an include unit are both active, disjoint ones are refused, or the faction refusal is returned while a higher control also blocks)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D7"><span class="mono">D7</span> Boot sweep split</h3>
+<p>Markers gains Carrier = 1313952069 (ASCII &quot;NYAE&quot;) in Markers.All and `Markers.KindOf(level)` → Unit, Carrier or None. `SweepPlan.From(buffs)` (Logic) turns the boot query&#39;s (level, buff key, target key) rows into units to despawn (Unit rows only) and carrier buffs to remove (Carrier rows only, never their target). SpawnTracker.BootSweep uses it: units go to the despawn queue as today and the log keeps &quot;boot marker sweep: &lt;n&gt; found, &lt;q&gt; queued for despawn&quot;; carriers go to the ledger&#39;s removal queue and the log adds &quot;boot carrier sweep: &lt;k&gt; found, &lt;k&gt; queued for removal&quot;</p>
+<p class="mono">test: Nyarlathotep.Tests SweepPlanTests (fails when: a Carrier row puts its target unit in the despawn list, a Unit row is left out, a row of another value is used, or an empty input yields anything)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D8"><span class="mono">D8</span> Carrier removal fenced</h3>
+<p>a carrier is removed only by EntityExtensions.RemoveBuffSafe, which refuses a missing or Prefab entity and calls DestroyUtility.Destroy with DestroyDebugReason.TryRemoveBuff; the structural-edits check also fails on DestroyUtility.Destroy anywhere but inside the body of RemoveBuffSafe (it finds the enclosing method by the nearest preceding method signature and matching braces)</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 → line &quot;structural edits: fenced&quot; (fails when: DestroyUtility.Destroy appears outside RemoveBuffSafe, including in another method of EntityExtensions.cs, or EntityManager.DestroyEntity outside EntityExtensions.cs; selftest fixtures StructuralEdits/bad-2 plants DestroyUtility.Destroy in Services/ and bad-3 in EntityExtensions.DestroySafe)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D9"><span class="mono">D9</span> Dispatch by action</h3>
+<p>Logic `ActionKindOf(def)` returns Waves for a SpawnWaves action and Empower for an Empower action; EventRuntime.Tick runs WaveAction for Waves and EmpowerAction for Empower inside the same per-event try/catch and fault limit (Epic D25); EventEngine.Expire adds a unit cleanup only for Waves, so an Empower event has no ending phase; End and Purge call EmpowerAction&#39;s removal for Empower events</p>
+<p class="mono">test: Nyarlathotep.Tests EngineTests (fails when: an Empower event gets a cleanup or an ending row, a Waves event loses its cleanup, or ActionKindOf maps either action to the other)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D10"><span class="mono">D10</span> Faction in messages</h3>
+<p>MessageContext.For takes {faction} from an Empower action as its factions&#39; short names (Faction_ removed) joined by &quot;, &quot; (Faction_Legion, Faction_Bandits → &quot;Legion, Bandits&quot;) and keeps the first-unit rule for SpawnWaves; no Empower message builder takes a position or radius (Epic D16 PrivacyTests enumerate them)</p>
+<p class="mono">test: Nyarlathotep.Tests AnnouncerTests and PrivacyTests (fails when: an Empower event renders {faction} as &quot;-&quot; or with the Faction_ prefix, or a new builder accepts a position)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D11"><span class="mono">D11</span> Status rows at api 3</h3>
+<p>`.nyar api status` sends an Empower event&#39;s row with kind=empower, faction=&lt;short names joined by &#39;,&#39;&gt;, wave=-, and units = the number of NPCs holding its carrier for an admin and `-` for a player; Wire.Api is 3; docs/RAPHAEL_INTEGRATION_CONTRACT.md says &quot;**Current api:** 3&quot;, documents those three values in §3 status and lists the change in its change log; the human `.nyar status` line is unchanged</p>
+<p class="mono">test: Nyarlathotep.Tests ApiLinesTests, WireFormatTests and ContractDocTests (fails when: an Empower row has faction=-, a wave count or a player unit count, a faction value holds a space, &#39;=&#39;, &#39;;&#39; or &#39;:&#39;, api is not 3, or the contract&#39;s Current api or §3 text disagrees)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D12"><span class="mono">D12</span> Stats settable</h3>
+<p>`.nyar event set &lt;id&gt; action.stats.&lt;stat&gt; &lt;value&gt;` takes the five stat names with a decimal 1.0-3.0 (invariant culture, at most two decimals) on an Empower definition; the SpawnWaves fields (action.waves, intervalSeconds, radius) are refused on an Empower definition and the stat fields on a SpawnWaves one, each with a one-line reason; a set that would leave no stat above 1.0 is refused</p>
+<p class="mono">test: Nyarlathotep.Tests CommandArgTests and ConfigChangedTests (fails when: &quot;3.5&quot;, &quot;0.9&quot;, &quot;1,2&quot;, &quot;abc&quot; or a SpawnWaves field on an Empower definition is accepted, a valid set does not change the file, or a failed set queues config-changed)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D13"><span class="mono">D13</span> V Blood trigger fires for V Bloods</h3>
+<p>Logic `DeathRule.IsVBloodKill(hasConsumeSource, hasVBloodUnit)` is true only with VBloodConsumeSource (DEV_REMINDERS #26), so a gate boss carrying VBloodUnit alone raises nothing; DeathEventPatch reads both components from the dead entity (DeathEvent.Died) and calls it; a kill seen twice within 5 s starts the event once (foundation TriggerDedupe)</p>
+<p class="mono">test: Nyarlathotep.Tests DeathRuleTests and TriggerActivationTests (fails when: VBloodUnit alone, or neither component, returns true, consume source returns false, or a duplicate delivery of one kill within 5 s starts two instances)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D14"><span class="mono">D14</span> Debug shows natives</h3>
+<p>`.nyar debug here [radius]` (admin) also lists, after the tracked units, at most 10 native NPCs within the radius, nearest first, one line each: &quot;&lt;prefab&gt; native &lt;faction short&gt; d &lt;m&gt;m carrier &lt;id&gt; left &lt;n&gt;s type &lt;BuffType&gt; stacks &lt;MaxStacks&gt; incr &lt;IncreaseStacks&gt; end &lt;EndAction&gt; mark &lt;ok|bad&gt; strip &lt;ok|missing:&lt;names&gt;&gt; mods &lt;UnitStatType&gt;:&lt;ModificationType&gt;:&lt;value&gt;,… other stat buffs &lt;k&gt; lvl L hp cur/max pp P sp S aspd A mspd M&quot;, read back from the live carrier entity (its Buff, LifeTime and ModifyUnitStatBuff_DOTS buffer, and HasComponent/HasBuffer for each of the five stripped gameplay-event types), with &quot;carrier none&quot; in place of the carrier fields for a plain NPC; the selection and the line are built by Logic AdminLines.Natives(rows, 10)</p>
+<p class="mono">test: Nyarlathotep.Tests AdminLinesTests (fails when: 11 rows give more than 10 lines, the lines are not in non-decreasing distance, a tie is not broken by prefab then key, a carried row lacks its id or seconds, a mods list is not rendered one entry per buffer element in buffer order, a present stripped component does not render &quot;strip missing:&lt;name&gt;&quot;, or a plain row shows other than &quot;carrier none&quot;); manual: Session 2 records the rows at a bandit camp with more than 10 natives in range</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D15"><span class="mono">D15</span> Stats verified in game</h3>
+<p>(profile note 6.1) for each of the five stats, on subjects whose debug row shows &quot;other stat buffs 0&quot; (D14 adds that count of other ModifyUnitStatBuff_DOTS buffs on the unit; a subject with any is not used), an empowered NPC&#39;s reading in `.nyar debug here` equals its plain reading × the multiplier (±1 %), and for physicalPower the damage numbers the owner sees on hits from the same unit type with and without the carrier differ by that multiplier (±10 %, spikes A16); attackSpeed and moveSpeed are also judged by eye. A stat whose reading or behaviour does not change is removed from D1 and D4 by a `discovered` amendment before release</p>
+<p class="mono">manual: Session 2 records each reading pair, the damage numbers and the owner&#39;s observation</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D16"><span class="mono">D16</span> Lifecycle in game</h3>
+<p>with Pillars.FactionEmpowerment on: `.nyar event start example-empowerment` logs &quot;empower example-empowerment: query &lt;n&gt; of &lt;m&gt; faction entities&quot; and &quot;empower example-empowerment: sweep &lt;n&gt; applied, &lt;s&gt; skipped (&lt;reason&gt; &lt;count&gt; …)&quot;, and with VerboseLogging the prefabs of the m − n gap; a bandit that respawns during the window gets the carrier by the next sweep, that is within 15 s plus the unfinished sweep&#39;s remaining batch turns (at most 15 s + ceil(m / EmpowerBatchPerTick) ticks, m the event&#39;s query count, Epic S-8), with the remaining time; at the end every carrier is gone and readings are back to base; `.nyar event stop` mid-window removes every carrier within ceil(n / EmpowerBatchPerTick) + 1 ticks and logs &quot;empower example-empowerment stopped: &lt;n&gt; removed, 0 left to expire&quot;; a second Empower event on Faction_Bandits is refused with &quot;faction Bandits already empowered by example-empowerment&quot;; the VBloodKilled trigger starts it once per V Blood kill</p>
+<p class="mono">manual: Session 2 records each step&#39;s log line and `.nyar debug here` reading</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D17"><span class="mono">D17</span> Restart and stop remove carriers</h3>
+<p>with Debug.VerboseLogging on, EmpowerAction logs one sample NPC per event (&quot;empower &lt;id&gt; sample &lt;prefab&gt;: pp &lt;before&gt; -&gt; &lt;after&gt;, hp max &lt;before&gt; -&gt; &lt;after&gt;&quot;) at apply and again one tick after the event ends or its carriers are removed, so an unattended session shows the stats reverting. A restart mid-event (Epic S-11) cancels the event and removes every carrier: the boot log shows &quot;boot carrier sweep: &lt;k&gt; found, &lt;k&gt; queued for removal&quot; with k &gt; 0, and the next boot shows &quot;boot carrier sweep: 0 found, 0 queued for removal&quot;</p>
+<p class="mono">manual: Session 1 (unattended, two Schedule-triggered Empower events from tools/ingame/session-events.py mode `fe1`: one on Faction_Bandits with durationSeconds 60, which ends by expiry, and one with durationSeconds 1200 left running while the server is stopped mid-window; the stop path is exercised by the owner in Session 2) records the sample lines and both boot lines; S-7 is decided by Sessions 1 and 2 before step 6</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D18"><span class="mono">D18</span> Kill switch, uninstall, coexistence</h3>
+<p>(Epic D11, D12, D23) with a spawn event and an empowerment event running, `.nyar purge` then `.nyar purge confirm` leaves 0 active events, 0 tracked units and 0 carriers within 10 s plus the carrier drain (the log shows carrier removal batches of at most EmpowerBatchPerTick); the Epic D12 uninstall steps end with &quot;marker sweep: 0 found&quot; and a base-stat bandit in `.nyar debug here`; with Bloodcraft and KindredCommands installed a familiar keeps its stats through an empowerment of its source faction, and `.nyar status` counts our units only</p>
+<p class="mono">manual: Sessions 2 and 3 record each step; the Epic Log gets the D11, D12 and D23 pass lines</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D19"><span class="mono">D19</span> Tick budget with empowerment</h3>
+<p>with Debug.TimingLog=true, the scheduler tick average stays under 5 ms (Epic D24) while example-empowerment sweeps Faction_Bandits at the default EmpowerBatchPerTick, and during the purge drain of D18</p>
+<p class="mono">manual: Session 2 records the &quot;tick timing&quot; lines and the number of carriers applied</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D20"><span class="mono">D20</span> Dependency failures</h3>
+<p>through Logic&#39;s ICarrierOps: an Apply is staged create → mark (SpellLevel = Markers.Carrier, written first, so the boot sweep of D7 can find any carrier that exists) → lifetime → strip → modifiers, and the ledger records the carrier as pending at create; an Apply that throws at any stage after create queues that carrier for removal through RemoveBuffSafe (removals first, D5) and never leaves it tracked as applied, a throw at create leaves nothing; either way the unit is skipped, &quot;empower &lt;id&gt;: apply failed&quot; is logged once per failure streak, and the sweep continues; a Remove that throws is retried on the next tick up to 3 times, then falls back once to expiring the carrier (LifeTime.Duration set to its current age, so the game destroys it next frame, S-7), and only if that also throws is it dropped with &quot;carrier removal failed, left to expire&quot; (its LifeTime ends it no later than the event&#39;s scheduled end); precedence: the stop bound of D5 governs every removal that does not throw, and a removal that throws four times and whose expiry fallback throws is the one documented exception, counted in the stop line &quot;empower &lt;id&gt; stopped: &lt;n&gt; removed, &lt;f&gt; left to expire&quot; (D16); a sweep query that throws counts as the event&#39;s tick fault (Epic D25); a DeathEvent patch that fails to apply reports its hook unavailable and disables only the triggers that need it (foundation DependencyFailureTests, rerun). Tooling dependencies (git, gh, GitHub, Codex) are not runtime dependencies: they abort-and-rerun under $ErrorActionPreference=&#39;Stop&#39; (evidenced by D24, D25), a Codex timeout gives no READY and the step waits; Raphael ignores unknown values (contract §1, D27); Bloodcraft and KindredCommands run in-process and hand us no data: a familiar is recognised only through the game components of D3, and a unit whose ownership components are present but unreadable (a destroyed owner, a garbage entity, an unknown team) is skipped as owned, never empowered</p>
+<p class="mono">test: Nyarlathotep.Tests DependencyFailureTests (fails when: a fake ICarrierOps throwing after create, after mark, after lifetime, after strip or after modifiers leaves a carrier not queued for removal or recorded as applied, a throw at create queues a removal, one failing unit stops the sweep, a failure logs more than once per streak, a failed removal is retried a fourth time or never, the expiry fallback is not tried after the third failure, a removal is dropped without the fallback, the stop line omits a left-to-expire count, a query failure escapes the event&#39;s try/catch, or a unit with an unreadable owner, followed entity or team is applied)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D21"><span class="mono">D21</span> Authorization unchanged</h3>
+<p>no ActionKind is added: an Empower event starts through StartEvent, stops through EndEvent and is edited through SetEventField, and every [Mutating] method of Services/EmpowerAction.cs is called only inside Gateway.Run or from EventRuntime</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 -AuthSuite → &quot;auth suite: pass (tests, commands, admin list, gateway)&quot; (fails when: an EmpowerAction [Mutating] method is called outside Gateway.Run and its own dispatch, or a System actor could start a disabled Empower definition)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D22"><span class="mono">D22</span> Static checks and selftest</h3>
+<p>preflight prints PREFLIGHT OK with &quot;secrets: none&quot;, &quot;pillar defaults: all off&quot;, &quot;structural edits: fenced&quot;, &quot;patch guards: &lt;n&gt;/&lt;n&gt;&quot;, &quot;gateway: only ActionGateway mutates (&lt;n&gt; call sites)&quot; and &quot;wire contract: &lt;n&gt; tags, &lt;m&gt; api commands, all documented (api 3)&quot;; tools/preflight-checks.json registers StructuralEdits/bad-2 (a real Services file with a planted DestroyUtility.Destroy), StructuralEdits/bad-3 (the real EntityExtensions.cs with the call moved into DestroySafe) and TemplatesJson/bad-2 (the real template with example-empowerment enabled), and -SelfTest passes, including the existing Secrets bad fixtures (a planted tss_ token and a tools/ script calling `gh auth token`); tools/preflight-checks.json gains an `externalSelfTests` registry of every other check this child introduces, each with its command, its success line and its named bad, good and empty cases: tools/rollback-drill.ps1 -SelfTest (D23), tools/dev-snapshot.ps1 -SelfTest (D28), tools/rollback-gate.ps1 -SelfTest (D29), tools/release-verify.ps1 -SelfTest (D24), tools/repo-rollback-drill.ps1 -SelfTest (D25: a scratch git repository with a clean range passes, a conflicting revert fails, a missing tag fails), and the unit-test run `dotnet test Nyarlathotep/Nyarlathotep.Tests` (its bad cases are the fails-when inputs of D1-D14, D20; a filter running 0 tests fails); preflight -SelfTest runs every registered command and fails when one lacks its success line, when an entry lacks a bad, good or empty case, or when a tools/*.ps1 declaring a -SelfTest switch is not registered (&quot;selftest registry: unregistered &lt;file&gt;&quot;); manual and session checks are covered by the registered -SessionsOf fixtures; -SelfTest also runs the Secrets check on the real tracked tree after its fixtures and fails on any finding, so one command proves both</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 -SelfTest → &quot;selftest: &lt;n&gt;/&lt;n&gt; checks, &lt;k&gt;/&lt;k&gt; external selftests&quot; with no failing fixture line; then pwsh tools/preflight.ps1 → PREFLIGHT OK with those lines (fails when: a bad-n or empty fixture passes, a good one fails, a new fixture is unregistered, a registered external selftest fails or lacks a case, a tools script with -SelfTest is unregistered, or a tracked file holds a token shape (which fails -SelfTest itself, not only the plain run); fixture SelfTestRegistry/bad plants an unregistered tools/x.ps1 with a -SelfTest switch and bad-2 an entry without an empty case)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D23"><span class="mono">D23</span> Rollback drill across a new action type</h3>
+<p>tools/rollback-drill.ps1 accepts that N-1 disables definitions N understands only when every extra disabled definition&#39;s reason is &quot;unknown action type &lt;T&gt;&quot;; it prints &quot;events.json: v&lt;N&gt; &#39;&lt;a&gt; valid, &lt;b&gt; disabled&#39;, v&lt;N-1&gt; &#39;&lt;c&gt; valid, &lt;d&gt; disabled&#39; (&lt;d-b&gt; newer action types)&quot;; its selftest gains a real log pair where N-1 disabled one Empower definition (pass) and one where it disabled a definition for another reason (fail)</p>
+<p class="mono">cmd: pwsh tools/rollback-drill.ps1 -SelfTest → &quot;drill selftest: 8/8&quot;; then pwsh tools/rollback-drill.ps1 -From v0.4.0 -To v0.3.0 → &quot;rollback drill: pass&quot; (fails when: a count difference with another reason passes, or v0.3.0 does not initialize on v0.4.0&#39;s files)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D24"><span class="mono">D24</span> Release 0.4.0</h3>
+<p>csproj Version and thunderstore.toml versionNumber are 0.4.0; both changelogs (with the migration note of Rollout › Compatibility) and both READMEs describe faction empowerment, its stats and its switch; the annotated tag v0.4.0 is pushed and the GitHub pre-release carries the tcli zip. No tcli publish: the owner publishes</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 → PREFLIGHT OK and &quot;release tags: &lt;n&gt;/&lt;n&gt;&quot;; then pwsh tools/release-verify.ps1 -Tag v0.4.0 -Asset kdpen-Nyarlathotep-0.4.0.zip, which runs exactly: $ErrorActionPreference=&#39;Stop&#39;; $PSNativeCommandUseErrorActionPreference=$true; $d=Join-Path $env:TEMP &quot;nyar-rel-$([guid]::NewGuid().ToString(&#39;N&#39;))&quot;; New-Item -ItemType Directory $d | Out-Null; try { gh release download v0.4.0 -p kdpen-Nyarlathotep-0.4.0.zip -D $d; (Get-FileHash (Join-Path $d &#39;kdpen-Nyarlathotep-0.4.0.zip&#39;) -Algorithm SHA256).Hash } finally { Remove-Item -Recurse -Force $d }, and compares the hash with the audit&#39;s &quot;zip sha256:&quot; line → &quot;release verify: hashes equal&quot;; its -SelfTest (a local asset source instead of gh: matching hash passes, a differing hash fails, a missing asset fails, an audit without the line fails) prints &quot;release verify selftest: 4/4&quot; (fails when: a surface differs, the tag is missing or unpushed, the release has no zip, or the hashes differ)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D25"><span class="mono">D25</span> Repository rollback drill</h3>
+<p>reverting v0.3.0..v0.4.0 (v0.3.0 = ee36a7d) in a disposable worktree restores v0.3.0&#39;s tree, which builds and passes its tests and preflight</p>
+<p class="mono">cmd: $ErrorActionPreference=&#39;Stop&#39;; $PSNativeCommandUseErrorActionPreference=$true; $wt=Join-Path $env:TEMP &quot;nyar-rollback-$([guid]::NewGuid().ToString(&#39;N&#39;))&quot;; git worktree add --detach $wt v0.4.0; try { git -C $wt revert --no-edit v0.3.0..v0.4.0; git -C $wt diff --quiet v0.3.0; dotnet build &quot;$wt\Nyarlathotep\Nyarlathotep.sln&quot; -c Release -p:VRisingServerPath=C:\__nodeploy__; dotnet test &quot;$wt\Nyarlathotep\Nyarlathotep.Tests&quot;; pwsh -NoProfile -File &quot;$wt\tools\preflight.ps1&quot;; &#39;rollback: clean&#39; } finally { git worktree remove --force $wt } → &quot;rollback: clean&quot; (fails when: a revert conflicts, the reverted tree differs from v0.3.0, or the build, tests or preflight fail)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D26"><span class="mono">D26</span> Sessions, records, paths and data</h3>
+<p>every server session is &quot;### Session &lt;n&gt; · &lt;date&gt;&quot; under docs/features/FACTION_EMPOWERMENT.md › Test results with a &quot;- session &lt;n&gt; log check: 0 unhandled, &lt;s&gt; nyar lines, 0 orphan errors, &lt;u&gt; unity errors&quot; line in docs/audits/faction-empowerment.md from -LogCheck before the next restart; the audit has a pre-audit, a post-audit and a &quot;Codex verdict:&quot; line per Build plan step; tools/data-inventory.json has an entry for the in-memory carrier ledger; every path this child writes is in tools/paths-manifest.txt, as walked by -Paths (Epic D33: git ls-files, git ls-files --others --exclude-standard, git status --ignored --porcelain, and the dev server&#39;s BepInEx/plugins/Nyarlathotep* and BepInEx/config/Nyarlathotep/*, run after the build, tcli build and deploy of step 7); -Paths also fails on every write outside those trees that this child makes: a remaining %TEMP%\nyar-* folder of any `temp:` glob of the manifest (nyar-snap-*, nyar-rel-*, nyar-rollback-*, nyar-drill-*) or any other %TEMP%\nyar-* folder (&quot;paths: leftover temp &lt;name&gt;&quot;), a `git worktree list --porcelain` entry other than the main worktree (&quot;paths: leftover worktree &lt;path&gt;&quot;), and a tag from `git ls-remote --tags origin` or a release from `gh release list --json tagName` that no `remote-tag:` / `remote-release:` line of tools/paths-manifest.txt declares (&quot;paths: undeclared remote &lt;kind&gt; &lt;name&gt;&quot;); the listings are read through one function that the selftest feeds from fixture files; every row of Design › Data has a data-inventory entry with its five fields, and every `temp:` glob of tools/paths-manifest.txt (%TEMP%\nyar-snap-*, nyar-rel-*, nyar-rollback-*, nyar-drill-*) has a data-inventory entry, so the expected set is derived from the manifest, not only from the rows already present</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 -AuditOf faction-empowerment → &quot;audit steps: faction-empowerment 7/7 pre, 7/7 post, 7/7 Codex verdicts&quot;; pwsh tools/preflight.ps1 -SessionsOf faction-empowerment → &quot;session logs: faction-empowerment &lt;n&gt;/&lt;n&gt; checked&quot;; pwsh tools/preflight.ps1 -Paths → &quot;paths: &lt;n&gt; walked, all in manifest&quot; (fails when: a step lacks an entry or verdict, a session lacks its log-check line, a Design › Data row or a manifest `temp:` glob has no inventory entry or one of its five fields is empty, a walked path matches no manifest glob, or a leftover temp folder, a leftover worktree or an undeclared remote tag or release exists; the existing Paths and DataInventory bad fixtures plant the first four, and new Paths fixtures bad-temp (a nyar-snap-* folder), bad-rel (a nyar-rel-* folder), bad-worktree and bad-remote plant the last three, and DataInventory/bad-temp declares a `temp:` glob with no inventory entry)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D28"><span class="mono">D28</span> Dev-server snapshot</h3>
+<p>(profile note 14.3) tools/dev-snapshot.ps1 wraps every session of steps 4-6: `-Save &lt;label&gt;` refuses while a VRisingServer process runs or while a %TEMP%\nyar-snap-* folder holding a manifest exists (printing its recorded restore), then copies the whole BepInEx/plugins and BepInEx/config trees with hidden files, and writes saved\manifest.json (every file&#39;s relative path and SHA-256) through a .tmp and a move, last; `-Restore` makes each tree equal to the snapshot (files added since, such as Bloodcraft&#39;s DLL and its cfg, are removed; changed and removed files are put back), verifies every hash against the manifest and that no unlisted file remains, and deletes the folder only when all match; the snapshot and restore functions are shared with tools/rollback-drill.ps1 (moved into tools/snapshot-lib.ps1)</p>
+<p class="mono">cmd: pwsh tools/dev-snapshot.ps1 -SelfTest → &quot;snapshot selftest: 6/6&quot; (a scratch install: save and restore round-trip with a hidden file, a DLL and a cfg added after the save removed by the restore, a leftover manifest refused, a partial snapshot without its manifest removed, a restore whose copy is corrupted keeps the folder, an absent config folder restored as absent, a running-server refusal); then each session in docs/audits/faction-empowerment.md records &quot;snapshot restored; hashes equal&quot; (fails when: a mutated restore reports equal hashes, a file added after the save survives the restore, a leftover manifest is overwritten, an absent path comes back present, or a session lacks the restored line)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D29"><span class="mono">D29</span> One rollback gate</h3>
+<p>tools/rollback-gate.ps1 -From v0.3.0 -To v0.4.0 runs, in order, the repository drill (D25&#39;s command, saved verbatim as tools/repo-rollback-drill.ps1 with -From and -To), `tools/rollback-drill.ps1 -From v0.4.0 -To v0.3.0` (D23) and `tools/dev-snapshot.ps1 -SelfTest` (D28), each in its own pwsh process, and prints &quot;rollback gate: 3/3&quot; only when all three exit 0 and print their success line (&quot;rollback: clean&quot;, &quot;rollback drill: pass&quot;, &quot;snapshot selftest: 6/6&quot;); otherwise &quot;rollback gate: &lt;k&gt;/3, failed: &lt;names&gt;&quot; and exit 1</p>
+<p class="mono">cmd: pwsh tools/rollback-gate.ps1 -SelfTest → &quot;rollback gate selftest: 5/5&quot; (stub parts: all pass → pass; each of the three failing alone → fail; a part exiting 0 without its success line → fail); then pwsh tools/rollback-gate.ps1 -From v0.3.0 -To v0.4.0 → &quot;rollback gate: 3/3&quot; (fails when: any one part fails or prints no success line, a part is skipped, or fewer than two release tags exist, which prints &quot;rollback gate: 0/3, failed: needs two releases&quot;)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D27"><span class="mono">D27</span> Raphael told of api 3</h3>
+<p>docs/RAPHAEL_HANDOFF.md gains &quot;## api 3 (faction empowerment)&quot; saying that status rows of kind=empower carry faction=&lt;names joined by &#39;,&#39;&gt;, wave=- and admin units = empowered NPCs, and that a client gating on api&gt;=2 needs no change</p>
+<p class="mono">file: docs/RAPHAEL_HANDOFF.md contains &quot;## api 3 (faction empowerment)&quot;, &quot;kind=empower&quot;, &quot;faction=&lt;names joined by &#39;,&#39;&gt;&quot;, &quot;faction=Legion,Bandits&quot;, &quot;wave=-&quot;, &quot;units=&lt;NPCs holding the event&#39;s empowerment&gt;&quot; and &quot;api&gt;=2&quot; (the contract&#39;s own §3 text is D11&#39;s ContractDocTests)</p>
+<p class="absent">no evidence line yet</p>
+</body>
+</html>
