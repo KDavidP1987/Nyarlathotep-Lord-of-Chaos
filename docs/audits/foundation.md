@@ -73,6 +73,15 @@ checks are lines "- session <n> log check: …" (D33).
 - feature doc read: docs/features/FOUNDATION.md (Status step 6 of 9); plan D17, D26 and Design › Security (the public command allow-list)
 - baseline boot: session 17 Boot A ran the 331bb3f Debug build (docs/features/FOUNDATION.md › Test results › Session 17)
 
+### Step 8 · 2026-09-25 · 4b7732e
+- git status: clean at 4b7732e (0 changes)
+- compile: 0 errors, 0 warnings (Release, no deploy); dotnet test: 531 passed
+- preflight: exit 0; -SelfTest 26/26 checks, 3 fixtures each, 74 extra bad fixtures; -AuditOf foundation 7/9 pre, 7/9 post (steps 8 and 9 to come); -SessionsOf foundation 11/11 checked after A10
+- dod status: foundation 34/40 verified (open: D33-D38, the release and close items); `--check foundation` 0 problems, 0 warnings
+- feature doc read: docs/features/FOUNDATION.md (Status step 6 of 9, now 8; Test results through session 18; Open questions none); plan D34, D35, D37, Rollout, docs/DOC_STYLE.md
+- baseline boot: session 18 (Release 8f974b0; later commits are docs only); log check 0 unhandled, 0 orphan errors, 0 unity errors
+- decisions the plan leaves to the build: the READMEs and changelogs say what 0.2.0 runs (spawn-wave events under every pillar switch, the kill switch, announcements) and keep each pillar's own behaviour marked in development
+
 ## Post-audit
 ### Step 1 · 2026-09-24 · 40505e2
 - compile: 0 errors, 0 warnings (plugin and Nyarlathotep.Tests)
