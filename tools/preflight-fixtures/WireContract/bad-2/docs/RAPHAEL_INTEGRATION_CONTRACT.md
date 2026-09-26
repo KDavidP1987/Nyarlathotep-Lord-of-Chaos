@@ -35,7 +35,7 @@ is listed here as IMPLEMENTED with the api that added it.
 | `zone` | tag | PLANNED (defended-zones) | — |
 | `version` | command | IMPLEMENTED | 1 |
 | `status` | command | IMPLEMENTED | 2 |
-| `events` | command | IMPLEMENTED | 2 |
+| `events` | command | PLANNED (raphael-api-core) | — |
 | `sub` | command | IMPLEMENTED | 2 |
 | `me` | command | PLANNED (stats) | — |
 | `top` | command | PLANNED (stats) | — |

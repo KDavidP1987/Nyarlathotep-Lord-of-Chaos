@@ -29,7 +29,6 @@ is listed here as IMPLEMENTED with the api that added it.
 | `end` | tag | IMPLEMENTED | 2 |
 | `err` | tag | IMPLEMENTED | 2 |
 | `ok` | tag | IMPLEMENTED | 2 |
-| `ev` | tag | IMPLEMENTED | 2 |
 | `me` | tag | PLANNED (stats) | — |
 | `top` | tag | PLANNED (stats) | — |
 | `zone` | tag | PLANNED (defended-zones) | — |

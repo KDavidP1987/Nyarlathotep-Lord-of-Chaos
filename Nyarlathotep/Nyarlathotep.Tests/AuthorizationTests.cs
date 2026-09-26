@@ -2,17 +2,17 @@ using Nyarlathotep.Logic;
 
 namespace Nyarlathotep.Tests;
 
-/// <summary>foundation D10: every ActionKind × actor against the table of Design › Permissions.</summary>
+/// <summary>foundation D10, raphael-api-core D7: every ActionKind × actor against the table of Design › Permissions.</summary>
 public class AuthorizationTests
 {
     // The expected grants, written out independently of ActionTable: Admin everything, Operator the file load,
-    // System start and end of enabled definitions, Player nothing in this child.
+    // System start and end of enabled definitions, Player only its own subscription (raphael-api-core).
     static bool Expected(ActionKind kind, Actor actor, bool enabled) => actor switch
     {
         Actor.Admin => true,
         Actor.Operator => kind == ActionKind.LoadDefinitions,
         Actor.System => enabled && kind is ActionKind.StartEvent or ActionKind.EndEvent,
-        _ => false,
+        _ => kind == ActionKind.Subscribe,
     };
 
     public static TheoryData<ActionKind, Actor, bool> Matrix()

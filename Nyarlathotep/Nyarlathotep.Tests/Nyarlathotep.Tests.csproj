@@ -24,5 +24,6 @@
 		<Compile Include="..\Nyarlathotep\Logic\**\*.cs" Link="Logic\%(RecursiveDir)%(Filename)%(Extension)" />
 		<None Include="..\Nyarlathotep\Resources\events.default.json" Link="Resources\events.default.json" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\RAPHAEL_INTEGRATION_CONTRACT.md" Link="Resources\RAPHAEL_INTEGRATION_CONTRACT.md" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\..\docs\NYARLATHOTEP_DESIGN.md" Link="Resources\NYARLATHOTEP_DESIGN.md" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 </Project>

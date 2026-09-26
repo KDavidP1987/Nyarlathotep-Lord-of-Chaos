@@ -15,6 +15,16 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - feature doc read: none yet — docs/features/RAPHAEL_API.md is created by this step; read the plan's D1–D4, Business rules 5, docs/RAPHAEL_INTEGRATION_CONTRACT.md §3 and §4, Logic/Wire.cs, Logic/Model.cs, Logic/Engine.cs
 - server: not running; step 1 is pure logic with no in-game test
 
+### Step 2 · 2026-09-25 · f64e04a
+- git status: clean
+- compile: 0 errors, 0 warnings
+- tests: 600 passed
+- preflight: exit 0 ("PREFLIGHT OK"); -AuditOf raphael-api-core 1/6 as expected
+- dod status: raphael-api-core 3/22 verified (D1–D3); review human, not pending (A1 and A2 name no gating probe)
+- feature doc read: docs/features/RAPHAEL_API.md (Status: step 1 of 6 done; Open questions: none); plan D4, D7–D11, D14, Build plan step 2 and A1; tools/preflight.ps1 Get-CommandWalk, Test-CheckAdminList, Test-CheckSecrets, Invoke-SelfTest
+- server: not running; step 2 has no in-game test
+- found on the way: AdminList/bad-2 already existed (the suffixed-attribute plant), so it moves to bad-3 and D11's two-group fixture takes bad-2 as the plan names it; a mislabelled command changes no count, so the admin-list check now also requires every walked command to begin a command documented in docs/NYARLATHOTEP_DESIGN.md § 6, which is what makes AdminList/bad-2 fail
+
 ## Post-audit
 ### Step 1 · 2026-09-25 · 6437b90
 - compile: 0 errors, 0 warnings (plugin and Nyarlathotep.Tests)

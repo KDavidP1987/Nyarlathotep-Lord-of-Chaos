@@ -1,6 +1,6 @@
 # Raphael api — the machine interface
 
-**Status:** in development (docs/dod/raphael-api-core.md, step 1 of 6 done). Ships in 0.3.0 as api 2.
+**Status:** in development (docs/dod/raphael-api-core.md, step 2 of 6 done). Ships in 0.3.0 as api 2.
 
 ## What it provides
 
@@ -23,6 +23,7 @@ says what Nyarlathotep implements and how it was tested.
 | `Logic/Wire.cs` | Line builders: grammar, 480-byte cap, the tag builders |
 | `Logic/Paging.cs` | Contract §4 paging: page parsing, the end line, badarg |
 | `Logic/ApiLines.cs` | The `status` and `events` rows from the engine's state |
+| `Commands/ApiCommands.cs` | `.nyar api version`, `status` and `events` (`sub` comes with the push in step 3) |
 
 ## Test results
 
@@ -38,6 +39,16 @@ says what Nyarlathotep implements and how it was tested.
   sends for the same values; a 32-character id with a 200-character name and reason of 4-byte characters keeps
   every key, the name cut to 64 bytes and the reason to 120. Examples are read from the section that documents each tag, and
   the optional forms (paged end, err with secs and with arg, ev with wave) must each have one. api=2 is asserted in step 2, when Wire.Api moves.
+
+### 2026-09-25 · step 2 · unit tests and checks
+- `dotnet test Nyarlathotep/Nyarlathotep.Tests`: 648 passed, 0 failed (ContractDocTests, ApiAccessTests and the
+  Subscribe row of AuthorizationTests added; api=2 asserted).
+- `pwsh tools/preflight.ps1`: "wire contract: 7 tags, 3 api commands, all documented (api 2)"; "admin list: 6 admin
+  commands, equal to the commands check; 10 commands documented"; "ready guard: 10/10"; PREFLIGHT OK.
+- `pwsh tools/preflight.ps1 -ListCommands admin` lists ".nyar api events".
+- `pwsh tools/preflight.ps1 -SelfTest`: 27/27 checks (WireContract good, bad to bad-5 and empty; AdminList bad-2 the
+  swapped two-group file; Secrets bad-3 `gh auth token` in a tools/ script).
+- `pwsh tools/preflight.ps1 -AuthSuite`: fails only on ".nyar api sub not found once", as expected until step 3 (A1).
 
 ## Open questions
 

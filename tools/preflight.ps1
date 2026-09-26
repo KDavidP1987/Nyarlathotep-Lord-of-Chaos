@@ -39,6 +39,10 @@
                    count above 0 fails them, and pre-A10 sessions are listed with their orphan errors named (D33, A10);
                    every listed Unity error kind needs a '  - unity "<kind>": game <why>' sub-bullet, or
                    'ours <why> (A<n>)' citing its amendment (A13).
+    -AuthSuite   : the authorization suite (raphael-api-core D7): dotnet test over AuthorizationTests and ApiAccessTests
+                   (0 tests run is a failure), then the commands, admin-list and gateway checks, then .nyar api version,
+                   status and sub public and .nyar api events adminOnly; prints "auth suite: pass (tests, commands, admin
+                   list, gateway)".
     -ListCommands admin
                  : every admin-only command of the commands walk, one per line, then "admin commands: <n>"
                    (foundation D19); Test-CheckAdminList keeps that list equal to the commands check's count.
@@ -78,6 +82,7 @@ param(
     [switch]$LogCheck,              # the live BepInEx/LogOutput.log after an in-game session (foundation D33)
     [string]$AuditOf,               # plan slug: check its audit record covers every Build plan step
     [string]$SessionsOf,            # plan slug: check every in-game session has a clean log check line (foundation D33)
+    [switch]$AuthSuite,             # the authorization suite: its tests, then the commands, admin-list and gateway checks (raphael-api-core D7)
     [ValidateSet('', 'admin')]
     [string]$ListCommands = '',     # 'admin': print every admin-only command, then "admin commands: <n>" (foundation D19)
     [string]$ServerPath = 'C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer',
@@ -501,8 +506,20 @@ $script:SecretPatterns = @(
     'gh[pousr]_[A-Za-z0-9]{20,}',
     'github_pat_[A-Za-z0-9_]{20,}',
     'Authorization:\s*Bearer\s+[A-Za-z0-9._~+/=-]{8,}',
-    '(TCLI_AUTH_TOKEN|GH_TOKEN)\s*[=:]\s*\S+'
+    '(TCLI_AUTH_TOK[E]N|GH_TOK[E]N)\s*[=:]\s*\S+'
 )
+
+# A tools/ script may not read a credential or dump the environment (raphael-api-core D10): these patterns are
+# checked in every script under tools/ (fixtures aside in the real repository). Each pattern is written so that its
+# own source text does not match it, so this file passes its own rule.
+$script:ToolsCredentialPatterns = @(
+    '\bgh\s+auth\s+token\b',
+    '\bprint[e]nv\b',
+    '\bGet-ChildItem\s+(?:-Path\s+)?env:',
+    '\b(?:dir|ls|gci)\s+env:',
+    'TCLI_AUTH_TOK[E]N'
+)
+$script:ScriptExt = @('.ps1', '.psm1', '.mjs', '.js', '.py', '.sh', '.cmd', '.bat')
 $script:BinaryExt = @('.png', '.jpg', '.jpeg', '.gif', '.dll', '.pdb', '.exe', '.ico')
 
 function Find-Secret([string]$Text) {
@@ -543,6 +560,9 @@ function Test-CheckSecrets([string]$Root) {
         $t = [IO.File]::ReadAllText($abs); $scanned++
         if (Find-Secret $t) { $hits += $f }
         if ($ext -eq '.cs' -and (Remove-CsComments $t) -match 'Environment\.GetEnvironmentVariable') { $hits += "$f (reads the environment)" }
+        if ($f -like 'tools/*' -and $f -notlike 'tools/preflight-fixtures/*' -and $script:ScriptExt -contains $ext) {
+            foreach ($p in $script:ToolsCredentialPatterns) { if ($t -match $p) { $hits += "$f (reads a credential or the environment: $($Matches[0]))"; break } }
+        }
     }
     # The index can hold content the working tree no longer shows (a token staged or committed, then
     # edited out or deleted only on disk), so every blob in the index is searched as well.
@@ -1165,12 +1185,15 @@ function Test-CheckFaultInjection([string]$Root) {
 }
 
 # The commands walk shared by the commands check, the admin list and -ListCommands: every [Command] in any .cs
-# file git sees, with its full chat form (the file's [CommandGroup] name, if any, then the command name).
+# file git sees, with its full chat form (the name of the nearest [CommandGroup] above it in its file, if any, then
+# the command name), so a file holding two groups labels each command with its own (raphael-api-core D9).
 function Get-CommandWalk([string]$Root) {
     foreach ($f in Get-CsFiles $Root) {
         $text = Remove-CsComments (Read-Text $Root $f)
-        $group = if ($text -match '\[CommandGroup(?:Attribute)?\s*\(\s*(?:name\s*:\s*)?"([^"]*)"') { $Matches[1] } else { '' }
+        $groups = @([regex]::Matches($text, '\[CommandGroup(?:Attribute)?\s*\(\s*(?:name\s*:\s*)?"([^"]*)"'))
         foreach ($m in [regex]::Matches($text, '\[Command(?:Attribute)?\s*\((?<args>(?:[^()]|\((?:[^()])*\))*)\)\s*\]')) {
+            $above = @($groups | Where-Object { $_.Index -lt $m.Index })
+            $group = if ($above.Count) { $above[-1].Groups[1].Value } else { '' }
             $a = $m.Groups['args'].Value
             $name = if ($a -match '^\s*(?:name\s*:\s*)?"([^"]*)"') { $Matches[1] } else { '?' }
             [pscustomobject]@{
@@ -1184,19 +1207,103 @@ function Get-CommandWalk([string]$Root) {
     }
 }
 
+# Every wire tag the plugin builds and every `.nyar api` command it answers is in the "Tags and commands" table of
+# docs/RAPHAEL_INTEGRATION_CONTRACT.md as IMPLEMENTED with an api no newer than "**Current api:** <n>", and Wire.Api
+# equals that n (Epic D38; raphael-api-core D8). A tag is the literal first argument of a Wire.Record or Wire.Line call
+# in Logic/ (Record( or Line( inside Logic/Wire.cs itself); a call anywhere in the plugin with a non-literal tag fails,
+# and so does any "[NYAR:" string literal in the plugin outside Logic/Wire.cs, so no line can bypass the builder.
+function Test-CheckWireContract([string]$Root) {
+    $wireRel = "$PkgRel/Logic/Wire.cs"
+    # The plugin's own sources; Nyarlathotep.Tests holds expected wire lines as literals by design (A3).
+    $cs = @(Get-CsFiles $Root | Where-Object { $_ -like "$PkgRel/*" })
+    if ($cs.Count -eq 0) { return New-Result $false 'wire contract: no source files found' }
+    $tags = @{}; $bad = @()
+    foreach ($f in $cs) {
+        $raw = Read-Text $Root $f
+        $code = Remove-CsComments $raw
+        if ($f -ne $wireRel) {
+            foreach ($lit in $script:CsLexRx.Matches($code)) {
+                if (-not ($lit.Groups['lc'].Success -or $lit.Groups['bc'].Success -or $lit.Groups['c'].Success) -and $lit.Value.Contains('[NYAR:')) {
+                    $bad += "a [NYAR: literal in $f"
+                }
+            }
+        }
+        $rx = if ($f -eq $wireRel) { '(?<![\w.])(?<!string\s)(?<m>Record|Line)\s*\(' } else { '\bWire\s*\.\s*(?<m>Record|Line)\s*\(' }
+        foreach ($call in [regex]::Matches($code, $rx)) {
+            $rest = $code.Substring($call.Index + $call.Length)
+            $arg = [regex]::Match($rest, '^\s*"([a-z][a-z0-9-]*)"\s*[,)]')
+            if (-not $arg.Success) { $bad += "a $($call.Groups['m'].Value) call in $f whose tag is not a literal"; continue }
+            if ($f -like "$PkgRel/Logic/*") { $tags[$arg.Groups[1].Value] = $true }
+        }
+    }
+    $apiCmds = @(Get-CommandWalk $Root | Where-Object { $_.Full -like '.nyar api *' } | ForEach-Object { $_.Name } | Sort-Object -Unique)
+    if ($tags.Count -eq 0) { return New-Result $false 'wire contract: no tag found' }
+    $wire = Read-Text $Root $wireRel
+    $contract = Read-Text $Root 'docs/RAPHAEL_INTEGRATION_CONTRACT.md'
+    if (-not $contract) { return New-Result $false 'wire contract: docs/RAPHAEL_INTEGRATION_CONTRACT.md not found' }
+    $codeApi = if ($wire -and $wire -match 'const\s+int\s+Api\s*=\s*(\d+)\s*;') { [int]$Matches[1] } else { -1 }
+    $docApi = if ($contract -match '\*\*Current api:\*\*\s*(\d+)') { [int]$Matches[1] } else { -1 }
+    if ($codeApi -lt 0) { $bad += 'Wire.Api not found' }
+    if ($docApi -lt 0) { $bad += 'the contract has no "**Current api:** <n>"' }
+    if ($codeApi -ge 0 -and $docApi -ge 0 -and $codeApi -ne $docApi) { $bad += "Wire.Api is $codeApi but the contract's current api is $docApi" }
+    $table = [regex]::Match($contract, '(?ms)^### Tags and commands.*?(?=^#|\z)')
+    $rows = @{}
+    foreach ($r in [regex]::Matches($table.Value, '(?m)^\|\s*`([^`]+)`\s*\|\s*(tag|command)\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|')) {
+        $rows["$($r.Groups[2].Value) $($r.Groups[1].Value)"] = @($r.Groups[3].Value, $r.Groups[4].Value)
+    }
+    foreach ($item in @(@($tags.Keys | Sort-Object | ForEach-Object { "tag $_" }) + @($apiCmds | ForEach-Object { "command $_" }))) {
+        if (-not $rows.ContainsKey($item)) { $bad += "$item is not in the contract's Tags and commands table"; continue }
+        $status, $api = $rows[$item]
+        if ($status -ne 'IMPLEMENTED') { $bad += "$item is $status in the contract"; continue }
+        if ($api -notmatch '^\d+$' -or ($docApi -ge 0 -and [int]$api -gt $docApi)) { $bad += "$item has api '$api' in the contract" }
+    }
+    if ($bad) { return New-Result $false "wire contract: $(@($bad | Select-Object -Unique) -join '; ')" }
+    return New-Result $true "wire contract: $($tags.Count) tags, $($apiCmds.Count) api commands, all documented (api $codeApi)"
+}
+
 # The admin list (-ListCommands admin) holds every admin-only command of the walk, wherever it is declared; the
 # commands check counts only those under Commands/. The two counts must be equal, so an admin command declared
 # anywhere else fails here even when it is admin-only (foundation D19).
 function Test-CheckAdminList([string]$Root) {
     $walk = @(Get-CommandWalk $Root)
     if ($walk.Count -eq 0) { return New-Result $false 'admin list: no commands found' }
+    # Every command's full form, admin or public, is the start of a command documented in docs/NYARLATHOTEP_DESIGN.md
+    # § 6, so a command labelled with the wrong group (".nyar events" for ".nyar api events") fails (raphael-api-core D9).
+    $documented = @(Get-DocumentedCommands $Root)
+    if ($documented.Count -eq 0) { return New-Result $false 'admin list: no command table in docs/NYARLATHOTEP_DESIGN.md § 6' }
+    $undocumented = @($walk | Where-Object {
+            $words = @($_.Full -split ' ')
+            @($documented | Where-Object { $_.Count -ge $words.Count -and (($_[0..($words.Count - 1)]) -join ' ') -eq ($words -join ' ') }).Count -eq 0
+        } | ForEach-Object { "$($_.Full) ($($_.File))" })
+    if ($undocumented) { return New-Result $false "admin list: not in the design doc's command table: $($undocumented -join '; ')" }
     $listed = @($walk | Where-Object Admin).Count
     $counted = @($walk | Where-Object { $_.Admin -and $_.InCommands }).Count
     if ($listed -ne $counted) {
         $outside = @($walk | Where-Object { $_.Admin -and -not $_.InCommands } | ForEach-Object { "$($_.Full) ($($_.File))" })
         return New-Result $false "admin list: $listed listed but the commands check counts $counted; outside Commands/: $($outside -join '; ')"
     }
-    return New-Result $true "admin list: $listed admin commands, equal to the commands check"
+    return New-Result $true "admin list: $listed admin commands, equal to the commands check; $($walk.Count) commands documented"
+}
+
+# The commands of the table in docs/NYARLATHOTEP_DESIGN.md § 6, each as its word list up to its first argument:
+# every backticked form in a row's first cell that starts with ".nyar", with "a|b" words expanded into each choice.
+function Get-DocumentedCommands([string]$Root) {
+    $doc = Read-Text $Root 'docs/NYARLATHOTEP_DESIGN.md'
+    if (-not $doc) { return }
+    $sec = [regex]::Match($doc, '(?ms)^## 6\. Commands.*?(?=^## |\z)')
+    if (-not $sec.Success) { return }
+    foreach ($row in [regex]::Matches($sec.Value, '(?m)^\|((?:[^|\n\\]|\\.)*)\|')) {
+        foreach ($code in [regex]::Matches($row.Groups[1].Value, '`(\.nyar[^`]*)`')) {
+            $words = @()
+            foreach ($w in ($code.Groups[1].Value.Replace('\|', '|') -split '\s+')) {
+                if ($w -eq '' -or $w -match '^[\[<…]' -or $w -eq '...') { break }
+                $words += , @($w -split '\|')
+            }
+            $forms = @(, @())
+            foreach ($choices in $words) { $forms = @(foreach ($f in $forms) { foreach ($c in $choices) { , (@($f) + $c) } }) }
+            foreach ($f in $forms) { , $f }
+        }
+    }
 }
 
 # Every [Command] method, in any .cs file git sees, has as its first statement
@@ -1407,6 +1514,32 @@ if ($ListCommands -eq 'admin') {
     $admins = @(Get-CommandWalk $repoRoot | Where-Object Admin | Sort-Object Full)
     $admins | ForEach-Object { Write-Host $_.Full }
     Write-Host "admin commands: $($admins.Count)"
+    exit 0
+}
+
+if ($AuthSuite) {
+    # Every direct and indirect path of the actor matrix in one run (raphael-api-core D7): the ActionKind × actor and
+    # row/push access tests, then the checks that keep adminOnly, the admin list and the gateway honest, then the
+    # public/admin split of the api commands. A filter that runs no test is a failure.
+    $parts = @(); $fail = @()
+    $out = & dotnet test (Join-Path $repoRoot 'Nyarlathotep/Nyarlathotep.Tests') --filter 'FullyQualifiedName~AuthorizationTests|FullyQualifiedName~ApiAccessTests' 2>&1 | Out-String
+    $ran = if ($out -match 'Passed:\s*(\d+)') { [int]$Matches[1] } else { 0 }
+    $failed = if ($out -match 'Failed:\s*(\d+)') { [int]$Matches[1] } else { 0 }
+    if ($LASTEXITCODE -ne 0 -or $failed -gt 0) { $fail += "tests failed ($failed)" }
+    elseif ($ran -eq 0) { $fail += 'no tests ran' }
+    else { $parts += 'tests' }
+    foreach ($c in @(@('commands', 'Test-CheckCommands'), @('admin list', 'Test-CheckAdminList'), @('gateway', 'Test-CheckGatewayOnly'))) {
+        $r = Invoke-Check $c[1] $repoRoot
+        if ($r.Pass) { $parts += $c[0] } else { $fail += $r.Line }
+    }
+    $walk = @(Get-CommandWalk $repoRoot)
+    foreach ($want in @(@('.nyar api version', $false), @('.nyar api status', $false), @('.nyar api sub', $false), @('.nyar api events', $true))) {
+        $cmd = @($walk | Where-Object Full -eq $want[0])
+        if ($cmd.Count -ne 1) { $fail += "$($want[0]) not found once"; continue }
+        if ($cmd[0].Admin -ne $want[1]) { $fail += "$($want[0]) must be $(if ($want[1]) { 'adminOnly' } else { 'public' })" }
+    }
+    if ($fail) { Write-Host "auth suite: FAILED — $($fail -join '; ')" -ForegroundColor Red; exit 1 }
+    Write-Host "auth suite: pass ($($parts -join ', '))" -ForegroundColor Green
     exit 0
 }
 

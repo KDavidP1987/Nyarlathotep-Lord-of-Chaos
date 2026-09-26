@@ -25,25 +25,3 @@ internal static class MessageCommands
         ctx.Reply(Gateway.Run(ActionKind.Announce, Actor.Admin, () => Announcer.AdminAnnounce(text)));
     }
 }
-
-/// <summary>`.nyar api version` (foundation D12, D32; docs/RAPHAEL_INTEGRATION_CONTRACT.md §2): the handshake line
-/// Raphael reads. Anyone may run it; `admin` is the server's view of the caller, for UI gating only. Before the world
-/// is ready it replies "still loading" like every command (D39), which Raphael treats as no answer and probes again,
-/// so every line it does get carries ready=1.</summary>
-[CommandGroup("nyar api")]
-internal static class ApiCommands
-{
-    [Command("version", description: "The machine-readable handshake line (for the Raphael client).")]
-    public static void Version(ChatCommandContext ctx)
-    {
-        if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }
-        ctx.Reply(Wire.Version(new VersionInfo(
-            Wire.Api, MyPluginInfo.PLUGIN_VERSION, Ready: true, ctx.IsAdmin,
-            Settings.Enabled.Value,
-            Persistence.State.Document.PurgeUntilUtc is { } until && until > DateTime.UtcNow,
-            Settings.EmpowermentEnabled.Value, Settings.EventSpawnsEnabled.Value, Settings.BossReinforcementsEnabled.Value,
-            Settings.DefendedZonesEnabled.Value, Settings.SiegeWavesEnabled.Value, Stats: false,
-            Settings.WaveWarnings.Value, Settings.EventBanners.Value, Settings.DailyBanner.Value,
-            Settings.LoginStats.Value, Settings.PlayerShare.Value)));
-    }
-}

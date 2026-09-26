@@ -16,6 +16,8 @@ public enum ActionKind
     Purge,
     PurgeConfirm,
     Announce,
+    /// <summary>`.nyar api sub on|off`: changes only the caller's own push subscription (raphael-api-core D5).</summary>
+    Subscribe,
 }
 
 /// <summary>Who asks (Design › Permissions): an admin in game, the operator's files (loaded at boot), the scheduler
@@ -28,7 +30,7 @@ public enum Actor { Admin, Operator, System, Player }
 public sealed class MutatingAttribute : Attribute { }
 
 /// <summary>The grants: Admin gets every kind; Operator loads definitions; System starts and ends enabled
-/// definitions only; Player gets nothing in this child (D10).</summary>
+/// definitions only; Player gets only Subscribe, its own push subscription (foundation D10; raphael-api-core D7).</summary>
 public static class ActionTable
 {
     public static readonly IReadOnlyDictionary<ActionKind, IReadOnlySet<Actor>> Grants = new Dictionary<ActionKind, IReadOnlySet<Actor>>
@@ -43,6 +45,7 @@ public static class ActionTable
         [ActionKind.Purge] = Set(Actor.Admin),
         [ActionKind.PurgeConfirm] = Set(Actor.Admin),
         [ActionKind.Announce] = Set(Actor.Admin),
+        [ActionKind.Subscribe] = Set(Actor.Admin, Actor.Player),
     };
 
     /// <summary>True when <paramref name="actor"/> may run <paramref name="kind"/>. System's grant holds only for an

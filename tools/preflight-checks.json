@@ -186,10 +186,12 @@
       "inputs": [
         "every file git sees, fixtures included",
         "Nyarlathotep/Nyarlathotep/dist/** and Nyarlathotep/Nyarlathotep/build/** (zips opened)",
-        "every index blob (git grep --cached -I -P)"
+        "every index blob (git grep --cached -I -P)",
+        "every script under tools/ (fixtures aside in the real repository): gh auth token, printenv, Get-ChildItem env:, dir env: or the tcli token variable"
       ],
       "plant": {
-        "bad": "README.md with a Thunderstore token assignment appended (stored base64 as README.md.b64plant)"
+        "bad": "README.md with a Thunderstore token assignment appended (stored base64 as README.md.b64plant)",
+        "bad-3": "tools/publish.ps1 reads the gh credential with gh auth token (raphael-api-core D10)"
       }
     },
     {
@@ -357,16 +359,37 @@
       }
     },
     {
+      "name": "WireContract",
+      "function": "Test-CheckWireContract",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/WireContract",
+      "inputs": [
+        "every .cs file git sees: Wire.Record/Wire.Line calls (Record(/Line( in Logic/Wire.cs) and \"[NYAR:\" string literals",
+        "Nyarlathotep/Nyarlathotep/Logic/Wire.cs const Api",
+        "every [Command] of a [CommandGroup(\"nyar api\")] class (the commands walk)",
+        "docs/RAPHAEL_INTEGRATION_CONTRACT.md **Current api:** and ### Tags and commands table"
+      ],
+      "plant": {
+        "bad": "the ev tag row removed from the contract's Tags and commands table",
+        "bad-2": "the events command row marked PLANNED",
+        "bad-3": "Wire.Api 3 against the contract's current api 2",
+        "bad-4": "a \"[NYAR:x] note=bypass\" literal replied from Commands/ApiCommands.cs",
+        "bad-5": "Wire.Line(tag, …) with a variable tag in Commands/ApiCommands.cs"
+      }
+    },
+    {
       "name": "AdminList",
       "function": "Test-CheckAdminList",
       "mode": "default",
       "fixtures": "tools/preflight-fixtures/AdminList",
       "inputs": [
-        "every [Command] and [CommandGroup] attribute in any .cs file git sees (the commands walk shared with Test-CheckCommands and -ListCommands admin)"
+        "every [Command] and [CommandGroup] attribute in any .cs file git sees (the commands walk shared with Test-CheckCommands and -ListCommands admin)",
+        "docs/NYARLATHOTEP_DESIGN.md § 6 command table (every walked command's full form must begin a documented command)"
       ],
       "plant": {
         "bad": "an admin-only command declared in Services/Hidden.cs, outside Commands/",
-        "bad-2": "an admin-only command in the suffixed [CommandAttribute(...)] form, declared in Patches/HiddenPatch.cs"
+        "bad-2": "Commands/ApiCommands.cs holds two groups (a real two-group file: the nyar class, then the nyar api class) with the two [CommandGroup] names swapped, so .nyar events and .nyar api announce are undocumented; good holds the same file unswapped, which only the nearest-group walk labels right (raphael-api-core D9)",
+        "bad-3": "an admin-only command in the suffixed [CommandAttribute(...)] form, declared in Patches/HiddenPatch.cs"
       }
     },
     {
