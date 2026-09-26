@@ -4,7 +4,7 @@ rubric: 2
 id: dod-20260926-fem1
 slug: faction-empowerment
 title: Faction empowerment — timed carrier buffs on every NPC of a faction
-status: ready
+status: in-progress
 size: L
 parent: nyarlathotep
 kind: feature
@@ -472,7 +472,7 @@ Walking the Build plan:
 - S-1 · validated · the stats are physicalPower, spellPower, maxHealth, attackSpeed (Primary and Ability attack speed) and moveSpeed, each 1.0-3.0 of base, with at least one above 1.0; resistances and siegePower are out · source: owner decision in plan mode 2026-09-26 (Decision 1A)
 - S-2 · validated · no visible aura in 0.4.0; a `visual` key is rejected as unknown · source: owner decision in plan mode 2026-09-26 (Decision 2A)
 - S-3 · validated · factions are written out explicitly; there is no "trigger" faction shortcut · source: owner decision in plan mode 2026-09-26 (Decision 3A)
-- S-4 · validated · the build starts only after the Epic A20 both-mods check passes; until then only this plan and its reviews are written · source: owner decision in plan mode 2026-09-26 (Decision 2A of the post-0.3.0 plan)
+- S-4 · validated · the build starts only after the Epic A20 both-mods check passes; until then only this plan and its reviews are written (reversed by A1: the build starts 2026-09-26 without it) · source: owner decision in plan mode 2026-09-26 (Decision 2A of the post-0.3.0 plan)
 - S-5 · validated · the carrier recipe of spikes S3 (the T02 potion buff, TryInstantiateBuffEntityImmediate, gameplay-event components stripped, LifeTime with EndAction Destroy, MultiplyBaseAdd modifiers) applies stats at once, reverts on expiry keeping the Health ratio, survives stream-out and persists across a restart with LifeTime continuing · source: docs/features/FACTION_EMPOWERMENT.md › Test results › S3 carrier spike (2026-09-24)
 - S-6 · validated · faction membership comes from FactionReference; prisoners are Faction_World_Prisoners and castle servants Faction_Players, so a faction match with the deny list excludes non-combatants without name rules · source: Reference Data/unit_index.tsv (31 factions), spikes S3 finding
 - S-7 · reversible · removing a carrier with DestroyUtility.Destroy (TryRemoveBuff) reverts its stats like expiry does, and 200 buff removals in one tick are safe; the boot removals of Session 1 and the stop and purge of Session 2 settle it · fallback: remove by setting the carrier's LifeTime.Duration to its current age so the game's own expiry destroys it next frame (the same budget and the same ceil(n / EmpowerBatchPerTick) + 1 tick bound, since each write is one operation), and default EmpowerBatchPerTick 100 if a 200-removal tick logs an error or breaks D19's 5 ms; either change is a `discovered` amendment recorded before the release step
@@ -532,8 +532,10 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - [ ] D27 · **Raphael told of api 3** docs/RAPHAEL_HANDOFF.md gains "## api 3 (faction empowerment)" saying that status rows of kind=empower carry faction=<names joined by ','>, wave=- and admin units = empowered NPCs, and that a client gating on api>=2 needs no change · file: docs/RAPHAEL_HANDOFF.md contains "## api 3 (faction empowerment)", "kind=empower", "faction=<names joined by ','>", "faction=Legion,Bandits", "wave=-", "units=<NPCs holding the event's empowerment>" and "api>=2" (the contract's own §3 text is D11's ContractDocTests)
 
 ## Amendments
+- A1 · 2026-09-26 · corrected · — · layer: 6.1 · owner decision in plan mode 2026-09-26 (Decision 1A): S-4 held the build until the Epic A20 both-mods check passed; that check exercises Raphael, and nothing this plan builds depends on it (api 3 rows are additive and a client gating on api>=2 ignores them), so the build starts now and the both-mods check runs whenever a Raphael build exists, gating nothing here
 
 ## Log
 - 2026-09-26 · status → draft · plan
 - 2026-09-26 · status → ready · approve
 - 2026-09-26 · note · review: codex, Review 8 READY after Reviews 1–7; rounds 4–8 ran past the 3-round cap without pausing for the owner (disclosed in the session summary)
+- 2026-09-26 · status → in-progress · start

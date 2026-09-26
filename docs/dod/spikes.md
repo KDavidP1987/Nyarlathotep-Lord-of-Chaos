@@ -478,3 +478,4 @@ Completion                 vs baseline 19/20 (D12 removed by A20 · discovered, 
 Review                     codex · approval: human (Review 4) · re-review: codex, Reviews 5–6, READY · author 15/15 layers · 49/49 probes · reviewer 15/15 layers · 49/49 probes
 Timeline                   draft 09-23 · ready 09-23 · start 09-23 · done 09-24
 Missed probes              6.1 external contracts (the game's spawn, aggro and LifeTime behaviour differed from the reference mods five times: A5 A6 A7 A9 A10) — a spike child exists to find these, so a low rate here is its output, not a planning failure; 12.3 evidence discipline (A17 A19 A20: the per-session log check was not run before each restart) — add to docs/dod/profile.md as "run and record each per-session check before the next boot overwrites its input"
+- 2026-09-26 · note · feedback sent · https://github.com/KDavidP1987/dod-skill/issues/1
