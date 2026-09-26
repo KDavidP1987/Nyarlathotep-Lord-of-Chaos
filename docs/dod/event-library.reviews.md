@@ -330,3 +330,68 @@ The owner accepted F1–F6 on 2026-09-26 in plan mode (option A: Review 7 is fin
 - F5 · accepted · duplicate faction, unit, boss, day and time values are refused before writing, with the validator's duplicate rule, and are cases of the authoring controls (corrected at apply: the validator's distinct rule covers factions, days and times only, Logic/Validation.cs:366, 255 and 263; trigger.bosses (283-286) and action.units (425-436) have none, so the authoring parser's own distinct check in Logic/CommandArgs.cs refuses those two before writing)
 - F6 · accepted · catalogue-unavailable and write-uncertain states join the existing degraded line and admin login notice
 
+## Review 7 · 2026-09-26 · codex · plan: revision 6 (649522a); file access confirmed (0 blocked reads)
+I read at least `docs/dod/event-library.md` and `Nyarlathotep/Nyarlathotep/Logic/CommandArgs.cs`, plus the requested Epic, sibling plan, profile, Logic, Services, Commands, settings, resources, tooling manifests, and unit index; I did not read `docs/dod/event-library.reviews.md`.
+
+1. Purpose & typical use — Considered: `Purpose & typical use` answers 1.1–1.3.
+
+2. Actors & permissions — Considered: `Design › Permissions`, D8, D17 and D22 answer 2.1–2.3.
+
+3. Inputs, outputs & data — Considered: D4–D15, D19, D30 and `Design › Data` answer 3.1–3.4.
+
+4. Business rules & invariants — Considered: `Business rules`, D2, D8, D12, D14, D16, D17, D20, D25 and D30 answer 4.1–4.5. The Epic’s precedence, hard-duration and every-X decisions are incorporated.
+
+5. Internal interfaces — Considered: `Interfaces › Internal` and D1, D3, D10, D12, D14 and D20 answer 5.1–5.3.
+
+6. External dependencies & contracts — Gap: `Interfaces › External` decides the dependency behaviors, but the gating evidence does not cover all of them under one command; specifically the listed D19 test filter omits `PillarSwitchTests SaveFailure`.
+
+7. States & lifecycle — Considered: `Design › States`, D8, D12, D14, D15, D19 and D26 answer 7.1–7.3.
+
+8. Minimal stretch — Considered: `Use cases › Minimal stretch`, D4–D6 and D8 answer 8.1–8.2.
+
+9. Maximal stretch — Considered: `Use cases › Maximal stretch`, D5, D8–D11, D14, D22 and D27 answer 9.1–9.3.
+
+10. Security & privacy — Considered: `Security`, D9, D10, D17, D18 and D22 answer 10.1–10.4. Epic admin authorization is preserved.
+
+11. Design & UX — Considered: `Design › UX`, D4, D16, D20, D21, D23, D25 and D28 answer 11.1–11.4. N/A is correctly not claimed because chat is human-facing.
+
+12. Failure handling & observability — Considered: `Failure & observability`, D3, D14, D17–D19, D24, D25, D30–D32 answer 12.1–12.4.
+
+13. Performance & scale — Considered: `Performance`, D5, D12, D25 and D27 answer 13.1–13.2.
+
+14. Rollout & compatibility — Gap: shipping and compatibility are covered, but D29’s evidence does not make every stated rollback route fail when absent, leaving gating probe 14.3 without evidence for the server and published-release procedures. D30 covers 14.4.
+
+15. Out of scope — Considered: `Out of scope` answers 15.1–15.2.
+
+F1 `blocking` — Probe 6.2 lacks the required single gating evidence command: its matrix distributes coverage across three commands, and `dotnet test ...~DependencyFailureTests` does not execute the cfg-save behavior in `PillarSwitchTests SaveFailure`.
+Fix: Add one aggregate evidence command that runs the event-file, state-file, cfg reload/save, catalogue, phase-source, VCF, and release-tool dependency-failure cases and fails if any case is absent or zero tests run.
+
+F2 `blocking` — Probe 14.3 is not enforced by D29: `rollback-gate.ps1` can pass if the plan loses the exact server rollback (`install 0.4.0 DLL`) or published-release withdrawal procedure, so prose is the only control for those required rollback paths.
+Fix: Extend one rollback evidence command to validate the repository range, post-write server downgrade procedure, published-release forward-fix/withdrawal policy, and exact `v0.4.0..v0.5.0` range from machine-checked plan data.
+
+F3 `advisory` — Minimal-stretch scenario: copying an invalid definition says it is copied “reason and all,” although `DisabledReason` is derived during validation rather than stored in the JSON contract (5.3).
+Fix: Say the JSON definition is copied verbatim and the same disabled reason is re-derived after reload.
+
+F4 `advisory` — Concurrent scenario: two admins setting different fields serialize, but the plan does not explicitly test that the second edit uses the stamp produced by the first reload rather than receiving a false stale-file refusal (7.2).
+Fix: Add a two-admin sequential-write case proving both edits survive and exactly two config-changed notifications occur.
+
+F5 `advisory` — Maximal-stretch scenario: D27 times 199/200 small definitions but does not cover a valid file near both the 200-definition and 1 MB bounds, where whole-file parsing and validation are most expensive (9.1).
+Fix: Add a near-1 MB valid fixture to the capacity benchmark or explicitly state that the 200 ms budget excludes maximum-byte definitions.
+
+F6 `advisory` — The Step 2 `Paths walked` entries use bare `Services/...` and `Commands/...` paths rather than repository-relative `Nyarlathotep/Nyarlathotep/...`; the planned `-DeclaredOf` parser should therefore reject the real changed paths (14.4).
+Fix: Spell those entries as full repository-relative paths before running the declared-path check.
+
+The sibling plan supplies the `Empower` action and is already `in-progress` with 0.4.0 as the prerequisite release; this child correctly prevents its build from starting until that release closes. Recon also confirms current `CommandArgs` has only the existing ID/stat/wave argument support, `Precedence.StartBlocker` uses the stated order, the validator requires exact `SchemaVersion`/`events` casing and the 200/1 MB bounds, all five pillar keys exist and default off, and the named unit/faction identifiers occur in `unit_index.tsv`.
+
+13/15 layers · 47/49 probes
+VERDICT: REVISE
+
+### Dispositions
+Under the owner's final-round rule (plan mode 2026-09-26, option A: advisory findings and blocking findings that are local fixes are applied, confirmed against the code, recorded as accepted and the plan approved; scope or decision findings return to the owner), F1–F6 are all local fixes and are accepted and applied in revision 7. F1 and F2 name gating probes 6.2 and 14.3, and references/review.md never lets a gating finding converge without a READY, so revision 7 goes to a confirmation Review 8 before approval.
+- F1 · accepted · new D33 `pwsh tools/preflight.ps1 -DependencySuite event-library`: one command over nine required categories (events-write, events-promote, state-write, cfg-save with PillarSwitchTests SaveFailure, catalogue, location-context, phase-source in one trx-counted test run; the vcf part of -AuthSuite; release-verify and repo-rollback-drill selftests), failing on a missing category, a zero-test category or a missing success line; fixtures DependencySuite/{bad,bad-2,good,empty}; the 6.2 matrix row, the layer 6 pointer, step 2 and W4.1 name it; its trx folder %TEMP%
+yar-dep-* is a Design › Data row, a `temp:` glob and an inventory entry
+- F2 · accepted · D29 gains `pwsh tools/preflight.ps1 -RollbackOf event-library`, which parses Rollout › Rollback and requires the repository revert, the dev-snapshot route, the server downgrade ("install the 0.4.0 DLL", "after data is written"), the published-release policy ("never deleted", "withdrawn by retitling") and the commit range, all equal to the rollback gate's -From v0.4.0 -To v0.5.0; fixtures RollbackRoutes/{bad,bad-2,bad-3,good,empty}; the 14.3 matrix row and step 3 name it (checked against the plan: all five bullets carry the required text today)
+- F3 · accepted · D7: the JSON definition is copied verbatim and validation re-derives the same disabled reason after the reload (checked: Logic/Validation.cs derives the reason at load; no reason field exists in the v1 shape)
+- F4 · accepted · D12 adds the two-admin sequential set: both edits survive, the second write uses the stamp of the first write's reload, exactly two config-changed notices
+- F5 · accepted · D27 times set and delete confirm again on a valid 200-definition file padded to just under 1 MB, under the same 200 ms budget
+- F6 · accepted · Rollout › Paths walked Step 2 spells Nyarlathotep/Nyarlathotep/Services/... and Nyarlathotep/Nyarlathotep/Commands/...
