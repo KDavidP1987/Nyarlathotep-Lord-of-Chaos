@@ -187,11 +187,13 @@
         "every file git sees, fixtures included",
         "Nyarlathotep/Nyarlathotep/dist/** and Nyarlathotep/Nyarlathotep/build/** (zips opened)",
         "every index blob (git grep --cached -I -P)",
-        "every script under tools/ (fixtures aside in the real repository): gh auth token, printenv, Get-ChildItem env:, dir env: or the tcli token variable"
+        "every script under tools/ (fixtures aside in the real repository): the gh credential command, the POSIX environment printer, the environment drive, .NET/Python/Node environment reads and $env names outside the allow-list, the tcli token variable"
       ],
       "plant": {
         "bad": "README.md with a Thunderstore token assignment appended (stored base64 as README.md.b64plant)",
-        "bad-3": "tools/publish.ps1 reads the gh credential with gh auth token (raphael-api-core D10)"
+        "bad-3": "tools/publish.ps1 reads the gh credential with gh auth token (raphael-api-core D10)",
+        "bad-4": "tools/read-env.ps1 reads GH_TOKEN through the environment drive with Get-Item -LiteralPath",
+        "bad-5": "tools/ingame/helper.py reads GH_TOKEN, a name outside the allow-list, with os.environ.get"
       }
     },
     {
@@ -364,7 +366,7 @@
       "mode": "default",
       "fixtures": "tools/preflight-fixtures/WireContract",
       "inputs": [
-        "every .cs file git sees: Wire.Record/Wire.Line calls (Record(/Line( in Logic/Wire.cs) and \"[NYAR:\" string literals",
+        "every plugin .cs file (Nyarlathotep/Nyarlathotep/): Wire.Record/Wire.Line calls (Record(/Line( in Logic/Wire.cs), aliases and static imports of Wire, and \"[NYAR:\" string literals",
         "Nyarlathotep/Nyarlathotep/Logic/Wire.cs const Api",
         "every [Command] of a [CommandGroup(\"nyar api\")] class (the commands walk)",
         "docs/RAPHAEL_INTEGRATION_CONTRACT.md **Current api:** and ### Tags and commands table"
@@ -374,7 +376,9 @@
         "bad-2": "the events command row marked PLANNED",
         "bad-3": "Wire.Api 3 against the contract's current api 2",
         "bad-4": "a \"[NYAR:x] note=bypass\" literal replied from Commands/ApiCommands.cs",
-        "bad-5": "Wire.Line(tag, …) with a variable tag in Commands/ApiCommands.cs"
+        "bad-5": "Wire.Line(tag, …) with a variable tag in Commands/ApiCommands.cs",
+        "bad-6": "Commands/ApiCommands.cs imports Wire under an alias (using W = …Wire;) and calls W.Line with a variable tag",
+        "bad-7": "Wire.Line(\"x\", …) with a literal tag the contract's table does not list, in Commands/ApiCommands.cs"
       }
     },
     {

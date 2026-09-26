@@ -85,13 +85,31 @@ public class ContractDocTests
         Assert.Contains("| `notready` | Reserved, never sent in api 2", flat);
     }
 
-    [Theory]
-    [InlineData("`.nyar api status")]
-    [InlineData("`.nyar api events")]
-    [InlineData("`.nyar api sub on")]
-    public void The_design_doc_lists_the_new_commands(string command)
+    /// <summary>The command forms of the design doc's § 6 table: each backticked form in a row's first cell, its words up
+    /// to the first argument, with "a\|b" words expanded into each choice.</summary>
+    static HashSet<string> DocumentedCommands()
     {
-        var table = Regex.Match(Read("NYARLATHOTEP_DESIGN.md"), @"(?ms)^## 6\. Commands.*?(?=^## |\z)").Value;
-        Assert.Contains(command, table);
+        var section = Regex.Match(Read("NYARLATHOTEP_DESIGN.md"), @"(?ms)^## 6\. Commands.*?(?=^## |\z)").Value;
+        var forms = new HashSet<string>(StringComparer.Ordinal);
+        foreach (Match row in Regex.Matches(section, @"(?m)^\|((?:[^|\n\\]|\\.)*)\|"))
+            foreach (Match code in Regex.Matches(row.Groups[1].Value, @"`(\.nyar[^`]*)`"))
+            {
+                var partial = new List<string> { "" };
+                foreach (var word in code.Groups[1].Value.Replace("\\|", "|").Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (word[0] is '[' or '<' or '…') break;
+                    partial = partial.SelectMany(p => word.Split('|').Select(c => p.Length == 0 ? c : $"{p} {c}")).ToList();
+                }
+                forms.UnionWith(partial);
+            }
+        return forms;
     }
+
+    [Theory]
+    [InlineData(".nyar api status")]
+    [InlineData(".nyar api events")]
+    [InlineData(".nyar api sub on")]
+    [InlineData(".nyar api sub off")]
+    public void The_design_doc_command_table_lists_the_new_commands(string command) =>
+        Assert.Contains(command, DocumentedCommands());
 }

@@ -509,14 +509,23 @@ $script:SecretPatterns = @(
     '(TCLI_AUTH_TOK[E]N|GH_TOK[E]N)\s*[=:]\s*\S+'
 )
 
-# A tools/ script may not read a credential or dump the environment (raphael-api-core D10): these patterns are
-# checked in every script under tools/ (fixtures aside in the real repository). Each pattern is written so that its
-# own source text does not match it, so this file passes its own rule.
+# A tools/ script may not read a credential or the environment beyond an allow-list (raphael-api-core D10, A4):
+# these patterns are checked, case-insensitively, in every script under tools/ (fixtures aside in the real repository).
+# The environment is reachable only as the $env variable with one of the names below; any other name, the environment
+# drive in any cmdlet (Get-Item, Get-ChildItem -LiteralPath, gci, dir, Get-Content …), .NET's environment reads,
+# Python's and Node's environment objects fail, as do the gh credential command (gh or gh.exe), the POSIX
+# environment printer and the tcli token variable's name. Each pattern and this comment are written so that their own
+# text does not match, so this file passes its own rule.
+$script:ToolsEnvAllowed = 'TEMP|TMP|USERPROFILE|LOCALAPPDATA|APPDATA|SteamAppId|NYAR_SESSION_DIR'
 $script:ToolsCredentialPatterns = @(
-    '\bgh\s+auth\s+token\b',
+    '\bgh(?:\.exe)?["'']?\s+auth\s+token\b',
     '\bprint[e]nv\b',
-    '\bGet-ChildItem\s+(?:-Path\s+)?env:',
-    '\b(?:dir|ls|gci)\s+env:',
+    '(?<![$\w])en[v]:',
+    "\`$env:(?!(?:$script:ToolsEnvAllowed)\b)[\w{]",
+    'GetEnvironmentVariabl[e]',
+    "\bos\.enviro[n]\b(?!\s*(?:\.get\s*\(|\[)\s*[`"'](?:$script:ToolsEnvAllowed)[`"'])",
+    "\bos\.gete[n]v\s*\((?!\s*[`"'](?:$script:ToolsEnvAllowed)[`"'])",
+    "\bprocess\.en[v]\b(?!\.(?:$script:ToolsEnvAllowed)\b)",
     'TCLI_AUTH_TOK[E]N'
 )
 $script:ScriptExt = @('.ps1', '.psm1', '.mjs', '.js', '.py', '.sh', '.cmd', '.bat')
@@ -559,7 +568,7 @@ function Test-CheckSecrets([string]$Root) {
         if ($script:BinaryExt -contains $ext) { continue }
         $t = [IO.File]::ReadAllText($abs); $scanned++
         if (Find-Secret $t) { $hits += $f }
-        if ($ext -eq '.cs' -and (Remove-CsComments $t) -match 'Environment\.GetEnvironmentVariable') { $hits += "$f (reads the environment)" }
+        if ($ext -eq '.cs' -and (Remove-CsComments $t) -match 'Environment\.GetEnvironmentVariabl[e]') { $hits += "$f (reads the environment)" }
         if ($f -like 'tools/*' -and $f -notlike 'tools/preflight-fixtures/*' -and $script:ScriptExt -contains $ext) {
             foreach ($p in $script:ToolsCredentialPatterns) { if ($t -match $p) { $hits += "$f (reads a credential or the environment: $($Matches[0]))"; break } }
         }
@@ -574,7 +583,7 @@ function Test-CheckSecrets([string]$Root) {
             if ($LASTEXITCODE -gt 1) { return New-Result $false "secrets: git grep --cached failed: $found" }
             $hits += @($found | Where-Object { $_ } | ForEach-Object { "$_ (index)" })
         }
-        $found = git -C $Root grep --cached -I -l -P 'Environment\.GetEnvironmentVariable' -- '*.cs' 2>&1
+        $found = git -C $Root grep --cached -I -l -P 'Environment\.GetEnvironmentVariabl[e]' -- '*.cs' 2>&1
         if ($LASTEXITCODE -gt 1) { return New-Result $false "secrets: git grep --cached failed: $found" }
         $hits += @($found | Where-Object { $_ } | ForEach-Object { "$_ (index, reads the environment)" })
         $indexNote = ", $blobs index blobs"
@@ -1209,8 +1218,9 @@ function Get-CommandWalk([string]$Root) {
 
 # Every wire tag the plugin builds and every `.nyar api` command it answers is in the "Tags and commands" table of
 # docs/RAPHAEL_INTEGRATION_CONTRACT.md as IMPLEMENTED with an api no newer than "**Current api:** <n>", and Wire.Api
-# equals that n (Epic D38; raphael-api-core D8). A tag is the literal first argument of a Wire.Record or Wire.Line call
-# in Logic/ (Record( or Line( inside Logic/Wire.cs itself); a call anywhere in the plugin with a non-literal tag fails,
+# equals that n (Epic D38; raphael-api-core D8, A4). A tag is the literal first argument of a Wire.Record or Wire.Line
+# call anywhere in the plugin (Record( or Line( inside Logic/Wire.cs itself); a call with a non-literal tag fails, an
+# alias or static import of Wire fails,
 # and so does any "[NYAR:" string literal in the plugin outside Logic/Wire.cs, so no line can bypass the builder.
 function Test-CheckWireContract([string]$Root) {
     $wireRel = "$PkgRel/Logic/Wire.cs"
@@ -1228,12 +1238,17 @@ function Test-CheckWireContract([string]$Root) {
                 }
             }
         }
+        # Wire is reached only as "Wire." outside its own file: an alias (using W = …Wire;) or a static import
+        # (using static …Wire;) would hide a call from this check, so either fails (A4).
+        if ($f -ne $wireRel -and $code -match '(?m)^\s*(?:global\s+)?using\s+(?:static\s+[\w.]*\bWire\s*;|\w+\s*=\s*[\w.]*\bWire\s*;)') {
+            $bad += "an alias or static import of Wire in $f"
+        }
         $rx = if ($f -eq $wireRel) { '(?<![\w.])(?<!string\s)(?<m>Record|Line)\s*\(' } else { '\bWire\s*\.\s*(?<m>Record|Line)\s*\(' }
         foreach ($call in [regex]::Matches($code, $rx)) {
             $rest = $code.Substring($call.Index + $call.Length)
             $arg = [regex]::Match($rest, '^\s*"([a-z][a-z0-9-]*)"\s*[,)]')
             if (-not $arg.Success) { $bad += "a $($call.Groups['m'].Value) call in $f whose tag is not a literal"; continue }
-            if ($f -like "$PkgRel/Logic/*") { $tags[$arg.Groups[1].Value] = $true }
+            $tags[$arg.Groups[1].Value] = $true
         }
     }
     $apiCmds = @(Get-CommandWalk $Root | Where-Object { $_.Full -like '.nyar api *' } | ForEach-Object { $_.Name } | Sort-Object -Unique)
@@ -1522,12 +1537,19 @@ if ($AuthSuite) {
     # row/push access tests, then the checks that keep adminOnly, the admin list and the gateway honest, then the
     # public/admin split of the api commands. A filter that runs no test is a failure.
     $parts = @(); $fail = @()
-    $out = & dotnet test (Join-Path $repoRoot 'Nyarlathotep/Nyarlathotep.Tests') --filter 'FullyQualifiedName~AuthorizationTests|FullyQualifiedName~ApiAccessTests' 2>&1 | Out-String
-    $ran = if ($out -match 'Passed:\s*(\d+)') { [int]$Matches[1] } else { 0 }
-    $failed = if ($out -match 'Failed:\s*(\d+)') { [int]$Matches[1] } else { 0 }
-    if ($LASTEXITCODE -ne 0 -or $failed -gt 0) { $fail += "tests failed ($failed)" }
-    elseif ($ran -eq 0) { $fail += 'no tests ran' }
-    else { $parts += 'tests' }
+    # Each class runs on its own, so a deleted, renamed or fully skipped class is "no tests ran", not hidden by the other.
+    $testsOk = $true
+    foreach ($cls in @('AuthorizationTests', 'ApiAccessTests')) {
+        $out = & dotnet test (Join-Path $repoRoot 'Nyarlathotep/Nyarlathotep.Tests') --filter "FullyQualifiedName~Nyarlathotep.Tests.$cls." 2>&1 | Out-String
+        $code = $LASTEXITCODE
+        $ran = if ($out -match 'Passed:\s*(\d+)') { [int]$Matches[1] } else { 0 }
+        $failed = if ($out -match 'Failed:\s*(\d+)') { [int]$Matches[1] } else { 0 }
+        $skipped = if ($out -match 'Skipped:\s*(\d+)') { [int]$Matches[1] } else { 0 }
+        if ($code -ne 0 -or $failed -gt 0) { $fail += "$cls failed ($failed)"; $testsOk = $false }
+        elseif ($ran -eq 0) { $fail += "${cls}: no tests ran"; $testsOk = $false }
+        elseif ($skipped -gt 0) { $fail += "${cls}: $skipped skipped"; $testsOk = $false }
+    }
+    if ($testsOk) { $parts += 'tests' }
     foreach ($c in @(@('commands', 'Test-CheckCommands'), @('admin list', 'Test-CheckAdminList'), @('gateway', 'Test-CheckGatewayOnly'))) {
         $r = Invoke-Check $c[1] $repoRoot
         if ($r.Pass) { $parts += $c[0] } else { $fail += $r.Line }

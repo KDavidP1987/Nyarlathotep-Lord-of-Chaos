@@ -4,12 +4,26 @@ using Nyarlathotep.Logic;
 namespace Nyarlathotep.Tests;
 
 /// <summary>raphael-api-core D7 (row cases): every status and definition row built for a player and for an admin.
-/// A player's row never carries a unit count, and no row for anyone carries a coordinate, radius or player key.
+/// Each row carries exactly the keys the contract lists for its tag, so a key added under any name fails; a player's
+/// row carries units=-.
 /// `api events` itself is admin-only through VCF (preflight commands check and -AuthSuite).</summary>
 public class ApiAccessTests
 {
     static readonly DateTime Now = new(2026, 9, 25, 12, 0, 0, DateTimeKind.Utc);
-    static readonly string[] Forbidden = ["x", "y", "z", "r", "radius", "pos", "player", "steam", "steamid", "owner", "clan"];
+    // The contract's key sets (§3 status, §3 events, §4), in order.
+    static readonly Dictionary<string, string[]> Allowed = new()
+    {
+        ["event"] = ["id", "kind", "name", "state", "faction", "left", "wave", "units"],
+        ["def"] = ["id", "name", "enabled", "trigger", "action", "duration", "state", "reason"],
+        ["end"] = ["cmd", "count"],
+    };
+
+    static void AssertExactKeys(string row)
+    {
+        var tag = row[6..row.IndexOf(']')];
+        Assert.True(Allowed.TryGetValue(tag, out var keys), $"unexpected tag {tag}");
+        Assert.Equal(keys, Keys(row));
+    }
 
     static EventDefinition Def(string id, Pillar pillar, TriggerType trigger, bool enabled, string? reason) =>
         new(id, $"Event {id}", enabled, pillar, new Trigger(trigger, [], [], DayPhase.Night, []), new Conditions(), 900,
@@ -43,7 +57,7 @@ public class ApiAccessTests
         Assert.Equal(8, rows.Count);
         foreach (var row in rows)
         {
-            foreach (var k in Keys(row)) Assert.DoesNotContain(k, Forbidden);
+            AssertExactKeys(row);
             Assert.DoesNotContain("1520", row);
             if (!row.StartsWith("[NYAR:event]")) continue;
             Assert.Equal(isAdmin ? "12" : "-", Regex.Match(row, " units=([^ ]+)").Groups[1].Value);
@@ -58,7 +72,7 @@ public class ApiAccessTests
         Assert.Equal(w.Set.All.Count, rows.Count);
         foreach (var row in rows)
         {
-            foreach (var k in Keys(row)) Assert.DoesNotContain(k, Forbidden);
+            AssertExactKeys(row);
             Assert.DoesNotContain("1520", row);
             Assert.DoesNotContain("CHAR_", row);
         }
