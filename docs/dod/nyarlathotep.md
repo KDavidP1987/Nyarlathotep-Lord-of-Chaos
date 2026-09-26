@@ -245,7 +245,7 @@ Constraints each child inherits (a child's review checks they appear verbatim or
 ## Children
 - spikes · done
 - foundation · done
-- raphael-api-core · planned
+- raphael-api-core · in-progress
 - faction-empowerment · planned
 - event-spawns · planned
 - stats · planned

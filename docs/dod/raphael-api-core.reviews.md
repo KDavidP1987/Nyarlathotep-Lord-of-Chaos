@@ -148,3 +148,10 @@ VERDICT: REVISE
 - F9 · accepted · unlimited api reads are accepted by decision; each call is bounded
 - F10 · accepted · recovery rule: Raphael re-reads api status on an unknown event id and after event-end and killswitch; handoff and contract state it
 - F11 · accepted · D22 measures at 150 tracked units; the 128-subscriber case is covered by the 640-send ceiling in PushTests, stated as unmeasured
+
+## Review 4 · 2026-09-25 · human · plan commit 8976eb2
+F1 advisory · Coverage: the owner accepts the author's coverage line after three Codex rounds, each of which confirmed every earlier finding resolved (EARLIER: all resolved in rounds 2 and 3); contested assumptions: none (S-1 and S-2 are the owner's own decisions of 2026-09-25); unhandled scenarios: none named; verifiability: no blocking gap — the owner chose to approve (plan-mode option A) and to catch build-level edge cases through amendments and the per-step Codex diff reviews.
+15/15 layers · 49/49 probes
+VERDICT: READY
+### Dispositions
+- F1 · accepted · approved on the owner's review; build-level findings go to amendments
