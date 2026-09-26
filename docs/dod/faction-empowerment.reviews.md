@@ -65,3 +65,58 @@ VERDICT: REVISE
 - F13 · rejected · advisory — each post-audit is headed "### Step <n> · <date> · <commit>" (the raphael-api-core audit's form), which ties the verdict to the step's diff; -AuditOf counts them
 - F14 · rejected · advisory — a confirmation, not a gap; no change
 - Recon limitation · accepted · the next round's prompt carries the code excerpts the plan cites, since the reviewer's sandbox refused file reads
+
+## Review 2 · 2026-09-26 · codex · plan commit 723cd63
+EARLIER: unresolved F4
+
+F1 — `blocking` — Probe `4.5` is unanswered: “every NPC” is computed by a query requiring `PrefabGUID + FactionReference + Health + UnitStats`, but the plan identifies only late-created and destroyed units as misses, not otherwise-valid faction NPCs lacking one of those components.
+Fix: Define eligible NPCs as requiring all four components and justify excluded entities, or query faction members broadly and specify/test the handling of missing `Health` or `UnitStats`.
+
+F2 — `blocking` — Probe `6.2` remains unanswered for Bloodcraft/KindredCommands: D18 tests their expected current records, but no policy says what happens when the familiar tag is absent, renamed, malformed, or returned without a resolvable owner; that can empower a player-owned familiar contrary to the invariant.
+Fix: Specify fail-closed behavior for unrecognised dependency ownership data and add that garbage/absent-tag case to `DependencyFailureTests` or another named evidence item.
+
+F3 — `blocking` — Probe `14.3` omits the project-profile rollback requirement for tools that change the live dev installation: steps 4–6 deploy DLL/config changes and install/remove mods without an atomic snapshot manifest, leftover-snapshot refusal, hash-verified restore, or crash test.
+Fix: Add a D-item and command that snapshots every changed live path atomically, refuses an existing snapshot, simulates interruption, restores it, and verifies hashes.
+
+F4 — `blocking` — D14 is unverifiable for probe `11.2`: recording one empowered and one plain bandit cannot establish the claimed ten-row cap, nearest-first ordering, or exact output alternatives, so a stranger cannot verify the item by its stated manual evidence.
+Fix: Make Session 2 record a controlled set of more than ten natives with known distances, the emitted rows, their order/count, and both carrier renderings.
+
+F5 — `blocking` — D24 is unverifiable for probe `14.1`: `gh release download … -D <scratch dir>` is not an executable evidence command, and the scratch directory’s creation and resulting asset path are unspecified.
+Fix: Replace the placeholder with a complete PowerShell command that creates a unique scratch directory, downloads the asset there, hashes its exact path, and cleans it up.
+
+F6 — `blocking` — D27 is unverifiable for probe `5.3`: its file evidence checks the heading, `kind=empower`, `wave=-`, and `api>=2`, but not its claimed `faction=<comma-joined names>` or admin `units` contract.
+Fix: Extend the file evidence to check the exact faction and admin-units clauses, preferably through `ContractDocTests`.
+
+F7 — `advisory` — Build step 4 says it satisfies D17 but schedules only one event and stops it mid-window; D17 also requires a separate 60-second event to expire naturally and produce the post-expiry sample.
+Fix: Add the natural-expiry event and its required sample lines to step 4.
+
+Layer grading:
+
+1. Considered — `Purpose & typical use` answers 1.1–1.3.
+2. Considered — `Design › Permissions` and D21 answer 2.1–2.3.
+3. Considered — D1, D10–D12, D16–D17, D23, D26 and `Design › Data` answer 3.1–3.4.
+4. Gap — `Business rules` answers 4.1–4.4, but the component-filter omission leaves 4.5 unanswered.
+5. Considered — `Interfaces › Internal` with D1, D7, D9, D11 and D20 answers 5.1–5.3; D27 nevertheless fails its own evidence claim.
+6. Gap — the dependency table answers 6.1 and 6.3, but Bloodcraft/KindredCommands garbage behavior leaves 6.2 unanswered.
+7. Considered — `Design › States` and D5–D6/D17 answer 7.1–7.3.
+8. Considered — `Use cases › Minimal stretch` and D1/D16/D17 answer 8.1–8.2.
+9. Considered — `Use cases › Maximal stretch` and D1/D5/D6/D12/D19/D21 answer 9.1–9.3.
+10. Considered — `Security` and D1/D10/D11/D21/D22 answer 10.1–10.4.
+11. Considered — `Design › UX` and D6/D10/D13/D14/D16/D24 answer 11.1–11.4; D14’s evidence remains defective.
+12. Considered — `Failure & observability`, its matrices, and D1/D6/D7/D11/D14/D20/D22/D23/D26 answer 12.1–12.4.
+13. Considered — `Performance` and D1/D5/D19 answer 13.1–13.2.
+14. Gap — `Rollout` answers 14.1, 14.2 and the repository/server version rollback, while the required live-install transactional rollback leaves 14.3 unanswered; D26 answers 14.4.
+15. Considered — `Out of scope` answers 15.1–15.2.
+
+The inherited Epic decisions are otherwise present: carrier-only mutation, `BuffType.Replace`, remaining-seconds `LifeTime`, exclusions, S-8 late arrivals, precedence, one empowerment per faction, hard durations, every-X enumeration, and the API-3 rows/integer bump.
+
+12/15 layers · 46/49 probes
+VERDICT: REVISE
+### Dispositions
+- F1 · accepted · Business rules 9 justifies the four-component query (no UnitStats → nothing to raise; no Health → not a combatant) and makes the gap visible: the first sweep logs "query <n> of <m> faction entities" and, verbose, the gap's prefabs (D16)
+- F2 · accepted · Ownership.Decide reads only game components (Follower, EntityOwner, Team) and fails closed on any unreadable one; D20 adds the unreadable-owner case; the dependency table and S-8 say so (also closes round 1's F4)
+- F3 · accepted · +D28: tools/dev-snapshot.ps1 with the drill's snapshot code moved into tools/snapshot-lib.ps1 (atomic manifest, leftover refusal, hash-verified restore, crash cases in -SelfTest); steps 4-6 save before and restore after each session
+- F4 · accepted · D14 gains a distance column and a Logic seam, AdminLines.Natives, tested for cap, order, ties and both carrier renderings; Session 2 records a camp with more than 10 natives
+- F5 · accepted · D24's download is a complete command: a unique scratch folder, the exact asset path hashed, the folder removed in finally
+- F6 · accepted · D27's file evidence adds "faction=<names joined by ','>", "faction=Legion,Bandits" and "units=<NPCs holding the event's empowerment>"; the contract's §3 text stays D11's ContractDocTests
+- F7 · accepted · step 4 now schedules fe-short (60 s, natural expiry, reverted sample line) and fe-long (1200 s, stopped mid-window)
