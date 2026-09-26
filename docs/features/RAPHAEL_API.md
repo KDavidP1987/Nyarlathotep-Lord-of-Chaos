@@ -1,6 +1,6 @@
 # Raphael api — the machine interface
 
-**Status:** in development (docs/dod/raphael-api-core.md, step 4 of 6 done: Session 1 clean). Ships in 0.3.0 as api 2.
+**Status:** in development (docs/dod/raphael-api-core.md, step 5 of 6 done: Sessions 1 and 2 clean). Ships in 0.3.0 as api 2.
 
 ## What it provides
 
@@ -163,6 +163,27 @@ Observed, part 1 (2026-09-26 07:52–08:10; 16 owner screenshots, BepInEx log):
   waves)") but not pushed to the owner. The 150 units drained 5 a tick to "0 left".
 - Part 1 has no screenshot of `api version`, `api events 2` or `api events x`, and no statement of reply times; part 2
   covers them.
+
+Part 2 (08:33–08:38, same boot; the owner reconnected with Raphael off and ran `adminauth`; 2 screenshots):
+- `.nyar api version` → `[NYAR:version] api=2 plugin=0.3.0 ready=1 admin=1 enabled=1 killswitch=0 empower=1 waves=1
+  boss=1 zones=1 sieges=1 stats=0 annwarn=1 annbanner=0 anndaily=0 annlogin=0 annshare=0` (annwarn=1: WaveWarnings on).
+- `.nyar api events 2` → `[NYAR:def] id=t-spare name=t-spare enabled=0 trigger=manual action=waves duration=90
+  state=disabled reason=disabled` (the 11th row, carrying part 1's `set … 90`) and `[NYAR:end] cmd=events page=2/2
+  count=11`; `.nyar api events x` → `[NYAR:err] cmd=events code=badarg arg=page`.
+- `sub on`, `.nyar event start example-spawns`: the log shows 7 of 7 spawned per wave. The owner: "Everything worked
+  correctly", answering step 4 (the bandits appeared around them) and step 8 (the `api status` and `api events`
+  replies, in part 1 and part 2, came back within about a second).
+- `.nyar purge confirm` without `.nyar purge` first was refused (the owner: "it said I had to run Purge first").
+  Purge asks, then confirms within 30 s, by design (foundation D20, command table); the part 1 and part 2 steps
+  omitted `.nyar purge`. With it: "purge ends 1 events and despawns 13 units; run .nyar purge confirm within 30 s",
+  then "purged: 1 events, 13 units queued" and `[NYAR:ev] type=killswitch id=- secs=240`, no event-end line. The log:
+  "purge: 1 events ended, 13 units queued, 0 spawns cancelled, cooldown 240s" (13: one of the 14 bandits was
+  already dead), batches 5, 5, 3 to "0 left".
+- `sub off` → `on=0`; `.nyar event reload` → "reloaded: 11 valid, 0 disabled" and no `[NYAR:ev]` line.
+- Stopped after "Finished Saving" (08:41). `-LogCheck`: 0 unhandled, 807 nyar lines (the overnight idle ticks
+  included), 0 orphan errors, 0 unity errors. [Warning] lines: Il2CppInterop Class::Init, two Beelzebub TUNE lines,
+  and the mod's own purge line (logged at Warning by design); the server log's 226 PrefabLookupMap warnings all come
+  before "Startup Completed". No error line. Dev cfg WaveWarnings set back to false.
 
 ## Open questions
 
