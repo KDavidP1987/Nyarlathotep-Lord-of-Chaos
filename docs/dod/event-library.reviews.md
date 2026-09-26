@@ -322,12 +322,11 @@ The Epic’s event-library child constraint, D47/A22 unattended-after-kick-off a
 VERDICT: REVISE
 
 ### Dispositions
-Review 6 has blocking findings; by the owner's option A they go back to the owner. The dispositions below are the
-author's proposals, applied only after the owner decides.
-- F1 · accepted · pending owner: the catalogue uses the validator's `SchemaVersion` (Logic/Validation.cs:75, Resources/events.default.json); D1, D4, Minimal stretch, fixtures and tests say `SchemaVersion`
-- F2 · accepted · pending owner: `.nyar template list [pillar] [page]` — a number is a page, any other word a pillar; ten per page with a "page <p>/<n>" footer and the next command; an out-of-range page replies "no page <p>; <n> pages"; chat replies use their own formatter, not the api's Paging lines; TemplateCommandTests prove every template is reachable
-- F3 · accepted · pending owner: `.nyar pillar` reloads the cfg file before it sets the entry (ConfigFile.Reload), so an operator's saved hand edit is kept and only the one key changes; an edit made in an editor that saves after the command wins, as with any file; PillarSwitchTests and D15's in-game diff cover the reload
-- F4 · accepted · pending owner: D21 records one block per case with every emitted line, in order, verbatim
-- F5 · accepted · pending owner: duplicate faction, unit, boss, day and time values are refused before writing, with the validator's duplicate rule, and are cases of the authoring controls
-- F6 · accepted · pending owner: catalogue-unavailable and write-uncertain states join the existing degraded line and admin login notice
+The owner accepted F1–F6 on 2026-09-26 in plan mode (option A: Review 7 is final; advisory and local-fix blocking findings are applied and the plan approved, scope or decision findings return to the owner); they are applied in revision 6, which goes to Review 7.
+- F1 · accepted · the catalogue uses the validator's `SchemaVersion` (Logic/Validation.cs:75, Resources/events.default.json); D1, D4, Minimal stretch, fixtures and tests say `SchemaVersion` (corrected at apply: the key is checked at Logic/Validation.cs:127-131 and line 2 of Resources/events.default.json; line 75 is the parsed LoadResult.SchemaVersion property)
+- F2 · accepted · `.nyar template list [pillar] [page]` — a number is a page, any other word a pillar; ten per page with a "page <p>/<n>" footer and the next command; an out-of-range page replies "no page <p>; <n> pages"; chat replies use their own formatter, not the api's Paging lines; TemplateCommandTests prove every template is reachable
+- F3 · accepted · `.nyar pillar` reloads the cfg file before it sets the entry (ConfigFile.Reload), so an operator's saved hand edit is kept and only the one key changes; an edit made in an editor that saves after the command wins, as with any file; PillarSwitchTests and D15's in-game diff cover the reload
+- F4 · accepted · D21 records one block per case with every emitted line, in order, verbatim
+- F5 · accepted · duplicate faction, unit, boss, day and time values are refused before writing, with the validator's duplicate rule, and are cases of the authoring controls (corrected at apply: the validator's distinct rule covers factions, days and times only, Logic/Validation.cs:366, 255 and 263; trigger.bosses (283-286) and action.units (425-436) have none, so the authoring parser's own distinct check in Logic/CommandArgs.cs refuses those two before writing)
+- F6 · accepted · catalogue-unavailable and write-uncertain states join the existing degraded line and admin login notice
 
