@@ -28,7 +28,6 @@ internal static class EmpowerAction
     static readonly Ops _ops = new();
     static CarrierLedger _ledger = new(_ops, Log);
     static readonly FailureStreak _tickFaults = new();
-    static readonly FailureStreak _sampleFaults = new();
     static readonly Dictionary<string, Sample> _samples = new(StringComparer.Ordinal);
     static readonly List<Sample> _reverts = new();
 
@@ -50,14 +49,10 @@ internal static class EmpowerAction
 
     /// <summary>An Empower event started: its first sweep is due this tick.</summary>
     [Mutating]
-    internal static void StartCarriers(ActiveEvent active)
-    {
-        _ops.Forget(active.Id);
+    internal static void StartCarriers(ActiveEvent active) =>
         _ledger.Start(active.Id, active.Definition.Empower!, active.Instance.EndsUtc, DateTime.UtcNow);
-    }
 
-    /// <summary>The natural end: every carrier's LifeTime ends in this same second, so nothing is queued now; any still
-    /// there 5 s after the end is queued for removal (D5, A4).</summary>
+    /// <summary>The natural end: every carrier's LifeTime ends in this same second, so nothing is queued (D5).</summary>
     [Mutating]
     internal static void EndCarriers(string eventId)
     {
@@ -98,24 +93,14 @@ internal static class EmpowerAction
     {
         try
         {
-            _ledger.BeginTick(Settings.Limit(Limits.EmpowerBatchPerTick), DateTime.UtcNow);
+            _ledger.BeginTick(Settings.Limit(Limits.EmpowerBatchPerTick));
             _tickFaults.Ok();
         }
         catch (Exception ex)
         {
             if (_tickFaults.Fail()) Core.Log.LogError($"[nyar] empower removals failed: {ex.Message}");
         }
-        if (!Settings.VerboseLogging.Value) return;
-        try
-        {
-            Samples();
-            _sampleFaults.Ok();
-        }
-        catch (Exception ex)
-        {
-            // Diagnostics only: a failing read never stops the events that follow in this tick.
-            if (_sampleFaults.Fail()) Core.Log.LogWarning($"[nyar] empower sample read failed: {ex.Message}");
-        }
+        if (Settings.VerboseLogging.Value) Samples();
     }
 
     /// <summary>The event's share of this tick. Throws on a failing query, which EventRuntime counts as the event's fault.</summary>
@@ -148,6 +133,7 @@ internal static class EmpowerAction
 
     static void Took(Entity unit, string prefab)
     {
+        StatChangeUtility.KillOrDestroyEntity(Core.EntityManager, unit, unit, unit, 0, StatChangeReason.Default, true);
         if (!Settings.VerboseLogging.Value || _current is null || _samples.ContainsKey(_current)) return;
         var (pp, hp) = Read(unit);
         _samples[_current] = new Sample(_current, unit, prefab, pp, hp);
@@ -157,11 +143,9 @@ internal static class EmpowerAction
         unit.TryGetComponent<UnitStats>(out var s) ? s.PhysicalPower._Value : 0f,
         unit.TryGetComponent<Health>(out var h) ? h.MaxHealth._Value : 0f);
 
-    /// <summary>The event's sample moves to the revert list; one whose apply line is still due gets it logged first, by
-    /// <see cref="Samples"/>, which then watches it like the rest.</summary>
     static void QueueRevert(string eventId)
     {
-        if (_samples.Remove(eventId, out var s)) _reverts.Add(s);
+        if (_samples.Remove(eventId, out var s) && s.Logged) _reverts.Add(s);
     }
 
     /// <summary>The apply line one tick after the apply (the buff systems recompute the stats in between); the revert line
@@ -181,15 +165,6 @@ internal static class EmpowerAction
         {
             var s = _reverts[i];
             if (!s.Unit.Exists()) { _reverts.RemoveAt(i); continue; }
-            if (!s.Logged)
-            {
-                s.Logged = true;
-                var (ap, ah) = Read(s.Unit);
-                Log($"empower {s.EventId} sample {s.Prefab}: pp {s.Pp:0.##} -> {ap:0.##}, hp max {s.Hp:0.##} -> {ah:0.##}");
-                s.Pp = ap;
-                s.Hp = ah;
-                continue;
-            }
             if (!s.Ready)
             {
                 s.Ready = _ledger.CarrierOf(KeyOf(s.Unit)) is null && CarrierOn(s.Unit) == Entity.Null;
@@ -201,20 +176,13 @@ internal static class EmpowerAction
         }
     }
 
-    /// <summary>The unit's carrier: the buff the ledger tracks on it, else a T02 potion buff carrying the carrier marker
-    /// (one left from an earlier run), else Entity.Null. A player's own T02 potion is never taken for a carrier.</summary>
+    /// <summary>The unit's carrier buff (the T02 potion prefab), or Entity.Null.</summary>
     static Entity CarrierOn(Entity unit)
     {
-        if (!unit.Exists()) return Entity.Null;
-        if (_ledger.BuffOf(KeyOf(unit)) is { } tracked && EntityOf(tracked).Exists()) return EntityOf(tracked);
-        if (!Core.EntityManager.HasBuffer<BuffBuffer>(unit)) return Entity.Null;
+        if (!unit.Exists() || !Core.EntityManager.HasBuffer<BuffBuffer>(unit)) return Entity.Null;
         var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(unit);
         for (var i = 0; i < buffs.Length; i++)
-        {
-            var b = buffs[i].Entity;
-            if (buffs[i].PrefabGuid == CarrierBuff && b.TryGetComponent<SpellLevel>(out var level)
-                && Markers.KindOf(level.Level) == MarkerKind.Carrier) return b;
-        }
+            if (buffs[i].PrefabGuid == CarrierBuff && buffs[i].Entity.Exists()) return buffs[i].Entity;
         return Entity.Null;
     }
 
@@ -238,7 +206,7 @@ internal static class EmpowerAction
     // ---- D14: `.nyar debug here` natives. ----
 
     /// <summary>Native NPCs within <paramref name="radius"/> m of <paramref name="at"/>, each read back from the live
-    /// entity and its carrier, as AdminLines.Natives renders them; each line is also written to the server log.</summary>
+    /// entity and its carrier, as AdminLines.Natives renders them.</summary>
     internal static IReadOnlyList<string> DebugNatives(float3 at, int radius, int max)
     {
         var rows = new List<NativeRow>();
@@ -268,9 +236,7 @@ internal static class EmpowerAction
             finally { units.Dispose(); }
         }
         finally { query.Dispose(); }
-        var lines = AdminLines.Natives(rows, max);
-        foreach (var line in lines) Log($"debug {line}");               // in full: a chat line may be cut short
-        return lines;
+        return AdminLines.Natives(rows, max);
     }
 
     static NativeRow NativeOf(Entity unit, float distance)
@@ -333,21 +299,12 @@ internal static class EmpowerAction
         readonly Dictionary<int, string> _names = new();
         readonly HashSet<int> _playerTeams = new();
         readonly HashSet<string> _gapLogged = new(StringComparer.Ordinal);
-        readonly HashSet<string> _counted = new(StringComparer.Ordinal);
 
         internal void Reset()
         {
             _names.Clear();
             _playerTeams.Clear();
             _gapLogged.Clear();
-            _counted.Clear();
-        }
-
-        /// <summary>A (re)started event gets its "query n of m" count and gap line again.</summary>
-        internal void Forget(string eventId)
-        {
-            _gapLogged.Remove(eventId);
-            _counted.Remove(eventId);
         }
 
         string Name(PrefabGUID guid)
@@ -357,9 +314,8 @@ internal static class EmpowerAction
         }
 
         /// <summary>Business rules 9: PrefabGUID + FactionReference + Health + UnitStats, IncludeDisabled | IncludeSpawnTag,
-        /// a unit of the factions or named in includeUnits. Only on an event's first query: the faction's entities over
-        /// PrefabGUID + FactionReference alone for the "query n of m" line, and with VerboseLogging the prefabs of the gap
-        /// (D16); later sweeps run the combatant pass alone.</summary>
+        /// a unit of the factions or named in includeUnits; the faction's entities over PrefabGUID + FactionReference alone
+        /// for the "query n of m" line, and on the first query with VerboseLogging the prefabs of the gap (D16).</summary>
         public SweepQuery Query(Logic.EmpowerAction action)
         {
             RefreshPlayerTeams();
@@ -367,13 +323,13 @@ internal static class EmpowerAction
             var combatants = new HashSet<long>();
             ForEach(true, e =>
             {
-                if (!action.Factions.Contains(Name(e.Read<FactionReference>().FactionGuid._Value))
-                    && (action.IncludeUnits.Count == 0 || !action.IncludeUnits.Contains(Name(e.Read<PrefabGUID>())))) return;
+                var prefab = Name(e.Read<PrefabGUID>());
+                var faction = Name(e.Read<FactionReference>().FactionGuid._Value);
+                if (!action.Factions.Contains(faction) && !action.IncludeUnits.Contains(prefab)) return;
                 var key = KeyOf(e);
                 units.Add(key);
                 combatants.Add(key);
             });
-            if (_current is not null && _counted.Contains(_current)) return new SweepQuery(units, 0);
             var gap = new Dictionary<string, int>(StringComparer.Ordinal);
             var factionEntities = 0;
             var verbose = _current is not null && Settings.VerboseLogging.Value && _gapLogged.Add(_current);
@@ -387,7 +343,6 @@ internal static class EmpowerAction
             });
             if (verbose && gap.Count > 0)
                 Log($"empower {_current}: query gap " + string.Join(", ", gap.OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Key} {g.Value}")));
-            if (_current is not null) _counted.Add(_current);
             return new SweepQuery(units, factionEntities);
         }
 
@@ -418,11 +373,8 @@ internal static class EmpowerAction
         void RefreshPlayerTeams()
         {
             _playerTeams.Clear();
-            var query = Core.EntityManager.CreateEntityQuery(new EntityQueryDesc
-            {
-                All = new[] { ComponentType.ReadOnly(Il2CppType.Of<PlayerCharacter>()), ComponentType.ReadOnly(Il2CppType.Of<Team>()) },
-                Options = EntityQueryOptions.IncludeDisabled                     // an offline player's character keeps its team
-            });
+            var query = Core.EntityManager.CreateEntityQuery(ComponentType.ReadOnly(Il2CppType.Of<PlayerCharacter>()),
+                ComponentType.ReadOnly(Il2CppType.Of<Team>()));
             try
             {
                 var teams = query.ToComponentDataArray<Team>(Allocator.Temp);
@@ -483,17 +435,12 @@ internal static class EmpowerAction
             catch { return Logic.OwnerLink.Unresolvable; }
         }
 
-        /// <summary>A present link whose entity is gone, or whose second-hop owner is gone, cannot be read and counts as
-        /// owned (D3, fail closed).</summary>
         Logic.OwnerLink Leads(Entity target)
         {
-            if (!target.Exists()) return Logic.OwnerLink.Unresolvable;
+            if (!target.Exists()) return Logic.OwnerLink.NotPlayer;
             if (target.Has<PlayerCharacter>() || target.Has<User>()) return Logic.OwnerLink.Player;
-            if (target.TryGetComponent<EntityOwner>(out var o) && o.Owner != Entity.Null && o.Owner != target)
-            {
-                if (!o.Owner.Exists()) return Logic.OwnerLink.Unresolvable;
-                if (o.Owner.Has<PlayerCharacter>() || o.Owner.Has<User>()) return Logic.OwnerLink.Player;
-            }
+            if (target.TryGetComponent<EntityOwner>(out var o) && o.Owner != target && o.Owner.Exists()
+                && (o.Owner.Has<PlayerCharacter>() || o.Owner.Has<User>())) return Logic.OwnerLink.Player;
             if (target.TryGetComponent<Team>(out var t) && _playerTeams.Contains(t.Value)) return Logic.OwnerLink.Player;
             return Logic.OwnerLink.NotPlayer;
         }
@@ -501,9 +448,7 @@ internal static class EmpowerAction
         public bool Exists(long buff) => EntityOf(buff).Exists();
 
         /// <summary>Create and mark (A2): the carrier exists only once SpellLevel = the carrier marker is written, so every
-        /// carrier is found by the boot sweep. In the same step (A4) it gets the recipe's LifeTime with Age 0 and an empty stat
-        /// buffer, so a carrier whose later stages fail grants nothing and still ends on time. A throw destroys what was made
-        /// through RemoveBuffSafe before it propagates.</summary>
+        /// carrier is found by the boot sweep; a throw destroys what was made through RemoveBuffSafe before it propagates.</summary>
         public long Create(long unitKey, CarrierRecipe recipe)
         {
             var unit = EntityOf(unitKey);
@@ -513,11 +458,6 @@ internal static class EmpowerAction
             {
                 if (!buff.AddComponentSafe<SpellLevel>()) throw new InvalidOperationException("SpellLevel could not be added");
                 buff.Write(new SpellLevel { Level = recipe.SpellLevel });
-                if (!buff.AddComponentSafe<LifeTime>()) throw new InvalidOperationException("LifeTime could not be added");
-                buff.Write(new LifeTime { Duration = recipe.LifeTimeSeconds, EndAction = Enum.Parse<LifeTimeEndAction>(recipe.EndAction) });
-                if (!buff.AddComponentSafe<Age>()) throw new InvalidOperationException("Age could not be added");
-                buff.Write(new Age { Value = 0f });
-                if (Core.EntityManager.HasBuffer<ModifyUnitStatBuff_DOTS>(buff)) Core.EntityManager.GetBuffer<ModifyUnitStatBuff_DOTS>(buff).Clear();
             }
             catch
             {

@@ -49,7 +49,8 @@ sealed class FakeCarrierOps : ICarrierOps
         return Units.TryGetValue(unit, out var f) ? f : null;
     }
 
-    public bool Exists(long buff) => Buffs.Contains(buff);
+    public bool ExistsThrows { get; set; }
+    public bool Exists(long buff) => ExistsThrows ? throw new InvalidOperationException("exists failed") : Buffs.Contains(buff);
 
     void Stage(string stage, long unit)
     {

@@ -148,7 +148,9 @@
         "bad-10": "a DestroyUtility.Destroy(Em(Pick(1), 2), e) call whose first argument nests parentheses and a comma, planted in Services/Leak.cs (spikes A13, Codex step 9 round 2)",
         "bad-11": "the real EntityExtensions.cs with a Prefab-guarded DestroyUtility.Destroy call planted in a third method, AddBufferSafe (faction-empowerment D8, A3)",
         "bad-12": "the real EntityExtensions.cs with RemoveBuffSafe's Prefab refusal removed (if (!buff.Exists()) ...) (faction-empowerment D8, A3)",
-        "bad-13": "a Services/EmpowerAction.cs calling unit.DestroySafe() (faction-empowerment D8, A3)"
+        "bad-13": "a Services/EmpowerAction.cs calling unit.DestroySafe() (faction-empowerment D8, A3)",
+        "bad-14": "the real EntityExtensions.cs with RemoveBuffSafe's destroy losing DestroyDebugReason.TryRemoveBuff (faction-empowerment D8, Codex step 2)",
+        "bad-15": "a Services/EmpowerAction.cs calling StatChangeUtility.KillOrDestroyEntity (faction-empowerment D8, step 2 review)"
       }
     },
     {

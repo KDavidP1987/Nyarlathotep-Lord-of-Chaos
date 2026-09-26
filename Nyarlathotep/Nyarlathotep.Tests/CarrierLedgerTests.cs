@@ -169,6 +169,87 @@ public class CarrierLedgerTests
         Assert.Equal(20, rig.Ops.Buffs.Count);                       // left to their LifeTime, which ends now
     }
 
+    // ---- A4: the natural-end watch. ----
+
+    static Rig Ended(int units, out DateTime end)
+    {
+        end = T0.AddSeconds(60);
+        var rig = Started(units, end);
+        rig.Tick(T0, 500, "surge");
+        rig.Ledger.End("surge");
+        return rig;
+    }
+
+    [Fact]
+    public void A_carrier_still_there_5_s_after_the_natural_end_is_queued_and_removed()
+    {
+        var rig = Ended(20, out var end);
+        Assert.Equal(20, rig.Ledger.Watched);
+        Assert.Equal("removing", rig.Ledger.CarrierOf(1));          // no second carrier while it is watched
+        rig.Ledger.BeginTick(200, end.AddSeconds(4.9));
+        Assert.Equal(20, rig.Ledger.Watched);                        // not due yet
+        foreach (var b in rig.Ops.Buffs.Where(b => rig.Ops.BuffUnit[b] > 5).ToList()) rig.Ops.Buffs.Remove(b);   // 15 expired
+        rig.Ledger.BeginTick(200, end.AddSeconds(5));
+        Assert.Equal(0, rig.Ledger.Watched);
+        Assert.Equal(5, rig.Ops.CallCount("remove"));                // the 5 that outlived it, in the same tick
+        Assert.Empty(rig.Ops.Buffs);
+        Assert.Contains("empower surge ended: 5 carriers outlived the end, queued for removal", rig.Log);
+        Assert.Null(rig.Ledger.CarrierOf(1));
+        Assert.Null(rig.Ledger.CarrierOf(20));
+    }
+
+    [Fact]
+    public void Carriers_that_end_on_time_need_no_removal_and_no_line()
+    {
+        var rig = Ended(20, out var end);
+        rig.Ops.Buffs.Clear();
+        rig.Ledger.BeginTick(200, end.AddSeconds(5));
+        Assert.Equal(0, rig.Ledger.Watched);
+        Assert.Equal(0, rig.Ops.CallCount("remove"));
+        Assert.DoesNotContain(rig.Log, l => l.Contains("outlived", StringComparison.Ordinal));
+        Assert.Null(rig.Ledger.CarrierOf(1));
+    }
+
+    [Fact]
+    public void The_watch_checks_at_most_the_budget_per_tick()
+    {
+        var rig = Ended(300, out var end);
+        rig.Ledger.BeginTick(200, end.AddSeconds(5));
+        Assert.Equal(100, rig.Ledger.Watched);
+        Assert.DoesNotContain(rig.Log, l => l.Contains("outlived", StringComparison.Ordinal));   // logged once, when all are checked
+        rig.Ledger.BeginTick(200, end.AddSeconds(6));
+        Assert.Equal(0, rig.Ledger.Watched);
+        Assert.Single(rig.Log, l => l == "empower surge ended: 300 carriers outlived the end, queued for removal");
+    }
+
+    [Fact]
+    public void A_purge_queues_the_watched_carriers_at_once()
+    {
+        var rig = Ended(20, out _);
+        rig.Ledger.StopAll();
+        Assert.Equal(0, rig.Ledger.Watched);
+        Assert.Equal(20, rig.Ledger.PendingRemovals);
+        rig.Ledger.BeginTick(200);
+        Assert.Empty(rig.Ops.Buffs);
+        Assert.Null(rig.Ledger.CarrierOf(1));
+    }
+
+    [Fact]
+    public void A_removal_pass_that_throws_loses_no_queued_carrier()
+    {
+        var rig = Started(3);
+        rig.Tick(T0, 200, "surge");
+        rig.Ledger.Stop("surge");
+        rig.Ops.ExistsThrows = true;
+        Assert.Throws<InvalidOperationException>(() => rig.Ledger.BeginTick(200));
+        Assert.Equal(3, rig.Ledger.PendingRemovals);
+        Assert.Equal("removing", rig.Ledger.CarrierOf(1));
+        rig.Ops.ExistsThrows = false;
+        rig.Ledger.BeginTick(200);
+        Assert.Empty(rig.Ops.Buffs);
+        Assert.Equal("empower surge stopped: 3 removed, 0 left to expire", rig.Log.Last());
+    }
+
     [Fact]
     public void A_carried_unit_keeps_the_first_events_carrier()
     {
@@ -235,6 +316,17 @@ public class CarrierLedgerTests
         rig.Tick(T0, 200);
         Assert.Equal(["remove 7", "remove 8"], rig.Ops.Calls);
         Assert.Empty(rig.Log);
+    }
+
+    [Fact]
+    public void BuffOf_names_the_tracked_carrier_until_it_is_dropped()
+    {
+        var rig = Started(1);
+        Assert.Null(rig.Ledger.BuffOf(1));
+        rig.Tick(T0, 200, "surge");
+        Assert.Equal(rig.Ops.Buffs.Single(), rig.Ledger.BuffOf(1));
+        rig.Ledger.Stop("surge");
+        Assert.Null(rig.Ledger.BuffOf(1));
     }
 
     [Fact]

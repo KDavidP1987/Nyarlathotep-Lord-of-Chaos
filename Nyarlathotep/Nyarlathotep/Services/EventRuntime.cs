@@ -188,7 +188,7 @@ internal static class EventRuntime
         {
             var carriers = EmpowerAction.CarriersOf(id);
             EmpowerAction.StopCarriers(id);
-            Core.Log.LogWarning($"[nyar] event {id} {why}: {carriers} carriers queued for removal");
+            Core.Log.LogWarning($"[nyar] empower {id}: {carriers} carriers queued for removal ({why})");
         }
         else
         {

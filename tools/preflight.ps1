@@ -392,14 +392,14 @@ function Test-CheckStructuralEdits([string]$Root) {
     $rx = '(?:\.(?<op>AddComponent(?!Safe\b)\w*|RemoveComponent(?!Safe\b)\w*|AddBuffer|DestroyEntity)\s*(?:<[^>]*>)?\s*\(\s*|\b(?<op>DestroyUtility\.Destroy\w*)\s*\(\s*(?:[^,()]|\((?:[^()]|\([^()]*\))*\))+,\s*)(?<arg>[^,)\s]+)'
     $fence = "$PkgRel/EntityExtensions.cs"
     # DestroyUtility.Destroy* is allowed only in the bodies of RemoveBuffSafe (the carrier-buff removal) and DestroySafe
-    # (the unit despawn helper, spikes A13); and the empowerment service never calls DestroySafe, so a carrier cannot be
-    # destroyed through the unit helper (faction-empowerment D8, A3).
+    # (the unit despawn helper, spikes A13); and the empowerment service never calls DestroySafe or KillOrDestroyEntity, so
+    # a carrier or its unit cannot be destroyed another way (faction-empowerment D8, A3).
     $destroyHosts = @('RemoveBuffSafe', 'DestroySafe')
     $empower = "$PkgRel/Services/EmpowerAction.cs"
     $bad = @(); $guarded = 0
     foreach ($f in $cs) {
         $text = Remove-CsComments (Read-Text $Root $f)
-        if ($f -eq $empower -and $text -match '\bDestroySafe\b') { $bad += "DestroySafe in $f (a carrier is removed only by RemoveBuffSafe)" }
+        if ($f -eq $empower -and $text -match '\b(?<k>DestroySafe|KillOrDestroyEntity)\b') { $bad += "$($Matches.k) in $f (a carrier is removed only by RemoveBuffSafe)" }
         $calls = [regex]::Matches($text, $rx)
         if ($calls.Count -eq 0) { continue }
         if ($f -ne $fence) { $bad += "$($calls[0].Groups['op'].Value) in $f"; continue }
@@ -411,6 +411,9 @@ function Test-CheckStructuralEdits([string]$Root) {
             if ($c.Groups['op'].Value -like 'DestroyUtility.Destroy*') {
                 $name = [regex]::Match($text.Substring($start), '^[^(]*?(\w+)\s*(?:<[^>]*>)?\s*\(').Groups[1].Value
                 if ($destroyHosts -notcontains $name) { $bad += "$($c.Groups['op'].Value) in $f method $name (only RemoveBuffSafe and DestroySafe)"; continue }
+                # The carrier removal is the game's buff removal: its destroy names DestroyDebugReason.TryRemoveBuff (D8).
+                $stmt = $text.Substring($c.Index); $stmt = $stmt.Substring(0, [Math]::Max(0, $stmt.IndexOf(';')))
+                if ($name -eq 'RemoveBuffSafe' -and $stmt -notmatch ',\s*DestroyDebugReason\.TryRemoveBuff\s*\)\s*$') { $bad += "$($c.Groups['op'].Value) in $f method RemoveBuffSafe without DestroyDebugReason.TryRemoveBuff"; continue }
             }
             $before = $text.Substring($start, $c.Index - $start)
             if (-not (Test-PrefabRefusal $before $c.Groups['arg'].Value)) { $bad += "$($c.Groups['op'].Value) in $f without an earlier Prefab refusal" }
@@ -828,7 +831,9 @@ function Get-PathsListings([string]$Root) {
     catch { $rel = $null }
     finally { Pop-Location }
     $tempDir = [IO.Path]::GetTempPath()
-    $temp = @(Get-ChildItem -LiteralPath $tempDir -Directory -Filter 'nyar-*' -Force -ErrorAction SilentlyContinue | ForEach-Object Name) -join "`n"
+    # An unreadable %TEMP% is a failed listing ($null), never an empty one (step 2 review).
+    try { $temp = @(Get-ChildItem -LiteralPath $tempDir -Directory -Filter 'nyar-*' -Force -ErrorAction Stop | ForEach-Object Name) -join "`n" }
+    catch { $temp = $null }
     return [pscustomobject]@{ Walked = @(Get-WalkedPaths $Root); Temp = $temp; Worktrees = $wt; RemoteTags = $rt; Releases = $rel }
 }
 

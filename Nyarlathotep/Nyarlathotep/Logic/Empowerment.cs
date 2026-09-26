@@ -166,6 +166,9 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
     /// <summary>No carrier is applied with less time than this left, so none outlives its event.</summary>
     public const double MinSecondsLeft = 1.0;
 
+    /// <summary>After a natural end, a carrier whose buff still exists this long past the end is queued for removal (A4).</summary>
+    public static readonly TimeSpan EndWatch = TimeSpan.FromSeconds(5);
+
     sealed class EventState(string id, EmpowerAction action, DateTime endsUtc, DateTime firstSweepUtc)
     {
         public string Id { get; } = id;
@@ -196,12 +199,22 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
         public int Left { get; set; }
     }
 
-    sealed class Removal(long buff, long? unit, StopTally? tally)
+    sealed class Removal(long buff, long? unit, StopTally? tally, string? eventId = null)
     {
         public long Buff { get; } = buff;
         public long? Unit { get; } = unit;
         public StopTally? Tally { get; } = tally;
+        public string EventId { get; } = tally?.EventId ?? eventId ?? "boot";
         public int Failures { get; set; }
+    }
+
+    /// <summary>The carriers of one naturally ended event, watched until <see cref="Due"/> (A4).</summary>
+    sealed class EndWatchTally(string eventId, int pending, DateTime due)
+    {
+        public string EventId { get; } = eventId;
+        public DateTime Due { get; } = due;
+        public int Pending { get; set; } = pending;
+        public int Outlived { get; set; }
     }
 
     readonly Dictionary<string, EventState> _events = new(StringComparer.Ordinal);
@@ -209,6 +222,7 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
     readonly LinkedList<Removal> _removals = new();
     readonly Dictionary<long, int> _removing = [];       // units whose carrier is queued for removal but still on them
     readonly Dictionary<long, long> _expiring = [];      // unit → carrier whose removal and fallback failed, until it is gone
+    readonly LinkedList<(long Buff, long Unit, EndWatchTally Tally)> _watch = new();   // carriers of naturally ended events
     int _remaining;
 
     public bool IsActive(string eventId) => _events.ContainsKey(eventId);
@@ -218,6 +232,8 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
 
     public int Carriers => _byUnit.Count;
     public int PendingRemovals => _removals.Count;
+    /// <summary>Carriers of naturally ended events still waiting for their end + <see cref="EndWatch"/> check (A4).</summary>
+    public int Watched => _watch.Count;
     public bool SweepInProgress(string eventId) => _events.TryGetValue(eventId, out var e) && e.Sweep is not null;
     /// <summary>The event whose carrier the unit holds, or "removing" while an old carrier is still on it (queued for
     /// removal, or left to its LifeTime after the removal and its fallback failed), so no event applies a second carrier
@@ -234,16 +250,28 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
         return null;
     }
 
+    /// <summary>The carrier buff the ledger tracks on <paramref name="unit"/> (applied or pending), or null.</summary>
+    public long? BuffOf(long unit) => _byUnit.TryGetValue(unit, out var c) ? c.Buff : null;
+
     /// <summary>An Empower event started: its first sweep is due now.</summary>
     public void Start(string eventId, EmpowerAction action, DateTime endsUtc, DateTime utcNow) =>
         _events[eventId] = new EventState(eventId, action, endsUtc, utcNow);
 
-    /// <summary>The natural end: the queued sweep is dropped and nothing is queued, since every carrier's LifeTime ends in
-    /// the same second (D5).</summary>
+    /// <summary>The natural end: the queued sweep is dropped and nothing is queued now, since every carrier's LifeTime ends
+    /// in the same second (D5); but a carrier on a disabled NPC may not age, so each is watched and, if its buff still exists
+    /// <see cref="EndWatch"/> after the end, queued for removal (A4). A watched unit counts as "removing".</summary>
     public void End(string eventId)
     {
+        var due = (_events.TryGetValue(eventId, out var e) ? e.EndsUtc : DateTime.MinValue) + EndWatch;
         _events.Remove(eventId);
-        foreach (var c in _byUnit.Values.Where(c => c.EventId == eventId).ToList()) _byUnit.Remove(c.Unit);
+        var carriers = _byUnit.Values.Where(c => c.EventId == eventId).ToList();
+        var tally = new EndWatchTally(eventId, carriers.Count, due);
+        foreach (var c in carriers)
+        {
+            _byUnit.Remove(c.Unit);
+            _removing[c.Unit] = _removing.GetValueOrDefault(c.Unit) + 1;
+            _watch.AddLast((c.Buff, c.Unit, tally));
+        }
     }
 
     /// <summary>Stop, fault cancel and purge: the queued sweep is dropped (no later tick applies for it) and every carrier
@@ -262,9 +290,15 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
         if (carriers.Count == 0) Stopped(tally);
     }
 
-    /// <summary>Every event stops (purge).</summary>
+    /// <summary>Every event stops (purge), and carriers still watched after a natural end are queued for removal now.</summary>
     public void StopAll()
     {
+        while (_watch.First is { } node)
+        {
+            var (buff, unit, t) = node.Value;
+            _watch.RemoveFirst();
+            _removals.AddLast(new Removal(buff, unit, null, t.EventId));      // End already counted the unit as removing
+        }
         foreach (var id in _events.Keys.Concat(_byUnit.Values.Select(c => c.EventId)).Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList())
             Stop(id);
     }
@@ -281,49 +315,86 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
     /// taken from the queue counts against the budget; one whose buff no longer exists is dropped without a game operation; a Remove that throws is retried on the next tick up
     /// to <see cref="RemoveRetries"/> times, then the expiry fallback is tried once, and only if that throws too is the
     /// carrier left to its LifeTime (D20).</summary>
-    public void BeginTick(int budget)
+    public void BeginTick(int budget, DateTime? utcNow = null)
     {
         _remaining = budget;
+        if (utcNow is { } now) Watch(now, budget);
         if (_expiring.Count > 0)                              // rare: only carriers whose removal and fallback both failed
             foreach (var gone in _expiring.Where(kv => !ops.Exists(kv.Value)).Select(kv => kv.Key).ToList()) _expiring.Remove(gone);
         var retry = new List<Removal>();
-        while (_remaining > 0 && _removals.First is { } node)
+        Removal? current = null;                              // taken from the queue, no state changed for it yet
+        try
         {
-            var r = node.Value;
-            _removals.RemoveFirst();
-            _remaining--;
-            if (!ops.Exists(r.Buff))
+            while (_remaining > 0 && _removals.First is { } node)
             {
-                Done(r, removed: true);
-                continue;
-            }
-            if (r.Failures > RemoveRetries)
-            {
+                var r = current = node.Value;
+                _removals.RemoveFirst();
+                _remaining--;
+                if (!ops.Exists(r.Buff))
+                {
+                    current = null;
+                    Done(r, removed: true);
+                    continue;
+                }
+                if (r.Failures > RemoveRetries)
+                {
+                    try
+                    {
+                        ops.Expire(r.Buff);
+                        current = null;
+                        Done(r, removed: true);
+                    }
+                    catch (Exception ex) when (current is not null)
+                    {
+                        current = null;
+                        if (r.Unit is { } u) _expiring[u] = r.Buff;
+                        log($"empower {r.EventId}: carrier removal failed, left to expire: {ex.Message}");
+                        Done(r, removed: false);
+                    }
+                    continue;
+                }
                 try
                 {
-                    ops.Expire(r.Buff);
+                    ops.Remove(r.Buff);
+                    current = null;
                     Done(r, removed: true);
                 }
-                catch (Exception ex)
+                catch (Exception) when (current is not null)
                 {
-                    log($"empower {r.Tally?.EventId ?? "boot"}: carrier removal failed, left to expire: {ex.Message}");
-                    Done(r, removed: false);
-                    if (r.Unit is { } u) _expiring[u] = r.Buff;
+                    current = null;
+                    r.Failures++;
+                    retry.Add(r);
                 }
-                continue;
-            }
-            try
-            {
-                ops.Remove(r.Buff);
-                Done(r, removed: true);
-            }
-            catch (Exception)
-            {
-                r.Failures++;
-                retry.Add(r);
             }
         }
-        for (var i = retry.Count - 1; i >= 0; i--) _removals.AddFirst(retry[i]);
+        finally
+        {
+            // A throw outside the per-entry handling (Exists, a log line) loses no entry: the one in hand, if nothing was
+            // recorded for it yet, and the retries go back to the front of the queue.
+            if (current is not null) _removals.AddFirst(current);
+            for (var i = retry.Count - 1; i >= 0; i--) _removals.AddFirst(retry[i]);
+        }
+    }
+
+    /// <summary>The natural-end watch (A4): carriers past their event's end + <see cref="EndWatch"/> whose buff still
+    /// exists join the removal queue, and "empower &lt;id&gt; ended: &lt;k&gt; carriers outlived the end, queued for
+    /// removal" is logged once the event's last one is checked; the rest are done. At most <paramref name="max"/> per tick.</summary>
+    void Watch(DateTime utcNow, int max)
+    {
+        for (var n = 0; n < max && _watch.First is { } node && node.Value.Tally.Due <= utcNow; n++)
+        {
+            var (buff, unit, t) = node.Value;
+            var outlived = ops.Exists(buff);
+            _watch.RemoveFirst();
+            if (outlived)
+            {
+                t.Outlived++;
+                _removals.AddLast(new Removal(buff, unit, null, t.EventId));   // End already counted the unit as removing
+            }
+            else Done(new Removal(buff, unit, null), removed: true);
+            if (--t.Pending == 0 && t.Outlived > 0)
+                log($"empower {t.EventId} ended: {t.Outlived} carriers outlived the end, queued for removal");
+        }
     }
 
     /// <summary>The event's share of this tick (D5): a sweep is queued at the start and again 15 s after each sweep
