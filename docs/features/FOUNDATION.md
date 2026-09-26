@@ -359,6 +359,32 @@ the restored config; no player connected.
 - Log check: 0 unhandled, 5 nyar lines, 0 orphan errors, 0 unity errors; warnings only Il2CppInterop and
   Beelzebub, plus the save-load PrefabLookupMap lines before "Startup Completed".
 
+### Session 20 · 2026-09-25
+Release build of 9c721cf (A21: every unit leaves through the despawn budget at its due time), unattended, no player.
+MaxDespawnsPerTick 1 and VerboseLogging on. tools/ingame `a21` scheduled two Point events at 20:38: t-own, 10 Bandit
+Deadeyes in one wave with unitLifetimeSeconds 30 inside a 300 s event, and t-end, 6 units for 60 s (the event-end
+control).
+- "event t-own wave 1/1: 10 units queued, due in 30s, lifetime 240s" (30 s + the 210 s drain margin at 150/1) and
+  "event t-end wave 1/1: 6 units queued, due in 90s, lifetime 300s".
+- 30 s after the spawn: "10 units due for despawn", then ten "despawn batch: 1 of 1 destroyed" lines from "9 left" to
+  "0 left", one a second. Before A21 the game's LifeTime removed such a batch in one frame.
+- t-end: "event t-end ended (1 of 1 waves)", "6 units due for despawn", six batches of 1 to "0 left".
+- Log check: 0 unhandled, 68 nyar lines, 0 orphan errors, 0 unity errors; warnings only Il2CppInterop and
+  Beelzebub, plus the 226 save-load PrefabLookupMap lines.
+
+### Session 21 · 2026-09-25
+Release build of 31c3a08 (A22: the marker is set first, and the LifeTime backstop is attempted even when marking
+fails), unattended, same config, two boots.
+- Boot B: tools/ingame `a22` scheduled t-mark (5 units, 600 s) at 20:45. "event t-own cancelled by restart" (left
+  over from session 20's kill), then "5 units queued, due in 629s, lifetime 839s" and 5 spawns. The server was killed
+  6 s after the 20:46:37 "Finished Saving", with the units alive.
+- Boot C: "event t-mark cancelled by restart", "boot marker sweep: 5 found, 5 queued for despawn (5 listed in
+  state.json)", then five batches of 1 to "0 left". The marker written first still makes every saved unit
+  findable.
+- Log check, Boot B (from the copies taken before the restart): 0 unhandled, 16 nyar lines, 0 orphan errors, 0 unity
+  errors. Boot C: 0 unhandled, 10 nyar lines, 0 orphan errors, 0 unity errors. Warnings only Il2CppInterop and
+  Beelzebub, plus the 226 PrefabLookupMap lines. The config and events.json were restored afterwards.
+
 ## Open questions
 
 None open. D28's "still loading" reply, which cannot be seen in game, is proven by a static check instead

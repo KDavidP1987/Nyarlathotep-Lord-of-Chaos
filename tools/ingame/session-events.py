@@ -131,6 +131,17 @@ elif mode == "a21":
          "trigger": {"type": "Schedule", "days": day, "times": at}, "action": end}]}
     write(doc)
     print("a21: t-own and t-end at", at[0])
+elif mode == "a22":
+    # foundation A22 (step 9): t-mark is 5 units for 600 s at a Point, spawned with the marker set first; the server is
+    # killed right after the next "Finished Saving" with them alive, and the next boot must log "boot marker sweep: 5
+    # found, 5 queued" and drain them (the marker still makes every unit findable).
+    now = datetime.datetime.now().replace(second=0, microsecond=0)
+    at = [hhmm(now + datetime.timedelta(minutes=3))]
+    doc = {"SchemaVersion": 1, "events": [
+        {"id": "t-mark", "name": "t-mark", "enabled": True, "pillar": "spawns", "durationSeconds": 600,
+         "trigger": {"type": "Schedule", "days": [now.strftime("%a")], "times": at}, "action": point(unit(5), radius=6)}]}
+    write(doc)
+    print("a22: t-mark at", at[0])
 elif mode == "restore-valid":
     write(json.load(open(os.path.join(HERE, "d23a.json"))))
     print("valid d23a restored")

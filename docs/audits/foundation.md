@@ -233,3 +233,20 @@ yarfoundation-before.tsv "20 created, 38 changed, 0 deleted, all in manifest, no
 - Codex cross-inspection of the release surfaces (read-only, code pasted), all findings accepted: round 1 REVISE (announce is not behind a switch, the purge pause is the configured cooldown, the daily-banner screenshot slot, the root README's retired-key note, Status recap, a one-paragraph intro); round 2 REVISE (the root README presented unbuilt pillars as working, no Architecture section, "everything off" when General.Enabled defaults on, missing ranges); round 3 REVISE (the toml description and csproj Description, the Discord link repeated); round 4 REVISE (the root README's beta note); round 5 REVISE (Status recap, the beta note's extra content); round 6 REVISE (a rejection names the event and reason, not always a field; "server-side" twice); round 7 REVISE (two sections for one pillar); round 8 REVISE (manual install must name the dependencies); round 9 REVISE (units outlive the event by GraceSeconds); round 10 READY
 - Codex verdict: READY (round 10)
 - session 19 ran the DLL built before the review; the review changed only the csproj Description metadata, and the rebuilt DLL passed the same 531 tests
+
+### Step 9 · 2026-09-25 · 31c3a08
+- D38 rollback drill (the D38 command, pre-child e5ebddc, worktree under %TEMP%): `git revert --no-edit e5ebddc..v0.2.0` without conflicts, the reverted tree "0 Warning(s)", "0 Error(s)", "PREFLIGHT OK", `git diff --quiet e5ebddc HEAD` exit 0; worktree removed
+- after the drill: `-Paths` "paths: 576 walked, all in manifest"; `git worktree list` one worktree (main)
+- Codex whole-child cross-inspection (e5ebddc..v0.2.0 plugin sources pasted, read-only): round 1 REVISE with 3 high findings.
+  - F1: a unit whose own lifetime decides its due time left through the game's LifeTime, outside the budget. Declined in round 2 as the owner's A16 choice; Codex held it blocking, the owner chose the fix (A21, 9c721cf).
+  - F2: Unload does not drain. Declined (settled Design › Startup and shutdown; the restart path cleans up, D21); Codex round 2 agreed.
+  - F3: a failed spawn without a boot-discoverable marker. Declined in round 1, accepted in round 2 (A22, 9c721cf); round 3 held that LifeTime and Age still preceded the marker, fixed in 31c3a08 (marker record first, LifeTime attempted even when marking fails).
+  - Round 3 (9c721cf and the plan edits) accepted F1's fix; round 4 (31c3a08) "No real defects found".
+- compile: 0 errors, 0 warnings; tests: 539 passed (SpawnLedgerTests: the due queue, earliest first and within the budget; every LifeTime past due + a full drain; a unit the game removed is not queued)
+- mutation check: an exclusive due time failed 2 tests, no earliest-first ordering failed 1, a no-op QueueDue failed 2, the margin only for event-end units (the A16 rule) failed 6, a manual unit never due failed 4; restored code passes
+- preflight: exit 0; "gateway: only ActionGateway mutates (15 call sites)"
+- /code-review (inline, 9c721cf and 31c3a08): QueueDue runs before TakeDespawns and QueueDespawn dedupes against EndEvent, Purge and the grace cleanup; units the game removed are pruned before it; a unit spawned after its due time is queued at once and keeps LifeTime ≥ the margin; no finding beyond Codex's
+- session 20 log check: 0 unhandled, 68 nyar lines, 0 orphan errors, 0 unity errors
+- session 21 log check: 0 unhandled, 16 nyar lines, 0 orphan errors, 0 unity errors (Boot B, from copies taken before the restart; Boot C: 0 unhandled, 10 nyar lines, 0 orphan errors, 0 unity errors)
+- in game: A21 in session 20 (10 own-lifetime units left 1 a tick through the queue, t-end the same), A22 in session 21 (the boot sweep found all 5 saved units)
+- Codex verdict: READY (round 4)
