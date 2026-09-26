@@ -16,7 +16,8 @@ sealed class FakeCarrierOps : ICarrierOps
     public int Queries { get; private set; }
     public int ExtraFactionEntities { get; set; } = 3;
 
-    /// <summary>"create", "mark", "lifetime", "strip" or "modifiers": that stage throws, for <see cref="ThrowFor"/> units
+    /// <summary>"create" (before anything exists), "mark" (inside create-and-mark, after the buff was made; the fake
+    /// destroys it as the service does), "lifetime", "strip" or "modifiers": that stage throws, for <see cref="ThrowFor"/> units
     /// (all units when empty).</summary>
     public string? ThrowAt { get; set; }
     public HashSet<long> ThrowFor { get; } = [];
@@ -61,12 +62,17 @@ sealed class FakeCarrierOps : ICarrierOps
         var buff = _next++;
         Buffs.Add(buff);
         BuffUnit[buff] = unit;
-        Recipes[buff] = recipe;
         Calls.Add($"create {unit}");
+        try { Stage("mark", unit); }
+        catch
+        {
+            Buffs.Remove(buff);                                     // destroyed before the throw leaves Create (A2)
+            throw;
+        }
+        Recipes[buff] = recipe;
         return buff;
     }
 
-    public void Mark(long buff, CarrierRecipe recipe) => Stage("mark", BuffUnit[buff]);
     public void Lifetime(long buff, CarrierRecipe recipe) => Stage("lifetime", BuffUnit[buff]);
     public void Strip(long buff, CarrierRecipe recipe) => Stage("strip", BuffUnit[buff]);
     public void Modifiers(long buff, CarrierRecipe recipe) => Stage("modifiers", BuffUnit[buff]);

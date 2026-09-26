@@ -238,6 +238,50 @@ public class CarrierLedgerTests
     }
 
     [Fact]
+    public void A_unit_whose_stopped_carrier_is_still_queued_is_not_given_a_second_one()
+    {
+        var rig = Started(1);
+        rig.Tick(T0, 200, "surge");
+        rig.Ledger.Stop("surge");
+        rig.Ops.RemoveThrows = 1;                                    // the old carrier's removal fails once and stays queued
+        rig.Ledger.Start("again", Bandits, T0.AddSeconds(600), T0);
+        rig.Tick(T0.AddSeconds(1), 200, "again");
+        Assert.Equal(1, rig.Ops.CallCount("create"));                // skipped as carried while its removal is pending
+        Assert.Equal("removing", rig.Ledger.CarrierOf(1));
+        rig.Tick(T0.AddSeconds(2), 200, "again");                    // removal succeeds
+        rig.Tick(T0.AddSeconds(17), 200, "again");                   // next resweep applies the new carrier
+        Assert.Equal(2, rig.Ops.CallCount("create"));
+        Assert.Single(rig.Ops.Buffs);
+        Assert.Equal("again", rig.Ledger.CarrierOf(1));
+    }
+
+    [Fact]
+    public void Stale_removal_entries_count_against_the_budget_and_boot_removals_are_deduplicated()
+    {
+        var rig = new Rig(new FakeCarrierOps());
+        rig.Ledger.QueueBootRemovals(Enumerable.Range(1, 500).Select(i => (long)i));   // none exists any more
+        rig.Ledger.QueueBootRemovals([1, 2, 3]);
+        Assert.Equal(500, rig.Ledger.PendingRemovals);
+        rig.Ledger.BeginTick(200);
+        Assert.Equal(300, rig.Ledger.PendingRemovals);
+        Assert.Empty(rig.Ops.Calls);
+    }
+
+    [Fact]
+    public void LifeTime_never_rounds_above_the_seconds_left()
+    {
+        foreach (var s in new[] { 0.1, 1.0000001, 599.99999999, 7199.9999999, 123.456789012345, 89.5 })
+        {
+            var f = CarrierRecipe.LifeTimeOf(s);
+            Assert.True(f <= s, $"{s}: {f}");
+            Assert.True(s - f < 0.01, $"{s}: {f}");
+        }
+        var up = 0.1;                                                // (float)0.1 is 0.100000001, above 0.1
+        Assert.True((float)up > up);
+        Assert.True(CarrierRecipe.LifeTimeOf(up) < up);
+    }
+
+    [Fact]
     public void Purge_stops_every_event()
     {
         var ops = FakeCarrierOps.WithBandits(5);

@@ -26,7 +26,6 @@ public partial class DependencyFailureTests
     }
 
     [Theory]
-    [InlineData("mark")]
     [InlineData("lifetime")]
     [InlineData("strip")]
     [InlineData("modifiers")]
@@ -36,23 +35,43 @@ public partial class DependencyFailureTests
         ops.ThrowAt = stage;
         Tick(ledger, C0);
         Assert.Equal(1, ops.CallCount("create"));
-        Assert.Null(ledger.CarrierOf(1));
+        Assert.Equal("removing", ledger.CarrierOf(1));               // untracked, but no second carrier until it is gone
         Assert.Equal(0, ledger.CountFor("surge"));
         Assert.Equal(1, ledger.PendingRemovals);
         Assert.Contains($"empower surge: apply failed: {stage} failed", log);
         Tick(ledger, C0.AddSeconds(1), id: null);
         Assert.Empty(ops.Buffs);                                     // removed through Remove on the next tick
+        Assert.Null(ledger.CarrierOf(1));
+    }
+
+    [Theory]
+    [InlineData("create")]
+    [InlineData("mark")]
+    public void A_throw_at_create_and_mark_leaves_nothing_in_the_world_or_the_ledger(string stage)
+    {
+        var (ops, ledger, log) = Carriers(1);
+        ops.ThrowAt = stage;
+        Tick(ledger, C0);
+        Assert.Empty(ops.Buffs);                                     // nothing unmarked exists to outlive a restart (A2)
+        Assert.Equal(0, ledger.PendingRemovals);
+        Assert.Equal(0, ledger.Carriers);
+        Assert.Contains($"empower surge: apply failed: {stage} failed", log);
     }
 
     [Fact]
-    public void A_throw_at_create_leaves_nothing()
+    public void A_resweep_whose_query_throws_leaves_the_ledger_unchanged()
     {
-        var (ops, ledger, _) = Carriers(1);
-        ops.ThrowAt = "create";
+        var (ops, ledger, _) = Carriers(3);
         Tick(ledger, C0);
-        Assert.Empty(ops.Buffs);
-        Assert.Equal(0, ledger.PendingRemovals);
-        Assert.Equal(0, ledger.Carriers);
+        ops.Buffs.Remove(ops.BuffUnit.First(kv => kv.Value == 1).Key);   // unit 1's carrier vanished
+        ops.QueryThrows = true;
+        ledger.BeginTick(200);
+        Assert.Throws<InvalidOperationException>(() => ledger.TickEvent("surge", C0.AddSeconds(15)));
+        Assert.Equal(3, ledger.Carriers);                            // not pruned before the failed query
+        ops.QueryThrows = false;
+        Tick(ledger, C0.AddSeconds(16));
+        Assert.Equal(3, ledger.CountFor("surge"));                   // pruned, then unit 1 re-applied
+        Assert.Equal(4, ops.CallCount("create"));
     }
 
     [Fact]

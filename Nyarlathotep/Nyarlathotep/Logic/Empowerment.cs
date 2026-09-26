@@ -116,15 +116,24 @@ public sealed record CarrierRecipe(
     ];
 
     public static CarrierRecipe For(EmpowerStats stats, double secondsLeft) =>
-        new("Replace", 1, false, Markers.Carrier, (float)secondsLeft, "Destroy", StripComponents, EmpowerStats.Modifiers(stats));
+        new("Replace", 1, false, Markers.Carrier, LifeTimeOf(secondsLeft), "Destroy", StripComponents, EmpowerStats.Modifiers(stats));
+
+    /// <summary>The float nearest <paramref name="secondsLeft"/> that is not above it, so rounding to float never lets a
+    /// carrier outlive its event (D5).</summary>
+    public static float LifeTimeOf(double secondsLeft)
+    {
+        var f = (float)secondsLeft;
+        return f > secondsLeft ? MathF.BitDecrement(f) : f;
+    }
 }
 
 /// <summary>An event's query result: the units to visit (PrefabGUID + FactionReference + Health + UnitStats, Business
 /// rules 9) and the faction's entity count over PrefabGUID + FactionReference alone, for the "query n of m" line.</summary>
 public sealed record SweepQuery(IReadOnlyList<long> Units, int FactionEntities);
 
-/// <summary>The game side of the ledger (D20). Keys are the service's entity handles. An Apply is staged Create → Mark →
-/// Lifetime (Buff type, stacks and LifeTime) → Strip → Modifiers, each stage taking the recipe and nothing else.</summary>
+/// <summary>The game side of the ledger (D20, A2). Keys are the service's entity handles. An Apply is staged
+/// create-and-mark → Lifetime (Buff type, stacks and LifeTime) → Strip → Modifiers, each stage taking the recipe and
+/// nothing else.</summary>
 public interface ICarrierOps
 {
     /// <summary>A throw is the event's tick fault (Epic D25).</summary>
@@ -132,8 +141,9 @@ public interface ICarrierOps
     /// <summary>The unit's facts, or null when it no longer exists.</summary>
     UnitFacts? Facts(long unit);
     bool Exists(long buff);
+    /// <summary>Creates the carrier and writes SpellLevel = recipe.SpellLevel before returning, so every carrier that
+    /// exists is found by the boot sweep; on a throw it destroys what it made first (A2).</summary>
     long Create(long unit, CarrierRecipe recipe);
-    void Mark(long buff, CarrierRecipe recipe);
     void Lifetime(long buff, CarrierRecipe recipe);
     void Strip(long buff, CarrierRecipe recipe);
     void Modifiers(long buff, CarrierRecipe recipe);
@@ -186,9 +196,10 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
         public int Left { get; set; }
     }
 
-    sealed class Removal(long buff, StopTally? tally)
+    sealed class Removal(long buff, long? unit, StopTally? tally)
     {
         public long Buff { get; } = buff;
+        public long? Unit { get; } = unit;
         public StopTally? Tally { get; } = tally;
         public int Failures { get; set; }
     }
@@ -196,6 +207,7 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
     readonly Dictionary<string, EventState> _events = new(StringComparer.Ordinal);
     readonly Dictionary<long, Carrier> _byUnit = [];
     readonly LinkedList<Removal> _removals = new();
+    readonly Dictionary<long, int> _removing = [];       // units whose carrier is queued for removal but still on them
     int _remaining;
 
     public bool IsActive(string eventId) => _events.ContainsKey(eventId);
@@ -206,7 +218,10 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
     public int Carriers => _byUnit.Count;
     public int PendingRemovals => _removals.Count;
     public bool SweepInProgress(string eventId) => _events.TryGetValue(eventId, out var e) && e.Sweep is not null;
-    public string? CarrierOf(long unit) => _byUnit.TryGetValue(unit, out var c) ? c.EventId : null;
+    /// <summary>The event whose carrier the unit holds, or "removing" while a stopped event's carrier is still queued for
+    /// removal on it, so no other event applies a second carrier before the first is gone (D5).</summary>
+    public string? CarrierOf(long unit) =>
+        _byUnit.TryGetValue(unit, out var c) ? c.EventId : _removing.ContainsKey(unit) ? "removing" : null;
 
     /// <summary>An Empower event started: its first sweep is due now.</summary>
     public void Start(string eventId, EmpowerAction action, DateTime endsUtc, DateTime utcNow) =>
@@ -231,7 +246,7 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
         foreach (var c in carriers)
         {
             _byUnit.Remove(c.Unit);
-            _removals.AddLast(new Removal(c.Buff, tally));
+            Enqueue(new Removal(c.Buff, c.Unit, tally));
         }
         if (carriers.Count == 0) Stopped(tally);
     }
@@ -243,14 +258,16 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
             Stop(id);
     }
 
-    /// <summary>Carriers found by the boot sweep (D7): each is queued for removal, never its unit.</summary>
+    /// <summary>Carriers found by the boot sweep (D7): each is queued once for removal, never its unit.</summary>
     public void QueueBootRemovals(IEnumerable<long> buffs)
     {
-        foreach (var b in buffs) _removals.AddLast(new Removal(b, null));
+        var queued = _removals.Select(r => r.Buff).ToHashSet();
+        foreach (var b in buffs)
+            if (queued.Add(b)) Enqueue(new Removal(b, null, null));
     }
 
-    /// <summary>Starts a tick with <paramref name="budget"/> operations and spends them on removals first (D5). A removal
-    /// whose buff no longer exists is dropped without an operation; a Remove that throws is retried on the next tick up
+    /// <summary>Starts a tick with <paramref name="budget"/> operations and spends them on removals first (D5). Every entry
+    /// taken from the queue counts against the budget; one whose buff no longer exists is dropped without a game operation; a Remove that throws is retried on the next tick up
     /// to <see cref="RemoveRetries"/> times, then the expiry fallback is tried once, and only if that throws too is the
     /// carrier left to its LifeTime (D20).</summary>
     public void BeginTick(int budget)
@@ -261,12 +278,12 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
         {
             var r = node.Value;
             _removals.RemoveFirst();
+            _remaining--;
             if (!ops.Exists(r.Buff))
             {
                 Done(r, removed: true);
                 continue;
             }
-            _remaining--;
             if (r.Failures > RemoveRetries)
             {
                 try
@@ -305,8 +322,8 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
         if (e.Sweep is null)
         {
             if (utcNow < e.NextSweepUtc || _remaining <= 0) return;
+            var q = ops.Query(e.Action);                           // a throw here leaves the ledger unchanged
             Prune(eventId);
-            var q = ops.Query(e.Action);
             if (e.Sweeps == 0) log($"empower {eventId}: query {q.Units.Count} of {q.FactionEntities} faction entities");
             e.Sweep = new Queue<long>(q.Units);
             e.NextSweepUtc = utcNow + ResweepInterval;
@@ -326,7 +343,7 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
             var unit = e.Sweep.Dequeue();
             _remaining--;
             var facts = ops.Facts(unit);
-            if (facts is null) continue;                          // gone since the query: dropped without an operation
+            if (facts is null) continue;                          // gone since the query: no game operation, one of the budget
             var decision = Eligibility.Decide(facts with { CarrierOf = CarrierOf(unit) ?? facts.CarrierOf }, e.Action);
             if (!decision.Apply)
             {
@@ -344,9 +361,9 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
         }
     }
 
-    /// <summary>The staged Apply (D20): the carrier is recorded as pending at create; a throw after create queues it for
-    /// removal and never leaves it tracked, a throw at create leaves nothing. Either way the unit is skipped and the
-    /// failure is logged once per streak.</summary>
+    /// <summary>The staged Apply (D20, A2): the carrier is recorded as pending once created and marked; a throw after that
+    /// queues it for removal and never leaves it tracked, a throw at create-and-mark leaves nothing tracked. Either way the
+    /// unit is skipped and the failure is logged once per streak.</summary>
     void Apply(EventState e, long unit, CarrierRecipe recipe)
     {
         long buff;
@@ -363,7 +380,6 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
         _byUnit[unit] = carrier;
         try
         {
-            ops.Mark(buff, recipe);
             ops.Lifetime(buff, recipe);
             ops.Strip(buff, recipe);
             ops.Modifiers(buff, recipe);
@@ -371,7 +387,7 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
         catch (Exception ex)
         {
             _byUnit.Remove(unit);
-            _removals.AddLast(new Removal(buff, null));
+            Enqueue(new Removal(buff, unit, null));
             Failed(e, ex);
             return;
         }
@@ -394,8 +410,19 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
         foreach (var c in _byUnit.Values.Where(c => c.EventId == eventId && !ops.Exists(c.Buff)).ToList()) _byUnit.Remove(c.Unit);
     }
 
+    void Enqueue(Removal r)
+    {
+        _removals.AddLast(r);
+        if (r.Unit is { } u) _removing[u] = _removing.GetValueOrDefault(u) + 1;
+    }
+
     void Done(Removal r, bool removed)
     {
+        if (r.Unit is { } u && _removing.TryGetValue(u, out var n))
+        {
+            if (n <= 1) _removing.Remove(u);
+            else _removing[u] = n - 1;
+        }
         if (r.Tally is not { } t) return;
         t.Pending--;
         if (removed) t.Removed++;
@@ -426,15 +453,17 @@ public sealed record SweepPlan(IReadOnlyList<long> Despawn, IReadOnlyList<long> 
     {
         var despawn = new List<long>();
         var carriers = new List<long>();
+        var seenUnits = new HashSet<long>();
+        var seenBuffs = new HashSet<long>();
         foreach (var r in rows)
         {
             switch (Markers.KindOf(r.Level))
             {
                 case MarkerKind.Unit:
-                    if (!despawn.Contains(r.Target)) despawn.Add(r.Target);
+                    if (seenUnits.Add(r.Target)) despawn.Add(r.Target);
                     break;
                 case MarkerKind.Carrier:
-                    if (!carriers.Contains(r.Buff)) carriers.Add(r.Buff);
+                    if (seenBuffs.Add(r.Buff)) carriers.Add(r.Buff);
                     break;
             }
         }
