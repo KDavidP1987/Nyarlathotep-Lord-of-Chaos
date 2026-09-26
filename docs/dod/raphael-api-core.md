@@ -4,13 +4,13 @@ rubric: 2
 id: dod-20260925-rac1
 slug: raphael-api-core
 title: Raphael api 2 — status, events, push subscription, paging, contract check
-status: in-progress
+status: done
 size: L
 parent: nyarlathotep
 kind: feature
 created: 2026-09-25
 baselined: 2026-09-25
-closed: none
+closed: 2026-09-26
 commit: 2dedb8f
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
@@ -422,3 +422,17 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-26 · D18 · pass · cmd: D18's command after the push (A10) → "rollback: clean": revert v0.2.1..v0.3.0 without conflict, `git diff --quiet v0.2.1`, build 0 warnings 0 errors, 539 tests, v0.2.1's preflight OK (the revert ran with a throwaway -c user.name/-c user.email) · ee36a7d · claude
 - 2026-09-26 · D19 · pass · cmd: pwsh tools/preflight.ps1 -Paths → "paths: 699 walked, all in manifest"; pwsh tools/preflight.ps1 → "data inventory: 18 entries; 43/43 globs and files, 8/8 plan rows" · 9e873be · claude
 - 2026-09-26 · D20 · pass · cmd: pwsh tools/preflight.ps1 -AuditOf raphael-api-core → "audit steps: raphael-api-core 6/6 pre, 6/6 post, 6/6 Codex verdicts"; -SessionsOf raphael-api-core → "session logs: raphael-api-core 9/9 checked" (Session 3's overwritten practice boots recorded as the one exception, audit › Session 8) · 9e873be · claude
+- 2026-09-26 · note · close: the owner confirmed the five defect amendments (A8, A11, A13, A14, A15) as code or tool faults against a correct plan (2026-09-26, plan-mode approval); no requested, emergent or external amendments
+- 2026-09-26 · status → done · close
+
+## Report · 2026-09-26
+Baseline items            22
+Discovered (planning gaps) 10 amendments · 13 design changes (wrong 11 · missed 2) · probes: 4.5 (2), 12.4 (2), 14.3 (2), 3.1, 5.1, 5.3, 7.3 (1 each)
+Corrected (reversals)      0            (counts in the rate)
+Requested scope changes    0    (excluded)
+Emergent / defect / external 0 · 5 (A8 A11 A13 A14 A15) · 0  (excluded, confirmed by the owner)
+Prediction rate            22 / (22 + 13) = 63 %   target ≥ 90 %
+Completion                 vs baseline 22/22 · vs current 22/22
+Review                     codex · approval: human (Review 4) after Codex Reviews 1–3 · re-review for A9/A10: codex, Review 5 REVISE, Review 6 READY · author 15/15 layers · 49/49 probes · reviewer 15/15 layers · 49/49 probes; every step's Codex cross-inspection READY (step 6 in round 3)
+Timeline                   draft 09-25 · ready 09-25 · start 09-25 · done 09-26 · released 0.3.0
+Missed probes              4.5 "every X" (A3, A4: "every tag" and "every credential read" had more call forms than the plan listed); 12.4 failing cases (A6, A7: push controls placed where no test could reach them — for every control, name the test seam before the build); 14.3 rollback (A9, A10: the drill assumed an idle boot writes state.json and that preflight passes on an unpushed tag; A11, A13–A15 then found the drill's own crash and restore paths) — add to docs/dod/profile.md: "a tool that changes a live install has its own rollback: snapshot manifest, refusal on a leftover, restore verified by hash, and a crash test"

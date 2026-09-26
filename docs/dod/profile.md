@@ -6,6 +6,10 @@
 - Layer 11 (Design & UX) is never N/A here: the chat command surface is the UX.
 - Probe 12.3 (spikes report, 2026-09-24): every per-session check whose input the next boot overwrites (BepInEx/LogOutput.log) is run and recorded before the restart; a check recorded later is not evidence.
 - Probe 6.1: the game's spawn, aggro and LifeTime behaviour has differed from the reference mods (spikes A5–A10); a plan that relies on one names the in-game test that confirms it.
+- Probe 4.5 (foundation and raphael-api-core reports, missed in both): for every rate, budget, check or rule stated over "every X", list each path that creates, removes or spells X (each call form, each end path) and name the item covering each.
+- Probe 11.2 (foundation report): every player-facing text is rendered in the real chat before release (chat eats "< >").
+- Probe 12.4 (raphael-api-core report): for every control, name the test seam before the build; a control placed where no test reaches it moves to Logic/ first.
+- Probe 14.3 (raphael-api-core report): a tool that changes a live install (the dev server's DLL or config) has its own rollback: an atomic snapshot manifest, a refusal on a leftover snapshot, a restore verified by hash, and a crash test.
 
 ## Audience
 - who · project owner
