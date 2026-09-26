@@ -36,6 +36,16 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - feature doc read: docs/features/FACTION_EMPOWERMENT.md (Status: steps 1–2 done); plan step 3, D11, D22 (wire line), D27; Logic/ApiLines.cs, Logic/Wire.cs, Commands/ApiCommands.cs; docs/RAPHAEL_INTEGRATION_CONTRACT.md §3 and §7 (it has no change log section yet, which D11 names: step 3 adds "## 9. Change log"); docs/RAPHAEL_HANDOFF.md (its "## api 3 (faction empowerment)" section was written at planning, marked PLANNED); ContractDocTests, WireFormatTests, ApiLinesTests; tools/preflight-fixtures/WireContract
 - server: not running; step 3 has no in-game test
 
+### Step 4 · 2026-09-26 · 998d65f
+- git status: clean at 998d65f (step 3 post-audit); the step's tooling (tools/snapshot-lib.ps1, tools/dev-snapshot.ps1, the drill's move to the library, session-events.py modes fe1 and show) and amendment A5 are committed with this entry, before the session
+- compile: 0 errors, 0 warnings
+- tests: 868 passed
+- preflight: exit 0 ("PREFLIGHT OK"); -SelfTest 27/27; -Paths 777 walked, all in manifest; `pwsh tools/dev-snapshot.ps1 -SelfTest` → "snapshot selftest: 6/6"; `pwsh tools/rollback-drill.ps1 -SelfTest` → "drill selftest: 6/6" before and after the move (8/8 is D23's later extension)
+- dod status: faction-empowerment 15/29 verified; review not pending (A5 is layer 12.1, not gating)
+- feature doc read: docs/features/FACTION_EMPOWERMENT.md (Status: steps 1–2 done, Session 1 is step 4); plan step 4, D17, D26, D28, S-7
+- baseline boot: no server running; the last logs (09:59) give "log check: 0 unhandled, 5 nyar lines, 0 orphan errors, 0 unity errors"; their 3 warning lines are Beelzebub's TUNE notices and Il2CppInterop's "Class::Init signatures have been exhausted", none from Nyarlathotep
+- found on the way: the tooling agent added -Restore refusals and a copy hash check beyond D28 → amendment A5 before the tooling is committed or run
+
 ## Post-audit
 ### Step 1 · 2026-09-26 · 0559d4c → 23f2ba4 → 5ca6812
 - compile / preflight: 0 errors, 0 warnings; 848 tests passed; PREFLIGHT OK; dod --check 0 problems, 0 warnings

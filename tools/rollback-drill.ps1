@@ -65,21 +65,8 @@ function Test-RollbackLog([string]$Text, [int]$MinListed = 0) {
     return $null
 }
 
-# The leftover check. Returns $null when no nyar-drill-* folder under $Root holds a complete snapshot, else the
-# refusal. A snapshot is complete once saved\manifest.json exists: the drill writes it (through a .tmp and a rename)
-# after the copy and before it changes the server, so a saved\ without it means the server was never touched (A15).
-function Get-LeftoverRefusal([string]$Root) {
-    $held = @(Get-ChildItem -LiteralPath $Root -Directory -Filter 'nyar-drill-*' -ErrorAction SilentlyContinue |
-        Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'saved\manifest.json') })
-    if (-not $held) { return $null }
-    $steps = foreach ($h in $held) {
-        $m = try { Get-Content -LiteralPath (Join-Path $h.FullName 'saved\manifest.json') -Raw | ConvertFrom-Json } catch { $null }
-        $dll = if (-not $m) { 'unreadable manifest' } elseif ($m.hadDll) { "copy saved\Nyarlathotep.dll to BepInEx\plugins (SHA-256 $($m.dllHash))" } else { 'remove BepInEx\plugins\Nyarlathotep.dll (there was none)' }
-        $cfg = if (-not $m) { 'restore by hand' } elseif ($m.hadConfig) { 'replace BepInEx\config\Nyarlathotep with saved\config\*' } else { 'remove BepInEx\config\Nyarlathotep (there was none)' }
-        "$($h.FullName): $dll; $cfg"
-    }
-    "an earlier drill left a saved snapshot of the dev server: $($steps -join ' | '); then delete the folder"
-}
+# The snapshot, restore and leftover check (Get-LeftoverRefusal) are shared with tools/dev-snapshot.ps1 (D28).
+. (Join-Path $PSScriptRoot 'snapshot-lib.ps1')
 
 function Read-Shared([string]$Path) {
     try {
@@ -161,13 +148,6 @@ function Invoke-LogCheck([string]$Stage) {
     if ($LASTEXITCODE -or -not $line) { Fail "$Stage — preflight -LogCheck failed: $(($out | Where-Object { $_ -match 'FAIL|log check' }) -join ' ')" }
 }
 
-function Get-FolderHashes([string]$Dir) {
-    if (-not (Test-Path -LiteralPath $Dir)) { return @() }
-    @(Get-ChildItem -LiteralPath $Dir -File -Recurse -Force | Sort-Object FullName | ForEach-Object {
-        "$($_.FullName.Substring($Dir.Length)) $((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash)"
-    })
-}
-
 $tmp = $null; $saved = $false; $booted = $false; $hadDll = $true; $hadConfig = $true; $dllHash = $null; $result = $null
 try {
     if (Get-Process VRisingServer -ErrorAction SilentlyContinue) { Fail 'a VRisingServer process is running; stop it first' }
@@ -206,21 +186,16 @@ try {
 
     # Save the dev server's DLL and config; N starts from an empty config folder so the files are N's own.
     $save = Join-Path $tmp 'saved'
-    New-Item -ItemType Directory -Path (Join-Path $save 'config') -Force | Out-Null
-    # Hidden files included (-Force); a server without the plugin gets none back (raphael-api-core A13).
-    $hadDll = Test-Path -LiteralPath $PluginDll
-    if ($hadDll) {
-        Copy-Item -LiteralPath $PluginDll -Destination (Join-Path $save 'Nyarlathotep.dll')
-        $dllHash = (Get-FileHash -LiteralPath $PluginDll -Algorithm SHA256).Hash
-    }
-    $hadConfig = Test-Path -LiteralPath $ConfigDir
-    if ($hadConfig) { Get-ChildItem -LiteralPath $ConfigDir -Force | Copy-Item -Destination (Join-Path $save 'config') -Recurse -Force }
-    $savedHashes = Get-FolderHashes (Join-Path $save 'config')
-    # The snapshot is complete: record it atomically before the server is changed (A15).
-    $manifest = [ordered]@{ complete = $true; hadDll = $hadDll; dllHash = $dllHash; hadConfig = $hadConfig; configHashes = @($savedHashes) }
-    $mTmp = Join-Path $save 'manifest.json.tmp'
-    [IO.File]::WriteAllText($mTmp, ($manifest | ConvertTo-Json -Depth 4), [Text.UTF8Encoding]::new($false))
-    Move-Item -LiteralPath $mTmp -Destination (Join-Path $save 'manifest.json')
+    # Hidden files included; a server without the plugin gets none back (raphael-api-core A13).
+    $hadDll = Test-Path -LiteralPath $PluginDll -PathType Leaf
+    if ($hadDll) { $dllHash = (Get-FileHash -LiteralPath $PluginDll -Algorithm SHA256).Hash }
+    $hadConfig = Test-Path -LiteralPath $ConfigDir -PathType Container
+    # Save-Snapshot copies both, checks the copies and writes saved\manifest.json last, through a .tmp and a move: the
+    # snapshot is complete before the server is changed (A15).
+    $null = Save-Snapshot -Saved $save -Entries @(
+        @{ Name = 'Nyarlathotep.dll'; Path = $PluginDll; Kind = 'File' },
+        @{ Name = 'config'; Path = $ConfigDir; Kind = 'Dir' }) `
+        -Extra ([ordered]@{ hadDll = $hadDll; dllHash = $dllHash; hadConfig = $hadConfig; configHashes = @(Get-FolderHashes $ConfigDir) })
     $saved = $true
     if (Test-Path -LiteralPath $ConfigDir) { Get-ChildItem -LiteralPath $ConfigDir -Force | Remove-Item -Recurse -Force }
 
@@ -288,21 +263,12 @@ catch { $result = "fail — $($_.Exception.Message)" }
 finally {
     if ($booted) { Stop-Server }
     if ($saved) {
-        # Put back exactly what was there: the DLL or its absence, the config folder or its absence (A13, A14).
-        $savedDll = Join-Path $tmp 'saved\Nyarlathotep.dll'
-        if ($hadDll) { Copy-Item -LiteralPath $savedDll -Destination $PluginDll -Force -ErrorAction SilentlyContinue }
-        else { Remove-Item -LiteralPath $PluginDll -Force -ErrorAction SilentlyContinue }
-        if (Test-Path -LiteralPath $ConfigDir) { Get-ChildItem -LiteralPath $ConfigDir -Force | Remove-Item -Recurse -Force }
-        if ($hadConfig) {
-            if (-not (Test-Path -LiteralPath $ConfigDir)) { New-Item -ItemType Directory -Path $ConfigDir | Out-Null }
-            Get-ChildItem -LiteralPath (Join-Path $tmp 'saved\config') -Force -ErrorAction SilentlyContinue | Copy-Item -Destination $ConfigDir -Recurse -Force
-        }
-        elseif (Test-Path -LiteralPath $ConfigDir) { Remove-Item -LiteralPath $ConfigDir -Recurse -Force }
-        $wrong = @()
-        if ($hadDll) { if (-not (Test-Path -LiteralPath $PluginDll) -or (Get-FileHash -LiteralPath $PluginDll -Algorithm SHA256).Hash -ne $dllHash) { $wrong += 'plugin DLL' } }
-        elseif (Test-Path -LiteralPath $PluginDll) { $wrong += 'plugin DLL (none before the drill)' }
-        if ($hadConfig) { if (Compare-Object @($savedHashes) @(Get-FolderHashes $ConfigDir)) { $wrong += 'config' } }
-        elseif (Test-Path -LiteralPath $ConfigDir) { $wrong += 'config folder (none before the drill)' }
+        # Put back exactly what was there: the DLL or its absence, the config folder or its absence, and verify every
+        # hash against the manifest (A13, A14; tools/snapshot-lib.ps1).
+        $wrong = @(foreach ($d in @(Restore-Snapshot -Saved (Join-Path $tmp 'saved'))) {
+            $what = if ($d.Name -eq 'config') { @('config', 'config folder') } else { @('plugin DLL', 'plugin DLL') }
+            if ($d.Reason -eq 'present') { "$($what[1]) (none before the drill)" } else { $what[0] }
+        })
         if ($wrong) { $result = "fail — the restored $($wrong -join ' and ') differs from the saved state (the copy is kept in the temp folder)"; $tmp = $null }
         else { Write-Host "restored the saved $(if ($hadDll) { 'plugin DLL' } else { 'state (no plugin DLL)' }) and $(if ($hadConfig) { 'config' } else { 'state (no config folder)' }); hashes equal" }
     }
