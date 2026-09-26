@@ -1,6 +1,5 @@
 using System.IO;
 using System.Reflection;
-using System.Text;
 using Nyarlathotep.Logic;
 using ProjectM;
 
@@ -33,47 +32,19 @@ internal static class EventStore
         }
     }
 
+    /// <summary>The load and edit flows (Logic/DefinitionEditor) over the disk and the game's unit catalog.</summary>
+    static DefinitionEditor Editor => new(Persistence.Events, Persistence.Disk, Catalog,
+        line => Core.Log.LogInfo($"[nyar] {line}"), line => Core.Log.LogWarning($"[nyar] {line}"));
+
     /// <summary>Loads events.json and applies it. Returns the `.nyar event reload` reply: "reloaded: &lt;v&gt; valid,
     /// &lt;x&gt; disabled" or the file error (the last valid set stays, D23).</summary>
     [Mutating]
-    internal static string Reload()
-    {
-        var (result, stamp) = Persistence.Events.Load(new PrefabUnitCatalog());
-        var error = Catalog.Reload(result, stamp);
-        if (error is not null)
-        {
-            Core.Log.LogWarning($"[nyar] {error}; the last valid set stays ({Catalog.Current.All.Count} events)");
-            return error;
-        }
-        foreach (var line in result.Log) Core.Log.LogWarning($"[nyar] {line}");
-        var disabled = result.Log.Count;
-        var reply = $"reloaded: {Catalog.Current.All.Count - disabled} valid, {disabled} disabled";
-        Core.Log.LogInfo($"[nyar] events: {reply}");                           // at boot and on every `.nyar event reload`
-        return reply;
-    }
+    internal static string Reload() => Editor.Reload(new PrefabUnitCatalog());
 
-    /// <summary>`.nyar event set`, `enable` and `disable`: changes one field of event <paramref name="id"/> in events.json
-    /// (Logic/EventsEditor), written only when the file is the one last loaded, keeping one .bak (Business rules 9, D6),
-    /// then reloads. A running instance keeps its definition; the change applies to the next start.</summary>
+    /// <summary>`.nyar event set`, `enable` and `disable`: changes one field of event <paramref name="id"/> in events.json,
+    /// written only when the file is the one last loaded, keeping one .bak (Business rules 9, D6), then reloads.</summary>
     [Mutating]
-    internal static string Edit(string id, string path, object value)
-    {
-        byte[] bytes;
-        try { bytes = Persistence.Disk.Read(DataFile.Events, FileVariant.Main); }
-        catch (Exception ex) { return $"events.json could not be read: {ex.Message}"; }
-        if (bytes is null) return "events.json not found";
-        var text = Encoding.UTF8.GetString(bytes).TrimStart('\uFEFF');
-        var edited = EventsEditor.Apply(text, id, path, value, out var refusal);
-        if (edited is null) return refusal;
-        var error = Persistence.Events.WriteEdit(Encoding.UTF8.GetBytes(edited), Catalog.LoadedStamp, out _);
-        if (error is not null) return error;
-
-        var reload = Reload();
-        var done = path == "enabled" ? $"event {id} {((bool)value ? "enabled" : "disabled")}" : $"event {id} {path} = {value}";
-        Core.Log.LogInfo($"[nyar] {done}; {reload}");
-        if (!reload.StartsWith("reloaded", StringComparison.Ordinal)) return $"{done}; {reload}";
-        return Catalog.Current.Find(id)?.DisabledReason is { } reason ? $"{done}; now disabled: {reason}" : done;
-    }
+    internal static string Edit(string id, string path, object value) => Editor.Edit(id, path, value, new PrefabUnitCatalog());
 
     static void Seed()
     {

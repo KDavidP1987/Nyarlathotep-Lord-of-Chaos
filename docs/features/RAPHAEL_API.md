@@ -29,6 +29,7 @@ says what Nyarlathotep implements and how it was tested.
 | `Logic/Subscriptions.cs` | The subscription set: on, off, disconnect, the offline prune, delivery, count-only log lines |
 | `Logic/PushQueue.cs` | IPushSink, the six push lines, the queue of 50, and PushHub: the guarded entry points and the push tick |
 | `Logic/Engine.cs`, `Logic/EventCatalog.cs` | Report each start, end, wave, purge and applied load to the sink where it happens |
+| `Logic/DefinitionEditor.cs` | The reload and edit flows EventStore runs; only an applied load reaches the catalog |
 | `Services/Pusher.cs` | The one PushHub, attached to the engine and the catalog; the scheduler's push phase |
 | `Patches/UserDisconnectPatch.cs` | Ends the leaving user's subscription (hook UserDisconnect) |
 | `Commands/ApiCommands.cs` | `.nyar api version`, `status`, `events` and `sub` |
@@ -74,6 +75,8 @@ says what Nyarlathotep implements and how it was tested.
   a purge pushes one killswitch. 13 more mutants (each report removed, a per-event end on purge, a rejected file
   reported, the overflow streak, one guard for the tick, no prune at the cap, an exception message logged) each fail
   a test. 692 passed.
+- Post-audit (A7): the reload and edit flows run in Logic/DefinitionEditor; ConfigChangedTests show the boot load and
+  every failed reload, set, enable and disable push nothing and an applied one pushes one config-changed. 701 passed.
 - Checked in step 4's session only: the disconnect patch applies and ends a subscription; `sub` reaches the hub
   through the gateway.
 
