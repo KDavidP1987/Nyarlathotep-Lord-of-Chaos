@@ -64,3 +64,17 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - amendments: A3 (discovered, 4.5: the wire check reads the plugin only), A4 (discovered, 4.5: every call form, the environment allow-list, the tools/ file-type rule, reverse check in step 3)
 - in-game: none (commands exercised in step 4's server session)
 - dod status: D4, D9, D14 pass lines added; D7, D8, D10, D11 wait for step 3 (sub, the reverse check, UserDisconnectPatch)
+### Step 3 · 2026-09-25 · 1ba3604
+- compile: 0 errors, 0 warnings (plugin and Nyarlathotep.Tests)
+- tests: `dotnet test Nyarlathotep/Nyarlathotep.Tests` → Passed 703, Failed 0 (SubscriptionTests, PushTests, ConfigChangedTests, the push cases of ApiAccessTests, DependencyFailureTests rows HookUserDisconnect and PushDelivery)
+- mutation check: 25 mutants of Subscriptions, PushQueue, Engine, EventCatalog and DefinitionEditor each fail at least one test; two more make no observable difference (a malformed mutant, and a failed read that reloads, which also fails and pushes nothing)
+- preflight: exit 0 ("PREFLIGHT OK"); "wire contract: 7 tags, 4 api commands, all documented (api 2)"; "patch guards: 5/5"; "ready guard: 11/11"; selftest 27/27, 90 extra bad fixtures; -AuthSuite "auth suite: pass (tests, commands, admin list, gateway)"
+- /code-review (cc1b828): 3 findings, all fixed in 89cece2 — the warnings and the send shared one guard (now two); at the 128 cap players who left held the slots (now pruned before refusing, A6); the disconnect prefix threw and logged for connections never approved (now TryGetValue, returns quietly)
+- Codex cross-inspection round 1 (cc1b828): REVISE, 3 findings — (1) exception messages in failure logs could carry a SteamID: accepted, the type only, sentinel test; (2) the overflow streak survived a drop below the cap: accepted; (3) the transition wiring was untested: accepted, the engine and catalog report through IPushSink (A6)
+- Codex round 2 (89cece2): F1, F2 and CR1–CR3 resolved; F3 open — the reload/edit flows lived in the service: accepted, moved to Logic/DefinitionEditor with ConfigChangedTests (A7)
+- Codex round 3 (bd8d677): F3 open — the EventStore delegates themselves and enable=true untested: enable and name cases added; the delegates are game-bound and go to step 4's session
+- Codex round 4 (1ba3604): F3 resolved, no new finding
+- Codex verdict: READY (round 4)
+- amendments: A5 (discovered, 5.3: push values, own-method hook checks, dependency rows, bad-9), A6 (discovered, 12.4: transitions reported where they happen; prune at the cap), A7 (discovered, 12.4: the reload and edit flows in Logic)
+- in-game: none in this step; step 4's session covers D12, the gateway path of `sub`, and the EventStore delegates
+- dod status: D5, D6, D7, D8, D10, D11, D21 pass lines added; D12, D13, D22 wait for steps 4 and 5
