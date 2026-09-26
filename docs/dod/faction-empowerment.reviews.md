@@ -171,3 +171,45 @@ VERDICT: REVISE
 - F4 · accepted · D8's structural check allows DestroyUtility.Destroy only inside RemoveBuffSafe's body (enclosing method found by signature and braces); fixture StructuralEdits/bad-3 moves the call into EntityExtensions.DestroySafe
 - F5 · accepted · D28 snapshots the whole BepInEx/plugins and BepInEx/config trees; restore removes files added since and verifies no unlisted file remains; -SelfTest adds a DLL and a cfg after the save and expects both removed
 - F6 · accepted · Rollout › Rollback gains a published-release policy: tags and releases are never deleted (Epic S-19), a bad 0.4.0 is withdrawn with the exact `gh release edit` command and fixed forward by 0.4.1, the owner withdraws the Thunderstore version, and servers that downloaded 0.4.0 follow the server rollback
+
+## Review 4 · 2026-09-26 · codex · plan commit a37ab57
+
+EARLIER: unresolved: F3
+
+Earlier F3 remains unresolved: D4 claims Session 2 reads back “each field” from the live carrier, but D14 exposes only `BuffType`, stacks, end action, marker, lifetime and effective stats. It does not expose the raw modifier buffer or prove that all five gameplay-event components were stripped. A service implementation could omit those writes while CarrierRecipeTests, AdminLinesTests and the stated manual rows still pass.
+
+F1 [blocking] D4 is not verifiable by its stated evidence, leaving probe 5.2 without evidence that the service writes the complete recipe into the live carrier.
+Fix: Add an ECS integration seam or live diagnostic that reads every written Buff/LifeTime/modifier value and confirms each stripped component is absent after `EmpowerAction` applies the carrier.
+
+F2 [blocking] Probes 12.4 and 14.3 require one evidence command per gating probe, but the rollback row needs three independent commands—D25, D23 and D28—so no single command fails when any repository, data-compatibility or live-install rollback control is absent.
+Fix: Add one rollback-gate command that runs all three drills and emits success only when repository revert, N−1 compatibility and snapshot restoration all pass.
+
+F3 [blocking] The probe 14.4 control cannot see every path it claims to police: `-Paths` walks the repository and named dev-server trees, but not `%TEMP%\nyar-snap-*`, temporary rollback worktrees, or remote tag/release writes; those paths can be added or changed without making the command fail.
+Fix: Make the gating command consume an instrumented build/write manifest covering repository, server, temporary and remote artifacts, or add explicit checks for every external path/action and fail on undeclared entries.
+
+F4 [advisory] The Bloodcraft/KindredCommands dependency row pins preferred versions but permits installing an unspecified replacement version if one is withdrawn. That makes the eventual compatibility claim dependent on whatever happens to be available.
+Fix: Define an allowed fallback version rule—such as an exact approved replacement recorded by amendment before installation.
+
+1. Purpose & typical use — Considered (3/3): “Purpose & typical use” identifies admin/player roles, desired outcomes, and coexistence with the foundation, SpawnWaves, Blood Moon, companion mods and Raphael.
+2. Actors & permissions — Considered (3/3): “Design › Permissions,” the actor matrix and D21 cover reachable actors, unauthorized behavior and server/event ownership.
+3. Inputs, outputs & data — Considered (4/4): D1, D10–D12, D16, D17, D23, D26 and “Design › Data” specify validation, outputs, persistence, deletion and migration.
+4. Business rules & invariants — Considered (5/5): “Business rules” and D3–D8/D26 state calculations, exclusivity, duration, precedence and every-X sets. The Epic’s carrier-only, precedence, one-per-faction, hard-duration, eligibility and S-8 late-arrival decisions are present.
+5. Internal interfaces — Considered (3/3): “Interfaces › Internal” enumerates reads, writes and shared contracts. D4’s evidence defect fails the acceptance gate but the interface decision itself is stated.
+6. External dependencies & contracts — Considered (3/3): the dependency table supplies versions, costs/quotas, sampled inputs and failure behavior; D20 and 6.3 cover failures and test isolation.
+7. States & lifecycle — Considered (3/3): “Design › States” covers empty/loading/partial/error states, main-thread concurrency, cancellation, restart and reload behavior.
+8. Minimal stretch — Considered (2/2): “Use cases › Minimal stretch” covers disabled/default, one-faction/one-stat, empty results and one-time cleanup.
+9. Maximal stretch — Considered (3/3): “Use cases › Maximal stretch” covers thousands of NPCs, bounded misuse, deduplication and repeated starts/sweeps.
+10. Security & privacy — Considered (4/4): “Security” plus D1, D10, D11, D21 and D22 cover authorization, injection boundaries, credentials and data minimization.
+11. Design & UX — Considered (4/4): “Design › UX” covers discovery, feedback, accessibility and activation/should-not-activate cases.
+12. Failure handling & observability — Gap (3/4): 12.1–12.3 are answered by “Failure & observability” and D1/D6/D7/D11/D14/D16/D20/D26; 12.4 fails because the rollback gating probe lacks one comprehensive evidence command.
+13. Performance & scale — Considered (2/2): “Performance” and D1/D5/D19 define the latency budget, hot path, bounds, behavior at bounds and excluded valid cases.
+14. Rollout & compatibility — Gap (2/4): Shipping and Compatibility answer 14.1–14.2; 14.3 lacks a single complete rollback gate, and 14.4’s command cannot observe all temporary and remote paths.
+15. Out of scope — Considered (2/2): exclusions and named future-plan slugs are explicit.
+
+13/15 layers · 46/49 probes
+VERDICT: REVISE
+### Dispositions
+- F1 · accepted · also closes the unresolved round-3 F3: D14's native row reads back IncreaseStacks, the whole ModifyUnitStatBuff_DOTS buffer ("mods <type>:<mod>:<value>,…") and the presence of each of the five stripped gameplay-event types ("strip ok|missing:<names>"); D4's Session 2 evidence requires "type Replace stacks 1 incr False end Destroy mark ok strip ok" and a mods list equal to EmpowerStats.Modifiers; AdminLinesTests covers the renderings
+- F2 · accepted · +D29: tools/rollback-gate.ps1 runs the repository drill (D25, saved as tools/repo-rollback-drill.ps1), the N-1 drill (D23) and the snapshot selftest (D28), printing "rollback gate: 3/3" only when all pass; its -SelfTest has 5 stub cases; it is the single 14.3 evidence command and step 7 runs it before and after the push
+- F3 · accepted · D26's -Paths also fails on a leftover %TEMP%\nyar-snap-* or nyar-rollback-* folder, a leftover git worktree, and a remote tag or GitHub release not declared by a remote-tag:/remote-release: line of tools/paths-manifest.txt; fixtures Paths/bad-temp, bad-worktree, bad-remote
+- F4 · accepted · a withdrawn Bloodcraft or KindredCommands version is replaced only by an external amendment naming the exact version before installation, and D18 runs against it
