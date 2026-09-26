@@ -259,6 +259,71 @@ comparison moves to Session 3. Chat lines are from the owner's notes; log lines 
   `pwsh tools/preflight.ps1 -LogCheck` → "log check: 0 unhandled, 575 nyar lines, 0 orphan errors, 0 unity errors"
 - [x] `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s2, … deleted)"
 
+### Session 3 · faction-empowerment step 6 (with the owner) — steps
+
+Setup (Claude, before the owner connects): `pwsh tools/dev-snapshot.ps1 -Save s3`, Release build deployed,
+`python tools/ingame/session-events.py fe3` (fe2's events plus fe-u-empower, Bandits pp 1.5 and maxHealth 2.0 for 300 s, and
+fe-u-spawns, 3 Bandit Thugs at the admin for 300 s with unitLifetimeSeconds 240; fe2's cfg keys plus
+Limits.PurgeCooldownSeconds = 60 and Limits.EmpowerBatchPerTick = 50). Bloodcraft 1.13.22 and KindredCommands 2.5.8 from
+Thunderstore are copied into BepInEx/plugins; one boot writes Bloodcraft's cfg, in which Claude sets only
+`[Familiars] FamiliarSystem = true` (every other Bloodcraft system is off by default), then the server boots again on world
+nyardev.
+
+Part 1 (owner, about 25 minutes; server **127.0.0.1:9876**, Direct Connect, world "Nyar Dev"):
+
+1. Connect to 127.0.0.1:9876 with your admin character. Open the console (the ~ key), enter `adminauth`, and close it.
+2. Run `.nyar event list`. Expect example-empowerment, fe-second, fe-expire, fe-big, fe-vblood, fe-spawns, fe-u-empower and
+   fe-u-spawns, all ready.
+3. Go to the Farbane bandit camp of Session 2 (Rufus's lumber camp). Let one Bandit Thug hit you 3 times, without changing
+   your gear. **Note the 3 damage numbers.**
+4. Run `.fam a <your character name> CHAR_Bandit_Thug`, then `.fam l` (the list shows the Thug as number 1), then `.fam b 1`
+   (your Thug familiar appears), then `.fam c` (combat off, so it stays by you). Note each reply.
+5. Stand still with the familiar next to you and run `.nyar debug here 40`. The familiar is the CHAR_Bandit_Thug row at
+   about 1-3 m. **Note that row's "carrier" and "hp" parts.**
+6. Run `.nyar event start example-empowerment`. Wait 20 seconds and run `.nyar debug here 40` again. Expect the camp's
+   bandits on "carrier example-empowerment" and **the familiar's row still "carrier none" with the same hp as in step 5.**
+7. Run `.fam t` (your familiar leaves). Let a Bandit Thug hit you 3 more times with the same gear. **Note the 3 damage
+   numbers** (expected about 1.5× step 3). Note whether the bandits look faster.
+8. Kill 2 or 3 bandits and stay within about 40 m. When one reappears, run `.nyar debug here 40` at once and again every
+   5 seconds until its row shows "carrier example-empowerment". If none respawns in 10 minutes, write "no respawn" and go on.
+9. Run `.nyar event start fe-big`, then `.nyar event start fe-spawns` (3 Bandit Thugs appear around you), then
+   `.spawnnpc CHAR_Bandit_Thug 2` (KindredCommands; 2 more Thugs). Wait 30 seconds and run `.nyar status`. **Note the
+   fe-spawns line**: it should count 3 units, not 5.
+10. Run `.nyar purge`, then `.nyar purge confirm` within 30 seconds. At once run `.nyar event start fe-expire` and **note the
+    reply** (expected: "purge cooldown active (n s left)" with a number of seconds).
+11. Wait 10 seconds, run `.nyar status` (expected: no active events) and `.nyar debug here 40` (expected: "carrier none" on
+    every row, no tracked units). Then run `.despawnnpc CHAR_Bandit_Thug 25` to remove the KindredCommands Thugs (it also
+    kills any camp Thug within 25 m, which is fine).
+12. When the step 10 seconds have passed (plus 5), run `.nyar event start fe-expire` (it starts now). Wait 20 seconds and run
+    `.nyar debug here 40` (expected: "carrier fe-expire"). Run `.nyar status` every 20 seconds until it shows no active
+    event (about a minute), wait 10 more seconds, and run `.nyar debug here 40` (expected: "carrier none" on every row).
+13. Walk about 50 m away from the camp, out of any fight. Run `.nyar event start fe-u-empower`, then
+    `.nyar event start fe-u-spawns` (3 Thugs appear). Do not kill them: keep about 30 m from them (keep moving if they
+    chase you) and stay connected, so they stay loaded and are saved. Within about 5 minutes the server stops and
+    disconnects you (Claude's watcher stops it right after the next autosave). Tell Claude **"part 1 done"** with your
+    notes from steps 3, 4, 5, 6, 7, 8, 9 and 10.
+
+Between the parts (Claude, about 20 minutes, no player needed; Epic D12): Claude's watcher sees fe-u-spawns start, waits for
+the next autosave after it and hard-stops the server mid-window (the carriers and the 3 Thugs are in that save); Claude deletes BepInEx/plugins/Nyarlathotep.dll, boots,
+waits 10 minutes (longer than fe-u-empower's 300 s and the units' 240 s) plus the next autosave, hard-stops, reinstalls the
+DLL with General.Enabled = false, boots, and reads "boot marker sweep: 0 found" in the log. Claude then tells the owner
+the server is up again.
+
+Part 2 (owner, about 3 minutes):
+
+14. Connect to 127.0.0.1:9876 again (`adminauth` if asked). Go back to the camp, stand where you stood in step 5, and run
+    `.nyar debug here 40`. Expect "carrier none" on every row, base stats (a Thug's hp max as in step 5), and no tracked
+    unit. Then walk to where you started fe-u-spawns and run `.nyar debug here 40` there (expected: no tracked unit and no
+    Thug left from fe-u-spawns).
+15. Run `.fam ub` (unbind the familiar), disconnect, and tell Claude **"session 3 done"** with your notes from step 14.
+
+After the owner (Claude): stop the server, `pwsh tools/preflight.ps1 -LogCheck`, read every [Error]/[Warning] line of both
+logs, record the results below against D15 (damage and speed by eye), D16 (the respawn bound, the natural-end read-back),
+D18 (the 50-cap drain, uninstall, coexistence) and D30, then `pwsh tools/dev-snapshot.ps1 -Restore` (it removes both mods,
+their configs and the Bloodcraft player data, and must print "snapshot restored; hashes equal"). The respawn bound passes
+when a respawned bandit shows the carrier within 15 s + ceil(m / 50) ticks of its first carrier-less row; the drain passes
+when every "empower tick: <k> removals (batch 50)" line has k ≤ 50 and at least two such lines follow the purge.
+
 ## Open questions
 
 - Which stats are worth exposing beyond power/HP/speed? (resistances, `SiegePower` for sieges)

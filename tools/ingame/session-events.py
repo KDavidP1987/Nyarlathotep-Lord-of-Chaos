@@ -28,6 +28,8 @@ USAGE = """usage: python tools/ingame/session-events.py <mode> [args]
   fe3 [--dry-run] [--server DIR]   faction-empowerment session 3: fe2's events and keys, plus
         Limits.PurgeCooldownSeconds = 60 (the dev cfg held 240 from an earlier session, Session 2) and
         Limits.EmpowerBatchPerTick = 50 (S-7, owner decision 1B: the purge drain shows the cap splitting it).
+        Adds fe-u-empower (Bandits, 300 s) and fe-u-spawns (3 Thugs, 300 s, unit lifetime 240 s) for the Epic D12
+        uninstall: started last, so the server stops mid-window.
   show [--server DIR]   prints the server's events.json and the cfg keys fe1, fe2 and fe3 set; writes nothing.
 The server defaults to """ + SERVER + "."
 def here():
@@ -303,6 +305,17 @@ elif mode in ("fe1", "fe2", "fe3", "show"):
              "action": {"type": "SpawnWaves", "units": [{"prefab": "CHAR_Bandit_Thug", "count": 3}], "waves": 1,
                         "intervalSeconds": 60, "radius": 8, "location": {"type": "Admin"}}},
         ]}
+        if mode == "fe3":
+            # Epic D12 (the uninstall, Session 3): a short pair the owner starts last, so the server is stopped mid-window
+            # and the mod-less boot only has to outlast 300 s (carriers' LifeTime) and 240 s (the units' own lifetime).
+            doc["events"] += [
+                {"id": "fe-u-empower", "name": "Uninstall surge", "enabled": True, "pillar": "empowerment",
+                 "trigger": {"type": "Manual"}, "durationSeconds": 300, "action": bandits({"physicalPower": 1.5, "maxHealth": 2.0})},
+                {"id": "fe-u-spawns", "name": "Uninstall raid", "enabled": True, "pillar": "spawns", "trigger": {"type": "Manual"},
+                 "durationSeconds": 300,
+                 "action": {"type": "SpawnWaves", "units": [{"prefab": "CHAR_Bandit_Thug", "count": 3}], "waves": 1,
+                            "intervalSeconds": 60, "radius": 8, "location": {"type": "Admin"}, "unitLifetimeSeconds": 240}},
+            ]
     events_text = json.dumps(doc, indent=2) + "\n"
     old_cfg = read(cfg_path)
     cfg_text = old_cfg if old_cfg is not None else ""
