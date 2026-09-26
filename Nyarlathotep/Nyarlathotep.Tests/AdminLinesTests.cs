@@ -68,4 +68,22 @@ public class AdminLinesTests
     {
         Assert.Empty(AdminLines.Natives([], 10));
     }
+
+    static readonly DateTime Now = new(2026, 9, 26, 17, 41, 0, DateTimeKind.Utc);
+
+    [Fact]
+    public void CooldownLeft_rounds_the_seconds_up()
+    {
+        Assert.Equal("purge cooldown active (44 s left)", AdminLines.CooldownLeft(Now.AddSeconds(43.2), Now));
+        Assert.Equal("purge cooldown active (1 s left)", AdminLines.CooldownLeft(Now.AddSeconds(0.4), Now));
+        Assert.Equal("purge cooldown active (240 s left)", AdminLines.CooldownLeft(Now.AddSeconds(240), Now));
+    }
+
+    [Fact]
+    public void CooldownLeft_is_null_once_the_cooldown_is_over()
+    {
+        Assert.Null(AdminLines.CooldownLeft(Now.AddSeconds(-5), Now));
+        Assert.Null(AdminLines.CooldownLeft(Now, Now));
+        Assert.Null(AdminLines.CooldownLeft(null, Now));
+    }
 }

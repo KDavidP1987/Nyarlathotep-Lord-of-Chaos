@@ -88,6 +88,9 @@ internal static class EventRuntime
         if (refused is not null)
         {
             Core.Log.LogInfo($"[nyar] event {id} not started by {trigger}: {refused}");
+            // The admin is told how long the purge cooldown still runs (A7, D30).
+            if (actor == Actor.Admin && refused == "purge cooldown active")
+                return AdminLines.CooldownLeft(Persistence.State.Document.PurgeUntilUtc, now) ?? refused;
             return refused;
         }
         var active = Engine.Find(id)!;

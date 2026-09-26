@@ -2,8 +2,8 @@
 # Modes: boot (test events, schedules parked on Mon 04:00), go (schedules relative to now), d23a (boot's events plus one
 # with an unknown unit), d23b (the same file with a comma removed), restore-valid (d23a again), cool (the last valid file
 # with t-cool due every minute from now+2 to now+13, so a purge right after it has due times inside its cooldown). State in
-# %TEMP%/nyar-session. s17a/s17b: session 17; rac2: raphael-api-core session 2; fe1, fe2 and show: faction-empowerment
-# sessions 1 and 2 (see each mode's comment). `python session-events.py --help` lists the modes and writes nothing.
+# %TEMP%/nyar-session. s17a/s17b: session 17; rac2: raphael-api-core session 2; fe1, fe2, fe3 and show: faction-empowerment
+# sessions 1, 2 and 3 (see each mode's comment). `python session-events.py --help` lists the modes and writes nothing.
 import json, sys, datetime, io, os, shutil
 SERVER = r"C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer"
 CFG = os.path.join(SERVER, "BepInEx", "config", "Nyarlathotep", "events.json")
@@ -25,7 +25,10 @@ USAGE = """usage: python tools/ingame/session-events.py <mode> [args]
         two keys plus Pillars.EventSpawns = true (D18's purge needs a spawn event) and Debug.TimingLog = true (D19)
         and Announcements.EventBanners = true (the {faction} banner is seen in real chat, UX 11.2).
         Backups and writes as fe1; the session's dev-snapshot restore puts every key back.
-  show [--server DIR]   prints the server's events.json and the cfg keys fe1 and fe2 set; writes nothing.
+  fe3 [--dry-run] [--server DIR]   faction-empowerment session 3: fe2's events and keys, plus
+        Limits.PurgeCooldownSeconds = 60 (the dev cfg held 240 from an earlier session, Session 2) and
+        Limits.EmpowerBatchPerTick = 50 (S-7, owner decision 1B: the purge drain shows the cap splitting it).
+  show [--server DIR]   prints the server's events.json and the cfg keys fe1, fe2 and fe3 set; writes nothing.
 The server defaults to """ + SERVER + "."
 def here():
     # Created on first use, so --help, show and fe1/fe2 --dry-run leave no %TEMP%/nyar-session behind.
@@ -187,7 +190,7 @@ elif mode == "rac2":
                               "durationSeconds": 60, "action": point(unit(1))})
     write(doc)
     print("rac2 written:", len(doc["events"]), "definitions")
-elif mode in ("fe1", "fe2", "show"):
+elif mode in ("fe1", "fe2", "fe3", "show"):
     # faction-empowerment session 1 (step 4, unattended, D17): fe-short ends by expiry and its sample line reverts one
     # tick later; fe-long is still running when the server is stopped mid-window, so the next boot's carrier sweep finds
     # k > 0. Only these two definitions are written (nothing else starts on its own); the -Save snapshot of
@@ -204,7 +207,8 @@ elif mode in ("fe1", "fe2", "show"):
     events_path = os.path.join(server, "BepInEx", "config", "Nyarlathotep", "events.json")
     cfg_path = os.path.join(server, "BepInEx", "config", "kdpen.Nyarlathotep.cfg")
     CFG_KEYS = [("Pillars", "FactionEmpowerment", "true"), ("Debug", "VerboseLogging", "true")]
-    if mode in ("fe2", "show"): CFG_KEYS += [("Pillars", "EventSpawns", "true"), ("Debug", "TimingLog", "true"), ("Announcements", "EventBanners", "true")]
+    if mode in ("fe2", "fe3", "show"): CFG_KEYS += [("Pillars", "EventSpawns", "true"), ("Debug", "TimingLog", "true"), ("Announcements", "EventBanners", "true")]
+    if mode in ("fe3", "show"): CFG_KEYS += [("Limits", "PurgeCooldownSeconds", "60"), ("Limits", "EmpowerBatchPerTick", "50")]
     DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]   # the validator's names, whatever the locale
     def cfg_get(text, section, key):
         cur = None

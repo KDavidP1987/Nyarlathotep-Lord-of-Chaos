@@ -22,6 +22,14 @@ public static partial class AdminLines
 
     public static string Purged(int events, int units) => $"purged: {events} events, {units} units queued";
 
+    /// <summary>The manual start reply while the purge cooldown runs (A7, D30): "purge cooldown active (&lt;n&gt; s left)",
+    /// n the whole seconds to <paramref name="untilUtc"/> rounded up; null once the cooldown is over. The StartBlocker
+    /// label stays "purge cooldown active".</summary>
+    public static string? CooldownLeft(DateTime? untilUtc, DateTime nowUtc) =>
+        untilUtc is { } until && until > nowUtc
+            ? $"purge cooldown active ({(int)Math.Ceiling((until - nowUtc).TotalSeconds)} s left)"
+            : null;
+
     /// <summary>The private line an admin gets on connecting while something is degraded (D31).</summary>
     public static string DegradedNotice(IReadOnlyCollection<string> degraded) =>
         $"nyar: degraded: {string.Join(", ", degraded)} (see .nyar status and the server log)";
