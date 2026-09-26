@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review — Raphael api 2 — status, events, push subscription, paging, contract check</title>
+<style>
+:root { color-scheme: light dark; --bg:#fbfbfa; --fg:#1b1b1a; --dim:#55534e; --line:#d9d7d1; --card:#ffffff;
+  --ok:#1b5e3a; --warn:#7a4a00; --accent:#1f4f82; }
+@media (prefers-color-scheme: dark) { :root { --bg:#16181a; --fg:#eceae5; --dim:#a8a49c; --line:#33363a;
+  --card:#1e2124; --ok:#7fd8a4; --warn:#e8b765; --accent:#8fbde8; } }
+* { box-sizing: border-box; }
+/* plan text carries long unbroken tokens — a review-page URL in a Log note, a path, a hostile string with no
+   space in it — and at 375 px one of those is what pushes the document wider than the window (D20) */
+body, p, td, th, li, caption { overflow-wrap: anywhere; }
+body { margin:0; padding:1.5rem 1rem 4rem; background:var(--bg); color:var(--fg); max-width:60rem;
+  font:16px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+h1 { font-size:1.5rem; line-height:1.25; margin:0 0 .25rem; }
+h2 { font-size:1.15rem; margin:2.25rem 0 .5rem; padding-bottom:.25rem; border-bottom:1px solid var(--line); }
+h3 { font-size:1rem; margin:1.25rem 0 .35rem; color:var(--dim); }
+p { margin:.4rem 0; }
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.9em; }
+.sub { color:var(--dim); margin:0 0 1rem; }
+.absent { color:var(--dim); font-style:italic; }
+.legend { color:var(--dim); }
+.scroll { overflow-x:auto; }
+table { border-collapse:collapse; width:100%; min-width:32rem; }
+caption { text-align:left; color:var(--dim); padding:.25rem 0; }
+th, td { text-align:left; vertical-align:top; padding:.35rem .5rem; border-bottom:1px solid var(--line); }
+th { color:var(--dim); font-weight:600; white-space:nowrap; }
+td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+tr:target td { background:var(--card); outline:2px solid var(--accent); }
+ul.tree { list-style:none; margin:0; padding:0; }
+ul.tree li { padding:.2rem 0; border-bottom:1px solid var(--line); display:flex; gap:.5rem; flex-wrap:wrap; }
+ul.tree li span.pkg { font-weight:600; }
+ul.tree li.lvl2 { padding-left:1.25rem; }
+ul.tree li .pct { margin-left:auto; font-variant-numeric:tabular-nums; color:var(--dim); }
+a { color:var(--accent); }
+a:focus-visible { outline:3px solid var(--accent); outline-offset:2px; border-radius:2px; }
+.k { display:inline-block; min-width:5.5rem; color:var(--dim); }
+.done { color:var(--ok); } .open { color:var(--warn); }
+ol.said { margin:.25rem 0 .75rem; padding-left:1.25rem; }
+ol.said li { padding:.15rem 0; }
+.declared { border-left:3px solid var(--warn); padding:.35rem .6rem; margin:.5rem 0; color:var(--fg); }
+</style>
+</head>
+<body>
+<h1>Review — Raphael api 2 — status, events, push subscription, paging, contract check</h1>
+
+<p class="sub"><span class="mono">raphael-api-core</span> · draft · size L · parent nyarlathotep · 22 item(s)</p>
+
+<p class="legend mono">legend: D item · A amendment · S assumption · F review finding · P proposal · W work package · n.m layer.probe</p>
+
+<p class="legend">Every probe of this plan's rubric is below with the plan's own answer. The author's own marking is not on this page — form your own before you look at theirs.</p>
+
+<h2 id="L1">1. Purpose &amp; typical use</h2>
+<p class="absent">the plan writes no numbered sentences under Purpose &amp; typical use for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 1</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">1.1</td><td>Who uses it (role, frequency) and the one sentence they would say when they want it.</td><td><span class="open">no answer</span></td></tr><tr><td class="mono">1.2</td><td>The job it does for them — the outcome, not the mechanism.</td><td><span class="open">no answer</span></td></tr><tr><td class="mono">1.3</td><td>What exists today that it replaces, extends, or must coexist with.</td><td><span class="open">no answer</span></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L2">2. Actors &amp; permissions</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 2</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">2.1 ⛔</td><td>Every actor that can reach it (including unauthenticated, service accounts, admins) and what each may do.</td><td><a href="#D7">D7</a></td></tr><tr><td class="mono">2.2</td><td>What happens on the unauthorized path — silent deny, error, redirect, audit entry.</td><td><a href="#D7">D7</a> <a href="#D3">D3</a> <a href="#D5">D5</a></td></tr><tr><td class="mono">2.3</td><td>Ownership: who may see, change, or delete what someone else created, and what happens when ownership changes hands — a holder replaced mid-flight, a closed thing legitimately reopened.</td><td><a href="#D5">D5</a> <a href="#D7">D7</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L3">3. Inputs, outputs &amp; data</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 3</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">3.1</td><td>Every input: shape, limits, validation, and the response to invalid input.</td><td><a href="#D3">D3</a> <a href="#D5">D5</a></td></tr><tr><td class="mono">3.2</td><td>Every output and side effect, including what other systems receive.</td><td><a href="#D1">D1</a> <a href="#D2">D2</a> <a href="#D6">D6</a> <a href="#D4">D4</a></td></tr><tr><td class="mono">3.3 ⛔</td><td>Persistence: what is stored, where, who owns it, how long it is kept, how it is deleted — for every artifact the feature produces, including by-products (logs, working directories, intermediates), and which of them exist only once.</td><td><a href="#D19">D19</a> <a href="#D5">D5</a> <a href="#D16">D16</a> <a href="#D17">D17</a></td></tr><tr><td class="mono">3.4</td><td>Migration of existing data, if the shape changes.</td><td>nothing persisted and api 1 lines unchanged, so nothing migrates</td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L4">4. Business rules &amp; invariants</h2>
+<h3>What the plan says under “Business rules”</h3>
+<ol class="said"><li>**Fairness (S-1):** a push never tells a subscriber more than chat or the public `.nyar status` tells every player. event-start, event-end, wave and killswitch are public state and always push. wave-warn pushes only when chat warnings would fire: WaveWarnings on, announce.warnings true, at WarningOffsets (D6).</li><li>**Privacy (Epic):** no wire line sent to a non-admin carries coordinates, a radius or another player&#39;s position or name; `units` is admin-only (D1, D6).</li><li>**Paging (contract §4):** 10 rows, 1-based, with the end line and error rules of D3. Paging is a live view: a reload between two pages can repeat or skip a row, and the contract says so; Raphael re-reads from page 1 on config-changed. The contract is authoritative for key names and order; the tests read it (D4).</li><li>**Enabled off (S-2):** with General.Enabled=false, `api status` and `api events` still answer normally; `version` reports enabled=0. `disabled` stays reserved for stats and zones.</li><li>**Consumed values (3.1):** ids are validated at load as 1-32 of a-z 0-9 - (foundation; D2 carries them); a definition name (at most 200 characters at load) is mapped by TextSink.WireValue and cut to 64 UTF-8 bytes on a character boundary; a DisabledReason is mapped and cut to 120 bytes; seconds and counts are integers the engine computed; WarningOffsets are validated at boot (1-5 values, each 5-3600). No consumed value can therefore push a documented key off a line (D4); an invalid definition never reaches the wire except as state=disabled with its reason (D2).</li><li>**Api number:** Wire.Api moves from 1 to 2 in the commit that adds the first api-2 line, together with the contract (D8, D14).</li><li>**Retroactive edits (4.3):** a running event keeps the definition it started with (foundation D6), so an edit to durationSeconds, waves or intervalSeconds changes its next start, never its countdown or its queued lines. WarningOffsets and the [Announcements] switches are read at boot; a cfg change takes effect at the next restart. Queued lines are never rewritten. Times on the wire are seconds counted from the server&#39;s UTC clock at send time (D6).</li><li>**Push ordering:** lines leave in queue order. A config-changed line that is already waiting absorbs a new one (D6). A wave-warn line whose event ended before it was sent is dropped when the event ends, like chat warnings.</li><li>**Every-X sets (4.5):** - **Every api command** = each [Command] in a class whose nearest [CommandGroup] is &quot;nyar api&quot;, found by preflight&#39;s walk over tracked and untracked-not-ignored .cs files (D8, D9). Blind spot: a group name built from a constant instead of a literal; the command then has no api group and fails the D10 allow-list unless it is adminOnly. - **Every tag** = each first argument of Wire.Record or Wire.Line in Logic/; every such argument must be a string literal, and a line assembled elsewhere is caught by the &quot;[NYAR:&quot; literal rule (D8). - **Every transition** = the six push types, each called from the one place that performs it (EventRuntime.StartEvent, End, Tick expiry and Purge; WaveAction after WaveSpawned; EventStore.Reload and Edit). PushTests drives each (D6). EventRuntime.End and Tick are the only callers of Engine.Cancel and Engine.Expire, so a new end path passes through them. - **Every path** = preflight -Paths, which walks tracked, untracked, ignored and server files at run time; it runs as the last action of step 6, after the release, close, index and review writes (D19). - **Every session** = each &quot;### Session &lt;n&gt;&quot; entry, counted by -SessionsOf against the audit&#39;s log-check lines (D20).</li><li>**Precedence (4.4):** push volume yields to the queue caps (50 lines, 5 lines per tick), which yield to nothing: a dropped line is logged, never retried. A player&#39;s subscription never overrides the S-1 gates. The owner decides exceptions by changing the switches.</li></ol>
+<div class="scroll">
+<table><caption>probes of layer 4</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">4.1</td><td>Calculations, thresholds, and policies stated precisely enough to write a test from, and which document is authoritative for a threshold stated in two places.</td><td><a href="#D3">D3</a> <a href="#D6">D6</a></td></tr><tr><td class="mono">4.2</td><td>Invariants that must never be violated (uniqueness, ordering, balance, totals).</td><td><a href="#D1">D1</a> <a href="#D5">D5</a> <a href="#D4">D4</a></td></tr><tr><td class="mono">4.3</td><td>Temporal rules — time zones, cut-offs, expiry, retroactive changes.</td><td><a href="#D6">D6</a> <a href="#D1">D1</a></td></tr><tr><td class="mono">4.4 ⛔</td><td>Precedence when rules conflict, and who decides an exception.</td><td><a href="#D6">D6</a> <a href="#D5">D5</a></td></tr><tr><td class="mono">4.5</td><td>(rubric 2) “Every X” sets: for every rule of the form “every X”, how X is computed, what valid content the computation misses, who checks the computation — and, when a tool derives X (a grep, a diff, a directory walk), whether that tool can see every member at the moment it runs: a file not yet tracked, a file this build creates, a path the tool excludes.</td><td><a href="#D8">D8</a> <a href="#D9">D9</a> <a href="#D6">D6</a> <a href="#D19">D19</a> <a href="#D20">D20</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L5">5. Internal interfaces</h2>
+<p class="absent">the plan writes no numbered sentences under Interfaces for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 5</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">5.1</td><td>What it reads from other features/modules, with paths or symbols.</td><td><a href="#D1">D1</a> <a href="#D2">D2</a></td></tr><tr><td class="mono">5.2</td><td>What it writes to or changes about other features, and what breaks there if this is wrong.</td><td><a href="#D6">D6</a> <a href="#D9">D9</a></td></tr><tr><td class="mono">5.3</td><td>Shared types, events, schemas or contracts it introduces or alters — each field enumerated against what the code emits or reads, not against the prose that describes it.</td><td><a href="#D4">D4</a> <a href="#D14">D14</a> <a href="#D8">D8</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L6">6. External dependencies &amp; contracts</h2>
+<p class="absent">the plan writes no numbered sentences under Interfaces for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 6</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">6.1</td><td>Every external API, service, package, or vendor it depends on — version, quota, cost — and every input contract sampled across all its record types, not only the ones the feature expects.</td><td><a href="#D3">D3</a> <a href="#D12">D12</a> <a href="#D14">D14</a> <a href="#D4">D4</a></td></tr><tr><td class="mono">6.2 ⛔</td><td>Behaviour when each dependency is slow, down, rate-limited, or returns garbage, including internal collaborators — sibling agents and your own tools.</td><td><a href="#D21">D21</a></td></tr><tr><td class="mono">6.3</td><td>Sandbox / test-mode behaviour and how it is kept out of production.</td><td><a href="#D16">D16</a> <a href="#D11">D11</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L7">7. States &amp; lifecycle</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 7</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">7.1</td><td>Empty, first-run, loading, partial, and error states.</td><td><a href="#D1">D1</a> <a href="#D3">D3</a></td></tr><tr><td class="mono">7.2</td><td>Concurrent use — two users, two tabs, a retry racing the original — and which of these actors is you: the planner, the orchestrator, the build tooling.</td><td><a href="#D5">D5</a> <a href="#D2">D2</a></td></tr><tr><td class="mono">7.3</td><td>Stale data, cancel, undo, and re-entry after interruption, and what a correction invalidates.</td><td><a href="#D6">D6</a> <a href="#D5">D5</a> <a href="#D2">D2</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L8">8. Minimal stretch</h2>
+<p class="absent">the plan writes no numbered sentences under Use cases for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 8</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">8.1</td><td>The least a user can do: empty input, one item, defaults only, skipping optional steps.</td><td><a href="#D1">D1</a> <a href="#D3">D3</a> <a href="#D5">D5</a></td></tr><tr><td class="mono">8.2</td><td>The feature used once and never again — does anything leak, linger, or nag.</td><td><a href="#D5">D5</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L9">9. Maximal stretch</h2>
+<p class="absent">the plan writes no numbered sentences under Use cases for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 9</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">9.1</td><td>Volume: 100× the expected count, size, or rate — what degrades and how.</td><td><a href="#D3">D3</a> <a href="#D6">D6</a></td></tr><tr><td class="mono">9.2</td><td>Abuse and misuse: hostile input, automation, the clever workaround a power user will try.</td><td><a href="#D5">D5</a> <a href="#D7">D7</a> <a href="#D10">D10</a></td></tr><tr><td class="mono">9.3</td><td>Repeated or parallel use of the same action — idempotency, duplicates, double-submit.</td><td><a href="#D5">D5</a> <a href="#D2">D2</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L10">10. Security &amp; privacy</h2>
+<p class="absent">the plan writes no numbered sentences under Security for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 10</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">10.1 ⛔</td><td>Authorization checked on every path, including indirect ones (jobs, webhooks, exports) — and an allowed program&#39;s options that change what runs (`git --upload-pack`, `npm --script-shell`, `node --require`) are the same boundary as the program itself.</td><td><a href="#D7">D7</a></td></tr><tr><td class="mono">10.2</td><td>Injection and unsafe content on every input that reaches a query, shell, template, or URL.</td><td><a href="#D4">D4</a> <a href="#D3">D3</a> <a href="#D8">D8</a></td></tr><tr><td class="mono">10.3 ⛔</td><td>Secrets and credentials: where they live, how they rotate, what must never be logged.</td><td><a href="#D10">D10</a></td></tr><tr><td class="mono">10.4</td><td>Personal data: what is collected, minimised, exposed in logs or exports, and the audit trail.</td><td><a href="#D5">D5</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L11">11. Design &amp; UX</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 11</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">11.1</td><td>Where it lives in the product and how a user discovers it.</td><td><a href="#D10">D10</a> <a href="#D14">D14</a></td></tr><tr><td class="mono">11.2</td><td>Feedback: progress, success, failure, and empty-result messaging in the product&#39;s voice.</td><td><a href="#D1">D1</a> <a href="#D3">D3</a> <a href="#D13">D13</a></td></tr><tr><td class="mono">11.3</td><td>Accessibility (keyboard, screen reader, contrast) and small-screen behaviour.</td><td>raw lines are plain chat text under 480 bytes</td></tr><tr><td class="mono">11.4</td><td>(rubric 2) Activation: how the feature is invoked or activated when nobody asks for it — a trigger, a pointer line, a hook, a schedule — and what shows it was; the should-not-activate cases are unrelated to the feature&#39;s purpose, never adjacent to it — an agent that has just finished an adjacent task invokes it for a good reason.</td><td><a href="#D5">D5</a> <a href="#D6">D6</a> <a href="#D13">D13</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L12">12. Failure handling &amp; observability</h2>
+<p class="absent">the plan writes no numbered sentences under Failure &amp; observability for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 12</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">12.1</td><td>What the user sees for each failure class, and what they can do next.</td><td><a href="#D3">D3</a> <a href="#D12">D12</a></td></tr><tr><td class="mono">12.2</td><td>What is logged or measured, with enough context to debug without reproducing.</td><td><a href="#D5">D5</a> <a href="#D6">D6</a> <a href="#D20">D20</a></td></tr><tr><td class="mono">12.3</td><td>How you would know in production that it is broken — the alert or the dashboard.</td><td><a href="#D12">D12</a> <a href="#D20">D20</a></td></tr><tr><td class="mono">12.4 ⛔</td><td>(rubric 2) Failing case: for every check the plan introduces, the input that makes it report a failure, the input it must stay silent on, and what it prints on an empty input — which must not read as a pass; one evidence command per gating probe, able to fail for its stated `fails when`; and a selftest fixture spells what the real input spells and plants the state the real run produces, never a corrected copy of either.</td><td><a href="#D11">D11</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L13">13. Performance &amp; scale</h2>
+<p class="absent">the plan writes no numbered sentences under Performance for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 13</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">13.1</td><td>The latency or throughput budget, and the hot path that decides it.</td><td><a href="#D22">D22</a></td></tr><tr><td class="mono">13.2</td><td>Limits and pagination — what is bounded and what happens at the bound, the case a limit came from, and the valid case it excludes.</td><td><a href="#D3">D3</a> <a href="#D6">D6</a> <a href="#D4">D4</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L14">14. Rollout &amp; compatibility</h2>
+<p class="absent">the plan writes no numbered sentences under Rollout for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 14</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">14.1</td><td>How it ships: flag, staged, all at once; who can turn it off.</td><td><a href="#D17">D17</a></td></tr><tr><td class="mono">14.2</td><td>Backward compatibility with existing clients, data, and integrations.</td><td><a href="#D4">D4</a> <a href="#D14">D14</a></td></tr><tr><td class="mono">14.3 ⛔</td><td>Rollback: the exact steps to undo it, whether they are still possible after data has been written, and the commit range they cover when the change is committed more than once.</td><td><a href="#D18">D18</a></td></tr><tr><td class="mono">14.4 ⛔</td><td>(rubric 2) Paths walked: every path the change ships, writes or regenerates, found by walking the Build plan step by step — generated indexes, tooling, fixtures, notes, ignored and generated files, the shipped files a release has to touch, the paths the review process itself writes (review pages, re-review records) and the plan store itself.</td><td><a href="#D19">D19</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L15">15. Out of scope</h2>
+<p class="absent">the plan writes no numbered sentences under Out of scope for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 15</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">15.1</td><td>What was explicitly considered and excluded, so a builder does not fill the gap by guessing.</td><td><span class="open">no answer</span></td></tr><tr><td class="mono">15.2</td><td>What is deferred to a later item, and the slug or issue it lives in.</td><td><span class="open">no answer</span></td></tr></tbody>
+</table>
+</div>
+
+<h2>Items in full</h2>
+
+<h3 id="D1"><span class="mono">D1</span> Status rows</h3>
+<p>`.nyar api status` (anyone) replies one `[NYAR:event]` line per active event, then one per ended event whose units are still waiting out the grace (state=ending, left = seconds until its despawn), then `[NYAR:end] cmd=status count=&lt;rows sent&gt;`, each line its own reply. Row keys in order: id kind name state faction left wave units. kind=waves for the Spawns pillar, faction=-, wave=&lt;spawned&gt;/&lt;total&gt;. units is the event&#39;s tracked unit count for an admin and `-` for a player. No row carries a coordinate, radius or player key. With no events the reply is only `[NYAR:end] cmd=status count=0`</p>
+<p class="mono">test: Nyarlathotep.Tests ApiLinesTests (fails when: a key is missing or out of the contract&#39;s order, a player row carries a unit count, any row carries x, y, z, r or a player name, an ending event has no row, or count differs from the rows built)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D2"><span class="mono">D2</span> Definition rows</h3>
+<p>`.nyar api events [page]` is adminOnly. It replies one `[NYAR:def]` line per definition of the page (keys in order: id name enabled trigger action duration state reason), then the end line of D3. trigger maps Manual, Schedule, GameTime and VBloodKilled to manual, schedule, ingame and vbloodkilled; action=waves. state is active while the event runs, else disabled when the definition is not startable, else scheduled when its trigger is not manual, else idle. reason is the wire-safe DisabledReason when state=disabled and `-` otherwise</p>
+<p class="mono">test: Nyarlathotep.Tests ApiLinesTests (fails when: an active, disabled, scheduled or idle definition gets another state, a disabled row has reason=-, a trigger is unmapped, or a reason keeps a space, &#39;=&#39;, &#39;;&#39; or &#39;:&#39;)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D3"><span class="mono">D3</span> Paging per contract §4</h3>
+<p>a paged read sends at most 10 rows, then `[NYAR:end] cmd=&lt;cmd&gt; page=&lt;cur&gt;/&lt;total&gt; count=&lt;rows in all pages&gt;`. No page means page 1. An empty result is `page=1/1 count=0`. A page past the last sends no rows and `page=&lt;asked&gt;/&lt;total&gt;`. A page below 1, not an integer, or outside the int range sends only `[NYAR:err] cmd=&lt;cmd&gt; code=badarg arg=page`</p>
+<p class="mono">test: Nyarlathotep.Tests PagingTests (fails when: page &quot;0&quot;, &quot;-1&quot;, &quot;x&quot;, &quot;1.5&quot; or &quot;99999999999&quot; is accepted, an empty set is not page=1/1 count=0, page 2 of 10 rows sends rows, page 2 of 11 rows sends other than the eleventh, or count counts only the page)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D4"><span class="mono">D4</span> Wire key sets from the contract</h3>
+<p>WireFormatTests reads docs/RAPHAEL_INTEGRATION_CONTRACT.md (copied to the test output) and, for each of the tags event, def, end, err, ok and ev, asserts that the builder&#39;s keys equal the example line&#39;s keys of the contract section that documents the tag. Every built line passes the grammar check (at most 480 bytes; no &#39;&lt;&#39;, &#39;&gt;&#39; or newline; values free of space, &#39;=&#39;, &#39;;&#39; and &#39;:&#39;), including a row with a 32-character id and a 200-character name of 4-byte characters: a name or reason is cut to 64 and 120 UTF-8 bytes respectively after mapping, on a character boundary, so every key of the row survives. The `[NYAR:version]` line reports api=2</p>
+<p class="mono">test: Nyarlathotep.Tests WireFormatTests (fails when: a builder adds, drops or reorders a documented key, a line exceeds 480 bytes, a value holds a forbidden character, a long multibyte name pushes a later key off the line, or api is not 2)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D5"><span class="mono">D5</span> Subscriptions end on disconnect</h3>
+<p>(Epic D45). `.nyar api sub on|off` (anyone) keys an in-memory set by the caller&#39;s SteamID from the VCF context; no argument names a player. It replies `[NYAR:ok] cmd=sub on=1` or `on=0`, and any other argument replies `[NYAR:err] cmd=sub code=badarg arg=state`. Running `sub on` twice leaves one entry. A disconnect removes the entry, and a new process starts empty. A push goes only to a subscriber who is connected at send time; a subscriber found offline is removed without a send. At most 128 entries: a `sub on` from a new id at the cap replies `[NYAR:err] cmd=sub code=ratelimit` and adds nothing. Every change logs exactly &quot;[nyar] push: &lt;n&gt; subscribed (&lt;reason&gt;)&quot; with reason on, off, disconnect or offline, and never a SteamID or a name</p>
+<p class="mono">test: Nyarlathotep.Tests SubscriptionTests (fails when: a push reaches an unsubscribed or disconnected id, an entry survives Disconnected(id), two `on` leave two entries, `sub maybe` is accepted, a 129th id is added, or a log line contains the id)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D6"><span class="mono">D6</span> Push rules</h3>
+<p>each transition queues one `[NYAR:ev]` line with keys type, id and secs: event-start: secs = the event&#39;s duration; event-end: on expiry, stop or fault cancel; wave: with wave=&lt;n&gt;, when a wave is queued; wave-warn: secs = the time until the wave, plus wave=&lt;n&gt;. It is queued only while [Announcements] WaveWarnings is on and the definition&#39;s announce.warnings is true, once per WarningOffsets offset (S-1); killswitch: on a purge, with id=- and secs = the purge cooldown; config-changed: on a successful reload, enable, disable or set, with id=-; a second config-changed while one waits is not queued. The queue holds 50 lines; at 51 the oldest is dropped and &quot;push queue full, oldest dropped&quot; is logged once per overflow streak. Each tick sends at most 5 lines, each to every connected subscriber, so a tick makes at most 5 × 128 = 640 sends. No push line carries a coordinate</p>
+<p class="mono">test: Nyarlathotep.Tests PushTests (fails when: wave-warn is queued with WaveWarnings off or announce.warnings false, an offset fires twice, a transition queues no line or two, two config-changed wait at once, a failed reload, enable, disable or set queues config-changed, the 51st line keeps the oldest, a tick sends 6 lines or more than 640 sends with 128 subscribers, or a line carries a coordinate key)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D7"><span class="mono">D7</span> Authorization suite</h3>
+<p>one command covers every direct and indirect path of the actor matrix (Design › Permissions): `pwsh tools/preflight.ps1 -AuthSuite` runs `dotnet test Nyarlathotep/Nyarlathotep.Tests --filter &quot;FullyQualifiedName~AuthorizationTests|FullyQualifiedName~ApiAccessTests&quot;` (every ActionKind × actor, with Subscribe granted to Admin and Player only; every status row, def row and push line built for a player and an admin, no player line carrying units, a coordinate, radius or player key; Subscriptions.Deliver reaching only subscribed, connected ids), then the commands check (`api events` adminOnly; `api status`, `version` and `sub` public), the admin-list check and the gateway-only check (every Pusher.Subscribe and Pusher.Unsubscribe call inside Gateway.Run), and exits non-zero when any part fails or the filter runs 0 tests</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 -AuthSuite → &quot;auth suite: pass (tests, commands, admin list, gateway)&quot; (fails when: Subscribe is granted to System or Operator, `api events` loses adminOnly, a player row or push line carries units or a coordinate, a push reaches an unsubscribed id, a subscription change bypasses Gateway.Run, or the test run fails)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D8"><span class="mono">D8</span> Wire contract check</h3>
+<p>(Epic D38) Test-CheckWireContract collects every tag passed to Wire.Record or Wire.Line in Logic/ and every [Command] of a `[CommandGroup(&quot;nyar api&quot;)]` class, requires each in the contract&#39;s &quot;Tags and commands&quot; table marked IMPLEMENTED (api &lt;n&gt;), requires Wire.Api to equal the contract&#39;s &quot;**Current api:** &lt;n&gt;&quot;, fails on a Wire.Record or Wire.Line call (outside their own definitions in Logic/Wire.cs) whose tag argument is not a string literal, and fails on any string literal &quot;[NYAR:&quot; in a .cs file other than Logic/Wire.cs, so no wire line bypasses the builder</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 → line &quot;wire contract: &lt;n&gt; tags, &lt;m&gt; api commands, all documented (api 2)&quot; (fails when: a tag or api command is missing from the table, a row is PLANNED, the api numbers differ, a tag argument is not a literal, a &quot;[NYAR:&quot; literal sits outside Logic/Wire.cs, or no tag is found)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D9"><span class="mono">D9</span> Command walk sees each group</h3>
+<p>Get-CommandWalk gives each [Command] the nearest [CommandGroup] above it in its file, so `.nyar api events` is listed as that and never as `.nyar events`</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 -ListCommands admin → a line &quot;.nyar api events&quot; (fails when: a file with two groups labels a command with the first group; the selftest fixture tools/preflight-fixtures/AdminList/bad-2 plants such a file)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D10"><span class="mono">D10</span> Static checks pass</h3>
+<p>preflight prints &quot;commands: &lt;n&gt; admin-only, &lt;m&gt; public (allow-listed)&quot; with api status, version and sub public and api events admin-only; &quot;ready guard: &lt;n&gt;/&lt;n&gt;&quot; covering the three new commands; &quot;patch guards: &lt;n&gt;/&lt;n&gt;&quot; covering Patches/UserDisconnectPatch.cs; &quot;secrets: none&quot;, where the secrets check also fails on `gh auth token`, `printenv`, `Get-ChildItem env:`, `dir env:` or `TCLI_AUTH_TOKEN` in any tools/ script, and on a token shape in any tracked or untracked file; and PREFLIGHT OK</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 → PREFLIGHT OK with each of those lines (fails when: a new command lacks adminOnly or the ready guard, the disconnect patch lacks its guard, or a tools/ script reads a credential or dumps the environment)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D11"><span class="mono">D11</span> New checks self-tested</h3>
+<p>tools/preflight-checks.json registers exactly the fixtures of the selftest matrix in Failure &amp; observability: WireContract good (copies of the real Wire.cs, ApiCommands.cs and contract), bad (a tag missing from the table), bad-2 (a row still PLANNED), bad-3 (Wire.Api 3 against contract 2), bad-4 (a &quot;[NYAR:x]&quot; literal in Commands/), bad-5 (Wire.Line(tag, …) with a variable tag) and empty (no .cs files); AdminList bad-2 (a real two-group file copied from Commands/ApiCommands.cs with the group order swapped); Secrets bad-3 (a tools/ script calling `gh auth token`). -SelfTest requires good to pass and every bad-n and empty to fail</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 -SelfTest → &quot;selftest: &lt;n&gt;/&lt;n&gt; checks&quot; with no failing fixture line (fails when: a bad-n or empty fixture passes, good fails, or a fixture of the matrix is not registered)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D12"><span class="mono">D12</span> Disconnect hook</h3>
+<p>Patches/UserDisconnectPatch.cs is a Prefix on ServerBootstrapSystem.OnUserDisconnected. It returns first when !Core.IsReady, reads the user as UserConnectPatch does, calls Pusher.Disconnected(platformId) inside try/catch, and logs a failure once per streak. Hook.UserDisconnect joins Logic/Hooks.cs, and the hook health line lists it</p>
+<p class="mono">manual: in game, run `.nyar api sub on`, disconnect, then read BepInEx/LogOutput.log → &quot;[nyar] push: 0 subscribed (disconnect)&quot;; reconnect and trigger a push without `sub on` → no `[NYAR:ev]` line in chat</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D13"><span class="mono">D13</span> Reads and pushes in game</h3>
+<p>on the local server with one admin and the example event: `.nyar api version` shows api=2 plugin=0.3.0; `.nyar api status` shows the rows of D1 while the event runs and `count=0` after; `.nyar api events` and `.nyar api events 2` show the D2 rows and end lines; `.nyar api events x` shows badarg; `.nyar api sub on` then `.nyar event start` shows event-start and wave lines, then event-end, in chat; `.nyar purge confirm` shows killswitch; `.nyar event reload` shows config-changed; `.nyar api sub off` stops them</p>
+<p class="mono">manual: the steps of docs/features/RAPHAEL_API.md › Test results › Session 2 performed by the owner at 127.0.0.1:9876; each observed line recorded</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D14"><span class="mono">D14</span> Contract at api 2</h3>
+<p>docs/RAPHAEL_INTEGRATION_CONTRACT.md says &quot;**Current api:** 2&quot;; its &quot;Tags and commands&quot; table lists the tags version, event, def, end, err, ok and ev and the commands version, status, events and sub, each IMPLEMENTED with its api; §3 status, events and push and §4 are headed IMPLEMENTED (api 2); me, top and zones stay PLANNED and name the child that fills them (stats, defended-zones); it states S-1&#39;s wave-warn rule and S-3&#39;s notready rule; docs/NYARLATHOTEP_DESIGN.md §6 lists the three new commands</p>
+<p class="mono">test: Nyarlathotep.Tests ContractDocTests (fails when: Current api differs from Wire.Api, a table row or §3/§4 heading lacks IMPLEMENTED (api 2), me, top or zones is not PLANNED with its child, or the wave-warn or notready rule sentence is missing)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D15"><span class="mono">D15</span> Raphael handoff</h3>
+<p>docs/RAPHAEL_HANDOFF.md tells a session in the Raphael workspace, in contract §6 and §8 terms, what to build against api 2; it is never copied into the Raphael workspace from here</p>
+<p class="mono">file: docs/RAPHAEL_HANDOFF.md contains each of &quot;## Build against api 2&quot;, &quot;## Parser and state&quot;, &quot;## Handshake and subscription&quot;, &quot;## Panels&quot;, &quot;## Not yet (later api)&quot;, &quot;## Requests (contract §8)&quot;, &quot;NyarWireParser.cs&quot;, &quot;NyarState.cs&quot;, &quot;NyarProtocolService.cs&quot;, &quot;ClientChatPatch&quot;, &quot;api&gt;=2&quot;, &quot;`.nyar api sub on` after every handshake with ready=1&quot;, &quot;[NYAR:ev]&quot;, &quot;config-changed: re-read version and events&quot;, &quot;Events board&quot;, &quot;Admin › Events&quot;, &quot;Kill switch&quot; and &quot;me, top and zones stay PLANNED&quot;</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D16"><span class="mono">D16</span> Rollback drill script</h3>
+<p>(Epic D32). tools/rollback-drill.ps1 -From v0.3.0 -To v0.2.1 does the following: It refuses while any VRisingServer process runs. It builds each tag&#39;s DLL in a disposable worktree. It saves the dev server&#39;s plugin DLL and BepInEx/config/Nyarlathotep/ and restores both in a finally. It installs N, edits one event&#39;s name in events.json, boots the dev world save-data-nyardev, and waits for &quot;Nyarlathotep initialized&quot;. It stops the server, installs N-1, boots again, and checks for &quot;Nyarlathotep initialized&quot;, the schema line of each file N wrote (stats.json is reported absent while no release writes it) and &quot;marker sweep&quot;. It checks that v0.2.1 is an ancestor of v0.3.0 and that `git diff --name-only v0.2.1..v0.3.0` lists only tools/paths-manifest.txt paths.</p>
+<p class="mono">cmd: pwsh tools/rollback-drill.ps1 -SelfTest → &quot;drill selftest: 3/3&quot; (good, bad and empty captured logs under tools/rollback-drill-fixtures/, the good one copied from a real session log); then pwsh tools/rollback-drill.ps1 -From v0.3.0 -To v0.2.1 → &quot;rollback drill: pass&quot; (fails when: a fixture log missing &quot;marker sweep&quot; or an empty log passes the selftest, a server process runs, N-1 does not initialize on N&#39;s state, a schema line is missing, the tags are not ancestor-ordered, the range touches an unlisted path, or the saved config differs from the restored one)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D17"><span class="mono">D17</span> Release 0.3.0</h3>
+<p>csproj Version and thunderstore.toml versionNumber are 0.3.0; both changelogs and both READMEs describe the Raphael api 2 reads and pushes; the annotated tag v0.3.0 is pushed; and the GitHub pre-release carries the tcli zip (Epic D3, D20, D21). No tcli publish: the owner publishes (Epic A20)</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 → PREFLIGHT OK and &quot;release tags: &lt;n&gt;/&lt;n&gt;&quot;; gh release download v0.3.0 -p kdpen-Nyarlathotep-0.3.0.zip -D &lt;scratch dir&gt;; its SHA-256 equals the one recorded in docs/audits/raphael-api-core.md (fails when: a surface differs, the tag is missing or unpushed, the release has no zip, or the hashes differ)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D18"><span class="mono">D18</span> Repository rollback drill</h3>
+<p>the rollback unit is the release: reverting v0.2.1..v0.3.0 (v0.2.1 = commit 8b405a0, the last release before this child; the range also holds this child&#39;s plan and Epic A20, which a rollback removes with it) in a disposable worktree restores v0.2.1&#39;s tree, which builds and passes its tests and preflight</p>
+<p class="mono">cmd: $ErrorActionPreference=&#39;Stop&#39;; $PSNativeCommandUseErrorActionPreference=$true; $wt=Join-Path $env:TEMP &quot;nyar-rollback-$([guid]::NewGuid().ToString(&#39;N&#39;))&quot;; git worktree add --detach $wt v0.3.0; try { git -C $wt revert --no-edit v0.2.1..v0.3.0; git -C $wt diff --quiet v0.2.1; dotnet build &quot;$wt\Nyarlathotep\Nyarlathotep.sln&quot; -c Release -p:VRisingServerPath=C:\__nodeploy__; dotnet test &quot;$wt\Nyarlathotep\Nyarlathotep.Tests&quot;; pwsh -NoProfile -File &quot;$wt\tools\preflight.ps1&quot;; &#39;rollback: clean&#39; } finally { git worktree remove --force $wt } → &quot;rollback: clean&quot; (fails when: a revert conflicts, the reverted tree differs from v0.2.1, or the build, tests or preflight fail)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D19"><span class="mono">D19</span> Paths and data</h3>
+<p>every path this child writes is in tools/paths-manifest.txt, and tools/data-inventory.json holds an entry (location, owner, retention, deletion, singleCopy) for every row of the artifact table in Design › Data, the in-memory subscription set and push queue and the drill&#39;s temp folders included; the data-inventory check fails on a row without an entry or an entry whose location, owner, retention, deletion or singleCopy is missing or empty, listed in tools/preflight-checks.json as that check&#39;s input</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 -Paths → &quot;paths: &lt;n&gt; walked, all in manifest&quot; and preflight&#39;s &quot;data inventory: &lt;n&gt; entries&quot; (fails when: an artifact-table row has no inventory entry, or a new file such as tools/rollback-drill.ps1 or docs/RAPHAEL_HANDOFF.md is not in the manifest)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D20"><span class="mono">D20</span> Sessions and records</h3>
+<p>every server session is an entry &quot;### Session &lt;n&gt; · &lt;date&gt;&quot; under docs/features/RAPHAEL_API.md › Test results, with a &quot;- session &lt;n&gt; log check: 0 unhandled, &lt;s&gt; nyar lines, 0 orphan errors, &lt;u&gt; unity errors&quot; line in docs/audits/raphael-api-core.md from `pwsh tools/preflight.ps1 -LogCheck` run before the next restart. The audit has a pre-audit and a post-audit with a &quot;Codex verdict:&quot; line for every Build plan step. tools/preflight-checks.json childDocs maps raphael-api-core to docs/features/RAPHAEL_API.md</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 -AuditOf raphael-api-core → &quot;audit steps: raphael-api-core 6/6 pre, 6/6 post, 6/6 Codex verdicts&quot;; pwsh tools/preflight.ps1 -SessionsOf raphael-api-core → &quot;sessions: &lt;n&gt;/&lt;n&gt; checked&quot; (fails when: a step lacks an entry or verdict, or a session lacks its log-check line)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D21"><span class="mono">D21</span> Dependency failures</h3>
+<p>DependencyFailureTests covers each failure class of the dependency table: Hook.UserDisconnect registration throwing logs &quot;hook UserDisconnect unavailable&quot; once and a later push still prunes the offline subscriber; an IUserSource whose Connected() throws skips that send, keeps the line out of the queue and logs once per streak; a recipient that throws is skipped while the others receive; a Pusher entry point that throws is caught and the caller&#39;s event tick continues plus the garbage-input cases of Raphael traffic (PagingTests, SubscriptionTests); tooling dependencies (git, gh, Codex) are not runtime dependencies: their policy is abort-and-rerun under $ErrorActionPreference=&#39;Stop&#39;, evidenced by D17 and D18</p>
+<p class="mono">test: Nyarlathotep.Tests, `dotnet test Nyarlathotep/Nyarlathotep.Tests --filter &quot;FullyQualifiedName~DependencyFailureTests|FullyQualifiedName~PagingTests|FullyQualifiedName~SubscriptionTests&quot;` (fails when: a malformed page or state argument is accepted, a hook, user-source, recipient or entry-point failure propagates, logs more than once per streak, or stops delivery to the other subscribers)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D22"><span class="mono">D22</span> Tick budget with pushes</h3>
+<p>with Debug.TimingLog=true, one subscriber and a 150-unit event (MaxTrackedUnits&#39; default) in waves with warnings on, the scheduler tick average stays under foundation D24&#39;s 5 ms, and `.nyar api status` and `.nyar api events` answer within one second as seen in chat</p>
+<p class="mono">manual: docs/features/RAPHAEL_API.md › Test results › Session 2 records the logged &quot;tick timing&quot; lines during the event and the observed reply times</p>
+<p class="absent">no evidence line yet</p>
+</body>
+</html>

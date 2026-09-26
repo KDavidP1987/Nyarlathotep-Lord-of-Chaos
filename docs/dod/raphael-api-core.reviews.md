@@ -109,3 +109,42 @@ VERDICT: REVISE
 - F13 · accepted · D6 fails when a failed reload, enable, disable or set queues config-changed
 - F14 · accepted · Business rules 3 states paging is a live view; the contract says so and Raphael re-reads from page 1 on config-changed
 - F15 · accepted · one log format "[nyar] push: <n> subscribed (<reason>)" in D5 and D12
+
+## Review 3 · 2026-09-25 · codex · plan commit a8b9417
+F1 blocking · Probe 1.1 is unanswered: Purpose identifies roles and intent but never decides usage frequency, so layer 1 is a Gap despite being presented as Considered.
+Fix: State the expected cadence, such as once per login, on each Events-panel refresh, and on each relevant event transition.
+F2 blocking · Probe 3.1 is unanswered: D3 and D5 specify command arguments, but the plan does not define validation and invalid-input behavior for consumed definition names, warning offsets, IDs, or other source values; a valid 200-character Unicode name can exceed the 480-byte wire limit.
+Fix: Enumerate each consumed input’s shape and limit and decide whether oversized or invalid values are rejected, escaped, truncated, or converted to an error line.
+F3 blocking · Probe 3.3 lacks a control: `preflight.ps1 -Paths` and the stated inventory check fail for a missing artifact entry, but no command is required to fail when `location`, `owner`, `retention`, `deletion`, or `singleCopy` is absent or inconsistent.
+Fix: Make one evidence command validate every required inventory field and fail when any artifact lacks its retention, deletion, ownership, location, or copy policy.
+F4 blocking · Probe 6.2 lacks one evidence command covering every dependency: `DependencyFailureTests` covers Pusher collaborators, while ProjectM/Harmony failures, VCF refusal, git/GitHub failure or rate limiting, Codex timeout, and malformed Raphael traffic remain prose or separate happy-path commands.
+Fix: Name one dependency-failure suite that injects every listed slow/down/rate-limited/garbage case and exits non-zero when any required containment behavior is removed.
+F5 blocking · Probe 12.4 is unanswered for all introduced checks: the matrix omits explicit failing, silent, and non-pass empty inputs for `-AuthSuite`, `-Paths`, data inventory, audit/session checks, and Secrets’ empty case; “Unit tests” does not spell the real input and produced state for each check.
+Fix: Extend the selftest matrix and its registered fixtures so every introduced check has an exact failing input, silent valid input, explicit empty-input output, and one executable command that proves those cases.
+F6 blocking · Probe 14.3 and D18 are unverifiable as scheduled: Build step 6 runs the D18 command before the release commit and `v0.3.0` tag exist, although the command requires that tag and expects the final release tree.
+Fix: Create the complete release commit and local annotated tag first, then run D18 against that immutable tag before pushing or publishing.
+F7 blocking · Probe 14.4 lacks an effective control: step 6 runs `preflight.ps1 -Paths` before version surfaces, build artifacts, release records, close-generated plan indexes, and review records are produced, contradicting the claim that it runs last after every file is written.
+Fix: Run the path control after all repository, generated, review, close, and release-path writes, or add a final post-close command that validates the complete manifest and fails on any undeclared path.
+F8 blocking · Probe 15.2 is unanswered: the both-mods check is delegated only to an unnamed “pause after this child,” and the possible api-3 `notready` work has no slug or issue.
+Fix: Name the child or issue owning each real deferral, or explicitly decide that `notready` is rejected rather than deferred.
+F9 advisory · Scenario for 9.2: a player can automate unlimited public `api status` calls; the per-call row bound does not decide throttling, logging, or server-pressure behavior across calls.
+Fix: State that unlimited calls are intentionally accepted within an existing command-rate control, or add a measurable request-rate policy.
+F10 advisory · Scenario for 7.3: overflow can discard `event-start` while retaining its later `wave` or `event-end`, leaving Raphael with an orphan transition and no specified resynchronization signal.
+Fix: Document the consumer recovery rule, such as re-reading status after an unrecognized event transition or detected queue-loss indication.
+F11 advisory · Scenario for 13.1: D22 measures a 20-unit event with one subscriber, while Performance claims the 5 ms budget at 150 tracked units and the maximal fan-out reaches 128 subscribers; the cited evidence does not test the claimed hot-path load.
+Fix: Align the performance claim with the measured case or add a benchmark at the claimed unit and subscriber bounds.
+EARLIER: all resolved
+9/15 layers · 41/49 probes
+VERDICT: REVISE
+### Dispositions
+- F1 · accepted · Purpose states the expected call cadence per connected Raphael
+- F2 · accepted · Business rules 5: names cut to 64 and reasons to 120 UTF-8 bytes after mapping; D4 tests a 200-character 4-byte name keeps every key
+- F3 · accepted · D19's inventory check fails on a missing or empty field
+- F4 · accepted · D21's one command adds the malformed-traffic cases; tooling dependencies are declared abort-and-rerun, evidenced by D17 and D18
+- F5 · accepted · the selftest matrix lists -AuthSuite (a zero-test run fails) and the existing -Paths, inventory, audit and session fixtures
+- F6 · accepted · step 6 now commits and tags locally first, then runs both drills against the tag before pushing
+- F7 · accepted · -Paths and preflight run as the last action of step 6, after close, index and review writes
+- F8 · accepted · the both-mods check belongs to the Epic A20 gate before faction-empowerment; sending notready is rejected, not deferred (S-3)
+- F9 · accepted · unlimited api reads are accepted by decision; each call is bounded
+- F10 · accepted · recovery rule: Raphael re-reads api status on an unknown event id and after event-end and killswitch; handoff and contract state it
+- F11 · accepted · D22 measures at 150 tracked units; the 128-subscriber case is covered by the 640-send ceiling in PushTests, stated as unmeasured
