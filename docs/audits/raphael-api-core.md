@@ -111,3 +111,14 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - Codex verdict: READY (round 3)
 - amendments: A8 (defect, ~D20, 12.4: -SessionsOf reads the childDocs docs; one doc per session number; an empty mapping fails)
 - dod status: D20 waits for steps 5 and 6 (every step and session); 13/22 verified
+
+### Step 5 · 2026-09-26 · e480752
+- compile: no code changed in this step; the session build of 881927c with -p:Version=0.3.0, 0 errors, 0 warnings
+- preflight: exit 0 ("PREFLIGHT OK")
+- session 2: docs/features/RAPHAEL_API.md › Test results › Session 2, two parts on one boot (owner, 127.0.0.1:9876, Raphael off). Every D13 line seen in the owner's screenshots; D12 by the log's "push: 0 subscribed (disconnect)" and a reconnect with no push; D22 tick averages 0.21–0.98 ms with 150 units and one subscriber; the step 3 checks (reload, enable, disable, set push one config-changed each; `set nope` none)
+- step errors in the owner steps, not the mod: part 1 ran `purge confirm` after the event had drained ("nothing to purge"), and both parts omitted `.nyar purge` before `confirm`, which purge requires by design (foundation D20); part 2 repeated the killswitch check with both commands
+- session 2 log check: 0 unhandled, 807 nyar lines, 0 orphan errors, 0 unity errors
+- warnings read: Il2CppInterop Class::Init, two Beelzebub TUNE lines, the mod's purge line (Warning by design); 226 PrefabLookupMap warnings in the server log, all before "Startup Completed". None unexplained
+- the owner's SteamID appears in the server log's "admin … ran" lines only; no record here or in the feature doc carries it
+- dev cfg WaveWarnings restored to false; the deployed DLL stays the 0.3.0 session build until step 6's release build
+- dod status: D12, D13, D22 pass lines added; 16/22 verified; D15–D20 wait for step 6
