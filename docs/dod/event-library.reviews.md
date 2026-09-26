@@ -395,3 +395,47 @@ yar-dep-* is a Design › Data row, a `temp:` glob and an inventory entry
 - F4 · accepted · D12 adds the two-admin sequential set: both edits survive, the second write uses the stamp of the first write's reload, exactly two config-changed notices
 - F5 · accepted · D27 times set and delete confirm again on a valid 200-definition file padded to just under 1 MB, under the same 200 ms budget
 - F6 · accepted · Rollout › Paths walked Step 2 spells Nyarlathotep/Nyarlathotep/Services/... and Nyarlathotep/Nyarlathotep/Commands/...
+
+## Review 8 · 2026-09-26 · codex · plan: revision 7 (07372fa); file access confirmed (0 blocked reads)
+Read-only confirmation: I read `docs/dod/event-library.md`, `Logic/CommandArgs.cs`, and the requested Epic, sibling, code, configuration, tooling, resource, reference-data, and profile files; I did not read `docs/dod/event-library.reviews.md`.
+
+Recon supports the plan’s main claims: `Precedence.StartBlocker` has the stated order; validation requires exact `SchemaVersion`/`events` casing and enforces the 200-definition/1-MB limits; `CommandArgs` presently lacks the planned authoring fields; Settings defines the five named pillar entries; the referenced units and factions exist; and faction-empowerment supplies the Empower action before this child begins. The Epic child constraint, Business rules, D47, and A22’s brief owner kick-off are inherited explicitly.
+
+Layer grading:
+
+1. Considered — Purpose & typical use, probes 1.1–1.3.
+2. Considered — Design › Permissions and D8/D17/D22, probes 2.1–2.3.
+3. Considered — Design › Data and D12/D15/D19/D30, probes 3.1–3.4.
+4. Considered — Business rules 1–9 and D2/D8/D12/D16/D25, probes 4.1–4.5.
+5. Considered — Interfaces › Internal and D1/D3/D10/D12/D14/D20, probes 5.1–5.3.
+6. Considered — Interfaces › External and D17–D19/D33, probes 6.1–6.3.
+7. Considered — Design › States and D8/D12/D14/D19/D26, probes 7.1–7.3.
+8. Considered — Minimal stretch and D4–D8, probes 8.1–8.2.
+9. Considered — Maximal stretch and D5/D8–D11/D14/D22/D27, probes 9.1–9.3.
+10. Considered — Security and D9/D10/D17/D18/D22, probes 10.1–10.4.
+11. Considered — Design › UX and D4/D16/D20/D21/D23/D25/D28, probes 11.1–11.4.
+12. Considered — Failure & observability and D3/D14/D16/D18/D19/D24/D30–D33, probes 12.1–12.4.
+13. Considered — Performance and D5/D12/D25/D27, probes 13.1–13.2.
+14. Considered — Rollout and D18/D28–D30, probes 14.1–14.4.
+15. Considered — Out of scope, probes 15.1–15.2.
+
+F1 `blocking` — Probe 4.4 lacks a dependable gating command: its filter uses textual `or` instead of VSTest’s `|`, and ordinary `dotnet test` does not reliably fail when a filter selects zero tests, so deleting or renaming both precedence classes can let the control report success without exercising a case.  
+Fix: Use a valid `|` filter and an aggregate/counting wrapper that fails unless both test classes execute the expected nonzero cases.
+
+F2 `blocking` — Probe 12.4 lacks a single fail-closed evidence command: the stated line uses the same invalid textual `or` filter and separates `dotnet test` from preflight with `;`, so a failed or zero-test test invocation followed by a successful selftest can leave the overall PowerShell line successful.  
+Fix: Add one aggregate command that runs the test controls and script selftests, checks nonzero test counts, and exits nonzero if either part fails or is absent.
+
+F3 `blocking` — Probe 14.3 is still not enforced by one fail-closed command: `-RollbackOf` and `rollback-gate.ps1` are joined with `;`, so removing the server downgrade or published-withdrawal route can make `-RollbackOf` fail while a succeeding rollback gate supplies the line’s final successful exit status.  
+Fix: Put both checks behind one fail-fast rollback command, or make `rollback-gate.ps1` invoke `-RollbackOf`, so loss of any route, exact range, compatibility drill, or snapshot drill makes that one command fail.
+
+Concrete uncovered scenarios are therefore: renamed precedence tests producing zero selected cases (4.4), a failing control-case test masked by a successful script selftest (12.4), and a missing server rollback bullet masked by a successful repository/data rollback drill (14.3).
+
+EARLIER: unresolved F2
+15/15 layers · 49/49 probes
+VERDICT: REVISE
+
+### Dispositions
+Confirmation round for revision 7 (Review 7's F1 and F2 named gating probes). The reviewer states EARLIER: unresolved F2 (Review 7's F2, the rollback routes; its new F3 says why: two commands joined by `;`). All three findings are local fixes under the owner's final-round rule, accepted and applied in revision 8, which goes to a confirmation Review 9. Checked against the code: tools/preflight.ps1's -AuthSuite already runs each class on its own and fails on 0 tests (`if ($AuthSuite)`, "no tests ran"); VSTest filters combine with `|` and `&`.
+- F1 · accepted · new D34 Invoke-ClassTests (factored out of -AuthSuite: per-class runs, exit code, Failed, Passed 0 and skipped all fail) with `-Tests <Class,...>`; the 4.4 row runs `pwsh tools/preflight.ps1 -Tests ReadinessTests,ControlPrecedenceTests`; D33's categories use the same runner with `|`-free per-category filters (its trx folder and the nyar-dep-* temp row of revision 7 are dropped)
+- F2 · accepted · D34 `-ControlSuite event-library` runs the thirteen D31 classes and the -SelfTest body in one process and exits 1 when either part fails or is absent; the 12.4 row names that one command; fixtures TestRuns/{bad,bad-2,bad-3,good,empty}
+- F3 · accepted · tools/rollback-gate.ps1 gains `-Plan <slug>`, running -RollbackOf as its fourth part ("rollback gate: 4/4"), with a routes-only-failing selftest case ("rollback gate selftest: 6/6"); D29, the 14.3 row, step 3, step 6 and Paths walked name it
