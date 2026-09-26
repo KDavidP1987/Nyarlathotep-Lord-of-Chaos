@@ -194,7 +194,8 @@
         "bad-3": "tools/publish.ps1 reads the gh credential with gh auth token (raphael-api-core D10)",
         "bad-4": "tools/read-env.ps1 reads GH_TOKEN through the environment drive with Get-Item -LiteralPath",
         "bad-5": "tools/ingame/helper.py imports environ from os and reads GH_TOKEN, a name outside the allow-list",
-        "bad-6": "tools/read.mjs destructures env from process and reads GH_TOKEN"
+        "bad-6": "tools/read.mjs destructures env from process and reads GH_TOKEN",
+        "bad-7": "tools/show.sh, a shell script (tools/ scripts are PowerShell, Python or Node), expanding GH_TOKEN"
       }
     },
     {
@@ -378,7 +379,7 @@
         "bad-3": "Wire.Api 3 against the contract's current api 2",
         "bad-4": "a \"[NYAR:x] note=bypass\" literal replied from Commands/ApiCommands.cs",
         "bad-5": "Wire.Line(tag, …) with a variable tag in Commands/ApiCommands.cs",
-        "bad-6": "Commands/ApiCommands.cs imports Wire under a global::-qualified alias (using W = global::…Wire;) and calls W.Line with a variable tag",
+        "bad-6": "Commands/ApiCommands.cs imports Wire under a global::-qualified alias written with spaces (using W = global :: Nyarlathotep . Logic . Wire;) and calls W.Line with a variable tag",
         "bad-7": "Wire.Line(\"x\", …) with a literal tag the contract's table does not list, in Commands/ApiCommands.cs"
       }
     },

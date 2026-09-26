@@ -4,7 +4,7 @@ using Nyarlathotep.Config;
 using Nyarlathotep.Logic;
 using Nyarlathotep.Services;
 using VampireCommandFramework;
-using W = global::Nyarlathotep.Logic.Wire;
+using W = global :: Nyarlathotep . Logic . Wire;
 
 namespace Nyarlathotep.Commands;
 
