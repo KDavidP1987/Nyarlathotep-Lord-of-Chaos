@@ -30,20 +30,22 @@ review: pending
 - [ ] D4 · **Wire key sets from the contract** WireFormatTests reads docs/RAPHAEL_INTEGRATION_CONTRACT.md (copied to the test output) and, for each of the tags event, def, end, err, ok and ev, asserts that the builder's keys equal the example line's keys of the contract section that documents the tag. Every built line passes the grammar check (at most 480 bytes; no '<', '>' or newline; values free of space, '=', ';' and ':'), including a row with a 32-character id and a 200-character name. The `[NYAR:version]` line reports api=2 · test: Nyarlathotep.Tests WireFormatTests (fails when: a builder adds, drops or reorders a documented key, a line exceeds 480 bytes, a value holds a forbidden character, or api is not 2)
 - [ ] D5 · **Subscriptions end on disconnect** (Epic D45). `.nyar api sub on|off` (anyone) keys an in-memory set by the caller's SteamID from the VCF context; no argument names a player. It replies `[NYAR:ok] cmd=sub on=1` or `on=0`, and any other argument replies `[NYAR:err] cmd=sub code=badarg arg=state`. Running `sub on` twice leaves one entry. A disconnect removes the entry, and a new process starts empty. A push goes only to a subscriber who is connected at send time; a subscriber found offline is removed without a send. The log names counts only, never a SteamID or a name · test: Nyarlathotep.Tests SubscriptionTests (fails when: a push reaches an unsubscribed or disconnected id, an entry survives Disconnected(id), two `on` leave two entries, `sub maybe` is accepted, or a log line contains the id)
 - [ ] D6 · **Push rules** each transition queues one `[NYAR:ev]` line with keys type, id and secs: event-start: secs = the event's duration; event-end: on expiry, stop or fault cancel; wave: with wave=<n>, when a wave is queued; wave-warn: secs = the time until the wave, plus wave=<n>. It is queued only while [Announcements] WaveWarnings is on and the definition's announce.warnings is true, once per WarningOffsets offset (S-1); killswitch: on a purge, with id=- and secs = the purge cooldown; config-changed: on a successful reload, enable, disable or set, with id=-; a second config-changed while one waits is not queued. The queue holds 50 lines; at 51 the oldest is dropped and "push queue full, oldest dropped" is logged once per overflow streak. Each tick sends at most 5 lines, each to every connected subscriber. No push line carries a coordinate · test: Nyarlathotep.Tests PushTests (fails when: wave-warn is queued with WaveWarnings off or announce.warnings false, an offset fires twice, a transition queues no line or two, two config-changed wait at once, the 51st line keeps the oldest, a tick sends 6 lines, or a line carries a coordinate key)
-- [ ] D7 · **Subscribe through the gateway** ActionKind.Subscribe exists and is granted to Admin and Player only. The sub command runs it through Gateway.Run on ctx.User.PlatformId, and AuthorizationTests enumerates it with every actor (Epic D36's Player row for Subscribe) · cmd: dotnet test Nyarlathotep/Nyarlathotep.Tests --filter AuthorizationTests; then pwsh tools/preflight.ps1 → "Passed!" and line "gateway: only ActionGateway mutates (<n> call sites)" (fails when: Subscribe has no table row, System or Operator is granted it, or Pusher.Subscribe is called outside Gateway.Run)
-- [ ] D8 · **Wire contract check** (Epic D38). Test-CheckWireContract collects every tag passed to Wire.Record or Wire.Line in Logic/ and every [Command] in a `[CommandGroup("nyar api")]` class. Each must appear in the contract's "Tags and commands" table marked IMPLEMENTED (api <n>), and Wire.Api must equal the contract's "**Current api:** <n>" · cmd: pwsh tools/preflight.ps1 → line "wire contract: <n> tags, <m> api commands, all documented (api 2)" (fails when: a tag or api command is missing from the table, a row is PLANNED, the two api numbers differ, or no tag is found at all)
+- [ ] D7 · **Authorization suite** one command covers every direct and indirect path of the actor matrix (Design › Permissions): AuthorizationTests enumerates every ActionKind × actor, with Subscribe granted to Admin and Player only; ApiAccessTests builds every status row, def row and push line for a player and an admin and asserts that no player line carries units, a coordinate, radius or player key, and that Subscriptions.Deliver reaches only subscribed, connected ids; preflight's commands check keeps `api events` adminOnly and `api status`, `version` and `sub` public; and the gateway-only check finds every Pusher.Subscribe and Pusher.Unsubscribe call inside Gateway.Run · cmd: dotnet test Nyarlathotep/Nyarlathotep.Tests --filter "FullyQualifiedName~AuthorizationTests|FullyQualifiedName~ApiAccessTests"; then pwsh tools/preflight.ps1 → "Passed!", line "commands: <n> admin-only, <m> public (allow-listed)" and line "gateway: only ActionGateway mutates (<n> call sites)" (fails when: Subscribe is granted to System or Operator, `api events` loses adminOnly, a player row or push line carries units or a coordinate, a push reaches an unsubscribed id, or a subscription change bypasses Gateway.Run)
+- [ ] D8 · **Wire contract check** (Epic D38) Test-CheckWireContract collects every tag passed to Wire.Record or Wire.Line in Logic/ and every [Command] of a `[CommandGroup("nyar api")]` class, requires each in the contract's "Tags and commands" table marked IMPLEMENTED (api <n>), requires Wire.Api to equal the contract's "**Current api:** <n>", and fails on any string literal "[NYAR:" in a .cs file other than Logic/Wire.cs, so no wire line bypasses the builder · cmd: pwsh tools/preflight.ps1 → line "wire contract: <n> tags, <m> api commands, all documented (api 2)" (fails when: a tag or api command is missing from the table, a row is PLANNED, the api numbers differ, a "[NYAR:" literal sits outside Logic/Wire.cs, or no tag is found)
 - [ ] D9 · **Command walk sees each group** Get-CommandWalk gives each [Command] the nearest [CommandGroup] above it in its file, so `.nyar api events` is listed as that and never as `.nyar events` · cmd: pwsh tools/preflight.ps1 -ListCommands admin → a line ".nyar api events" (fails when: a file with two groups labels a command with the first group; the selftest fixture tools/preflight-fixtures/AdminList/bad-2 plants such a file)
 - [ ] D10 · **Static checks pass** preflight prints "commands: <n> admin-only, <m> public (allow-listed)" with api status, version and sub public and api events admin-only; "ready guard: <n>/<n>" covering the three new commands; "patch guards: <n>/<n>" covering Patches/UserDisconnectPatch.cs; "secrets: none"; and PREFLIGHT OK · cmd: pwsh tools/preflight.ps1 → PREFLIGHT OK with each of those lines (fails when: a new command lacks adminOnly or the ready guard, or the disconnect patch lacks its guard)
-- [ ] D11 · **New checks self-tested** tools/preflight-checks.json has good, bad and empty fixtures for Test-CheckWireContract: good: the real Wire.cs, ApiCommands.cs and contract; bad: a tag missing from the table; bad-2: a row still PLANNED; bad-3: Wire.Api 3 against contract 2; empty: no Logic files, which fails. AdminList gains bad-2, a two-group file · cmd: pwsh tools/preflight.ps1 -SelfTest → "selftest: <n>/<n> checks, 3 fixtures each" (fails when: a fixture passes that should fail, or good fails)
+- [ ] D11 · **New checks self-tested** tools/preflight-checks.json registers, per the selftest matrix in Failure & observability, fixtures for Test-CheckWireContract (good: copies of the real Wire.cs, ApiCommands.cs and contract; bad: a tag missing from the table; bad-2: a row still PLANNED; bad-3: Wire.Api 3 against contract 2; bad-4: a "[NYAR:x]" literal in Commands/; empty: no .cs files, which fails with "wire contract: no tags found") and AdminList bad-2 (a real two-group file copied from Commands/ApiCommands.cs with the group order swapped) · cmd: pwsh tools/preflight.ps1 -SelfTest → "selftest: <n>/<n> checks, 3 fixtures each" (fails when: a bad or empty fixture passes, good fails, or a check of this child has no fixture)
 - [ ] D12 · **Disconnect hook** Patches/UserDisconnectPatch.cs is a Prefix on ServerBootstrapSystem.OnUserDisconnected. It returns first when !Core.IsReady, reads the user as UserConnectPatch does, calls Pusher.Disconnected(platformId) inside try/catch, and logs a failure once per streak. Hook.UserDisconnect joins Logic/Hooks.cs, and the hook health line lists it · manual: in game, run `.nyar api sub on`, disconnect, then read BepInEx/LogOutput.log → "[nyar] push: subscriber left (0 subscribed)"; reconnect and trigger a push without `sub on` → no `[NYAR:ev]` line in chat
 - [ ] D13 · **Reads and pushes in game** on the local server with one admin and the example event: `.nyar api version` shows api=2 plugin=0.3.0; `.nyar api status` shows the rows of D1 while the event runs and `count=0` after; `.nyar api events` and `.nyar api events 2` show the D2 rows and end lines; `.nyar api events x` shows badarg; `.nyar api sub on` then `.nyar event start` shows event-start and wave lines, then event-end, in chat; `.nyar purge confirm` shows killswitch; `.nyar event reload` shows config-changed; `.nyar api sub off` stops them · manual: the steps of docs/features/RAPHAEL_API.md › Test results › Session 2 performed by the owner at 127.0.0.1:9876; each observed line recorded
-- [ ] D14 · **Contract at api 2** docs/RAPHAEL_INTEGRATION_CONTRACT.md: says "**Current api:** 2"; has a "Tags and commands" table listing version, event, def, end, err, ok and ev and the commands version, status, events and sub, each IMPLEMENTED (api 1 or 2); marks §3 status and events and the push section, and §4, IMPLEMENTED (api 2); states S-1's rule on wave-warn and S-3's on notready; leaves me, top and zones PLANNED, naming the child that fills each. docs/NYARLATHOTEP_DESIGN.md §6 lists the three new commands · file: docs/RAPHAEL_INTEGRATION_CONTRACT.md contains "**Current api:** 2" and "### `status` — active events (anyone) — IMPLEMENTED (api 2)"
-- [ ] D15 · **Raphael handoff** docs/RAPHAEL_HANDOFF.md tells a session in the Raphael workspace, in the terms of contract §6 and §8, what to build against api 2: the parser and state files; the probe, then `sub on` after each handshake; the Events board, Admin › Events and Kill switch panels; the panels that wait for later api rows; how to file a §8 request. It is never copied into the Raphael workspace from here · file: docs/RAPHAEL_HANDOFF.md contains "## Build against api 2" and "## Not yet (later api)"
-- [ ] D16 · **Rollback drill script** (Epic D32). tools/rollback-drill.ps1 -From v0.3.0 -To v0.2.1 does the following: It refuses while any VRisingServer process runs. It builds each tag's DLL in a disposable worktree. It saves the dev server's plugin DLL and BepInEx/config/Nyarlathotep/ and restores both in a finally. It installs N, edits one event's name in events.json, boots the dev world save-data-nyardev, and waits for "Nyarlathotep initialized". It stops the server, installs N-1, boots again, and checks for "Nyarlathotep initialized", the schema line of each file N wrote (stats.json is reported absent while no release writes it) and "marker sweep". It checks that v0.2.1 is an ancestor of v0.3.0 and that `git diff --name-only v0.2.1..v0.3.0` lists only tools/paths-manifest.txt paths. · cmd: pwsh tools/rollback-drill.ps1 -From v0.3.0 -To v0.2.1 → "rollback drill: pass" (fails when: a server process runs, N-1 does not initialize on N's state, a schema line is missing, the tags are not ancestor-ordered, the range touches an unlisted path, or the saved config differs from the restored one)
+- [ ] D14 · **Contract at api 2** docs/RAPHAEL_INTEGRATION_CONTRACT.md says "**Current api:** 2"; its "Tags and commands" table lists the tags version, event, def, end, err, ok and ev and the commands version, status, events and sub, each IMPLEMENTED with its api; §3 status, events and push and §4 are headed IMPLEMENTED (api 2); me, top and zones stay PLANNED and name the child that fills them (stats, defended-zones); it states S-1's wave-warn rule and S-3's notready rule; docs/NYARLATHOTEP_DESIGN.md §6 lists the three new commands · test: Nyarlathotep.Tests ContractDocTests (fails when: Current api differs from Wire.Api, a table row or §3/§4 heading lacks IMPLEMENTED (api 2), me, top or zones is not PLANNED with its child, or the wave-warn or notready rule sentence is missing)
+- [ ] D15 · **Raphael handoff** docs/RAPHAEL_HANDOFF.md tells a session in the Raphael workspace, in contract §6 and §8 terms, what to build against api 2; it is never copied into the Raphael workspace from here · file: docs/RAPHAEL_HANDOFF.md contains "## Build against api 2", "## Parser and state", "## Handshake and subscription", "## Panels", "## Not yet (later api)" and "## Requests (contract §8)"
+- [ ] D16 · **Rollback drill script** (Epic D32). tools/rollback-drill.ps1 -From v0.3.0 -To v0.2.1 does the following: It refuses while any VRisingServer process runs. It builds each tag's DLL in a disposable worktree. It saves the dev server's plugin DLL and BepInEx/config/Nyarlathotep/ and restores both in a finally. It installs N, edits one event's name in events.json, boots the dev world save-data-nyardev, and waits for "Nyarlathotep initialized". It stops the server, installs N-1, boots again, and checks for "Nyarlathotep initialized", the schema line of each file N wrote (stats.json is reported absent while no release writes it) and "marker sweep". It checks that v0.2.1 is an ancestor of v0.3.0 and that `git diff --name-only v0.2.1..v0.3.0` lists only tools/paths-manifest.txt paths. · cmd: pwsh tools/rollback-drill.ps1 -SelfTest → "drill selftest: 3/3" (good, bad and empty captured logs under tools/rollback-drill-fixtures/, the good one copied from a real session log); then pwsh tools/rollback-drill.ps1 -From v0.3.0 -To v0.2.1 → "rollback drill: pass" (fails when: a fixture log missing "marker sweep" or an empty log passes the selftest, a server process runs, N-1 does not initialize on N's state, a schema line is missing, the tags are not ancestor-ordered, the range touches an unlisted path, or the saved config differs from the restored one)
 - [ ] D17 · **Release 0.3.0** csproj Version and thunderstore.toml versionNumber are 0.3.0; both changelogs and both READMEs describe the Raphael api 2 reads and pushes; the annotated tag v0.3.0 is pushed; and the GitHub pre-release carries the tcli zip (Epic D3, D20, D21). No tcli publish: the owner publishes (Epic A20) · cmd: pwsh tools/preflight.ps1 → PREFLIGHT OK and "release tags: <n>/<n>"; gh release download v0.3.0 -p kdpen-Nyarlathotep-0.3.0.zip -D <scratch dir>; its SHA-256 equals the one recorded in docs/audits/raphael-api-core.md (fails when: a surface differs, the tag is missing or unpushed, the release has no zip, or the hashes differ)
-- [ ] D18 · **Repository rollback drill** in a disposable worktree at v0.3.0, `git revert --no-edit <pre-child>..v0.3.0` (<pre-child> recorded in docs/audits/raphael-api-core.md at step 1) builds, passes preflight and leaves `git diff --quiet <pre-child>` true, run by the same worktree command form as foundation D38 · cmd: the foundation D38 command with v0.2.0 replaced by v0.3.0 → exit 0 and "rollback: clean" (fails when: the revert conflicts, the build or preflight fails, or the tree differs from <pre-child>)
+- [ ] D18 · **Repository rollback drill** reverting the whole release range in a disposable worktree restores v0.2.1's tree, which builds and passes its tests and preflight · cmd: $ErrorActionPreference='Stop'; $PSNativeCommandUseErrorActionPreference=$true; $wt=Join-Path $env:TEMP "nyar-rollback-$([guid]::NewGuid().ToString('N'))"; git worktree add --detach $wt v0.3.0; try { git -C $wt revert --no-edit v0.2.1..v0.3.0; git -C $wt diff --quiet v0.2.1; dotnet build "$wt\Nyarlathotep\Nyarlathotep.sln" -c Release -p:VRisingServerPath=C:\__nodeploy__; dotnet test "$wt\Nyarlathotep\Nyarlathotep.Tests"; pwsh -NoProfile -File "$wt\tools\preflight.ps1"; 'rollback: clean' } finally { git worktree remove --force $wt } → "rollback: clean" (fails when: a revert conflicts, the reverted tree differs from v0.2.1, or the build, tests or preflight fail)
 - [ ] D19 · **Paths and data** every path this child writes is in tools/paths-manifest.txt, and tools/data-inventory.json needs no new entry because subscriptions and the push queue live in memory only · cmd: pwsh tools/preflight.ps1 -Paths → "paths: <n> walked, all in manifest" and preflight's "data inventory: <n> entries" (fails when: a new file such as tools/rollback-drill.ps1 or docs/RAPHAEL_HANDOFF.md is not in the manifest)
 - [ ] D20 · **Sessions and records** every server session is an entry "### Session <n> · <date>" under docs/features/RAPHAEL_API.md › Test results, with a "- session <n> log check: 0 unhandled, <s> nyar lines, 0 orphan errors, <u> unity errors" line in docs/audits/raphael-api-core.md from `pwsh tools/preflight.ps1 -LogCheck` run before the next restart. The audit has a pre-audit and a post-audit with a "Codex verdict:" line for every Build plan step. tools/preflight-checks.json childDocs maps raphael-api-core to docs/features/RAPHAEL_API.md · cmd: pwsh tools/preflight.ps1 -AuditOf raphael-api-core → "audit steps: raphael-api-core 6/6 pre, 6/6 post, 6/6 Codex verdicts"; pwsh tools/preflight.ps1 -SessionsOf raphael-api-core → "sessions: <n>/<n> checked" (fails when: a step lacks an entry or verdict, or a session lacks its log-check line)
+- [ ] D21 · **Dependency failures** DependencyFailureTests covers each failure class of the dependency table: Hook.UserDisconnect registration throwing logs "hook UserDisconnect unavailable" once and a later push still prunes the offline subscriber; an IUserSource whose Connected() throws skips that send, keeps the line out of the queue and logs once per streak; a recipient that throws is skipped while the others receive; a Pusher entry point that throws is caught and the caller's event tick continues · test: Nyarlathotep.Tests DependencyFailureTests (fails when: a hook, user-source, recipient or entry-point failure propagates, logs more than once per streak, or stops delivery to the other subscribers)
+- [ ] D22 · **Tick budget with pushes** with Debug.TimingLog=true, one subscriber and a 20-unit, 3-wave event with warnings on, the scheduler tick average stays under foundation D24's 5 ms, and `.nyar api status` and `.nyar api events` answer within one second as seen in chat · manual: docs/features/RAPHAEL_API.md › Test results › Session 2 records the logged "tick timing" lines during the event and the observed reply times
 
 ## Purpose & typical use
 Raphael, Lord of Wisdom, is the owner's client UI mod. Its players and admins want to see Nyarlathotep's events in a panel instead of typing commands. Today Raphael can only detect the mod through the api 1 handshake. With api 2 it can:
@@ -70,7 +72,13 @@ No events defined: `api events` → `[NYAR:end] cmd=events page=1/1 count=0` (D3
 4. **Enabled off (S-2):** with General.Enabled=false, `api status` and `api events` still answer normally; `version` reports enabled=0. `disabled` stays reserved for stats and zones.
 5. **Api number:** Wire.Api moves from 1 to 2 in the commit that adds the first api-2 line, together with the contract (D8, D14).
 6. **Push ordering:** lines leave in queue order. A config-changed line that is already waiting absorbs a new one (D6). A wave-warn line whose event ended before it was sent is dropped when the event ends, like chat warnings.
-7. **Precedence (4.4):** push volume yields to the queue caps (50 lines, 5 lines per tick), which yield to nothing: a dropped line is logged, never retried. A player's subscription never overrides the S-1 gates. The owner decides exceptions by changing the switches.
+7. **Every-X sets (4.5):**
+   - **Every api command** = each [Command] in a class whose nearest [CommandGroup] is "nyar api", found by preflight's walk over tracked and untracked-not-ignored .cs files (D8, D9). Blind spot: a group name built from a constant instead of a literal; the command then has no api group and fails the D10 allow-list unless it is adminOnly.
+   - **Every tag** = each first argument of Wire.Record or Wire.Line in Logic/; a line assembled elsewhere is caught by the "[NYAR:" literal rule (D8).
+   - **Every transition** = the six push types, each called from the one place that performs it (EventRuntime.StartEvent, End, Tick expiry and Purge; WaveAction after WaveSpawned; EventStore.Reload and Edit). PushTests drives each (D6). EventRuntime.End and Tick are the only callers of Engine.Cancel and Engine.Expire, so a new end path passes through them.
+   - **Every path** = preflight -Paths, which walks tracked, untracked, ignored and server files at run time; it runs last in step 6, after every file is written (D19).
+   - **Every session** = each "### Session <n>" entry, counted by -SessionsOf against the audit's log-check lines (D20).
+8. **Precedence (4.4):** push volume yields to the queue caps (50 lines, 5 lines per tick), which yield to nothing: a dropped line is logged, never retried. A player's subscription never overrides the S-1 gates. The owner decides exceptions by changing the switches.
 
 ## Interfaces
 ### Internal — reads / writes / changes (paths or symbols)
@@ -98,6 +106,17 @@ No events defined: `api events` → `[NYAR:end] cmd=events page=1/1 count=0` (D3
   - A wrong walk group would mislabel the admin list of Epic D26 (D9).
 - **Shared contract (5.3):** the `[NYAR:*]` lines. Each field is enumerated in D1, D2, D5 and D6 against the builder, and D4 compares the builder's keys with the contract's example lines.
 ### External — dependencies and their failure behaviour
+
+| Dependency | Version and cost | Inputs sampled | Slow, down or garbage |
+|---|---|---|---|
+| V Rising server (ProjectM) | the build of VampireReferenceAssemblies 1.1.12-r99041-b2; free | User (connected, admin, PlatformId), NetConnectionId → approved user, as in UserConnectPatch | a missing method or a throwing lookup: the hook is reported unavailable and the offline prune covers it (D12, D21) |
+| BepInEx 6.0.0-be.733 / Harmony | pinned with the siblings; free | the OnUserDisconnected signature, sampled in KindredCommands and Bloodcraft | the patch fails to apply: logged at boot, Hook.UserDisconnect unavailable (D21) |
+| VCF 0.10.4 | pinned; free | string arguments: empty, numeric, non-numeric, quoted | VCF refuses adminOnly before we run; a malformed argument reaches our parser and gets badarg (D3, D5) |
+| ServerChatUtils.SendSystemMessageToClient | the game's; free | a connected user and a line of at most 480 bytes | a recipient that throws is skipped, once-per-streak log (D21) |
+| git, gh 2.x, GitHub API | the owner's installs; a handful of API calls per release, far under the rate limit | tags, release assets | a failure stops the release step before anything is pushed half-way; it is rerun by hand (D17, D18) |
+| Codex CLI | the owner's install | the review prompt via stdin | no verdict means no READY; the step waits (Epic procedure) |
+| Raphael | a consumer of contract api 2 | the contract's example lines | an older Raphael ignores unknown tags and keys (contract §1) |
+
 - **VCF 0.10.4.** `[CommandGroup("nyar api")]` with string arguments, so a non-numeric page reaches our parser rather than VCF's type error (D3). VCF refuses adminOnly commands itself (contract §4 noaccess reserved; D10).
 - **ServerBootstrapSystem.OnUserDisconnected** (the game). A Prefix, as in KindredCommands Patches/PlayerConnectivityPatches.cs and Bloodcraft Patches/ServerBootstrapSystemPatches.cs.
   - If the method is missing or the patch fails, Hook.UserDisconnect is reported unavailable, and a stale entry is still pruned on the next push, because the send reads the connected users (D5, D12).
@@ -108,12 +127,25 @@ No events defined: `api events` → `[NYAR:end] cmd=events page=1/1 count=0` (D3
 ## Design
 ### Data
 Nothing new is persisted. The subscription set (SteamID → nothing) and the push queue (at most 50 strings) live in memory in Services/Pusher and are gone on restart (D5, D19). The documents written are the contract, the handoff, the feature doc docs/features/RAPHAEL_API.md, the audit docs/audits/raphael-api-core.md and the release surfaces; each exists once in git. The drill writes to the dev server only: the save-data-nyardev world, logs/NyarDev.log and BepInEx/LogOutput.log. The config it saves goes to a scratch folder deleted in its finally, and it never touches C:\VRising-LocalServer (D16). No migration: api 1 lines are unchanged.
+
+| Artifact | Location | Owner | Retention and deletion | Copies |
+|---|---|---|---|---|
+| Subscription set | server memory (Services/Pusher) | the mod | until off, disconnect, offline prune or restart | one |
+| Push queue | server memory | the mod | until sent, dropped on overflow or restart | one |
+| Contract, handoff, feature doc, audit, plan, reviews | git | the owner | forever in git history; edited only through commits | one per file |
+| Test and preflight fixtures | tools/preflight-fixtures/WireContract/**, AdminList/bad-2/**, tools/rollback-drill-fixtures/** | the repo | forever in git | one |
+| Release zip | Nyarlathotep/Nyarlathotep/build/*.zip (ignored) and the GitHub release | the owner | local copy until the next clean; the release stays | two, hash-matched (D17) |
+| Server logs | BepInEx/LogOutput.log, logs/NyarDev.log | the game | overwritten at the next boot, after -LogCheck (D20) | one each |
+| Dev world and mod data | save-data-nyardev/**, BepInEx/config/Nyarlathotep/** (+.bak .tmp) | the owner's dev server | kept between sessions; the drill restores the config it saved | one |
+| Drill worktrees and saved config | %TEMP%/nyar-drill-*, %TEMP%/nyar-rollback-* | the drill | deleted in finally; a crash leaves them, and the next run lists and removes leftovers first | one |
+
+preflight -Paths (a discovery walk) fails on any repository or server path outside tools/paths-manifest.txt, and the data inventory already lists every persisted file; this child adds no persisted file (D19).
 ### States
 - **Subscription:** absent → on (`sub on`) → absent on `sub off`, a disconnect, being found offline at a push, or a restart (D5).
 - **Push line:** queued → sent, or dropped on overflow (oldest first) or by its event's end (wave-warn only) (D6).
 - **Read states:** before Core.IsReady every api command replies "still loading" (foundation D39 guard, S-3). Empty and partial results are covered in D1 and D3; an error is `[NYAR:err]`.
 - **Concurrency:** all of it runs on the server main thread (commands, the scheduler tick and the Harmony prefix), so there are no locks. Two Raphael clients hold two entries. A disconnect racing a push: the push reads the connected users at send time (D5).
-- **Stale data:** a paged read after a reload reads the new set, and Raphael re-reads on config-changed (D6).
+- **Stale data, cancel, re-entry (7.3):** paging is stateless: each page request reads the current set, and no cursor exists to invalidate. `sub on` and `sub off` are idempotent, so a retried command is harmless. A queued push is never undone. The exceptions: an event's end drops its queued wave-warn lines, and a waiting config-changed absorbs a new one. A restart loses the queue and every subscription, and Raphael re-subscribes after its handshake. A correction (reload, enable, disable, set) invalidates Raphael's cached def rows and is announced by config-changed. A stop or purge invalidates the status rows and is announced by event-end or killswitch (D6).
 ### Permissions
 | Command | Who | Check |
 |---|---|---|
@@ -122,9 +154,9 @@ Nothing new is persisted. The subscription set (SteamID → nothing) and the pus
 | `.nyar api events [page]` | admin | adminOnly: true; VCF refuses others (D10) |
 | `.nyar api sub on\|off` | anyone, own SteamID only | Gateway Subscribe on ctx.User.PlatformId (D7) |
 
-The unauthorized path is VCF's standard refusal line; the mod never runs.
+Actor matrix (2.1): a **connected player** reaches version, status (no units) and sub for their own SteamID. A **connected admin** also reaches events and sees units. An **unauthenticated or disconnected** client reaches nothing: VCF runs only for chat from a connected, approved user, and pushes go only to connected users (D5). **System** (the scheduler and triggers) sends pushes but runs no api command and cannot subscribe. **Operator** (files) has no api path. **Raphael** acts as the player or admin it runs for; it has no identity of its own. A **tool** (preflight, the drill) reads the repository and the dev server only. D7 fails when any actor gains a path beyond this matrix. The unauthorized path is VCF's standard refusal line; the mod never runs.
 ### UX
-The surface is a machine wire read by Raphael. A human who types the commands sees the raw lines; that is expected and the contract says so (§1). Discovery: `.nyar` lists the api commands the caller may run (foundation D26 list). Feedback: every command answers with rows and an end line, an ok line or an err line; an empty result is count=0 (D1, D3). Activation (11.4): Raphael sends `sub on` after each handshake; nothing else subscribes a player. Pushes start only from the transitions of D6, never on a timer. Accessibility belongs to Raphael's panels; the wire carries no colour.
+The surface is a machine wire read by Raphael. A human who types the commands sees the raw lines; that is expected and the contract says so (§1). Discovery: `.nyar` lists the api commands the caller may run (foundation D26 list). Feedback: every command answers with rows and an end line, an ok line or an err line; an empty result is count=0 (D1, D3). Activation (11.4): Raphael sends `sub on` after each handshake; nothing else subscribes a player. Pushes start only from the transitions of D6, never on a timer. Accessibility (11.3): a human who types an api command gets plain text lines of at most 480 bytes, no colour and no markup, which the game chat wraps like any system line; the surface is keyboard-only chat. Screen-reader and small-screen behaviour is the game client's, and Raphael's panels own their own.
 
 ## Security
 - **10.1 Authorization on every path:**
@@ -133,8 +165,17 @@ The surface is a machine wire read by Raphael. A human who types the commands se
   - Pushes are an indirect path: they go only to connected subscribers (D5) and carry only public state (Business rules 1 and 2, D1, D6).
   - The drill is a local owner tool that runs no game command.
 - **10.2 Injection:** every value passes TextSink.WireValue (D4). The page and state arguments are parsed strictly (D3, D5), so no input reaches a shell, a query or a file.
-- **10.3 Secrets:** none are added. The preflight secrets check runs (D10). gh uses its own stored login, and no token is written (D17).
-- **10.4 Personal data:** the SteamID is held in memory for the subscription only and is never logged (D5). Names appear on no api-2 line.
+- **10.3 Secrets:** none are added to the mod.
+  - The only credential in play is the owner's gh login. It is kept in gh's own credential store and rotated or revoked with `gh auth refresh` or `gh auth logout`.
+  - No script of this child reads it: tools/rollback-drill.ps1 and the release steps call no `gh auth token` and print no environment.
+  - TCLI_AUTH_TOKEN is never used by this child.
+  - The preflight secrets check scans every tracked and untracked file, fixtures included, and fails on a token shape (D10).
+- **10.4 Personal data:**
+  - The SteamID is held in server memory for the subscription only. Only the server process can see it.
+  - It is deleted on sub off, disconnect, the offline prune or a restart.
+  - No command, export or debug output lists subscribers, and the log carries counts only (D5).
+  - Policy: subscription changes have no audit trail beyond those counts, because they change nothing but the caller's own delivery.
+  - Names appear on no api-2 line.
 
 ## Failure & observability
 - **12.1:** a bad argument → `[NYAR:err]` naming the argument (D3, D5). An admin-only refusal → VCF's line. A hook failure → the hook health line and `.nyar status` degraded list (D12).
@@ -143,26 +184,38 @@ The surface is a machine wire read by Raphael. A human who types the commands se
   - a push queue overflow;
   - a send failure once per streak;
   - each drill stage.
-- **12.3:** in production, the `.nyar status` degraded line and the BepInEx log show a broken hook. For a broken wire, Raphael's diagnostics (NyarDiag, contract §6) show lines that do not parse, and the owner files a §8 request.
+- **12.3:** the mod runs on single-owner servers with no alerting infrastructure. The monitoring decision is operator polling:
+  - An admin's login notice and `.nyar status` name a degraded hook (D12).
+  - The operator reads the BepInEx log after each restart (`-LogCheck`, D20).
+  - Raphael's NyarDiag shows wire lines that do not parse, and the owner files a §8 request.
+  - The signals are "hook UserDisconnect unavailable", "push queue full" and a send failure, each logged once per streak.
 - **12.4:** each new check has a failing input and a silent input, and prints something on an empty input:
   - Test-CheckWireContract: fixtures good, bad, bad-2 and bad-3; empty fails with "wire contract: no tags found" (D8, D11).
   - The AdminList bad-2 fixture (D9).
   - The drill prints "rollback drill: fail — <stage>" and never "pass" on a missing log line (D16).
   - Every test item names its fails-when.
-- Every Pusher entry point wraps its work in try/catch, so a push failure never faults an event tick (D6).
+- Every Pusher entry point wraps its work in try/catch, so a push failure never faults an event tick (D21).
+
+Selftest matrix (12.4):
+
+| Check | Fails on | Silent on | Empty input |
+|---|---|---|---|
+| Test-CheckWireContract | bad (tag not in table), bad-2 (PLANNED row), bad-3 (api 3 vs 2), bad-4 ("[NYAR:" literal in Commands/) | good: copies of the real files | no .cs → "wire contract: no tags found", a failure |
+| Test-CheckAdminList (walk) | bad-2: a two-group file with swapped groups | good: the real Commands/ | existing empty fixture → "admin list: no commands found", a failure |
+| rollback-drill -SelfTest | bad: a real session log with "marker sweep" removed | good: a real session log | an empty log, reported "fail — no log" |
+| Unit tests | each D-item's fails-when inputs | the valid cases next to them | empty sets: status count=0, events page=1/1 count=0 |
 
 ## Performance
-- **Hot path:** Pusher.Tick once per scheduler tick. With an empty queue it is one count check. Otherwise it sends at most 5 lines × subscribers (D6).
-- **Reads:**
-  - `api status` is O(active + cleanups + tracked units), and tracked units are at most 500.
-  - `api events` sorts nothing new: DefinitionSet.All is already ordered.
-- **Bounds:**
-  - 10 rows per page;
-  - 50 queued push lines;
-  - 5 lines per tick;
-  - 480 bytes per line.
+- **Budget (13.1):** the scheduler tick keeps foundation D24's averages, under 5 ms at 150 tracked units, with pushes on (D22). Pusher.Tick is the new hot path. With an empty queue it is one count check. Otherwise it sends at most 5 lines to each subscriber. An api read replies within one second in chat (D22); a read is O(active events + cleanups + tracked units), at most 10 + 10 + 500.
+- **Bounds (13.2):**
 
-  These come from the contract (paging, bytes) and from S-4 (queue). The valid case the queue bound excludes is a burst of more than 50 transitions between two ticks, which the log reports (D6).
+| Bound | Source case | At the bound | Valid case excluded |
+|---|---|---|---|
+| 10 rows per page | contract §4, the size Raphael's list shows | the next page is asked for | none: every row is reachable by paging |
+| 480 bytes per line | FixedString512Bytes (510 usable), contract §1 | Wire.Line drops trailing tokens; Record throws | a def row whose name alone would pass 480 bytes (names are at most 200 characters, D4) |
+| 50 queued push lines | 10 concurrent events × 5 transitions in one tick | the oldest line is dropped and logged (D6) | a burst of more than 50 transitions between two sends |
+| 5 lines per tick | 5 × 100 subscribers = 500 sends, the per-tick fan-out cap | lines wait for the next tick | none: the queue carries them |
+| 500 tracked units | foundation's MaxTrackedUnits ceiling | status counts at most 500 | none |
 
 ## Build plan
 Every step runs inside the Epic's `## Rollout` › Procedure: a pre-audit and a post-audit recorded in docs/audits/raphael-api-core.md, `/code-review`, and a Codex read-only cross-inspection of the step's diff (`codex exec -s read-only`, prompt via stdin) until "VERDICT: READY", with its line written to the audit. Compile check: `dotnet build Nyarlathotep/Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__`. Tests: `dotnet test Nyarlathotep/Nyarlathotep.Tests`.
@@ -175,7 +228,7 @@ Every step runs inside the Epic's `## Rollout` › Procedure: a pre-audit and a 
    - Satisfies D1, D2, D3, D4.
 2. **Commands and contract.**
    - Move ApiCommands to Commands/ApiCommands.cs and add status, events [page] (adminOnly) and sub <on|off>, each starting with the ready guard. sub runs Gateway.Run(ActionKind.Subscribe, ctx.IsAdmin ? Actor.Admin : Actor.Player, …).
-   - Add ActionKind.Subscribe to Logic/ActionGateway.cs and AuthorizationTests.
+   - Add ActionKind.Subscribe to Logic/ActionGateway.cs and AuthorizationTests; add ApiAccessTests (row cases) and ContractDocTests.
    - Set Wire.Api = 2.
    - Update docs/RAPHAEL_INTEGRATION_CONTRACT.md per D14, with a new "Tags and commands" table: | Tag or command | Kind | Status | Api |.
    - Add the three commands to docs/NYARLATHOTEP_DESIGN.md §6.
@@ -186,8 +239,8 @@ Every step runs inside the Epic's `## Rollout` › Procedure: a pre-audit and a 
    - Add Services/Pusher.cs: EventStarted, EventEnded, Wave, Purged, ConfigChanged, the WarningTick using Logic/AnnouncerCore WarningClock and UpcomingWave under the S-1 gates, and Tick. Every entry point is wrapped in try/catch.
    - Call it from EventRuntime (StartEvent, End, Tick expiry, Purge), WaveAction (after WaveSpawned), EventStore (Reload and Edit on success) and EventScheduler (a phase after the announcements).
    - Add Patches/UserDisconnectPatch.cs and Hook.UserDisconnect with its registration in TriggerBus.
-   - Add tests SubscriptionTests and PushTests.
-   - Satisfies D5, D6, D12.
+   - Add tests SubscriptionTests, PushTests, ApiAccessTests' push cases and the DependencyFailureTests cases.
+   - Satisfies D5, D6, D7, D12, D21.
 4. **Unattended session.**
    - Stop the server and run `pwsh tools/preflight.ps1 -LogCheck` on the last logs. Deploy with `dotnet build Nyarlathotep/Nyarlathotep.sln -c Release`.
    - Boot the dev world (`$env:SteamAppId='1604030'`; VRisingServer.exe -persistentDataPath .\save-data-nyardev -serverName "Nyar Dev" -saveName nyardev -logFile .\logs\NyarDev.log).
@@ -197,9 +250,10 @@ Every step runs inside the Epic's `## Rollout` › Procedure: a pre-audit and a 
 5. **In-game session with the owner.**
    - Write the exact numbered steps (server 127.0.0.1:9876) into docs/features/RAPHAEL_API.md › Test results › Session 2, boot, and hand the steps to the owner.
    - Record each observed line, stop the server, run -LogCheck, and record it.
-   - Satisfies D12, D13, D20.
+   - Turn on Debug.TimingLog for the session and record the tick lines.
+   - Satisfies D12, D13, D20, D22.
 6. **Release and handoff.**
-   - Write tools/rollback-drill.ps1 (D16) and docs/RAPHAEL_HANDOFF.md (D15), and add both to tools/paths-manifest.txt.
+   - Write tools/rollback-drill.ps1 with its -SelfTest and tools/rollback-drill-fixtures/ (D16) and docs/RAPHAEL_HANDOFF.md (D15), and add them to tools/paths-manifest.txt.
    - Run the D18 repository drill, then `pwsh tools/preflight.ps1` and -Paths.
    - Move the six surfaces to 0.3.0 in one `chore(release): v0.3.0` commit; tcli build; record the zip's SHA-256 in the audit.
    - Create the annotated tag v0.3.0, then run `pwsh tools/rollback-drill.ps1 -From v0.3.0 -To v0.2.1` with the server stopped.
@@ -212,11 +266,11 @@ Every step runs inside the Epic's `## Rollout` › Procedure: a pre-audit and a 
 - W1.1 · **Rows, paging and key sets** · items: D1 D2 D3 D4 · steps: 1
 - W1.2 · **Commands and contract** · items: D7 D14 · steps: 2
 - W2 · **Push**
-- W2.1 · **Subscriptions and push queue** · items: D5 D6 D12 · steps: 3
+- W2.1 · **Subscriptions and push queue** · items: D5 D6 D12 D21 · steps: 3
 - W3 · **Tooling**
 - W3.1 · **Preflight checks** · items: D8 D9 D10 D11 · steps: 2
 - W4 · **Verification and release**
-- W4.1 · **Sessions and records** · items: D13 D20 · steps: 4, 5
+- W4.1 · **Sessions and records** · items: D13 D20 D22 · steps: 4, 5
 - W4.2 · **Release, drills and handoff** · items: D15 D16 D17 D18 D19 · steps: 6
 
 ## Rollout
@@ -236,7 +290,7 @@ Walking the Build plan:
 - **Steps 4–5:**
   - On the server: the plugins DLL, BepInEx/config/Nyarlathotep/{events,state}.json (+.bak/.tmp), save-data-nyardev/**, logs/NyarDev.log and BepInEx/LogOutput.log.
   - In the repository: docs/features/RAPHAEL_API.md and the audit.
-- **Step 6:** tools/rollback-drill.ps1, docs/RAPHAEL_HANDOFF.md, tools/paths-manifest.txt, the six release surfaces, Nyarlathotep/Nyarlathotep/dist/** and build/*.zip (ignored), the drill's temp worktrees and scratch config copy (outside the repository, deleted in finally), docs/dod/raphael-api-core.md, docs/dod/nyarlathotep.md and docs/dod/README.md.
+- **Step 6:** tools/rollback-drill.ps1, tools/rollback-drill-fixtures/**, docs/RAPHAEL_HANDOFF.md, tools/paths-manifest.txt, the six release surfaces (Nyarlathotep/Nyarlathotep/Nyarlathotep.csproj, Nyarlathotep/Nyarlathotep/thunderstore.toml, CHANGELOG.md, Nyarlathotep/Nyarlathotep/CHANGELOG.md, README.md, Nyarlathotep/Nyarlathotep/README.md), Nyarlathotep/Nyarlathotep/dist/** and build/*.zip (ignored), the drill's temp worktrees and scratch config copy (outside the repository, deleted in finally), docs/dod/raphael-api-core.md, docs/dod/nyarlathotep.md and docs/dod/README.md.
 - **Review process:** docs/dod/raphael-api-core.reviews.md and docs/dod/raphael-api-core.review.html.
 
 ## Out of scope
@@ -265,9 +319,9 @@ Walking the Build plan:
 ## Assumptions
 - S-1 · validated · a push never tells a subscriber more than chat or `.nyar status` tells every player; wave-warn pushes only when WaveWarnings is on and announce.warnings is true, at WarningOffsets; the other push types always go · source: owner decision in plan mode 2026-09-25 (Decision 1A)
 - S-2 · validated · with General.Enabled=false, api status and api events answer normally; `disabled` is reserved for stats and zones · source: owner decision in plan mode 2026-09-25 (Decision 2A)
-- S-3 · reversible · before Core.IsReady the api commands reply "still loading" like every command (foundation D39); `notready` stays documented but is not sent in api 2, since no player can connect before the world is ready (foundation session 1) · fallback: have the guarded commands send `[NYAR:err] code=notready` instead, a one-line change per command and a preflight ready-guard update
+- S-3 · reversible · before Core.IsReady the api commands reply "still loading" like every command (foundation D39); `notready` stays documented but is not sent in api 2, since no player can connect before the world is ready (foundation session 1) · fallback: an api 3 change that sends `[NYAR:err] code=notready` from the guarded commands, with a contract update and a preflight ready-guard change; Raphael already treats "still loading" as no answer
 - S-4 · reversible · the push queue holds 50 lines and sends 5 per tick, outside the one-per-second chat queue, with config-changed collapsed · fallback: the two numbers are constants in Logic/PushQueue.cs; a cfg key can be added later
-- S-5 · reversible · ending rows (units waiting out the grace) appear in `api status` with state=ending; `scheduled` is never sent by status in api 2 · fallback: drop the ending rows; Raphael ignores rows it does not expect
+- S-5 · reversible · ending rows (units waiting out the grace) appear in `api status` with state=ending; `scheduled` is never sent by status in api 2 · fallback: an api 3 change with a contract RETIRED note that drops the ending rows; Raphael keys rows by state and can ignore ending
 - S-6 · validated · every api command runs on the server main thread (VCF commands, the scheduler tick, Harmony prefixes), so Pusher needs no locks · source: foundation Design › States (main-thread serialisation), Services/EventScheduler.cs
 - S-7 · reversible · the in-game session (D13) is done by the owner typing the commands, without Raphael, because Raphael's panels are built after this child · fallback: repeat D13 through Raphael in the both-mods check
 
@@ -275,19 +329,19 @@ Walking the Build plan:
 | # | Layer | Status | Probes | Pointer / reason |
 |---|---|---|---|---|
 | 1 | Purpose & typical use | Considered | 3/3 | Purpose & typical use |
-| 2 | Actors & permissions | Considered | 3/3 | Design › Permissions › 2.1 D7 D10 D5; 2.2 D10 D3 D5; 2.3 D5 D7 |
-| 3 | Inputs, outputs & data | Considered | 4/4 | Design › Data › 3.1 D3 D5; 3.2 D1 D2 D6 D4; 3.3 D19 D5 D16; 3.4 prose: nothing persisted and api 1 lines unchanged, so nothing migrates |
-| 4 | Business rules & invariants | Considered | 5/5 | Business rules › 4.1 D3 D6; 4.2 D1 D5 D4; 4.3 D6 D1; 4.4 D6 D5; 4.5 D8 D9 D1 |
+| 2 | Actors & permissions | Considered | 3/3 | Design › Permissions › 2.1 D7; 2.2 D7 D3 D5; 2.3 D5 D7 |
+| 3 | Inputs, outputs & data | Considered | 4/4 | Design › Data › 3.1 D3 D5; 3.2 D1 D2 D6 D4; 3.3 D19 D5 D16 D17; 3.4 prose: nothing persisted and api 1 lines unchanged, so nothing migrates |
+| 4 | Business rules & invariants | Considered | 5/5 | Business rules › 4.1 D3 D6; 4.2 D1 D5 D4; 4.3 D6 D1; 4.4 D6 D5; 4.5 D8 D9 D6 D19 D20 |
 | 5 | Internal interfaces | Considered | 3/3 | Interfaces › 5.1 D1 D2; 5.2 D6 D9; 5.3 D4 D14 D8 |
-| 6 | External dependencies & contracts | Considered | 3/3 | Interfaces › 6.1 D3 D12 D14; 6.2 D5 D12 D16 D17; 6.3 D16 D11 |
-| 7 | States & lifecycle | Considered | 3/3 | Design › States › 7.1 D1 D3; 7.2 D5 D2; 7.3 D6 D5 |
+| 6 | External dependencies & contracts | Considered | 3/3 | Interfaces › 6.1 D3 D12 D14 D4; 6.2 D21; 6.3 D16 D11 |
+| 7 | States & lifecycle | Considered | 3/3 | Design › States › 7.1 D1 D3; 7.2 D5 D2; 7.3 D6 D5 D2 |
 | 8 | Minimal stretch | Considered | 2/2 | Use cases › Minimal stretch › 8.1 D1 D3 D5; 8.2 D5 |
 | 9 | Maximal stretch | Considered | 3/3 | Use cases › Maximal stretch › 9.1 D3 D6; 9.2 D5 D7 D10; 9.3 D5 D2 |
-| 10 | Security & privacy | Considered | 4/4 | Security › 10.1 D10 D7 D5 D1; 10.2 D4 D3; 10.3 D10; 10.4 D5 |
-| 11 | Design & UX | Considered | 4/4 | Design › UX › 11.1 D10 D14; 11.2 D1 D3 D13; 11.3 prose: panels and contrast belong to Raphael; the wire carries no colour; 11.4 D5 D6 D13 |
-| 12 | Failure handling & observability | Considered | 4/4 | Failure & observability › 12.1 D3 D12; 12.2 D5 D6 D20; 12.3 D12 D20; 12.4 D11 D8 D16 |
-| 13 | Performance & scale | Considered | 2/2 | Performance › 13.1 D6; 13.2 D3 D6 |
-| 14 | Rollout & compatibility | Considered | 4/4 | Rollout › 14.1 D17; 14.2 D4 D14; 14.3 D18 D16; 14.4 D19 |
+| 10 | Security & privacy | Considered | 4/4 | Security › 10.1 D7; 10.2 D4 D3 D8; 10.3 D10; 10.4 D5 |
+| 11 | Design & UX | Considered | 4/4 | Design › UX › 11.1 D10 D14; 11.2 D1 D3 D13; 11.3 prose: raw lines are plain chat text under 480 bytes; the client wraps them and Raphael's panels own accessibility; 11.4 D5 D6 D13 |
+| 12 | Failure handling & observability | Considered | 4/4 | Failure & observability › 12.1 D3 D12; 12.2 D5 D6 D20; 12.3 D12 D20; 12.4 D11 |
+| 13 | Performance & scale | Considered | 2/2 | Performance › 13.1 D22; 13.2 D3 D6 D4 |
+| 14 | Rollout & compatibility | Considered | 4/4 | Rollout › 14.1 D17; 14.2 D4 D14; 14.3 D18; 14.4 D19 |
 | 15 | Out of scope | Considered | 2/2 | Out of scope |
 Gate — acceptance & testability: passed — every Considered layer 2–14 maps to ≥ 1 D-item
 
