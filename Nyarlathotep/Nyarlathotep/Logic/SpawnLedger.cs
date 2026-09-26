@@ -10,12 +10,18 @@ public sealed record UnitTuning(LevelArg? Level, float Health, float Power)
     public static readonly UnitTuning None = new(null, 1f, 1f);
 }
 
+/// <summary>When a unit is due for the budgeted despawn, and the game LifeTime it carries as the backstop: its due time
+/// plus the queue's drain time, counted from its spawn (Business rules 2, A16, A21).</summary>
+public readonly record struct UnitLifetime(DateTime DueUtc, int LifetimeSeconds);
+
 /// <summary>One unit waiting in the spawn queue: what, for which event (null for `.nyar spawn`), where, and for how
 /// long. Its slot under MaxTrackedUnits is held from the request until it is confirmed or failed.</summary>
-public sealed record SpawnOrder(long Ticket, string Prefab, string? EventId, float X, float Y, float Z, int LifetimeSeconds, UnitTuning Tuning);
+public sealed record SpawnOrder(long Ticket, string Prefab, string? EventId, float X, float Y, float Z, int LifetimeSeconds,
+    DateTime DueUtc, UnitTuning Tuning);
 
-/// <summary>A unit the ledger tracks. <see cref="Key"/> is the service's handle for the entity.</summary>
-public sealed record TrackedUnit(long Key, string Prefab, string? EventId, DateTime SpawnedUtc, int LifetimeSeconds);
+/// <summary>A unit the ledger tracks. <see cref="Key"/> is the service's handle for the entity; at
+/// <see cref="DueUtc"/> the ledger queues it for despawn (A21).</summary>
+public sealed record TrackedUnit(long Key, string Prefab, string? EventId, DateTime SpawnedUtc, int LifetimeSeconds, DateTime DueUtc);
 
 /// <summary>The limits the ledger enforces, read from the cfg (already clamped to their ceilings, D5).</summary>
 public sealed record LedgerLimits(int MaxTracked, int MaxPerWave, int SpawnsPerTick, int DespawnsPerTick);
@@ -66,7 +72,7 @@ public sealed class SpawnLedger(LedgerLimits limits)
 
     /// <summary>Queues up to <paramref name="count"/> units, first clamped by MaxUnitsPerWave, then by the free
     /// MaxTrackedUnits slots. <paramref name="place"/> gives the position of the i-th unit.</summary>
-    public SpawnRequestResult Request(string prefab, string? eventId, int count, int lifetimeSeconds, UnitTuning tuning,
+    public SpawnRequestResult Request(string prefab, string? eventId, int count, UnitLifetime life, UnitTuning tuning,
         Func<int, (float X, float Y, float Z)> place)
     {
         if (count < 1) return new SpawnRequestResult(0, null);
@@ -86,7 +92,7 @@ public sealed class SpawnLedger(LedgerLimits limits)
         for (var i = 0; i < n; i++)
         {
             var (x, y, z) = place(i);
-            _spawnQueue.Enqueue(new SpawnOrder(++_nextTicket, prefab, eventId, x, y, z, lifetimeSeconds, tuning));
+            _spawnQueue.Enqueue(new SpawnOrder(++_nextTicket, prefab, eventId, x, y, z, life.LifetimeSeconds, life.DueUtc, tuning));
         }
         return new SpawnRequestResult(n, skipped);
     }
@@ -112,7 +118,7 @@ public sealed class SpawnLedger(LedgerLimits limits)
     {
         if (!_inFlight.Remove(order.Ticket)) return false;
         if (_tracked.ContainsKey(key)) return false;
-        _tracked.Add(key, new TrackedUnit(key, order.Prefab, order.EventId, utcNow, order.LifetimeSeconds));
+        _tracked.Add(key, new TrackedUnit(key, order.Prefab, order.EventId, utcNow, order.LifetimeSeconds, order.DueUtc));
         return true;
     }
 
@@ -127,6 +133,16 @@ public sealed class SpawnLedger(LedgerLimits limits)
         if (!_tracked.ContainsKey(key)) _survivors.Add(key);
         _despawnQueue.Enqueue(key);
         return true;
+    }
+
+    /// <summary>Queues every tracked unit whose due time has come, earliest first, so a unit that ends on its own
+    /// lifetime leaves through the despawn budget like an event's (A21). Returns how many were newly queued.</summary>
+    public int QueueDue(DateTime utcNow)
+    {
+        var queued = 0;
+        foreach (var u in _tracked.Values.Where(u => u.DueUtc <= utcNow && !_queued.Contains(u.Key)).OrderBy(u => u.DueUtc).ToList())
+            if (QueueDespawn(u.Key)) queued++;
+        return queued;
     }
 
     /// <summary>The keys to destroy this tick, at most DespawnsPerTick. Each leaves the ledger here, so it is never
@@ -208,18 +224,19 @@ public sealed class SpawnLedger(LedgerLimits limits)
         return (Math.Max(0, maxTracked) + perTick - 1) / perTick + DrainSlackSeconds;
     }
 
-    /// <summary>A unit's LifeTime in seconds (Business rules 2): a `.nyar spawn` unit lives
-    /// <paramref name="manualLifetimeSeconds"/>. An event's unit is due for despawn at min(its own lifetime, event end
-    /// + grace); when the event end decides that, its LifeTime runs <paramref name="drainMarginSeconds"/> past it, so
-    /// the budgeted queue removes it and LifeTime is only the backstop if the mod stops (A16). At least 1 s.</summary>
-    public static int LifetimeSeconds(DateTime utcNow, DateTime? eventEndUtc, int? unitLifetimeSeconds, int graceSeconds,
+    /// <summary>A unit's due time and LifeTime (Business rules 2): a `.nyar spawn` unit is due
+    /// <paramref name="manualLifetimeSeconds"/> after the request; an event's unit at min(its own lifetime, event end +
+    /// grace). The ledger queues it at that time for the budgeted despawn, and its LifeTime runs
+    /// <paramref name="drainMarginSeconds"/> past it, so LifeTime is only the backstop if the mod stops (A16, A21).
+    /// LifeTime is at least 1 s.</summary>
+    public static UnitLifetime Lifetime(DateTime utcNow, DateTime? eventEndUtc, int? unitLifetimeSeconds, int graceSeconds,
         int manualLifetimeSeconds, int drainMarginSeconds)
     {
-        if (eventEndUtc is null) return manualLifetimeSeconds;
-        var byEvent = eventEndUtc.Value.AddSeconds(graceSeconds);
-        var expiry = Precedence.UnitExpiryUtc(utcNow, unitLifetimeSeconds, eventEndUtc.Value, graceSeconds);
-        if (expiry == byEvent) expiry = expiry.AddSeconds(drainMarginSeconds);
-        return Math.Max(1, (int)Math.Ceiling((expiry - utcNow).TotalSeconds));
+        var due = eventEndUtc is null
+            ? utcNow.AddSeconds(manualLifetimeSeconds)
+            : Precedence.UnitExpiryUtc(utcNow, unitLifetimeSeconds, eventEndUtc.Value, graceSeconds);
+        var untilDue = Math.Max(0, (int)Math.Ceiling((due - utcNow).TotalSeconds));
+        return new UnitLifetime(due, Math.Max(1, untilDue + drainMarginSeconds));
     }
 
     /// <summary>The i-th of <paramref name="count"/> positions spread evenly on a circle of <paramref name="radius"/>

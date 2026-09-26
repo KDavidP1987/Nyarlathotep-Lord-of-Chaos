@@ -86,9 +86,9 @@ internal static class SpawnTracker
         if (UnitDenyList.IsDenied(prefab) || catalog.IsDenied(prefab)) return $"unit {prefab} is deny-listed";
 
         var angle = _random.NextDouble() * 2 * Math.PI;
-        var lifetime = SpawnLedger.LifetimeSeconds(DateTime.UtcNow, null, null, Settings.Limit(Limits.GraceSeconds),
-            Settings.Limit(Limits.ManualSpawnLifetimeSeconds), 0);
-        var result = _ledger.Request(prefab, null, count, lifetime, tuning, i =>
+        var life = SpawnLedger.Lifetime(DateTime.UtcNow, null, null, Settings.Limit(Limits.GraceSeconds),
+            Settings.Limit(Limits.ManualSpawnLifetimeSeconds), DrainMargin());
+        var result = _ledger.Request(prefab, null, count, life, tuning, i =>
         {
             var (x, z) = SpawnLedger.Around(at.x, at.z, PlaceRadius, i, count, angle);
             return (x, at.y, z);
@@ -101,10 +101,10 @@ internal static class SpawnTracker
     /// <paramref name="first"/>.. of <paramref name="total"/> on a circle of <paramref name="radius"/> around
     /// <paramref name="center"/>. WaveAction has sized the wave already, so the ledger's own caps only guard.</summary>
     [Mutating]
-    internal static int RequestWave(string prefab, string eventId, int count, int lifetimeSeconds, float3 center, float radius,
+    internal static int RequestWave(string prefab, string eventId, int count, UnitLifetime life, float3 center, float radius,
         int first, int total, double angle)
     {
-        var result = _ledger.Request(prefab, eventId, count, lifetimeSeconds, UnitTuning.None, i =>
+        var result = _ledger.Request(prefab, eventId, count, life, UnitTuning.None, i =>
         {
             var (x, z) = SpawnLedger.Around(center.x, center.z, radius, first + i, total, angle);
             return (x, center.y, z);
@@ -112,6 +112,10 @@ internal static class SpawnTracker
         if (result.Skipped is not null) Core.Log.LogWarning($"[nyar] event {eventId} {prefab}: {result.Skipped}");
         return result.Queued;
     }
+
+    /// <summary>The despawn queue's worst-case drain time at the current caps, added to every unit's LifeTime (A16, A21).</summary>
+    internal static int DrainMargin() =>
+        SpawnLedger.DrainMarginSeconds(Settings.Limit(Limits.MaxTrackedUnits), Settings.Limit(Limits.MaxDespawnsPerTick));
 
     /// <summary>An event ended (stop, faults, or its grace ran out): its units spawned before <paramref name="spawnedBefore"/>
     /// are queued for despawn and, on a stop or fault, its waiting orders are cancelled (Business rules 2).</summary>
@@ -175,6 +179,10 @@ internal static class SpawnTracker
             _ledger.Forget(gone);
             Release(gone);
         }
+
+        // Units past their due time join the budgeted queue here; LifeTime stays the backstop (A21).
+        var due = _ledger.QueueDue(now);
+        if (due > 0) Core.Log.LogInfo($"[nyar] {due} units due for despawn");
 
         var despawns = _ledger.TakeDespawns();
         var destroyed = 0;
@@ -267,22 +275,24 @@ internal static class SpawnTracker
     static Entity Prepare(Entity unit, SpawnOrder order, out string error)
     {
         error = null;
-        var position = new float3(order.X, order.Y, order.Z);
-        if (unit.Has<Translation>()) unit.Write(new Translation { Value = position });
-        if (unit.Has<LastTranslation>()) unit.Write(new LastTranslation { Value = position });
-
+        // A22: the backstop and the marker come first, so a unit that fails any later step, and then fails to be
+        // destroyed, still expires on its own and is found by the boot sweep.
         if (!unit.AddComponentSafe<LifeTime>()) return Abandon(unit, "LifeTime could not be added", out error);
         unit.Write(new LifeTime { Duration = order.LifetimeSeconds, EndAction = LifeTimeEndAction.Destroy });
         // A10: an immediate spawn has no Age, and without it LifeTime never counts down.
         if (!unit.AddComponentSafe<Age>()) return Abandon(unit, "Age could not be added", out error);
         unit.Write(new Age { Value = 0f });
+        // The marker's stat modifiers and UnitSetup's level land in this frame, before the buff systems read either.
+        if (!TryMark(unit, order.Tuning, out error)) return Abandon(unit, error, out error);
+
+        var position = new float3(order.X, order.Y, order.Z);
+        if (unit.Has<Translation>()) unit.Write(new Translation { Value = position });
+        if (unit.Has<LastTranslation>()) unit.Write(new LastTranslation { Value = position });
         if (!unit.AddComponentSafe<DestroyWhenDisabled>()) return Abandon(unit, "DestroyWhenDisabled could not be added", out error);
         // No DontSaveEntity (A9): it kept the unit out of the save but not its child entities, which came back as orphans.
         if (unit.Has<DropTableBuffer>()) Core.EntityManager.GetBuffer<DropTableBuffer>(unit).Clear();
 
         UnitSetup.Apply(unit, order.Tuning);
-
-        if (!TryMark(unit, order.Tuning, out error)) return Abandon(unit, error, out error);
         return unit;
     }
 

@@ -219,8 +219,8 @@ public class EngineTests
     public void Ending_an_event_queues_only_its_older_units_and_cancels_its_orders()
     {
         var ledger = new SpawnLedger(new LedgerLimits(150, 50, 2, 5));
-        ledger.Request("CHAR_A", "raid", 3, 60, UnitTuning.None, _ => (0, 0, 0));
-        ledger.Request("CHAR_A", "other", 1, 60, UnitTuning.None, _ => (0, 0, 0));
+        ledger.Request("CHAR_A", "raid", 3, new UnitLifetime(DateTime.MaxValue, 60), UnitTuning.None, _ => (0, 0, 0));
+        ledger.Request("CHAR_A", "other", 1, new UnitLifetime(DateTime.MaxValue, 60), UnitTuning.None, _ => (0, 0, 0));
         var batch = ledger.TakeSpawns();                         // two raid units in flight
         ledger.Confirm(batch[0], 1, T0);
         ledger.Confirm(batch[1], 2, T0.AddSeconds(10));
@@ -234,9 +234,9 @@ public class EngineTests
     public void The_despawn_after_the_grace_keeps_a_restarted_events_waiting_orders()
     {
         var ledger = new SpawnLedger(new LedgerLimits(150, 50, 2, 5));
-        ledger.Request("CHAR_A", "raid", 1, 60, UnitTuning.None, _ => (0, 0, 0));
+        ledger.Request("CHAR_A", "raid", 1, new UnitLifetime(DateTime.MaxValue, 60), UnitTuning.None, _ => (0, 0, 0));
         ledger.Confirm(ledger.TakeSpawns()[0], 1, T0);           // the ended instance's unit
-        ledger.Request("CHAR_A", "raid", 1, 60, UnitTuning.None, _ => (0, 0, 0));   // the restart's wave, waiting
+        ledger.Request("CHAR_A", "raid", 1, new UnitLifetime(DateTime.MaxValue, 60), UnitTuning.None, _ => (0, 0, 0));   // the restart's wave, waiting
         var (queued, cancelled) = ledger.EndEvent("raid", T0.AddSeconds(5), cancelOrders: false);
         Assert.Equal((1, 0), (queued, cancelled));
         Assert.Single(ledger.TakeSpawns());

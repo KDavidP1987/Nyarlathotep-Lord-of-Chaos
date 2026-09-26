@@ -32,18 +32,17 @@ internal static class WaveAction
         var center = action.Location.Type == LocationType.Admin && active.Origin is { } o
             ? new float3(o.X, o.Y, o.Z)
             : new float3(action.Location.X, 0f, action.Location.Z);
-        var lifetime = SpawnLedger.LifetimeSeconds(now, active.Instance.EndsUtc, action.UnitLifetimeSeconds,
-            Settings.Limit(Limits.GraceSeconds), Settings.Limit(Limits.ManualSpawnLifetimeSeconds),
-            SpawnLedger.DrainMarginSeconds(Settings.Limit(Limits.MaxTrackedUnits), Settings.Limit(Limits.MaxDespawnsPerTick)));
+        var life = SpawnLedger.Lifetime(now, active.Instance.EndsUtc, action.UnitLifetimeSeconds,
+            Settings.Limit(Limits.GraceSeconds), Settings.Limit(Limits.ManualSpawnLifetimeSeconds), SpawnTracker.DrainMargin());
         var total = plan.Sum(u => u.Count);
         var angle = _random.NextDouble() * 2 * Math.PI;
         var first = 0;
         foreach (var entry in plan)
         {
-            SpawnTracker.RequestWave(entry.Prefab, active.Id, entry.Count, lifetime, center, action.Radius, first, total, angle);
+            SpawnTracker.RequestWave(entry.Prefab, active.Id, entry.Count, life, center, action.Radius, first, total, angle);
             first += entry.Count;
         }
         EventRuntime.Engine.WaveSpawned(active.Id);
-        Core.Log.LogInfo($"[nyar] event {active.Id} wave {due.Wave}/{due.Waves}: {total} units queued, lifetime {lifetime}s");
+        Core.Log.LogInfo($"[nyar] event {active.Id} wave {due.Wave}/{due.Waves}: {total} units queued, due in {(int)Math.Ceiling((life.DueUtc - now).TotalSeconds)}s, lifetime {life.LifetimeSeconds}s");
     }
 }

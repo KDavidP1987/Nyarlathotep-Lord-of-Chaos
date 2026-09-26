@@ -11,7 +11,10 @@ public class SpawnLedgerTests
         new(new LedgerLimits(maxTracked, perWave, spawnsPerTick, despawnsPerTick));
 
     static SpawnRequestResult Ask(SpawnLedger l, int count, string? eventId = null) =>
-        l.Request("CHAR_Bandit_Thug", eventId, count, 300, UnitTuning.None, _ => (0f, 0f, 0f));
+        l.Request("CHAR_Bandit_Thug", eventId, count, new UnitLifetime(DateTime.MaxValue, 300), UnitTuning.None, _ => (0f, 0f, 0f));
+
+    static SpawnRequestResult AskDue(SpawnLedger l, int count, DateTime dueUtc, string? eventId = null) =>
+        l.Request("CHAR_Bandit_Thug", eventId, count, new UnitLifetime(dueUtc, 300), UnitTuning.None, _ => (0f, 0f, 0f));
 
     static long _nextKey = 1000;
 
@@ -261,12 +264,68 @@ public class SpawnLedgerTests
         var end = Now.AddMinutes(10);
         var margin = SpawnLedger.DrainMarginSeconds(150, 5);                // 30 ticks + 60 s
         Assert.Equal(90, margin);
-        Assert.Equal(630 + 90, SpawnLedger.LifetimeSeconds(Now, end, null, 30, 300, margin));
-        Assert.Equal(120, SpawnLedger.LifetimeSeconds(Now, end, 120, 30, 300, margin));      // its own shorter lifetime
-        Assert.Equal(630 + 90, SpawnLedger.LifetimeSeconds(Now, end, 7200, 30, 300, margin));
-        Assert.Equal(630 + 90, SpawnLedger.LifetimeSeconds(Now, end, 630, 30, 300, margin));  // a tie is the event's
-        Assert.Equal(1, SpawnLedger.LifetimeSeconds(end.AddMinutes(5), end, null, 30, 300, margin));
-        Assert.Equal(300, SpawnLedger.LifetimeSeconds(Now, null, null, 30, 300, margin));
+        Assert.Equal(new UnitLifetime(end.AddSeconds(30), 630 + 90), SpawnLedger.Lifetime(Now, end, null, 30, 300, margin));
+        // A21: its own shorter lifetime decides the due time, and LifeTime still runs the margin past it
+        Assert.Equal(new UnitLifetime(Now.AddSeconds(120), 120 + 90), SpawnLedger.Lifetime(Now, end, 120, 30, 300, margin));
+        Assert.Equal(new UnitLifetime(end.AddSeconds(30), 630 + 90), SpawnLedger.Lifetime(Now, end, 7200, 30, 300, margin));
+        Assert.Equal(new UnitLifetime(end.AddSeconds(30), 630 + 90), SpawnLedger.Lifetime(Now, end, 630, 30, 300, margin));  // a tie
+        Assert.Equal(new UnitLifetime(end.AddSeconds(30), 90), SpawnLedger.Lifetime(end.AddMinutes(5), end, null, 30, 300, margin));
+        // A21: a `.nyar spawn` unit is due after ManualSpawnLifetimeSeconds and gets the margin too
+        Assert.Equal(new UnitLifetime(Now.AddSeconds(300), 300 + 90), SpawnLedger.Lifetime(Now, null, null, 30, 300, margin));
+        Assert.Equal(1, SpawnLedger.Lifetime(end.AddMinutes(5), end, null, 30, 300, 0).LifetimeSeconds);
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData(null, 30)]
+    [InlineData(null, 7200)]
+    [InlineData(600, null)]
+    [InlineData(600, 30)]
+    [InlineData(600, 3000)]
+    public void Every_units_LifeTime_ends_after_its_due_time_and_the_full_drain(int? eventMinutesLeft, int? ownLifetime)
+    {
+        // A21: whichever of the event end, its own lifetime or the manual lifetime decides, the game's LifeTime is the
+        // backstop: it ends no sooner than the due time plus a full queue's drain at the budget.
+        foreach (var (maxTracked, perTick) in new[] { (1, 20), (150, 5), (500, 1) })
+        {
+            var margin = SpawnLedger.DrainMarginSeconds(maxTracked, perTick);
+            DateTime? end = eventMinutesLeft is { } m ? Now.AddMinutes(m) : null;
+            var life = SpawnLedger.Lifetime(Now, end, ownLifetime, 30, 300, margin);
+            var drained = life.DueUtc.AddSeconds((maxTracked + perTick - 1) / perTick);
+            Assert.True(Now.AddSeconds(life.LifetimeSeconds) > drained, $"{maxTracked}/{perTick}: LifeTime ends before the drain");
+        }
+    }
+
+    [Fact]
+    public void Units_past_their_due_time_are_queued_earliest_first_and_drain_at_the_budget()
+    {
+        // A21: 12 units of one spawn batch share a due time; they leave through TakeDespawns, 5 a tick, never at once.
+        var l = Ledger(despawnsPerTick: 5);
+        AskDue(l, 12, Now.AddSeconds(30), "raid");
+        AskDue(l, 2, Now.AddSeconds(10));                          // manual units, due earlier
+        AskDue(l, 3, Now.AddSeconds(90), "raid");                  // not due yet
+        var keys = SpawnAll(l);
+        Assert.Equal(0, l.QueueDue(Now.AddSeconds(9)));
+        Assert.Equal(14, l.QueueDue(Now.AddSeconds(30)));          // both groups, due time inclusive
+        Assert.Equal(0, l.QueueDue(Now.AddSeconds(32)));           // never queued twice
+        var first = l.TakeDespawns();
+        Assert.Equal(keys.Skip(12).Take(2).Concat(keys.Take(3)), first);   // the earliest due leave first
+        var sizes = new List<int> { first.Count };
+        for (var batch = l.TakeDespawns(); batch.Count > 0; batch = l.TakeDespawns()) sizes.Add(batch.Count);
+        Assert.Equal([5, 5, 4], sizes);
+        Assert.Equal(3, l.Tracked);                                // the three not yet due stay
+        Assert.Equal(3, l.QueueDue(Now.AddSeconds(90)));
+    }
+
+    [Fact]
+    public void A_unit_the_game_removed_is_not_queued_when_due()
+    {
+        var l = Ledger();
+        AskDue(l, 2, Now.AddSeconds(10));
+        var keys = SpawnAll(l);
+        Assert.True(l.Forget(keys[0]));
+        Assert.Equal(1, l.QueueDue(Now.AddSeconds(10)));
+        Assert.Equal([keys[1]], l.TakeDespawns());
     }
 
     [Theory]
@@ -303,8 +362,8 @@ public class SpawnLedgerTests
         // A16: a full ledger queued at end + grace and drained at the budget is empty before its units' LifeTime ends.
         var end = Now.AddMinutes(10);
         var l = Ledger(maxTracked: 12, perWave: 12, spawnsPerTick: 12, despawnsPerTick: 5);
-        var lifetime = SpawnLedger.LifetimeSeconds(Now, end, null, 30, 300,
-            SpawnLedger.DrainMarginSeconds(l.Limits.MaxTracked, l.Limits.DespawnsPerTick));
+        var lifetime = SpawnLedger.Lifetime(Now, end, null, 30, 300,
+            SpawnLedger.DrainMarginSeconds(l.Limits.MaxTracked, l.Limits.DespawnsPerTick)).LifetimeSeconds;
         Assert.Equal(12, Ask(l, 12, "raid").Queued);
         Assert.Equal(12, SpawnAll(l).Count);
         Assert.Equal((12, 0), l.EndEvent("raid", DateTime.MaxValue));
