@@ -523,8 +523,10 @@ $script:ToolsCredentialPatterns = @(
     'GetEnvironmentVariabl[e]',
     'TCLI_AUTH_TOK[E]N'
 )
-# Shell and batch scripts expand any variable with no marker to count, so tools/ holds none (Codex step 2 round 3).
-$script:ToolsForbiddenExt = @('.sh', '.bash', '.cmd', '.bat')
+# tools/ holds PowerShell, Python and Node scripts and their data only: a file of any other type (a shell or batch
+# script, or an extensionless one run through a shebang) expands variables with no marker to count, so it fails.
+$script:ToolsAllowedExt = @('.ps1', '.psm1', '.py', '.mjs', '.js', '.json', '.txt', '.md')
+$script:ToolsScriptExt = @('.ps1', '.psm1', '.py', '.mjs', '.js')
 # Per language: the token that reaches the environment, and the one form of it that is an allowed read.
 $script:ToolsEnvRules = @(
     @{ Ext = @('.ps1', '.psm1'); Any = '(?i)\ben[v]:'; Allowed = "(?i)\`$(?:en[v]:(?:$script:ToolsEnvAllowed)\b|\{en[v]:(?:$script:ToolsEnvAllowed)\})" },
@@ -534,7 +536,8 @@ $script:ToolsEnvRules = @(
 
 # The first credential or environment access in a tools/ script that is not allowed, or $null.
 function Find-ToolsEnvAccess([string]$Ext, [string]$Text) {
-    if ($script:ToolsForbiddenExt -contains $Ext) { return "a $Ext script (tools/ scripts are PowerShell, Python or Node)" }
+    if ($script:ToolsAllowedExt -notcontains $Ext) { return "a file of type '$Ext' (tools/ holds PowerShell, Python or Node scripts and their data)" }
+    if ($script:ToolsScriptExt -notcontains $Ext) { return $null }
     foreach ($p in $script:ToolsCredentialPatterns) { if ($Text -match $p) { return $Matches[0] } }
     foreach ($r in $script:ToolsEnvRules) {
         if ($r.Ext -notcontains $Ext) { continue }
@@ -544,7 +547,6 @@ function Find-ToolsEnvAccess([string]$Ext, [string]$Text) {
     }
     return $null
 }
-$script:ScriptExt = @('.ps1', '.psm1', '.mjs', '.js', '.py', '.sh', '.bash', '.cmd', '.bat')
 $script:BinaryExt = @('.png', '.jpg', '.jpeg', '.gif', '.dll', '.pdb', '.exe', '.ico')
 
 function Find-Secret([string]$Text) {
@@ -585,7 +587,7 @@ function Test-CheckSecrets([string]$Root) {
         $t = [IO.File]::ReadAllText($abs); $scanned++
         if (Find-Secret $t) { $hits += $f }
         if ($ext -eq '.cs' -and (Remove-CsComments $t) -match 'Environment\.GetEnvironmentVariabl[e]') { $hits += "$f (reads the environment)" }
-        if ($f -like 'tools/*' -and $f -notlike 'tools/preflight-fixtures/*' -and $script:ScriptExt -contains $ext) {
+        if ($f -like 'tools/*' -and $f -notlike 'tools/preflight-fixtures/*') {
             $why = Find-ToolsEnvAccess $ext $t
             if ($why) { $hits += "$f (reads a credential or the environment: $why)" }
         }
@@ -1257,7 +1259,7 @@ function Test-CheckWireContract([string]$Root) {
         }
         # Wire is reached only as "Wire." outside its own file: an alias (using W = …Wire;) or a static import
         # (using static …Wire;) would hide a call from this check, so either fails (A4).
-        if ($f -ne $wireRel -and $code -match '(?m)^\s*(?:global\s+)?using\s+(?:static\s+|\w+\s*=\s*)[\w.:\s]*?\bWire\s*;') {
+        if ($f -ne $wireRel -and $code -match '(?m)^\s*(?:global\s+)?using\s+(?:static\s+|@?\w+\s*=\s*)[\w.:\s]*?\bWire\s*;') {
             $bad += "an alias or static import of Wire in $f"
         }
         $rx = if ($f -eq $wireRel) { '(?<![\w.])(?<!string\s)(?<m>Record|Line)\s*\(' } else { '\bWire\s*\.\s*(?<m>Record|Line)\s*\(' }

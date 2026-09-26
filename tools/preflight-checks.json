@@ -195,7 +195,9 @@
         "bad-4": "tools/read-env.ps1 reads GH_TOKEN through the environment drive with Get-Item -LiteralPath",
         "bad-5": "tools/ingame/helper.py imports environ from os and reads GH_TOKEN, a name outside the allow-list",
         "bad-6": "tools/read.mjs destructures env from process and reads GH_TOKEN",
-        "bad-7": "tools/show.sh, a shell script (tools/ scripts are PowerShell, Python or Node), expanding GH_TOKEN"
+        "bad-7": "tools/show.sh, a shell script (tools/ scripts are PowerShell, Python or Node), expanding GH_TOKEN",
+        "bad-8": "tools/show, an extensionless shell script run through a shebang, expanding GH_TOKEN",
+        "bad-9": "tools/show.zsh, a zsh script expanding GH_TOKEN"
       }
     },
     {
@@ -380,7 +382,8 @@
         "bad-4": "a \"[NYAR:x] note=bypass\" literal replied from Commands/ApiCommands.cs",
         "bad-5": "Wire.Line(tag, …) with a variable tag in Commands/ApiCommands.cs",
         "bad-6": "Commands/ApiCommands.cs imports Wire under a global::-qualified alias written with spaces (using W = global :: Nyarlathotep . Logic . Wire;) and calls W.Line with a variable tag",
-        "bad-7": "Wire.Line(\"x\", …) with a literal tag the contract's table does not list, in Commands/ApiCommands.cs"
+        "bad-7": "Wire.Line(\"x\", …) with a literal tag the contract's table does not list, in Commands/ApiCommands.cs",
+        "bad-8": "Commands/ApiCommands.cs imports Wire under an escaped alias (using @class = Nyarlathotep.Logic.Wire;) and calls @class.Line with a variable tag"
       }
     },
     {
