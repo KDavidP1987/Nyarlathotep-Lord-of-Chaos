@@ -439,3 +439,47 @@ Confirmation round for revision 7 (Review 7's F1 and F2 named gating probes). Th
 - F1 · accepted · new D34 Invoke-ClassTests (factored out of -AuthSuite: per-class runs, exit code, Failed, Passed 0 and skipped all fail) with `-Tests <Class,...>`; the 4.4 row runs `pwsh tools/preflight.ps1 -Tests ReadinessTests,ControlPrecedenceTests`; D33's categories use the same runner with `|`-free per-category filters (its trx folder and the nyar-dep-* temp row of revision 7 are dropped)
 - F2 · accepted · D34 `-ControlSuite event-library` runs the thirteen D31 classes and the -SelfTest body in one process and exits 1 when either part fails or is absent; the 12.4 row names that one command; fixtures TestRuns/{bad,bad-2,bad-3,good,empty}
 - F3 · accepted · tools/rollback-gate.ps1 gains `-Plan <slug>`, running -RollbackOf as its fourth part ("rollback gate: 4/4"), with a routes-only-failing selftest case ("rollback gate selftest: 6/6"); D29, the 14.3 row, step 3, step 6 and Paths walked name it
+
+## Review 9 · 2026-09-26 · codex · plan: revision 8 (4bfd849); file access confirmed (0 blocked reads)
+Confirmed: I read `docs/dod/event-library.md` and `Nyarlathotep/Nyarlathotep/Logic/CommandArgs.cs`, plus the requested Epic, sibling plan, code, tooling, profile, resource, manifest, and reference-data files; I did not read `docs/dod/event-library.reviews.md`.
+
+1. **F1 `advisory` — 7.3:** If an event starts after delete arming, D8 says confirmation is refused but does not decide whether that failed confirmation consumes or preserves the pending delete, making the subsequent stop-and-confirm behavior ambiguous.  
+   **Fix:** State whether the pending confirmation is cleared on the running-event refusal and add that sequence to D8’s cases.
+
+2. **F2 `advisory` — 3.1:** The valid command shapes are detailed, but malformed forms such as a dangling `template use <t> as`, surplus arguments, or a missing `event set` value are left to the framework without specifying whether VCF usage or a mod reply is authoritative.  
+   **Fix:** State that malformed arity and binding failures receive VCF’s usage response without entering the gateway, and cover representative forms in command tests.
+
+3. **F3 `advisory` — 9.2:** S-6 permits replacing `CHAR_Bandit_Hunter` if it behaves as melee, but Session 3’s stated evidence records only start/end and soak statistics, so the fallback’s triggering observation is not preserved.  
+   **Fix:** Record a brief kick-off observation of the Hunter’s ranged behavior in the Session 3 evidence, or validate the prefab choice before the soak.
+
+Layer grading:
+
+1. Considered — Purpose & typical use answers 1.1–1.3.  
+2. Considered — Design › Permissions and D8/D17/D22 answer 2.1–2.3.  
+3. Considered — D1–D15, D19, D29–D30 and Design › Data answer 3.1–3.4.  
+4. Considered — Business rules and D1–D2, D5, D8, D12–D18, D20, D25, D30, D34 answer 4.1–4.5.  
+5. Considered — Interfaces and D1, D3–D4, D10, D12, D14, D20 answer 5.1–5.3.  
+6. Considered — External dependencies, D8, D17–D19, D24–D25, D30, D33–D34 answer 6.1–6.3.  
+7. Considered — Design › States and D3–D4, D8, D12, D14–D16, D19, D23, D26 answer 7.1–7.3.  
+8. Considered — Minimal stretch and D4–D6, D8 answer 8.1–8.2.  
+9. Considered — Maximal stretch and D5, D8–D11, D14, D22, D27 answer 9.1–9.3.  
+10. Considered — Security and D9–D12, D17–D18, D22 answer 10.1–10.4.  
+11. Considered — Design › UX and D4, D16, D19–D21, D23, D25, D28, D32 answer 11.1–11.4.  
+12. Considered — Failure & observability and D3, D14, D16–D19, D21, D24–D25, D30–D34 answer 12.1–12.4.  
+13. Considered — Performance and D5, D12, D25, D27 answer 13.1–13.2.  
+14. Considered — Rollout and D2, D16, D18, D28–D30 answer 14.1–14.4.  
+15. Considered — Out of scope answers 15.1–15.2.
+
+The Epic inheritance is present by explicit reference and restatement: the read-only embedded catalogue, disabled-copy-only import, validator/Persistence write path, ConfigEntry pillar writes, disabled shipping, pre-release soak, amended unattended-after-kick-off requirement, precedence, hard durations, every-X sets, and admin authorization. The sibling’s `Empower` schema and 0.4.0 ordering are also correctly treated as prerequisites.
+
+Earlier Review 8 findings are resolved: D34 supplies valid fail-closed per-class execution for 4.4; `-ControlSuite` aggregates tests and selftests for 12.4; and `rollback-gate.ps1 -Plan` incorporates `-RollbackOf` into the single 14.3 gate.
+
+EARLIER: all resolved
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+READY on revision 8 (4bfd849), with EARLIER: all resolved. The three advisory findings do not block; editing a D-item or assumption now would invalidate this READY, so each is applied after `approve` as a typed amendment.
+- F1 · accepted · A1 ~D8: a confirm refused because the event is running keeps the pending delete (its 30 s still run), so stop then confirm inside the window deletes; the sequence joins AuthoringTests Delete
+- F2 · accepted · A2 ~D20: malformed arity and binding (a dangling `as`, surplus arguments, a missing `event set` value) get VCF's own usage reply and never reach the gateway; representative forms join CommandArgTests
+- F3 · accepted · A3 ~D25: the Session 3 kick-off records one observation of CHAR_Bandit_Hunter's attack (ranged or melee), the trigger of S-6's fallback
