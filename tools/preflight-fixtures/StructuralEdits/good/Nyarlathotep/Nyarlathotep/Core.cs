@@ -61,9 +61,23 @@ internal static class Core
             ServerScriptMapper = server.GetExistingSystemManaged<ServerScriptMapper>();
             ServerGameSettingsSystem = server.GetExistingSystemManaged<ServerGameSettingsSystem>();
 
-            // TODO(foundation): construct services here in dependency order —
-            // SpawnTracker (+ orphan sweep of units tagged by a previous run), EventScheduler,
-            // TriggerBus, then the four feature services. See docs/NYARLATHOTEP_DESIGN.md §"Build order".
+            // Services in dependency order (docs/dod/foundation.md › Design › States › Startup and shutdown):
+            // Persistence → EventStore → SpawnTracker → EmpowerAction → TriggerBus → EventRuntime → Announcer → Pusher → HealthMonitor
+            // → EventScheduler.
+            Services.Persistence.Initialize();
+            Services.EventStore.Initialize();
+            Services.SpawnTracker.Initialize();
+            Services.EmpowerAction.Initialize();
+            Services.TriggerBus.Initialize();
+            Services.EventRuntime.Initialize();
+            Services.Announcer.Initialize();
+            Services.Pusher.Initialize();
+            Services.HealthMonitor.Initialize();
+            // The scheduler starts before the sweep, so a sweep that throws never leaves the queues without a tick; it
+            // does nothing until IsReady.
+            Services.EventScheduler.Start();
+            try { Services.SpawnTracker.BootSweep(); }
+            catch (System.Exception ex) { Log.LogError($"[nyar] boot sweep failed: {ex.Message}; marked survivors expire on their own LifeTime"); }
 
             IsReady = true;
             Log.LogInfo($"Nyarlathotep initialized via {trigger} (attempt #{_initAttempts}). Prefab map has {prefabSystem.SpawnableNameToPrefabGuidDictionary.Count} entries.");
@@ -108,4 +122,10 @@ internal static class Core
     /// <summary>Run a managed coroutine on the server's main thread (wrapped for Il2Cpp).</summary>
     public static Coroutine StartCoroutine(IEnumerator routine) =>
         MonoBehaviour.StartCoroutine(routine.WrapToIl2Cpp());
+
+    /// <summary>Stops a coroutine started by <see cref="StartCoroutine"/>; nothing when the host is gone.</summary>
+    public static void StopCoroutine(Coroutine routine)
+    {
+        if (_monoBehaviour != null) _monoBehaviour.StopCoroutine(routine);
+    }
 }

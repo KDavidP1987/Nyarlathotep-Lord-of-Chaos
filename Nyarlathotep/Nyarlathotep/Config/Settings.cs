@@ -78,6 +78,8 @@ internal static class Settings
             "Most units spawned in one server tick; a larger wave spreads over the next ticks.");
         BindLimit(config, Limits.MaxDespawnsPerTick,
             "Most units despawned in one server tick (many destroys in one frame can crash the server).");
+        BindLimit(config, Limits.EmpowerBatchPerTick,
+            "Most empowerment carrier operations (applies and removals together, removals first) in one server tick.");
         BindLimit(config, Limits.GraceSeconds,
             "Seconds an event's units outlive the event's end before they expire.");
         BindLimit(config, Limits.PurgeCooldownSeconds,

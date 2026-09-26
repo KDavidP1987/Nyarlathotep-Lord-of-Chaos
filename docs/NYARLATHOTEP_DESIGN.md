@@ -35,7 +35,7 @@ EventDefinition
 
 | Pillar | Trigger(s) | Action |
 |---|---|---|
-| A. Faction empowerment | Schedule, VBloodKilled, BloodMoon, Manual | `Empower { factions, include/exclude units, stat mods, visual }` |
+| A. Faction empowerment | Schedule, VBloodKilled, GameTime, Manual | `Empower { factions, includeUnits, excludeUnits, includeVBloods, stats }` |
 | B1. Sieges | Schedule, Manual (later: faction heat) | `SpawnWaves { location: CastleOf(target), behaviour: Assault }` |
 | B2. Defended zones | ZoneActivity | `SpawnWaves { location: Zone, behaviour: Guard }` |
 | C. Boss reinforcements | BossEngaged, BossHealthPhase | `SpawnWaves { location: AroundBoss, behaviour: JoinFight }` |
@@ -44,6 +44,12 @@ EventDefinition
 `SpawnWaves` carries: unit composition (weighted list of unit GUIDs × count), wave count, interval between
 waves, spawn radius, modifiers (level delta or absolute, HP ×, power ×, move speed ×, loot on/off), behaviour,
 and per-unit lifetime.
+
+`Empower` (0.4.0, docs/features/FACTION_EMPOWERMENT.md) carries 1–5 `Faction_*` names, optional `includeUnits` and
+`excludeUnits` (up to 20 `CHAR_` names each), `includeVBloods` (default false) and `stats`: `physicalPower`, `spellPower`,
+`maxHealth`, `attackSpeed`, `moveSpeed`, each a multiplier 1.0–3.0 with at least one above 1.0. Each affected NPC gets one
+timed carrier buff whose LifeTime ends with the event. A `visual` key is rejected as unknown: the owner chose no visible
+aura for 0.4.0 (faction-empowerment S-2).
 
 ## 3. Architecture
 

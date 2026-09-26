@@ -1,0 +1,8 @@
+worktree C:/Users/KDPen/OneDrive/Documents/CURSOR PROJECTS/Games/V Rising/Nyarlathotep Lord of Chaos
+HEAD f4d08750c8cc11daccddf02d40e9b546255f5143
+branch refs/heads/main
+
+worktree C:/Users/KDPen/AppData/Local/Temp/nyar-rollback-20260926-101500
+HEAD ee36a7d4960e5d01e947f85d94481256d47139a9
+detached
+

@@ -6,7 +6,7 @@ namespace Nyarlathotep.Logic;
 /// <summary>Replies only admins see (Design › UX: `.nyar spawn`, `.nyar purge`, `.nyar debug here`, the tracked
 /// count in `.nyar status`). Kept apart from <see cref="Messages"/>, whose builders may never carry a position; these
 /// carry none either, but `debug here` works from positions the service reads.</summary>
-public static class AdminLines
+public static partial class AdminLines
 {
     public const int DebugMaxLines = 20;
     public const string NothingToPurge = "nothing to purge";

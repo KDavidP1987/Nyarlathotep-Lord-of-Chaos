@@ -1,0 +1,78 @@
+{
+  "SchemaVersion": 1,
+  "events": [
+    {
+      "id": "example-empowerment",
+      "name": "Bandits rally after a V Blood falls",
+      "enabled": true,
+      "pillar": "empowerment",
+      "trigger": { "type": "VBloodKilled", "bosses": [ "any" ] },
+      "conditions": { "minPlayers": 1, "cooldownMinutes": 60 },
+      "durationSeconds": 600,
+      "action": {
+        "type": "Empower",
+        "factions": [ "Faction_Bandits" ],
+        "stats": { "physicalPower": 1.3, "spellPower": 1.3, "maxHealth": 1.5, "attackSpeed": 1.15, "moveSpeed": 1.1 }
+      },
+      "announce": { "start": [ "The {faction} rally: {event}." ], "end": [ "The {faction} lose heart. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "example-spawns",
+      "name": "Bandit raid",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 600,
+      "action": {
+        "type": "SpawnWaves",
+        "units": [ { "prefab": "CHAR_Bandit_Thug", "count": 5 }, { "prefab": "CHAR_Bandit_Deadeye", "count": 2 } ],
+        "waves": 3, "intervalSeconds": 60, "radius": 10,
+        "location": { "type": "Admin" }
+      }
+    },
+    {
+      "id": "example-boss",
+      "name": "Tourok's gang answers his fall",
+      "enabled": false,
+      "pillar": "boss",
+      "trigger": { "type": "VBloodKilled", "bosses": [ "CHAR_Bandit_Tourok_VBlood" ] },
+      "durationSeconds": 300,
+      "action": {
+        "type": "SpawnWaves",
+        "units": [ { "prefab": "CHAR_Bandit_Deadeye", "count": 3 } ],
+        "waves": 1, "intervalSeconds": 60, "radius": 8,
+        "location": { "type": "Point", "x": -1200, "z": -800 }
+      }
+    },
+    {
+      "id": "example-zones",
+      "name": "The dead walk at night",
+      "enabled": false,
+      "pillar": "zones",
+      "trigger": { "type": "GameTime", "phase": "night" },
+      "durationSeconds": 900,
+      "action": {
+        "type": "SpawnWaves",
+        "units": [ { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 6 } ],
+        "waves": 2, "intervalSeconds": 120, "radius": 12,
+        "location": { "type": "Point", "x": -1200, "z": -800 }
+      }
+    },
+    {
+      "id": "example-sieges",
+      "name": "Saturday night assault",
+      "enabled": false,
+      "pillar": "sieges",
+      "trigger": { "type": "Schedule", "days": [ "Sat" ], "times": [ "20:00" ] },
+      "conditions": { "minPlayers": 2 },
+      "durationSeconds": 1200,
+      "action": {
+        "type": "SpawnWaves",
+        "units": [ { "prefab": "CHAR_Bandit_Thug", "count": 8 }, { "prefab": "CHAR_Bandit_Deadeye", "count": 4 } ],
+        "waves": 3, "intervalSeconds": 180, "radius": 15,
+        "location": { "type": "Point", "x": -1200, "z": -800 }
+      },
+      "announce": { "start": [ "Wave {wave} of {waves} is coming." ], "warnings": true }
+    }
+  ]
+}

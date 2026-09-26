@@ -13,7 +13,10 @@
     -Verbose prints each fixture's result line.
 
     Default run  : every check whose manifest mode is "default". Exit 1 if any fails.
-    -Paths       : the paths walk (Test-CheckPaths) — run after dotnet build, tcli build and a deploy.
+    -Paths       : the paths walk (Test-CheckPaths) — run after dotnet build, tcli build and a deploy. It also fails on
+                   any %TEMP%\nyar-* folder, any git worktree besides the main one, and any tag on origin or GitHub
+                   release that no remote-tag: / remote-release: line of tools/paths-manifest.txt declares
+                   (faction-empowerment D26).
     -SelfTest    : every check against its three fixtures.
     -ServerWrites -Snapshot <file>
                  : records the server directory and LocalLow\Stunlock Studios tree (path, size, write
@@ -56,8 +59,8 @@
     the file set is every file under the fixture. Git-derived and live inputs (commit subjects, tags,
     the path walk, the Compile items, the server snapshots, the audited slug) come from git, msbuild or
     the server in the real repository and from captured text files (git-log.txt, tags.txt,
-    remote-tags.txt, walked.txt, compile-items.txt, git-files.txt, before.tsv, after.tsv,
-    aftercleanup.txt, auditof.txt) in a fixture, written in the format the real collection produces.
+    remote-tags.txt, walked.txt, temp.txt, worktrees.txt, ls-remote-tags.txt, releases.json, compile-items.txt,
+    git-files.txt, before.tsv, after.tsv, aftercleanup.txt, auditof.txt) in a fixture, written in the format the real collection produces.
 
 .EXAMPLE
     pwsh tools/preflight.ps1
@@ -180,13 +183,15 @@ function Get-DoneChildren([string]$Root) {
     })
 }
 
-# "tracked: <glob>" / "ignored: <glob>" / "server: <glob>" / "external: <glob>" lines of
+# "tracked: <glob>" / "ignored: <glob>" / "server: <glob>" / "external: <glob>" / "temp: <glob>" (a %TEMP% folder a
+# tool may hold while it runs, never after it) / "remote-tag: <name>" / "remote-release: <name>" lines of
 # tools/paths-manifest.txt.
+$script:ManifestLineRx = '^(tracked|ignored|server|external|temp|remote-tag|remote-release):\s*(\S.*)$'
 function Get-PathsManifest([string]$Root) {
     $t = Read-Text $Root 'tools/paths-manifest.txt'
     if ($null -eq $t) { return $null }
-    return @($t -split '\r?\n' | Where-Object { $_ -match '^(tracked|ignored|server|external):\s*(\S.*)$' } |
-        ForEach-Object { $null = $_ -match '^(tracked|ignored|server|external):\s*(\S.*)$'; [pscustomobject]@{ Kind = $Matches[1]; Glob = $Matches[2].Trim() } })
+    return @($t -split '\r?\n' | Where-Object { $_ -match $script:ManifestLineRx } |
+        ForEach-Object { $null = $_ -match $script:ManifestLineRx; [pscustomobject]@{ Kind = $Matches[1]; Glob = $Matches[2].Trim() } })
 }
 
 function ConvertTo-GlobRegex([string]$Glob) {
@@ -254,10 +259,27 @@ function Test-CheckTemplatesJson([string]$Root) {
     if ($null -eq (Read-Text $Root "$PkgRel/Nyarlathotep.csproj")) { return New-Result $false 'templates: package directory not found' }
     $files = @(Get-TreeFiles $Root | Where-Object { $_ -like "$PkgRel/Resources/*.json" })
     foreach ($f in $files) {
-        try { Read-Text $Root $f | ConvertFrom-Json | Out-Null }
+        try { $json = Read-Text $Root $f | ConvertFrom-Json }
         catch { return New-Result $false "templates: $f is not valid JSON" }
+        # Every template ships disabled (Epic D4, faction-empowerment D22): any "enabled": true, at any depth, fails.
+        $on = @(Find-EnabledTrue $json '')
+        if ($on) { return New-Result $false "templates: $f ships enabled: $($on -join ', ')" }
     }
     return New-Result $true "templates: $($files.Count) valid"
+}
+
+# The ids (or JSON paths) of every object under $Node whose "enabled" property is the boolean true.
+function Find-EnabledTrue($Node, [string]$Path) {
+    if ($Node -is [System.Collections.IEnumerable] -and $Node -isnot [string]) {
+        $i = 0
+        foreach ($n in $Node) { Find-EnabledTrue $n "$Path[$i]"; $i++ }
+    }
+    elseif ($Node -is [pscustomobject]) {
+        foreach ($p in $Node.PSObject.Properties) {
+            if ($p.Name -eq 'enabled' -and $p.Value -is [bool] -and $p.Value) { if ($Node.id) { "$($Node.id)" } else { "$Path" } }
+            else { Find-EnabledTrue $p.Value "$Path.$($p.Name)" }
+        }
+    }
 }
 
 # ---------------------------------------------------------------- checks: safety rules (Epic D4-D9)
@@ -369,9 +391,15 @@ function Test-CheckStructuralEdits([string]$Root) {
     # DestroyUtility.Destroy*(em, entity) is the deferred destroy; its entity is the second argument (spikes A13).
     $rx = '(?:\.(?<op>AddComponent(?!Safe\b)\w*|RemoveComponent(?!Safe\b)\w*|AddBuffer|DestroyEntity)\s*(?:<[^>]*>)?\s*\(\s*|\b(?<op>DestroyUtility\.Destroy\w*)\s*\(\s*(?:[^,()]|\((?:[^()]|\([^()]*\))*\))+,\s*)(?<arg>[^,)\s]+)'
     $fence = "$PkgRel/EntityExtensions.cs"
+    # DestroyUtility.Destroy* is allowed only in the bodies of RemoveBuffSafe (the carrier-buff removal) and DestroySafe
+    # (the unit despawn helper, spikes A13); and the empowerment service never calls DestroySafe, so a carrier cannot be
+    # destroyed through the unit helper (faction-empowerment D8, A3).
+    $destroyHosts = @('RemoveBuffSafe', 'DestroySafe')
+    $empower = "$PkgRel/Services/EmpowerAction.cs"
     $bad = @(); $guarded = 0
     foreach ($f in $cs) {
         $text = Remove-CsComments (Read-Text $Root $f)
+        if ($f -eq $empower -and $text -match '\bDestroySafe\b') { $bad += "DestroySafe in $f (a carrier is removed only by RemoveBuffSafe)" }
         $calls = [regex]::Matches($text, $rx)
         if ($calls.Count -eq 0) { continue }
         if ($f -ne $fence) { $bad += "$($calls[0].Groups['op'].Value) in $f"; continue }
@@ -380,6 +408,10 @@ function Test-CheckStructuralEdits([string]$Root) {
         foreach ($c in $calls) {
             $start = Get-EnclosingMethodStart $text $c.Index
             if ($start -lt 0) { $bad += "$($c.Groups['op'].Value) in $f outside a method"; continue }
+            if ($c.Groups['op'].Value -like 'DestroyUtility.Destroy*') {
+                $name = [regex]::Match($text.Substring($start), '^[^(]*?(\w+)\s*(?:<[^>]*>)?\s*\(').Groups[1].Value
+                if ($destroyHosts -notcontains $name) { $bad += "$($c.Groups['op'].Value) in $f method $name (only RemoveBuffSafe and DestroySafe)"; continue }
+            }
             $before = $text.Substring($start, $c.Index - $start)
             if (-not (Test-PrefabRefusal $before $c.Groups['arg'].Value)) { $bad += "$($c.Groups['op'].Value) in $f without an earlier Prefab refusal" }
             else { $guarded++ }
@@ -732,7 +764,9 @@ function Test-CheckDataInventory([string]$Root) {
     if ($null -eq $manifest) { return New-Result $false 'data inventory: tools/paths-manifest.txt not found' }
     $entries = @(($inv | ConvertFrom-Json).entries)
     if ($entries.Count -eq 0) { return New-Result $false 'data inventory: no entries' }
-    $required = @($manifest | Where-Object { $_.Kind -ne 'tracked' } | ForEach-Object { $_.Glob })
+    # Every ignored, server, external and temp glob needs an entry, so the expected set comes from the manifest
+    # (faction-empowerment D26); remote-tag and remote-release lines declare git refs, not stored data.
+    $required = @($manifest | Where-Object { $_.Kind -in 'ignored', 'server', 'external', 'temp' } | ForEach-Object { $_.Glob })
     $pers = Read-Text $Root "$PkgRel/Services/Persistence.cs"
     if ($pers) { $required += @([regex]::Matches((Remove-CsComments $pers), 'const\s+string\s+\w+\s*=\s*"([^"]+)"') | ForEach-Object { $_.Groups[1].Value }) }
     $bad = @()
@@ -765,13 +799,41 @@ function Test-CheckDataInventory([string]$Root) {
     return New-Result $true "data inventory: $($entries.Count) entries; $($required.Count)/$($required.Count) globs and files, $($rows.Count)/$($rows.Count) plan rows"
 }
 
-# Walked paths as "<kind> <path>" (kind tracked|ignored|server).
-function Get-WalkedPaths([string]$Root) {
+# Every listing the paths walk reads, raw as its source prints it, through this one function: in the real repository
+# from git, the server directory, %TEMP% and gh; in a fixture from captured files. A listing whose source failed (or
+# whose file a fixture lacks) is $null, and the check fails on it.
+#   Walked     "<kind> <path>" lines (kind tracked|ignored|server)                        walked.txt
+#   Temp       the names of the %TEMP% folders named nyar-*                                temp.txt
+#   Worktrees  `git worktree list --porcelain`                                             worktrees.txt
+#   RemoteTags `git ls-remote --tags origin`                                               ls-remote-tags.txt
+#   Releases   `gh release list --json tagName`                                            releases.json
+function Get-PathsListings([string]$Root) {
     if (Test-IsFixture $Root) {
         $w = Read-Text $Root 'walked.txt'
-        if ($null -eq $w) { return @() }
-        return @($w -split '\r?\n' | Where-Object { $_ })
+        return [pscustomobject]@{
+            Walked     = if ($null -eq $w) { @() } else { @($w -split '\r?\n' | Where-Object { $_ }) }
+            Temp       = Read-Text $Root 'temp.txt'
+            Worktrees  = Read-Text $Root 'worktrees.txt'
+            RemoteTags = Read-Text $Root 'ls-remote-tags.txt'
+            Releases   = Read-Text $Root 'releases.json'
+        }
     }
+    $wt = git -C $Root worktree list --porcelain 2>$null
+    $wt = if ($LASTEXITCODE -eq 0) { @($wt) -join "`n" } else { $null }
+    $rt = git -C $Root ls-remote --tags origin 2>$null
+    $rt = if ($LASTEXITCODE -eq 0) { @($rt) -join "`n" } else { $null }
+    $rel = $null
+    Push-Location -LiteralPath $Root
+    try { $rel = gh release list --limit 1000 --json tagName 2>$null; $rel = if ($LASTEXITCODE -eq 0) { @($rel) -join "`n" } else { $null } }
+    catch { $rel = $null }
+    finally { Pop-Location }
+    $tempDir = [IO.Path]::GetTempPath()
+    $temp = @(Get-ChildItem -LiteralPath $tempDir -Directory -Filter 'nyar-*' -Force -ErrorAction SilentlyContinue | ForEach-Object Name) -join "`n"
+    return [pscustomobject]@{ Walked = @(Get-WalkedPaths $Root); Temp = $temp; Worktrees = $wt; RemoteTags = $rt; Releases = $rel }
+}
+
+# Walked paths of the real repository as "<kind> <path>" (kind tracked|ignored|server); only Get-PathsListings calls it.
+function Get-WalkedPaths([string]$Root) {
     $out = @()
     $out += @(Get-TreeFiles $Root -IncludeFixtures | ForEach-Object { "tracked $_" })
     $ign = git -C $Root status --ignored --porcelain 2>$null
@@ -795,14 +857,37 @@ function Get-WalkedPaths([string]$Root) {
 function Test-CheckPaths([string]$Root) {
     $manifest = Get-PathsManifest $Root
     if ($null -eq $manifest -or $manifest.Count -eq 0) { return New-Result $false 'paths: tools/paths-manifest.txt missing or empty' }
-    $walked = @(Get-WalkedPaths $Root)
+    $in = Get-PathsListings $Root
+    $walked = @($in.Walked)
     if ($walked.Count -eq 0) { return New-Result $false 'paths: nothing walked' }
     $bad = @()
     foreach ($w in $walked) {
         $kind, $path = $w -split ' ', 2
         if (-not ($manifest | Where-Object { $_.Kind -eq $kind -and (Test-GlobMatch $path $_.Glob) })) { $bad += "$kind $path" }
     }
-    if ($bad) { return New-Result $false "paths: $($bad.Count) outside the manifest: $(($bad | Select-Object -First 10) -join ', ')" }
+    $problems = @()
+    if ($bad) { $problems += "$($bad.Count) outside the manifest: $(($bad | Select-Object -First 10) -join ', ')" }
+    # Writes outside the walked trees (faction-empowerment D26). A tool's %TEMP%\nyar-* folder must be gone once it
+    # finishes, so any one fails, declared by a temp: glob or not.
+    foreach ($l in @('Temp', 'Worktrees', 'RemoteTags', 'Releases')) { if ($null -eq $in.$l) { $problems += "$l listing unreadable" } }
+    foreach ($t in @("$($in.Temp)" -split '\r?\n' | ForEach-Object { $_.Trim() } | Where-Object { $_ -like 'nyar-*' })) { $problems += "leftover temp $t" }
+    # Porcelain entries start "worktree <path>"; the first is the main worktree.
+    $trees = @("$($in.Worktrees)" -split '\r?\n' | Where-Object { $_ -match '^worktree (.+)$' } | ForEach-Object { $_.Substring(9).Trim() })
+    if ($null -ne $in.Worktrees -and $trees.Count -eq 0) { $problems += 'worktree listing has no main worktree' }
+    foreach ($t in @($trees | Select-Object -Skip 1)) { $problems += "leftover worktree $t" }
+    # Remote tags ("<sha>\trefs/tags/<name>", plus "<name>^{}" peel lines for annotated tags) and releases.
+    $remote = @()
+    $remote += @("$($in.RemoteTags)" -split '\r?\n' | Where-Object { $_ -match '\srefs/tags/(\S+?)(\^\{\})?\s*$' } |
+        ForEach-Object { $null = $_ -match '\srefs/tags/(\S+?)(\^\{\})?\s*$'; "tag $($Matches[1])" })
+    if ($null -ne $in.Releases) {
+        try { $remote += @(@("$($in.Releases)" | ConvertFrom-Json) | ForEach-Object { $_ } | Where-Object { $_.tagName } | ForEach-Object { "release $($_.tagName)" }) }
+        catch { $problems += 'Releases listing is not JSON' }
+    }
+    foreach ($r in @($remote | Sort-Object -Unique)) {
+        $rk, $rn = $r -split ' ', 2
+        if (-not ($manifest | Where-Object { $_.Kind -eq "remote-$rk" -and (Test-GlobMatch $rn $_.Glob) })) { $problems += "undeclared remote $r" }
+    }
+    if ($problems) { return New-Result $false "paths: $($problems -join '; ')" }
     return New-Result $true "paths: $($walked.Count) walked, all in manifest"
 }
 
@@ -1157,7 +1242,8 @@ function Get-ParenEnd([string]$Text, [int]$Open) {
 # step for a unit it has just spawned (foundation step 4); its Apply is [Mutating], so only these services call it.
 # Announcer runs ActionKind.Announce (`.nyar announce`, foundation step 6).
 # Pusher runs ActionKind.Subscribe (`.nyar api sub`, raphael-api-core step 3).
-$script:DispatchedServices = @('EventRuntime', 'SpawnTracker', 'UnitSetup', 'WaveAction', 'Persistence', 'EventStore', 'Announcer', 'Pusher') |
+# EmpowerAction is the empowerment service EventRuntime and SpawnTracker call directly (faction-empowerment D21).
+$script:DispatchedServices = @('EventRuntime', 'SpawnTracker', 'UnitSetup', 'WaveAction', 'Persistence', 'EventStore', 'Announcer', 'Pusher', 'EmpowerAction') |
     ForEach-Object { "$PkgRel/Services/$_.cs" }
 
 # Every method marked [Mutating] in a dispatched service is a mutating method. Any other file under Commands/,

@@ -2,7 +2,8 @@
   "schemaVersion": 1,
   "note": "Every preflight check (functions named Test-Check* in tools/preflight.ps1) with its fixtures. good/ holds copies of real repository files, bad/ the same with the planted change named in \"plant\", bad-<n>/ further planted faults (one each), empty/ nothing. Every check reads the \"inputs\" listed. `pwsh tools/preflight.ps1 -SelfTest` requires good to pass and bad and empty to fail (Epic D10). childDocs maps each Epic child to the feature docs whose \"## Test results\" it must fill (Epic D18).",
   "dataTables": [
-    "docs/dod/raphael-api-core.md"
+    "docs/dod/raphael-api-core.md",
+    "docs/dod/faction-empowerment.md"
   ],
   "childDocs": {
     "spikes": [
@@ -81,7 +82,8 @@
         "Nyarlathotep/Nyarlathotep/Resources/*.json (file set: git ls-files --cached --others --exclude-standard)"
       ],
       "plant": {
-        "bad": "the closing brace of the template removed (unterminated JSON)"
+        "bad": "the closing brace of the template removed (unterminated JSON)",
+        "bad-2": "the real template with example-empowerment's \"enabled\" set true (faction-empowerment D22)"
       }
     },
     {
@@ -143,7 +145,10 @@
         "bad-7": "the helper reassigns the entity between the guard and the DestroyEntity call",
         "bad-8": "a DestroyEntity call in Services/Leak.cs placed after a string holding \"//\" on the same line",
         "bad-9": "a DestroyUtility.Destroy(Core.EntityManager, e) call planted in Services/Leak.cs (spikes A13)",
-        "bad-10": "a DestroyUtility.Destroy(Em(Pick(1), 2), e) call whose first argument nests parentheses and a comma, planted in Services/Leak.cs (spikes A13, Codex step 9 round 2)"
+        "bad-10": "a DestroyUtility.Destroy(Em(Pick(1), 2), e) call whose first argument nests parentheses and a comma, planted in Services/Leak.cs (spikes A13, Codex step 9 round 2)",
+        "bad-11": "the real EntityExtensions.cs with a Prefab-guarded DestroyUtility.Destroy call planted in a third method, AddBufferSafe (faction-empowerment D8, A3)",
+        "bad-12": "the real EntityExtensions.cs with RemoveBuffSafe's Prefab refusal removed (if (!buff.Exists()) ...) (faction-empowerment D8, A3)",
+        "bad-13": "a Services/EmpowerAction.cs calling unit.DestroySafe() (faction-empowerment D8, A3)"
       }
     },
     {
@@ -268,14 +273,15 @@
       "fixtures": "tools/preflight-fixtures/DataInventory",
       "inputs": [
         "tools/data-inventory.json",
-        "tools/paths-manifest.txt ignored/server globs",
+        "tools/paths-manifest.txt ignored, server, external and temp globs",
         "Nyarlathotep/Nyarlathotep/Services/Persistence.cs const file names",
         "tools/preflight-checks.json dataTables: each listed plan's Design › Data artifact table (raphael-api-core D19)"
       ],
       "plant": {
         "bad": "the artwork/** glob dropped from its inventory entry",
         "bad-2": "the raphael-api-core › Push queue row dropped from its entry's rows",
-        "bad-3": "the push queue entry's retention is empty"
+        "bad-3": "the push queue entry's retention is empty",
+        "bad-temp": "the nyar-snap-* temp glob of the manifest has no inventory entry (its entry's covers dropped; faction-empowerment D26)"
       }
     },
     {
@@ -285,10 +291,18 @@
       "fixtures": "tools/preflight-fixtures/Paths",
       "inputs": [
         "tools/paths-manifest.txt",
-        "git ls-files + git status --ignored + server globs (walked.txt)"
+        "git ls-files + git status --ignored + server globs (walked.txt)",
+        "%TEMP% folders named nyar-* (temp.txt)",
+        "git worktree list --porcelain (worktrees.txt)",
+        "git ls-remote --tags origin (ls-remote-tags.txt)",
+        "gh release list --json tagName (releases.json)"
       ],
       "plant": {
-        "bad": "an unmanifested tracked path (stray/notes.txt) added to the walk"
+        "bad": "an unmanifested tracked path (stray/notes.txt) added to the walk",
+        "bad-temp": "a leftover %TEMP%\\nyar-snap-* folder in the temp listing (faction-empowerment D26)",
+        "bad-rel": "a leftover %TEMP%\\nyar-rel-* folder in the temp listing (faction-empowerment D26)",
+        "bad-worktree": "a second (detached nyar-rollback-*) worktree in the worktree listing (faction-empowerment D26)",
+        "bad-remote": "an undeclared tag v0.4.0 on origin in the ls-remote listing (faction-empowerment D26)"
       }
     },
     {

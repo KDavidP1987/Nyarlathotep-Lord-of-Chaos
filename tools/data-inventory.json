@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "note": "Machine-readable copy of docs/dod/nyarlathotep.md › Design › Data, and the authority for it. Every ignored and server glob in tools/paths-manifest.txt and every constant file name in Services/Persistence.cs must appear in some entry's covers list (Epic D34).",
+  "note": "Machine-readable copy of docs/dod/nyarlathotep.md › Design › Data, and the authority for it. Every ignored, server, external and temp glob in tools/paths-manifest.txt and every constant file name in Services/Persistence.cs must appear in some entry's covers list (Epic D34).",
   "entries": [
     {
       "artifact": "Reference material copied from sibling workspaces",
@@ -66,7 +66,8 @@
       "deletion": "delete dist/ and build/",
       "singleCopy": false,
       "rows": [
-        "raphael-api-core › Release zip"
+        "raphael-api-core › Release zip",
+        "faction-empowerment › Release zip"
       ]
     },
     {
@@ -144,7 +145,8 @@
       "singleCopy": true,
       "rows": [
         "raphael-api-core › Server logs",
-        "raphael-api-core › Dev world and mod data"
+        "raphael-api-core › Dev world and mod data",
+        "faction-empowerment › Server logs, dev world, mod config"
       ]
     },
     {
@@ -220,7 +222,8 @@
       "artifact": "Project documents in git",
       "covers": [],
       "rows": [
-        "raphael-api-core › Contract, handoff, feature doc, audit, plan, reviews"
+        "raphael-api-core › Contract, handoff, feature doc, audit, plan, reviews",
+        "faction-empowerment › Feature doc, audit, plan, reviews, contract, handoff"
       ],
       "location": "the repository (docs/, tools/, READMEs, changelogs)",
       "owner": "project owner",
@@ -232,7 +235,8 @@
       "artifact": "Test and preflight fixtures",
       "covers": [],
       "rows": [
-        "raphael-api-core › Test and preflight fixtures"
+        "raphael-api-core › Test and preflight fixtures",
+        "faction-empowerment › Preflight and drill fixtures"
       ],
       "location": "tools/preflight-fixtures/**, tools/rollback-drill-fixtures/** (tracked)",
       "owner": "project owner",
@@ -250,6 +254,110 @@
       "owner": "the drill",
       "retention": "for one run: removed in its finally; a crash or a restore mismatch leaves them. The next run removes a leftover without saved\\ and refuses while one holds saved\\, the only copy of the dev server DLL and config (A11)",
       "deletion": "automatic; a folder holding saved\\ is deleted by hand only after its DLL and config are restored, then `git worktree prune`",
+      "singleCopy": true
+    },
+    {
+      "artifact": "Empowerment carrier ledger",
+      "covers": [],
+      "rows": [
+        "faction-empowerment › Carrier ledger"
+      ],
+      "location": "server memory (Logic CarrierLedger inside Services/EmpowerAction.cs): the carriers by unit and event, and the removal queue",
+      "owner": "the mod",
+      "retention": "in memory only, until the event's carriers end; cleared at restart, where the boot carrier sweep removes any carrier left in the world",
+      "deletion": "automatic; a restart empties it and the boot carrier sweep removes the carriers",
+      "singleCopy": true
+    },
+    {
+      "artifact": "Empowerment carrier buffs",
+      "covers": [],
+      "rows": [
+        "faction-empowerment › Carrier buffs"
+      ],
+      "location": "the world save, on each empowered NPC's buff list",
+      "owner": "the mod",
+      "retention": "until the buff's LifeTime ends, the event stops, a purge, or the boot carrier sweep",
+      "deletion": "automatic, through RemoveBuffSafe under the per-tick budget (faction-empowerment D5, D8)",
+      "singleCopy": false
+    },
+    {
+      "artifact": "Other plugins installed for a compatibility session",
+      "covers": [],
+      "rows": [
+        "faction-empowerment › Bloodcraft and KindredCommands DLLs and cfg (Session 3)"
+      ],
+      "location": "dedicated server BepInEx/plugins and BepInEx/config",
+      "owner": "the owner",
+      "retention": "installed for faction-empowerment Session 3 only",
+      "deletion": "removed by the tools/dev-snapshot.ps1 restore, hash-verified (faction-empowerment D28)",
+      "singleCopy": true
+    },
+    {
+      "artifact": "Session snapshots",
+      "covers": [
+        "nyar-snap-*"
+      ],
+      "rows": [
+        "faction-empowerment › Session snapshots"
+      ],
+      "location": "%TEMP%\\nyar-snap-* (saved\\manifest.json plus the copies)",
+      "owner": "tools/dev-snapshot.ps1",
+      "retention": "while a session runs; a crash leaves it and the next -Save refuses and prints the restore (faction-empowerment D28); -Paths fails while one remains",
+      "deletion": "deleted by -Restore once every hash matches, or by hand after restoring",
+      "singleCopy": true
+    },
+    {
+      "artifact": "In-game session working folder",
+      "covers": [
+        "nyar-session"
+      ],
+      "rows": [],
+      "location": "%TEMP%\nyar-session (session-events.py definitions and cfg copies, session-watch.ps1 watcher.log)",
+      "owner": "tools/ingame/session-events.py and tools/ingame/session-watch.ps1",
+      "retention": "while a server session runs; -Paths fails while it remains",
+      "deletion": "removed by hand when the session is recorded (its evidence lives in the feature doc and the audit)",
+      "singleCopy": true
+    },
+    {
+      "artifact": "Release download",
+      "covers": [
+        "nyar-rel-*"
+      ],
+      "rows": [
+        "faction-empowerment › Release download"
+      ],
+      "location": "%TEMP%\\nyar-rel-* (the downloaded release zip)",
+      "owner": "tools/release-verify.ps1",
+      "retention": "for one run; an interrupted run leaves it and -Paths fails until it is deleted (faction-empowerment D24, D26)",
+      "deletion": "deleted in the script's finally block after hashing, or by hand",
+      "singleCopy": true
+    },
+    {
+      "artifact": "Rollback worktrees",
+      "covers": [
+        "nyar-rollback-*"
+      ],
+      "rows": [
+        "faction-empowerment › Rollback worktrees"
+      ],
+      "location": "%TEMP%\\nyar-rollback-* (a detached git worktree of the release tag)",
+      "owner": "tools/repo-rollback-drill.ps1",
+      "retention": "for one run; a leftover folder or worktree entry fails -Paths (faction-empowerment D25, D26, D29)",
+      "deletion": "`git worktree remove --force` in the script's finally block; by hand, `git worktree prune` and delete the folder",
+      "singleCopy": true
+    },
+    {
+      "artifact": "Drill saved config",
+      "covers": [
+        "nyar-drill-*"
+      ],
+      "rows": [
+        "faction-empowerment › Drill saved config"
+      ],
+      "location": "%TEMP%\\nyar-drill-* (the dev server's config saved by tools/rollback-drill.ps1 through tools/snapshot-lib.ps1)",
+      "owner": "tools/rollback-drill.ps1",
+      "retention": "for one drill; a crash leaves it, the next drill refuses and prints the restore, and -Paths fails until it is gone (faction-empowerment D23, D26)",
+      "deletion": "restored and deleted once every hash matches, or by hand after restoring",
       "singleCopy": true
     }
   ]

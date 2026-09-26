@@ -81,3 +81,21 @@ external: BepInEx/interop/**
 external: logs/*.txt
 external: LocalLow/VRising/**
 external: LocalLow/VRisingServer/backtrace/**
+
+
+# ---- temp: folders under %TEMP% that a tool holds only while it runs (faction-empowerment D26). A temp glob
+# declares the folder, it does not permit it to remain: `-Paths` fails on every %TEMP%\nyar-* folder it finds,
+# declared or not ("paths: leftover temp <name>"). Each temp glob has an entry in tools/data-inventory.json.
+temp: nyar-snap-*
+temp: nyar-rel-*
+temp: nyar-rollback-*
+temp: nyar-drill-*
+
+# ---- remote: tags on origin (git ls-remote --tags origin) and GitHub releases (gh release list) this project
+# published; `-Paths` fails on any tag or release no line declares ("paths: undeclared remote <kind> <name>").
+remote-tag: v0.2.0
+remote-tag: v0.2.1
+remote-tag: v0.3.0
+remote-release: v0.2.0
+remote-release: v0.2.1
+remote-release: v0.3.0

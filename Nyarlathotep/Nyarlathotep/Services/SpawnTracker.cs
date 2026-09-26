@@ -38,6 +38,9 @@ internal static class SpawnTracker
 
     internal static SpawnLedger Ledger => _ledger;
 
+    /// <summary>True for a unit we spawned or found marked at boot: never a native NPC to empower (faction-empowerment D3).</summary>
+    internal static bool IsTracked(long key) => _entities.ContainsKey(key);
+
     static long KeyOf(Entity e) => ((long)e.Index << 32) | (uint)e.Version;
 
     /// <summary>Third in Core.TryInitialize, after EventStore: the ledger with the loaded limits.</summary>
@@ -52,25 +55,33 @@ internal static class SpawnTracker
         _stateUnits.Clear();
     }
 
-    /// <summary>Once at IsReady: every unit carrying one of our markers is a survivor of an earlier run (the ledger is
-    /// empty at boot), so each is queued for despawn. state.json's unit list is informational and is cleared.</summary>
+    /// <summary>Once at IsReady, through Logic/SweepPlan (faction-empowerment D7): every unit carrying our unit marker is a
+    /// survivor of an earlier run (the ledger is empty at boot), so each is queued for despawn; every carrier buff is queued
+    /// for removal with EmpowerAction, and its native unit is never touched. state.json's unit list is informational and is
+    /// cleared.</summary>
     internal static void BootSweep()
     {
-        var marked = MarkedUnits();
+        var rows = MarkerRows();
+        var plan = SweepPlan.From(rows.Select(r => new MarkerRow(r.Level, KeyOf(r.Buff), KeyOf(r.Target))));
+        var byKey = rows.Select(r => r.Target).Where(t => t.Exists()).GroupBy(KeyOf).ToDictionary(g => g.Key, g => g.First());
         var queued = 0;
-        foreach (var unit in marked)
+        var found = 0;
+        foreach (var key in plan.Despawn)
         {
-            var key = KeyOf(unit);
+            if (!byKey.TryGetValue(key, out var unit)) continue;
+            found++;
             _entities[key] = unit;
             if (_ledger.QueueDespawn(key)) queued++;
         }
+        var carriers = EmpowerAction.QueueBootCarriers(plan.RemoveCarriers);
         var listed = Persistence.State.Document.Units.Count;
         if (listed > 0)
         {
             Persistence.State.Document.Units.Clear();
             Persistence.State.MarkDirty();
         }
-        Core.Log.LogInfo($"[nyar] boot marker sweep: {marked.Count} found, {queued} queued for despawn ({listed} listed in state.json)");
+        Core.Log.LogInfo($"[nyar] boot marker sweep: {found} found, {queued} queued for despawn ({listed} listed in state.json)");
+        Core.Log.LogInfo($"[nyar] boot carrier sweep: {plan.RemoveCarriers.Count} found, {carriers} queued for removal");
     }
 
     /// <summary>`.nyar spawn`: queues <paramref name="count"/> units of <paramref name="prefab"/> around
@@ -239,7 +250,9 @@ internal static class SpawnTracker
             lines.Add((distance, AdminLines.DebugUnit(tracked.Prefab, tracked.EventId, left, level,
                 (int)MathF.Round(health.Value), (int)MathF.Round(health.MaxHealth._Value), (int)MathF.Round(power)) + " " + recipe + flag));
         }
-        return AdminLines.DebugReport(lines.OrderBy(l => l.Distance).Select(l => l.Line).ToList(), radius);
+        var report = AdminLines.DebugReport(lines.OrderBy(l => l.Distance).Select(l => l.Line).ToList(), radius);
+        // faction-empowerment D14: then at most 10 native NPCs, read back from the live unit and its carrier.
+        return [.. report, .. EmpowerAction.DebugNatives(at, radius, 10)];
     }
 
     static void Release(long key)
@@ -380,11 +393,15 @@ internal static class SpawnTracker
         }
     }
 
-    /// <summary>Units whose marker buff carries one of our values, from an IncludeDisabled | IncludeSpawnTag query (a
-    /// buff made this frame still has SpawnTag).</summary>
-    static HashSet<Entity> MarkedUnits()
+    /// <summary>Units whose marker buff carries our unit marker (never a carrier, Markers.IsOurs).</summary>
+    static HashSet<Entity> MarkedUnits() =>
+        MarkerRows().Where(r => Markers.IsOurs(r.Level) && r.Target.Exists()).Select(r => r.Target).ToHashSet();
+
+    /// <summary>Every buff whose SpellLevel is one of Markers.All, with its target, from an IncludeDisabled |
+    /// IncludeSpawnTag query (a buff made this frame still has SpawnTag).</summary>
+    static List<(float Level, Entity Buff, Entity Target)> MarkerRows()
     {
-        var result = new HashSet<Entity>();
+        var result = new List<(float, Entity, Entity)>();
         var query = Core.EntityManager.CreateEntityQuery(new EntityQueryDesc
         {
             All = new[] { ComponentType.ReadOnly(Il2CppType.Of<Buff>()), ComponentType.ReadOnly(Il2CppType.Of<SpellLevel>()) },
@@ -397,9 +414,9 @@ internal static class SpawnTracker
             {
                 foreach (var buff in buffs)
                 {
-                    if (!Markers.IsOurs(buff.Read<SpellLevel>().Level)) continue;
-                    var target = buff.Read<Buff>().Target;
-                    if (target.Exists()) result.Add(target);
+                    var level = buff.Read<SpellLevel>().Level;
+                    if (Markers.KindOf(level) == MarkerKind.None) continue;
+                    result.Add((level, buff, buff.Read<Buff>().Target));
                 }
             }
             finally

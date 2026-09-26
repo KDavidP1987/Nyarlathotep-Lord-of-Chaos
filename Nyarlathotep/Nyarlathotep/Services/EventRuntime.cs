@@ -94,6 +94,7 @@ internal static class EventRuntime
         Persistence.State.Document.Instances.Add(new StateInstance(id, active.Instance.StartedUtc, active.Instance.EndsUtc, "active"));
         Persistence.State.MarkDirty();
         Core.Log.LogInfo($"[nyar] event {id} started by {trigger} (ends {active.Instance.EndsUtc:u})");
+        if (EventActions.ActionKindOf(active.Definition) == EventActionKind.Empower) EmpowerAction.StartCarriers(active);
         Announcer.EventStarted(active.Instance);
         return $"event {id} started";
     }
@@ -111,6 +112,7 @@ internal static class EventRuntime
         var cooldown = Settings.Limit(Limits.PurgeCooldownSeconds);
         var events = Engine.CancelAll(cooldown);
         var (queued, cancelled) = SpawnTracker.PurgeUnits();
+        EmpowerAction.StopAllCarriers();
         var doc = Persistence.State.Document;
         doc.Instances.Clear();
         doc.PurgeUntilUtc = DateTime.UtcNow.AddSeconds(cooldown);
@@ -127,11 +129,21 @@ internal static class EventRuntime
     {
         foreach (var ended in Engine.Expire(now, Settings.Limit(Limits.GraceSeconds)))
         {
-            // Its waiting orders go now: one spawned later would get a fresh LifeTime and outlive end + grace, and the
-            // cleanup after the grace keeps waiting orders, which then belong to a restart of the same event.
-            SpawnTracker.EndEventUnits(ended.Id, DateTime.MinValue);
             RemoveInstance(ended.Id);
-            Core.Log.LogInfo($"[nyar] event {ended.Id} ended ({ended.WavesSpawned} of {ended.Definition.Action?.Waves ?? 0} waves)");
+            if (EventActions.ActionKindOf(ended.Definition) == EventActionKind.Empower)
+            {
+                // Every carrier's LifeTime ends in this same second, so nothing is queued (D5).
+                var carriers = EmpowerAction.CarriersOf(ended.Id);
+                EmpowerAction.EndCarriers(ended.Id);
+                Core.Log.LogInfo($"[nyar] event {ended.Id} ended ({carriers} carriers expire with it)");
+            }
+            else
+            {
+                // Its waiting orders go now: one spawned later would get a fresh LifeTime and outlive end + grace, and the
+                // cleanup after the grace keeps waiting orders, which then belong to a restart of the same event.
+                SpawnTracker.EndEventUnits(ended.Id, DateTime.MinValue);
+                Core.Log.LogInfo($"[nyar] event {ended.Id} ended ({ended.WavesSpawned} of {ended.Definition.Action?.Waves ?? 0} waves)");
+            }
             Announcer.EventEnded(ended.Definition);
         }
         foreach (var cleanup in Engine.DueCleanups(now))
@@ -139,6 +151,8 @@ internal static class EventRuntime
             var (queued, _) = SpawnTracker.EndEventUnits(cleanup.EventId, cleanup.SpawnedBefore, cancelOrders: false);
             if (queued > 0) Core.Log.LogInfo($"[nyar] event {cleanup.EventId}: {queued} units queued for despawn after the grace");
         }
+        // Carrier removals first, within EmpowerBatchPerTick; the Empower events share what is left (D5).
+        EmpowerAction.BeginCarrierTick();
         foreach (var active in Engine.Active.ToList())
         {
             try
@@ -146,7 +160,11 @@ internal static class EventRuntime
 #if DEBUG
                 if (Settings.FaultInjection.Value == active.Id) throw new InvalidOperationException("Debug.FaultInjection");
 #endif
-                WaveAction.QueueDueWave(active, now);
+                switch (EventActions.ActionKindOf(active.Definition))
+                {
+                    case EventActionKind.Empower: EmpowerAction.TickCarriers(active, now); break;
+                    case EventActionKind.Waves: WaveAction.QueueDueWave(active, now); break;
+                }
                 Engine.Healthy(active.Id);
             }
             catch (Exception ex)
@@ -165,9 +183,18 @@ internal static class EventRuntime
     {
         var ended = Engine.Cancel(id);
         if (ended is null) return false;
-        var (queued, cancelled) = SpawnTracker.EndEventUnits(id, DateTime.MaxValue);
         RemoveInstance(id);
-        Core.Log.LogWarning($"[nyar] event {id} {why}: {queued} units queued, {cancelled} spawns cancelled");
+        if (EventActions.ActionKindOf(ended.Definition) == EventActionKind.Empower)
+        {
+            var carriers = EmpowerAction.CarriersOf(id);
+            EmpowerAction.StopCarriers(id);
+            Core.Log.LogWarning($"[nyar] event {id} {why}: {carriers} carriers queued for removal");
+        }
+        else
+        {
+            var (queued, cancelled) = SpawnTracker.EndEventUnits(id, DateTime.MaxValue);
+            Core.Log.LogWarning($"[nyar] event {id} {why}: {queued} units queued, {cancelled} spawns cancelled");
+        }
         Announcer.EventEnded(ended.Definition);
         return true;
     }

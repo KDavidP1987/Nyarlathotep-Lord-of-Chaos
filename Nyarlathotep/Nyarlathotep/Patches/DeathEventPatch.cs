@@ -7,8 +7,8 @@ using Unity.Collections;
 namespace Nyarlathotep.Patches;
 
 /// <summary>
-/// Reads the frame's DeathEvents (DEV_REMINDERS #26): a dead unit of ours leaves the spawn ledger, and a dead V Blood
-/// raises VBloodKilled on the TriggerBus. The system runs only when something dies (DEV_REMINDERS #28), so nothing
+/// Reads the frame's DeathEvents (DEV_REMINDERS #26): a dead unit of ours leaves the spawn ledger, and a V Blood kill
+/// (Logic/DeathRule) raises VBloodKilled on the TriggerBus. The system runs only when something dies (DEV_REMINDERS #28), so nothing
 /// ticks from here.
 /// </summary>
 [HarmonyPatch(typeof(DeathEventListenerSystem), nameof(DeathEventListenerSystem.OnUpdate))]
@@ -28,7 +28,10 @@ internal static class DeathEventPatch
                 foreach (var death in deaths)
                 {
                     SpawnTracker.Died(death.Died);
-                    if (death.Died.Has<VBloodUnit>()) TriggerBus.VBloodKilled(death.Died.GetPrefabGuid().GetPrefabName());
+                    // faction-empowerment D13: a V Blood kill carries VBloodConsumeSource; a gate boss with VBloodUnit alone
+                    // raises nothing (DEV_REMINDERS #26).
+                    if (Logic.DeathRule.IsVBloodKill(death.Died.Has<VBloodConsumeSource>(), death.Died.Has<VBloodUnit>()))
+                        TriggerBus.VBloodKilled(death.Died.GetPrefabGuid().GetPrefabName());
                 }
             }
             finally

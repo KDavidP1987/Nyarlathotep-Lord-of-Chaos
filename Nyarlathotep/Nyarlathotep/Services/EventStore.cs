@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Nyarlathotep.Logic;
@@ -69,9 +70,27 @@ internal static class EventStore
     }
 
     /// <summary>Unit names from PrefabCollectionSystem; denied are the name-based do-not-spawn list plus prefabs
-    /// carrying DropInInventoryOnSpawn (docs/GAME_ASSETS.md › Do-not-spawn list).</summary>
-    internal sealed class PrefabUnitCatalog : IUnitCatalog
+    /// carrying DropInInventoryOnSpawn (docs/GAME_ASSETS.md › Do-not-spawn list). Faction names are the Faction_* prefab
+    /// names of the prefab map, read once (faction-empowerment D1).</summary>
+    internal sealed class PrefabUnitCatalog : IUnitCatalog, IFactionCatalog
     {
+        static HashSet<string> _factions;
+
+        bool IFactionCatalog.IsKnown(string factionName) =>
+            factionName.StartsWith("Faction_", StringComparison.Ordinal) && Factions().Contains(factionName);
+
+        static HashSet<string> Factions()
+        {
+            if (_factions is not null) return _factions;
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var entry in Core.PrefabCollectionSystem._PrefabGuidToEntityMap)
+            {
+                var name = entry.Key.GetPrefabName();
+                if (name.StartsWith("Faction_", StringComparison.Ordinal)) names.Add(name);
+            }
+            return _factions = names;
+        }
+
         public bool IsKnown(string prefabName) =>
             Core.PrefabCollectionSystem.SpawnableNameToPrefabGuidDictionary.ContainsKey(prefabName);
 

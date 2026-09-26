@@ -251,6 +251,62 @@
       "retention": "for one run: removed in its finally; a crash leaves them and the next run removes leftovers first",
       "deletion": "automatic, or delete the folders and run `git worktree prune`",
       "singleCopy": true
+    },
+    {
+      "artifact": "Session snapshots",
+      "covers": [
+        "nyar-snap-*"
+      ],
+      "rows": [
+        "faction-empowerment › Session snapshots"
+      ],
+      "location": "%TEMP%\\nyar-snap-* (saved\\manifest.json plus the copies)",
+      "owner": "tools/dev-snapshot.ps1",
+      "retention": "while a session runs; a crash leaves it and the next -Save refuses and prints the restore (faction-empowerment D28); -Paths fails while one remains",
+      "deletion": "deleted by -Restore once every hash matches, or by hand after restoring",
+      "singleCopy": true
+    },
+    {
+      "artifact": "Release download",
+      "covers": [
+        "nyar-rel-*"
+      ],
+      "rows": [
+        "faction-empowerment › Release download"
+      ],
+      "location": "%TEMP%\\nyar-rel-* (the downloaded release zip)",
+      "owner": "tools/release-verify.ps1",
+      "retention": "for one run; an interrupted run leaves it and -Paths fails until it is deleted (faction-empowerment D24, D26)",
+      "deletion": "deleted in the script's finally block after hashing, or by hand",
+      "singleCopy": true
+    },
+    {
+      "artifact": "Rollback worktrees",
+      "covers": [
+        "nyar-rollback-*"
+      ],
+      "rows": [
+        "faction-empowerment › Rollback worktrees"
+      ],
+      "location": "%TEMP%\\nyar-rollback-* (a detached git worktree of the release tag)",
+      "owner": "tools/repo-rollback-drill.ps1",
+      "retention": "for one run; a leftover folder or worktree entry fails -Paths (faction-empowerment D25, D26, D29)",
+      "deletion": "`git worktree remove --force` in the script's finally block; by hand, `git worktree prune` and delete the folder",
+      "singleCopy": true
+    },
+    {
+      "artifact": "Drill saved config",
+      "covers": [
+        "nyar-drill-*"
+      ],
+      "rows": [
+        "faction-empowerment › Drill saved config"
+      ],
+      "location": "%TEMP%\\nyar-drill-* (the dev server's config saved by tools/rollback-drill.ps1 through tools/snapshot-lib.ps1)",
+      "owner": "tools/rollback-drill.ps1",
+      "retention": "for one drill; a crash leaves it, the next drill refuses and prints the restore, and -Paths fails until it is gone (faction-empowerment D23, D26)",
+      "deletion": "restored and deleted once every hash matches, or by hand after restoring",
+      "singleCopy": true
     }
   ]
 }
