@@ -7,9 +7,9 @@
 |---|---|---|---|---|---|---|---|
 | [foundation](foundation.md) | Foundation engine, store, spawner, scheduler, announcer and commands | done | L | 40/40 | 38 | 63 % | nyarlathotep |
 | [nyarlathotep](nyarlathotep.md) | Nyarlathotep, Lord of Chaos, v0.1 to v1.0 | in-progress | Epic | 33/46 | 36 | 77 % |  |
-| [raphael-api-core](raphael-api-core.md) | Raphael api 2 — status, events, push subscription, paging, contract check | in-progress | L | 0/22 | 22 | 100 % | nyarlathotep |
+| [raphael-api-core](raphael-api-core.md) | Raphael api 2 — status, events, push subscription, paging, contract check | in-progress | L | 0/22 | 22 | 92 % | nyarlathotep |
 | [spikes](spikes.md) | Spikes S1-S3, march, restart marker, carrier buff | done | M | 20/20 | 20 | 50 % | nyarlathotep |
 
-Most-missed layers — done plans: layer 6.1 (8), layer 12.3 (4), layer 4.5 (3), layer 12.4 (2), layer 11.2 (2); open plans (provisional): layer 6.1 (3), layer 14.1 (2), layer 5.1 (1), layer 10.1 (1), layer 3.1 (1).
+Most-missed layers — done plans: layer 6.1 (8), layer 12.3 (4), layer 4.5 (3), layer 12.4 (2), layer 11.2 (2); open plans (provisional): layer 6.1 (3), layer 5.1 (2), layer 3.1 (2), layer 14.1 (2), layer 10.1 (1).
 
 Store: `docs/dod`. Plans are the source of truth; this file is regenerated.
