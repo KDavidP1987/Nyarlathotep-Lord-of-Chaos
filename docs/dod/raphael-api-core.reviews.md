@@ -58,3 +58,54 @@ VERDICT: REVISE
 - F16 · accepted · the six surfaces are enumerated in Paths walked; -Paths is a discovery walk of tracked, untracked, ignored and server files, run last
 - F17 · accepted · D14 is now a test (ContractDocTests); D15 lists every required heading
 - F18 · accepted · S-3 and S-5 fallbacks now state the api 3 bump and contract note they need
+
+## Review 2 · 2026-09-25 · codex · plan commit a4e926a
+F1 blocking · Probe 2.1 has no single evidence command: D7 divides the actor-matrix control between filtered tests and preflight, so either half can pass while an actor gains access.
+Fix: Add one executable authorization-suite command that invokes both checks and fails for every ActionKind × actor, command visibility, indirect delivery, and gateway-bypass violation.
+F2 blocking · Probe 3.3 has no single evidence command covering every artifact’s storage, retention, deletion, and copies; `preflight.ps1 -Paths` checks names, while D16 separately checks only drill cleanup and restoration.
+Fix: Add one artifact-lifecycle check that validates the complete Data table, inventory/manifest membership, copy count, cleanup paths, and retention/deletion behavior.
+F3 blocking · Probe 4.3 leaves retroactive temporal behavior undecided: the plan does not say whether edits to duration, warning offsets, or announcement settings affect active events and already queued warnings.
+Fix: State whether active events snapshot temporal settings or adopt edits, and specify the resulting countdown and queued-warning behavior.
+F4 blocking · Probe 4.5 misses valid dynamically supplied tag arguments such as `Wire.Line(tag, ...)`; the stated first-argument collector and `[NYAR:` literal search can both overlook them.
+Fix: Require literal tag arguments and make `pwsh tools/preflight.ps1` fail on every non-literal `Wire.Record` or `Wire.Line` tag argument.
+F5 blocking · Probe 6.2 is not covered for every listed dependency: D21 exercises four runtime collaborators but not slow or rate-limited git/GitHub, unavailable Codex, malformed VCF context, or a slow message recipient.
+Fix: State timeout, retry, abort, and partial-state policy for each dependency and provide one dependency-failure-suite command that fails when any listed policy is absent.
+F6 blocking · Probe 10.1 has no single evidence command for authorization on every direct and indirect path; D7’s test command omits the preflight command-policy and gateway-only controls.
+Fix: Provide one command that runs the authorization tests plus command/gateway checks and returns failure if any direct or indirect path loses its control.
+F7 blocking · Probe 10.3 is supported only by a static token-shape scan; removing the prohibitions on reading `gh auth token`, printing credential-bearing environment, or leaking credentials into release logs need not make D10 fail.
+Fix: Extend one named secrets command to reject credential-reading commands, environment dumps, and secret-shaped content in generated logs and release records.
+F8 blocking · Probe 12.4 is internally inconsistent: D11 and Build step 2 omit `WireContract/bad-4`, while the matrix requires it, and the promised “3 fixtures each” cannot verify the enumerated five-or-six fixture states.
+Fix: Make the registry, Build step, D11, and matrix enumerate the same fixtures and use `pwsh tools/preflight.ps1 -SelfTest` to fail when any required failing, silent, or empty case is missing.
+F9 blocking · Probe 13.2 leaves subscriber fan-out unbounded: “100 subscribers” is only an example, while D22 measures one subscriber and no limit or degradation rule exists for larger connected populations.
+Fix: Decide a subscriber bound or an explicit unbounded-overload policy, state behavior at that bound, and test the worst permitted fan-out against the tick budget.
+F10 blocking · Probe 14.3 does not give an exact repository rollback range: `<pre-child>` remains an unresolved placeholder, while D18 instead reverts the potentially broader `v0.2.1..v0.3.0` release range.
+Fix: Record the concrete pre-child SHA before building and use that same SHA in the rollback instructions and drill command.
+F11 blocking · Probe 14.4’s path walk omits planned writes to `Nyarlathotep.Tests/ApiAccessTests.cs` and `ContractDocTests.cs`, including the later push additions to ApiAccessTests.
+Fix: Add those paths under the corresponding steps and make `pwsh tools/preflight.ps1 -Paths` compare the realized step diff with the declared walk and manifest.
+F12 blocking · D15 is unverifiable by its `file` evidence: a stranger can confirm six headings while the handoff contains no usable api-2 instructions, leaving probe 5.3’s conveyed contract uncontrolled.
+Fix: Enumerate the required parser, state, handshake, subscription, panel, and deferred-contract assertions in D15 or validate them with a handoff-document test.
+F13 advisory · Scenario—an unsuccessful reload or edit queues `config-changed`: probe 11.4 states successful operations activate it, but D6’s fails-when list does not verify the should-not-activate path.
+Fix: Add a negative PushTests case for failed reload, enable, disable, and set operations.
+F14 advisory · Scenario—definitions change between page 1 and page 2, causing duplicates or omissions: probe 7.2 chooses live stateless paging but does not surface this consequence to Raphael.
+Fix: Document the live-view paging consequence in the contract or add a revision token in a later API if stable traversal is required.
+F15 advisory · Scenario—a disconnect hook logs `subscriber left (0 subscribed)` although the specified subscription log format is `push: <n> subscribed`, making D12’s manual evidence ambiguous to a stranger.
+Fix: Use one exact log message in D5, D12, and the manual-session instructions.
+EARLIER: all resolved
+7/15 layers · 38/49 probes
+VERDICT: REVISE
+### Dispositions
+- F1 · accepted · D7 is now one command, preflight -AuthSuite, running the filtered tests, the commands, admin-list and gateway checks
+- F2 · accepted · D19: tools/data-inventory.json holds an entry for every artifact-table row, the in-memory ones and drill temp folders included; the check fails on a missing row
+- F3 · accepted · Business rules 6 (retroactive edits): running events keep their definition; cfg offsets and switches apply at restart; queued lines are never rewritten
+- F4 · accepted · D8 fails on a non-literal tag argument; fixture bad-5
+- F5 · accepted · the dependency table states timeout, retry, abort and partial-state policy for git/gh/GitHub, Codex, VCF and the send call; runtime ones are tested by D21
+- F6 · accepted · same as F1
+- F7 · accepted · D10's secrets check also fails on credential reads and environment dumps in tools/ scripts; fixture Secrets/bad-3
+- F8 · accepted · D11, Build step 2 and the matrix list the same fixtures; the selftest line no longer claims three fixtures each
+- F9 · accepted · subscriber cap 128 with `code=ratelimit` at the cap (D5); 640-send ceiling per tick pinned by PushTests (D6); bounds table row added
+- F10 · accepted · the rollback unit is the release, v0.2.1 (8b405a0)..v0.3.0, stated in D18, Rollback and step 1
+- F11 · accepted · ApiAccessTests.cs, ContractDocTests.cs and data-inventory.json added to Paths walked
+- F12 · accepted · D15 lists the required parser, state, handshake, subscription, panel and deferred-api statements
+- F13 · accepted · D6 fails when a failed reload, enable, disable or set queues config-changed
+- F14 · accepted · Business rules 3 states paging is a live view; the contract says so and Raphael re-reads from page 1 on config-changed
+- F15 · accepted · one log format "[nyar] push: <n> subscribed (<reason>)" in D5 and D12
