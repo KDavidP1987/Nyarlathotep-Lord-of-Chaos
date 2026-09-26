@@ -288,12 +288,10 @@ Part 1 (owner, about 25 minutes; server **127.0.0.1:9876**, Direct Connect, worl
 7. Run `.fam t` (your familiar leaves). Let a Bandit Thug hit you 3 more times with the same gear. **Note the 3 damage
    numbers** (expected about 1.5× step 3). **Note separately** whether they attack faster (time between swings) and whether they move or chase faster than before step 6.
 8. Kill 2 or 3 bandits and stay within about 40 m. When one reappears, run `.nyar debug here 40` at once and again every
-   5 seconds until its row shows "carrier example-empowerment". Wait up to 10 minutes for a real respawn. Only if none has
-   reappeared by then, run
-   `.spawnnpc CHAR_Bandit_Scout 1` instead (a new native bandit appearing mid-event, which the sweep treats exactly like a
-   respawn), then at once `.nyar debug here 40` and again every 5 seconds until the Scout's row shows "carrier
-   example-empowerment"; then kill the Scout. Note which of the two you timed (a Scout timing is recorded as an equivalent
-   of D16's respawn clause and needs an amendment before D16 is checked).
+   5 seconds until its row shows "carrier example-empowerment". Wait up to 10 minutes for a real respawn and stop
+   polling after 2 minutes of rows without the carrier. If no bandit reappears in 10 minutes, write "no respawn" and go on;
+   D16's respawn clause then stays open (KindredCommands' `.spawnnpc` is no substitute: it spawns units owned by the admin,
+   which Nyarlathotep skips on purpose).
 9. Walk about 40 m away from the camp, so no camp bandit is within 25 m of you. Run `.nyar event start fe-big`, then `.nyar event start fe-spawns` (3 Bandit Thugs appear around you), then
    `.spawnnpc CHAR_Bandit_Thug 2` (KindredCommands; 2 more Thugs). Wait 30 seconds and run `.nyar status`. **Note the
    fe-spawns line**: it should count 3 units, not 5.
