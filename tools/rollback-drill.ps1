@@ -30,7 +30,8 @@
     pwsh tools/rollback-drill.ps1 -SelfTest
     Runs the N-1 log check over tools/rollback-drill-fixtures/{good,bad,empty}/LogOutput.txt (a captured BepInEx LogOutput.log): good (a real boot log)
     must pass, bad (the same log without "marker sweep") and empty ("no log") must fail; then the leftover check over
-    two scratch folders: one holding saved\ must be refused, one without it must not → "drill selftest: 5/5".
+    three scratch folders: none without saved\ or with a saved\ that has no manifest.json (an unfinished snapshot)
+    may be refused, a complete snapshot must be, with its restore steps (A11, A15) → "drill selftest: 6/6".
 #>
 [CmdletBinding()]
 param(
@@ -64,12 +65,20 @@ function Test-RollbackLog([string]$Text, [int]$MinListed = 0) {
     return $null
 }
 
-# The leftover check. Returns $null when no nyar-drill-* folder under $Root holds a saved\ copy, else the refusal.
+# The leftover check. Returns $null when no nyar-drill-* folder under $Root holds a complete snapshot, else the
+# refusal. A snapshot is complete once saved\manifest.json exists: the drill writes it (through a .tmp and a rename)
+# after the copy and before it changes the server, so a saved\ without it means the server was never touched (A15).
 function Get-LeftoverRefusal([string]$Root) {
     $held = @(Get-ChildItem -LiteralPath $Root -Directory -Filter 'nyar-drill-*' -ErrorAction SilentlyContinue |
-        Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'saved') })
+        Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'saved\manifest.json') })
     if (-not $held) { return $null }
-    "an earlier drill left the saved plugin DLL and config in $(($held.FullName) -join ', '); copy saved\Nyarlathotep.dll to BepInEx\plugins and saved\config\* to BepInEx\config\Nyarlathotep, then delete the folder"
+    $steps = foreach ($h in $held) {
+        $m = try { Get-Content -LiteralPath (Join-Path $h.FullName 'saved\manifest.json') -Raw | ConvertFrom-Json } catch { $null }
+        $dll = if (-not $m) { 'unreadable manifest' } elseif ($m.hadDll) { "copy saved\Nyarlathotep.dll to BepInEx\plugins (SHA-256 $($m.dllHash))" } else { 'remove BepInEx\plugins\Nyarlathotep.dll (there was none)' }
+        $cfg = if (-not $m) { 'restore by hand' } elseif ($m.hadConfig) { 'replace BepInEx\config\Nyarlathotep with saved\config\*' } else { 'remove BepInEx\config\Nyarlathotep (there was none)' }
+        "$($h.FullName): $dll; $cfg"
+    }
+    "an earlier drill left a saved snapshot of the dev server: $($steps -join ' | '); then delete the folder"
 }
 
 function Read-Shared([string]$Path) {
@@ -91,15 +100,20 @@ if ($SelfTest) {
         if ($why -eq $want[$k]) { $ok++ }
         else { Write-Host "  - $k fixture: expected $(if ($want[$k]) { "fail — $($want[$k])" } else { 'pass' }), got $(if ($why) { "fail — $why" } else { 'pass' })" }
     }
-    # The leftover check over scratch folders: a leftover holding saved\ is refused, one without it is not.
+    # The leftover check over scratch folders: no saved\, and a saved\ without its manifest (an unfinished snapshot,
+    # the server untouched), are not refused; a complete snapshot is, with the restore its manifest describes.
     $scratch = Join-Path $env:TEMP "nyar-drilltest-$([guid]::NewGuid().ToString('N'))"
     try {
         New-Item -ItemType Directory -Path (Join-Path $scratch 'nyar-drill-plain') | Out-Null
         if (-not (Get-LeftoverRefusal $scratch)) { $ok++ } else { Write-Host '  - leftover without saved\: expected no refusal' }
+        New-Item -ItemType Directory -Path (Join-Path $scratch 'nyar-drill-partial\saved\config') | Out-Null
+        if (-not (Get-LeftoverRefusal $scratch)) { $ok++ } else { Write-Host '  - saved\ without a manifest: expected no refusal' }
         New-Item -ItemType Directory -Path (Join-Path $scratch 'nyar-drill-crashed\saved\config') | Out-Null
-        if (Get-LeftoverRefusal $scratch) { $ok++ } else { Write-Host '  - leftover holding saved\: expected a refusal' }
+        Set-Content -LiteralPath (Join-Path $scratch 'nyar-drill-crashed\saved\manifest.json') -Value '{"complete":true,"hadDll":true,"dllHash":"AB","hadConfig":false}'
+        $why = Get-LeftoverRefusal $scratch
+        if ($why -match 'SHA-256 AB' -and $why -match 'there was none' -and $why -notmatch 'partial') { $ok++ } else { Write-Host "  - complete snapshot: expected a refusal with its restore, got: $why" }
     } finally { Remove-Item -LiteralPath $scratch -Recurse -Force -ErrorAction SilentlyContinue }
-    $total = $want.Count + 2
+    $total = $want.Count + 3
     Write-Host "drill selftest: $ok/$total"
     exit ([int]($ok -ne $total))
 }
@@ -202,6 +216,11 @@ try {
     $hadConfig = Test-Path -LiteralPath $ConfigDir
     if ($hadConfig) { Get-ChildItem -LiteralPath $ConfigDir -Force | Copy-Item -Destination (Join-Path $save 'config') -Recurse -Force }
     $savedHashes = Get-FolderHashes (Join-Path $save 'config')
+    # The snapshot is complete: record it atomically before the server is changed (A15).
+    $manifest = [ordered]@{ complete = $true; hadDll = $hadDll; dllHash = $dllHash; hadConfig = $hadConfig; configHashes = @($savedHashes) }
+    $mTmp = Join-Path $save 'manifest.json.tmp'
+    [IO.File]::WriteAllText($mTmp, ($manifest | ConvertTo-Json -Depth 4), [Text.UTF8Encoding]::new($false))
+    Move-Item -LiteralPath $mTmp -Destination (Join-Path $save 'manifest.json')
     $saved = $true
     if (Test-Path -LiteralPath $ConfigDir) { Get-ChildItem -LiteralPath $ConfigDir -Force | Remove-Item -Recurse -Force }
 
