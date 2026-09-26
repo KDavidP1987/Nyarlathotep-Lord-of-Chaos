@@ -155,3 +155,35 @@ F1 advisory · Coverage: the owner accepts the author's coverage line after thre
 VERDICT: READY
 ### Dispositions
 - F1 · accepted · approved on the owner's review; build-level findings go to amendments
+
+## Review 5 · 2026-09-26 · codex · plan commit 0fc6771
+F1 `blocking` — Probe `4.5` is unanswered for “every server session”: D20 computes the set from already-recorded `### Session` headings, so a session omitted from both feature doc and audit is invisible, and a stranger cannot verify D20’s “every server session” claim.
+Fix: Define an independently enumerable source of sessions—such as boot/session IDs extracted from preserved logs—and make `-SessionsOf` fail when any such session lacks both its feature-doc entry and audit line.
+
+F2 `blocking` — Probe `12.4` is incomplete: the matrix does not state non-pass empty-input output for Secrets, `-Paths`, data inventory, `-AuditOf`, or `-SessionsOf`, and the rollback selftest mutates only parsed log content rather than planting failures for live-process refusal, missing `state.json`, restoration, or ancestor/range checks.
+Fix: Enumerate failing, silent, and empty fixtures with exact outputs for every introduced check, and make one registered selftest command fail when each real rollback-stage control is removed.
+
+F3 `blocking` — Probe `14.3` has no single evidence command: D16 proves server/data downgrade while D18 separately proves repository reversal, contrary to the required one-command gating evidence, so either half can be omitted while the other reports success.
+Fix: Add one rollback-gate command that runs both the D16 server/data drill and the final post-push D18 repository drill and exits non-zero if either control is absent.
+
+F4 `blocking` — Probe `7.3` relies on D15 for recovery after dropped/unknown pushes, but D15 checks only headings and keywords—not the required reread-on-unknown-event, event-end, and killswitch rules—and its claim that the file is “never copied” cannot be verified from that file.
+Fix: Make a test parse the handoff and contract for each precise cache-invalidation and reread rule, and replace the untestable “never copied” criterion with a repository-scoped, command-verifiable condition.
+
+F5 `advisory` — A host or PowerShell crash after D16 empties the live dev configuration but before `finally` can leave the newer DLL or altered configuration installed; the next-run cleanup covers temporary folders, not recovery of the server installation.
+Fix: Use an atomic staging/swap protocol with a durable recovery marker, and restore any interrupted installation before starting a new drill.
+
+F6 `advisory` — The explicit `14.4` path walk omits amendment-created `Logic/DefinitionEditor.cs` and `ConfigChangedTests.cs`; D19’s final discovery walk should catch them, but the documented step-by-step inventory is stale.
+Fix: Add both amendment paths, and any A6/A7 fixtures, to Step 3’s Paths walked list.
+
+F7 `advisory` — The unauthorized-path decision says a non-admin receives VCF’s standard refusal, while D7 proves only the `adminOnly` declaration; it does not verify the observed refusal or that the handler produces no rows or side effects.
+Fix: Add an integration-level denial case for a player invoking `api events`, asserting the refusal response and zero wire rows or state changes.
+13/15 layers · 47/49 probes
+VERDICT: REVISE
+### Dispositions
+- F1 · rejected · advisory by rule — 4.5 is answered at D20 and Build plan steps 4–6: every session is a boot the plan runs, each written as "### Session <n>" with its log-check line, and -SessionsOf fails on a session without one; deriving sessions from logs is more rigour on an answered probe (the drill now log-checks each of its own boots)
+- F2 · rejected · advisory by rule — 12.4 is answered at D11 (each preflight check's good, bad and empty fixtures under -SelfTest) and D16 (the drill selftest); more fixtures on an answered probe is work, not a decision. The drill's live stages each fail by name, and runs A and B (Session 3) exercised the missing state.json and name-change failures
+- F3 · rejected · advisory by rule — 14.3 is answered at Rollout by two controls with one failing command each: D16 (release N-1 on N's files) and D18 (the repository revert); the rubric asks for the command behind each control, and one wrapper would add no control
+- F4 · accepted · A12: D15 requires both recovery sentences and checks that no RAPHAEL_HANDOFF.md exists under the Raphael workspace
+- F5 · accepted · A11 (defect): a leftover holding saved\ refuses the drill with the restore steps; the selftest reads 5/5
+- F6 · accepted · Paths walked › Step 3 names Logic/{EventEngine,EventCatalog,DefinitionEditor}.cs and ConfigChangedTests.cs (A6, A7)
+- F7 · rejected · advisory — the refusal is VCF's adminOnly, a framework control D7 checks by declaration and -AuthSuite by the admin list; a live non-admin call is covered by the contract's noaccess note and needs no decision

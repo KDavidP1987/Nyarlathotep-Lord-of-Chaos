@@ -4,7 +4,9 @@
 
 .DESCRIPTION
     pwsh tools/rollback-drill.ps1 -From v0.3.0 -To v0.2.1
-      1. Refuses while any VRisingServer process runs; removes leftovers of a crashed run (%TEMP%\nyar-drill-*).
+      1. Refuses while any VRisingServer process runs. Refuses while a leftover %TEMP%\nyar-drill-* folder holds a
+         saved\ copy (a crashed run, or a restore that did not match): that copy is the only one of the dev server's
+         DLL and config, so the admin restores it by hand first (raphael-api-core A11). Other leftovers are removed.
       2. Checks that -To is an ancestor of -From and that `git diff --name-only <To>..<From>` lists only paths a
          tracked glob of tools/paths-manifest.txt covers.
       3. Builds each tag's DLL in a disposable worktree under %TEMP%\nyar-drill-<guid>.
@@ -25,7 +27,8 @@
 
     pwsh tools/rollback-drill.ps1 -SelfTest
     Runs the N-1 log check over tools/rollback-drill-fixtures/{good,bad,empty}/LogOutput.txt (a captured BepInEx LogOutput.log): good (a real boot log)
-    must pass, bad (the same log without "marker sweep") and empty ("no log") must fail → "drill selftest: 3/3".
+    must pass, bad (the same log without "marker sweep") and empty ("no log") must fail; then the leftover check over
+    two scratch folders: one holding saved\ must be refused, one without it must not → "drill selftest: 5/5".
 #>
 [CmdletBinding()]
 param(
@@ -59,6 +62,14 @@ function Test-RollbackLog([string]$Text, [int]$MinListed = 0) {
     return $null
 }
 
+# The leftover check. Returns $null when no nyar-drill-* folder under $Root holds a saved\ copy, else the refusal.
+function Get-LeftoverRefusal([string]$Root) {
+    $held = @(Get-ChildItem -LiteralPath $Root -Directory -Filter 'nyar-drill-*' -ErrorAction SilentlyContinue |
+        Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'saved') })
+    if (-not $held) { return $null }
+    "an earlier drill left the saved plugin DLL and config in $(($held.FullName) -join ', '); copy saved\Nyarlathotep.dll to BepInEx\plugins and saved\config\* to BepInEx\config\Nyarlathotep, then delete the folder"
+}
+
 function Read-Shared([string]$Path) {
     try {
         $fs = [IO.File]::Open($Path, 'Open', 'Read', 'ReadWrite,Delete')
@@ -78,8 +89,17 @@ if ($SelfTest) {
         if ($why -eq $want[$k]) { $ok++ }
         else { Write-Host "  - $k fixture: expected $(if ($want[$k]) { "fail — $($want[$k])" } else { 'pass' }), got $(if ($why) { "fail — $why" } else { 'pass' })" }
     }
-    Write-Host "drill selftest: $ok/$($want.Count)"
-    exit ([int]($ok -ne $want.Count))
+    # The leftover check over scratch folders: a leftover holding saved\ is refused, one without it is not.
+    $scratch = Join-Path $env:TEMP "nyar-drilltest-$([guid]::NewGuid().ToString('N'))"
+    try {
+        New-Item -ItemType Directory -Path (Join-Path $scratch 'nyar-drill-plain') | Out-Null
+        if (-not (Get-LeftoverRefusal $scratch)) { $ok++ } else { Write-Host '  - leftover without saved\: expected no refusal' }
+        New-Item -ItemType Directory -Path (Join-Path $scratch 'nyar-drill-crashed\saved\config') | Out-Null
+        if (Get-LeftoverRefusal $scratch) { $ok++ } else { Write-Host '  - leftover holding saved\: expected a refusal' }
+    } finally { Remove-Item -LiteralPath $scratch -Recurse -Force -ErrorAction SilentlyContinue }
+    $total = $want.Count + 2
+    Write-Host "drill selftest: $ok/$total"
+    exit ([int]($ok -ne $total))
 }
 
 if (-not $From -or -not $To) { Write-Host 'usage: rollback-drill.ps1 -From <tag N> -To <tag N-1> | -SelfTest'; exit 2 }
@@ -134,6 +154,8 @@ function Get-FolderHashes([string]$Dir) {
 $tmp = $null; $saved = $false; $result = $null
 try {
     if (Get-Process VRisingServer -ErrorAction SilentlyContinue) { Fail 'a VRisingServer process is running; stop it first' }
+    $refusal = Get-LeftoverRefusal $env:TEMP
+    if ($refusal) { Fail $refusal }
     foreach ($old in @(Get-ChildItem -LiteralPath $env:TEMP -Directory -Filter 'nyar-drill-*' -ErrorAction SilentlyContinue)) {
         Write-Host "leftover from an earlier run removed: $($old.FullName)"
         Remove-Item -LiteralPath $old.FullName -Recurse -Force
