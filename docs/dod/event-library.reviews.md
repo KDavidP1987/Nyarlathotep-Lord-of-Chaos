@@ -203,13 +203,12 @@ Fix: maintain a control-to-fixture/input table and have `ControlCaseTests` requi
 VERDICT: REVISE
 
 ### Dispositions
-Review 4 ran past the three-round cap by the owner's decision 3A ("approve only on READY; if round 4 is not READY,
-bring it back"). The dispositions below are the author's proposals, applied only after the owner decides.
-- F1 · accepted · pending owner: readiness is defined as Precedence.StartBlocker's first blocker, in its order (purge, General.Enabled, pillar, definition disabled or invalid, MaxConcurrentEvents), shown as ready / off (purge) / off (mod) / off (pillar) / off (event) / invalid: <reason> / full (cap); ReadinessTests asserts equality with StartBlocker over every combination
-- F2 · accepted · pending owner: a write whose Promote throws re-reads events.json, reloads memory from what is on disk and replies with the observed state ("write uncertain: file now holds <n> definitions"); D19 gains a fake that promotes and then throws
-- F3 · accepted · pending owner: the kick-off and D25 add `.nyar event enable <id>` for each spawn template before `.nyar event start <id>`
-- F4 · accepted · pending owner: Build step 4 hashes events.json and the cfg immediately before the non-admin walk (part C) and compares them immediately after, before part D
-- F5 · accepted · pending owner: a valid empty catalogue replies "no templates" to template list and "unknown template <name>" to info and use; CatalogTests covers it
-- F6 · accepted · pending owner: S-11 is relabelled a dependency contract gated by D15 (a cfg write that rewrites comments or other keys fails D15 and stops the build for an amendment)
-- F7 · accepted · pending owner: ControlCaseTests reads a control → case-name table (bad, good, empty per control) and requires those exact tests, not just prefixes
+The owner accepted F1–F7 on 2026-09-26 in plan mode (option A); they are applied in revision 4, which goes to Review 5.
+- F1 · accepted · readiness is defined as Precedence.StartBlocker's first blocker, in its order (purge, General.Enabled, pillar, definition disabled or invalid, MaxConcurrentEvents), shown as ready / off (purge) / off (mod) / off (pillar) / off (event) / invalid: <reason> / full (cap); ReadinessTests asserts equality with StartBlocker over every combination; revision 4 applies it in the code's actual order, which puts MaxConcurrentEvents before the definition (Logic/Precedence.cs:22-27)
+- F2 · accepted · a write whose Promote throws re-reads events.json, reloads memory from what is on disk and replies with the observed state ("write uncertain: file now holds <n> definitions"); D19 gains a fake that promotes and then throws
+- F3 · accepted · the kick-off and D25 add `.nyar event enable <id>` for each spawn template before `.nyar event start <id>`
+- F4 · accepted · Build step 4 hashes events.json and the cfg immediately before the non-admin walk (part C) and compares them immediately after, before part D
+- F5 · accepted · a valid empty catalogue replies "no templates" to template list and "unknown template <name>" to info and use; CatalogTests covers it
+- F6 · accepted · S-11 is relabelled a dependency contract gated by D15 (a cfg write that rewrites comments or other keys fails D15 and stops the build for an amendment)
+- F7 · accepted · ControlCaseTests reads a control → case-name table (bad, good, empty per control) and requires those exact tests, not just prefixes
 
