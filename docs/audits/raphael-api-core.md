@@ -167,3 +167,15 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 ### Session 9 · 2026-09-26 (step 6 crash and recovery, A15)
 - session 9 log check: 0 unhandled, 5 nyar lines, 0 orphan errors, 0 unity errors
   - part 1's crashed boot read 0 unhandled, 6 nyar lines, 0 orphan, 0 unity; part 2's v0.3.0 boots 6 and 14, its last boot (v0.2.1) the line above
+
+### Step 6 · 2026-09-26 · 9e873be
+- compile: 0 errors, 0 warnings; tests: 703 passed, 0 failed
+- preflight: PREFLIGHT OK ("release tags: 3/3", "data inventory: 18 entries; 43/43 globs and files, 8/8 plan rows", "wire contract: 7 tags, 4 api commands, all documented (api 2)"); -Paths "699 walked, all in manifest"; -SelfTest 27/27; -SessionsOf "9/9 checked"
+- release: v0.3.0 (ee36a7d) tagged, drilled (Session 5; D18 before the push allowed only "v0.3.0 not pushed", A10), grepped (no SteamID or email in the tracked files; the commit author identity is the owner's git config, as on every earlier push), pushed, and published as a GitHub pre-release; the downloaded zip's SHA-256 equals the one recorded above
+- /code-review (dda8ba9..86d77c4): 4 findings, all fixed as A13 (drill-mark minute past the boot timeout, no DLL left on a server without one, hidden config files saved and hashed, a JSON escape in the inventory's leftover path); Session 7 planted the DLL and hidden-file cases
+- Codex cross-inspection round 1 (77e5446): REVISE, 4 blocking — (1) a refusal while a server ran ended in the finally's Stop-Server and killed that server; (2) the DLL restore was not hash-checked; (3) an absent config folder came back empty; (5) Session 3's overwritten practice boots were never log-checked; non-blocking (4) the inventory contradicted A11, (6) an email-pattern scan, (7) the handoff and surfaces agree. (1)–(4) accepted as A14, Session 8 exercised the refusal and the absent folder; (5) recorded as an exception in Session 8's entry; (6) `git grep -IE` for email addresses over 651 tracked files finds none
+- Codex round 2 (cc48e83): EARLIER all resolved; 1 blocking — a crash during the snapshot left a partial saved\ that looked restorable, and an absent and an empty config folder saved alike: accepted as A15 (saved\manifest.json written atomically before the server changes; only a complete snapshot is refused, with its recorded restore); selftest 6/6, mutants 4/6 and 5/6; Session 9 crashed a drill and restored by the refusal's steps
+- Codex round 3 (9e873be): EARLIER all resolved; no new finding
+- Codex verdict: READY (round 3)
+- amendments: A10 (discovered, 14.3), A11 A13 A14 A15 (defect, ~D16), A12 (discovered, ~D15, 7.3); plan re-review for A9–A10: Review 5 REVISE, Review 6 READY
+- dod status: D15–D20 pass lines follow; 22/22 verified at close
