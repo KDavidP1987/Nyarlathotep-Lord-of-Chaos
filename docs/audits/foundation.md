@@ -64,6 +64,15 @@ checks are lines "- session <n> log check: …" (D33).
 - baseline boot: session 16 (547dc3b, the current code); session 16 log check: 0 unhandled, 0 orphan errors, 0 unity errors
 - decisions the plan leaves to the build, recorded before building: A18 (state.json gains the daily banner's occurrence key), A19 (the daily banner names the day's remaining scheduled events until the stats digest); warnings apply to waves after the first (wave 1 comes at the start); a warning under a minute says "almost here" (a pool line, same placeholders); `.nyar api version` keeps D39's IsReady guard, so a probe before ready gets "still loading" (contract §2 says so)
 
+### Step 7 · 2026-09-25 · 5859b60 (recorded after the fact)
+- written after step 7 was built: the approved plan (functional-stirring-quilt.md › Execution, item 2) folded step 7 (D17, D26) into step 6's in-game session, and its prep commit 331bb3f was built on 5859b60 without a separate entry here; the state it started from is step 6's post-audit at 5859b60
+- git status: clean at 5859b60 (step 6's last Codex fix committed)
+- compile: 0 errors, 0 warnings; dotnet test: 529 passed (step 6 post-audit)
+- preflight: exit 0; -SelfTest 25/25 checks before the AnnouncementDefaults check was added
+- dod status: foundation 27/40 verified, 0 problems
+- feature doc read: docs/features/FOUNDATION.md (Status step 6 of 9); plan D17, D26 and Design › Security (the public command allow-list)
+- baseline boot: session 17 Boot A ran the 331bb3f Debug build (docs/features/FOUNDATION.md › Test results › Session 17)
+
 ## Post-audit
 ### Step 1 · 2026-09-24 · 40505e2
 - compile: 0 errors, 0 warnings (plugin and Nyarlathotep.Tests)
@@ -184,9 +193,13 @@ yarfoundation-before.tsv waits for step 8 (D34), with the game client closed
 - Codex round 2 REVISE: an expired warning could hold a queue slot while a live line was dropped; fixed with DropExpired before the full-queue drop
 - Codex round 3 REVISE: a caller outside the tick could still meet expired lines; Enqueue now runs DropExpired itself
 - Codex verdict: READY (round 4, 5859b60)
-- 331bb3f (step 7 prep: the announcement-defaults preflight check, `.nyar` listing the caller's commands, the degraded notice 10 s after login): compile, 529 tests, preflight and selftest as above
-- 331bb3f Codex cross-inspection round 1 REVISE: F1 the `.nyar` command list uncapped at 480 bytes, accepted (split into lines, no command cut, boundary test); F2 the delayed notice not rechecking its recipient, accepted (same PlatformId and still an admin at send); F3 a notice queued while healthy, accepted (queued only while degraded, re-read at send); F4 the defaults regex fooled by strings or dead code, rejected (every preflight check is lexical with a planted-fault selftest; the boot line shows the defaults in each session). Round 2 REVISE: an oversized single command, accepted (lines cut to the cap); the reconnect gate used up by a connect that queues nothing, accepted (checked last; exercised by D31's reconnect in game). Round 3 READY at 3126518
-- 331bb3f fixes: compile 0 errors, 0 warnings; tests Passed 530, Failed 0; mutation check 4 planted faults each failed a test (no split, no trailing comma, a padded continuation line, no cut of an oversized command); preflight exit 0
 - session 17 log check: 0 unhandled, 116 nyar lines, 0 orphan errors, 0 unity errors (Boot A; Boot B: 0 unhandled, 229 nyar lines, 0 orphan errors, 0 unity errors)
 - session 18 log check: 0 unhandled, 20 nyar lines, 0 orphan errors, 0 unity errors
 - A20 (session 17 Boot B, the refusal text showed "< >", which the chat took for a tag): 531 tests pass, verified in session 18
+
+### Step 7 · 2026-09-25 · 331bb3f, fixes c06aad5 and 3126518
+- 331bb3f (step 7 prep: the announcement-defaults preflight check, `.nyar` listing the caller's commands, the degraded notice 10 s after login): compile, 529 tests, preflight and selftest as above
+- 331bb3f Codex cross-inspection round 1 REVISE: F1 the `.nyar` command list uncapped at 480 bytes, accepted (split into lines, no command cut, boundary test); F2 the delayed notice not rechecking its recipient, accepted (same PlatformId and still an admin at send); F3 a notice queued while healthy, accepted (queued only while degraded, re-read at send); F4 the defaults regex fooled by strings or dead code, rejected (every preflight check is lexical with a planted-fault selftest; the boot line shows the defaults in each session). Round 2 REVISE: an oversized single command, accepted (lines cut to the cap); the reconnect gate used up by a connect that queues nothing, accepted (checked last; exercised by D31's reconnect in game). Round 3 READY at 3126518
+- 331bb3f fixes: compile 0 errors, 0 warnings; tests Passed 530, Failed 0; mutation check 4 planted faults each failed a test (no split, no trailing comma, a padded continuation line, no cut of an oversized command); preflight exit 0
+- /code-review (inline): the degraded notice sent at once could reach a client still loading; 331bb3f delays it 10 s
+- Codex verdict: READY (round 3, 3126518)
