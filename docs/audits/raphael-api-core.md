@@ -122,4 +122,7 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - the owner's SteamID appears in the server log's "admin … ran" lines only; no record here or in the feature doc carries it
 - dev cfg WaveWarnings restored to false; the deployed DLL stays the 0.3.0 session build until step 6's release build
 - Codex cross-inspection round 1 (a8174fb): REVISE, 1 blocking — (1) D12's pass line proved the behaviour but not the item's structural clauses (Prefix, IsReady first, the user read, try/catch, once-per-streak log, Hook.UserDisconnect in the health line): accepted, the pass line now cites each in the source and the preflight and test evidence. Non-blocking: (2) D13's plugin=0.3.0 is the deployed session build: noted in D13's pass line; (3) D22's reply times by the owner's statement: accepted as manual evidence; (4) the purge refusal is a step error: the reusable steps for step 6's drill will name `.nyar purge` then `.nyar purge confirm`; (5) step 3 checks complete; (6) no SteamID in the repo: `git grep 7656119` finds only the plan's grep instruction, and no server log is stored in the repository
+- Codex round 2 (d896479): F1 resolved; F2–F6 dispositions consistent; one low note — the D12 pass line named the test row HookUserDisconnect, whose method is DisconnectHook and covers the offline-prune fallback: the citation now says so
+- Codex verdict: READY (round 2)
+- amendments: none
 - dod status: D12, D13, D22 pass lines added; 16/22 verified; D15–D20 wait for step 6
