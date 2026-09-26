@@ -76,9 +76,11 @@ says what Nyarlathotep implements and how it was tested.
   reported, the overflow streak, one guard for the tick, no prune at the cap, an exception message logged) each fail
   a test. 692 passed.
 - Post-audit (A7): the reload and edit flows run in Logic/DefinitionEditor; ConfigChangedTests show the boot load and
-  every failed reload, set, enable and disable push nothing and an applied one pushes one config-changed. 701 passed.
-- Checked in step 4's session only: the disconnect patch applies and ends a subscription; `sub` reaches the hub
-  through the gateway.
+  every failed reload, set, enable and disable push nothing and an applied one pushes one config-changed.
+- Checked in step 4's session only (the game-bound services cannot load in the test host): the disconnect patch
+  applies and ends a subscription; `sub` reaches the hub through the gateway; EventStore's two one-line delegates
+  reach DefinitionEditor: with `sub on`, `.nyar event reload`, `enable`, `disable` and `set` each push one
+  config-changed, and a refused `set` (unknown event) pushes none. 703 passed after the enable and name cases.
 
 ## Open questions
 

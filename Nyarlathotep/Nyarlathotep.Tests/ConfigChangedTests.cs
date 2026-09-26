@@ -60,10 +60,12 @@ public class ConfigChangedTests
 
     [Theory]
     [InlineData("enabled", false)]
+    [InlineData("enabled", true)]
     [InlineData("durationSeconds", 900)]
+    [InlineData("name", "Ashfall raid")]
     public void An_applied_edit_pushes_config_changed_once(string path, object value)
     {
-        var s = New();
+        var s = new Setup(Json.File(Json.Event("raid").Replace("\"enabled\": true", "\"enabled\": " + (value is true ? "false" : "true"))));
         Assert.StartsWith("event raid", s.Editor.Edit("raid", path, value, FakeUnits.Default()));
         Assert.Equal([ConfigChanged], s.Pushed());
     }
