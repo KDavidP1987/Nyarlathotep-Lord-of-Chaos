@@ -114,6 +114,23 @@ elif mode in ("s17a", "s17b"):
         doc = {"SchemaVersion": 1, "events": [warn]}
     write(doc)
     print(mode, "written", sys.argv[2] if len(sys.argv) > 2 else "")
+elif mode == "a21":
+    # foundation A21 (step 9): t-own is 10 units in one wave, each with unitLifetimeSeconds 30 inside a 300 s event, so
+    # their own lifetime decides the due time; with MaxDespawnsPerTick 1 they must leave 1 a tick ("10 units due for
+    # despawn", then batches of 1 to "0 left"), not all in one frame by LifeTime. t-end (6 units, 60 s) is the event-end
+    # control: queued at end + grace and drained the same way.
+    now = datetime.datetime.now().replace(second=0, microsecond=0)
+    at = [hhmm(now + datetime.timedelta(minutes=3))]
+    own = point(unit(10), radius=6); own["unitLifetimeSeconds"] = 30
+    end = point(unit(6), radius=6); end["location"] = {"type": "Point", "x": -1180, "z": -800}
+    day = [now.strftime("%a")]
+    doc = {"SchemaVersion": 1, "events": [
+        {"id": "t-own", "name": "t-own", "enabled": True, "pillar": "spawns", "durationSeconds": 300,
+         "trigger": {"type": "Schedule", "days": day, "times": at}, "action": own},
+        {"id": "t-end", "name": "t-end", "enabled": True, "pillar": "spawns", "durationSeconds": 60,
+         "trigger": {"type": "Schedule", "days": day, "times": at}, "action": end}]}
+    write(doc)
+    print("a21: t-own and t-end at", at[0])
 elif mode == "restore-valid":
     write(json.load(open(os.path.join(HERE, "d23a.json"))))
     print("valid d23a restored")

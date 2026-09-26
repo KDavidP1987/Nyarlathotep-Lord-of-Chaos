@@ -275,15 +275,13 @@ internal static class SpawnTracker
     static Entity Prepare(Entity unit, SpawnOrder order, out string error)
     {
         error = null;
-        // A22: the backstop and the marker come first, so a unit that fails any later step, and then fails to be
-        // destroyed, still expires on its own and is found by the boot sweep.
-        if (!unit.AddComponentSafe<LifeTime>()) return Abandon(unit, "LifeTime could not be added", out error);
-        unit.Write(new LifeTime { Duration = order.LifetimeSeconds, EndAction = LifeTimeEndAction.Destroy });
-        // A10: an immediate spawn has no Age, and without it LifeTime never counts down.
-        if (!unit.AddComponentSafe<Age>()) return Abandon(unit, "Age could not be added", out error);
-        unit.Write(new Age { Value = 0f });
-        // The marker's stat modifiers and UnitSetup's level land in this frame, before the buff systems read either.
-        if (!TryMark(unit, order.Tuning, out error)) return Abandon(unit, error, out error);
+        // A22: the marker (the boot sweep's record) comes first and the LifeTime backstop is attempted even when marking
+        // failed, so a unit that fails any step, and then fails to be destroyed, keeps at least one of the two. The
+        // marker's stat modifiers and UnitSetup's level land in this frame, before the buff systems read either.
+        var marked = TryMark(unit, order.Tuning, out var markError);
+        var timed = TryTime(unit, order.LifetimeSeconds, out var timeError);
+        if (!marked) return Abandon(unit, markError, out error);
+        if (!timed) return Abandon(unit, timeError, out error);
 
         var position = new float3(order.X, order.Y, order.Z);
         if (unit.Has<Translation>()) unit.Write(new Translation { Value = position });
@@ -294,6 +292,26 @@ internal static class SpawnTracker
 
         UnitSetup.Apply(unit, order.Tuning);
         return unit;
+    }
+
+    /// <summary>The LifeTime backstop: LifeTime with Destroy at its end, and Age, without which it never counts down (A10).
+    /// Never throws.</summary>
+    static bool TryTime(Entity unit, int lifetimeSeconds, out string error)
+    {
+        error = null;
+        try
+        {
+            if (!unit.AddComponentSafe<LifeTime>()) { error = "LifeTime could not be added"; return false; }
+            unit.Write(new LifeTime { Duration = lifetimeSeconds, EndAction = LifeTimeEndAction.Destroy });
+            if (!unit.AddComponentSafe<Age>()) { error = "Age could not be added"; return false; }
+            unit.Write(new Age { Value = 0f });
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = $"LifeTime could not be set: {ex.Message}";
+            return false;
+        }
     }
 
     static Entity Abandon(Entity unit, string why, out string error)
@@ -335,22 +353,31 @@ internal static class SpawnTracker
     static bool TryMark(Entity unit, UnitTuning tuning, out string error)
     {
         error = null;
-        if (!Core.ServerGameManager.TryInstantiateBuffEntityImmediate(unit, unit, MarkerBuff, out Entity buff) || !buff.Exists())
+        try
         {
-            error = "marker buff could not be applied";
+            if (!Core.ServerGameManager.TryInstantiateBuffEntityImmediate(unit, unit, MarkerBuff, out Entity buff) || !buff.Exists())
+            {
+                error = "marker buff could not be applied";
+                return false;
+            }
+            // The sweep's record first (A22), so a marker that fails a later step still makes the unit findable.
+            if (!buff.AddComponentSafe<SpellLevel>()) { error = "SpellLevel could not be added to the marker"; return false; }
+            buff.Write(new SpellLevel { Level = Markers.Unit });
+            buff.RemoveComponentSafe<CreateGameplayEventsOnSpawn>();
+            buff.RemoveComponentSafe<GameplayEventListeners>();
+            buff.RemoveComponentSafe<RemoveBuffOnGameplayEvent>();
+            buff.RemoveComponentSafe<RemoveBuffOnGameplayEventEntry>();
+            buff.RemoveComponentSafe<DestroyOnGameplayEvent>();
+            // The potion's own stat bonus is replaced by the requested multipliers (none by default), A7.
+            if (!UnitSetup.StatModifiers(buff, tuning)) { error = "stat modifiers could not be set on the marker"; return false; }
+            if (buff.Has<LifeTime>()) buff.Write(new LifeTime { Duration = 0f, EndAction = LifeTimeEndAction.None });
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = $"marker could not be set: {ex.Message}";
             return false;
         }
-        buff.RemoveComponentSafe<CreateGameplayEventsOnSpawn>();
-        buff.RemoveComponentSafe<GameplayEventListeners>();
-        buff.RemoveComponentSafe<RemoveBuffOnGameplayEvent>();
-        buff.RemoveComponentSafe<RemoveBuffOnGameplayEventEntry>();
-        buff.RemoveComponentSafe<DestroyOnGameplayEvent>();
-        // The potion's own stat bonus is replaced by the requested multipliers (none by default), A7.
-        if (!UnitSetup.StatModifiers(buff, tuning)) { error = "stat modifiers could not be set on the marker"; return false; }
-        if (buff.Has<LifeTime>()) buff.Write(new LifeTime { Duration = 0f, EndAction = LifeTimeEndAction.None });
-        if (!buff.AddComponentSafe<SpellLevel>()) { error = "SpellLevel could not be added to the marker"; return false; }
-        buff.Write(new SpellLevel { Level = Markers.Unit });
-        return true;
     }
 
     /// <summary>Units whose marker buff carries one of our values, from an IncludeDisabled | IncludeSpawnTag query (a
