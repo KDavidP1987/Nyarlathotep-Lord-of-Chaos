@@ -113,6 +113,26 @@ Carrier: `AB_Consumable_PhysicalPowerPotion_T02_Buff` (-1591883586). The prefab 
 - also seen: `empower` at 10 m buffed a CHAR_Bandit_Prisoner_Villager_Female, because the spike's native-NPC filter admits prisoners. The pillar must filter by faction and exclude prisoners and other non-combatants
 - S3 verdict: go — AB_Consumable_PhysicalPowerPotion_T02_Buff (-1591883586) applied with TryInstantiateBuffEntityImmediate; gameplay-event components stripped; LifeTime set to the window with EndAction Destroy; ModifyUnitStatBuff_DOTS cleared and refilled with MultiplyBaseAdd modifiers. Stats apply at once, revert on expiry keeping the Health ratio, survive streaming out and back, and persist across a restart with LifeTime continuing
 
+### Session 1 · 2026-09-26 · faction-empowerment step 4 (build 5d775a9, dev world nyardev, unattended)
+
+Setup: `pwsh tools/dev-snapshot.ps1 -Save s1` (28 files), Release build deployed, `python tools/ingame/session-events.py fe1` at
+12:25:04: Pillars.FactionEmpowerment and Debug.VerboseLogging on, two Schedule-triggered Empower events on Faction_Bandits with
+physicalPower 1.5 and maxHealth 1.5: fe-short (Sat 12:28, 60 s) and fe-long (Sat 12:31, 1200 s). No player connected.
+
+- [x] boot 1 (12:25): "boot carrier sweep: 0 found, 0 queued for removal"
+- [x] fe-short started by Schedule 12:28; "empower fe-short: query 41 of 41 faction entities"; "sweep 40 applied, 1 skipped (vblood 1)"
+- [x] apply sample: "empower fe-short sample CHAR_Bandit_Scout: pp 11.49 -> 17.24, hp max 53.05 -> 79.58" (both exactly ×1.5)
+- [x] natural end: "event fe-short ended (40 carriers expire with it)", then one tick later the revert sample "pp 17.24 -> 11.49, hp max 79.58 -> 53.05"; no "outlived the end" line, so all 40 carriers were gone within 5 s of the end (A4 watch)
+- [x] fe-long started by Schedule 12:31; "sweep 40 applied, 1 skipped (vblood 1)"; apply sample the same ×1.5
+- [x] tick timing with both sweeps: avg 0.05–1.7 ms, max 55.5 ms over 61 ticks (the tick of the first 40 applies), then max ≤ 3.5 ms
+- [x] mid-window stop at 12:40 (fe-long due to end 12:51, several autosaves after its apply), hard stop as in the rollback drill
+- [x] boot 2 (12:40): "event fe-long cancelled by restart (it was due to end 2026-09-26 16:51:00Z)" and "boot carrier sweep: 40 found, 40 queued for removal" (k = 40 > 0); the removals ran, then the next autosave (12:43) before the stop
+- [x] boot 3 (12:43): "boot carrier sweep: 0 found, 0 queued for removal"
+- [x] `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s1, … deleted)"; the fe1 backups in %TEMP%
+yar-session archived to the session scratchpad; `-Paths` clean
+- logs: each boot's BepInEx log has only the three known warnings (Beelzebub TUNE ×2, Il2CppInterop Class::Init); the Unity log's 226 "PrefabLookupMap.TryGet - Prefab with PrefabGUID <n> is in an unknown state" warnings all fall between the save load and "Startup Completed" (one per GUID, from the save), 0 after it, 0 exceptions
+- not covered here: the stop and purge paths (owner, Session 2); S-7 is decided after Session 2
+
 ## Open questions
 
 - Which stats are worth exposing beyond power/HP/speed? (resistances, `SiegePower` for sieges)

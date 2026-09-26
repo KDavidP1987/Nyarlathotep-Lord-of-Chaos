@@ -71,3 +71,7 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - in-game: none (step 3 is the wire shape; Session 2 reads `.nyar api status` in game)
 - dod status: 15/29 verified (D1, D2, D3, D5, D6, D7, D8, D9, D10, D11, D12, D13, D20, D21, D27)
 
+## Sessions
+- session 1 log check: 0 unhandled, 48 nyar lines, 0 orphan errors, 0 unity errors
+  - boot 1 (12:25–12:40): "log check: 0 unhandled, 33 nyar lines, 0 orphan errors, 0 unity errors"; boot 2 (12:40–12:43): 9 nyar lines, otherwise the same; boot 3 (12:43): 6 nyar lines, otherwise the same; each run before the next boot
+
