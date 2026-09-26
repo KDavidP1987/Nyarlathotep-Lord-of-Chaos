@@ -1,6 +1,6 @@
 # Raphael api — the machine interface
 
-**Status:** in development (docs/dod/raphael-api-core.md, step 3 of 6 done, post-audit READY). Ships in 0.3.0 as api 2.
+**Status:** in development (docs/dod/raphael-api-core.md, step 4 of 6 done: Session 1 clean). Ships in 0.3.0 as api 2.
 
 ## What it provides
 
@@ -77,10 +77,31 @@ says what Nyarlathotep implements and how it was tested.
   a test. 692 passed.
 - Post-audit (A7): the reload and edit flows run in Logic/DefinitionEditor; ConfigChangedTests show the boot load and
   every failed reload, set, enable and disable push nothing and an applied one pushes one config-changed.
-- Checked in step 4's session only (the game-bound services cannot load in the test host): the disconnect patch
-  applies and ends a subscription; `sub` reaches the hub through the gateway; EventStore's two one-line delegates
-  reach DefinitionEditor: with `sub on`, `.nyar event reload`, `enable`, `disable` and `set` each push one
-  config-changed, and a refused `set` (unknown event) pushes none. 703 passed after the enable and name cases.
+- Checked in the server sessions only (the game-bound services cannot load in the test host): the disconnect patch
+  applies (Session 1) and ends a subscription; `sub` reaches the hub through the gateway; EventStore's two one-line
+  delegates reach DefinitionEditor: with `sub on`, `.nyar event reload`, `enable`, `disable` and `set` each push one
+  config-changed, and a refused `set` (unknown event) pushes none. All but the first need a connected player and run
+  in Session 2 (step 5). 703 passed after the enable and name cases.
+
+### Session 1 · 2026-09-25
+Step 4, unattended. c744f1b deployed (Release, 0 warnings) to the dev world (save-data-nyardev); dev cfg General.Enabled
+true, TimingLog true, [Announcements] all off, MaxDespawnsPerTick 5. `session-events.py a21` wrote t-own (10 units, own
+lifetime 30 s, 300 s event) and t-end (6 units, 60 s) at 22:42.
+- Boot: "Harmony patches applied: 5 method(s) patched"; "triggers: all hooks available" (UserDisconnect is one of
+  them: TriggerBus.RequirePatched finds OnUserDisconnected patched); "push: ready (queue 50, 5 lines a tick, at most 128
+  subscribers)", after "announcements: all off", before "Nyarlathotep initialized … (attempt #1)".
+- The boot marker sweep found 5 units the previous world save still held ("5 found, 5 queued for despawn (0 listed in
+  state.json)") and drained them in one batch ("5 of 5 destroyed, 0 requeued, 0 left").
+- 22:42 both started by Schedule; t-own "10 units queued, due in 30s", t-end "6 units queued, due in 90s"; spawn
+  batches 10 then 6. t-own's units left by their own lifetime: "10 units due for despawn", batches 5 and 5 to "0
+  left". t-end ended (1 of 1 waves); at end + grace "6 units due for despawn", batches 5 and 1 to "0 left". t-own
+  ended (1 of 1 waves) at 22:47.
+- Tick timing: avg 0.040–1.184 ms, max 28.3 ms (the spawn and despawn minutes); idle max under 0.7 ms.
+- Stopped after the next "Finished Saving" (AutoSave_413, 22:47:39), so the saved world holds no event unit.
+- `-LogCheck`: 0 unhandled, 28 nyar lines, 0 orphan errors, 0 unity errors. Every [Warning] line read: Il2CppInterop
+  "Class::Init signatures have been exhausted" and two Beelzebub TUNE lines (sibling mods, the same every boot); the
+  server log's 226 PrefabLookupMap "unknown state" warnings all come before "Startup Completed", as in foundation
+  session 12. No error line.
 
 ## Open questions
 

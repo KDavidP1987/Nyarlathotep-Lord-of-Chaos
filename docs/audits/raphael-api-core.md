@@ -34,6 +34,14 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - feature doc read: docs/features/RAPHAEL_API.md (Status: step 2 of 6 done, post-audit READY; Open questions: none); plan D5–D7, D12, D21, Build plan step 3, Business rules 1, 8–10, Interfaces, Design › States and Permissions, Failure & observability; contract § Push events; Services/Announcer.cs (WarningClock, UpcomingWave, GameUsers), Logic/Hooks.cs (Broadcaster, IUserSource), Services/EventRuntime.cs, WaveAction.cs, EventStore.cs, EventScheduler.cs, TriggerBus.cs, Patches/UserConnectPatch.cs
 - server: not running; step 3's in-game checks run in step 4's session
 
+### Step 4 · 2026-09-25 · c744f1b
+- git status: clean
+- compile: 0 errors, 0 warnings
+- preflight: exit 0 ("PREFLIGHT OK"); dod --check raphael-api-core: problems 0, warnings 0
+- dod status: raphael-api-core 13/22 verified (D1–D11, D14, D21)
+- feature doc read: docs/features/RAPHAEL_API.md (Status: step 3 of 6 done, post-audit READY; Open questions: none; step 3 results name the checks for the step 4 and 5 sessions); plan Build plan step 4, D20
+- server: not running; dev config General.Enabled true, TimingLog true, WaveWarnings false, MaxDespawnsPerTick 5; the session uses tools/ingame/session-events.py mode `a21` (t-own and t-end at now+3)
+
 ## Post-audit
 ### Step 1 · 2026-09-25 · 6437b90
 - compile: 0 errors, 0 warnings (plugin and Nyarlathotep.Tests)
