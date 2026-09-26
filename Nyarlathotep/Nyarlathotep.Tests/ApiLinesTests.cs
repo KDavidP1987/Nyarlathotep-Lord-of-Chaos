@@ -74,6 +74,17 @@ public class ApiLinesTests
         Assert.Equal("-", Value(reply[0], "wave"));
     }
 
+    [Fact]
+    public void The_largest_empower_row_fits_the_line_limit()
+    {
+        // Five of the longest faction names in Reference Data/unit_index.tsv, a 32-character id and a 64-byte name.
+        var d = EmpowerDef(new string('x', 32), Enumerable.Repeat("Faction_ChurchOfLum_SpotShapeshiftVampire", 5).ToArray())
+            with { Name = new string('N', 80) };
+        var reply = Status([Running(d, 0, 86400)], [], new DefinitionSet([d]), isAdmin: true, new() { [d.Id] = 99999 });
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(reply[0]) <= Wire.MaxBytes);
+        Assert.EndsWith(" wave=- units=99999", reply[0]);
+    }
+
     [Theory]
     [InlineData("Faction_Bad Name", "Bad_Name")]
     [InlineData("Faction_a=b;c:d", "abcd")]
