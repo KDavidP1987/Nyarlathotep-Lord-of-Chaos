@@ -208,6 +208,7 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
     readonly Dictionary<long, Carrier> _byUnit = [];
     readonly LinkedList<Removal> _removals = new();
     readonly Dictionary<long, int> _removing = [];       // units whose carrier is queued for removal but still on them
+    readonly Dictionary<long, long> _expiring = [];      // unit → carrier whose removal and fallback failed, until it is gone
     int _remaining;
 
     public bool IsActive(string eventId) => _events.ContainsKey(eventId);
@@ -218,10 +219,20 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
     public int Carriers => _byUnit.Count;
     public int PendingRemovals => _removals.Count;
     public bool SweepInProgress(string eventId) => _events.TryGetValue(eventId, out var e) && e.Sweep is not null;
-    /// <summary>The event whose carrier the unit holds, or "removing" while a stopped event's carrier is still queued for
-    /// removal on it, so no other event applies a second carrier before the first is gone (D5).</summary>
-    public string? CarrierOf(long unit) =>
-        _byUnit.TryGetValue(unit, out var c) ? c.EventId : _removing.ContainsKey(unit) ? "removing" : null;
+    /// <summary>The event whose carrier the unit holds, or "removing" while an old carrier is still on it (queued for
+    /// removal, or left to its LifeTime after the removal and its fallback failed), so no event applies a second carrier
+    /// before the first is gone (D5).</summary>
+    public string? CarrierOf(long unit)
+    {
+        if (_byUnit.TryGetValue(unit, out var c)) return c.EventId;
+        if (_removing.ContainsKey(unit)) return "removing";
+        if (_expiring.TryGetValue(unit, out var buff))
+        {
+            if (ops.Exists(buff)) return "removing";
+            _expiring.Remove(unit);
+        }
+        return null;
+    }
 
     /// <summary>An Empower event started: its first sweep is due now.</summary>
     public void Start(string eventId, EmpowerAction action, DateTime endsUtc, DateTime utcNow) =>
@@ -273,6 +284,8 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
     public void BeginTick(int budget)
     {
         _remaining = budget;
+        if (_expiring.Count > 0)                              // rare: only carriers whose removal and fallback both failed
+            foreach (var gone in _expiring.Where(kv => !ops.Exists(kv.Value)).Select(kv => kv.Key).ToList()) _expiring.Remove(gone);
         var retry = new List<Removal>();
         while (_remaining > 0 && _removals.First is { } node)
         {
@@ -295,6 +308,7 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
                 {
                     log($"empower {r.Tally?.EventId ?? "boot"}: carrier removal failed, left to expire: {ex.Message}");
                     Done(r, removed: false);
+                    if (r.Unit is { } u) _expiring[u] = r.Buff;
                 }
                 continue;
             }

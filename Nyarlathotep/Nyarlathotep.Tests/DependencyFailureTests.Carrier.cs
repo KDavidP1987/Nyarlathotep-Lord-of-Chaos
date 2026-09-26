@@ -130,6 +130,26 @@ public partial class DependencyFailureTests
     }
 
     [Fact]
+    public void A_carrier_left_to_expire_blocks_a_second_carrier_until_it_is_gone()
+    {
+        var (ops, ledger, _) = Carriers(1);
+        Tick(ledger, C0);
+        ledger.Stop("surge");
+        ops.RemoveThrows = int.MaxValue;
+        ops.ExpireThrows = true;
+        ledger.Start("again", Surge, C0.AddSeconds(600), C0);
+        for (var i = 1; i <= 6; i++) Tick(ledger, C0.AddSeconds(i), id: "again");
+        Assert.Equal(0, ledger.PendingRemovals);                    // given up: left to its LifeTime
+        Tick(ledger, C0.AddSeconds(20), id: "again");               // a resweep while the old carrier still exists
+        Assert.Equal(1, ops.CallCount("create"));
+        Assert.Equal("removing", ledger.CarrierOf(1));
+        ops.Buffs.Clear();                                           // its LifeTime ran out
+        Tick(ledger, C0.AddSeconds(40), id: "again");
+        Assert.Equal(2, ops.CallCount("create"));
+        Assert.Equal("again", ledger.CarrierOf(1));
+    }
+
+    [Fact]
     public void A_failing_query_is_the_events_own_fault_and_changes_nothing()
     {
         var (ops, ledger, _) = Carriers(3);
