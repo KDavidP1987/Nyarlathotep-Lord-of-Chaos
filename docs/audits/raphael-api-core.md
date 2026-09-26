@@ -39,3 +39,19 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - amendments: A1 (discovered, 5.1: `sub` moves to step 3 with the code it calls), A2 (discovered, 3.1: action named by pillar)
 - in-game: none (pure logic step)
 - dod status: D1, D2, D3 pass lines added; D4 waits for Wire.Api = 2 in step 2
+### Step 2 · 2026-09-25 · f05f2ac
+- compile: 0 errors, 0 warnings (plugin and Nyarlathotep.Tests)
+- tests: `dotnet test Nyarlathotep/Nyarlathotep.Tests` → Passed 649, Failed 0 (ContractDocTests, ApiAccessTests, WireFormatTests and AuthorizationTests cases)
+- mutation check: Wire.Api = 3 failed 2 WireFormatTests/ContractDocTests cases; restored code passes
+- preflight: exit 0 ("PREFLIGHT OK"); selftest 27/27 checks, 89 extra bad fixtures, none passing
+- -AuthSuite: fails only on ".nyar api sub not found once", expected until step 3 (A1)
+- /code-review (09fbce5): a literal tag in Commands/ reached the wire unchecked (the check read Logic/ only) — fixed in c317a63, tags now collected from the whole plugin (A4)
+- Codex cross-inspection round 1 (09fbce5): REVISE, 5 findings — alias/static import of Wire, tools/ credential rule by spelling, -AuthSuite could pass with zero tests, ApiAccessTests checked known keys only, ContractDocTests matched the design table loosely: all accepted (c317a63, A4)
+- Codex round 2 (c317a63): F3–F5 resolved; new — global:: alias, imported Python environ / destructured Node env, ${env:TEMP} rejected: accepted (d03a335)
+- Codex round 3 (d03a335): whitespace around :: or . in an alias; shell/batch expansions: accepted (86063d5 — tools/ holds no shell or batch script)
+- Codex round 4 (86063d5): escaped @alias; extensionless and .zsh scripts: accepted (f05f2ac — tools/ holds only .ps1 .psm1 .py .mjs .js .json .txt .md)
+- Codex round 5 (f05f2ac): both resolved, no new finding
+- Codex verdict: READY (round 5)
+- amendments: A3 (discovered, 4.5: the wire check reads the plugin only), A4 (discovered, 4.5: every call form, the environment allow-list, the tools/ file-type rule, reverse check in step 3)
+- in-game: none (commands exercised in step 4's server session)
+- dod status: D4, D9, D14 pass lines added; D7, D8, D10, D11 wait for step 3 (sub, the reverse check, UserDisconnectPatch)

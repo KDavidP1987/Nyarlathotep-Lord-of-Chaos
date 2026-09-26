@@ -1,6 +1,6 @@
 # Raphael api — the machine interface
 
-**Status:** in development (docs/dod/raphael-api-core.md, step 2 of 6 done). Ships in 0.3.0 as api 2.
+**Status:** in development (docs/dod/raphael-api-core.md, step 2 of 6 done, post-audit READY). Ships in 0.3.0 as api 2.
 
 ## What it provides
 
