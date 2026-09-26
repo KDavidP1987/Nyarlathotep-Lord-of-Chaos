@@ -441,7 +441,10 @@
         "bad-10": "the audit's session 8 line lists a Unity error kind with no unity sub-bullet attributing it",
         "bad-11": "the audit's session 8 line shows 1 unity error and lists no kinds",
         "bad-12": "the audit's session 8 kind is attributed to ours without citing an amendment",
-        "bad-13": "tools/preflight-checks.json maps the slug to a second doc whose session 99 has no log check line (A8: every mapped doc is read)"
+        "bad-13": "tools/preflight-checks.json maps the slug to a second doc whose session 99 has no log check line (A8: every mapped doc is read)",
+        "bad-14": "a second mapped doc reuses session 8, which the audit has one clean line for (A8: a session number belongs to one doc)",
+        "bad-15": "the feature doc has two Session 8 headings (A8)",
+        "bad-16": "tools/preflight-checks.json maps the slug to an empty list (A8: an empty mapping is not the slug-derived doc)"
       }
     },
     {

@@ -1398,19 +1398,25 @@ function Test-CheckSessionLogs([string]$Root) {
     if (-not $slug) { return New-Result $false 'session logs: no plan named (-SessionsOf <slug>)' }
     # The feature docs are the ones childDocs maps the slug to; the slug-derived name only without a mapping (A8).
     $mt = Read-Text $Root 'tools/preflight-checks.json'
-    $mapped = if ($mt) { @(($mt | ConvertFrom-Json).childDocs.$slug | Where-Object { $_ }) } else { @() }
-    $docRels = if ($mapped.Count) { $mapped } else { @("docs/features/$($slug.ToUpperInvariant().Replace('-', '_')).md") }
+    $entry = if ($mt) { ($mt | ConvertFrom-Json).childDocs.PSObject.Properties[$slug] } else { $null }
+    $docRels = if ($entry) { @($entry.Value | Where-Object { $_ }) } else { @("docs/features/$($slug.ToUpperInvariant().Replace('-', '_')).md") }
+    if ($docRels.Count -eq 0) { return New-Result $false "session logs: childDocs maps $slug to no doc" }
     $audit = Read-Text $Root "docs/audits/$slug.md"
-    $sessions = @()
+    # One session number belongs to one doc: the audit names sessions by number only.
+    $owner = @{}; $shared = @()
     foreach ($docRel in $docRels) {
         $doc = Read-Text $Root $docRel
         if ($null -eq $doc) { return New-Result $false "session logs: $docRel not found" }
         $results = [regex]::Match($doc, '(?ms)^## Test results\s*$(.*?)(?=^## |\z)')
-        if ($results.Success) { $sessions += @([regex]::Matches($results.Groups[1].Value, '(?m)^### Session (\d+) · ') | ForEach-Object { [int]$_.Groups[1].Value }) }
+        if (-not $results.Success) { continue }
+        foreach ($n in @([regex]::Matches($results.Groups[1].Value, '(?m)^### Session (\d+) · ') | ForEach-Object { [int]$_.Groups[1].Value })) {
+            if ($owner.ContainsKey($n)) { $shared += "session $n in $($owner[$n]) and $docRel" } else { $owner[$n] = $docRel }
+        }
     }
     $docRel = $docRels -join ', '
+    if ($shared) { return New-Result $false "session logs: $slug numbers a session twice ($($shared -join '; '))" }
     if ($null -eq $audit) { return New-Result $false "session logs: docs/audits/$slug.md not found" }
-    $sessions = @($sessions | Sort-Object -Unique)
+    $sessions = @($owner.Keys | Sort-Object)
     if ($sessions.Count -eq 0) { return New-Result $false "session logs: $slug has no sessions under $docRel › Test results" }
     $checks = @{}; $dupes = @(); $unattributed = @()
     $pattern = '(?m)^- session (\d+) log check: (\d+) unhandled, (\d+) nyar lines(?:, (\d+) orphan errors, (\d+) unity errors)?(?<rest>[^\r\n]*)(?:\r?\n  - before A10[^\r\n]*?\b(\d+) orphan errors)?'
