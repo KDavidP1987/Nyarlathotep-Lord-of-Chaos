@@ -143,3 +143,73 @@ The owner accepted F1–F8 on 2026-09-26 in plan mode (decisions 1A, 2A, 3A); th
 - F6 · accepted · Design › States says a delete undone from .bak comes back without its former cooldown
 - F7 · accepted · Session 2's non-admin walk adds template list, template info and pillar list
 - F8 · accepted · D27 names the creating forms (template use, event new, event copy), each tested at 200 → 201, and set and delete confirm tested separately at capacity
+
+## Review 4 · 2026-09-26 · codex · plan: revision 3 (4e24357); file access confirmed (0 blocked reads)
+I read `docs/dod/event-library.md` and `Nyarlathotep/Nyarlathotep/Logic/CommandArgs.cs`, plus the requested Epic, sibling, profile, code, resources, tooling manifests, and unit index; I did not read `docs/dod/event-library.reviews.md`.
+
+Layer scoring:
+
+1. Considered — 1.1–1.3: Purpose & typical use.
+2. Considered — 2.1–2.3: Design › Permissions; D8, D17, D22.
+3. Considered — 3.1–3.4: Design › Data; D1–D15, D30.
+4. Gap — 4.1–4.3 and 4.5 are answered, but 4.4 contradicts the inherited precedence.
+5. Considered — 5.1–5.3: Interfaces › Internal.
+6. Gap — 6.1 and 6.3 are answered, but 6.2 leaves an ambiguous post-write failure contract.
+7. Considered — 7.1–7.3: Design › States.
+8. Considered — 8.1–8.2: Use cases › Minimal stretch.
+9. Considered — 9.1–9.3: Use cases › Maximal stretch.
+10. Considered — 10.1–10.4: Security; D17, D18, D22.
+11. Considered — 11.1–11.4: Design › UX; D20, D21, D23, D25.
+12. Considered — 12.1–12.4: Failure & observability; D18, D19, D24, D31.
+13. Considered — 13.1–13.2: Performance; D25, D27.
+14. Considered — 14.1–14.4: Rollout; D28–D30.
+15. Considered — 15.1–15.2: Out of scope.
+
+The child correctly inherits or references the Epic’s event-library constraint, hard durations, every-X sets, admin authorization, and amended unattended-soak rule. Its stated readiness rule does not correctly inherit Epic precedence.
+
+Gating evidence commands:
+
+- 2.1 and 10.1: `pwsh tools/preflight.ps1 -AuthSuite`
+- 3.3: `pwsh tools/preflight.ps1`
+- 4.4: the filtered `dotnet test` command for `ReadinessTests` and `ControlPrecedenceTests`
+- 6.2: filtered `dotnet test` for dependency-failure tests plus `pwsh tools/preflight.ps1 -SelfTest`
+- 10.3: `pwsh tools/preflight.ps1 -SelfTest`
+- 12.4: the D31 filtered `dotnet test` command followed by `pwsh tools/preflight.ps1 -SelfTest`
+- 14.3: `pwsh tools/rollback-gate.ps1 -From v0.4.0 -To v0.5.0`
+- 14.4: `pwsh tools/preflight.ps1 -Paths -DeclaredOf event-library`
+
+F1 [blocking] Probe 4.4 is contradictory: D16 requires `invalid` to beat `off (pillar)`, while Epic precedence and the current `Precedence.StartBlocker` implement pillar before the definition; it also calls capped definitions `ready` while their start refusal is `MaxConcurrentEvents`.
+Fix: choose one inherited ordering and make readiness represent the same first blocker—including purge, General.Enabled, pillar and cap—or explicitly define a separate display contract without claiming equality to `StartBlocker`.
+
+F2 [blocking] Probe 6.2 leaves the events-file failure contract undecided: `IFileStore.Promote` can conceptually replace the main file and then throw, but D19 promises every failed write leaves the file unchanged and loaded memory unchanged; the stated fake cases do not settle this post-commit failure.
+Fix: define whether promotion is guaranteed atomic-with-trustworthy-success, or require rereading/reloading after an uncertain failure and reporting the observed on-disk state; make the D19 command fail on a fake that promotes and then throws.
+
+F3 [blocking] D25 is unverifiable by its manual evidence as written: `template use` creates both spawn templates disabled, and the kick-off runs `event start` without first running `event enable`; current `StartBlocker` rejects disabled definitions, so probe 11.4’s claimed soak activation cannot occur.
+Fix: add `.nyar event enable <id>` for each spawn template before `event start`, and include those commands in D25 and Build step 5.
+
+F4 [blocking] D22 is not reproducible from Build step 4: that step hashes events.json and the cfg before deleting them for the fresh-install milestone, after which authorized parts A/B mutate both files; those hashes cannot establish that part C’s unauthorized commands changed nothing, leaving probe 10.1’s manual control unverifiable to a stranger.
+Fix: take fresh hashes immediately before the non-admin walk and compare them immediately afterward, before part D changes the pillar cfg.
+
+F5 [advisory] The minimal-stretch empty-catalogue scenario conflates an empty valid catalogue with an unavailable catalogue; D19 only defines missing or unparsable input, so a valid `{"schemaVersion":1,"events":[]}` catalogue has no explicit list/info behavior.
+Fix: specify whether an empty valid catalogue reports an empty-list message or is treated as unavailable, and add the corresponding catalogue test.
+
+F6 [advisory] S-11 is not especially cheap to reverse: if `ConfigEntry.Value` rewrites comments or unrelated formatting, the fallback stops for an owner decision instead of providing an alternate implementation.
+Fix: label S-11 as a validated dependency contract gated by D15, or preselect an acceptable BepInEx-native fallback and enumerate its preservation guarantees.
+
+F7 [advisory] D31 enforces method-name triplets rather than confirming that each “empty” case is semantically meaningful; a vacuous empty test can satisfy reflection while testing no empty-input behavior.
+Fix: maintain a control-to-fixture/input table and have `ControlCaseTests` require the declared case names, not merely matching prefixes.
+
+13/15 layers · 47/49 probes
+VERDICT: REVISE
+
+### Dispositions
+Review 4 ran past the three-round cap by the owner's decision 3A ("approve only on READY; if round 4 is not READY,
+bring it back"). The dispositions below are the author's proposals, applied only after the owner decides.
+- F1 · accepted · pending owner: readiness is defined as Precedence.StartBlocker's first blocker, in its order (purge, General.Enabled, pillar, definition disabled or invalid, MaxConcurrentEvents), shown as ready / off (purge) / off (mod) / off (pillar) / off (event) / invalid: <reason> / full (cap); ReadinessTests asserts equality with StartBlocker over every combination
+- F2 · accepted · pending owner: a write whose Promote throws re-reads events.json, reloads memory from what is on disk and replies with the observed state ("write uncertain: file now holds <n> definitions"); D19 gains a fake that promotes and then throws
+- F3 · accepted · pending owner: the kick-off and D25 add `.nyar event enable <id>` for each spawn template before `.nyar event start <id>`
+- F4 · accepted · pending owner: Build step 4 hashes events.json and the cfg immediately before the non-admin walk (part C) and compares them immediately after, before part D
+- F5 · accepted · pending owner: a valid empty catalogue replies "no templates" to template list and "unknown template <name>" to info and use; CatalogTests covers it
+- F6 · accepted · pending owner: S-11 is relabelled a dependency contract gated by D15 (a cfg write that rewrites comments or other keys fails D15 and stops the build for an amendment)
+- F7 · accepted · pending owner: ControlCaseTests reads a control → case-name table (bad, good, empty per control) and requires those exact tests, not just prefixes
+
