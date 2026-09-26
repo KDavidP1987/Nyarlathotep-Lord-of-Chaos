@@ -60,6 +60,9 @@ is listed here as IMPLEMENTED with the api that added it.
   - `-` means unknown or none; `0`/`1` are booleans.
   - Numbers are bare: seconds, not `5m`.
   - Unknown keys are ignored, so a line may grow without breaking an older Raphael.
+  - A value outside the set §3 lists for a key (a `kind` or `state` the client does not render) never breaks
+    parsing: the client shows the row with its generic fields or skips it. Every value of an enumerated key is
+    listed in §3 before the server sends it; `kind=empower` has been listed since api 2 and is first sent in api 3.
 - **At most 480 bytes per line** (under the 510-byte `FixedString512Bytes` limit). Wire lines carry **no colour
   tags**.
 - The human replies (`.nyar status`, `.nyar top`, …) are **not** a wire. They are for people, may change

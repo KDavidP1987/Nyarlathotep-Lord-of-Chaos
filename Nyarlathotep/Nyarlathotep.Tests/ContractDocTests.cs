@@ -85,6 +85,9 @@ public class ContractDocTests
         Assert.Contains("An empower row (api 3) carries `faction=<names joined by ','>`", flat);
         Assert.Contains("its `wave` is `-`, and its admin `units` is the number of NPCs holding the event's empowerment", flat);
         Assert.Contains("kind=empower name=Legion_Surge state=active faction=Legion,Bandits left=1500 wave=- units=42", flat);
+        var transport = Regex.Replace(Regex.Match(Contract, @"(?ms)^## 1\. Transport.*?(?=^## )").Value, @"\s+", " ");
+        Assert.Contains("A value outside the set §3 lists for a key", transport);
+        Assert.Contains("`kind=empower` has been listed since api 2 and is first sent in api 3", transport);
         var log = Regex.Match(Contract, @"(?ms)^## 9\. Change log.*").Value;
         Assert.Matches(@"(?m)^\| 3 \| 0\.4\.0 \(faction-empowerment\) \| `status` rows of `kind=empower`", log);
     }

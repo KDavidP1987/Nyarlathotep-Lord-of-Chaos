@@ -77,11 +77,20 @@ public class ApiLinesTests
     [Fact]
     public void The_largest_empower_row_fits_the_line_limit()
     {
-        // Five of the longest faction names in Reference Data/unit_index.tsv, a 32-character id and a 64-byte name.
-        var d = EmpowerDef(new string('x', 32), Enumerable.Repeat("Faction_ChurchOfLum_SpotShapeshiftVampire", 5).ToArray())
-            with { Name = new string('N', 80) };
+        // The five longest distinct faction prefabs outside the deny list (Reference Data/prefab_names.tsv, 2026-09-26),
+        // a 32-character id and a name past the 64-byte cut; every key must survive (Wire.Record throws otherwise).
+        string[] longest =
+        [
+            "Faction_ChurchOfLum_SpotShapeshiftVampire", "Faction_ChurchOfLum_Slaves_Rioters", "Faction_CorruptedBloodBuffSpawns",
+            "Faction_Spiders_Shapeshifted", "Faction_ChurchOfLum_Slaves",
+        ];
+        Assert.All(longest, f => Assert.False(FactionDenyList.IsDenied(f)));
+        var d = EmpowerDef(new string('x', 32), longest) with { Name = new string('N', 80) };
         var reply = Status([Running(d, 0, 86400)], [], new DefinitionSet([d]), isAdmin: true, new() { [d.Id] = 99999 });
         Assert.True(System.Text.Encoding.UTF8.GetByteCount(reply[0]) <= Wire.MaxBytes);
+        Assert.Equal(EventKeys, Keys(reply[0]));
+        Assert.Equal("ChurchOfLum_SpotShapeshiftVampire,ChurchOfLum_Slaves_Rioters,CorruptedBloodBuffSpawns,Spiders_Shapeshifted,ChurchOfLum_Slaves",
+            Value(reply[0], "faction"));
         Assert.EndsWith(" wave=- units=99999", reply[0]);
     }
 

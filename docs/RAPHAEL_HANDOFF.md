@@ -126,7 +126,10 @@ api 2 already defines.
 - A status row of `kind=empower` carries `faction=<names joined by ','>` (e.g. `faction=Legion,Bandits`, the
   `Faction_` prefix removed), `wave=-`, and for admins `units=<NPCs holding the event's empowerment>`.
 - An empower event has no `ending` row: it goes straight from `active` to gone.
-- A client gating on `api>=2` needs no change. Show `faction` on empower rows and hide the wave column when it is `-`.
+- A client gating on `api>=2` needs no change to keep working: `kind=empower` has been in contract §3's list since
+  api 2, the keys are the same, and a value a client does not render is shown generically or skipped (contract §1).
+- Optional, to render empower rows well (gate it on `api>=3`): show `faction` on empower rows and hide the wave
+  column when it is `-`.
 
 ## Requests (contract §8)
 
