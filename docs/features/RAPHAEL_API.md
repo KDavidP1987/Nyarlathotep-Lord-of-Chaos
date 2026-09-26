@@ -135,6 +135,35 @@ Steps given to the owner (D12, D13, D22 and the step 3 checks):
 15. After t-150's event-end, `.nyar api sub off`, then disconnect. Send back what each step showed (screenshots are
     fine), and anything unexpected.
 
+Observed, part 1 (2026-09-26 07:52–08:10; 16 owner screenshots, BepInEx log):
+- `.nyar api events`: 10 def rows in id order (example-boss … t-fill-2, then t-fill-3, t-fill-4 on the next screen
+  as page 1 of the 11), each with the D2 keys; example-spawns and t-150 `state=idle reason=-`, the disabled ones
+  `state=disabled reason=disabled`; end line `[NYAR:end] cmd=events page=1/2 count=11`.
+- `sub on` → `[NYAR:ok] cmd=sub on=1`; the log "push: 1 subscribed (on)".
+- Step 3 checks: `.nyar event reload` → "reloaded: 11 valid, 0 disabled" then one `[NYAR:ev] type=config-changed
+  id=- secs=0`; `enable t-spare`, `disable t-spare` and `set t-spare durationSeconds 90` → each reply then one
+  config-changed; `set nope durationSeconds 90` → "unknown event nope" and no config-changed line.
+- example-spawns: `type=event-start id=example-spawns secs=120`, `type=wave … secs=0 wave=1`; `.nyar api status` →
+  `[NYAR:event] id=example-spawns kind=waves name=Bandit_raid state=active faction=- left=96 wave=1/2 units=7` and
+  `[NYAR:end] cmd=status count=1`; `wave=2` about 40 s later; status `left=24 wave=2/2 units=14`; then
+  `type=event-end id=example-spawns secs=0`; `.nyar api status` → `count=0`. The log: 7 of 7 spawned per wave, and at
+  end + grace "14 units due for despawn", batches 5, 5, 4 to "0 left".
+- `.nyar purge confirm` replied "nothing to purge": the steps put the purge after the event had ended and drained,
+  so no killswitch was pushed (a step-order error, repeated in part 2).
+- `sub off` → `on=0`, log "push: 0 subscribed (off)". Step 12's reload after it was not run (part 2 repeats it).
+- D12: `sub on`, disconnect → log "[nyar] push: 0 subscribed (disconnect)". After reconnecting and `adminauth`,
+  without `sub on`, `.nyar event reload` → "reloaded: 11 valid, 0 disabled" and no `[NYAR:ev]` line.
+- t-150 (D22) with the owner subscribed: 10 waves of 15, all spawned ("10 of 10 spawned, 5 waiting", then "5 of 5");
+  on screen for waves 8–10 the chat warning "Wave <n> of 10 of the Test 150 is almost here.", then
+  `type=wave-warn id=t-150 secs=10 wave=<n>` and `type=wave id=t-150 secs=0 wave=<n>`; `.nyar api status` →
+  `… state=active faction=- left=118 wave=10/10 units=150` and count=1; `.nyar api events` during the event shows
+  t-150 `state=active`. Tick timing during the event: avg 0.512, 0.465, 0.426, 0.213 ms (max 5.3 ms); during the
+  150-unit drain avg 0.975 ms (max 3.9 ms); idle avg 0.03–0.05 ms. Every average is under D24's 5 ms.
+- The owner unsubscribed at 08:07, before t-150's end (08:08:07), so its event-end was logged ("ended (10 of 10
+  waves)") but not pushed to the owner. The 150 units drained 5 a tick to "0 left".
+- Part 1 has no screenshot of `api version`, `api events 2` or `api events x`, and no statement of reply times; part 2
+  covers them.
+
 ## Open questions
 
 None.
