@@ -263,3 +263,62 @@ VERDICT: REVISE
 - F1 · accepted · Design › Data gains rows for %TEMP%\nyar-rel-* (release download), %TEMP%\nyar-rollback-* (rollback worktree) and %TEMP%\nyar-drill-* (drill saved config) with owner, retention, deletion and copies; the inventory check derives its expected set from the `temp:` globs of tools/paths-manifest.txt too, with fixture DataInventory/bad-temp
 - F2 · accepted · -Paths fails on any leftover %TEMP%\nyar-* folder, the manifest declares nyar-snap-*, nyar-rel-*, nyar-rollback-*, nyar-drill-* as `temp:` lines, fixture Paths/bad-rel spells the real name; D24's download moves into tools/release-verify.ps1 with its own -SelfTest
 - F3 · accepted · D22's -SelfTest also runs an `externalSelfTests` registry in tools/preflight-checks.json (rollback drill, snapshot, rollback gate, release verify, repository drill with its new -SelfTest, unit tests), fails when an entry lacks a bad, good or empty case or when a tools script declaring -SelfTest is unregistered (fixtures SelfTestRegistry/bad, bad-2); the 12.4 matrix row names it as the single command
+
+## Review 6 · 2026-09-26 · codex · plan commit 1c05157
+
+EARLIER: all resolved
+
+F1 [blocking] Probe 4.4 is unanswered because D5/D16 promise stop removes every carrier within the batch bound, while D20 drops a removal after three failures and leaves it until LifeTime expiry; the plan never establishes which rule wins.
+Fix: State an explicit precedence decision: either failed removals are a documented exception to the stop bound, or continue/fallback removal until the bound is met, and make the selected behavior fail under one Engine/CarrierLedger evidence command.
+
+F2 [blocking] Probe 6.2 is unanswered for an Apply that throws after the carrier entity is instantiated but before the recipe is completely written: D20 says only “skips it,” leaving a possible partially configured, untracked potion buff with native gameplay behavior.
+Fix: Define failed-Apply atomicity—destroy or queue removal of every partially created carrier—and test throws after instantiation and after each recipe-writing stage through `DependencyFailureTests`.
+
+F3 [blocking] Probe 10.3 lacks the required single evidence command: the gating matrix names `preflight -SelfTest` followed by ordinary `preflight`, so neither named command alone is specified to prove both the negative secret fixtures and the real repository scan.
+Fix: Make one command, such as `pwsh tools/preflight.ps1 -SelfTest`, run the real secrets scan plus its bad/good/empty fixtures and fail if either portion fails.
+
+F4 [advisory] Probe 4.1’s D15 oracle says each live reading equals the plain reading multiplied by the configured multiplier, but `MultiplyBaseAdd` need not produce that result when another native or mod buff is already contributing to the same stat.
+Fix: Compare the carrier delta with the unmodified base contribution, or explicitly constrain Session 2 subjects to have no other modifiers and verify that precondition in the debug row.
+
+F5 [advisory] Probe 4.2’s `Faction_Players*` invariant is broader than its named negative example: D3 expressly tests `Faction_Players`, but does not name a derived faction such as `Faction_Players_Servants`.
+Fix: Add a wildcard-derived faction case proving the prefix rule, not merely the exact catalog name.
+
+1. Purpose & typical use — Considered (3/3): `Purpose & typical use` identifies the admin and players, the desired timed-world-pressure outcome, and the foundation, SpawnWaves, Blood Moon, companion mods, and Raphael coexistence.
+
+2. Actors & permissions — Considered (3/3): `Design › Permissions`, D21, and the actor matrix cover all reachable actors, unauthorized refusal, server-owned definitions, carrier ownership, contention, stopping, and restarting.
+
+3. Inputs, outputs & data — Considered (4/4): D1/D12 enumerate and validate inputs; D10/D11/D16 enumerate outputs and side effects; `Design › Data` plus D26 covers persistent, in-memory, remote, ignored, temporary, and drill artifacts; D2/D23 and Compatibility cover migration.
+
+4. Business rules & invariants — Gap (4/5): `Business rules`, D1–D7, and the Every-X inventory answer 4.1, 4.2, 4.3, and 4.5. Probe 4.4 remains unanswered because the hard stop-removal bound conflicts with D20’s abandon-after-three-failures rule.
+
+5. Internal interfaces — Considered (3/3): `Interfaces › Internal` names reads, writes, affected symbols, failure consequences, and the JSON, wire, and marker contracts field by field.
+
+6. External dependencies & contracts — Gap (2/3): the dependency table and 6.3 answer 6.1 and 6.3. Probe 6.2 does not decide cleanup of a carrier created before a later Apply operation throws.
+
+7. States & lifecycle — Considered (3/3): `Design › States` covers empty/loading/partial/error states, main-thread concurrency and start races, cancellation, stale entities, restart re-entry, reload, and correction invalidation.
+
+8. Minimal stretch — Considered (2/2): `Use cases › Minimal stretch` covers pillar-off, one faction/one stat, an empty faction, and one-time cleanup or boot recovery.
+
+9. Maximal stretch — Considered (3/3): `Use cases › Maximal stretch`, D5, D6, D12, and D19 cover multi-thousand-NPC volume, bounded misuse, duplicate starts, repeated sweeps, and trigger deduplication.
+
+10. Security & privacy — Gap (3/4): `Security`, D1, D10, D11, and D21 answer authorization design, injection, and personal-data handling. Probe 10.3 lacks one evidence command that validates both the real tree and negative secret fixtures.
+
+11. Design & UX — Considered (4/4): `Design › UX`, D6, D10, D13, D14, D16, and D24 cover discovery, feedback, empty output, chat accessibility constraints, activation evidence, and unrelated should-not-activate cases.
+
+12. Failure handling & observability — Considered (4/4): `Failure & observability`, its selftest matrix, D20, D22, and D26 cover user-visible failures, diagnostic logs, production detection, and bad/good/empty cases under the registered aggregate selftest command.
+
+13. Performance & scale — Considered (2/2): `Performance`, D5, and D19 state the five-millisecond budget, hot path, operational bounds, their source cases, bound behavior, and excluded valid cases.
+
+14. Rollout & compatibility — Considered (4/4): `Rollout`, D23–D29, and `Paths walked` cover disabled-by-default shipping, API/config/data compatibility, repository/server/published rollback, and all repository, server, temporary, remote, review, and plan paths.
+
+15. Out of scope — Considered (2/2): `Out of scope` identifies exclusions and names the future children or workspaces receiving deferred functionality.
+
+12/15 layers · 46/49 probes
+
+VERDICT: REVISE
+### Dispositions
+- F1 · accepted · D20 states the precedence: the stop bound of D5 governs every removal that does not throw; a removal failing 3 retries falls back to expiring the carrier (LifeTime.Duration = age, S-7), and only when that also throws is it the documented exception, counted in "empower <id> stopped: <n> removed, <f> left to expire" (D16); CarrierLedgerTests and DependencyFailureTests fail on each break
+- F2 · accepted · D20 defines Apply atomicity: staged create → mark → lifetime → strip → modifiers, the mark written first so D7's boot sweep finds any existing carrier; a throw after create queues the carrier for removal and never records it as applied; DependencyFailureTests throws after each stage
+- F3 · accepted · D22's -SelfTest runs the Secrets check against its fixtures and then on the real tracked tree, failing on any finding; the 10.3 matrix row names that one command
+- F4 · accepted · D14 adds "other stat buffs <k>", and D15 uses only subjects showing 0, so the × multiplier oracle holds
+- F5 · accepted · D3's tests add the derived factions Faction_Players_Castle_Prisoners, Faction_Players_Mutant and Faction_Players_Shapeshift_Human (from unit_index.tsv) as denied units and a rejected `factions` entry
