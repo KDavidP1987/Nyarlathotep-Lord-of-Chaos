@@ -6,7 +6,7 @@ A **server-side** event layer for V Rising. Admins stage NPC events the base gam
 enemies on a schedule, at nightfall or after a V Blood falls, with warnings and banners for players, and in
 later releases empowered factions, castle sieges, defended zones and boss-fight adds.
 
-> **Public beta (0.2.1).** Every pillar and automatic announcement is off by default; no event runs until an
+> **Public beta (0.3.0).** Every pillar and automatic announcement is off by default; no event runs until an
 > admin turns on its pillar and enables it.
 
 ## What it does
@@ -34,6 +34,16 @@ only if the event allows it.
 Wave warnings before each wave (by default 5 min, 1 min and 10 s ahead), start and end banners with your own
 text or a stock line, and a daily banner naming the events still due that day, each behind its own switch.
 Admins can also broadcast on demand with `.nyar announce`.
+</details>
+
+<details>
+<summary><b>Raphael companion panel</b> · <i>0.3.0 (server side)</i></summary>
+
+The optional client mod [Raphael](https://thunderstore.io/c/v-rising/p/TheShadowRealm/Raphael/) can show a live
+events board with wave countdowns, and give admins an events list and a kill-switch button. From 0.3.0 the server
+answers Raphael's reads (active events, event definitions for admins) and pushes updates when an event starts or
+ends, a wave comes or is warned, the kill switch fires or the definitions change. The pushes never tell a player
+more than chat or `.nyar status` does, and no line carries a position. The panels arrive with a Raphael update.
 </details>
 
 <details>
@@ -130,6 +140,7 @@ set running.
 | `.nyar` | Overview and your available commands |
 | `.nyar status` | Active events and minutes left (admins also see tracked units and any degraded hook) |
 | `.nyar api version` | Machine-readable handshake for the Raphael client |
+| `.nyar api status` / `api sub on\|off` | Active events and live updates as machine-readable lines, for Raphael |
 </details>
 
 <details>
@@ -145,6 +156,7 @@ set running.
 | `.nyar spawn <unit> [count] [level\|+n\|-n] [hp] [power]` | One-off test spawn beside you, removed after `ManualSpawnLifetimeSeconds` |
 | `.nyar debug here [radius]` | The mod's units near you, with lifetime, level and stats |
 | `.nyar announce <text>` | Broadcast a line to everyone (quote text longer than 16 words) |
+| `.nyar api events [page]` | Event definitions as machine-readable lines, for Raphael |
 </details>
 
 <details>

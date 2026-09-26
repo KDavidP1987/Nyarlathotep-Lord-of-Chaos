@@ -4,7 +4,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "kdpen"
 name = "Nyarlathotep"
-versionNumber = "0.2.1"
+versionNumber = "0.3.0"
 description = "Server-side event engine for V Rising: NPC spawn waves on schedules, at nightfall, after V Blood kills or by command, with warnings, banners and a kill switch. Faction buffs, sieges, zones and boss adds are coming. Pillars start off."
 websiteUrl = "https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos"
 containsNsfwContent = false

@@ -3,16 +3,17 @@
 <p align="center"><img src="docs/img/nyarlathotep-cover.jpg" alt="Nyarlathotep, Lord of Chaos" width="512"></p>
 
 A server-side BepInEx IL2CPP plugin for V Rising that adds admin-configured, event-driven NPC behaviour.
-0.2.x ships the event engine with spawn-wave events, wave warnings and banners, and a kill switch; timed
+0.3.x ships the event engine with spawn-wave events, wave warnings and banners, and a kill switch; timed
 faction empowerment, castle sieges, defended zones, boss-fight reinforcements, spawn modifiers and
-leaderboards are planned, one release each. The companion client Raphael reads a machine-readable API.
+leaderboards are planned, one release each. The companion client Raphael reads a machine-readable API
+(api 2): live event status, event definitions for admins, and pushed updates.
 
-0.2.x is a public beta. Every pillar and automatic announcement starts disabled; admins opt in. The 0.1.0 key
+0.3.x is a public beta. Every pillar and automatic announcement starts disabled; admins opt in. The 0.1.0 key
 `General.AnnounceEvents` is retired and ignored; the `[Announcements]` switches replace it.
 
 ## Status
 
-**v0.2.1.** See [`CHANGELOG.md`](CHANGELOG.md) for what ships and [`docs/dod/`](docs/dod/) for the
+**v0.3.0.** See [`CHANGELOG.md`](CHANGELOG.md) for what ships and [`docs/dod/`](docs/dod/) for the
 build plan.
 
 ## How it works
@@ -29,6 +30,7 @@ which everything the event created is reverted or despawned. Four services carry
 | Event engine, spawn-wave events, kill switch | 0.2.0 | [`docs/features/FOUNDATION.md`](docs/features/FOUNDATION.md) |
 | Announcements (warnings, banners, daily banner) | 0.2.0 | [`docs/features/FOUNDATION.md`](docs/features/FOUNDATION.md) |
 | Raphael handshake (`.nyar api version`) | 0.2.0 | [`docs/RAPHAEL_INTEGRATION_CONTRACT.md`](docs/RAPHAEL_INTEGRATION_CONTRACT.md) |
+| Raphael api 2: `api status`, `api events`, `api sub` pushes | 0.3.0 | [`docs/features/RAPHAEL_API.md`](docs/features/RAPHAEL_API.md) |
 | Event spawn modifiers and locations | in development | [`docs/features/EVENT_SPAWNS.md`](docs/features/EVENT_SPAWNS.md) |
 | Faction empowerment | in development | [`docs/features/FACTION_EMPOWERMENT.md`](docs/features/FACTION_EMPOWERMENT.md) |
 | Boss reinforcements | in development | [`docs/features/BOSS_REINFORCEMENTS.md`](docs/features/BOSS_REINFORCEMENTS.md) |
@@ -75,6 +77,7 @@ changelogs, both READMEs). Run `pwsh tools/preflight.ps1` first.
 
 - [`docs/NYARLATHOTEP_DESIGN.md`](docs/NYARLATHOTEP_DESIGN.md) — architecture, config, the command reference (§6), build order, decisions
 - [`docs/RAPHAEL_INTEGRATION_CONTRACT.md`](docs/RAPHAEL_INTEGRATION_CONTRACT.md) — the `[NYAR:*]` wire contract for Raphael
+- [`docs/RAPHAEL_HANDOFF.md`](docs/RAPHAEL_HANDOFF.md) — what the Raphael client builds against api 2
 - [`docs/dod/`](docs/dod/) — Definition-of-Done plans, reviews and progress
 - [`docs/RESEARCH_NOTES.md`](docs/RESEARCH_NOTES.md) — what we learned from sibling mods, reference mods, and Thunderstore
 - [`docs/GAME_ASSETS.md`](docs/GAME_ASSETS.md) — using the prefab dump; factions, buffs, units

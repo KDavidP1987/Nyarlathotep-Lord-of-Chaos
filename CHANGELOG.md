@@ -3,6 +3,35 @@
 The complete technical history. The concise, player-facing changelog that ships to Thunderstore lives at
 `Nyarlathotep/Nyarlathotep/CHANGELOG.md`. Public beta from 0.2.0; features stay experimental until validated on live servers.
 
+## [0.3.0] - 2026-09-26
+
+The `raphael-api-core` child of the DoD Epic (`docs/dod/raphael-api-core.md`): the Raphael wire moves from api 1
+(handshake only) to **api 2**. Contract: `docs/RAPHAEL_INTEGRATION_CONTRACT.md` §1–§4; client handoff:
+`docs/RAPHAEL_HANDOFF.md`; sessions: `docs/features/RAPHAEL_API.md`.
+
+- **`.nyar api status`** (anyone): one `[NYAR:event]` row per active event (`state=active`, or `ending` while its
+  units wait out `GraceSeconds`, with `wave=-`), then `[NYAR:end] cmd=status count=<n>`. `units` goes to admins
+  only; no row carries a position.
+- **`.nyar api events [page]`** (admin): `[NYAR:def]` rows, 10 per page, then `[NYAR:end] cmd=events
+  page=<cur>/<total> count=<n>`. The action is named by pillar even for a definition validation disabled; `name`
+  is cut to 64 UTF-8 bytes and `reason` to 120 on a character boundary so every line stays under 480 bytes. A bad
+  page answers `[NYAR:err] cmd=events code=badarg arg=page`. Both reads answer normally when `General.Enabled=false`.
+- **`.nyar api sub on|off`** (anyone) and six push types, `[NYAR:ev] type=event-start|event-end|wave-warn|wave|
+  killswitch|config-changed`. Subscriptions are in memory only (cap 128, `ratelimit` past it), pruned on
+  disconnect through a `ServerBootstrapSystem.OnUserDisconnected` hook; the push queue holds 50 lines (oldest
+  dropped) and sends 5 per tick. Fairness: `wave-warn` pushes only when the chat warning fires. An event's end drops
+  its queued wave-warn lines; a waiting config-changed absorbs a new one. `.nyar event reload|set|enable|disable`
+  push config-changed only when a load was applied (`Logic/DefinitionEditor`).
+- **Failure isolation.** A throwing disconnect hook, user source, recipient or push entry point is caught, logged
+  once per streak, and never stops the event tick or the other subscribers.
+- **Preflight.** `Test-CheckWireContract` fails when a wire tag or `api` command in the code is missing from the
+  contract, still PLANNED there, or the api numbers differ; `-SessionsOf` reads the preflight-checks `childDocs`
+  mapping and fails on a session numbered twice; the data inventory covers each listed plan's Design › Data rows.
+- **Rollback drill.** `tools/rollback-drill.ps1 -From v0.3.0 -To v0.2.1` (with `-SelfTest`) boots N on a fresh
+  config, lets it write `events.json` and `state.json`, then boots N-1 on them and checks every load line. 0.3.0
+  writes no new file and no new schema.
+- 703 tests.
+
 ## [0.2.1] - 2026-09-25
 
 Fixes from the foundation child's closing review (Codex whole-child cross-inspection, `docs/audits/foundation.md`

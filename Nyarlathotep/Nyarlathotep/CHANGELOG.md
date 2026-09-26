@@ -2,6 +2,14 @@
 
 Public beta. Event pillars and automatic announcements default off; admins opt in per feature.
 
+## 0.3.0 (2026-09-26)
+
+- **Raphael API 2.** The optional Raphael client can now read the active events (`.nyar api status`) and, for
+  admins, the event definitions (`.nyar api events`), and subscribe to live updates (`.nyar api sub on`): event
+  start and end, waves and wave warnings, the kill switch and definition changes. Updates never tell a player more
+  than chat or `.nyar status` does and never carry a position. The Raphael panels arrive with a Raphael update.
+- No config changes; 0.3.0 reads and writes the same files as 0.2.1, and rolling back to 0.2.1 keeps them.
+
 ## 0.2.1 (2026-09-25)
 
 - **Paced removal for every spawned unit.** Units with their own lifetime (`unitLifetimeSeconds`) and `.nyar spawn`
