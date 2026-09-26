@@ -185,6 +185,32 @@ Part 2 (08:33–08:38, same boot; the owner reconnected with Raphael off and ran
   and the mod's own purge line (logged at Warning by design); the server log's 226 PrefabLookupMap warnings all come
   before "Startup Completed". No error line. Dev cfg WaveWarnings set back to false.
 
+### Session 3 · 2026-09-26
+Step 6, unattended: practice runs of tools/rollback-drill.ps1 on the existing tags (`-From v0.2.1 -To v0.2.0`), before
+the release tag exists. Dev world only; the drill saves and restores the plugin DLL and BepInEx/config/Nyarlathotep/.
+- Run A: N booted once and wrote no state.json ("boot v0.2.1 did not write state.json"): the mod writes it only on a
+  change, so an idle boot leaves nothing for N-1 to read. Recorded as A9 before the fix; the drill now adds a
+  one-unit scheduled drill-mark event and boots N until it fires.
+- Run B passed, but its edit made a 43-character name, and v0.2.0 disabled that event ("name must be 1-40
+  characters"; "5 valid, 1 disabled"). The drill now writes a valid name, and fails when N-1's "events: reloaded"
+  counts differ from N's.
+- Run C passed: range v0.2.0..v0.2.1 17 paths, all in the manifest; both releases read "6 valid, 0 disabled";
+  v0.2.0 logged "boot marker sweep: 0 found, 0 queued for despawn (1 listed in state.json)" and "event drill-mark
+  cancelled by restart"; the config and DLL restored byte for byte; no worktree or %TEMP%
+yar-drill-* left.
+- The boots of runs A and B before their last one were not log-checked on their own (each boot overwrites the log);
+  runs B's and C's last boots were: 0 unhandled, 6 nyar lines, 0 orphan errors, 0 unity errors. Their [Warning] lines:
+  Il2CppInterop Class::Init and the two Beelzebub TUNE lines; run B's also the name warning above. Run D (Session 4)
+  checks every boot.
+
+### Session 4 · 2026-09-26
+Step 6, unattended: run D of the drill, which now runs `preflight.ps1 -LogCheck` after each of its three boots.
+- "boot v0.2.1 (seed): log check: 0 unhandled, 6 nyar lines, 0 orphan errors, 0 unity errors"; "boot v0.2.1
+  (drill-mark): log check: 0 unhandled, 9 nyar lines, …"; "boot v0.2.0: log check: 0 unhandled, 6 nyar lines, …";
+  "events.json: v0.2.1 and v0.2.0 both read '6 valid, 0 disabled'"; "rollback drill: pass".
+- The selftest: "drill selftest: 3/3"; a mutant without the "marker sweep" check passes the bad fixture and one without
+  the empty-log check reports the empty fixture as another failure, so each fails the selftest (2/3).
+
 ## Open questions
 
 None.

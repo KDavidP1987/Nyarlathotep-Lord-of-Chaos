@@ -1,0 +1,280 @@
+[Message: Preloader] BepInEx 6.0.0-dev - VRisingServer (9/12/2026 2:09:56 PM)
+[Message: Preloader] Built from commit 3a12d1810bf4dd5ca1635352ccf5bff5d95f987f
+[Info   :   BepInEx] System platform: Windows 10 64-bit
+[Info   :   BepInEx] Process bitness: 64-bit (x64)
+[Info   :   BepInEx] Running under Unity 2022.3.58f1
+[Info   :   BepInEx] Runtime version: 6.0.7
+[Info   :   BepInEx] Runtime information: .NET 6.0.7
+[Info   : Preloader] 0 patcher plugins loaded
+[Info   : Preloader] 0 assemblies discovered
+[Message:AssemblyPatcher] Executing 0 patch(es)
+[Message:   BepInEx] Chainloader initialized
+[Warning:Il2CppInterop] Class::Init signatures have been exhausted, using a substitute!
+[Info   :Il2CppInterop] Registered mono type Il2CppInterop.Runtime.DelegateSupport+Il2CppToMonoDelegateReference in il2cpp domain
+[Info   :   BepInEx] 5 plugins to load
+[Info   :   BepInEx] Loading [VampireCommandFramework 0.10.4]
+[Message:VampireCommandFramework] VCF Loaded: 0.10.4
+[Info   :   BepInEx] Loading [Beelzebub 0.136.0]
+[Info   : Beelzebub] Plugin kdpen.Beelzebub v0.136.0 loading...
+[Info   : Beelzebub] Harmony patches applied: 16 method(s) patched.
+[Info   : Beelzebub] Plugin kdpen.Beelzebub v0.136.0 loaded. Awaiting game data init.
+[Info   :   BepInEx] Loading [Faust 0.16.5]
+[Info   :     Faust] Plugin kdpen.Faust v0.16.5 loading...
+[Info   :     Faust] [FAUST STORE] loaded 121 session(s), 224 concurrency point(s), 63 region sample(s), 3 name(s).
+[Info   :     Faust] [FAUST HEATMAP] loaded 82 all-time cell(s) over 2 player(s), 53 daily cell(s) over 3 day(s), 620 sample(s) @ cell=25.
+[Info   :     Faust] [FAUST USAGE] loaded usage state for 1 (player,feature) pair(s).
+[Info   :     Faust] [FAUST USAGESTATS] loaded usage tallies for 13 feature(s).
+[Info   :     Faust] [FAUST CONTROL] loaded runtime overrides for 1 feature(s).
+[Info   :     Faust] [FAUST KILLS] loaded kill tallies for 1 player(s), 8 boss(es).
+[Info   :     Faust] Harmony patches applied: 4 method(s) patched.
+[Info   :     Faust] Plugin kdpen.Faust v0.16.5 loaded. Awaiting game data init.
+[Info   :   BepInEx] Loading [Nyarlathotep 0.3.0]
+[Info   :Nyarlathotep] Plugin kdpen.Nyarlathotep v0.3.0 loading...
+[Info   :Nyarlathotep] Harmony patches applied: 5 method(s) patched.
+[Info   :Nyarlathotep] Plugin kdpen.Nyarlathotep v0.3.0 loaded. Awaiting game data init.
+[Info   :   BepInEx] Loading [Uriel 0.20.0]
+[Info   :     Uriel] Plugin kdpen.Uriel v0.20.0 loading...
+[Info   :     Uriel] Harmony patches applied: 4 method(s) patched.
+[Info   :     Uriel] Plugin kdpen.Uriel v0.20.0 loaded. Awaiting game data init.
+[Message:   BepInEx] Chainloader startup complete
+[Info   : Beelzebub] Loaded ability rules from C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer\BepInEx\config\kdpen.Beelzebub\ability_rules.json: deny patterns=18, allow patterns=0, deny guids=0, allow guids=0.
+[Info   : Beelzebub] [AbilityMetadata] Loaded 1813 shipped ability entries from embedded resource.
+[Info   : Beelzebub] [AbilityMetadata] Built unit-name index: 402 units from SourceNpcs; unit→abilities index: 402 units.
+[Info   : Beelzebub] Loaded 3 player(s), 0 universal slot(s), 2 weapon-specific slot(s), 0 form-specific slot(s), 0 verbosity, 3 transform unlock(s) from C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer\BepInEx\config\kdpen.Beelzebub\state.json.
+[Info   : Beelzebub] Beelzebub: name map built. Embedded=23534 (AB_=8262), added from runtime=226 (AB_=0). Total=23760.
+[Info   : Beelzebub] [Beelz GRAPH] built: 1815 ability groups, 7703 chain prefabs, 9 incomplete group(s), script-edge drift 0, 123ms (gen 1).
+[Info   : Beelzebub] [Beelz TUNE] AB_Monster_SummonLightningPillars_AbilityGroup → AB_Monster_SummonLightningPillars_Cast: freelymove=0.70s
+[Info   : Beelzebub] [Beelz TUNE] AB_Monster_SummonLightningPillars_AbilityGroup → AB_Monster_SummonLightningPillars_Channel: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_HighLord_SwordDashCleave_AbilityGroup → AB_HighLord_SwordDashCleave_DashStrike_Cast: freelymove=0.80s
+[Info   : Beelzebub] [Beelz TUNE] AB_HighLord_SwordDashCleave_AbilityGroup → AB_HighLord_SwordDashCleave_DashStrike_Dash: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Spider_Queen_PBAoE_AbilityGroup → AB_Spider_Queen_PBAoE_Cast: freelymove=2.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_ArchMage_FlamingIce_AbilityGroup → AB_ArchMage_FlamingIce_Cast: freelymove=3.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Foreman_Crossbow_Group → AB_Bandit_Foreman_Crossbow_Cast: freelymove=1.30s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bear_Dire_AreaAttack_AbilityGroup → AB_Bear_Dire_AreaAttack_Cast: freelymove=2.20s
+[Info   : Beelzebub] [Beelz TUNE] AB_Militia_Scribe_InkFuel_AbilityGroup → AB_Militia_Scribe_InkFuel_Cast: freelymove=0.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Militia_Scribe_InkFuel_AbilityGroup → AB_Militia_Scribe_InkFuel_InkPreTravelBuff: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_FrosttArrow_MultiShot_Hard_Group → AB_Bandit_FrosttArrow_MultiShot_Hard_Cast: freelymove=1.60s
+[Info   : Beelzebub] [Beelz TUNE] AB_Cursed_ToadKing_PoisonRain_AbilityGroup → AB_Cursed_ToadKing_PoisonRain_Cast: freelymove=2.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_CarverBoss_UltraMegaChopLeap_AbilityGroup → AB_Blackfang_CarverBoss_UltraMegaChopLeap_Cast01: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_CarverBoss_UltraMegaChopLeap_AbilityGroup → AB_Blackfang_CarverBoss_UltraMegaChopLeap_Travel: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Militia_Leader_Whirlwind_v2_Init_AbilityGroup → AB_Militia_Leader_Whirlwind_v2_Init_Cast: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Iva_BomberJetpack_TakeOff_AbilityGroup → AB_Iva_BomberJetpack_TakeOff_Phase: leapheight=30.0
+[Info   : Beelzebub] [Beelz TUNE] skip leapheight on AB_Iva_BomberJetpack_Land_Phase: shared with 1 other group(s), e.g. AB_Iva_BomberJetpack_Land_AbilityGroup
+[Info   : Beelzebub] [Beelz TUNE] AB_Iva_BomberJetpack_TakeOff_AbilityGroup → AB_Iva_BomberJetpack_Land_Phase: leapheight=SKIP(shared)
+[Info   : Beelzebub] [Beelz TUNE] AB_Cursed_Witch_ExplodeMosquito_AbilityGroup → AB_Cursed_Witch_ExplodeMosquito_Cast: freelymove=0.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Nun_Counter_AbilityGroup → AB_Nun_Counter_Cast: freelymove=0.60s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Foreman_RapidShot_Hard_AbilityGroup → AB_Bandit_Foreman_RapidShot_Hard_Cast: freelymove=0.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_Morgana_SpectralBlast_Humanoid_AbilityGroup → AB_Blackfang_Morgana_SpectralBlast_Humanoid_Cast: freelymove=1.40s
+[Info   : Beelzebub] [Beelz TUNE] AB_Geomancer_Human_Projectile_Group → AB_Geomancer_Human_Projectile_Cast: freelymove=1.70s
+[Info   : Beelzebub] [Beelz TUNE] AB_Militia_Guard_VBlood_IceBoltsThrow_Hard_Group → AB_Militia_Guard_VBlood_IceBoltsThrow_Hard_Cast: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Spider_Queen_ProjectileLoop_AbilityGroup → AB_Spider_Queen_ProjectileLoop_Cast: freelymove=2.20s
+[Info   : Beelzebub] [Beelz TUNE] AB_Spider_Queen_ProjectileLoop_AbilityGroup → AB_Spider_Queen_ProjectileLoop_Channel: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Nun_HolyProjectile_AbilityGroup → AB_Nun_HolyProjectile_Cast: freelymove=2.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Cursed_MountainBeast_GhostCall_AbilityGroup → AB_Cursed_MountainBeast_GhostCall_Scream: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Bear_Dire_Roar_AbilityGroup → AB_Bear_Dire_Roar_Cast: freelymove=1.70s
+[Info   : Beelzebub] [Beelz TUNE] AB_Voltage_ElectricRod_AbilityGroup → AB_Voltage_ElectricRod_Cast: freelymove=2.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Voltage_ElectricRod_AbilityGroup → AB_Voltage_ElectricRod_ChannelBuff: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Sommelier_Flurry_AbilityGroup → AB_Sommelier_Flurry_Cast: freelymove=0.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Foreman_Crossbow_Hard_BloodRage_AbilityGroup → AB_Bandit_Foreman_Crossbow_Hard_Cast: freelymove=0.90s
+[Info   : Beelzebub] [Beelz TUNE] AB_Voltage_Swap_AbilityGroup → AB_Voltage_Swap_Cast: freelymove=0.80s
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_Valyr_PhaseDual_BomberDuelQuake_AbilityGroup → AB_Blackfang_Valyr_PhaseDual_BomberDuelQuake_PrepBuff: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Foreman_RapidShot_AbilityGroup → AB_Bandit_Foreman_RapidShot_Cast: freelymove=0.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_VHunter_Jade_Caltrops_Group → AB_VHunter_Jade_Caltrops_Group: maxrange=20.0
+[Info   : Beelzebub] [Beelz TUNE] AB_Undead_BishopOfDeath_CorpseExplosion_AbilityGroup → AB_Undead_BishopOfDeath_CorpseExplosion_Cast: freelymove=0.90s
+[Info   : Beelzebub] [Beelz TUNE] AB_Voltage_Whirlwind_AbilityGroup → AB_Voltage_Whirlwind_Cast: freelymove=2.00s
+[Info   : Beelzebub] [Beelz TUNE] skip freelymove on AB_Cursed_ToadKing_Spit_Cast: chain not fully decoded — shared edits disabled (no override)
+[Info   : Beelzebub] [Beelz TUNE] AB_Cursed_ToadKing_Spit_AbilityGroup → AB_Cursed_ToadKing_Spit_Cast: freelymove=SKIP(shared)
+[Info   : Beelzebub] [Beelz TUNE] skip leapheight on AB_Cursed_ToadKing_Spit_LaunchBuff: chain not fully decoded — shared edits disabled (no override)
+[Info   : Beelzebub] [Beelz TUNE] AB_Cursed_ToadKing_Spit_AbilityGroup → AB_Cursed_ToadKing_Spit_LaunchBuff: leapheight=SKIP(shared)
+[Info   : Beelzebub] [Beelz TUNE] AB_ArchMage_LightningArc_AbilityGroup → AB_ArchMage_LightningArc_Cast: freelymove=1.20s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Deadeye_Chaosstorm_Group → AB_Bandit_Deadeye_Chaosstorm_Cast: freelymove=1.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Deadeye_Chaosstorm_Group → AB_Bandit_Deadeye_Chaosstorm_Channel_Buff: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Vermin_DireRat_Gnaw_AbilityGroup → AB_Vermin_DireRat_Gnaw_Cast: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Gloomrot_RailgunSergeant_EnergyBurst_AbilityGroup → AB_Gloomrot_RailgunSergeant_EnergyBurst_Cast: freelymove=1.70s
+[Info   : Beelzebub] [Beelz TUNE] AB_Gloomrot_RailgunSergeant_EnergyBurst_AbilityGroup → AB_Gloomrot_RailgunSergeant_EnergyBurst_ChannelV2: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Gloomrot_RailgunSergeant_EnergyBurst_AbilityGroup → AB_Gloomrot_RailgunSergeant_EnergyBurst_ChannelV2_Hard: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Sommelier_MeleeSwing_AbilityGroup → AB_Sommelier_MeleeSwing_Cast: freelymove=0.90s
+[Info   : Beelzebub] [Beelz TUNE] AB_Militia_Guard_VBlood_IceBoltsThrow_Group → AB_Militia_Guard_VBlood_IceBoltsThrow_Cast: freelymove=2.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Foreman_Crossbow_BloodRage_Group → AB_Bandit_Foreman_Crossbow_BloodRage_Cast: freelymove=1.30s
+[Info   : Beelzebub] [Beelz TUNE] AB_Vermin_DireRat_PoisonBurst_AbilityGroup → AB_Vermin_DireRat_PoisonBurst_Cast: freelymove=2.40s
+[Info   : Beelzebub] [Beelz TUNE] AB_Cardinal_Channel_AbilityGroup → AB_Cardinal_Channel_Cast: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Cardinal_Channel_AbilityGroup → AB_Cardinal_Channel_Buff: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Poloma_SpiritRift_Group → AB_Poloma_SpiritRift_Cast: freelymove=1.60s
+[Info   : Beelzebub] [Beelz TUNE] AB_ChurchOfLight_Cleric_Heal_AbilityGroup → AB_ChurchOfLight_Cleric_Heal_Cast: freelymove=2.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_ChurchOfLight_Cleric_Heal_AbilityGroup → AB_ChurchOfLight_Cleric_Heal_ChannelBuff: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Poloma_Projectile_Group → AB_Poloma_Projectile_Cast: freelymove=1.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Gloomrot_RailgunSergeant_WideShot_AbilityGroup → AB_Gloomrot_RailgunSergeant_WideShot_Cast: freelymove=1.40s
+[Info   : Beelzebub] [Beelz TUNE] AB_Gloomrot_SpiderTank_Driller_EarthQuake_AbilityGroup → AB_Gloomrot_SpiderTank_Driller_EarthQuake_Cast: freelymove=2.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Gloomrot_SpiderTank_Driller_EarthQuake_AbilityGroup → AB_Gloomrot_SpiderTank_Driller_EarthQuake_ChannelBuff: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Foreman_BloodRage_AbilityGroup → AB_Bandit_Foreman_BloodRage_Cast: freelymove=0.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_CarverBoss_SpewCorruption_AbilityGroup → AB_Blackfang_CarverBoss_SpewCorruption_Cast: freelymove=0.80s
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_CarverBoss_SpewCorruption_AbilityGroup → AB_Blackfang_CarverBoss_SpewCorruption_Channel: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Wolf_Boss_Pounce_AbilityGroup → AB_Wolf_Boss_Pounce_Cast: freelymove=0.70s
+[Info   : Beelzebub] [Beelz TUNE] AB_Wolf_Boss_Pounce_AbilityGroup → AB_Wolf_Boss_Pounce_Phase: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_IceRanger_LurkerSpikes_Split_AbilityGroup → AB_IceRanger_LurkerSpikes_Split_Cast: freelymove=1.60s
+[Info   : Beelzebub] [Beelz TUNE] AB_Manticore_ChaosBreath_AbilityGroup → AB_Manticore_ChaosBreath_Cast: freelymove=1.27s
+[Info   : Beelzebub] [Beelz TUNE] AB_Manticore_ChaosBreath_AbilityGroup → AB_Manticore_ChaosBreath_Trigger: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Stalker_VBlood_SpinAttack_Hard_Group → AB_Bandit_Stalker_VBlood_SpinAttack_Hard_Cast: freelymove=0.50s
+[Info   : Beelzebub] [Beelz TUNE] skip freelymove on AB_Bandit_Stalker_VBlood_SpinAttack_Channel: shared with 1 other group(s), e.g. AB_Bandit_Stalker_VBlood_SpinAttack_Group
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Stalker_VBlood_SpinAttack_Hard_Group → AB_Bandit_Stalker_VBlood_SpinAttack_Channel: freelymove=SKIP(shared)
+[Info   : Beelzebub] [Beelz TUNE] AB_BatVampire_SummonMinions_AbilityGroup → AB_BatVampire_SummonMinions_Phase: leapheight=12.0
+[Info   : Beelzebub] [Beelz TUNE] AB_Poloma_Hard_Projectile_Group → AB_Poloma_Hard_Projectile_Cast: freelymove=1.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_ChurchOfLight_Paladin_HealAngel_AbilityGroup → AB_ChurchOfLight_Paladin_HealAngel_Cast: freelymove=1.20s
+[Info   : Beelzebub] [Beelz TUNE] AB_ChurchOfLight_Paladin_HealAngel_AbilityGroup → AB_ChurchOfLight_Paladin_HealAngel_HealBuff: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_ClusterBombThrow_AbilityGroup → AB_Bandit_ClusterBombThrow_Cast: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Gargoyle_FlyStart_AbilityGroup → AB_Gargoyle_FlyStart_Travel: leapheight=30.0
+[Info   : Beelzebub] [Beelz TUNE] AB_Undead_CursedSmith_Summon_WeaponSword_AbilityGroup → AB_Undead_CursedSmith_Summon_WeaponSword_Cast: freelymove=1.75s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_FrostArrow_RainOfArrows_Hard_AbilityGroup → AB_Bandit_FrostArrow_RainOfArrows_Hard_Cast: freelymove=1.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Undead_BishopOfDeath_ChainBolt_Hard_AbilityGroup → AB_Undead_BishopOfDeath_ChainBolt_Hard_Cast: freelymove=1.40s
+[Info   : Beelzebub] [Beelz TUNE] AB_Poloma_Wolf_AbilityGroup → AB_Poloma_Wolf_Cast: freelymove=1.70s
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_Livith_CuttingWind_AbilityGroup → AB_Blackfang_Livith_CuttingWind_Cast01: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_Livith_CuttingWind_AbilityGroup → AB_Blackfang_Livith_CuttingWind_Cast02: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bear_Dire_MeleeAttack_AbilityGroup_Hasted → AB_Bear_Dire_MeleeAttack_Cast_Hasted: freelymove=1.00s
+[Warning: Beelzebub] [Beelz TUNE] freelymove on shared prefab AB_Militia_Leader_Whirlwind_v2_Cast rejected for ALL requesters — conflicting values from AB_Militia_Leader_Whirlwind_v2_AbilityGroup, AB_Militia_Leader_Whirlwind_v2_Init_AbilityGroup.
+[Info   : Beelzebub] [Beelz TUNE] skip freelymove on AB_Militia_Leader_Whirlwind_v2_Cast: CONFLICT between AB_Militia_Leader_Whirlwind_v2_AbilityGroup, AB_Militia_Leader_Whirlwind_v2_Init_AbilityGroup
+[Info   : Beelzebub] [Beelz TUNE] AB_Militia_Leader_Whirlwind_v2_AbilityGroup → AB_Militia_Leader_Whirlwind_v2_Cast: freelymove=SKIP(shared)
+[Info   : Beelzebub] [Beelz TUNE] AB_Cursed_MountainBeast_LeapAttack_Travel_AbilityGroup → AB_Cursed_MountainBeast_LeapAttack_Travel_Phase: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_Valyr_PhaseSingle_BomberQuake_AbilityGroup → AB_Blackfang_Valyr_PhaseSingle_BomberQuake_PrepBuff: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_StoneBreaker_VBlood_RockSmash_AbilityGroup → AB_Bandit_StoneBreaker_VBlood_RockSmash_Cast: freelymove=1.20s
+[Info   : Beelzebub] [Beelz TUNE] AB_Militia_BishopOfDunley_Projectile_Hard_Group → AB_Militia_BishopOfDunley_Projectile_Hard_Cast: freelymove=1.20s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Stalker_VBlood_MeleeAttack_Group → AB_Bandit_Stalker_VBlood_MeleeAttack_Cast: freelymove=1.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_Morgana_DownHorizontalSlash_Left_AbilityGroup → AB_Blackfang_Morgana_DownHorizontalSlash_Left_Cast: freelymove=1.80s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_StoneBreaker_VBlood_SpinAttack_Group → AB_Bandit_StoneBreaker_VBlood_SpinAttack_Cast: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_StoneBreaker_VBlood_SpinAttack_Group → AB_Bandit_StoneBreaker_VBlood_SpinAttack_Channel: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Vampire_Dracula_RingOfBlood_AbilityGroup → AB_Vampire_Dracula_RingOfBlood_Cast: freelymove=2.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Vampire_Dracula_RingOfBlood_AbilityGroup → AB_Vampire_Dracula_RingOfBlood_ChannelBuff: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Foreman_Crossbow_Hard_AbilityGroup → AB_Bandit_Foreman_Crossbow_Hard_Cast: freelymove=0.90s
+[Info   : Beelzebub] [Beelz TUNE] AB_ChurchOfLight_Paladin_DivineRays_AbilityGroup → AB_ChurchOfLight_Paladin_DivineRays_Cast: freelymove=1.20s
+[Info   : Beelzebub] [Beelz TUNE] AB_Wendigo_IceDash_Init_AbilityGroup → AB_Wendigo_IceDash_Init_Cast: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Stalker_VBlood_ChargeAttack_Group → AB_Bandit_Stalker_VBlood_ChargeAttack_Cast: freelymove=2.20s
+[Info   : Beelzebub] [Beelz TUNE] AB_ArchMage_ArcaneImprisonment_AbilityGroup → AB_ArchMage_ArcaneImprisonment_Cast: freelymove=3.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Cardinal_LightNova_AbilityGroup → AB_Cardinal_LightNova_Cast: freelymove=1.70s
+[Info   : Beelzebub] [Beelz TUNE] AB_Spider_Queen_WebProjectile_AbilityGroup → AB_Spider_Queen_WebProjectile_Cast: freelymove=1.20s
+[Info   : Beelzebub] [Beelz TUNE] AB_Cardinal_LightWave_AbilityGroup → AB_Cardinal_LightWave_Cast: freelymove=1.60s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Stalker_VBlood_Projectile_Group → AB_Bandit_Stalker_VBlood_Projectile_Cast: freelymove=2.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Militia_BishopOfDunley_SummonPillar_AbilityGroup → AB_Militia_BishopOfDunley_SummonPillar_Cast: freelymove=0.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Militia_Guard_VBlood_FrostShield_AbilityGroup → AB_Militia_Guard_VBlood_FrostShield_Cast: freelymove=0.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Tourok_WeaponThrow_Hard_AbilityGroup → AB_Bandit_Tourok_WeaponThrow_Hard_Cast: freelymove=1.20s
+[Info   : Beelzebub] [Beelz TUNE] AB_Manticore_FrostBreath_AbilityGroup → AB_Manticore_FrostBreath_Cast: freelymove=1.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Manticore_FrostBreath_AbilityGroup → AB_Manticore_FrostBreath_Channel: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Vampire_Dracula_SwordThrow_Abilitygroup → AB_Vampire_Dracula_SwordThrow_Cast: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Wolf_Boss_SpeedBuff_AbilityGroup → AB_Wolf_Boss_SpeedBuff_Cast: freelymove=2.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_StoneBreaker_VBlood_MountainRumbler_AbilityGroup → AB_Bandit_StoneBreaker_VBlood_MountainRumbler_Cast: freelymove=2.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Nun_HARD_HolyBoltSpray_AbilityGroup → AB_Nun_HARD_HolyBoltSpray_Cast: freelymove=0.80s
+[Info   : Beelzebub] [Beelz TUNE] AB_Nun_Vblood_MeleeAttack_AbilityGroup → AB_Nun_Vblood_MeleeAttack_Cast: freelymove=1.40s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Fisherman_FishHook_AbilityGroup → AB_Bandit_Fisherman_FishHook_Cast: freelymove=0.60s
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_CarverBoss_SpewCorruption_Small_AbilityGroup → AB_Blackfang_CarverBoss_SpewCorruption_Small_Cast: freelymove=0.60s
+[Info   : Beelzebub] [Beelz TUNE] AB_BatVampire_BatSwarm_AbilityGroup → AB_BatVampire_BatSwarm_Cast: freelymove=1.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_FrostArrow_RainOfArrows_AbilityGroup → AB_Bandit_FrostArrow_RainOfArrows_Cast: freelymove=1.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Undead_BishopOfDeath_Projectile_Group → AB_Undead_BishopOfDeath_Projectile_Cast01: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_ChurchOfLight_Paladin_HolyFlackCannon_AbilityGroup → AB_ChurchOfLight_Paladin_HolyFlackCannon_Cast: freelymove=1.20s
+[Info   : Beelzebub] [Beelz TUNE] AB_ChurchOfLight_Paladin_HolyFlackCannon_AbilityGroup → AB_ChurchOfLight_Paladin_HolyFlackCannon_ChannelBuff: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_Morgana_CrossWindSlash_AbilityGroup → AB_Blackfang_Morgana_CrossWindSlash_Cast: freelymove=1.20s
+[Info   : Beelzebub] [Beelz TUNE] AB_Lucie_LiquidFire_AbilityGroup → AB_Lucie_LiquidFire_Cast: freelymove=0.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Undead_BishopOfDeath_SmallExplosion_AbilityGroup → AB_Undead_BishopOfDeath_SmallExplosion_Cast01: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Undead_BishopOfDeath_SmallExplosion_AbilityGroup → AB_Undead_BishopOfDeath_SmallExplosion_Cast02: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Undead_BishopOfDeath_SmallExplosion_AbilityGroup → AB_Undead_BishopOfDeath_SmallExplosion_Cast03: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Purifier_MeleeAttack_AbilityGroup → AB_Purifier_MeleeAttack_Cast: freelymove=0.80s
+[Info   : Beelzebub] [Beelz TUNE] AB_Lucie_DeadlyInjection_AbilityGroup → AB_Lucie_DeadlyInjection_Cast: freelymove=0.60s
+[Info   : Beelzebub] [Beelz TUNE] AB_Gloomrot_RailgunSergeant_LightningWall_AbilityGroup → AB_Gloomrot_RailgunSergeant_LightningWall_Cast: freelymove=0.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Gloomrot_RailgunSergeant_LightningWall_AbilityGroup → AB_Gloomrot_RailgunSergeant_LightningWall_StationBuff: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Undead_GhostGuardian_ChargeFollowUp_AbilityGroup → AB_Undead_GhostGuardian_ChargeFollowUp_Cast: freelymove=0.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Monster_LightningShield_AbilityGroup → AB_Monster_LightningShield_Cast: freelymove=0.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Monster_LightningShield_AbilityGroup → AB_Monster_LightningShield_Buff: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Spider_Queen_RangeAttack_AbilityGroup → AB_Spider_Queen_RangeAttack_Cast: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Militia_LightArrow_Hard_GuidedArrow_AbilityGroup → AB_Militia_LightArrow_Hard_GuidedArrow_Cast: freelymove=2.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_Morgana_SpectralHell_AbilityGroup → AB_Blackfang_Morgana_SpectralHell_Cast: freelymove=0.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_ArchMage_CrystalLance_Charged_AbilityGroup → AB_ArchMage_CrystalLance_Charged_Cast: freelymove=1.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Foreman_BoltStorm_Group → AB_Bandit_Foreman_BoltStorm_Cast: freelymove=2.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Voltage_Whip_AbilityGroup → AB_Voltage_Whip_Cast: freelymove=0.80s
+[Info   : Beelzebub] [Beelz TUNE] AB_Matriarch_Soar_Travel_AbilityGroup → AB_Matriarch_Soar_Travel_Phase: leapheight=12.0
+[Info   : Beelzebub] [Beelz TUNE] AB_Nun_AoE_AbilityGroup → AB_Nun_AoE_Cast: freelymove=1.80s
+[Info   : Beelzebub] [Beelz TUNE] AB_Spider_Queen_MeleeAttack_AbilityGroup → AB_Spider_Queen_MeleeAttack_Cast: freelymove=1.40s
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_Morgana_MistSpinners_AbilityGroup → AB_Blackfang_Morgana_MistSpinners_Cast: freelymove=0.70s
+[Info   : Beelzebub] [Beelz TUNE] skip leapheight on AB_Cursed_ToadKing_Swallow_OnHitTravel: chain not fully decoded — shared edits disabled (no override)
+[Info   : Beelzebub] [Beelz TUNE] AB_Cursed_ToadKing_Swallow_AbilityGroup → AB_Cursed_ToadKing_Swallow_OnHitTravel: leapheight=SKIP(shared)
+[Info   : Beelzebub] [Beelz TUNE] skip leapheight on AB_Cursed_ToadKing_Spit_LaunchBuff: chain not fully decoded — shared edits disabled (no override)
+[Info   : Beelzebub] [Beelz TUNE] AB_Cursed_ToadKing_Swallow_AbilityGroup → AB_Cursed_ToadKing_Spit_LaunchBuff: leapheight=SKIP(shared)
+[Info   : Beelzebub] [Beelz TUNE] AB_Cursed_Witch_WickedWhisps_AbilityGroup → AB_Cursed_Witch_WickedWhisps_Cast: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_VHunter_Jade_Caltrops_Hard_Group → AB_VHunter_Jade_Caltrops_Hard_Group: maxrange=20.0
+[Info   : Beelzebub] [Beelz TUNE] AB_Cursed_ToadKing_FrogVomit_Group → AB_Cursed_ToadKing_FrogVomit_Cast: freelymove=0.60s
+[Info   : Beelzebub] [Beelz TUNE] AB_Purifier_ChaosVolley_AbilityGroup → AB_Purifier_ChaosVolley_Cast: freelymove=1.20s
+[Info   : Beelzebub] [Beelz TUNE] AB_Purifier_ChaosVolley_AbilityGroup → AB_Purifier_ChaosVolley_Channel: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] skip leapheight on AB_ChurchOfLight_Overseer_IceRecovery_LaunchBuff: shared with 4 other group(s), e.g. AB_ChurchOfLight_Sommelier_BarrelMinion_AbilityGroup
+[Info   : Beelzebub] [Beelz TUNE] AB_IceRanger_TowerOfFrost_AbilityGroup → AB_ChurchOfLight_Overseer_IceRecovery_LaunchBuff: leapheight=SKIP(shared)
+[Info   : Beelzebub] [Beelz TUNE] skip leapheight on AB_IceRanger_JumpDown_Travel: shared with 2 other group(s), e.g. AB_IceRanger_JumpDown_AbilityGroup
+[Info   : Beelzebub] [Beelz TUNE] AB_IceRanger_TowerOfFrost_AbilityGroup → AB_IceRanger_JumpDown_Travel: leapheight=SKIP(shared)
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Tourok_VBlood_ChaosParry_AbilityGroup → AB_Bandit_Tourok_VBlood_ChaosParry_Cast: freelymove=0.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Tourok_VBlood_ChaosParry_AbilityGroup → AB_Bandit_Tourok_VBlood_ChaosParry_Buff: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Spider_Queen_WebHook_AbilityGroup → AB_Spider_Queen_WebHook_Cast: freelymove=0.80s
+[Info   : Beelzebub] [Beelz TUNE] AB_Lucie_CripplingGoo_AbilityGroup → AB_Lucie_CripplingGoo_Cast: freelymove=0.80s
+[Info   : Beelzebub] [Beelz TUNE] AB_Cursed_Witch_WitchBolt_AbilityGroup → AB_Cursed_Witch_WitchBolt_Cast: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Fisherman_SwingAttack_AbilityGroup → AB_Bandit_Fisherman_SwingAttack_Cast01: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Fisherman_SwingAttack_AbilityGroup → AB_Bandit_Fisherman_SwingAttack_Cast02: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_ChurchOfLight_Overseer_Hard_SnowLob_AbilityGroup → AB_ChurchOfLight_Overseer_Hard_SnowLob_Cast: freelymove=0.50s
+[Info   : Beelzebub] [Beelz TUNE] AB_Gargoyle_FlyEnd_Tailor_Hard_AbilityGroup → AB_Gargoyle_FlyEnd_Tailor_Hard_Travel: leapheight=30.0
+[Info   : Beelzebub] [Beelz TUNE] AB_Gargoyle_FlyEnd_AbilityGroup → AB_Gargoyle_FlyEnd_Travel: leapheight=30.0
+[Info   : Beelzebub] [Beelz TUNE] AB_Spider_Queen_AoE_AbilityGroup → AB_Spider_Queen_AoE_Cast: freelymove=1.80s
+[Info   : Beelzebub] [Beelz TUNE] AB_Militia_Guard_VBlood_IceBreakerInit_AbilityGroup → AB_Militia_Guard_VBlood_IceBreakerInit_Cast: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Undead_Priest_Elite_ProjectileNova_Hard_AbilityGroup → AB_Undead_Priest_Elite_ProjectileNova_Hard_Cast: freelymove=3.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Undead_Priest_Elite_ProjectileNova_Hard_AbilityGroup → AB_Undead_Priest_Elite_ProjectileNova_Hard_ChannelBuff: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_ChurchOfLight_Paladin_Melee_AbilityGroup → AB_ChurchOfLight_Paladin_Melee_Cast01: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_ChurchOfLight_Paladin_Melee_AbilityGroup → AB_ChurchOfLight_Paladin_Melee_Cast02: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Manticore_FrostVortex_AbilityGroup → AB_Manticore_FrostVortex_Cast: freelymove=1.20s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_StoneBreaker_MountainRumbler_Hard_AbilityGroup → AB_Bandit_StoneBreaker_MountainRumbler_Hard_Cast: freelymove=2.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Cursed_ToadKing_DoubleTongueSlap_AbilityGroup → AB_Cursed_ToadKing_DoubleTongueSlap_Cast01: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Cursed_ToadKing_DoubleTongueSlap_AbilityGroup → AB_Cursed_ToadKing_DoubleTongueSlap_Cast02: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Cursed_ToadKing_PoisonLeap_Travel_AbilityGroup → AB_Cursed_ToadKing_PoisonLeap_Travel_Cast: freelymove=0.60s
+[Info   : Beelzebub] [Beelz TUNE] AB_Cursed_ToadKing_PoisonLeap_Travel_AbilityGroup → AB_Cursed_ToadKing_PoisonLeap_Travel_Phase: leapheight=20.0 freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_ChurchOfLight_Overseer_IceRecovery_AbilityGroup → AB_ChurchOfLight_Overseer_IceRecovery_Cast: freelymove=2.20s
+[Info   : Beelzebub] [Beelz TUNE] AB_Cursed_ToadKing_FrogSplit_Travel_AbilityGroup → AB_Cursed_ToadKing_FrogSplit_Travel_Phase: leapheight=12.0
+[Info   : Beelzebub] [Beelz TUNE] AB_Cursed_Witch_Hex_VBlood_AbilityGroup → AB_Cursed_Witch_Hex_VBlood_Cast: freelymove=4.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Voltage_KickCombo_AbilityGroup → AB_Voltage_KickCombo_Cast01: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Voltage_KickCombo_AbilityGroup → AB_Voltage_KickCombo_Cast02: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] skip freelymove on AB_Voltage_KickCombo_Cast03: shared with 1 other group(s), e.g. AB_Voltage_KickCombo_Final_AbilityGroup
+[Info   : Beelzebub] [Beelz TUNE] AB_Voltage_KickCombo_AbilityGroup → AB_Voltage_KickCombo_Cast03: freelymove=SKIP(shared)
+[Info   : Beelzebub] [Beelz TUNE] skip freelymove on AB_Blackfang_Morgana_SpectralSnake_Cast: chain not fully decoded — shared edits disabled (no override)
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_Morgana_SpectralSnake_AbilityGroup → AB_Blackfang_Morgana_SpectralSnake_Cast: freelymove=SKIP(shared)
+[Info   : Beelzebub] [Beelz TUNE] AB_Undead_BishopOfDeath_CorpseExplosion_Hard_AbilityGroup → AB_Undead_BishopOfDeath_CorpseExplosion_Hard_Cast: freelymove=0.90s
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_Morgana_SpectralOrbBarrage_AbilityGroup → AB_Blackfang_Morgana_SpectralOrbBarrage_Cast: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_Morgana_SpectralOrbBarrage_AbilityGroup → AB_Blackfang_Morgana_SpectralOrbBarrage_Channel: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Deadeye_Chaosbarrage_Group → AB_Bandit_Deadeye_Chaosbarrage_Cast: freelymove=2.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Deadeye_Chaosbarrage_Group → AB_Bandit_Deadeye_Chaosbarrage_Channel_Buff: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Voltage_LeapAttack_AbilityGroup → AB_Voltage_LeapAttack_Cast: freelymove=0.60s
+[Info   : Beelzebub] [Beelz TUNE] AB_Voltage_LeapAttack_AbilityGroup → AB_Voltage_LeapAttack_Travel: freelymove=unimpair
+[Info   : Beelzebub] [Beelz TUNE] AB_Lucie_PanicShot_AbilityGroup → AB_Lucie_PanicShot_Cast: freelymove=1.20s
+[Info   : Beelzebub] [Beelz TUNE] AB_Lucie_ToxinBolt_AbilityGroup → AB_Lucie_ToxinBolt_Cast01: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Lucie_ToxinBolt_AbilityGroup → AB_Lucie_ToxinBolt_Cast02: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Lucie_ToxinBolt_AbilityGroup → AB_Lucie_ToxinBolt_Cast03: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] skip leapheight on AB_ChurchOfLight_Overseer_IceRecovery_LaunchBuff: shared with 4 other group(s), e.g. AB_IceRanger_TowerOfFrost_AbilityGroup
+[Info   : Beelzebub] [Beelz TUNE] AB_IceRanger_TowerOfFrost_LowHealth_AbilityGroup → AB_ChurchOfLight_Overseer_IceRecovery_LaunchBuff: leapheight=SKIP(shared)
+[Info   : Beelzebub] [Beelz TUNE] skip leapheight on AB_IceRanger_JumpDown_Travel: shared with 2 other group(s), e.g. AB_IceRanger_JumpDown_AbilityGroup
+[Info   : Beelzebub] [Beelz TUNE] AB_IceRanger_TowerOfFrost_LowHealth_AbilityGroup → AB_IceRanger_JumpDown_Travel: leapheight=SKIP(shared)
+[Info   : Beelzebub] [Beelz TUNE] AB_Cursed_MountainBeast_KongPound_AbilityGroup → AB_Cursed_MountainBeast_KongPound_Cast: freelymove=1.80s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_StoneBreaker_RockSmash_Hard_AbilityGroup → AB_Bandit_StoneBreaker_RockSmash_Hard_Cast: freelymove=1.20s
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_Morgana_SpectralBeam_AbilityGroup → AB_Blackfang_Morgana_SpectralBeam_Cast01: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_Morgana_SpectralBeam_AbilityGroup → AB_Blackfang_Morgana_SpectralBeam_Cast02: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_Foreman_ThrowNet_Group → AB_Bandit_Foreman_ThrowNet_Cast: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Blackfang_Morgana_MeleeAttack_AbilityGroup → AB_Blackfang_Morgana_MeleeAttack_Cast01: freelymove=1.00s
+[Info   : Beelzebub] [Beelz TUNE] AB_Bandit_FrosttArrow_MultiShot_Group → AB_Bandit_FrosttArrow_MultiShot_Cast: freelymove=2.30s
+[Info   : Beelzebub] [Beelz TUNE] AB_Wolf_Boss_Maul_Hard_AbilityGroup → AB_Wolf_Boss_Maul_Hard_Cast: freelymove=1.40s
+[Info   : Beelzebub] [Beelz TUNE] AB_Wolf_Boss_Maul_Hard_AbilityGroup → AB_Wolf_Boss_Maul_Hard_Phase: freelymove=unimpair
+[Warning: Beelzebub] [Beelz TUNE] 10 baked write(s) SKIPPED on prefabs shared with other abilities/bosses (or in a chain that isn't fully decoded). `.beelz admin ability-inspect <ability>` shows where; `allowglobalsharededit on` opts in.
+[Info   : Beelzebub] [Beelz TUNE] applied tuning to 189 prefab(s) from 155 curated entry(ies).
+[Info   : Beelzebub] [Beelz MOUNT] neutralized 2 mount-disrupting CastImpair buff(s) (zeroed BuffModificationFlagData) — Erwin/Fabian saddle casts no longer throw the rider off the horse.
+[Info   :Il2CppInterop] Registered mono type Beelzebub.Services.HeartbeatBehaviour in il2cpp domain
+[Info   : Beelzebub] [Beelz] heartbeat driver started (per-frame).
+[Info   : Beelzebub] Beelzebub initialized via GameDataInitializedPatch (attempt #1). Registry size: 3 player(s). Prefab map has 14481 entries. Built reverse name map with 23760 entries.
+[Info   :     Faust] [FAUST WORLDSCAN] loaded 1290 whitelisted prefab(s).
+[Info   :     Faust] Faust initialized via GameDataInitializedPatch (attempt #1). Prefab map has 14481 entries.
+[Info   :Il2CppInterop] Registered mono type BepInEx.Unity.IL2CPP.Utils.Collections.Il2CppManagedEnumerator in il2cpp domain
+[Info   :     Faust] [FAUST HEATMAP] position sampler running (coroutine).
+[Info   :Nyarlathotep] [nyar] events: reloaded: 11 valid, 0 disabled
+[Info   :Nyarlathotep] [nyar] triggers: all hooks available
+[Info   :Nyarlathotep] [nyar] announcements: WaveWarnings; warning offsets 300,60,10 s; daily banner 20:00
+[Info   :Nyarlathotep] [nyar] push: ready (queue 50, 5 lines a tick, at most 128 subscribers)
+[Info   :Nyarlathotep] [nyar] boot: 0 found, 0 queued for despawn (0 listed in state.json)
+[Info   :Nyarlathotep] Nyarlathotep initialized via GameDataInitializedPatch (attempt #1). Prefab map has 14481 entries.
+[Info   :Il2CppInterop] Registered mono type Uriel.Services.UrielTickBehaviour in il2cpp domain
+[Info   :     Uriel] [Uriel] tick driver started (per-frame).
+[Info   :     Uriel] [Uriel ITEMS] catalog built: 1128 item prefab(s).

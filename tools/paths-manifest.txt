@@ -29,6 +29,7 @@ tracked: tools/*.ps1
 tracked: tools/*.json
 tracked: tools/*.txt
 tracked: tools/preflight-fixtures/**
+tracked: tools/rollback-drill-fixtures/**
 tracked: tools/ingame/**
 
 # ---- ignored: reference material and local workspace state

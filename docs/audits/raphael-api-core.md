@@ -135,3 +135,10 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - Codex verdict: READY (round 2)
 - amendments: none
 - dod status: D12, D13, D22 pass lines added; 16/22 verified; D15–D20 wait for step 6
+
+### Sessions 3 and 4 · 2026-09-26 (step 6 build)
+- session 3 log check: 0 unhandled, 6 nyar lines, 0 orphan errors, 0 unity errors
+  - practice drill runs A–C (docs/features/RAPHAEL_API.md › Session 3); the line is run C's last boot, run B's last boot read the same; earlier boots of runs A and B were overwritten before a check
+- session 4 log check: 0 unhandled, 6 nyar lines, 0 orphan errors, 0 unity errors
+  - practice drill run D; the drill ran -LogCheck after each of its three boots (6, 9 and 6 nyar lines, all 0 unhandled, 0 orphan, 0 unity)
+- A9 (discovered, ~D16, gating 14.3): review: pending; a fresh review is owed before close
