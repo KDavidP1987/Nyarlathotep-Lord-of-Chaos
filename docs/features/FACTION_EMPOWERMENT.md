@@ -275,7 +275,8 @@ Part 1 (owner, about 25 minutes; server **127.0.0.1:9876**, Direct Connect, worl
 1. Connect to 127.0.0.1:9876 with your admin character. Open the console (the ~ key), enter `adminauth`, and close it.
 2. Run `.nyar event list`. Expect example-empowerment, fe-second, fe-expire, fe-big, fe-vblood, fe-spawns, fe-u-empower and
    fe-u-spawns, all ready.
-3. Go to the Farbane bandit camp of Session 2 (Rufus's lumber camp). Let one Bandit Thug hit you 3 times, without changing
+3. Go to the Farbane bandit camp of Session 2 (Rufus's lumber camp). Run `.nyar debug here 40` and check that the
+   CHAR_Bandit_Thug rows show "other stat buffs 0" (Claude uses only such Thugs for the comparison). Let one Bandit Thug hit you 3 times, without changing
    your gear. **Note the 3 damage numbers**, and note how fast the Thugs swing (time between swings) and how fast they
    move or chase you, as the baseline for step 7.
 4. Run `.fam a <your character name> CHAR_Bandit_Thug`, then `.fam l` (the list shows the Thug as number 1), then `.fam b 1`
@@ -285,7 +286,8 @@ Part 1 (owner, about 25 minutes; server **127.0.0.1:9876**, Direct Connect, worl
    further away** (a native Thug's base reading, compared again in step 14).
 6. Run `.nyar event start example-empowerment`. Wait 20 seconds and run `.nyar debug here 40` again. Expect the camp's
    bandits on "carrier example-empowerment" and **the familiar's row still "carrier none" with the same hp as in step 5.**
-7. Run `.fam t` (your familiar leaves). Let a Bandit Thug hit you 3 more times with the same gear. **Note the 3 damage
+7. Run `.fam t` (your familiar leaves). Run `.nyar debug here 40` (the Thug rows should show "carrier
+   example-empowerment" and "other stat buffs 0"). Let a Bandit Thug hit you 3 more times with the same gear. **Note the 3 damage
    numbers** (expected about 1.5× step 3). **Note separately** whether they attack faster (time between swings) and whether they move or chase faster than before step 6.
 8. Kill 2 or 3 bandits and stay within about 40 m. When one reappears, run `.nyar debug here 40` at once and again every
    5 seconds until its row shows "carrier example-empowerment". Wait up to 10 minutes for a real respawn and stop
@@ -294,7 +296,7 @@ Part 1 (owner, about 25 minutes; server **127.0.0.1:9876**, Direct Connect, worl
    which Nyarlathotep skips on purpose).
 9. Walk about 40 m away from the camp, so no camp bandit is within 25 m of you. Run `.nyar event start fe-big`, then `.nyar event start fe-spawns` (3 Bandit Thugs appear around you), then
    `.spawnnpc CHAR_Bandit_Thug 2` (KindredCommands; 2 more Thugs). Wait 30 seconds and run `.nyar status`. **Note the
-   fe-spawns line**: it should count 3 units, not 5.
+   "tracked units: <n>" line**: it should say 3 (fe-spawns' Thugs), not 5.
 10. Run `.nyar purge`, then `.nyar purge confirm` within 30 seconds. At once run `.nyar event start fe-expire` and **note the
     reply** (expected: "purge cooldown active (n s left)" with a number of seconds).
 11. Wait 10 seconds, run `.nyar status` (expected: no active events) and `.nyar debug here 40` (expected: "carrier none" on
