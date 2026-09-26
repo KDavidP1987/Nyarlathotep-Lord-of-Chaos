@@ -8,10 +8,13 @@
     A snapshot is a folder `saved\` holding one copy per entry (a file or a directory, named by the entry's Name) and
     `saved\manifest.json`, written through a .tmp and a move after every copy, so a `saved\` without a manifest is an
     unfinished snapshot and the live files were never touched after it. An entry that was absent at the save is
-    recorded as absent, and the restore makes it absent again.
+    recorded as absent, and the restore makes it absent again. A directory entry records its subdirectories too, so an
+    empty one is saved and restored. The save re-reads each live entry after copying it and fails when it changed; the
+    restore checks every saved copy against the manifest before it touches any live path.
 
       Save-Snapshot -Saved <dir> -Entries @(@{ Name; Path; Kind = 'File'|'Dir' }) [-Extra <ordered>] [-Restore <text>]
-      @(Restore-Snapshot -Saved <dir>) → the entries that differ after the restore (empty when every hash matches)
+      @(Restore-Snapshot -Saved <dir>) → the entries that differ (empty when every hash matches); Reason 'copy' means a
+                                         saved copy differs from the manifest and nothing live was touched
       Get-FolderHashes <dir>          → "<\relative path> <SHA-256>" per file, hidden files included
       Get-LeftoverRefusal <root>      → the drill's refusal for a complete %TEMP%\nyar-drill-* snapshot, or $null
       Get-HeldSnapshots <root> <filter> → the folders under <root> matching <filter> whose saved\manifest.json exists
@@ -37,10 +40,28 @@ function Get-EntryFiles([string]$Path, [string]$Kind) {
     })
 }
 
-function Format-EntryFiles($Files) { @($Files | ForEach-Object { "$($_.path) $($_.sha256)" }) }
+# A function returning @() passes $null, so nulls are dropped: an empty tree formats as no rows, not one blank row.
+function Format-EntryFiles($Files) { @($Files | Where-Object { $null -ne $_ } | ForEach-Object { "$($_.path) $($_.sha256)" }) }
 
-# Copies every entry into $Saved (hidden files included), checks each copy against the live file's hash, then writes
-# saved\manifest.json through a .tmp and a move, last. Returns the manifest. Throws when a copy differs.
+# The subdirectories of a Dir entry as relative paths, sorted (empty ones included); @() for a File entry or an absent path.
+function Get-EntryDirs([string]$Path, [string]$Kind) {
+    if ($Kind -eq 'File' -or -not (Test-Path -LiteralPath $Path -PathType Container)) { return @() }
+    @(Get-ChildItem -LiteralPath $Path -Directory -Recurse -Force | ForEach-Object { $_.FullName.Substring($Path.Length) } | Sort-Object)
+}
+
+# $true when $Path is of its kind (a file for File, a directory for Dir) and holds exactly $Files and (when $Dirs is not
+# $null) exactly $Dirs.
+function Test-EntryMatches([string]$Path, [string]$Kind, $Files, $Dirs) {
+    if (-not (Test-Path -LiteralPath $Path -PathType $(if ($Kind -eq 'File') { 'Leaf' } else { 'Container' }))) { return $false }
+    if (Compare-Object @(Format-EntryFiles $Files) @(Format-EntryFiles (Get-EntryFiles $Path $Kind))) { return $false }
+    if ($null -ne $Dirs -and (Compare-Object @($Dirs | Where-Object { $null -ne $_ }) @(Get-EntryDirs $Path $Kind))) { return $false }
+    $true
+}
+
+# Copies every entry into $Saved (hidden files and empty directories included), checks each copy against the record
+# taken before the copy and re-reads the live entry, then writes saved\manifest.json through a .tmp and a move, last.
+# Once every entry is copied, re-reads them all again, so a change to an early entry while a later one was copying is
+# caught too. Returns the manifest. Throws when a copy differs or a live entry changed during the save.
 function Save-Snapshot {
     param(
         [Parameter(Mandatory)][string]$Saved,
@@ -53,6 +74,7 @@ function Save-Snapshot {
         $copy = Join-Path $Saved $e.Name
         $present = if ($e.Kind -eq 'File') { Test-Path -LiteralPath $e.Path -PathType Leaf } else { Test-Path -LiteralPath $e.Path -PathType Container }
         $files = @(Get-EntryFiles $e.Path $e.Kind)
+        $dirs = @(Get-EntryDirs $e.Path $e.Kind)
         if ($e.Kind -eq 'File') {
             if ($present) { Copy-Item -LiteralPath $e.Path -Destination $copy -Force }
         }
@@ -60,10 +82,20 @@ function Save-Snapshot {
             New-Item -ItemType Directory -Path $copy -Force | Out-Null
             if ($present) { Get-ChildItem -LiteralPath $e.Path -Force | Copy-Item -Destination $copy -Recurse -Force }
         }
-        if ($present -and (Compare-Object @(Format-EntryFiles $files) @(Format-EntryFiles (Get-EntryFiles $copy $e.Kind)))) {
+        if ($present -and -not (Test-EntryMatches $copy $e.Kind $files $dirs)) {
             throw "the saved copy of $($e.Path) differs from the live one"
         }
-        [ordered]@{ name = $e.Name; path = $e.Path; kind = $e.Kind; present = $present; files = $files }
+        $still = if ($e.Kind -eq 'File') { Test-Path -LiteralPath $e.Path -PathType Leaf } else { Test-Path -LiteralPath $e.Path -PathType Container }
+        if ($still -ne $present -or ($present -and -not (Test-EntryMatches $e.Path $e.Kind $files $dirs))) {
+            throw "$($e.Path) changed during the save; stop whatever writes to it and save again"
+        }
+        [ordered]@{ name = $e.Name; path = $e.Path; kind = $e.Kind; present = $present; files = $files; dirs = $dirs }
+    }
+    foreach ($r in @($records)) {
+        $still = if ($r.kind -eq 'File') { Test-Path -LiteralPath $r.path -PathType Leaf } else { Test-Path -LiteralPath $r.path -PathType Container }
+        if ($still -ne $r.present -or ($r.present -and -not (Test-EntryMatches $r.path $r.kind $r.files $r.dirs))) {
+            throw "$($r.path) changed during the save; stop whatever writes to it and save again"
+        }
     }
     $manifest = [ordered]@{ complete = $true }
     if ($Extra) { foreach ($k in $Extra.Keys) { $manifest[$k] = $Extra[$k] } }
@@ -75,13 +107,22 @@ function Save-Snapshot {
     return $manifest
 }
 
-# Makes every entry of saved\manifest.json equal to its copy: a present file or directory is replaced by the copy
+# First checks every saved copy against the manifest; when one differs, returns it with Reason 'copy' and touches no
+# live path. Otherwise makes every entry equal to its copy: a present file or directory is replaced by the copy
 # (anything added since is removed, changed and removed files are put back), an absent one is removed. Then verifies
-# every hash against the manifest and that no unlisted file remains. Returns one object { Name; Path; Reason } per
-# entry that differs ('differs' or 'present' for one that was absent); @() when all match.
+# every hash (and a directory entry's subdirectories) against the manifest and that no unlisted file remains. Returns
+# one object { Name; Path; Reason } per entry that differs ('differs', or 'present' for one that was absent); @() when
+# all match. A manifest without `dirs` (written before they were recorded) is checked on files alone.
 function Restore-Snapshot {
     param([Parameter(Mandatory)][string]$Saved)
     $m = Get-Content -LiteralPath (Join-Path $Saved 'manifest.json') -Raw | ConvertFrom-Json
+    $dirsOf = { param($e) if ($e.PSObject.Properties.Name -contains 'dirs') { , @($e.dirs) } else { $null } }
+    $bad = @(foreach ($e in @($m.entries)) {
+        if ($e.present -and -not (Test-EntryMatches (Join-Path $Saved $e.name) $e.kind $e.files (& $dirsOf $e))) {
+            [pscustomobject]@{ Name = $e.name; Path = $e.path; Reason = 'copy' }
+        }
+    })
+    if ($bad) { return $bad }
     $wrong = @()
     foreach ($e in @($m.entries)) {
         $copy = Join-Path $Saved $e.name
@@ -106,7 +147,7 @@ function Restore-Snapshot {
         $reason = $null
         if ($e.present) {
             $exists = if ($e.kind -eq 'File') { Test-Path -LiteralPath $e.path -PathType Leaf } else { Test-Path -LiteralPath $e.path -PathType Container }
-            if (-not $exists -or (Compare-Object @(Format-EntryFiles $e.files) @(Format-EntryFiles (Get-EntryFiles $e.path $e.kind)))) { $reason = 'differs' }
+            if (-not $exists -or -not (Test-EntryMatches $e.path $e.kind $e.files (& $dirsOf $e))) { $reason = 'differs' }
         }
         elseif (Test-Path -LiteralPath $e.path) { $reason = 'present' }
         if ($reason) { $wrong += [pscustomobject]@{ Name = $e.name; Path = $e.path; Reason = $reason } }

@@ -2,8 +2,8 @@
 # Modes: boot (test events, schedules parked on Mon 04:00), go (schedules relative to now), d23a (boot's events plus one
 # with an unknown unit), d23b (the same file with a comma removed), restore-valid (d23a again), cool (the last valid file
 # with t-cool due every minute from now+2 to now+13, so a purge right after it has due times inside its cooldown). State in
-# %TEMP%/nyar-session. s17a/s17b: session 17; rac2: raphael-api-core session 2; fe1 and show: faction-empowerment
-# session 1 (see each mode's comment). `python session-events.py --help` lists the modes and writes nothing.
+# %TEMP%/nyar-session. s17a/s17b: session 17; rac2: raphael-api-core session 2; fe1, fe2 and show: faction-empowerment
+# sessions 1 and 2 (see each mode's comment). `python session-events.py --help` lists the modes and writes nothing.
 import json, sys, datetime, io, os, shutil
 SERVER = r"C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer"
 CFG = os.path.join(SERVER, "BepInEx", "config", "Nyarlathotep", "events.json")
@@ -16,10 +16,19 @@ USAGE = """usage: python tools/ingame/session-events.py <mode> [args]
         to the next whole minute; kdpen.Nyarlathotep.cfg gets Pillars.FactionEmpowerment = true and
         Debug.VerboseLogging = true. The previous events.json and cfg are copied to %TEMP%/nyar-session first; each
         file is written through a .tmp and a replace. --dry-run prints what it would write and writes nothing.
-  show [--server DIR]   prints the server's events.json and the cfg keys fe1 sets; writes nothing.
+  fe2 [--dry-run] [--server DIR]   faction-empowerment session 2 (with the owner): events.json gets only
+        example-empowerment (Manual, Faction_Bandits, all five stats: pp 1.5, sp 1.5, maxHealth 2.0, attackSpeed 1.5,
+        moveSpeed 1.5, 900 s), fe-second (Manual, Faction_Bandits, the refused second event), fe-expire (Manual,
+        Faction_Bandits, 60 s, the natural end), fe-big (Manual, five large factions, 600 s, so the purge drains at least
+        200 carriers, A6), fe-vblood (VBloodKilled
+        any, Faction_Bandits, 120 s) and fe-spawns (Manual SpawnWaves at the admin, for the purge); the cfg gets fe1's
+        two keys plus Pillars.EventSpawns = true (D18's purge needs a spawn event) and Debug.TimingLog = true (D19)
+        and Announcements.EventBanners = true (the {faction} banner is seen in real chat, UX 11.2).
+        Backups and writes as fe1; the session's dev-snapshot restore puts every key back.
+  show [--server DIR]   prints the server's events.json and the cfg keys fe1 and fe2 set; writes nothing.
 The server defaults to """ + SERVER + "."
 def here():
-    # Created on first use, so --help, show and fe1 --dry-run leave no %TEMP%/nyar-session behind.
+    # Created on first use, so --help, show and fe1/fe2 --dry-run leave no %TEMP%/nyar-session behind.
     os.makedirs(HERE, exist_ok=True)
     return HERE
 if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help", "help"):
@@ -178,7 +187,7 @@ elif mode == "rac2":
                               "durationSeconds": 60, "action": point(unit(1))})
     write(doc)
     print("rac2 written:", len(doc["events"]), "definitions")
-elif mode in ("fe1", "show"):
+elif mode in ("fe1", "fe2", "show"):
     # faction-empowerment session 1 (step 4, unattended, D17): fe-short ends by expiry and its sample line reverts one
     # tick later; fe-long is still running when the server is stopped mid-window, so the next boot's carrier sweep finds
     # k > 0. Only these two definitions are written (nothing else starts on its own); the -Save snapshot of
@@ -195,6 +204,7 @@ elif mode in ("fe1", "show"):
     events_path = os.path.join(server, "BepInEx", "config", "Nyarlathotep", "events.json")
     cfg_path = os.path.join(server, "BepInEx", "config", "kdpen.Nyarlathotep.cfg")
     CFG_KEYS = [("Pillars", "FactionEmpowerment", "true"), ("Debug", "VerboseLogging", "true")]
+    if mode in ("fe2", "show"): CFG_KEYS += [("Pillars", "EventSpawns", "true"), ("Debug", "TimingLog", "true"), ("Announcements", "EventBanners", "true")]
     DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]   # the validator's names, whatever the locale
     def cfg_get(text, section, key):
         cur = None
@@ -261,8 +271,34 @@ elif mode in ("fe1", "show"):
                 "trigger": {"type": "Schedule", "days": [DAYS[t.weekday()]], "times": [hhmm(t)]},
                 "durationSeconds": duration,
                 "action": {"type": "Empower", "factions": ["Faction_Bandits"], "stats": {"physicalPower": 1.5, "maxHealth": 1.5}}}
-    doc = {"SchemaVersion": 1, "events": [empower("fe-short", "FE short (expires)", 2, 60),
-                                          empower("fe-long", "FE long (stopped mid-window)", 5, 1200)]}
+    if mode == "fe1":
+        doc = {"SchemaVersion": 1, "events": [empower("fe-short", "FE short (expires)", 2, 60),
+                                              empower("fe-long", "FE long (stopped mid-window)", 5, 1200)]}
+    else:
+        # faction-empowerment session 2 (step 5, with the owner, D14-D16, D18, D19): all Manual except fe-vblood, so
+        # nothing starts before the owner asks. example-empowerment carries all five stats, set well above 1 so each
+        # reading pair is easy to tell apart; fe-second is the refused second event on the same faction.
+        bandits = lambda stats: {"type": "Empower", "factions": ["Faction_Bandits"], "stats": stats}
+        doc = {"SchemaVersion": 1, "events": [
+            {"id": "example-empowerment", "name": "Bandits rally", "enabled": True, "pillar": "empowerment",
+             "trigger": {"type": "Manual"}, "durationSeconds": 900,
+             "action": bandits({"physicalPower": 1.5, "spellPower": 1.5, "maxHealth": 2.0, "attackSpeed": 1.5, "moveSpeed": 1.5})},
+            {"id": "fe-second", "name": "Second bandit surge", "enabled": True, "pillar": "empowerment",
+             "trigger": {"type": "Manual"}, "durationSeconds": 300, "action": bandits({"physicalPower": 1.2})},
+            {"id": "fe-expire", "name": "Short bandit surge", "enabled": True, "pillar": "empowerment",
+             "trigger": {"type": "Manual"}, "durationSeconds": 60, "action": bandits({"physicalPower": 1.5, "maxHealth": 1.5})},
+            # A6: five large factions, so the purge drain holds at least 200 carriers (S-7's 200-removal tick).
+            {"id": "fe-big", "name": "The world stirs", "enabled": True, "pillar": "empowerment", "trigger": {"type": "Manual"},
+             "durationSeconds": 600, "action": {"type": "Empower", "stats": {"physicalPower": 1.2},
+                                                "factions": ["Faction_Undead", "Faction_Militia", "Faction_Legion",
+                                                             "Faction_Blackfangs", "Faction_Gloomrot"]}},
+            {"id": "fe-vblood", "name": "Bandits avenge their boss", "enabled": True, "pillar": "empowerment",
+             "trigger": {"type": "VBloodKilled", "bosses": ["any"]}, "durationSeconds": 120, "action": bandits({"maxHealth": 1.5})},
+            {"id": "fe-spawns", "name": "Bandit raid", "enabled": True, "pillar": "spawns", "trigger": {"type": "Manual"},
+             "durationSeconds": 600,
+             "action": {"type": "SpawnWaves", "units": [{"prefab": "CHAR_Bandit_Thug", "count": 3}], "waves": 1,
+                        "intervalSeconds": 60, "radius": 8, "location": {"type": "Admin"}}},
+        ]}
     events_text = json.dumps(doc, indent=2) + "\n"
     old_cfg = read(cfg_path)
     cfg_text = old_cfg if old_cfg is not None else ""
@@ -270,14 +306,14 @@ elif mode in ("fe1", "show"):
     if (cfg_get(cfg_text, "General", "Enabled") or "true").lower() != "true":
         print("warning: General.Enabled is false in the cfg; the mod will not run")
     if dry:
-        show(events_text, cfg_text, f"fe1 --dry-run (run at {now:%H:%M:%S}, nothing written):")
+        show(events_text, cfg_text, f"{mode} --dry-run (run at {now:%H:%M:%S}, nothing written):")
         sys.exit(0)
     for path in (events_path, cfg_path):
         if os.path.exists(path):
-            shutil.copy2(path, os.path.join(here(), "fe1-" + os.path.basename(path) + ".bak"))
+            shutil.copy2(path, os.path.join(here(), mode + "-" + os.path.basename(path) + ".bak"))
     atomic_write(events_path, events_text)
     atomic_write(cfg_path, cfg_text)
-    show(read(events_path), read(cfg_path), f"fe1 written (run at {now:%H:%M:%S}; previous files copied to {HERE}):")
+    show(read(events_path), read(cfg_path), f"{mode} written (run at {now:%H:%M:%S}; previous files copied to {HERE}):")
 elif mode == "restore-valid":
     write(json.load(open(os.path.join(here(), "d23a.json"))))
     print("valid d23a restored")

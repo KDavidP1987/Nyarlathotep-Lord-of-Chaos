@@ -17,13 +17,17 @@
       Refuses while a VRisingServer process runs. Makes each tree equal to the one held snapshot (files added since,
       such as another mod's DLL and cfg, are removed; changed and removed files are put back; a tree absent at the save
       is removed), verifies every hash against the manifest and that no unlisted file remains, and deletes the folder
-      only when all match. → "snapshot restored; hashes equal", else "snapshot restore: fail — …" (folder kept), exit 1.
+      only when all match. It first checks the saved copies against the manifest and, when one differs, stops before
+      touching the live trees ("saved copy of BepInEx\<tree> differs from its manifest; live trees untouched"). → "snapshot restored; hashes equal", else "snapshot restore: fail — …" (folder kept), exit 1.
 
     pwsh tools/dev-snapshot.ps1 -SelfTest
       Six cases on a scratch install under %TEMP%\nyar-snaptest-<guid> (removed when done): a save and restore round
       trip with a hidden file, where a DLL and a cfg added after the save are removed by the restore; a leftover
-      manifest refused (and not overwritten); a partial snapshot without its manifest removed; a restore whose copy is
-      corrupted keeps the folder; an absent config folder restored as absent; a running-server refusal.
+      manifest refused (and not overwritten), and a restore refused while two snapshots are held or for another server
+      path; a partial snapshot without its manifest removed; a restore whose copy is corrupted (a changed file, or an
+      empty saved directory replaced by a file) keeps the folder and leaves the live trees unchanged; an absent config folder (and an empty directory) restored as saved; a running
+      server refuses both the save and the restore. Every refusal also checks the live trees and the held snapshot are
+      unchanged, and each case evaluates all its assertions before it reports.
       → "snapshot selftest: 6/6" (no scratch install → "snapshot selftest: 0/6", a failure).
 
     -ServerDir defaults to the dev server the other tools use.
@@ -99,7 +103,7 @@ function Invoke-Restore([string]$Server, [string]$TempRoot, [scriptblock]$IsRunn
     if (Compare-Object $want $have) { return @{ Ok = $false; Message = "snapshot restore: fail — $folder was saved from $($m.server), not $Server" } }
     $wrong = @(Restore-Snapshot -Saved (Join-Path $folder 'saved'))
     if ($wrong) {
-        return @{ Ok = $false; Message = "snapshot restore: fail — $(@($wrong | ForEach-Object { "BepInEx\$($_.Name) $(if ($_.Reason -eq 'present') { 'present (absent at the save)' } else { 'differs from the manifest' })" }) -join '; '); the copy is kept at $folder" }
+        return @{ Ok = $false; Message = "snapshot restore: fail — $(@($wrong | ForEach-Object { $w = $_; switch ($w.Reason) { 'present' { "BepInEx\$($w.Name) present (absent at the save)" } 'copy' { "saved copy of BepInEx\$($w.Name) differs from its manifest; live trees untouched" } default { "BepInEx\$($w.Name) differs from the manifest" } } }) -join '; '); the copy is kept at $folder" }
     }
     Remove-Item -LiteralPath $folder -Recurse -Force
     return @{ Ok = $true; Message = "snapshot restored; hashes equal ($($m.label), $folder deleted)" }
@@ -162,9 +166,19 @@ if ($SelfTest) {
             $mHash = (Get-FileHash -LiteralPath $mPath -Algorithm SHA256).Hash
             $b = Invoke-Save 'a' $srv $tmpRoot $notRunning
             $c = Invoke-Save 'b' $srv $tmpRoot $notRunning
+            # The restore refuses a snapshot saved from another server path, and refuses while two snapshots are held;
+            # neither refusal changes the live trees or the held snapshots.
+            Put (Join-Path $plugins 'Bloodcraft.dll') 'added after the save'
+            $live = Tree-State $srv
+            $other = Invoke-Restore (Join-Path $scratch 'other-server') $tmpRoot $notRunning
+            Copy-Item -LiteralPath $a.Folder -Destination (Join-Path $tmpRoot 'nyar-snap-z') -Recurse
+            $two = Invoke-Restore $srv $tmpRoot $notRunning
+            $unchanged = -not (Compare-Object $live (Tree-State $srv)) -and (Get-FileHash -LiteralPath $mPath -Algorithm SHA256).Hash -eq $mHash -and
+                (Test-Path -LiteralPath (Join-Path $tmpRoot 'nyar-snap-z\saved\manifest.json'))
             Check 'leftover manifest' ($a.Ok -and -not $b.Ok -and -not $c.Ok -and $c.Message -match 'not restored' -and $c.Message -match '-Restore' -and
-                $c.Message -match [regex]::Escape($a.Folder) -and (Get-FileHash -LiteralPath $mPath -Algorithm SHA256).Hash -eq $mHash -and
-                -not (Test-Path -LiteralPath (Join-Path $tmpRoot 'nyar-snap-b'))) "got '$($c.Message)'"
+                $c.Message -match [regex]::Escape($a.Folder) -and -not (Test-Path -LiteralPath (Join-Path $tmpRoot 'nyar-snap-b')) -and
+                -not $other.Ok -and $other.Message -match 'was saved from' -and -not $two.Ok -and $two.Message -match 'more than one snapshot' -and
+                $unchanged) "save '$($c.Message)', other server '$($other.Message)', two held '$($two.Message)', unchanged $unchanged"
         }
         Run-Case 'partial snapshot' {
             # A saved\ without its manifest is removed and the save proceeds.
@@ -175,23 +189,51 @@ if ($SelfTest) {
         }
         Run-Case 'corrupted copy' {
             # A restore whose copy is corrupted reports the difference and keeps the folder.
+            # The check runs before any live path is touched, so a file added after the save is still there.
             $d = Invoke-Save 'd' $srv $tmpRoot $notRunning
             Put (Join-Path $d.Folder 'saved\config\Nyarlathotep\events.json') '{"corrupted":true}'
+            Put (Join-Path $plugins 'Bloodcraft.dll') 'added after the save'
+            $live = Tree-State $srv
             $dr = Invoke-Restore $srv $tmpRoot $notRunning
-            Check 'corrupted copy' ($d.Ok -and -not $dr.Ok -and $dr.Message -match 'config differs' -and (Test-Path -LiteralPath (Join-Path $d.Folder 'saved\manifest.json'))) "restore '$($dr.Message)'"
+            $first = $d.Ok -and -not $dr.Ok -and $dr.Message -match 'saved copy of BepInEx\\config differs from its manifest; live trees untouched' -and
+                -not (Compare-Object $live (Tree-State $srv)) -and (Test-Path -LiteralPath (Join-Path $d.Folder 'saved\manifest.json'))
+            # An empty config saved, then its saved directory replaced by a file: the copy check still refuses first.
+            Remove-Item -LiteralPath $d.Folder -Recurse -Force
+            Get-ChildItem -LiteralPath $config -Force | Remove-Item -Recurse -Force
+            $d2 = Invoke-Save 'd2' $srv $tmpRoot $notRunning
+            Remove-Item -LiteralPath (Join-Path $d2.Folder 'saved\config') -Recurse -Force
+            Put (Join-Path $d2.Folder 'saved\config') 'not a directory'
+            Put (Join-Path $config 'written-by-a-boot.cfg') 'kept'
+            $live2 = Tree-State $srv
+            $dr2 = Invoke-Restore $srv $tmpRoot $notRunning
+            $second = $d2.Ok -and -not $dr2.Ok -and $dr2.Message -match 'saved copy of BepInEx\\config differs from its manifest; live trees untouched' -and
+                -not (Compare-Object $live2 (Tree-State $srv))
+            Check 'corrupted copy' ($first -and $second) "restore '$($dr.Message)', dir-to-file restore '$($dr2.Message)'"
         }
         Run-Case 'absent config' {
             # A config folder absent at the save is absent after the restore.
+            # An empty plugins directory removed during the session comes back too.
             Remove-Item -LiteralPath $config -Recurse -Force
+            New-Item -ItemType Directory -Path (Join-Path $plugins 'empty') | Out-Null
             $e = Invoke-Save 'e' $srv $tmpRoot $notRunning
             Put (Join-Path $config 'kdpen.Nyarlathotep.cfg') 'written by a boot'
+            Remove-Item -LiteralPath (Join-Path $plugins 'empty') -Force
             $er = Invoke-Restore $srv $tmpRoot $notRunning
-            Check 'absent config' ($e.Ok -and $e.Message -match 'absent: config' -and $er.Ok -and -not (Test-Path -LiteralPath $config) -and (Test-Path -LiteralPath (Join-Path $plugins 'Nyarlathotep.dll'))) "save '$($e.Message)', restore '$($er.Message)'"
+            Check 'absent config' ($e.Ok -and $e.Message -match 'absent: config' -and $er.Ok -and -not (Test-Path -LiteralPath $config) -and
+                (Test-Path -LiteralPath (Join-Path $plugins 'Nyarlathotep.dll')) -and (Test-Path -LiteralPath (Join-Path $plugins 'empty') -PathType Container)) "save '$($e.Message)', restore '$($er.Message)'"
         }
         Run-Case 'running server' {
-            # A running server refuses the save, and nothing is written.
+            # A running server refuses the save (nothing is written) and the restore (the live trees and the held snapshot
+            # are unchanged).
             $f = Invoke-Save 'f' $srv $tmpRoot { $true }
-            Check 'running server' (-not $f.Ok -and $f.Message -match 'VRisingServer process is running' -and -not @(Get-ChildItem -LiteralPath $tmpRoot -Force)) "got '$($f.Message)'"
+            $nothing = -not @(Get-ChildItem -LiteralPath $tmpRoot -Force)
+            $g = Invoke-Save 'g' $srv $tmpRoot $notRunning
+            Put (Join-Path $plugins 'Bloodcraft.dll') 'added after the save'
+            $live = Tree-State $srv
+            $gr = Invoke-Restore $srv $tmpRoot { $true }
+            Check 'running server' (-not $f.Ok -and $f.Message -match 'VRisingServer process is running' -and $nothing -and $g.Ok -and
+                -not $gr.Ok -and $gr.Message -match 'restore: refused .* VRisingServer process is running' -and -not (Compare-Object $live (Tree-State $srv)) -and
+                (Test-Path -LiteralPath (Join-Path $g.Folder 'saved\manifest.json'))) "save '$($f.Message)', restore '$($gr.Message)'"
         }
     }
     Remove-Item -LiteralPath $scratch -Recurse -Force -ErrorAction SilentlyContinue

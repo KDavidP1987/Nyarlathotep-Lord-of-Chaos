@@ -98,8 +98,11 @@ internal static class EmpowerAction
     {
         try
         {
-            _ledger.BeginTick(Settings.Limit(Limits.EmpowerBatchPerTick), DateTime.UtcNow);
+            var batch = Settings.Limit(Limits.EmpowerBatchPerTick);
+            _ledger.BeginTick(batch, DateTime.UtcNow);
             _tickFaults.Ok();
+            if (Settings.VerboseLogging.Value && CarrierLedger.TickLine(_ledger.TickRemovals, batch, _ledger.PendingRemovals) is { } line)
+                Log(line);
         }
         catch (Exception ex)
         {

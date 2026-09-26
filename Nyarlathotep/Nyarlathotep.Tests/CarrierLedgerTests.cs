@@ -252,6 +252,28 @@ public class CarrierLedgerTests
         Assert.Null(rig.Ledger.CarrierOf(1));
     }
 
+    /// <summary>A6: the verbose removal line reports each tick's taken removals against the batch.</summary>
+    [Fact]
+    public void A_drain_reports_its_removals_per_tick()
+    {
+        var rig = Started(250);
+        rig.Tick(T0, 200, "surge");
+        rig.Tick(T0.AddMilliseconds(100), 200, "surge");
+        Assert.Equal(250, rig.Ledger.CountFor("surge"));
+        rig.Ledger.BeginTick(200);                                    // nothing queued: no line
+        Assert.Equal(0, rig.Ledger.TickRemovals);
+        Assert.Null(CarrierLedger.TickLine(rig.Ledger.TickRemovals, 200, rig.Ledger.PendingRemovals));
+        rig.Ledger.Stop("surge");
+        var lines = new List<string?>();
+        for (var i = 0; i < 3; i++)
+        {
+            rig.Ledger.BeginTick(200);
+            lines.Add(CarrierLedger.TickLine(rig.Ledger.TickRemovals, 200, rig.Ledger.PendingRemovals));
+        }
+        Assert.Equal(["empower tick: 200 removals (batch 200), 50 still queued", "empower tick: 50 removals (batch 200), 0 still queued", null], lines);
+        Assert.Empty(rig.Ops.Buffs);
+    }
+
     [Fact]
     public void A_removal_pass_that_throws_loses_no_queued_carrier()
     {

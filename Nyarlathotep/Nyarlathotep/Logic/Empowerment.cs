@@ -232,6 +232,12 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
 
     public int Carriers => _byUnit.Count;
     public int PendingRemovals => _removals.Count;
+    /// <summary>Queued removals the last <see cref="BeginTick"/> took, each counted against its budget (A6).</summary>
+    public int TickRemovals { get; private set; }
+
+    /// <summary>The verbose per-tick removal line (A6), or null for a tick that took no removal.</summary>
+    public static string? TickLine(int removals, int batch, int pending) =>
+        removals == 0 ? null : $"empower tick: {removals} removals (batch {batch}), {pending} still queued";
     /// <summary>Carriers of naturally ended events still waiting for their end + <see cref="EndWatch"/> check (A4).</summary>
     public int Watched => _watch.Count;
     public bool SweepInProgress(string eventId) => _events.TryGetValue(eventId, out var e) && e.Sweep is not null;
@@ -322,6 +328,7 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
     public void BeginTick(int budget, DateTime? utcNow = null)
     {
         _remaining = budget;
+        TickRemovals = 0;
         if (utcNow is { } now) Watch(now, budget);
         if (_expiring.Count > 0)                              // rare: only carriers whose removal and fallback both failed
             foreach (var gone in _expiring.Where(kv => !ops.Exists(kv.Value)).Select(kv => kv.Key).ToList()) _expiring.Remove(gone);
@@ -334,6 +341,7 @@ public sealed class CarrierLedger(ICarrierOps ops, Action<string> log)
                 var r = current = node.Value;
                 _removals.RemoveFirst();
                 _remaining--;
+                TickRemovals++;
                 if (!ops.Exists(r.Buff))
                 {
                     current = null;

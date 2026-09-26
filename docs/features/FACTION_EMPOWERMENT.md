@@ -133,6 +133,65 @@ yar-session archived to the session scratchpad; `-Paths` clean
 - logs: each boot's BepInEx log has only the three known warnings (Beelzebub TUNE ×2, Il2CppInterop Class::Init); the Unity log's 226 "PrefabLookupMap.TryGet - Prefab with PrefabGUID <n> is in an unknown state" warnings all fall between the save load and "Startup Completed" (one per GUID, from the save), 0 after it, 0 exceptions
 - not covered here: the stop and purge paths (owner, Session 2); S-7 is decided after Session 2
 
+### Session 2 · faction-empowerment step 5 (with the owner) — steps
+
+Setup (Claude, before the owner connects): `pwsh tools/dev-snapshot.ps1 -Save s2`, Release build deployed,
+`python tools/ingame/session-events.py fe2` (example-empowerment: Manual, Faction_Bandits, pp 1.5, sp 1.5, maxHealth 2.0,
+attackSpeed 1.5, moveSpeed 1.5, 900 s; fe-second; fe-expire: 60 s; fe-big: Undead, Militia, Legion, Blackfangs and
+Gloomrot, 600 s; fe-vblood: VBloodKilled any, 120 s; fe-spawns: 3 Bandit Thugs at the admin; cfg: FactionEmpowerment,
+EventSpawns, VerboseLogging, TimingLog, EventBanners on), server booted on world nyardev. With VerboseLogging every tick
+that takes a removal logs "empower tick: <k> removals (batch <b>), <p> still queued" (A6).
+Everything `.nyar debug here` prints is also written in full to the BepInEx log, so the owner only notes what the log
+cannot see: damage numbers, chat lines and what the bandits look like they are doing.
+
+Owner steps (server **127.0.0.1:9876**, Direct Connect, world "Nyar Dev"):
+
+1. Connect to 127.0.0.1:9876 with your admin character. Open the console (the ~ key) and enter `adminauth`, then
+   close it.
+2. Run `.nyar event list`. Expect example-empowerment, fe-second, fe-expire, fe-big, fe-vblood and fe-spawns, all ready.
+3. Go to a Farbane Woods bandit camp with at least 11 bandits (e.g. Rufus the Foreman's lumber camp). Stand in the middle,
+   out of their aggro if you can.
+4. Run `.nyar debug here 40`. Expect up to 10 "native" rows, each with "carrier none". These are the plain readings.
+   **Stay on this spot until step 7**: the rows are matched by prefab and distance, so the same NPCs must be read twice
+   (if the bandits walk around, stand still anyway; Claude only uses rows whose prefab and distance match).
+5. Let one Bandit Thug (or another melee bandit; note which) hit you 3 times, without changing your gear. Note the 3
+   damage numbers.
+6. Run `.nyar event start example-empowerment`. Note every chat line you see (the reply and the server-wide banner).
+7. Wait 20 seconds, then run `.nyar debug here 40` again. Expect the rows to show "carrier example-empowerment" with
+   "type Replace stacks 1 incr False end Destroy mark ok strip ok".
+8. Let the same unit type hit you 3 more times, with the same gear. Note the 3 damage numbers (expected about 1.5×).
+   Watch whether the bandits attack and move visibly faster, and note what you see.
+9. Run `.nyar event start fe-second`. Note the reply (expected: "faction Bandits already empowered by
+   example-empowerment").
+10. Kill 2 or 3 bandits of the camp and stay within about 40 m. When one reappears, run `.nyar debug here 40` at once and
+    again every 5 seconds until its row shows "carrier example-empowerment" (the log timestamps each run, so the
+    carrier's arrival is bounded to 5 s). If none respawns in 10 minutes, write "no respawn" and go on; that clause of
+    D16 is then retried in Session 3.
+11. Run `.nyar status`. Note the time left shown for example-empowerment.
+12. Run `.nyar event stop example-empowerment`. Note the chat lines. Wait 5 seconds, then run `.nyar debug here 40`.
+    Expect "carrier none" on every row.
+13. Run `.nyar event start example-empowerment`, `.nyar event start fe-big`, then `.nyar event start fe-spawns`
+    (3 Bandit Thugs spawn around you). Wait 30 seconds and run `.nyar status` (three events expected).
+14. Run `.nyar purge`, then `.nyar purge confirm` within 30 seconds. Wait 10 seconds, then run `.nyar status` (expected:
+    no active events) and `.nyar debug here 40` (expected: no tracked units, "carrier none" on every native row).
+15. Wait 2 minutes (the purge cooldown is 60 s), still at the camp. Run `.nyar event start fe-expire`, wait 20 seconds
+    and run `.nyar debug here 40` (expected: "carrier fe-expire"). Wait until `.nyar status` shows no active event (about
+    a minute), then wait 10 more seconds and run `.nyar debug here 40` (expected: "carrier none" on every row).
+16. Kill any V Blood boss (an easy one near Farbane is fine). Note the chat lines. Right after, run `.nyar status`
+    (expected: fe-vblood active, about 120 s left). Wait until it ends on its own, about 2 minutes, and note the end line
+    if one shows.
+17. Disconnect and tell Claude "session 2 done", with your notes from steps 5, 6, 8, 9, 10, 12, 15 and 16.
+
+After the owner (Claude): stop the server, `pwsh tools/preflight.ps1 -LogCheck`, read every [Error]/[Warning] line of
+both logs, record the results below against D4, D14, D15, D16, D18 (purge part; uninstall and coexistence are Session 3),
+D19 and S-7, then `pwsh tools/dev-snapshot.ps1 -Restore`. D15 is judged from the step 4 and step 7 debug lines in the
+log: rows matched by prefab and distance (±1 m), only rows showing "other stat buffs 0" in both, level unchanged, and for
+each stat the empowered reading = plain × multiplier ±1 % (hp max ×2.0, pp ×1.5, sp ×1.5, aspd ×1.5, mspd ×1.5); a stat
+with no matched pair, or one outside the tolerance, fails D15 and goes to a `discovered` amendment. The step 5/8 damage
+numbers must differ by ×1.5 ±10 %. S-7 needs an "empower tick: 200 removals (batch 200)" line in the
+purge drain with no error; if the query totals of example-empowerment and fe-big stay under 200, S-7's 200-removal clause
+is recorded as unsettled and brought to the owner before step 6.
+
 ## Open questions
 
 - Which stats are worth exposing beyond power/HP/speed? (resistances, `SiegePower` for sieges)
