@@ -1,0 +1,495 @@
+---
+dod: 2
+rubric: 2
+id: dod-20260926-fem1
+slug: faction-empowerment
+title: Faction empowerment — timed carrier buffs on every NPC of a faction
+status: draft
+size: L
+parent: nyarlathotep
+kind: feature
+created: 2026-09-26
+baselined: none
+closed: none
+commit: 90c2ec4
+coverage_author: 15/15 layers · 49/49 probes
+coverage_reviewer: pending
+review: pending
+---
+
+# DoD: Faction empowerment — timed carrier buffs on every NPC of a faction
+
+**Size:** L. It touches several modules: Logic (Model, Validation, a new Empowerment.cs with the eligibility rule, the stat map and the carrier ledger, Markers, Engine, Messages, ApiLines, CommandArgs), Services (a new EmpowerAction, EventRuntime dispatch, the SpawnTracker boot sweep), Patches (DeathEventPatch), Commands (debug here), EntityExtensions, Config/Settings and Limits, Resources/events.default.json and tools (preflight checks and fixtures, rollback-drill.ps1). It changes the events.json action schema (a second action type) and the external contract docs/RAPHAEL_INTEGRATION_CONTRACT.md from api 2 to api 3. It adds no dependency and no data file.
+**Planned:** interactively. This is a child of the approved Epic `nyarlathotep`; its `## Child constraints` › faction-empowerment entry and Business rules 2 and 5 govern this plan. The owner settled three decisions in plan mode on 2026-09-26 (S-1, S-2, S-3). The build starts only after the both-mods check of Epic A20 passes (S-4).
+**Request:** "Please proceed autonomously and iteratively with the next phase of development of Nyarlathotep." The owner's plan decision 2A (2026-09-26): "I run `/dod plan faction-empowerment` (plan and Codex reviews only, no mod code) … faction-empowerment's build starts only after that check passes."
+
+## Definition of Done
+- [ ] D1 · **Empower action validated** events.json accepts `"action": { "type": "Empower", "factions": [...], "includeUnits": [...], "excludeUnits": [...], "includeVBloods": bool, "stats": {...} }` with exactly those keys (factions and stats required, the others optional with defaults [], [], false). factions: 1-5 distinct names, each known to the faction catalog (IFactionCatalog, the game's Faction_* prefab names) and not on the faction deny list (Faction_Players*, Faction_Traders*, Faction_Critters, Faction_World_Prisoners, Faction_Ignored). includeUnits and excludeUnits: 0-20 distinct CHAR_ names known to IUnitCatalog; includeUnits also refuses UnitDenyList entries. stats: keys among physicalPower, spellPower, maxHealth, attackSpeed, moveSpeed, each a number 1.0-3.0, at least one above 1.0. A `visual` key or any other key is unknown. Each failure disables the event with one reason naming the field · test: Nyarlathotep.Tests EventValidationTests (fails when: an unknown, deny-listed, duplicate or sixth faction, an unknown or deny-listed include unit, a stat of 0.9, 3.01 or a string, a stats object raising nothing, a `visual` key or an unknown stat name is accepted, or a valid Empower definition is disabled)
+- [ ] D2 · **Pillar and action pair** a definition with pillar empowerment must have an Empower action and an Empower action must have pillar empowerment; otherwise it is disabled with "pillar empowerment takes an Empower action" or "action Empower needs pillar empowerment". Resources/events.default.json ships example-empowerment as a disabled Empower definition on Faction_Bandits (VBloodKilled any, durationSeconds 600, physicalPower 1.3, spellPower 1.3, maxHealth 1.5, attackSpeed 1.15, moveSpeed 1.1) and its four other templates unchanged · test: Nyarlathotep.Tests EventValidationTests and TemplateTests (fails when: SpawnWaves under pillar empowerment or Empower under pillar spawns loads startable, the shipped template does not validate, or it ships enabled)
+- [ ] D3 · **Eligibility rule** Logic/Empowerment.cs `Eligibility.Decide(UnitFacts, EmpowerAction)` returns Apply or Skip(reason) from facts the service reads per unit: prefab name, faction name, IsPrefab, IsDead, HasVBloodUnit, IsOurs (a unit marker), OwnedByPlayer (from `Ownership.Decide`: EntityOwner or Follower leads to a player character, or it carries Bloodcraft's familiar tag; an owner or followed entity that cannot be resolved counts as owned, so an unknown owner fails closed) and CarrierOf (the event id whose carrier it already holds, or none). Apply only when: not a prefab, not dead, not ours, not player-owned, faction not on the deny list, (faction in factions or prefab in includeUnits), prefab not in excludeUnits, not a V Blood unless includeVBloods, and no carrier. Skip reasons are prefab, dead, ours, owned, denied, other, excluded, vblood and carried · test: Nyarlathotep.Tests EmpowerEligibilityTests (fails when: any one of those facts flipped from the Apply case still gives Apply, an includeUnits unit of another faction is skipped, an excludeUnits unit of the faction is applied, a Faction_Players unit named in includeUnits is applied, or Ownership.Decide returns not-owned for an unresolvable owner or followed entity)
+- [ ] D4 · **Carrier recipe and stat map** `CarrierRecipe.For(stats, secondsLeft)` (Logic) gives every value the service writes on a new carrier: Buff.BuffType = Replace (ProjectM.BuffType is Parallel, Replace or Block), MaxStacks = 1, IncreaseStacks = false, SpellLevel = Markers.Carrier, LifeTime = secondsLeft with EndAction Destroy, the gameplay-event components to strip (CreateGameplayEventsOnSpawn, GameplayEventListeners, RemoveBuffOnGameplayEvent, RemoveBuffOnGameplayEventEntry, DestroyOnGameplayEvent), and the modifiers; Services/EmpowerAction.cs writes exactly the recipe's values. `EmpowerStats.Modifiers(stats)` gives one entry per stat above 1.0, each MultiplyBaseAdd with value = multiplier − 1: physicalPower → PhysicalPower, spellPower → SpellPower, maxHealth → MaxHealth, attackSpeed → PrimaryAttackSpeed and AbilityAttackSpeed, moveSpeed → MovementSpeed; a stat at 1.0 gives no entry · test: Nyarlathotep.Tests EmpowerStatsTests and CarrierRecipeTests (fails when: the recipe's BuffType is not Replace, MaxStacks is not 1, EndAction is not Destroy, a strip entry is missing, a stat maps to another UnitStatType name, a value is not multiplier − 1, attackSpeed gives other than two entries, or a 1.0 stat gives an entry)
+- [ ] D5 · **Carrier ledger** Logic/Empowerment.cs `CarrierLedger` holds carriers by unit key and event id and plans every carrier operation. An event's sweep is queued at its start and again every 15 s (Epic S-8) while it is active; a queued sweep is processed at most EmpowerBatchPerTick units per tick (Limits, default 200, range 50-1000), and a new sweep of the same event is not queued while one is unfinished. Each Apply is given LifeTime = the fractional seconds until the event's end, and no Apply is made when less than 1 s is left, so no carrier outlives the end; a unit already holding any of our carriers is skipped ("carried"), so the first event keeps it. Stop, fault cancel and purge drop the event's queued sweep (no later tick applies for it) and queue its carriers for removal; a natural end queues nothing (the carriers expire on their LifeTime in the same second). Removals share the same per-tick budget as applies, removals first. An entry whose unit or buff no longer exists is dropped without an operation · test: Nyarlathotep.Tests CarrierLedgerTests (fails when: a tick performs more than the budget, a sweep is queued twice while unfinished, a carrier's LifeTime exceeds the seconds left, an Apply is made with 0.99 s left, a stop mid-sweep is followed by an Apply, a carried unit gets a second carrier, a natural end queues removals, a stop leaves a carrier unqueued, or a vanished entity is operated on)
+- [ ] D6 · **One empowerment per faction** (Epic Business rules 2) EventEngine.Start refuses an Empower definition whose factions or includeUnits intersect those of an active Empower event with "faction <short name> already empowered by <id>" (or "unit <prefab> already empowered by <id>"); EventRuntime logs it as every refused start ("event <id> not started by <trigger>: …"); the refusal comes after the controls of Precedence.StartBlocker, so purge, General.Enabled, the pillar switch and MaxConcurrentEvents still win · test: Nyarlathotep.Tests EngineTests (fails when: two Empower events sharing a faction or an include unit are both active, disjoint ones are refused, or the faction refusal is returned while a higher control also blocks)
+- [ ] D7 · **Boot sweep split** Markers gains Carrier = 1313952069 (ASCII "NYAE") in Markers.All and `Markers.KindOf(level)` → Unit, Carrier or None. `SweepPlan.From(buffs)` (Logic) turns the boot query's (level, buff key, target key) rows into units to despawn (Unit rows only) and carrier buffs to remove (Carrier rows only, never their target). SpawnTracker.BootSweep uses it: units go to the despawn queue as today and the log keeps "boot marker sweep: <n> found, <q> queued for despawn"; carriers go to the ledger's removal queue and the log adds "boot carrier sweep: <k> found, <k> queued for removal" · test: Nyarlathotep.Tests SweepPlanTests (fails when: a Carrier row puts its target unit in the despawn list, a Unit row is left out, a row of another value is used, or an empty input yields anything)
+- [ ] D8 · **Carrier removal fenced** a carrier is removed only by EntityExtensions.RemoveBuffSafe, which refuses a missing or Prefab entity and calls DestroyUtility.Destroy with DestroyDebugReason.TryRemoveBuff; the structural-edits check also fails on DestroyUtility.Destroy outside EntityExtensions.cs · cmd: pwsh tools/preflight.ps1 → line "structural edits: fenced" (fails when: DestroyUtility.Destroy or EntityManager.DestroyEntity appears outside EntityExtensions.cs; the selftest fixture StructuralEdits/bad-2 plants DestroyUtility.Destroy in Services/)
+- [ ] D9 · **Dispatch by action** Logic `ActionKindOf(def)` returns Waves for a SpawnWaves action and Empower for an Empower action; EventRuntime.Tick runs WaveAction for Waves and EmpowerAction for Empower inside the same per-event try/catch and fault limit (Epic D25); EventEngine.Expire adds a unit cleanup only for Waves, so an Empower event has no ending phase; End and Purge call EmpowerAction's removal for Empower events · test: Nyarlathotep.Tests EngineTests (fails when: an Empower event gets a cleanup or an ending row, a Waves event loses its cleanup, or ActionKindOf maps either action to the other)
+- [ ] D10 · **Faction in messages** MessageContext.For takes {faction} from an Empower action as its factions' short names (Faction_ removed) joined by ", " (Faction_Legion, Faction_Bandits → "Legion, Bandits") and keeps the first-unit rule for SpawnWaves; no Empower message builder takes a position or radius (Epic D16 PrivacyTests enumerate them) · test: Nyarlathotep.Tests AnnouncerTests and PrivacyTests (fails when: an Empower event renders {faction} as "-" or with the Faction_ prefix, or a new builder accepts a position)
+- [ ] D11 · **Status rows at api 3** `.nyar api status` sends an Empower event's row with kind=empower, faction=<short names joined by ','>, wave=-, and units = the number of NPCs holding its carrier for an admin and `-` for a player; Wire.Api is 3; docs/RAPHAEL_INTEGRATION_CONTRACT.md says "**Current api:** 3", documents those three values in §3 status and lists the change in its change log; the human `.nyar status` line is unchanged · test: Nyarlathotep.Tests ApiLinesTests, WireFormatTests and ContractDocTests (fails when: an Empower row has faction=-, a wave count or a player unit count, a faction value holds a space, '=', ';' or ':', api is not 3, or the contract's Current api or §3 text disagrees)
+- [ ] D12 · **Stats settable** `.nyar event set <id> action.stats.<stat> <value>` takes the five stat names with a decimal 1.0-3.0 (invariant culture, at most two decimals) on an Empower definition; the SpawnWaves fields (action.waves, intervalSeconds, radius) are refused on an Empower definition and the stat fields on a SpawnWaves one, each with a one-line reason; a set that would leave no stat above 1.0 is refused · test: Nyarlathotep.Tests CommandArgTests and ConfigChangedTests (fails when: "3.5", "0.9", "1,2", "abc" or a SpawnWaves field on an Empower definition is accepted, a valid set does not change the file, or a failed set queues config-changed)
+- [ ] D13 · **V Blood trigger fires for V Bloods** Logic `DeathRule.IsVBloodKill(hasConsumeSource, hasVBloodUnit)` is true only with VBloodConsumeSource (DEV_REMINDERS #26), so a gate boss carrying VBloodUnit alone raises nothing; DeathEventPatch reads both components from the dead entity (DeathEvent.Died) and calls it; a kill seen twice within 5 s starts the event once (foundation TriggerDedupe) · test: Nyarlathotep.Tests DeathRuleTests and TriggerActivationTests (fails when: VBloodUnit alone, or neither component, returns true, consume source returns false, or a duplicate delivery of one kill within 5 s starts two instances)
+- [ ] D14 · **Debug shows natives** `.nyar debug here [radius]` (admin) also lists, after the tracked units, at most 10 native NPCs within the radius, nearest first, one line each: "<prefab> native <faction short> carrier <id> left <n>s | carrier none, lvl L hp cur/max pp P sp S aspd A mspd M" · manual: docs/features/FACTION_EMPOWERMENT.md › Test results › Session 2 records a line for an empowered and a plain bandit
+- [ ] D15 · **Stats verified in game** (profile note 6.1) for each of the five stats, an empowered NPC's reading in `.nyar debug here` equals its plain reading × the multiplier (±1 %), and for physicalPower the damage numbers the owner sees on hits from the same unit type with and without the carrier differ by that multiplier (±10 %, spikes A16); attackSpeed and moveSpeed are also judged by eye. A stat whose reading or behaviour does not change is removed from D1 and D4 by a `discovered` amendment before release · manual: Session 2 records each reading pair, the damage numbers and the owner's observation
+- [ ] D16 · **Lifecycle in game** with Pillars.FactionEmpowerment on: `.nyar event start example-empowerment` logs "empower example-empowerment: sweep <n> applied, <s> skipped (<reason> <count> …)"; a bandit that respawns during the window gets the carrier within 15 s with the remaining time; at the end every carrier is gone and readings are back to base; `.nyar event stop` mid-window removes every carrier within ceil(n / EmpowerBatchPerTick) + 1 ticks; a second Empower event on Faction_Bandits is refused with "faction Bandits already empowered by example-empowerment"; the VBloodKilled trigger starts it once per V Blood kill · manual: Session 2 records each step's log line and `.nyar debug here` reading
+- [ ] D17 · **Restart and stop remove carriers** with Debug.VerboseLogging on, EmpowerAction logs one sample NPC per event ("empower <id> sample <prefab>: pp <before> -> <after>, hp max <before> -> <after>") at apply and again one tick after the event ends or its carriers are removed, so an unattended session shows the stats reverting. A restart mid-event (Epic S-11) cancels the event and removes every carrier: the boot log shows "boot carrier sweep: <k> found, <k> queued for removal" with k > 0, and the next boot shows "boot carrier sweep: 0 found, 0 queued for removal" · manual: Session 1 (unattended, two Schedule-triggered Empower events from tools/ingame/session-events.py mode `fe1`: one on Faction_Bandits with durationSeconds 60, which ends by expiry, and one with durationSeconds 1200 left running while the server is stopped mid-window; the stop path is exercised by the owner in Session 2) records the sample lines and both boot lines; S-7 is decided by Sessions 1 and 2 before step 6
+- [ ] D18 · **Kill switch, uninstall, coexistence** (Epic D11, D12, D23) with a spawn event and an empowerment event running, `.nyar purge` then `.nyar purge confirm` leaves 0 active events, 0 tracked units and 0 carriers within 10 s plus the carrier drain (the log shows carrier removal batches of at most EmpowerBatchPerTick); the Epic D12 uninstall steps end with "marker sweep: 0 found" and a base-stat bandit in `.nyar debug here`; with Bloodcraft and KindredCommands installed a familiar keeps its stats through an empowerment of its source faction, and `.nyar status` counts our units only · manual: Sessions 2 and 3 record each step; the Epic Log gets the D11, D12 and D23 pass lines
+- [ ] D19 · **Tick budget with empowerment** with Debug.TimingLog=true, the scheduler tick average stays under 5 ms (Epic D24) while example-empowerment sweeps Faction_Bandits at the default EmpowerBatchPerTick, and during the purge drain of D18 · manual: Session 2 records the "tick timing" lines and the number of carriers applied
+- [ ] D20 · **Dependency failures** through Logic's ICarrierOps: an Apply that throws for one unit skips it, logs "empower <id>: apply failed" once per failure streak and the sweep continues; a Remove that throws is retried on the next tick up to 3 times, then dropped with "carrier removal failed, left to expire" (its LifeTime ends it); a sweep query that throws counts as the event's tick fault (Epic D25); a DeathEvent patch that fails to apply reports its hook unavailable and disables only the triggers that need it (foundation DependencyFailureTests, rerun). Tooling dependencies (git, gh, GitHub, Codex) are not runtime dependencies: they abort-and-rerun under $ErrorActionPreference='Stop' (evidenced by D24, D25), a Codex timeout gives no READY and the step waits; Raphael ignores unknown values (contract §1, D27); Bloodcraft and KindredCommands are covered by D18 · test: Nyarlathotep.Tests DependencyFailureTests (fails when: one failing unit stops the sweep, a failure logs more than once per streak, a failed removal is retried a fourth time or never, or a query failure escapes the event's try/catch)
+- [ ] D21 · **Authorization unchanged** no ActionKind is added: an Empower event starts through StartEvent, stops through EndEvent and is edited through SetEventField, and every [Mutating] method of Services/EmpowerAction.cs is called only inside Gateway.Run or from EventRuntime · cmd: pwsh tools/preflight.ps1 -AuthSuite → "auth suite: pass (tests, commands, admin list, gateway)" (fails when: an EmpowerAction [Mutating] method is called outside Gateway.Run and its own dispatch, or a System actor could start a disabled Empower definition)
+- [ ] D22 · **Static checks and selftest** preflight prints PREFLIGHT OK with "secrets: none", "pillar defaults: all off", "structural edits: fenced", "patch guards: <n>/<n>", "gateway: only ActionGateway mutates (<n> call sites)" and "wire contract: <n> tags, <m> api commands, all documented (api 3)"; tools/preflight-checks.json registers StructuralEdits/bad-2 (a real Services file with a planted DestroyUtility.Destroy) and TemplatesJson/bad-2 (the real template with example-empowerment enabled), and -SelfTest passes, including the existing Secrets bad fixtures (a planted tss_ token and a tools/ script calling `gh auth token`) · cmd: pwsh tools/preflight.ps1 -SelfTest → "selftest: <n>/<n> checks" with no failing fixture line; then pwsh tools/preflight.ps1 → PREFLIGHT OK with those lines (fails when: a bad-n or empty fixture passes, a good one fails, a new fixture is unregistered, or a tracked file holds a token shape)
+- [ ] D23 · **Rollback drill across a new action type** tools/rollback-drill.ps1 accepts that N-1 disables definitions N understands only when every extra disabled definition's reason is "unknown action type <T>"; it prints "events.json: v<N> '<a> valid, <b> disabled', v<N-1> '<c> valid, <d> disabled' (<d-b> newer action types)"; its selftest gains a real log pair where N-1 disabled one Empower definition (pass) and one where it disabled a definition for another reason (fail) · cmd: pwsh tools/rollback-drill.ps1 -SelfTest → "drill selftest: 8/8"; then pwsh tools/rollback-drill.ps1 -From v0.4.0 -To v0.3.0 → "rollback drill: pass" (fails when: a count difference with another reason passes, or v0.3.0 does not initialize on v0.4.0's files)
+- [ ] D24 · **Release 0.4.0** csproj Version and thunderstore.toml versionNumber are 0.4.0; both changelogs (with the migration note of Rollout › Compatibility) and both READMEs describe faction empowerment, its stats and its switch; the annotated tag v0.4.0 is pushed and the GitHub pre-release carries the tcli zip. No tcli publish: the owner publishes · cmd: pwsh tools/preflight.ps1 → PREFLIGHT OK and "release tags: <n>/<n>"; gh release download v0.4.0 -p kdpen-Nyarlathotep-0.4.0.zip -D <scratch dir>; its SHA-256 equals the one in docs/audits/faction-empowerment.md (fails when: a surface differs, the tag is missing or unpushed, the release has no zip, or the hashes differ)
+- [ ] D25 · **Repository rollback drill** reverting v0.3.0..v0.4.0 (v0.3.0 = ee36a7d) in a disposable worktree restores v0.3.0's tree, which builds and passes its tests and preflight · cmd: $ErrorActionPreference='Stop'; $PSNativeCommandUseErrorActionPreference=$true; $wt=Join-Path $env:TEMP "nyar-rollback-$([guid]::NewGuid().ToString('N'))"; git worktree add --detach $wt v0.4.0; try { git -C $wt revert --no-edit v0.3.0..v0.4.0; git -C $wt diff --quiet v0.3.0; dotnet build "$wt\Nyarlathotep\Nyarlathotep.sln" -c Release -p:VRisingServerPath=C:\__nodeploy__; dotnet test "$wt\Nyarlathotep\Nyarlathotep.Tests"; pwsh -NoProfile -File "$wt\tools\preflight.ps1"; 'rollback: clean' } finally { git worktree remove --force $wt } → "rollback: clean" (fails when: a revert conflicts, the reverted tree differs from v0.3.0, or the build, tests or preflight fail)
+- [ ] D26 · **Sessions, records, paths and data** every server session is "### Session <n> · <date>" under docs/features/FACTION_EMPOWERMENT.md › Test results with a "- session <n> log check: 0 unhandled, <s> nyar lines, 0 orphan errors, <u> unity errors" line in docs/audits/faction-empowerment.md from -LogCheck before the next restart; the audit has a pre-audit, a post-audit and a "Codex verdict:" line per Build plan step; tools/data-inventory.json has an entry for the in-memory carrier ledger; every path this child writes is in tools/paths-manifest.txt, as walked by -Paths (Epic D33: git ls-files, git ls-files --others --exclude-standard, git status --ignored --porcelain, and the dev server's BepInEx/plugins/Nyarlathotep* and BepInEx/config/Nyarlathotep/*, run after the build, tcli build and deploy of step 7); every row of Design › Data has a data-inventory entry with its five fields · cmd: pwsh tools/preflight.ps1 -AuditOf faction-empowerment → "audit steps: faction-empowerment 7/7 pre, 7/7 post, 7/7 Codex verdicts"; pwsh tools/preflight.ps1 -SessionsOf faction-empowerment → "session logs: faction-empowerment <n>/<n> checked"; pwsh tools/preflight.ps1 -Paths → "paths: <n> walked, all in manifest" (fails when: a step lacks an entry or verdict, a session lacks its log-check line, a Design › Data row has no inventory entry or one of its five fields is empty, or a walked path matches no manifest glob; the existing Paths and DataInventory bad fixtures plant each)
+- [ ] D27 · **Raphael told of api 3** docs/RAPHAEL_HANDOFF.md gains "## api 3 (faction empowerment)" saying that status rows of kind=empower carry faction=<names joined by ','>, wave=- and admin units = empowered NPCs, and that a client gating on api>=2 needs no change · file: docs/RAPHAEL_HANDOFF.md contains "## api 3 (faction empowerment)", "kind=empower", "wave=-" and "api>=2"
+
+## Purpose & typical use
+- **Who:** a server admin who wants the world to push back at set times or after a boss falls. They'd say: "Every Saturday at 8 the Legion surges for 20 minutes", or "when a V Blood dies, the bandits rally". Players feel it in fights; they don't configure it.
+- **Job:** for a fixed window, every NPC of chosen factions hits harder, has more health, and attacks or moves faster. Everything reverts by itself when the window ends, even if the mod is removed mid-window.
+- **Coexists with:** the foundation engine (events, triggers, controls, purge), the SpawnWaves pillar (our own units are never empowered), vanilla Blood Moon (a player-side buff, untouched), Bloodcraft familiars and KindredCommands (never touched, D18), and Raphael, which shows the empower rows (D11, D27).
+
+## Use cases
+### Typical
+The admin turns on Pillars.FactionEmpowerment, sets example-empowerment's `enabled` to true, and runs `.nyar event reload`. A player kills a V Blood. The trigger starts the event, and every Bandit NPC gets a carrier with 600 s left, applied 200 per tick. Players see the start banner (when EventBanners is on) and `.nyar status` shows the event. Bandits that respawn get the carrier within 15 s. At the end the carriers expire, and the end banner shows.
+### Minimal stretch
+- **Least use (8.1):** the pillar is off, which is the default. Nothing is swept and nothing is applied: the event is refused with "pillar empowerment is off" for an admin, and silently for a trigger (Epic D27 ControlPrecedenceTests; D16 runs with the pillar on).
+- **Least definition:** one faction and one stat, with no include or exclude lists (D1).
+- **Empty faction:** one with no NPCs loaded logs "sweep 0 applied" and runs its window.
+- **Once and never again (8.2):** after one event, carriers are gone at the end (D16) or at the next boot (D17). The ledger is in memory, and nothing is added to state.json beyond the instance row foundation already writes and clears.
+### Maximal stretch
+- **Volume (9.1):** five large factions at once, for example Legion, Undead, Militia, Bandits and Gloomrot, a few thousand NPCs. Sweeps run at 200 units a tick, so a first pass over 3000 NPCs takes 15 ticks. Re-sweeps wait for the unfinished one (D5). The tick budget is measured (D19).
+- **Abuse (9.2):**
+  - An admin sets every stat to 3.0 on every faction: it is allowed, bounded by the 3.0 cap (D1).
+  - A second event on the same faction is refused (D6).
+  - `.nyar event set` with 3.5 or "1,2" is refused (D12).
+  - A player can do nothing: every path is admin or System (D21).
+- **Repeated use (9.3):**
+  - Starting an active event again replies "already active" (foundation).
+  - A second sweep never stacks, because a carried unit is skipped (D5).
+  - A V Blood kill seen twice within 5 s starts once (foundation TriggerDedupe).
+  - Stopping a stopped event replies "not active".
+
+## Business rules
+1. **Carriers only (Epic constraint):** a native NPC is changed only by our carrier buff: AB_Consumable_PhysicalPowerPotion_T02_Buff (-1591883586, spikes S3), made inert, its stat buffer cleared and refilled, with Buff.BuffType = Replace and MaxStacks 1 (the Epic's BuffType.Replace rule), SpellLevel = Markers.Carrier, and LifeTime = the seconds left with EndAction Destroy, every value from CarrierRecipe (D4). Nothing writes UnitStats or Health on a native NPC. Re-applying never stacks: Replace refreshes rather than stacks, and a carried unit is skipped anyway (D5).
+2. **Stats (S-1):** physicalPower, spellPower, maxHealth, attackSpeed and moveSpeed, each a multiplier 1.0-3.0 of the base value (MultiplyBaseAdd, value − 1, D4). There are no weakening values. A stat that proves inert in game is removed by amendment (D15).
+3. **One empowerment per faction** (Epic Business rules 2, D6): two active Empower events never share a faction or an include unit. A unit that both an event's faction and another event's includeUnits could reach keeps the first carrier ("carried", D3, D5).
+4. **Who is empowered** (Epic Business rules 5, D3): computed per unit from facts at sweep time. It never touches player-faction units, traders, critters, prisoners, Faction_Ignored, our own units, player-owned units (familiars, servants), prefab entities or dead units, and touches V Bloods only with includeVBloods.
+5. **Durations are hard** (Epic Business rules 3):
+   - Every carrier's LifeTime ends by the event's end.
+   - Stop, fault cancel and purge remove carriers through the per-tick budget (D5, D8).
+   - A restart removes every carrier found at boot (S-11, D7, D17).
+   - If the mod is gone, LifeTime still ends each carrier within durationSeconds, at most 7200 s (Epic D12).
+6. **Budget (13.2):** at most EmpowerBatchPerTick carrier operations per tick, applies and removals together, with removals first (D5).
+7. **Precedence (4.4, Epic Business rules 1):** purge > General.Enabled > the pillar switch > MaxConcurrentEvents > the definition's own state > the one-per-faction rule (D6). Settings.cs is authoritative for the numbers (Epic Business rules 10). The owner decides exceptions by changing the cfg within its ranges.
+8. **Temporal (4.3):**
+   - LifeTime is set from the server's UTC clock at each apply.
+   - A reload never changes a running event: it keeps the definition it started with (foundation D6). So a `set` on its stats applies at the next start.
+   - A cfg change takes effect at restart.
+9. **Every-X sets (4.5, profile note):**
+   - **Every NPC of a faction:** an EntityQuery over PrefabGUID + FactionReference + Health + UnitStats, IncludeDisabled | IncludeSpawnTag, filtered by D3.
+     - It misses a unit created after the query runs. The 15 s re-sweep catches it (Epic S-8), and D16 checks a respawn.
+     - The query snapshot is taken when a sweep starts, so a unit destroyed before its turn is dropped (D5).
+   - **Every path that applies a carrier:** the start sweep and the re-sweep, both through CarrierLedger (D5).
+   - **Every path that removes one:**
+     - LifeTime expiry (the game, D16);
+     - EventRuntime.End for stop and fault cancel (D9);
+     - EventRuntime.Purge (D18);
+     - SpawnTracker.BootSweep (D7, D17);
+     - the unit's own death, which destroys its buffs: the ledger drops the entry when its buff is gone (D5).
+
+     No other path exists. A reload leaves running instances alone, and a cfg change waits for the restart.
+   - **Every marker value:** Markers.All, used by BootSweep through SweepPlan (D7).
+   - **Every structural call:** the preflight walk of tracked and untracked .cs files (D8).
+   - **Every session:** -SessionsOf (D26).
+   - **Every path:** -Paths, run last in step 7 (D26).
+
+## Interfaces
+### Internal — reads / writes / changes (paths or symbols)
+- **Reads:**
+  - EventStore.Catalog.Current (Logic/Model.cs DefinitionSet);
+  - EventRuntime.Engine.Active;
+  - PrefabCollectionSystem's name map, for Faction_* names (IFactionCatalog) and CHAR_ names (the existing PrefabUnitCatalog);
+  - per unit: FactionReference, PrefabGUID, Health, UnitStats, VBloodUnit, EntityOwner and Follower;
+  - Settings (Pillars.FactionEmpowerment, Limits.EmpowerBatchPerTick).
+- **Writes and changes:**
+  - Logic/Model.cs: EmpowerAction, EmpowerStats and the definition's action as SpawnWaves or Empower.
+  - Logic/Validation.cs: ParseAction by type, the pairing rule and IFactionCatalog.
+  - New Logic/Empowerment.cs: Eligibility, EmpowerStats.Modifiers, CarrierLedger, ICarrierOps and SweepPlan.
+  - Logic/Markers.cs: Carrier and KindOf.
+  - Logic/Engine.cs: ActionKindOf, the faction refusal, and a cleanup for Waves only.
+  - Logic/Messages.cs: {faction}.
+  - Logic/ApiLines.cs, Logic/Wire.cs: Api = 3.
+  - Logic/CommandArgs.cs and Logic/EventAdmin.cs: stat fields.
+  - Logic/Limits.cs: EmpowerBatchPerTick.
+  - New Services/EmpowerAction.cs: the query, the facts, and apply and remove through EntityExtensions.
+  - Services/EventRuntime.cs: dispatch, End and Purge.
+  - Services/SpawnTracker.cs: BootSweep through SweepPlan, and debug here with natives.
+  - Services/EventStore.cs: the faction catalog.
+  - EntityExtensions.cs: RemoveBuffSafe.
+  - Patches/DeathEventPatch.cs: VBloodConsumeSource.
+  - Commands/SpawnCommands.cs: debug here.
+  - Config/Settings.cs: binds the new limit.
+  - Resources/events.default.json.
+  - tools/preflight.ps1, tools/preflight-checks.json and fixtures; tools/rollback-drill.ps1 and its fixtures.
+  - docs/RAPHAEL_INTEGRATION_CONTRACT.md, docs/RAPHAEL_HANDOFF.md and docs/NYARLATHOTEP_DESIGN.md §2.
+- **What breaks if this is wrong:**
+  - A carrier value treated as a unit marker would despawn native NPCs at boot, which D7 guards.
+  - An Empower event given a cleanup would show a false ending row (D9).
+  - A throwing apply inside the tick would fault the event, which D20 contains.
+- **Shared contract (5.3):**
+  - The Empower action's JSON keys, enumerated in D1 against ParseAction.
+  - The status row's kind, faction, wave and units values, in D11 against ApiLines and the contract.
+  - The SpellLevel carrier value, in D7.
+### External — dependencies and their failure behaviour
+
+| Dependency | Version and cost | Inputs sampled | Slow, down or garbage |
+|---|---|---|---|
+| V Rising server (ProjectM) | VampireReferenceAssemblies 1.1.12-r99041-b2; free | spikes S3: the T02 carrier on CHAR_Bandit_Hunter, Mugger and Thug (stats, expiry, stream-out, restart); unit_index.tsv: 31 factions, prisoners in Faction_World_Prisoners, servants in Faction_Players; per stat, the in-game check of D15 (profile note 6.1) | a missing stat type or buff fails the apply: skipped and logged once per streak (D20); a throwing query faults the event (Epic D25) |
+| DestroyUtility.Destroy (buff removal) | the game's, as KindredCommands Buffs.RemoveBuff uses it | a live carrier on a live NPC; a carrier whose unit died | a throw → retried 3 times then left to LifeTime (D20) |
+| BepInEx / Harmony, VCF 0.10.4 | pinned with the siblings | the existing DeathEventListenerSystem postfix; `event set` string arguments | as foundation: a patch failure disables its pillar; a bad argument gets its one-line reason (D12) |
+| Bloodcraft, KindredCommands | their current Thunderstore releases, installed on the dev server only for Session 3 | a familiar's owner and tag; spawnnpc | our eligibility skips player-owned units; D18 checks it |
+| git, gh, GitHub | the owner's installs; a handful of calls per release | tags, release assets | run under $ErrorActionPreference='Stop': a failed call aborts the step, and a rerun finishes it (D24) |
+| Codex CLI | the owner's install | the review prompt via stdin | a 15-minute timeout; no verdict means no READY, and the step reruns |
+| Raphael | a consumer of contract api 3 | the contract's example rows | a Raphael built for api 2 reads the same keys and ignores new values (contract §1, D27) |
+
+6.3 (test mode): the dev server (save-data-nyardev) is the only place this child runs a server. Debug.FaultInjection stays Debug-build-only (Epic D25), and no test switch reaches a Release build.
+
+## Design
+### Data
+Nothing new is persisted.
+- The carrier ledger (unit key → event id and buff key, plus the sweep and removal queues) lives in memory in Services/EmpowerAction and is gone on restart. The boot sweep finds any carrier left in the world by its SpellLevel value (D7).
+- An Empower event's instance row in state.json is foundation's (written at start, cleared at end and at boot).
+- events.json gains the Empower action shape under SchemaVersion 1. An older reader disables such a definition with "unknown action type Empower" (D23), so the version stays 1 and nothing migrates.
+- An existing events.json whose example-empowerment still uses SpawnWaves loads it disabled with "pillar empowerment takes an Empower action". Both changelogs carry that migration note (3.4).
+- The carrier buffs themselves are game data on each NPC's buff list. They are saved with the world while they last and removed as Business rules 5 says.
+
+| Artifact | Location | Owner | Retention and deletion | Copies |
+|---|---|---|---|---|
+| Carrier ledger | server memory (Services/EmpowerAction) | the mod | until the event's carriers end, or restart | one |
+| Carrier buffs | the world save, on each empowered NPC | the mod | until LifeTime, stop, purge or the boot sweep | one per NPC |
+| Feature doc, audit, plan, reviews, contract, handoff | git | the owner | forever in git history | one per file |
+| Preflight and drill fixtures | tools/preflight-fixtures/StructuralEdits/bad-2/**, TemplatesJson/bad-2/**, tools/rollback-drill-fixtures/** | the repo | forever in git | one |
+| Release zip | Nyarlathotep/Nyarlathotep/build/*.zip (ignored) and the GitHub release | the owner | local copy until the next clean; the release stays | two, hash-matched (D24) |
+| Server logs, dev world, mod config | as raphael-api-core › Design › Data | the owner's dev server | as there; -LogCheck before every restart (D26) | one each |
+| Bloodcraft and KindredCommands DLLs and cfg (Session 3) | dev server BepInEx/plugins and BepInEx/config | the owner | installed for Session 3, then removed; the plugins folder is hashed before and after | one |
+
+tools/data-inventory.json gets the carrier-ledger and carrier-buff entries (D26).
+### States
+- **Empower event:**
+  - Scheduled or idle → Active (start sweep queued) → ended, at its natural end (carriers expire; no ending phase, D9), on stop or fault cancel (removals queued), on purge (every event's removals queued), or cancelled on boot (carriers removed by the boot sweep).
+  - There is no Ending state for Empower.
+- **Carrier:** absent → applied (LifeTime = seconds left) → gone, by expiry, removal, the unit's death, or the boot sweep.
+- **Sweep:** queued → processing (EmpowerBatchPerTick per tick) → done. Re-queued 15 s after its start while the event is active, never while unfinished (D5).
+- **7.1:**
+  - Empty: no Empower definitions, or the pillar off, and nothing happens.
+  - First run: the seeded template is disabled.
+  - Loading: before Core.IsReady, commands reply "still loading" (foundation).
+  - Partial: a sweep in progress shows its applied count so far in `units` (D11).
+  - Error: an invalid definition is disabled with its reason (D1, D2).
+- **7.2 Concurrency:**
+  - Commands, the scheduler tick and the DeathEvent postfix all run on the server main thread, so the ledger needs no lock.
+  - Two admins starting two events on one faction: the second is refused (D6).
+  - A trigger racing an admin start: "already active" (foundation).
+  - The actors here are the admins, System and me as builder; my test sessions run only on the dev server.
+- **7.3 Stale data, cancel, re-entry:**
+  - Snapshot entries whose entity died are dropped (D5).
+  - A stop is the cancel. Undo is not needed: an event can be started again.
+  - A restart is the re-entry: every carrier is removed and the event is cancelled (S-11, D17).
+  - A reload invalidates nothing that is running.
+  - A `set` invalidates Raphael's def rows, announced by config-changed (raphael-api-core).
+### Permissions
+| Path | Who | Check |
+|---|---|---|
+| `.nyar event start/stop <id>` on an Empower definition | admin | adminOnly; Gateway StartEvent/EndEvent (Epic D36) |
+| `.nyar event set <id> action.stats.<stat> <v>` | admin | adminOnly; Gateway SetEventField (D12) |
+| Schedule, GameTime or VBloodKilled start | System | Gateway StartEvent for System: enabled definitions only (Epic D36, D21) |
+| `.nyar debug here` | admin | adminOnly (D14) |
+| `.nyar status`, `.nyar api status` | anyone | public; units for admins only (D11) |
+| events.json edits | Operator | file load, validated (D1, D2) |
+
+Actor matrix (2.1):
+- A **player** reads status only.
+- An **admin** runs every path above.
+- **System** starts and ends enabled definitions only.
+- The **Operator** writes definitions that validation checks.
+- **Raphael** acts as its player.
+- **Other mods** cannot reach any path.
+- An **unauthenticated** client reaches nothing.
+
+2.2: the unauthorized path is VCF's standard refusal, and the mod never runs.
+2.3 ownership: definitions belong to the server (any admin may start, stop or set any of them). Carriers belong to the event that applied them, and the first event keeps a contested unit (D5). A stopped event can be started again by any admin, and the new instance sweeps afresh. Nothing is owned by a player.
+### UX
+- **Discovery (11.1):** the pillar switch and template are described in the Thunderstore README with the stats table (D24); `.nyar event list` shows the template; `.nyar` lists the commands.
+- **Feedback (11.2, profile note):**
+  - Start and stop replies are foundation's.
+  - The sweep line tells the admin how many NPCs were empowered and why others were skipped (D16).
+  - The banner uses {faction} (D10), and every new chat line is seen in the real chat during Session 2 before release.
+  - An empty result: "sweep 0 applied".
+- **Accessibility (11.3):** plain chat lines of at most 480 bytes, no meaning carried by colour; the chat window is the game's.
+- **Activation (11.4):** an Empower event starts only from its trigger (Schedule, GameTime, VBloodKilled) or an admin's start, and only with the pillar on and the definition enabled. What shows it: the sweep log line, the banner, and the status row. Should-not-activate cases:
+  - a V Blood kill with the pillar off, which logs nothing (Epic Business rules 13);
+  - a gate boss's death (D13);
+  - a second event on the same faction, which is refused with a log line (D6).
+
+## Security
+- **10.1 Authorization on every path:**
+  - Direct paths are adminOnly commands through the gateway (D21).
+  - Indirect paths are the triggers (System: enabled definitions only) and the scheduler's sweeps, which act only on already-started instances.
+  - No path takes a player's input.
+- **10.2 Injection:**
+  - Faction and unit names are matched against the game's catalogs, never used in a query string.
+  - Stat values are parsed numbers in range (D1, D12).
+  - {faction} is built from validated names (D10).
+  - No input reaches a shell, a URL or a file name.
+- **10.3 Secrets:** none are added. The gh credential stays in gh's store, and no script of this child reads it (the preflight secrets check, Epic D9).
+- **10.4 Personal data:** none. Carriers and the ledger hold entity keys only, and the sweep line holds counts. Status rows carry faction names, never a position or a player (D11, Epic D16).
+
+## Failure & observability
+- **12.1:**
+  - An invalid definition shows its reason in `.nyar event list` (D1, D2).
+  - A refused start gives the reply and a log line (D6).
+  - A faulting event is cancelled after 3 faults and marked degraded in `.nyar status` (Epic D25).
+  - A failed removal is logged, and the carrier expires on its own (D20).
+- **12.2:** log lines:
+  - "empower <id>: sweep <n> applied, <s> skipped (<reason> <count> …)" per sweep that applied anything, and the first sweep always;
+  - "empower <id>: <k> carriers queued for removal (<why>)";
+  - the boot carrier sweep line (D7);
+  - "apply failed" and "carrier removal failed" once per streak (D20).
+- **12.3:** the operator polls, as in raphael-api-core.
+  - `.nyar status` shows the degraded list and, for admins, the carrier count per event (D11).
+  - The operator reads the log after each restart (-LogCheck, D26), where a non-zero boot carrier sweep after a clean stop is a signal.
+  - `.nyar debug here` shows a nearby NPC's carrier and stats (D14).
+- **12.4:** every check has a failing input, a silent input and a non-passing empty input:
+  - The structural-edits check: bad-2 plants DestroyUtility.Destroy in a Services file; the existing empty fixture reports a failure, never a pass (D8, D22).
+  - The TemplatesJson check: bad-2 ships example-empowerment enabled (D22).
+  - The drill selftest: a log pair where N-1 disabled a definition for another reason fails, and an empty log is "fail — no log" (D23).
+  - Test seams (profile note): every control sits in Logic/ first (eligibility, stat map, ledger budget, sweep plan, per-faction refusal, dispatch kind), so a unit test reaches it. The service keeps only the ECS reads and writes, which are covered by Sessions 1-3.
+- Every EmpowerAction entry point runs inside the event's try/catch, or wraps its own work in one (BootSweep's carrier part), so a failure never stops the scheduler (D20).
+
+Selftest matrix (12.4):
+
+| Check | Fails on | Silent on | Empty input |
+|---|---|---|---|
+| Test-CheckStructuralEdits | bad (existing), bad-2 (DestroyUtility.Destroy in Services/) | good: copies of the real files incl. EntityExtensions.RemoveBuffSafe | existing empty fixture, a failure |
+| Test-CheckTemplatesJson / PillarDefaults | bad-2: the real template with example-empowerment enabled | good: the real Resources/events.default.json | existing empty fixture |
+| Test-CheckWireContract | existing bad-3 (api mismatch), re-copied at api 3 | good: the real Wire.cs and contract at api 3 | existing empty fixture |
+| rollback-drill -SelfTest | bad-3: N-1 disabled a definition for a reason other than "unknown action type" | good-2: N-1 disabled one Empower definition | an empty log, "fail — no log" |
+| Unit tests (D1-D12, D20) | each D-item's fails-when input | the valid cases beside them | empty inputs: no factions (rejected), an empty sweep (0 applied), an empty SweepPlan (nothing) |
+| preflight -AuthSuite (D21) | a planted EmpowerAction [Mutating] call outside Gateway.Run (GatewayOnly bad fixture) or a failing test | all parts pass | a filter running 0 tests prints "auth suite: no tests ran", a failure |
+| Release check (D24) | a surface at another version, a missing tag, a zip hash differing from the audit | all six at 0.4.0, tag pushed, hashes equal | a release commit without a tag prints "release tags: <n-1>/<n>", a failure |
+| Repository drill (D25) | a conflicting revert or a reverted tree differing from v0.3.0 | a clean revert | a missing tag makes `git worktree add` fail under Stop, so "rollback: clean" is never printed |
+| -AuditOf, -SessionsOf, -Paths, data inventory (D26) | their existing bad fixtures (a step without a verdict, a session without its line, an unlisted path, an entry missing a field) | copies of the real files | existing empty fixtures, each printing a failure line |
+
+Gating-control matrix (one evidence command per gating probe):
+
+| Probe | Evidence | Fails on | Silent on | Empty input |
+|---|---|---|---|---|
+| 2.1 actors | D21 `pwsh tools/preflight.ps1 -AuthSuite` | an actor granted beyond its row, or an EmpowerAction mutation outside the gateway | the declared table | 0 tests → failure |
+| 3.3 persistence | D26 `pwsh tools/preflight.ps1` data inventory line | a Design › Data row without a complete entry | a complete inventory | a missing data-inventory.json → failure |
+| 4.4 precedence | D6 `dotnet test Nyarlathotep/Nyarlathotep.Tests --filter FullyQualifiedName~EngineTests` | the faction refusal winning over a higher control, or two events on one faction | disjoint factions | 0 cases → failure |
+| 6.2 dependencies | D20 `dotnet test Nyarlathotep/Nyarlathotep.Tests --filter FullyQualifiedName~DependencyFailureTests` | a failure escaping its scope or logging more than once per streak | healthy fakes | 0 cases → failure |
+| 10.1 authorization | D21 (as 2.1) | as 2.1 | as 2.1 | as 2.1 |
+| 10.3 secrets | D22 `pwsh tools/preflight.ps1 -SelfTest` then `pwsh tools/preflight.ps1` "secrets: none" | a planted token shape or credential read | ordinary text | no files → failure |
+| 12.4 failing cases | D22 -SelfTest | a bad or empty fixture passing | good fixtures | an empty manifest → failure |
+| 14.3 rollback | D25 repository drill and D23 `pwsh tools/rollback-drill.ps1 -From v0.4.0 -To v0.3.0` | a conflicting revert; N-1 failing on N's files or disabling for another reason | a clean range | fewer than two release tags → "rollback drill: needs two releases" |
+| 14.4 paths | D26 `pwsh tools/preflight.ps1 -Paths` | a walked path matching no glob | manifested paths | an empty manifest → failure |
+
+## Performance
+- **Budget (13.1):** the scheduler tick keeps Epic D24's under-5 ms average during a sweep and a purge drain (D19). The hot path is EmpowerAction's batch: at most EmpowerBatchPerTick buff instantiations or removals, plus one query per sweep (every 15 s per event). The query cost is measured in D19. If the average breaks 5 ms at 200, the default drops by amendment to the value that meets it.
+- **Bounds (13.2):**
+
+| Bound | Source case | At the bound | Valid case excluded |
+|---|---|---|---|
+| EmpowerBatchPerTick 200 (50-1000) | the Epic's Performance note; Beelzebub's 36-destroys crash is why removals are staged too | the rest wait for the next tick | a whole faction empowered in one tick (it takes n/200 s) |
+| 15 s re-sweep | Epic S-8 | a new unit waits up to 15 s plus its batch turn | a respawned NPC empowered the instant it appears |
+| 1-5 factions, 0-20 include and exclude units | the largest real grouping (Legion 68 prefabs; a boss's retinue) | validation refuses more (D1) | a "every faction" event (use five events or a later plan) |
+| stat 1.0-3.0 | S-1 | validation refuses (D1, D12) | weakening and 3×+ events |
+| durationSeconds 30-7200 | foundation | validation refuses (foundation EventValidationTests, Epic D29) | an empowerment longer than 2 h |
+| MaxConcurrentEvents (3, ceiling 10) | foundation | the start is refused "skipped by MaxConcurrentEvents" (Epic D27, D6) | more than 10 simultaneous events |
+
+## Build plan
+Every step runs inside the Epic's `## Rollout` › Procedure: a pre-audit and a post-audit recorded in docs/audits/faction-empowerment.md, `/code-review`, and a Codex read-only cross-inspection of the step's diff (`codex exec -s read-only`, prompt via stdin) until "VERDICT: READY", with its line written to the audit. Compile check: `dotnet build Nyarlathotep/Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__`. Tests: `dotnet test Nyarlathotep/Nyarlathotep.Tests`. Step 1 begins only after the Epic A20 both-mods check is recorded in the Epic Log (S-4).
+1. **Records and pure logic.**
+   - Create docs/audits/faction-empowerment.md (rollback base v0.3.0 = ee36a7d) and extend docs/features/FACTION_EMPOWERMENT.md's Status and Test plan.
+   - Add to Logic/Model.cs EmpowerAction(Factions, IncludeUnits, ExcludeUnits, IncludeVBloods, EmpowerStats) and let EventDefinition carry either action (a SpawnWaves `Action` and an Empower `Empower`, exactly one set).
+   - Extend Logic/Validation.cs: ParseAction by type, the pairing rule, IFactionCatalog and the faction deny list.
+   - New Logic/Empowerment.cs: Eligibility, Ownership, CarrierRecipe, EmpowerStats.Modifiers, CarrierLedger with ICarrierOps, SweepPlan, DeathRule.
+   - Logic/Markers.cs: Carrier and KindOf. Logic/Limits.cs: EmpowerBatchPerTick.
+   - Logic/Engine.cs: ActionKindOf, the faction refusal, and a cleanup for Waves only.
+   - Logic/Messages.cs: {faction}.
+   - Logic/CommandArgs.cs and Logic/EventAdmin.cs: the stat fields.
+   - Tests: EventValidationTests, TemplateTests, EmpowerEligibilityTests, EmpowerStatsTests, CarrierRecipeTests, CarrierLedgerTests, SweepPlanTests, DeathRuleTests, TriggerActivationTests, EngineTests, AnnouncerTests, CommandArgTests, ConfigChangedTests, DependencyFailureTests; the test catalog fake gains factions.
+   - Satisfies D1, D3, D4, D5, D6, D7, D9, D10, D12, D13, D20.
+2. **Service, template and checks.**
+   - New Services/EmpowerAction.cs: the query of Business rules 9, UnitFacts, apply per Business rules 1 through RemoveBuffSafe and a carrier recipe beside SpawnTracker.TryMark, Tick and removal hooks, all [Mutating] entry points dispatched from EventRuntime.
+   - EventRuntime: dispatch by ActionKindOf; End and Purge call EmpowerAction.
+   - SpawnTracker: BootSweep via SweepPlan, and debug here with natives.
+   - EntityExtensions: RemoveBuffSafe.
+   - DeathEventPatch: VBloodConsumeSource.
+   - Config/Settings.cs binds EmpowerBatchPerTick; EventStore supplies the faction catalog.
+   - Resources/events.default.json: the Empower template.
+   - tools/preflight.ps1: the structural-edits check covers DestroyUtility.Destroy; fixtures StructuralEdits/bad-2 and TemplatesJson/bad-2 registered in tools/preflight-checks.json.
+   - docs/NYARLATHOTEP_DESIGN.md §2: the Empower action, without `visual` (S-2).
+   - Satisfies D2, D8, D14, D21, D22.
+3. **Wire api 3.**
+   - ApiLines: empower rows. Wire.Api = 3.
+   - docs/RAPHAEL_INTEGRATION_CONTRACT.md: Current api 3, §3 status values, and the change log.
+   - Tests: ContractDocTests and WireFormatTests at api 3; the WireContract fixtures re-copied.
+   - docs/RAPHAEL_HANDOFF.md: the api 3 section.
+   - Satisfies D11, D27.
+4. **Unattended session.**
+   - Stop the server, run `pwsh tools/preflight.ps1 -LogCheck` on the last logs, and deploy with `dotnet build Nyarlathotep/Nyarlathotep.sln -c Release`.
+   - Enable Pillars.FactionEmpowerment on the dev server's cfg and add a Schedule-triggered Empower event on Faction_Bandits through tools/ingame/session-events.py (a new mode `fe1`).
+   - Boot the dev world (`$env:SteamAppId='1604030'`; VRisingServer.exe -persistentDataPath .\save-data-nyardev -serverName "Nyar Dev" -saveName nyardev -logFile .\logs\NyarDev.log).
+   - Wait for the sweep line, stop the server mid-window, run -LogCheck, and boot again: the carrier sweep finds k > 0.
+   - Stop, run -LogCheck, and boot a third time: 0 found.
+   - Record Session 1.
+   - Satisfies D17, D26.
+5. **In-game session with the owner (Session 2).**
+   - Write the exact numbered steps (server 127.0.0.1:9876) into docs/features/FACTION_EMPOWERMENT.md › Test results › Session 2: debug readings per stat, damage numbers with and without the carrier, respawn catch-up, stop, the second-event refusal, a V Blood kill, and purge with a spawn event and an empowerment event running.
+   - Turn Debug.TimingLog on, boot, and hand the steps over.
+   - Record each observation, stop, run -LogCheck, and record it.
+   - An inert stat gets a `discovered` amendment before step 7.
+   - Satisfies D14, D15, D16, D18 (Epic D11), D19.
+6. **Uninstall and coexistence (Session 3).**
+   - Hash the dev server's BepInEx/plugins.
+   - Install Bloodcraft and KindredCommands from Thunderstore into it. The owner summons a familiar; I run an empowerment on its source faction and a spawn event; the owner reads the familiar with `.nyar debug here` and runs KindredCommands' spawnnpc.
+   - Then the Epic D12 steps: stop mid-event, delete Nyarlathotep.dll, boot, wait durationSeconds, reinstall with General.Enabled=false, boot, and read `.nyar debug here`.
+   - Remove both mods and confirm the plugins hash equals the one taken before.
+   - Satisfies D18 (Epic D12, D23), D26.
+7. **Release.**
+   - Extend tools/rollback-drill.ps1 and its fixtures (D23).
+   - Move the six surfaces to 0.4.0 in one `chore(release): v0.4.0` commit; tcli build; record the zip's SHA-256 in the audit.
+   - Create the local annotated tag v0.4.0. Before anything is pushed, run D25 and `pwsh tools/rollback-drill.ps1 -From v0.4.0 -To v0.3.0` with the server stopped. A failure means deleting the local tag, fixing, and re-tagging. The pre-push D25 run allows only preflight's "v0.4.0 not pushed" line, and D25 reruns after the push.
+   - Grep for 7656119 and kdpenland, push the commit and tag, and create the GitHub pre-release with the zip (D24).
+   - Record the Epic pass lines (D11, D12, D23), run `dod close faction-empowerment`, regenerate the dod index and commit.
+   - Last, after every write of this child: run `pwsh tools/preflight.ps1 -Paths` and `pwsh tools/preflight.ps1`; an undeclared path is added to the manifest and the run repeated until clean.
+   - Satisfies D23, D24, D25, D26.
+
+## Work breakdown
+- W1 · **Definitions**
+- W1.1 · **Schema, template and fields** · items: D1 D2 D12 · steps: 1, 2
+- W2 · **Engine**
+- W2.1 · **Eligibility, stats and ledger** · items: D3 D4 D5 D13 D20 · steps: 1
+- W2.2 · **Rules, dispatch and boot sweep** · items: D6 D7 D9 D10 · steps: 1
+- W2.3 · **Service and game hooks** · items: D8 D14 D21 D22 · steps: 2
+- W3 · **Wire**
+- W3.1 · **api 3 and Raphael** · items: D11 D27 · steps: 3
+- W4 · **Verification and release**
+- W4.1 · **Sessions** · items: D15 D16 D17 D18 D19 · steps: 4, 5, 6
+- W4.2 · **Release, drills and records** · items: D23 D24 D25 D26 · steps: 7
+
+## Rollout
+### Shipping
+One release, 0.4.0, a GitHub pre-release at close; the owner publishes to Thunderstore. It ships off: Pillars.FactionEmpowerment defaults to false and the template to disabled (Epic D4, D22). Who turns it off:
+- any admin, with `.nyar event stop`, `.nyar purge confirm` or the pillar switch at restart;
+- the operator, by removing the DLL, after which carriers end on their LifeTime (Epic D12).
+### Compatibility
+- events.json stays SchemaVersion 1. Existing SpawnWaves definitions are unchanged.
+- An example-empowerment that still uses SpawnWaves loads disabled with its reason. The changelog tells the admin to change its pillar to "spawns" or copy the new template from the README.
+- api 3 only adds values to existing keys. A Raphael built for api 2 keeps working (D27). Human replies are unchanged.
+- A new cfg key, Limits.EmpowerBatchPerTick, is added. No key is renamed.
+### Rollback
+- **In the repository:** `git revert --no-edit v0.3.0..v0.4.0` (v0.3.0 = ee36a7d), drilled by D25.
+- **On a server:** install the 0.3.0 DLL (D23 proves it initializes on 0.4.0's files, with Empower definitions disabled as "unknown action type Empower").
+  - Carriers already applied are left to expire on their LifeTime, at most 7200 s, because 0.3.0 does not sweep them.
+  - To remove them at once, run `.nyar purge confirm` on 0.4.0 before downgrading. The README's Uninstall section says so.
+  - This remains possible after data is written: 0.4.0 persists nothing new.
+- **Commit range:** v0.3.0..v0.4.0, every commit since the last release, this child's included.
+### Paths walked
+Walking the Build plan:
+- **Step 1:**
+  - docs/audits/faction-empowerment.md, docs/features/FACTION_EMPOWERMENT.md.
+  - Nyarlathotep/Nyarlathotep/Logic/{Model,Validation,Empowerment,Markers,Limits,Engine,Messages,CommandArgs,EventAdmin}.cs.
+  - Nyarlathotep/Nyarlathotep.Tests/{EventValidationTests,TemplateTests,EmpowerEligibilityTests,EmpowerStatsTests,CarrierRecipeTests,CarrierLedgerTests,SweepPlanTests,DeathRuleTests,TriggerActivationTests,EngineTests,AnnouncerTests,CommandArgTests,ConfigChangedTests,DependencyFailureTests,TestSupport}.cs.
+- **Step 2:**
+  - Services/{EmpowerAction,EventRuntime,SpawnTracker,EventStore}.cs, EntityExtensions.cs, Patches/DeathEventPatch.cs, Commands/SpawnCommands.cs, Config/Settings.cs, Resources/events.default.json.
+  - tools/preflight.ps1, tools/preflight-checks.json, tools/preflight-fixtures/StructuralEdits/bad-2/**, tools/preflight-fixtures/TemplatesJson/bad-2/**.
+  - docs/NYARLATHOTEP_DESIGN.md, tools/data-inventory.json.
+- **Step 3:** Logic/{ApiLines,Wire}.cs, Nyarlathotep.Tests/{ApiLinesTests,WireFormatTests,ContractDocTests}.cs, docs/RAPHAEL_INTEGRATION_CONTRACT.md, tools/preflight-fixtures/WireContract/**, docs/RAPHAEL_HANDOFF.md.
+- **Steps 4–6:**
+  - In the repository: tools/ingame/session-events.py, and the feature doc and audit.
+  - On the server: the plugins DLL (plus Bloodcraft and KindredCommands during Session 3), BepInEx/config/kdpen.Nyarlathotep.cfg, BepInEx/config/Nyarlathotep/{events,state}.json (+.bak/.tmp), save-data-nyardev/**, logs/NyarDev.log and BepInEx/LogOutput.log.
+- **Step 7:**
+  - tools/rollback-drill.ps1, tools/rollback-drill-fixtures/**, tools/paths-manifest.txt.
+  - The six release surfaces: Nyarlathotep/Nyarlathotep/Nyarlathotep.csproj, Nyarlathotep/Nyarlathotep/thunderstore.toml, CHANGELOG.md, Nyarlathotep/Nyarlathotep/CHANGELOG.md, README.md, Nyarlathotep/Nyarlathotep/README.md.
+  - Nyarlathotep/Nyarlathotep/dist/** and build/*.zip (ignored); the drill's temp worktrees and saved config (outside the repository, per A11 of raphael-api-core).
+  - docs/dod/faction-empowerment.md, docs/dod/nyarlathotep.md, docs/dod/README.md.
+- **Review process:** docs/dod/faction-empowerment.reviews.md and docs/dod/faction-empowerment.review.html.
+
+## Out of scope
+- **15.1, excluded here:**
+  - A visible aura (S-2).
+  - A "trigger" faction shortcut (S-3).
+  - Weakening multipliers (S-1).
+  - Resistances and siegePower (S-1).
+  - Changing UnitLevel, which leaves the vanilla level-difference damage modifier unchanged.
+  - Empowering our own spawned units, which have their own tuning.
+  - Per-hit damage logging in the mod (D15 reads the game's damage numbers).
+  - A Blood Moon trigger.
+  - Building Raphael's panels (Raphael workspace).
+  - Thunderstore publication (the owner's).
+- **15.2, deferred:**
+  - auras: a future `empower-visuals` plan;
+  - the trigger shortcut: `empower-trigger-faction`;
+  - the Blood Moon trigger: the Epic's `bloodmoon-trigger`;
+  - resistances and siegePower: the sieges child, which needs siegePower;
+  - counting kills of empowered NPCs: the stats child, which reads CarrierLedger.
+
+## Also considered
+- **Compliance and legal:** none; no personal data.
+- **Localisation:** faction short names are the game's internal names, not localised; message pools are admin-editable.
+- **Running cost:** tick time only (D19).
+- **Operational ownership:** the server admin; the README's Kill switch and Uninstall sections cover carriers.
+- **Documentation and changelog:** the six surfaces, the feature doc, the contract and the handoff (D11, D24, D27).
+- **Analytics:** the sweep line's counts are enough.
+- **Decommissioning:** the placeholder SpawnWaves template is replaced.
+- **Support tooling:** `.nyar debug here` with natives (D14), and the carrier count in admin status rows (D11).
+
+## Assumptions
+- S-1 · validated · the stats are physicalPower, spellPower, maxHealth, attackSpeed (Primary and Ability attack speed) and moveSpeed, each 1.0-3.0 of base, with at least one above 1.0; resistances and siegePower are out · source: owner decision in plan mode 2026-09-26 (Decision 1A)
+- S-2 · validated · no visible aura in 0.4.0; a `visual` key is rejected as unknown · source: owner decision in plan mode 2026-09-26 (Decision 2A)
+- S-3 · validated · factions are written out explicitly; there is no "trigger" faction shortcut · source: owner decision in plan mode 2026-09-26 (Decision 3A)
+- S-4 · validated · the build starts only after the Epic A20 both-mods check passes; until then only this plan and its reviews are written · source: owner decision in plan mode 2026-09-26 (Decision 2A of the post-0.3.0 plan)
+- S-5 · validated · the carrier recipe of spikes S3 (the T02 potion buff, TryInstantiateBuffEntityImmediate, gameplay-event components stripped, LifeTime with EndAction Destroy, MultiplyBaseAdd modifiers) applies stats at once, reverts on expiry keeping the Health ratio, survives stream-out and persists across a restart with LifeTime continuing · source: docs/features/FACTION_EMPOWERMENT.md › Test results › S3 carrier spike (2026-09-24)
+- S-6 · validated · faction membership comes from FactionReference; prisoners are Faction_World_Prisoners and castle servants Faction_Players, so a faction match with the deny list excludes non-combatants without name rules · source: Reference Data/unit_index.tsv (31 factions), spikes S3 finding
+- S-7 · reversible · removing a carrier with DestroyUtility.Destroy (TryRemoveBuff) reverts its stats like expiry does, and 200 buff removals in one tick are safe; the boot removals of Session 1 and the stop and purge of Session 2 settle it · fallback: remove by setting the carrier's LifeTime.Duration to its current age so the game's own expiry destroys it next frame (the same budget and the same ceil(n / EmpowerBatchPerTick) + 1 tick bound, since each write is one operation), and default EmpowerBatchPerTick 100 if a 200-removal tick logs an error or breaks D19's 5 ms; either change is a `discovered` amendment recorded before the release step
+- S-8 · reversible · Bloodcraft familiars are recognisable as player-owned (EntityOwner or Follower to a player character, or its familiar tag) · fallback: add their faction or tag to the deny rule found in Session 3, by a `discovered` amendment
+- S-9 · reversible · the UnitStats readings of attack speed and move speed on an NPC move with the carrier · fallback: D15 removes a stat that does not, by amendment
+- S-10 · validated · commands, the scheduler tick and Harmony postfixes all run on the server main thread, so the ledger needs no lock · source: foundation Design › States, Services/EventScheduler.cs
+
+## Coverage
+| # | Layer | Status | Probes | Pointer / reason |
+|---|---|---|---|---|
+| 1 | Purpose & typical use | Considered | 3/3 | Purpose & typical use |
+| 2 | Actors & permissions | Considered | 3/3 | Design › Permissions › 2.1 D21; 2.2 D21; 2.3 D5 D6 |
+| 3 | Inputs, outputs & data | Considered | 4/4 | Design › Data › 3.1 D1 D12; 3.2 D11 D16 D10; 3.3 D26 D17; 3.4 D2 D23 |
+| 4 | Business rules & invariants | Considered | 5/5 | Business rules › 4.1 D4 D5; 4.2 D6 D5 D7; 4.3 D5 D17; 4.4 D6; 4.5 D3 D5 D7 D8 D26 |
+| 5 | Internal interfaces | Considered | 3/3 | Interfaces › 5.1 D3 D14; 5.2 D7 D9 D20; 5.3 D1 D11 D7 |
+| 6 | External dependencies & contracts | Considered | 3/3 | Interfaces › 6.1 D15 D18 D13; 6.2 D20; 6.3 D22 |
+| 7 | States & lifecycle | Considered | 3/3 | Design › States › 7.1 D1 D16 D11; 7.2 D6 D5; 7.3 D5 D17 |
+| 8 | Minimal stretch | Considered | 2/2 | Use cases › Minimal stretch › 8.1 D1 D16; 8.2 D16 D17 |
+| 9 | Maximal stretch | Considered | 3/3 | Use cases › Maximal stretch › 9.1 D5 D19; 9.2 D1 D6 D12 D21; 9.3 D5 D6 |
+| 10 | Security & privacy | Considered | 4/4 | Security › 10.1 D21; 10.2 D1 D10; 10.3 D22; 10.4 D11 D10 |
+| 11 | Design & UX | Considered | 4/4 | Design › UX › 11.1 D24 D14; 11.2 D16 D10; 11.3 prose: plain chat lines under 480 bytes with no meaning carried by colour; the chat window is the game's; 11.4 D13 D6 D16 |
+| 12 | Failure handling & observability | Considered | 4/4 | Failure & observability › 12.1 D1 D6 D20; 12.2 D16 D7 D20; 12.3 D14 D11 D26; 12.4 D22 D23 |
+| 13 | Performance & scale | Considered | 2/2 | Performance › 13.1 D19; 13.2 D5 D1 |
+| 14 | Rollout & compatibility | Considered | 4/4 | Rollout › 14.1 D24 D22; 14.2 D2 D11 D27; 14.3 D25 D23; 14.4 D26 |
+| 15 | Out of scope | Considered | 2/2 | Out of scope |
+Gate — acceptance & testability: passed — every Considered layer 2–14 maps to ≥ 1 D-item
+
+## Baseline
+
+## Amendments
+
+## Log
+- 2026-09-26 · status → draft · plan

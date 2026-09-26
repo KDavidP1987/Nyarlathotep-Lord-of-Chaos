@@ -119,6 +119,15 @@ Gating, from the handshake:
   and bumps `api`.
 - Also PLANNED: `state=scheduled` rows in `api status`, siege rows, and the share command.
 
+## api 3 (faction empowerment)
+
+PLANNED for Nyarlathotep 0.4.0 (docs/dod/faction-empowerment.md, D11). No new tag or key: api 3 fills values that
+api 2 already defines.
+- A status row of `kind=empower` carries `faction=<names joined by ','>` (e.g. `faction=Legion,Bandits`, the
+  `Faction_` prefix removed), `wave=-`, and for admins `units=<NPCs holding the event's empowerment>`.
+- An empower event has no `ending` row: it goes straight from `active` to gone.
+- A client gating on `api>=2` needs no change. Show `faction` on empower rows and hide the wave column when it is `-`.
+
 ## Requests (contract §8)
 
 If Raphael needs a shape, key or command that api 2 doesn't have, add a row to contract §8 in the Nyarlathotep
