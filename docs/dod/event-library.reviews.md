@@ -277,3 +277,57 @@ The owner accepted F1–F6 on 2026-09-26 in plan mode (option A: a Review 6 with
 - F5 · accepted · S-5's fallback reads "a coordinated amendment of D2, Business rules 2, the catalogue and TemplateLibraryTests' expected set before release"
 - F6 · accepted · CommandArgTests adds a 400-character CHAR_ and Faction_ value, each refused with the existing length rule (corrected at apply: no length rule exists today, Logic/CommandArgs.cs has only the 1-32 id rule at lines 26-29; step 1 adds a 96-character name rule to CommandArgs, the longest real names in unit_index.tsv being 50 and 41 characters)
 
+## Review 6 · 2026-09-26 · codex · plan: revision 5 (5062e05); file access confirmed (0 blocked reads)
+Confirmed read-only review: I read at least `docs/dod/event-library.md` and `Nyarlathotep/Nyarlathotep/Logic/CommandArgs.cs`; I did not read `docs/dod/event-library.reviews.md`.
+
+F1 · `blocking` · Probe `5.3` is unanswered because D1/D4 define the shared catalogue contract with lowercase `schemaVersion`, while `EventValidator.Parse` accepts only case-sensitive `SchemaVersion` and `events.default.json` uses that spelling; the stated valid-empty fixture would be rejected as an unknown top-level field.
+Fix: Decide the authoritative casing—most consistently `SchemaVersion`—and change D1, D4, Minimal stretch, fixtures, and tests so the catalogue contract exactly matches the existing validator.
+
+F2 · `blocking` · Probe `3.1` is unanswered for catalogue pagination: `.nyar template list [pillar]` accepts no page argument, yet D4 promises ten-per-page paging and refers to `Logic/Paging.cs`, whose API-oriented output adds `[NYAR:end]`; once later children add a seventh-plus template beyond page one, an admin has no specified way to request it.
+Fix: Specify an actionable human-chat contract such as `.nyar template list [pillar] [page]`, including ambiguity resolution, page header/footer, invalid/out-of-range replies, and tests proving every template remains reachable.
+
+F3 · `blocking` · Probe `7.2` omits the concurrent cfg-edit path: the plan handles stale `events.json`, but an operator can edit the cfg after load while an admin runs `.nyar pillar …`; `ConfigEntry.Value` with `SaveOnConfigSet` may save the in-memory configuration over that external edit, contradicting the claimed coexistence with hand editing.
+Fix: Choose and test a cfg concurrency policy—reload and detect conflicts before changing the entry, or explicitly require operator coordination and define which write wins and what the admin sees.
+
+F4 · `advisory` · Probe `11.2` has an evidence wording conflict: D21 requires “one line per case,” but `.nyar template info` delegates to `EventLines.Info`, which currently produces multiple reply lines.
+Fix: Say “one recorded block per case” and require every emitted chat line, in order, to be captured verbatim.
+
+F5 · `advisory` · Probe `9.2` tests oversized syntactically valid names but not duplicate names, although the existing validator rejects duplicate faction entries and the authoring parser’s intended reply/write behavior is not stated.
+Fix: Add duplicate faction, unit, boss, day, and time cases to the existing bad/good/empty authoring controls and state whether they are rejected before writing or written and disabled after reload.
+
+F6 · `advisory` · Probe `12.3` relies on operator polling and session-time log checks, so catalogue failure or repeated uncertain writes between operator checks have no proactive production signal.
+Fix: Include catalogue-unavailable and uncertain-write state in the existing health/degraded line and admin login notice.
+
+Coverage by layer and probe:
+
+1. `Considered` — `1.1–1.3`: Purpose & typical use.
+2. `Considered` — `2.1–2.3`: Design › Permissions; D8, D12, D17, D22.
+3. `Gap` — `3.1` missing usable pagination input; `3.2–3.4` answered by D12–D15, D19, D29–D30 and Design › Data.
+4. `Considered` — `4.1–4.5`: Business rules; D1–D2, D8, D12–D18, D20, D25, D30.
+5. `Gap` — `5.3` has a contradictory schema contract; `5.1–5.2` answered by Interfaces and D3, D12, D14.
+6. `Considered` — `6.1–6.3`: Interfaces › External; D3, D8, D15, D17–D19, D24–D30.
+7. `Gap` — `7.2` omits concurrent external cfg edits; `7.1` and `7.3` answered by Design › States and D3–D4, D8, D12, D16, D19, D23, D26.
+8. `Considered` — `8.1–8.2`: Use cases › Minimal stretch; D4–D6, D8.
+9. `Considered` — `9.1–9.3`: Use cases › Maximal stretch; D5, D8–D11, D14, D22, D27.
+10. `Considered` — `10.1–10.4`: Security; D9–D12, D17–D18, D22.
+11. `Considered` — `11.1–11.4`: Design › UX; D4, D16, D20–D21, D23, D25, D28.
+12. `Considered` — `12.1–12.4`: Failure & observability; D3, D14, D16–D19, D24–D25, D30–D31.
+13. `Considered` — `13.1–13.2`: Performance; D5, D12, D25, D27.
+14. `Considered` — `14.1–14.4`: Rollout; D18, D28–D30.
+15. `Considered` — `15.1–15.2`: Out of scope.
+
+The Epic’s event-library child constraint, D47/A22 unattended-after-kick-off amendment, precedence, hard durations, every-X obligations, and admin authorization are inherited verbatim or by explicit reference. The sibling’s Empower contract is also referenced and sequenced after its 0.4.0 release.
+
+12/15 layers · 46/49 probes
+VERDICT: REVISE
+
+### Dispositions
+Review 6 has blocking findings; by the owner's option A they go back to the owner. The dispositions below are the
+author's proposals, applied only after the owner decides.
+- F1 · accepted · pending owner: the catalogue uses the validator's `SchemaVersion` (Logic/Validation.cs:75, Resources/events.default.json); D1, D4, Minimal stretch, fixtures and tests say `SchemaVersion`
+- F2 · accepted · pending owner: `.nyar template list [pillar] [page]` — a number is a page, any other word a pillar; ten per page with a "page <p>/<n>" footer and the next command; an out-of-range page replies "no page <p>; <n> pages"; chat replies use their own formatter, not the api's Paging lines; TemplateCommandTests prove every template is reachable
+- F3 · accepted · pending owner: `.nyar pillar` reloads the cfg file before it sets the entry (ConfigFile.Reload), so an operator's saved hand edit is kept and only the one key changes; an edit made in an editor that saves after the command wins, as with any file; PillarSwitchTests and D15's in-game diff cover the reload
+- F4 · accepted · pending owner: D21 records one block per case with every emitted line, in order, verbatim
+- F5 · accepted · pending owner: duplicate faction, unit, boss, day and time values are refused before writing, with the validator's duplicate rule, and are cases of the authoring controls
+- F6 · accepted · pending owner: catalogue-unavailable and write-uncertain states join the existing degraded line and admin login notice
+
