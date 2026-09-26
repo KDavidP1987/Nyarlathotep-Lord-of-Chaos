@@ -284,17 +284,17 @@ Part 1 (owner, about 25 minutes; server **127.0.0.1:9876**, Direct Connect, worl
 6. Run `.nyar event start example-empowerment`. Wait 20 seconds and run `.nyar debug here 40` again. Expect the camp's
    bandits on "carrier example-empowerment" and **the familiar's row still "carrier none" with the same hp as in step 5.**
 7. Run `.fam t` (your familiar leaves). Let a Bandit Thug hit you 3 more times with the same gear. **Note the 3 damage
-   numbers** (expected about 1.5× step 3). Note whether the bandits look faster.
+   numbers** (expected about 1.5× step 3). **Note separately** whether they attack faster (time between swings) and whether they move or chase faster than before step 6.
 8. Kill 2 or 3 bandits and stay within about 40 m. When one reappears, run `.nyar debug here 40` at once and again every
    5 seconds until its row shows "carrier example-empowerment". If none respawns in 10 minutes, write "no respawn" and go on.
-9. Run `.nyar event start fe-big`, then `.nyar event start fe-spawns` (3 Bandit Thugs appear around you), then
+9. Walk about 40 m away from the camp, so no camp bandit is within 25 m of you. Run `.nyar event start fe-big`, then `.nyar event start fe-spawns` (3 Bandit Thugs appear around you), then
    `.spawnnpc CHAR_Bandit_Thug 2` (KindredCommands; 2 more Thugs). Wait 30 seconds and run `.nyar status`. **Note the
    fe-spawns line**: it should count 3 units, not 5.
 10. Run `.nyar purge`, then `.nyar purge confirm` within 30 seconds. At once run `.nyar event start fe-expire` and **note the
     reply** (expected: "purge cooldown active (n s left)" with a number of seconds).
 11. Wait 10 seconds, run `.nyar status` (expected: no active events) and `.nyar debug here 40` (expected: "carrier none" on
-    every row, no tracked units). Then run `.despawnnpc CHAR_Bandit_Thug 25` to remove the KindredCommands Thugs (it also
-    kills any camp Thug within 25 m, which is fine).
+    every row, no tracked units). Then, still at the step 9 spot, run `.despawnnpc CHAR_Bandit_Thug 25` to remove the KindredCommands Thugs (the
+    camp is more than 25 m away, so its Thugs stay). Walk back to the camp.
 12. Wait until the seconds named in step 10's reply have passed, plus 5 more (about 65 seconds after the purge confirm;
     if the reply still says "purge cooldown active", wait the seconds it names and try again), then run
     `.nyar event start fe-expire` (it starts now). Wait 20 seconds and run
