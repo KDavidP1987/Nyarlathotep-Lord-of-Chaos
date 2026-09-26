@@ -146,3 +146,11 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 ### Release 0.3.0 · 2026-09-26 (step 6 build)
 - six surfaces at 0.3.0; compile check 0 errors, 0 warnings; 703 tests pass
 - tcli build: Nyarlathotep/Nyarlathotep/build/kdpen-Nyarlathotep-0.3.0.zip SHA-256 474b64d1b4d2b2f1f4081f942aaa0a3afd90978397ecfc924ff98018ad1b5abd (icon, README, manifest 0.3.0, BepInEx/plugins/Nyarlathotep.dll, CHANGELOG, LICENSE)
+
+### Session 5 · 2026-09-26 (step 6 release drill)
+- session 5 log check: 0 unhandled, 5 nyar lines, 0 orphan errors, 0 unity errors
+  - the drill's last boot (v0.2.1 on v0.3.0's files); its seed and drill-mark boots of v0.3.0 read 7 and 11 nyar lines, 0 unhandled, 0 orphan, 0 unity
+
+### Session 6 · 2026-09-26 (step 6 drill after the push)
+- session 6 log check: 0 unhandled, 5 nyar lines, 0 orphan errors, 0 unity errors
+  - the last boot (v0.2.1); the v0.3.0 boots read 6 and 10 nyar lines, 0 unhandled, 0 orphan, 0 unity

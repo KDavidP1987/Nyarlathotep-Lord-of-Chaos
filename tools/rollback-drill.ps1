@@ -146,12 +146,12 @@ function Invoke-LogCheck([string]$Stage) {
 
 function Get-FolderHashes([string]$Dir) {
     if (-not (Test-Path -LiteralPath $Dir)) { return @() }
-    @(Get-ChildItem -LiteralPath $Dir -File -Recurse | Sort-Object FullName | ForEach-Object {
+    @(Get-ChildItem -LiteralPath $Dir -File -Recurse -Force | Sort-Object FullName | ForEach-Object {
         "$($_.FullName.Substring($Dir.Length)) $((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash)"
     })
 }
 
-$tmp = $null; $saved = $false; $result = $null
+$tmp = $null; $saved = $false; $hadDll = $true; $result = $null
 try {
     if (Get-Process VRisingServer -ErrorAction SilentlyContinue) { Fail 'a VRisingServer process is running; stop it first' }
     $refusal = Get-LeftoverRefusal $env:TEMP
@@ -190,8 +190,10 @@ try {
     # Save the dev server's DLL and config; N starts from an empty config folder so the files are N's own.
     $save = Join-Path $tmp 'saved'
     New-Item -ItemType Directory -Path (Join-Path $save 'config') -Force | Out-Null
-    if (Test-Path -LiteralPath $PluginDll) { Copy-Item -LiteralPath $PluginDll -Destination (Join-Path $save 'Nyarlathotep.dll') }
-    if (Test-Path -LiteralPath $ConfigDir) { Copy-Item -Path (Join-Path $ConfigDir '*') -Destination (Join-Path $save 'config') -Recurse }
+    # Hidden files included (-Force); a server without the plugin gets none back (raphael-api-core A13).
+    $hadDll = Test-Path -LiteralPath $PluginDll
+    if ($hadDll) { Copy-Item -LiteralPath $PluginDll -Destination (Join-Path $save 'Nyarlathotep.dll') }
+    if (Test-Path -LiteralPath $ConfigDir) { Get-ChildItem -LiteralPath $ConfigDir -Force | Copy-Item -Destination (Join-Path $save 'config') -Recurse -Force }
     $savedHashes = Get-FolderHashes (Join-Path $save 'config')
     $saved = $true
     if (Test-Path -LiteralPath $ConfigDir) { Get-ChildItem -LiteralPath $ConfigDir -Force | Remove-Item -Recurse -Force }
@@ -208,7 +210,9 @@ try {
     # Edit one event, as an admin would, and add drill-mark so N has a change to write to state.json (A9).
     $doc = Get-Content -LiteralPath $evPath -Raw | ConvertFrom-Json
     $doc.events[0].name = 'Renamed by the drill'   # a valid name (1-40 characters): N-1 must accept the edit, not disable it
-    $at = (Get-Date).AddMinutes(3)
+    # The schedule fires only in its own minute and never replays a missed one, so the minute is set past the longest
+    # boot the drill waits for (A13), and a boot that ends after it fails by name.
+    $at = (Get-Date).AddMinutes([math]::Ceiling($BootTimeoutSeconds / 60) + 2)
     $mark = [ordered]@{ id = 'drill-mark'; name = 'Rollback drill mark'; enabled = $true; pillar = 'spawns'
         trigger = [ordered]@{ type = 'Schedule'; days = @($at.ToString('ddd', [Globalization.CultureInfo]::InvariantCulture)); times = @($at.ToString('HH:mm')) }
         durationSeconds = 600
@@ -220,8 +224,9 @@ try {
 
     # Release N, second boot: drill-mark fires and N writes state.json.
     $null = Invoke-Boot "boot $From (drill-mark)" 0
+    if ((Get-Date).ToString('yyyyMMddHHmm') -ge $at.ToString('yyyyMMddHHmm')) { Fail "boot $From (drill-mark) — the boot ended after drill-mark's minute $($at.ToString('HH:mm'))" }
     $statePath = Join-Path $ConfigDir 'state.json'
-    $deadline = (Get-Date).AddMinutes(6)
+    $deadline = $at.AddMinutes(3)
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Seconds 2
         if ((Test-Path -LiteralPath $statePath) -and (Read-Shared $statePath) -match 'drill-mark' -and (Read-Shared $BepLog) -match 'spawn batch: 1 of 1 spawned') { Start-Sleep -Seconds 3; break }
@@ -259,11 +264,12 @@ finally {
     if ($saved) {
         $savedDll = Join-Path $tmp 'saved\Nyarlathotep.dll'
         if (Test-Path -LiteralPath $savedDll) { Copy-Item -LiteralPath $savedDll -Destination $PluginDll -Force }
+        elseif (-not $hadDll) { Remove-Item -LiteralPath $PluginDll -Force -ErrorAction SilentlyContinue }
         if (Test-Path -LiteralPath $ConfigDir) { Get-ChildItem -LiteralPath $ConfigDir -Force | Remove-Item -Recurse -Force } else { New-Item -ItemType Directory -Path $ConfigDir | Out-Null }
-        Copy-Item -Path (Join-Path $tmp 'saved\config\*') -Destination $ConfigDir -Recurse -ErrorAction SilentlyContinue
+        Get-ChildItem -LiteralPath (Join-Path $tmp 'saved\config') -Force -ErrorAction SilentlyContinue | Copy-Item -Destination $ConfigDir -Recurse -Force
         $restored = Get-FolderHashes $ConfigDir
         if (Compare-Object @($savedHashes) @($restored)) { $result = 'fail — the restored config differs from the saved one (the copy is kept in the temp folder)'; $tmp = $null }
-        else { Write-Host 'restored the saved plugin DLL and config' }
+        else { Write-Host "restored the saved $(if ($hadDll) { 'plugin DLL' } else { 'state (no plugin DLL)' }) and config" }
     }
     if ($tmp -and (Test-Path -LiteralPath $tmp)) {
         foreach ($wt in @(Get-ChildItem -LiteralPath $tmp -Directory -Filter 'wt-*' -ErrorAction SilentlyContinue)) { git -C $Repo worktree remove --force $wt.FullName 2>&1 | Out-Null }

@@ -1,6 +1,6 @@
 # Raphael api — the machine interface
 
-**Status:** in development (docs/dod/raphael-api-core.md, step 5 of 6 done: Sessions 1 and 2 clean). Ships in 0.3.0 as api 2.
+**Status:** in development (docs/dod/raphael-api-core.md, step 6 of 6: released as 0.3.0 (GitHub pre-release); Sessions 1–5 clean). Ships in 0.3.0 as api 2.
 
 ## What it provides
 
@@ -209,6 +209,29 @@ Step 6, unattended: run D of the drill, which now runs `preflight.ps1 -LogCheck`
   "events.json: v0.2.1 and v0.2.0 both read '6 valid, 0 disabled'"; "rollback drill: pass".
 - The selftest: "drill selftest: 3/3"; a mutant without the "marker sweep" check passes the bad fixture and one without
   the empty-log check reports the empty fixture as another failure, so each fails the selftest (2/3).
+
+### Session 5 · 2026-09-26
+Step 6, unattended: the release drill `pwsh tools/rollback-drill.ps1 -From v0.3.0 -To v0.2.1` on the local tag v0.3.0
+(ee36a7d), before the push. Dev world only.
+- "range v0.2.1..v0.3.0: 158 paths, all in the manifest; v0.2.1 is an ancestor of v0.3.0"; both tags built.
+- "boot v0.3.0 (seed): log check: 0 unhandled, 7 nyar lines, 0 orphan errors, 0 unity errors"; the drill renamed
+  example-empowerment to "Renamed by the drill" and scheduled drill-mark.
+- "boot v0.3.0 (drill-mark): log check: 0 unhandled, 11 nyar lines, …"; "drill-mark fired; files: events.json,
+  state.json"; "stats.json: absent (no release writes it)".
+- "boot v0.2.1: log check: 0 unhandled, 5 nyar lines, …"; "events.json: v0.3.0 and v0.2.1 both read '6 valid, 0
+  disabled'"; "initialized on v0.3.0's files; events.json and state.json loaded without a read-only warning; marker
+  sweep logged"; "restored the saved plugin DLL and config"; "rollback drill: pass".
+- [Warning] lines of the last boot: Il2CppInterop Class::Init and the two Beelzebub TUNE lines, as in every session.
+- Review 5 then found that a crashed drill's saved copy would be deleted by the next run (A11); the fixed script is
+  rerun in Session 6.
+
+### Session 6 · 2026-09-26
+Step 6, unattended: the drill again after the push, with A11's leftover refusal, so D16's evidence comes from the
+current script. Same range line; "boot v0.3.0 (seed): log check: 0 unhandled, 6 nyar lines, …"; "boot v0.3.0
+(drill-mark): log check: 0 unhandled, 10 nyar lines, …"; "boot v0.2.1: log check: 0 unhandled, 5 nyar lines, …";
+both read '6 valid, 0 disabled'; "rollback drill: pass". The same run of D18's command on the pushed tag:
+"rollback: clean" (539 tests; v0.2.1's preflight OK). /code-review then found four drill defects (A13); Session 7
+reruns the fixed script.
 
 ## Open questions
 

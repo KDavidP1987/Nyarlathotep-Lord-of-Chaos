@@ -187,3 +187,25 @@ VERDICT: REVISE
 - F5 · accepted · A11 (defect): a leftover holding saved\ refuses the drill with the restore steps; the selftest reads 5/5
 - F6 · accepted · Paths walked › Step 3 names Logic/{EventEngine,EventCatalog,DefinitionEditor}.cs and ConfigChangedTests.cs (A6, A7)
 - F7 · rejected · advisory — the refusal is VCF's adminOnly, a framework control D7 checks by declaration and -AuthSuite by the admin list; a live non-admin call is covered by the contract's noaccess note and needs no decision
+
+## Review 6 · 2026-09-26 · codex · plan commit 9c203bf
+F1 `advisory` — Probe `4.5` is answered by D20 and Build plan steps 4–6, but a boot omitted from both the feature document and audit remains invisible because `-SessionsOf` derives its universe from recorded session headings.
+Fix: Derive session identifiers independently from preserved boot logs or launch records and compare that set with the documented sessions.
+
+F2 `advisory` — Probe `12.4` is answered by D11, D16, and the selftest matrix, but several empty fixtures specify only “a failure” rather than their exact non-pass output, and the rollback selftest does not plant every live-stage failure it claims.
+Fix: Record exact empty-input messages for Secrets, Paths, inventory, AuditOf, and SessionsOf, and add mutants for live-process refusal, missing state, restoration, and range validation.
+
+F3 `advisory` — Probe `14.3` is answered by Rollout, D16, and D18, but there is no single aggregate command ensuring both the server/data downgrade and repository reversal ran successfully; one may be omitted while the other passes.
+Fix: Add a rollback-gate command that invokes D16 and D18 and exits non-zero unless both succeed.
+
+F7 `advisory` — Probes `2.2` and `10.1` are answered by the `adminOnly` decision and D7’s `-AuthSuite`, but the suite verifies declaration and access structure rather than dispatching `api events` as a player and observing VCF’s refusal with zero rows and state changes.
+Fix: Add an integration fixture that invokes the command through VCF as a non-admin and asserts the refusal response, no wire rows, and no mutation.
+
+EARLIER: unresolved F1, F2, F3, F7
+15/15 layers · 49/49 probes
+VERDICT: READY
+### Dispositions
+- F1 · rejected · advisory — 4.5 answered at D20; a launch-record cross-check is a candidate check for a later child's preflight, not a decision this plan owes
+- F2 · rejected · advisory — 12.4 answered at D11 and D16; exact empty-input messages and live-stage mutants are fixture work for a later preflight pass
+- F3 · rejected · advisory — 14.3 answered by D16 and D18, each with its own failing command; both are run and recorded at close
+- F7 · rejected · advisory — 2.2 and 10.1 answered by adminOnly and D7; a VCF-dispatch fixture needs the game runtime, outside the test project's reach

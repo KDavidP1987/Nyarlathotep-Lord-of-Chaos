@@ -246,7 +246,7 @@
       "rows": [
         "raphael-api-core › Drill worktrees and saved config"
       ],
-      "location": "%TEMP%\nyar-drill-* (tools/rollback-drill.ps1) and %TEMP%\nyar-rollback-* (the D18 repository drill)",
+      "location": "%TEMP%\\nyar-drill-* (tools/rollback-drill.ps1) and %TEMP%\\nyar-rollback-* (the D18 repository drill)",
       "owner": "the drill",
       "retention": "for one run: removed in its finally; a crash leaves them and the next run removes leftovers first",
       "deletion": "automatic, or delete the folders and run `git worktree prune`",

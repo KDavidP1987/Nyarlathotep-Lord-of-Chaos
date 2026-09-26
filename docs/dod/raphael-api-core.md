@@ -14,7 +14,7 @@ closed: none
 commit: 2dedb8f
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
-review: pending
+review: codex
 ---
 
 # DoD: Raphael api 2 — status, events, push subscription, paging, contract check
@@ -388,6 +388,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - A10 · 2026-09-26 · discovered · — · layer: 14.3 · step 6 build: the Build plan runs the D18 repository drill on the local tag before the push, but D18 ends with v0.2.1's preflight, whose release-tags check (foundation) fails while a tag is unpushed: "release tags: 2/3 (v0.3.0 not pushed)", the only failure. Before the push the drill now runs D18's command with that one line allowed (revert without conflict, tree equal to v0.2.1, build, tests, and every other preflight check), so a failure there still means re-tagging before anything is public; after the push, D18's full command runs unchanged and its "rollback: clean" is the evidence. D18's text does not change. 4.2: the unpushed tag is the only difference between the two runs; 14.3: the rollback is proved on the pushed release; 12.4: D18's command still fails on any other preflight failure
 - A11 · 2026-09-26 · defect · ~D16 · layer: 14.3 · Review 5 F5: the drill keeps the only copy of the dev server's DLL and config in %TEMP%\nyar-drill-<guid>\saved until its finally restores them, and a restore that does not match keeps the folder on purpose; but the next run's leftover cleanup removed every nyar-drill-* folder, so a crashed or mismatched run's copy would be deleted. A leftover holding saved\ now refuses the run with the restore steps; other leftovers are still removed. 4.2: no leftover; 14.3: the dev server is always restorable after an interrupted drill; 12.4: the selftest's two scratch leftovers (5/5), and a mutant without the refusal reads 4/5
 - A12 · 2026-09-26 · discovered · ~D15 · layer: 7.3 · Review 5 F4: 7.3's recovery rule (re-read `api status` on an [NYAR:ev] naming an unknown event, and after every event-end and killswitch) points at D15, whose evidence checked only headings and keywords, and "never copied into the Raphael workspace" had no check. D15 now requires both rule sentences and checks that no RAPHAEL_HANDOFF.md exists under the Raphael workspace. 4.2: an empty handoff fails; 7.3: the rule is in the evidence; 12.4: a handoff without either sentence, or a copy in the Raphael workspace, fails D15
+- A13 · 2026-09-26 · defect · ~D16 · layer: 14.3 · step 6 /code-review: four defects in tools/rollback-drill.ps1 and its inventory row. (1) drill-mark was scheduled 3 minutes out before a boot the drill allows 300 s, and a schedule never replays a missed minute, so a slow boot failed the drill falsely: the minute is now ceil(BootTimeoutSeconds/60)+2 minutes out and a boot that ends after it fails by name. (2) A dev server with no plugin DLL before the drill was left with N-1's DLL: the finally now removes it. (3) Hidden files in BepInEx/config/Nyarlathotep/ were deleted but neither saved nor hashed: save, restore and hashes use -Force. (4) tools/data-inventory.json wrote %TEMP%\nyar-drill-* with a JSON escape that reads as a newline. 4.2: no plugin DLL and a hidden config file (Session 7 plants both); 14.3: the dev server returns to its exact prior state; 12.4: Session 7 fails if the DLL is left or the hidden file is lost
 
 ## Log
 - 2026-09-25 · status → draft · plan
@@ -412,3 +413,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-26 · D22 · pass · manual: Session 2 t-150 (10 waves of 15, warnings on, one subscriber, TimingLog on): tick timing avg 0.512, 0.465, 0.426, 0.213 ms during the event and 0.975 ms during the 150-unit drain, every average under 5 ms (max 5.3 ms); wave-warn and wave lines pushed; `api status` and `api events` replies within about a second (the owner) · e480752 · claude
 - 2026-09-26 · note · A9 names gating probe 14.3: review: pending; a fresh review is owed before close
 - 2026-09-26 · note · re-review A9 A10 · Review 5 (codex) REVISE: F4 F5 F6 accepted (A12, A11), F1 F2 F3 F7 rejected as advisory by rule; round 6 re-scores them
+- 2026-09-26 · note · re-review A9 · Review 6 READY (codex, 15/15 layers · 49/49 probes; F1 F2 F3 F7 advisory, rejected with reasons)
