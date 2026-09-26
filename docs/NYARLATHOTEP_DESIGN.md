@@ -122,9 +122,9 @@ it. **Who:** *anyone*, or *admin* (VCF `adminOnly`, Epic D5). **Child:** the chi
 | `.nyar stats hide\|show` | anyone | Leave or rejoin boards and digests | stats |
 | `.nyar stats reset <player\|all> [confirm]` | admin | Clear stats (two-step) | stats |
 | `.nyar api version` | anyone | Raphael handshake `[NYAR:version]` | foundation |
-| `.nyar api status\|me\|top …` | anyone | Machine-readable twins of the player reads | raphael-api |
-| `.nyar api events\|zones [page]` | admin | Machine-readable definitions and zones | raphael-api |
-| `.nyar api sub on\|off` | anyone | Push events `[NYAR:ev]` to this player | raphael-api |
+| `.nyar api status\|me\|top …` | anyone | Machine-readable twins of the player reads | raphael-api-core (status); stats (me, top) |
+| `.nyar api events\|zones [page]` | admin | Machine-readable definitions and zones | raphael-api-core (events); defended-zones (zones) |
+| `.nyar api sub on\|off` | anyone | Push events `[NYAR:ev]` to this player | raphael-api-core |
 
 Stats: `kills` (event units), `events` (joined), `waves` (survived), `defences` (sieges won),
 `bossadds` (boss adds killed) and `deaths` (to our units). Counting rules are in the Epic plan's
@@ -180,7 +180,7 @@ All settled with the user on 2026-09-23 in plan mode and recorded as validated a
 | D9 | Player visibility | Announcements + player `.nyar status` (active events, time left, no positions) |
 | D10 | Siege target eligibility | **All admin-configurable:** owner or clan member online **or last online within `RecentlyOnlineHours`** (so logging out does not dodge a siege); optional **minimum castle-heart level** (not gear level — gear can be swapped); never sealed/decaying hearts; PvE/PvP availability per event; re-checked every tick |
 | D11 | Schedule time basis | Both: real server-local clock and in-game day/night |
-| D12 | Raphael (client UI) integration | **In v1.0** (changed 2026-09-23, Epic A5): `[NYAR:*]` wire behind `.nyar api …`, human replies unchanged; handshake in foundation, reads and push events in the `raphael-api` child; contract `docs/RAPHAEL_INTEGRATION_CONTRACT.md` |
+| D12 | Raphael (client UI) integration | **In v1.0** (changed 2026-09-23, Epic A5): `[NYAR:*]` wire behind `.nyar api …`, human replies unchanged; handshake in foundation, reads and push events in the `raphael-api-core` child (next after foundation, Epic A20), later pillars adding their own rows; contract `docs/RAPHAEL_INTEGRATION_CONTRACT.md` |
 | D13 | Player names on boards | Allowed on leaderboards, stat replies and digests, never positions; admins excluded by default, admin ignore list, player opt-out `.nyar stats hide` (Epic A3, S-22) |
 | D14 | Stats persistence | `stats.json`, 30 daily buckets + all-time, admin reset (Epic A6, S-23) |
 | D15 | Mod-initiated messages | Wave warnings + event banners, daily banner with digest, admin on-demand banner, private login stats, rate-limited player share; each off by default (Epic A7, S-24) |
