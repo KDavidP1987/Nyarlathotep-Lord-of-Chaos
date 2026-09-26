@@ -82,6 +82,15 @@ checks are lines "- session <n> log check: …" (D33).
 - baseline boot: session 18 (Release 8f974b0; later commits are docs only); log check 0 unhandled, 0 orphan errors, 0 unity errors
 - decisions the plan leaves to the build: the READMEs and changelogs say what 0.2.0 runs (spawn-wave events under every pillar switch, the kill switch, announcements) and keep each pillar's own behaviour marked in development
 
+### Step 9 · 2026-09-25 · c4d3e2f
+- git status: clean at c4d3e2f (0 changes)
+- compile: 0 errors, 0 warnings (Release, no deploy); dotnet test: 531 passed
+- preflight: exit 0; -AuditOf foundation 8/9 pre, 8/9 post, 8/9 Codex verdicts (step 9 is this entry); -SessionsOf foundation 12/12 checked after A10; -Paths 576 walked, all in manifest
+- dod status: foundation 38/40 verified (open: D36 audit matrix, D38 rollback drill); `--check foundation` 0 problems, 0 warnings
+- feature doc read: docs/features/FOUNDATION.md (Status released in 0.2.0, step 8 of 9; Open questions none); plan D34, D36, D38, Build plan step 9
+- baseline boot: none; step 9 changes no code and runs no session (0.2.0 was released at c593b0c after session 19)
+- decisions the plan leaves to the build: none
+
 ## Post-audit
 ### Step 1 · 2026-09-24 · 40505e2
 - compile: 0 errors, 0 warnings (plugin and Nyarlathotep.Tests)
