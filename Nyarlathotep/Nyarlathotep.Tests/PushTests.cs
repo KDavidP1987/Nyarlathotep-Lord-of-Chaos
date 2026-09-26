@@ -155,6 +155,110 @@ public class PushTests
         Assert.Equal(["[NYAR:ev] type=event-end id=raid secs=0", "[NYAR:ev] type=killswitch id=- secs=300"], Texts(hub));
     }
 
+    // ---- the transitions report themselves (A6): the real engine and catalog, the hub as their sink ----
+
+    static ControlState Open(bool purge = false) => new(purge, true, new HashSet<Pillar>(Enum.GetValues<Pillar>()), 0, 3);
+
+    static (EventEngine Engine, EventCatalog Catalog, PushHub Hub) Wired(params string[] events)
+    {
+        var catalog = new EventCatalog();
+        Assert.Null(catalog.Reload(EventValidator.Parse(Json.File(events), FakeUnits.Default()), FileStamp.Of(T0, [1])));
+        var hub = New().Hub;
+        var engine = new EventEngine(catalog) { Push = hub };
+        catalog.Push = hub;
+        return (engine, catalog, hub);
+    }
+
+    [Fact]
+    public void A_start_a_wave_a_stop_and_an_expiry_each_push_once()
+    {
+        var (e, _, hub) = Wired(Json.Event("raid"), Json.Event("siege"));
+        Assert.Null(e.Start("raid", "manual", T0, Open()));
+        Assert.Null(e.Start("siege", "manual", T0, Open()));
+        e.WaveSpawned("raid");
+        e.WaveSpawned("raid");
+        Assert.NotNull(e.Cancel("siege"));                         // `.nyar event stop`, or the fault limit
+        Assert.Single(e.Expire(T0.AddSeconds(600), 30));
+        Assert.Equal(
+        [
+            "[NYAR:ev] type=event-start id=raid secs=600",
+            "[NYAR:ev] type=event-start id=siege secs=600",
+            "[NYAR:ev] type=wave id=raid secs=0 wave=1",
+            "[NYAR:ev] type=wave id=raid secs=0 wave=2",
+            "[NYAR:ev] type=event-end id=siege secs=0",
+            "[NYAR:ev] type=event-end id=raid secs=0",
+        ], Texts(hub));
+    }
+
+    [Fact]
+    public void A_refused_start_or_an_end_of_nothing_pushes_nothing()
+    {
+        var (e, _, hub) = Wired(Json.Event("raid"));
+        Assert.NotNull(e.Start("nope", "manual", T0, Open()));        // unknown
+        Assert.NotNull(e.Start("raid", "manual", T0, Open(purge: true)));   // the purge cooldown
+        Assert.Null(e.Start("raid", "manual", T0, Open()));
+        Assert.NotNull(e.Start("raid", "manual", T0, Open()));        // already active
+        e.WaveSpawned("nope");
+        Assert.Null(e.Cancel("nope"));
+        Assert.Empty(e.Expire(T0.AddSeconds(10), 30));
+        Assert.Equal(["[NYAR:ev] type=event-start id=raid secs=600"], Texts(hub));
+    }
+
+    [Fact]
+    public void A_purge_pushes_the_killswitch_once_and_no_end_per_event()
+    {
+        var (e, _, hub) = Wired(Json.Event("raid"), Json.Event("siege"));
+        e.Start("raid", "manual", T0, Open());
+        e.Start("siege", "manual", T0, Open());
+        hub.Queue.Take(10);
+        Assert.Equal(2, e.CancelAll(300).Count);
+        Assert.Equal(["[NYAR:ev] type=killswitch id=- secs=300"], Texts(hub));
+    }
+
+    [Fact]
+    public void An_applied_load_pushes_config_changed_and_a_rejected_file_pushes_nothing()
+    {
+        var (_, catalog, hub) = Wired(Json.Event("raid"));
+        Assert.NotNull(catalog.Reload(EventValidator.Parse("{ broken", FakeUnits.Default()), FileStamp.Of(T0, [2])));
+        Assert.Empty(hub.Queue.Lines);
+        Assert.Null(catalog.Reload(EventValidator.Parse(Json.File(Json.Event("raid")), FakeUnits.Default()), FileStamp.Of(T0, [3])));
+        Assert.Equal(["[NYAR:ev] type=config-changed id=- secs=0"], Texts(hub));
+    }
+
+    [Fact]
+    public void A_catalog_or_engine_without_a_sink_pushes_nothing_and_does_not_fail()
+    {
+        var catalog = new EventCatalog();
+        Assert.Null(catalog.Reload(EventValidator.Parse(Json.File(Json.Event("raid")), FakeUnits.Default()), FileStamp.Of(T0, [1])));
+        var e = new EventEngine(catalog);
+        Assert.Null(e.Start("raid", "manual", T0, Open()));
+        e.WaveSpawned("raid");
+        Assert.NotNull(e.Cancel("raid"));
+        Assert.Empty(e.CancelAll(300));
+    }
+
+    [Fact]
+    public void Draining_the_queue_below_its_cap_ends_the_overflow_streak()
+    {
+        var (hub, _, log) = New();
+        for (var i = 1; i <= 50; i++) hub.Queue.Enqueue(PushLines.WaveWarn("raid", i, 60));
+        hub.Wave("siege", 1);                                     // overflow 1
+        hub.EventEnded("raid");                                   // drops raid's 49 waiting warnings
+        for (var i = 1; i <= 60; i++) hub.Wave("siege", i + 1);  // overflow 2
+        Assert.Equal(2, log.Count("push queue full, oldest dropped"));
+    }
+
+    [Fact]
+    public void A_fault_in_the_warnings_never_stops_the_send()
+    {
+        var (hub, users, log) = New();
+        hub.Subscribe(1);
+        hub.ConfigChanged();
+        Assert.Equal(1, hub.Tick(T0, [null!], waveWarnings: true));
+        Assert.Equal(["[NYAR:ev] type=config-changed id=- secs=0"], users.Sent.Select(s => s.Text));
+        Assert.Equal(1, log.Count("push: warnings failed"));
+    }
+
     // ---- privacy ----
 
     [Fact]

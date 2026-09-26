@@ -15,7 +15,7 @@ says what Nyarlathotep implements and how it was tested.
   `[NYAR:end] cmd=events page=<cur>/<total> count=`.
 - **`.nyar api sub on|off`** (anyone): push lines `[NYAR:ev]` for event start and end, waves, wave warnings, the
   kill switch and config changes. Subscriptions live in memory only, at most 128, and end on `sub off`, a
-  disconnect, being found offline at a send, or a restart. Lines wait in a queue of 50 (oldest dropped) and leave
+  disconnect, being found offline at a send or at the cap, or a restart. Lines wait in a queue of 50 (oldest dropped) and leave
   5 a tick. `wave-warn` is pushed only when the chat warning would fire (WaveWarnings on, the event's
   announce.warnings true, at the WarningOffsets).
 
@@ -27,8 +27,9 @@ says what Nyarlathotep implements and how it was tested.
 | `Logic/Paging.cs` | Contract §4 paging: page parsing, the end line, badarg |
 | `Logic/ApiLines.cs` | The `status` and `events` rows from the engine's state |
 | `Logic/Subscriptions.cs` | The subscription set: on, off, disconnect, the offline prune, delivery, count-only log lines |
-| `Logic/PushQueue.cs` | The six push lines, the queue of 50, and PushHub: the guarded entry points and the push tick |
-| `Services/Pusher.cs` | The one PushHub; called by EventRuntime, WaveAction, EventStore and the scheduler's push phase |
+| `Logic/PushQueue.cs` | IPushSink, the six push lines, the queue of 50, and PushHub: the guarded entry points and the push tick |
+| `Logic/Engine.cs`, `Logic/EventCatalog.cs` | Report each start, end, wave, purge and applied load to the sink where it happens |
+| `Services/Pusher.cs` | The one PushHub, attached to the engine and the catalog; the scheduler's push phase |
 | `Patches/UserDisconnectPatch.cs` | Ends the leaving user's subscription (hook UserDisconnect) |
 | `Commands/ApiCommands.cs` | `.nyar api version`, `status`, `events` and `sub` |
 
@@ -68,8 +69,13 @@ says what Nyarlathotep implements and how it was tested.
 - `pwsh tools/preflight.ps1 -AuthSuite`: "auth suite: pass (tests, commands, admin list, gateway)".
 - `pwsh tools/preflight.ps1 -SelfTest`: 27/27 checks; WireContract bad-9 (sub missing while the table marks it
   IMPLEMENTED) fails.
-- Not testable outside the game, checked in step 4's session: the service wiring (a failed reload, enable, disable
-  or set pushes no config-changed; the disconnect patch applies and ends a subscription).
+- Post-audit (A6): the engine and the catalog report their own transitions, so PushTests drive the real start,
+  wave, stop, expiry, purge and reload paths: a refused start, an end of nothing and a rejected file push nothing,
+  a purge pushes one killswitch. 13 more mutants (each report removed, a per-event end on purge, a rejected file
+  reported, the overflow streak, one guard for the tick, no prune at the cap, an exception message logged) each fail
+  a test. 692 passed.
+- Checked in step 4's session only: the disconnect patch applies and ends a subscription; `sub` reaches the hub
+  through the gateway.
 
 ## Open questions
 

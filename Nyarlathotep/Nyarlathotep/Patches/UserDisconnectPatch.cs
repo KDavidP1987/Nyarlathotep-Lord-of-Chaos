@@ -24,14 +24,15 @@ internal static class UserDisconnectPatch
         if (!Core.IsReady) return;
         try
         {
-            var index = __instance._NetEndPointToApprovedUserIndex[netConnectionId];
+            // A connection refused before approval (password, version) has no index and no subscription.
+            if (!__instance._NetEndPointToApprovedUserIndex.TryGetValue(netConnectionId, out var index)) return;
             var user = Core.EntityManager.GetComponentData<User>(__instance._ApprovedUsersLookup[index].UserEntity);
             Pusher.Disconnected(user.PlatformId);
             Faults.Ok();
         }
         catch (Exception ex)
         {
-            if (Faults.Fail()) Core.Log.LogError($"[nyar] disconnect hook failed: {ex.Message}");
+            if (Faults.Fail()) Core.Log.LogError($"[nyar] disconnect hook failed ({ex.GetType().Name})");   // the message can hold the id
         }
     }
 }

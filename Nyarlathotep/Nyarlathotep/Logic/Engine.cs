@@ -118,6 +118,11 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
     readonly List<Cleanup> _cleanups = [];
 
     public EventCatalog Catalog => catalog;
+
+    /// <summary>Told of every start, end, wave and purge where it happens (raphael-api-core D6, A6); null reports
+    /// nothing.</summary>
+    public IPushSink? Push { get; set; }
+
     public IReadOnlyCollection<ActiveEvent> Active => _active.Values;
     public IReadOnlyList<Cleanup> PendingCleanups => _cleanups;
     public ActiveEvent? Find(string id) => _active.TryGetValue(id, out var a) ? a : null;
@@ -137,6 +142,7 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
         if (error is not null) return error;
         _active[id] = new ActiveEvent(instance!, trigger, origin);
         Starts[id] = utcNow;
+        Push?.EventStarted(instance!);
         for (var i = 0; i < _cleanups.Count; i++)                   // the ended instance's units are all older (A17)
             if (_cleanups[i].EventId == id && _cleanups[i].SpawnedBefore > utcNow)
                 _cleanups[i] = _cleanups[i] with { SpawnedBefore = utcNow };
@@ -154,9 +160,12 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
         return new WaveDue(a, a.WavesSpawned + 1, action.Waves);
     }
 
+    /// <summary>A wave of <paramref name="id"/> was queued: counted, and reported with its number.</summary>
     public void WaveSpawned(string id)
     {
-        if (_active.TryGetValue(id, out var a)) a.WavesSpawned++;
+        if (!_active.TryGetValue(id, out var a)) return;
+        a.WavesSpawned++;
+        Push?.Wave(id, a.WavesSpawned);
     }
 
     /// <summary>A fault in the event's tick; true when it is the <see cref="FaultLimit"/>-th in a row, and the caller
@@ -178,6 +187,7 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
         {
             Remove(a.Id);
             _cleanups.Add(new Cleanup(a.Id, DateTime.MaxValue, a.Instance.EndsUtc.AddSeconds(graceSeconds)));
+            Push?.EventEnded(a.Id);
         }
         return ended;
     }
@@ -196,16 +206,19 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
     {
         if (!_active.TryGetValue(id, out var a)) return null;
         Remove(id);
+        Push?.EventEnded(id);
         return a;
     }
 
     /// <summary>The purge: every event ends now and every pending cleanup is dropped, since the purge queues every
-    /// tracked unit itself (D20).</summary>
-    public IReadOnlyList<ActiveEvent> CancelAll()
+    /// tracked unit itself (D20). It is reported once as the purge with its <paramref name="cooldownSeconds"/>, not as
+    /// one end per event.</summary>
+    public IReadOnlyList<ActiveEvent> CancelAll(int cooldownSeconds = 0)
     {
         var all = _active.Values.ToList();
         foreach (var a in all) Remove(a.Id);
         _cleanups.Clear();
+        Push?.Purged(cooldownSeconds);
         return all;
     }
 

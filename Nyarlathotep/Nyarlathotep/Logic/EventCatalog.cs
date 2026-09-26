@@ -14,12 +14,17 @@ public sealed class EventCatalog
     public FileStamp? LoadedStamp { get; private set; }
     public IReadOnlyCollection<RunningInstance> Running => _running.Values;
 
+    /// <summary>Told of every applied load (raphael-api-core D6, A6): `.nyar event reload`, set, enable and disable
+    /// all apply through <see cref="Reload"/>. A rejected file reports nothing.</summary>
+    public IPushSink? Push { get; set; }
+
     /// <summary>Applies a load. A rejected file keeps the last valid set and returns its error.</summary>
     public string? Reload(LoadResult result, FileStamp stamp)
     {
         if (result.FileError is not null) return result.FileError;
         Current = result.Set;
         LoadedStamp = stamp;
+        Push?.ConfigChanged();
         return null;
     }
 

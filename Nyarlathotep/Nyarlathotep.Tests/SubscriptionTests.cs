@@ -113,6 +113,53 @@ public class SubscriptionTests
     }
 
     [Fact]
+    public void At_the_cap_players_who_left_are_pruned_before_a_new_id_is_refused()
+    {
+        var (subs, log) = New();
+        var users = new FakeUsers();
+        users.Online.Clear();
+        for (ulong i = 1; i <= Subscriptions.Capacity; i++) subs.On(i);
+        users.Online.Add(1);                                      // only one of them is still connected
+        users.Online.Add(Id);
+        Assert.Equal("[NYAR:ok] cmd=sub on=1", subs.On(Id, users));
+        Assert.Equal(2, subs.Count);
+        Assert.Equal(1, log.Count("push: 1 subscribed (offline)"));
+
+        for (ulong i = 2; i <= Subscriptions.Capacity - 1; i++) { users.Online.Add(i); subs.On(i, users); }
+        Assert.Equal(Subscriptions.Capacity, subs.Count);
+        Assert.Equal("[NYAR:err] cmd=sub code=ratelimit", subs.On(999, users));   // all connected: refused
+    }
+
+    /// <summary>An exception's message can hold an id or a name (a missing dictionary key prints the key), so the
+    /// failure lines carry only the exception's type.</summary>
+    [Fact]
+    public void No_failure_line_carries_an_id_from_the_exception()
+    {
+        var log = new LogLines();
+        var users = new LeakyUsers();
+        var hub = new PushHub(users, [60], log.Add);
+        hub.Subscribe(Id);
+        hub.ConfigChanged();
+        hub.Tick(DateTime.UtcNow, [], waveWarnings: false);     // Send throws with the id in the message
+        users.FailList = true;
+        hub.Wave("raid", 1);
+        hub.Tick(DateTime.UtcNow, [], waveWarnings: false);     // Connected throws with the id in the message
+        Assert.Equal(2, log.Lines.Count(l => l.Contains("KeyNotFoundException", StringComparison.Ordinal)));
+        Assert.All(log.Lines, l => Assert.DoesNotContain("424242", l));
+    }
+
+    sealed class LeakyUsers : IUserSource
+    {
+        public bool FailList { get; set; }
+
+        public IReadOnlyList<ulong> Connected() =>
+            FailList ? throw new KeyNotFoundException($"The given key '{Id}' was not present") : [Id];
+
+        public void Send(ulong platformId, string text) =>
+            throw new KeyNotFoundException($"The given key '{platformId}' was not present in the dictionary.");
+    }
+
+    [Fact]
     public void With_no_subscriber_the_user_list_is_not_read()
     {
         var (subs, _) = New();

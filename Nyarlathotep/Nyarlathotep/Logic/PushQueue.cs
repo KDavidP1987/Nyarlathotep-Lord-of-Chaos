@@ -4,7 +4,20 @@ using System.Collections.Generic;
 namespace Nyarlathotep.Logic;
 
 // The push rules without the game (raphael-api-core D5, D6, D21; contract § Push events). Services/Pusher holds one
-// PushHub and feeds it from EventRuntime, WaveAction, EventStore, the disconnect hook and the scheduler tick.
+// PushHub. Logic/EventEngine and EventCatalog report each transition to it through IPushSink where the transition
+// happens (A6); the disconnect hook and the scheduler tick call it through Pusher.
+
+/// <summary>Where Logic/EventEngine and EventCatalog report the transitions a push announces (D6, A6): a start, an end
+/// (expiry, stop or fault cancel), a wave queued, the purge, and a successful reload. <see cref="PushHub"/> is the
+/// implementation; its entry points never throw.</summary>
+public interface IPushSink
+{
+    void EventStarted(RunningInstance instance);
+    void EventEnded(string id);
+    void Wave(string id, int wave);
+    void Purged(int cooldownSeconds);
+    void ConfigChanged();
+}
 
 /// <summary>One queued push line. <see cref="EventId"/> ties a wave-warn to its event, so the event's end drops it.</summary>
 public sealed record PushLine(string Text, string Type, string? EventId);
@@ -61,7 +74,7 @@ public static class PushLines
 }
 
 /// <summary>The push queue: at most <see cref="Capacity"/> lines, the oldest dropped at overflow with one log line per
-/// overflow streak; a config-changed line that is already waiting absorbs a new one; at most <see cref="PerTick"/>
+/// overflow streak (a streak ends when the queue has room again); a config-changed line that is already waiting absorbs a new one; at most <see cref="PerTick"/>
 /// lines leave per tick.</summary>
 public sealed class PushQueue(Action<string> log)
 {
@@ -78,6 +91,7 @@ public sealed class PushQueue(Action<string> log)
     public void Enqueue(PushLine line)
     {
         if (line.Type == PushLines.ConfigChangedType && _lines.Exists(l => l.Type == PushLines.ConfigChangedType)) return;
+        if (_lines.Count < Capacity) _overflowing = false;          // room again, by a send or a dropped warning
         if (_lines.Count >= Capacity)
         {
             _lines.RemoveAt(0);
@@ -91,14 +105,12 @@ public sealed class PushQueue(Action<string> log)
     public int DropWarnings(string? eventId = null) =>
         _lines.RemoveAll(l => l.Type == PushLines.WaveWarnType && (eventId is null || l.EventId == eventId));
 
-    /// <summary>The next lines to send, at most <paramref name="max"/>, oldest first. Taking a line ends an overflow
-    /// streak.</summary>
+    /// <summary>The next lines to send, at most <paramref name="max"/>, oldest first.</summary>
     public IReadOnlyList<PushLine> Take(int max = PerTick)
     {
         var n = Math.Min(max, _lines.Count);
         var taken = _lines.GetRange(0, n);
         _lines.RemoveRange(0, n);
-        if (n > 0) _overflowing = false;
         return taken;
     }
 }
@@ -106,7 +118,7 @@ public sealed class PushQueue(Action<string> log)
 /// <summary>The subscriptions, the queue and the push warning clock behind Services/Pusher. Every entry point catches
 /// and logs once per failure streak (per entry point), so a push fault never reaches the event tick that called it
 /// (D21).</summary>
-public sealed class PushHub(IUserSource users, IReadOnlyList<int> warningOffsets, Action<string> log)
+public sealed class PushHub(IUserSource users, IReadOnlyList<int> warningOffsets, Action<string> log) : IPushSink
 {
     readonly WarningClock _warnings = new(warningOffsets);
     readonly Dictionary<string, FailureStreak> _faults = new(StringComparer.Ordinal);
@@ -115,7 +127,7 @@ public sealed class PushHub(IUserSource users, IReadOnlyList<int> warningOffsets
     public PushQueue Queue { get; } = new(log);
 
     /// <summary>`sub on` for the caller's own id (through Gateway.Run in the service).</summary>
-    public string Subscribe(ulong id) => Subscriptions.On(id);
+    public string Subscribe(ulong id) => Subscriptions.On(id, users);
 
     /// <summary>`sub off` for the caller's own id.</summary>
     public string Unsubscribe(ulong id) => Subscriptions.Off(id);
@@ -141,13 +153,17 @@ public sealed class PushHub(IUserSource users, IReadOnlyList<int> warningOffsets
     public void ConfigChanged() => Guard(PushLines.ConfigChangedType, () => Queue.Enqueue(PushLines.ConfigChanged()));
 
     /// <summary>The scheduler's push phase: the wave-warn lines due now, then at most <see cref="PushQueue.PerTick"/>
-    /// lines, each to every connected subscriber. Returns the number of sends.</summary>
+    /// lines, each to every connected subscriber. The two have their own guards, so a fault in the warnings never stops
+    /// the send. Returns the number of sends.</summary>
     public int Tick(DateTime utcNow, IEnumerable<ActiveEvent> active, bool waveWarnings)
     {
-        var sends = 0;
-        Guard("tick", () =>
+        Guard("warnings", () =>
         {
             foreach (var line in PushLines.Warnings(active, waveWarnings, _warnings, utcNow)) Queue.Enqueue(line);
+        });
+        var sends = 0;
+        Guard("send", () =>
+        {
             foreach (var line in Queue.Take()) sends += Subscriptions.Deliver(users, line.Text);
         });
         return sends;
@@ -163,7 +179,7 @@ public sealed class PushHub(IUserSource users, IReadOnlyList<int> warningOffsets
         }
         catch (Exception ex)
         {
-            if (streak.Fail()) log($"push: {entry} failed ({ex.Message}); skipped");
+            if (streak.Fail()) log($"push: {entry} failed ({ex.GetType().Name}); skipped");
         }
     }
 }

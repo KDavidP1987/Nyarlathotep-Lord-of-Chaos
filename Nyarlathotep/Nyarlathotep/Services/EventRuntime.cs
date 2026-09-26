@@ -95,7 +95,6 @@ internal static class EventRuntime
         Persistence.State.MarkDirty();
         Core.Log.LogInfo($"[nyar] event {id} started by {trigger} (ends {active.Instance.EndsUtc:u})");
         Announcer.EventStarted(active.Instance);
-        Pusher.EventStarted(active.Instance);
         return $"event {id} started";
     }
 
@@ -109,15 +108,14 @@ internal static class EventRuntime
     [Mutating]
     internal static string Purge()
     {
-        var events = Engine.CancelAll();
-        var (queued, cancelled) = SpawnTracker.PurgeUnits();
         var cooldown = Settings.Limit(Limits.PurgeCooldownSeconds);
+        var events = Engine.CancelAll(cooldown);
+        var (queued, cancelled) = SpawnTracker.PurgeUnits();
         var doc = Persistence.State.Document;
         doc.Instances.Clear();
         doc.PurgeUntilUtc = DateTime.UtcNow.AddSeconds(cooldown);
         Persistence.State.MarkDirty();
         Announcer.Purged();
-        Pusher.Purged(cooldown);
         Core.Log.LogWarning($"[nyar] purge: {events.Count} events ended, {queued} units queued, {cancelled} spawns cancelled, cooldown {cooldown}s");
         return AdminLines.Purged(events.Count, queued);
     }
@@ -135,7 +133,6 @@ internal static class EventRuntime
             RemoveInstance(ended.Id);
             Core.Log.LogInfo($"[nyar] event {ended.Id} ended ({ended.WavesSpawned} of {ended.Definition.Action?.Waves ?? 0} waves)");
             Announcer.EventEnded(ended.Definition);
-            Pusher.EventEnded(ended.Id);
         }
         foreach (var cleanup in Engine.DueCleanups(now))
         {
@@ -172,7 +169,6 @@ internal static class EventRuntime
         RemoveInstance(id);
         Core.Log.LogWarning($"[nyar] event {id} {why}: {queued} units queued, {cancelled} spawns cancelled");
         Announcer.EventEnded(ended.Definition);
-        Pusher.EventEnded(id);
         return true;
     }
 

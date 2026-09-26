@@ -43,7 +43,6 @@ internal static class WaveAction
             first += entry.Count;
         }
         EventRuntime.Engine.WaveSpawned(active.Id);
-        Pusher.Wave(active.Id, due.Wave);
         Core.Log.LogInfo($"[nyar] event {active.Id} wave {due.Wave}/{due.Waves}: {total} units queued, due in {(int)Math.Ceiling((life.DueUtc - now).TotalSeconds)}s, lifetime {life.LifetimeSeconds}s");
     }
 }
