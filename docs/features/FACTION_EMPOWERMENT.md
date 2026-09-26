@@ -279,7 +279,8 @@ Part 1 (owner, about 25 minutes; server **127.0.0.1:9876**, Direct Connect, worl
 4. Run `.fam a <your character name> CHAR_Bandit_Thug`, then `.fam l` (the list shows the Thug as number 1), then `.fam b 1`
    (your Thug familiar appears), then `.fam c` (combat off, so it stays by you). Note each reply.
 5. Stand still with the familiar next to you and run `.nyar debug here 40`. The familiar is the CHAR_Bandit_Thug row at
-   about 1-3 m. **Note that row's "carrier" and "hp" parts.**
+   about 1-3 m. **Note that row's "carrier" and "hp" parts, and also the "hp" part of one camp CHAR_Bandit_Thug row
+   further away** (a native Thug's base reading, compared again in step 14).
 6. Run `.nyar event start example-empowerment`. Wait 20 seconds and run `.nyar debug here 40` again. Expect the camp's
    bandits on "carrier example-empowerment" and **the familiar's row still "carrier none" with the same hp as in step 5.**
 7. Run `.fam t` (your familiar leaves). Let a Bandit Thug hit you 3 more times with the same gear. **Note the 3 damage
@@ -294,7 +295,9 @@ Part 1 (owner, about 25 minutes; server **127.0.0.1:9876**, Direct Connect, worl
 11. Wait 10 seconds, run `.nyar status` (expected: no active events) and `.nyar debug here 40` (expected: "carrier none" on
     every row, no tracked units). Then run `.despawnnpc CHAR_Bandit_Thug 25` to remove the KindredCommands Thugs (it also
     kills any camp Thug within 25 m, which is fine).
-12. When the step 10 seconds have passed (plus 5), run `.nyar event start fe-expire` (it starts now). Wait 20 seconds and run
+12. Wait until the seconds named in step 10's reply have passed, plus 5 more (about 65 seconds after the purge confirm;
+    if the reply still says "purge cooldown active", wait the seconds it names and try again), then run
+    `.nyar event start fe-expire` (it starts now). Wait 20 seconds and run
     `.nyar debug here 40` (expected: "carrier fe-expire"). Run `.nyar status` every 20 seconds until it shows no active
     event (about a minute), wait 10 more seconds, and run `.nyar debug here 40` (expected: "carrier none" on every row).
 13. Walk about 50 m away from the camp, out of any fight. Run `.nyar event start fe-u-empower`, then
@@ -312,8 +315,8 @@ the server is up again.
 Part 2 (owner, about 3 minutes):
 
 14. Connect to 127.0.0.1:9876 again (`adminauth` if asked). Go back to the camp, stand where you stood in step 5, and run
-    `.nyar debug here 40`. Expect "carrier none" on every row, base stats (a Thug's hp max as in step 5), and no tracked
-    unit. Then walk to where you started fe-u-spawns and run `.nyar debug here 40` there (expected: no tracked unit and no
+    `.nyar debug here 40`. Expect "carrier none" on every row, base stats (a native CHAR_Bandit_Thug row's hp max equal to the native
+    Thug noted in step 5, not the familiar's), and no tracked unit. Then walk to where you started fe-u-spawns and run `.nyar debug here 40` there (expected: no tracked unit and no
     Thug left from fe-u-spawns).
 15. Run `.fam ub` (unbind the familiar), disconnect, and tell Claude **"session 3 done"** with your notes from step 14.
 
