@@ -1,6 +1,6 @@
 # Foundation — the event engine
 
-**Status:** in build (docs/dod/foundation.md, step 6 of 9). Ships in 0.2.0. Nothing here is enabled by
+**Status:** released in 0.2.0, the first public beta (docs/dod/foundation.md, step 8 of 9; step 9 closes the plan). Nothing here is enabled by
 default: pillar switches are off, seeded events are disabled, announcement switches are off.
 
 ## What it provides
@@ -346,6 +346,18 @@ Release build of 8f974b0 (A20), with the config restored. The owner connected wi
 - The boot sweep found and despawned Boot B's 3 autosaved units. The health line read "degraded: none".
 - Log check: 0 unhandled, 20 nyar lines, 0 orphan errors, 0 unity errors. Warnings: only Il2CppInterop and
   Beelzebub, plus the same 226 save-load PrefabLookupMap lines.
+
+### Session 19 · 2026-09-25
+Release build of the 0.2.0 release tree (versions bumped, the build that `tcli build` packaged), unattended boot on
+the restored config; no player connected.
+- "Plugin kdpen.Nyarlathotep v0.2.0 loaded", "events: reloaded: 6 valid, 0 disabled", "triggers: all hooks
+  available", "announcements: all off", "boot marker sweep: 0 found" (session 18 removed the last saved units),
+  then "tick timing: avg 0.311 ms" over the first minute.
+- D34 after build, test, tcli and this deploy: `-Paths` "576 walked, all in manifest" (tools/ingame/** added);
+  `-ServerWrites -Compare` against step 2's snapshot "20 created, 38 changed, 0 deleted, all in manifest, no other
+  save".
+- Log check: 0 unhandled, 5 nyar lines, 0 orphan errors, 0 unity errors; warnings only Il2CppInterop and
+  Beelzebub, plus the save-load PrefabLookupMap lines before "Startup Completed".
 
 ## Open questions
 

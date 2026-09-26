@@ -212,3 +212,15 @@ yarfoundation-before.tsv waits for step 8 (D34), with the game client closed
 - 331bb3f fixes: compile 0 errors, 0 warnings; tests Passed 530, Failed 0; mutation check 4 planted faults each failed a test (no split, no trailing comma, a padded continuation line, no cut of an oversized command); preflight exit 0
 - /code-review (inline): the degraded notice sent at once could reach a client still loading; 331bb3f delays it 10 s
 - Codex verdict: READY (round 3, 3126518)
+
+### Step 8 · 2026-09-25 · release tree (versions 0.2.0)
+- compile: 0 errors, 0 warnings (Release, deployed); tests Passed 531, Failed 0
+- preflight: exit 0 except "release tags", which needs the release commit (rerun after it below); -Paths "576 walked, all in manifest" after adding tools/ingame/**; -ServerWrites -Compare %TEMP%
+yarfoundation-before.tsv "20 created, 38 changed, 0 deleted, all in manifest, no other save"
+- tcli build (after the review's README and csproj edits): kdpen-Nyarlathotep-0.2.0.zip, SHA-256 27847f928d413c5e762ce962f4dca94fd3678ee9be0e1827a98fae99ba27c436 (icon, README, manifest, BepInEx/plugins/Nyarlathotep.dll, CHANGELOG, LICENSE); the first build's b7d2cd0b… was superseded
+- six surfaces: csproj and thunderstore.toml 0.2.0; both changelogs have 0.2.0 with the retired General.AnnounceEvents key; both READMEs describe 0.2.0 (the Thunderstore page marks spawn-wave events and announcements 0.2.0, every other pillar in development); the Thunderstore description rewritten to what 0.2.0 does
+- session 19 log check: 0 unhandled, 5 nyar lines, 0 orphan errors, 0 unity errors
+- /code-review (inline): the READMEs and changelogs checked claim by claim against Config/Settings.cs, Logic/Limits.cs, the commands and events.default.json; `.nyar spawn` placing units at the admin and `event enable` saving to events.json confirmed in code
+- Codex cross-inspection of the release surfaces (read-only, code pasted), all findings accepted: round 1 REVISE (announce is not behind a switch, the purge pause is the configured cooldown, the daily-banner screenshot slot, the root README's retired-key note, Status recap, a one-paragraph intro); round 2 REVISE (the root README presented unbuilt pillars as working, no Architecture section, "everything off" when General.Enabled defaults on, missing ranges); round 3 REVISE (the toml description and csproj Description, the Discord link repeated); round 4 REVISE (the root README's beta note); round 5 REVISE (Status recap, the beta note's extra content); round 6 REVISE (a rejection names the event and reason, not always a field; "server-side" twice); round 7 REVISE (two sections for one pillar); round 8 REVISE (manual install must name the dependencies); round 9 REVISE (units outlive the event by GraceSeconds); round 10 READY
+- Codex verdict: READY (round 10)
+- session 19 ran the DLL built before the review; the review changed only the csproj Description metadata, and the rebuilt DLL passed the same 531 tests
