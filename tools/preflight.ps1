@@ -1047,14 +1047,14 @@ function Get-ComposedTempNames([string]$Root) {
 
 # The tool lines that take the %TEMP% root without naming their folder (event-library A18), as "<file>:<line>". A code
 # line of a tool source that reads the temp root ($env:TEMP or $env:TMP, [IO.Path]::GetTempPath(), Python's
-# os.environ TEMP/TMP, tempfile.gettempdir(), and the anonymous makers mkdtemp, mkstemp, TemporaryDirectory,
+# os.environ TEMP/TMP (spaces allowed around its dots, as around Node's process.env.TEMP), tempfile.gettempdir(), and the anonymous makers mkdtemp, mkstemp, TemporaryDirectory,
 # NamedTemporaryFile, GetTempFileName, New-TemporaryFile, Node's os.tmpdir) must spell a nyar-<name> literal on that
 # line's code, or end with the registration comment "# nyar-temp: <reason>" ("// nyar-temp:" in Node) (a listing, or the
 # root handed to a function that spells the name). Each line is split at its trailing comment, found outside quotes
 # (Split-CodeComment), so a literal or an API in the comment does not count and a marker in a string is no comment. A name built wholly from variables therefore cannot reach %TEMP% unseen. Comment lines and
 # PowerShell <# #> help blocks are not code. An unreadable source is reported as "unreadable <file>".
 function Get-UnmarkedTempRoots([string]$Root) {
-    $api = '\$\{?en[v]:(TEMP|TMP)\b|\bgete[n]v\s*\(\s*[''"](TEMP|TMP)[''"]|process\.en[v]\.(TEMP|TMP)\b|\bGetTempPath\s*\(\s*\)|\benviron(\.get\s*\(\s*|\[\s*)[''"](TEMP|TMP)[''"]|\bgettempdir\s*\(|\bmkdtemp\s*\(|\bmkstemp\s*\(|\bTemporaryDirectory\s*\(|\bNamedTemporaryFile\s*\(|\bGetTempFileName\s*\(|(?<![\w-])New-TemporaryFile\b|\btmpdir\s*\(\s*\)'   # nyar-temp: the pattern itself, it opens no folder
+    $api = '\$\{?en[v]:(TEMP|TMP)\b|\bgete[n]v\s*\(\s*[''"](TEMP|TMP)[''"]|process\s*\.\s*en[v]\s*\.\s*(TEMP|TMP)\b|\bGetTempPath\s*\(\s*\)|\benviron\s*(\.\s*get\s*\(\s*|\[\s*)[''"](TEMP|TMP)[''"]|\bgettempdir\s*\(|\bmkdtemp\s*\(|\bmkstemp\s*\(|\bTemporaryDirectory\s*\(|\bNamedTemporaryFile\s*\(|\bGetTempFileName\s*\(|(?<![\w-])New-TemporaryFile\b|\btmpdir\s*\(\s*\)'   # nyar-temp: the pattern itself, it opens no folder
     $out = @()
     foreach ($f in @(Get-ToolSources $Root)) {
         $t = Read-ToolSource $Root $f

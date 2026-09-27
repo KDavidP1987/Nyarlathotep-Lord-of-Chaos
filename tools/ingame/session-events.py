@@ -3,8 +3,8 @@
 # with an unknown unit), d23b (the same file with a comma removed), restore-valid (d23a again), cool (the last valid file
 # with t-cool due every minute from now+2 to now+13, so a purge right after it has due times inside its cooldown). State in
 # %TEMP%/nyar-session. s17a/s17b: session 17; rac2: raphael-api-core session 2; fe1, fe2, fe3 and show: faction-empowerment
-# sessions 1, 2 and 3 (see each mode's comment); el1: event-library session 1. `python session-events.py --help` lists the
-# modes and writes nothing.
+# sessions 1, 2 and 3 (see each mode's comment); el1: event-library session 1; soak: its four-hour soak.
+# `python session-events.py --help` lists the modes and writes nothing.
 import json, sys, datetime, io, os, shutil
 SERVER = r"C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer"
 CFG = os.path.join(SERVER, "BepInEx", "config", "Nyarlathotep", "events.json")
@@ -36,6 +36,9 @@ USAGE = """usage: python tools/ingame/session-events.py <mode> [args]
         template copy is, except legion-weekend-surge, enabled and retimed to today at 2 min after now + M (M defaults
         to 3, the boot's own time), and undead-nightfall, enabled as shipped (the next in-game night); the cfg gets
         Pillars.FactionEmpowerment, Pillars.EventSpawns and Debug.TimingLog = true. Backups and writes as fe1.
+  soak [--delay M] [--every N] [--dry-run] [--server DIR]   event-library step 5, the four-hour soak: events.json gets
+        copies of the four empowerment templates, all enabled, legion-weekend-surge retimed to twelve times N minutes
+        apart (default 22) from 2 min after now + M (default 3); the cfg keys as el1. Backups and writes as fe1.
   show [--server DIR]   prints the server's events.json and the cfg keys fe1, fe2 and fe3 set; writes nothing.
 The server defaults to """ + SERVER + "."
 def here():
@@ -198,7 +201,7 @@ elif mode == "rac2":
                               "durationSeconds": 60, "action": point(unit(1))})
     write(doc)
     print("rac2 written:", len(doc["events"]), "definitions")
-elif mode in ("fe1", "fe2", "fe3", "el1", "show"):
+elif mode in ("fe1", "fe2", "fe3", "el1", "soak", "show"):
     # faction-empowerment session 1 (step 4, unattended, D17): fe-short ends by expiry and its sample line reverts one
     # tick later; fe-long is still running when the server is stopped mid-window, so the next boot's carrier sweep finds
     # k > 0. Only these two definitions are written (nothing else starts on its own); the -Save snapshot of
@@ -215,7 +218,7 @@ elif mode in ("fe1", "fe2", "fe3", "el1", "show"):
     events_path = os.path.join(server, "BepInEx", "config", "Nyarlathotep", "events.json")
     cfg_path = os.path.join(server, "BepInEx", "config", "kdpen.Nyarlathotep.cfg")
     CFG_KEYS = [("Pillars", "FactionEmpowerment", "true"), ("Debug", "VerboseLogging", "true")]
-    if mode == "el1": CFG_KEYS = [("Pillars", "FactionEmpowerment", "true"), ("Pillars", "EventSpawns", "true"), ("Debug", "TimingLog", "true")]
+    if mode in ("el1", "soak"): CFG_KEYS = [("Pillars", "FactionEmpowerment", "true"), ("Pillars", "EventSpawns", "true"), ("Debug", "TimingLog", "true")]
     if mode in ("fe2", "fe3", "show"): CFG_KEYS += [("Pillars", "EventSpawns", "true"), ("Debug", "TimingLog", "true"), ("Announcements", "EventBanners", "true")]
     if mode in ("fe3", "show"): CFG_KEYS += [("Limits", "PurgeCooldownSeconds", "60"), ("Limits", "EmpowerBatchPerTick", "50")]
     DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]   # the validator's names, whatever the locale
@@ -272,7 +275,7 @@ elif mode in ("fe1", "fe2", "fe3", "el1", "show"):
     if mode == "show":
         show(read(events_path), read(cfg_path), "current files:")
         sys.exit(0)
-    delay = int(opt("--delay", "3" if mode == "el1" else "0"))
+    delay = int(opt("--delay", "3" if mode in ("el1", "soak") else "0"))
     now = datetime.datetime.now()
     def due(minutes):
         t = now + datetime.timedelta(minutes=minutes + delay)
@@ -300,6 +303,27 @@ elif mode in ("fe1", "fe2", "fe3", "el1", "show"):
                 e["trigger"] = {"type": "Schedule", "days": [DAYS[t.weekday()]], "times": [hhmm(t)]}
         if sorted(e["id"] for e in doc["events"] if e["enabled"]) != ["legion-weekend-surge", "undead-nightfall"]:
             sys.exit("templates.json lacks legion-weekend-surge or undead-nightfall")
+    elif mode == "soak":
+        # event-library step 5, the four-hour soak (D25, D26): copies of the four empowerment templates, all enabled; the
+        # two spawn templates come in by chat at the owner's kick-off (Build plan step 5). legion-weekend-surge keeps its
+        # 1800 s and stats and fires at twelve times, one every --every minutes (default 22) from 2 min after now + M, so
+        # the soak window (about 4.5 h with the restart) holds several starts, one of them across the restart; a time
+        # while it is still active is refused by the engine and logs no start. The days list holds every day the times
+        # fall on, so a window across midnight is still met.
+        every = int(opt("--every", "22"))
+        here_ = os.path.dirname(os.path.abspath(__file__))
+        catalogue = os.path.join(here_, "..", "..", "Nyarlathotep", "Nyarlathotep", "Resources", "templates.json")
+        doc = {"SchemaVersion": 1, "events": [e for e in json.load(io.open(catalogue, encoding="utf-8-sig"))["events"]
+                                               if e.get("pillar") == "empowerment"]}
+        ids = sorted(e["id"] for e in doc["events"])
+        if ids != ["bandit-vengeance", "legion-weekend-surge", "militia-crackdown", "undead-nightfall"]:
+            sys.exit(f"templates.json empowerment templates are {ids}, not the four the soak names")
+        for e in doc["events"]:
+            e["enabled"] = True
+            if e["id"] == "legion-weekend-surge":
+                ts = [due(2 + k * every) for k in range(12)]
+                e["trigger"] = {"type": "Schedule", "days": sorted({DAYS[t.weekday()] for t in ts}, key=DAYS.index),
+                                "times": sorted({hhmm(t) for t in ts})}
     else:
         # faction-empowerment session 2 (step 5, with the owner, D14-D16, D18, D19): all Manual except fe-vblood, so
         # nothing starts before the owner asks. example-empowerment carries all five stats, set well above 1 so each

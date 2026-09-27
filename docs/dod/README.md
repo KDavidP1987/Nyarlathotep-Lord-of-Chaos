@@ -5,13 +5,13 @@
 
 | Plan | Title | Status | Size | Verified | Baseline items | Prediction | Parent |
 |---|---|---|---|---|---|---|---|
-| [event-library](event-library.md) | Event library — built-in templates and in-game authoring | in-progress | L | 7/35 | 34 | 62 % | nyarlathotep |
+| [event-library](event-library.md) | Event library — built-in templates and in-game authoring | in-progress | L | 7/35 | 34 | 61 % | nyarlathotep |
 | [faction-empowerment](faction-empowerment.md) | Faction empowerment — timed carrier buffs on every NPC of a faction | done | L | 30/30 | 29 | 69 % | nyarlathotep |
 | [foundation](foundation.md) | Foundation engine, store, spawner, scheduler, announcer and commands | done | L | 40/40 | 38 | 63 % | nyarlathotep |
 | [nyarlathotep](nyarlathotep.md) | Nyarlathotep, Lord of Chaos, v0.1 to v1.0 | in-progress | Epic | 37/47 | 36 | 75 % |  |
 | [raphael-api-core](raphael-api-core.md) | Raphael api 2 — status, events, push subscription, paging, contract check | done | L | 22/22 | 22 | 63 % | nyarlathotep |
 | [spikes](spikes.md) | Spikes S1-S3, march, restart marker, carrier buff | done | M | 20/20 | 20 | 50 % | nyarlathotep |
 
-Most-missed layers — done plans: layer 6.1 (10), layer 12.3 (5), layer 4.5 (5), layer 12.4 (4), layer 7.3 (3); open plans (provisional): layer 3.1 (5), layer 6.1 (5), layer 14.4 (4), layer 6.2 (2), layer 4.5 (2).
+Most-missed layers — done plans: layer 6.1 (10), layer 12.3 (5), layer 4.5 (5), layer 12.4 (4), layer 7.3 (3); open plans (provisional): layer 3.1 (5), layer 14.4 (5), layer 6.1 (5), layer 6.2 (2), layer 4.5 (2).
 
 Store: `docs/dod`. Plans are the source of truth; this file is regenerated.
