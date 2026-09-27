@@ -522,7 +522,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - A1 · 2026-09-26 · discovered · ~D8 · layer: 7.3 · Review 9 F1 (advisory): D8 refused a confirm for an event started after arming but did not say whether the refusal clears the pending delete; it keeps it, so stop then confirm inside the 30 s deletes, and AuthoringTests Delete covers the sequence
 - A2 · 2026-09-26 · discovered · ~D20 · layer: 3.1 · Review 9 F2 (advisory): malformed arity and binding (a dangling `as`, surplus arguments, a missing `event set` value) were left unstated; they get VCF's own usage reply and never reach the gateway, with representative forms in CommandArgTests
 - A3 · 2026-09-26 · discovered · ~D25 · layer: 9.2 · Review 9 F3 (advisory): S-6's fallback (CHAR_Bandit_Hunter fighting in melee) had no recorded observation; the Session 3 kick-off records the Hunter's attack in the feature doc
-- A4 · 2026-09-26 · requested · ~D23 · layer: 9.2 · owner decision 2026-09-26 (faction-empowerment A8, option A): the damage-number check of faction-empowerment D15, not taken in its Sessions 2 and 3, is taken in this plan's Session 2 with undead-nightfall (physicalPower 1.25)
+- A4 · 2026-09-26 · requested · ~D23 · layer: 9.2 · owner decision 2026-09-26 (faction-empowerment A8, option A): the damage-number check and the by-eye attack and move speed view of faction-empowerment D15, not taken in its Sessions 2 and 3, are taken in this plan's Session 2 with undead-nightfall (physicalPower 1.25)
 
 ## Log
 - 2026-09-26 · status → draft · plan
