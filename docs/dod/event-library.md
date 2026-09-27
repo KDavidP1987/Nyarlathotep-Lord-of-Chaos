@@ -576,3 +576,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-27 · note · round cap · after Review 12 · owner: approved option A in plan mode — run Review 13 now (codex, scope A13-A17), after the D18 decision is written into Assumptions
 - 2026-09-27 · note · S-15 added: the owner's decision D18 (Review 11 F1) as a validated assumption, so a reviewer reads it in the plan
 - 2026-09-27 · note · Review 13 (codex, scope A13-A17) REVISE: F1-F3 blocking, answered by A18; F4 advisory scoring; review stays pending
+- 2026-09-27 · note · round cap · after Review 13 · owner: approved option A in plan mode — Reviews 14 and 15 (codex, scope A13-A18); still REVISE after Review 15, or a scope finding, goes back to the owner · through Review 15
