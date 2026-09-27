@@ -92,6 +92,14 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - Codex verdict: READY (round 1) — F1 advisory accepted: the spawn centre moved to Logic WavePlan.Center with a test, so dropping the height fails a test; F2 advisory rejected: an action line of ten 96-character prefabs could still be cut, outside A21/D4, which name trigger lines, and no shipped or authored event comes near it; F3 advisory rejected: ±10000 is D11's bound for every axis, `location here` reads the admin's real position, and a hand-edited height is admin-authored like x and z; F4 confirmation
 - in-game: D21 cases 1 and 12 and D22's four silent commands are rerun in Session 3
 
+### A22 probe · 2026-09-27 · 9f2f315 + working tree (Services/GroundProbe.cs, log only)
+- compile 0 errors, 0 warnings; 1320 tests passed; PREFLIGHT OK
+- scope: a VerboseLogging-only spike that reads Translation, ProjectM.Height, SnapToHeight and FallToHeight at spawn, ~1 s and ~5 s; it writes nothing. The plan's CollisionWorld ray was left out: the game's Height component (ProjectM.HeightCorrectionSystem) answers the question directly with less IL2CPP risk (Codex agreed, F4)
+- /code-review (self, 60-line diff): no findings
+- Codex verdict: READY (round 2) — round 1 NOT READY: F1 pending samples kept logging after VerboseLogging turned off (fixed: Tick clears them), F2 units past 64 got no follow-up silently (fixed: pass 0 says "not followed"), F3 the flag read sat outside the try (fixed); round 2 no findings
+- privacy grep (7656119, kdpenland): none in the diff
+- in-game: Session 4 (the probe session)
+
 ## Sessions
 - session 1 log check: 0 unhandled, 60 nyar lines, 0 orphan errors, 0 unity errors
   - one boot (23:10–23:48), unattended; run after the stop and before any restart; BepInEx: the three known warnings (Il2CppInterop, two Beelzebub TUNE); Unity log: 226 PrefabLookupMap lines at save load, the game's RepairVBloodProgressionSystem lookup notice and the hard stop's Crashpad and temp-memory notices; then "snapshot restored; hashes equal (s1, … deleted)"

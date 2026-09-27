@@ -180,9 +180,11 @@ internal static class SpawnTracker
             spawned++;
             if (Settings.VerboseLogging.Value)
                 Core.Log.LogInfo($"[nyar] spawned {order.Prefab} for {order.EventId ?? "manual"} (lifetime {order.LifetimeSeconds}s)");
+            GroundProbe.Spawned(unit, order.Prefab, order.Y, now);
         }
         if (spawns.Count > 0)
             Core.Log.LogInfo($"[nyar] spawn batch: {spawned} of {spawns.Count} spawned, {_ledger.PendingSpawns} waiting");
+        GroundProbe.Tick(now);
 
         // Units the game removed on its own (LifeTime ran out, DestroyWhenDisabled) leave the ledger here.
         foreach (var gone in _ledger.Units.Where(u => !_entities.TryGetValue(u.Key, out var e) || !e.Exists()).Select(u => u.Key).ToList())
