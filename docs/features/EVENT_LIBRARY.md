@@ -393,3 +393,27 @@ were moved back to the centre's level.
 old example-empowerment line at each reload, two stop summaries; Unity: 0 exceptions, no PrefabLookupMap line after
 "Startup Completed". Then `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s5,
 C:\Users\<user>\AppData\Local\Temp\nyar-snap-s5 deleted)".
+
+### Session 6 · 2026-09-27 · event-library step 5, the four-hour soak (owner kick-off, then unattended; 127.0.0.1:9876, build b084e47)
+
+Setup (Claude): `pwsh tools/dev-snapshot.ps1 -Save s6`; `python tools/ingame/session-events.py soak --delay 10` (the four empowerment
+templates enabled, legion-weekend-surge at twelve times 22 min apart, Sun 18:08 to 22:10; Pillars.FactionEmpowerment, Pillars.EventSpawns and
+Debug.TimingLog on); the Release DLL of b084e47 deployed; boot.
+
+**Kick-off (owner, admin).**
+- K1. Kill one bandit V Blood from bandit-vengeance's list (e.g. CHAR_Bandit_Foreman_VBlood, Rufus the Foreman, or
+  CHAR_Bandit_Frostarrow_VBlood, Keely the Frost Archer) → "bandit-vengeance" starts (log "event bandit-vengeance started").
+- K2. Kill one Militia or Church V Blood from militia-crackdown's list (e.g. CHAR_Militia_Guard_VBlood or
+  CHAR_Militia_Nun_VBlood) → "militia-crackdown" starts.
+- K3. `.nyar template use bandit-ambush`, `.nyar event set bandit-ambush location here`, `.nyar event enable bandit-ambush`,
+  `.nyar event start bandit-ambush`.
+- K4. The same four commands for undead-rising, at another spot.
+- K5. The owner may leave the game.
+
+**Unattended (Claude).** At about two hours, while legion-weekend-surge is active: copy both logs to %TEMP%\nyar-soak-1,
+-LogCheck, restart (D26). Run until the timing lines total at least 240, stop after an autosave, copy the logs to
+%TEMP%\nyar-soak-2, -LogCheck, `pwsh tools/soak-report.ps1 -Log <archived logs in order> -Templates
+legion-weekend-surge,bandit-vengeance,undead-nightfall,militia-crackdown,bandit-ambush,undead-rising -MinMinutes 240`,
+delete the %TEMP%\nyar-soak-* folders, `pwsh tools/dev-snapshot.ps1 -Restore`.
+
+Observed: (recorded when the session runs)

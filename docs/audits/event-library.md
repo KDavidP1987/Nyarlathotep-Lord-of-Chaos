@@ -63,6 +63,12 @@ and one under "### A22 probe · Session 4 · 2026-09-27 · 86f6f53
 - setup: `dev-snapshot.ps1 -Save s3` (28 files); deploying build with the server stopped, DLL ACDC9D8264A48658 in plugins equals the build output
 - baseline boot: "templates: 6/6 valid", "triggers: all hooks available", boot marker and carrier sweeps 0 found; warnings only Il2CppInterop Class::Init, Beelzebub TUNE ×2 and the dev world's old example-empowerment disabled line
 
+### Step 5 · Session 6 · 2026-09-27 · b084e47
+- git tree clean at b084e47 (Review 19 dispositions; the DLL source unchanged since b4beecf); compile 0 errors, 0 warnings, 1333 tests passed; PREFLIGHT OK (data inventory 31 entries, 54/54 globs and files, 32/32 plan rows); dod --check event-library 0 problems, verified 7/35; review pending (A24, Review 19 REVISE, the round cap reached and put to the owner)
+- -Paths -DeclaredOf event-library fails only on the session's own open folders ("leftover temp nyar-session; leftover temp nyar-snap-s6"), removed by the -Restore that closes the session
+- feature doc read: EVENT_LIBRARY.md › Test results › Session 5 and the Status block; plan D25, D26, D30 and step 5
+- setup: `pwsh tools/dev-snapshot.ps1 -Save s6` (28 files); `python tools/ingame/session-events.py soak --delay 10` (legion-weekend-surge Sun 18:08 to 22:10, twelve times 22 min apart); Release build deployed with the server stopped, DLL B8C75323E580B5DC in plugins equal to the build output
+- baseline boot 17:55: "events: reloaded: 4 valid, 0 disabled", "templates: 6/6 valid", "triggers: all hooks available", boot marker and carrier sweeps 0 found; warnings only Il2CppInterop Class::Init and Beelzebub TUNE ×2
 ## Post-audit
 ### Step 1 · 2026-09-26 · e84c8a3 + working tree (committed as step 1)
 - compile / preflight: 0 errors, 0 warnings; 1309 tests passed (871 before the step); PREFLIGHT OK; dod --check 0 problems (6 warnings, all old review-round notes)
