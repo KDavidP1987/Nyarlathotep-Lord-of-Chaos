@@ -623,3 +623,45 @@ VERDICT: REVISE
 - F4 · accepted · A19: -Paths lists %TEMP% a second time after its checks; a nyar-* folder new in the second listing is a leftover
 - F5 · rejected · a helper that builds the folder from a root it is handed is the case the registration covers: the call site that takes the root carries "# nyar-temp: <reason>" (dev-snapshot's Invoke-Save hand-off), and the helper's own nyar-<name> literal is read by the name scan; a factory symbol would add a second mechanism for the same two facts
 - F6 · accepted · A19, as F1: the plants run inside the gating command
+
+## Review 15 · 2026-09-27 · codex · plan commit c8ade06 · plan 193524 B · 34 items · files 0 · e3b0c44298fc · prompt 6b8d1909836c · scope A13,A14,A15,A16,A17,A18,A19
+Prompt checked twice before recording: the prompt file's SHA-256 begins 6b8d1909836c, and a rebuild from the plan at c8ade06 gave the same prompt.
+
+F1 `blocking` — Probe `14.4` remains unanswered because S-15 deliberately excludes repository or server paths created and deleted within one build step, although the probe requires every path the change writes; a script can create `logs/transient.json`, consume it, and delete it before post-audit, leaving neither `git diff` nor the final filesystem scan evidence.
+Fix: Record a per-step write/path journal and union it into `-Paths -DeclaredOf`, with a fixture that creates and deletes a repository or server path in one step and makes the command fail unless declared.
+
+F2 `blocking` — Probes `4.5` and `14.4` remain unanswered for paths detected by “file written after” timestamps: a copied ignored/server file can retain an older timestamp, while a concurrent child process can create and remove `%TEMP%\nyar-race-*` between the two listings, so the evidence command can pass without seeing every member.
+Fix: State a reliable observation boundary—such as a build-wide write journal or filesystem watcher—and add preserved-timestamp and create-between-scans fixtures that must make `pwsh tools/preflight.ps1 -Paths -DeclaredOf event-library` fail.
+
+F3 `advisory` — The 12.4 soak-report row still says “five bad fixtures” while it names seven failing fixtures after A17–A18, making the matrix internally inconsistent even though D24’s command remains verifiable.
+Fix: Replace “five bad fixtures” with “seven bad fixtures” or remove the count.
+
+F4 `advisory` — D30’s explicit missing-plant failure list omits `Paths/bad-base`, although A19 broadly says every Paths plant must be present; a stranger must resolve these competing formulations to verify removal of the base-integrity control.
+Fix: Enumerate `bad-base`, `bad-transient`, `bad-composed`, `bad-scratch`, `bad-tempvar`, and `bad-undeclared` consistently in D30 and the gating-control matrix.
+
+Layer scores:
+1 Considered — Purpose & typical use.  
+2 Considered — Design › Permissions; D17, D22.  
+3 Considered — Design › Data; D1, D12, D19, D29, D30.  
+4 Considered — Business rules; D2, D12, D16, D30.  
+5 Considered — Interfaces › Internal.  
+6 Considered — Interfaces › External; D17, D19, D33.  
+7 Considered — Design › States; D8, D12, D14, D26.  
+8 Considered — Use cases › Minimal stretch.  
+9 Considered — Use cases › Maximal stretch; D5, D8–D11, D22, D27.  
+10 Considered — Security; D17, D18, D22.  
+11 Considered — Design › UX; D4, D16, D20, D21, D23, D25, D28.  
+12 Considered — Failure & observability; D3, D18, D19, D24, D30–D34.  
+13 Considered — Performance; D5, D12, D27.  
+14 Gap — Rollout answers 14.1–14.3, but D30/S-15 do not satisfy 14.4.  
+15 Considered — Out of scope.
+
+EARLIER: unresolved F5
+14/15 layers · 48/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · rejected · repeats Reviews 11 and 12 F1, decided by the owner (NYARLATHOTEP_DESIGN.md §9 D18, S-15): a path created and deleted inside one step is outside the declared set
+- F2 · rejected · owner decision 2026-09-27 widening D18 (§9, S-15): a timestamp-preserving copy into an ignored or server path and a %TEMP% folder created and removed between the two listings are the same case; the check observes what a step leaves, and no write journal or watcher is kept
+- F3 · accepted · 6eac3ae: the 12.4 soak row no longer counts its bad fixtures
+- F4 · accepted · 6eac3ae: D30 and -Paths name bad-base among the required plants
