@@ -104,6 +104,15 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - Codex verdict: READY (round 2) — round 1 REVISE: the natural end was claimed as a full D16 pass from one sample line without a debug read-back (blocking → carried to Session 3 as an in-game read-back), and three wording fixes (timing highest average qualified to the empowerment interval with the boot-wide 2.481 ms, hp rounding, movement-speed pairs called matched rows rather than the same units); round 2: EARLIER all resolved, no findings. Log excerpts sent with the SteamID redacted; 0 blocked reads
 - dod status: 19/30 verified (D4, D14, D19 added; D30 new)
 
+### Step 6 · 2026-09-26 · ee13316 (the Session 3 build) → 19513df → 4f0d5d4
+- compile / preflight: 0 errors, 0 warnings; 871 tests passed; PREFLIGHT OK; -Paths "778 walked, all in manifest" after archiving %TEMP%
+yar-session; dod --check 0 problems (faction-empowerment and event-library)
+- mutation checks: CooldownLeft with Floor instead of Ceiling fails CooldownLeft_rounds_the_seconds_up; with >= instead of > fails CooldownLeft_is_null_once_the_cooldown_is_over
+- /code-review (5a74b75..HEAD): EventRuntime matched the purge blocker by a second copy of its label, so renaming the label in Precedence would silently drop the seconds-left reply → one constant Precedence.PurgeCooldown (bfa863c), no behaviour or text change; fe3 and the Session 3 steps reviewed through the Codex rounds below
+- Codex verdict: READY (round 2 of the post-session pass) — pre-session pass: rounds 1-6 REVISE on the owner steps (listed under the pre-audit), round 7 READY; post-session record (bc6771a..19513df with redacted log excerpts): READY round 1, no findings; refactor and A8/A4 (19513df..bfa863c): round 1 REVISE, one low finding (A4 named only the damage check, not the by-eye view; fixed), round 2 READY; every round's log: 0 "blocked by policy" besides round 1's audit-text hit
+- in-game: Session 3 with the owner (docs/features/FACTION_EMPOWERMENT.md › Test results › Session 3); D18, D28, D30 pass; D15 and D16 pass after owner decision A (amendment A8, corrected; the damage check moves to event-library D23 by that plan's A4)
+- dod status: 24/30 verified; open D22, D23, D24, D25, D26, D29 (all Build plan step 7)
+
 ## Sessions
 - session 1 log check: 0 unhandled, 48 nyar lines, 0 orphan errors, 0 unity errors
   - boot 1 (12:25–12:40): "log check: 0 unhandled, 33 nyar lines, 0 orphan errors, 0 unity errors"; boot 2 (12:40–12:43): 9 nyar lines, otherwise the same; boot 3 (12:43): 6 nyar lines, otherwise the same; each run before the next boot
