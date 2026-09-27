@@ -18,6 +18,12 @@ public enum ActionKind
     Announce,
     /// <summary>`.nyar api sub on|off`: changes only the caller's own push subscription (raphael-api-core D5).</summary>
     Subscribe,
+    /// <summary>`.nyar template use`, `.nyar event new` and `copy`: a new, disabled definition (event-library D17).</summary>
+    CreateEvent,
+    /// <summary>`.nyar event delete &lt;id&gt; confirm` (event-library D8, D17).</summary>
+    DeleteEvent,
+    /// <summary>`.nyar pillar &lt;name&gt; on|off`, saved to the cfg (event-library D14, D17).</summary>
+    SetPillar,
 }
 
 /// <summary>Who asks (Design › Permissions): an admin in game, the operator's files (loaded at boot), the scheduler
@@ -46,6 +52,9 @@ public static class ActionTable
         [ActionKind.PurgeConfirm] = Set(Actor.Admin),
         [ActionKind.Announce] = Set(Actor.Admin),
         [ActionKind.Subscribe] = Set(Actor.Admin, Actor.Player),
+        [ActionKind.CreateEvent] = Set(Actor.Admin),
+        [ActionKind.DeleteEvent] = Set(Actor.Admin),
+        [ActionKind.SetPillar] = Set(Actor.Admin),
     };
 
     /// <summary>True when <paramref name="actor"/> may run <paramref name="kind"/>. System's grant holds only for an

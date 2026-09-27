@@ -127,7 +127,7 @@ public partial class CommandArgTests
     [InlineData("conditions.chancePercent", "0", "conditions.chancePercent must be 1-100")]
     [InlineData("name", "Night raid", null)]
     [InlineData("name", "<b>x</b>", "name must be 1-40 characters, no angle brackets or control characters")]
-    [InlineData("trigger.type", "Manual", "field trigger.type is not settable; edit events.json and reload")]
+    [InlineData("action.location", "here", "field action.location is not settable; edit events.json and reload")]   // location is set as `location here` (event-library D11)
     public void Settable_fields(string field, string value, string? error)
     {
         Assert.Equal(error, CommandArgs.SettableValue(field, value).Error);

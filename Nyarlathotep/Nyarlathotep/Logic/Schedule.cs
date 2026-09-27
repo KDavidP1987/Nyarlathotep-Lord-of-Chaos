@@ -52,3 +52,48 @@ public sealed class DayNightEdges
         return isDay ? DayPhase.Day : DayPhase.Night;
     }
 }
+
+/// <summary>The day and night read of the GameTime triggers (event-library D19, A5): <paramref name="isDay"/> is the
+/// game's read, which may throw. A throwing read faults only the GameTime triggers: this sample gives no edge, and the
+/// failure is logged once per streak; a good read ends the streak.</summary>
+public sealed class PhaseSampler(Func<bool> isDay, Action<string> logError)
+{
+    readonly DayNightEdges _edges = new();
+    readonly FailureStreak _faults = new();
+
+    /// <summary>The phase just entered, or null (no edge, or a failed read).</summary>
+    public DayPhase? Sample()
+    {
+        bool day;
+        try
+        {
+            day = isDay();
+            _faults.Ok();
+        }
+        catch (Exception ex)
+        {
+            if (_faults.Fail()) logError($"day/night read failed: {ex.Message}; GameTime triggers wait");
+            return null;
+        }
+        return _edges.Sample(day);
+    }
+}
+
+/// <summary>One scheduler tick's trigger starts (Services/TriggerBus, event-library A5): the Schedule definitions due
+/// this server-local minute, then, when <paramref name="phases"/> is given (the day and night hook is available), the
+/// GameTime definitions of the phase just entered. A failed phase read leaves the Schedule starts of the same tick.</summary>
+public static class TriggerTick
+{
+    public sealed record Due(
+        IReadOnlyList<(EventDefinition Definition, string Occurrence)> Scheduled,
+        DayPhase? Entered,
+        IReadOnlyList<EventDefinition> PhaseStarts);
+
+    public static Due Collect(DefinitionSet set, DateTime utcNow, TimeZoneInfo zone, Func<string, string?> lastOccurrence, PhaseSampler? phases)
+    {
+        var scheduled = TriggerRouter.ScheduleDue(set, utcNow, zone, lastOccurrence);
+        var entered = phases?.Sample();
+        var starts = entered is { } phase ? TriggerRouter.PhaseEntered(set, phase) : [];
+        return new Due(scheduled, entered, starts);
+    }
+}

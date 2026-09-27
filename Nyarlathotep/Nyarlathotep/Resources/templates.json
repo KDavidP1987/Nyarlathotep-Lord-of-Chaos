@@ -1,0 +1,112 @@
+{
+  "SchemaVersion": 1,
+  "events": [
+    {
+      "id": "legion-weekend-surge",
+      "name": "Legion weekend surge",
+      "enabled": false,
+      "pillar": "empowerment",
+      "trigger": { "type": "Schedule", "days": [ "Sat" ], "times": [ "20:00" ] },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "Empower",
+        "factions": [ "Faction_Legion" ],
+        "stats": { "physicalPower": 1.5, "maxHealth": 1.5 }
+      },
+      "announce": { "start": [ "The {faction} surge: {event}." ], "end": [ "The {faction} fall back. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "bandit-vengeance",
+      "name": "Bandit vengeance",
+      "enabled": false,
+      "pillar": "empowerment",
+      "trigger": {
+        "type": "VBloodKilled",
+        "bosses": [
+          "CHAR_Bandit_Bomber_VBlood", "CHAR_Bandit_Chaosarrow_VBlood", "CHAR_Bandit_Fisherman_VBlood",
+          "CHAR_Bandit_Foreman_VBlood", "CHAR_Bandit_Frostarrow_VBlood", "CHAR_Bandit_Stalker_VBlood",
+          "CHAR_Bandit_StoneBreaker_VBlood", "CHAR_Bandit_Tourok_VBlood"
+        ]
+      },
+      "conditions": { "cooldownMinutes": 30 },
+      "durationSeconds": 600,
+      "action": {
+        "type": "Empower",
+        "factions": [ "Faction_Bandits" ],
+        "stats": { "physicalPower": 1.3, "attackSpeed": 1.3 }
+      },
+      "announce": { "start": [ "The {faction} swear vengeance: {event}." ], "end": [ "The {faction} lose heart. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "undead-nightfall",
+      "name": "Undead nightfall",
+      "enabled": false,
+      "pillar": "empowerment",
+      "trigger": { "type": "GameTime", "phase": "night" },
+      "durationSeconds": 1200,
+      "action": {
+        "type": "Empower",
+        "factions": [ "Faction_Undead" ],
+        "stats": { "physicalPower": 1.25, "spellPower": 1.25 }
+      },
+      "announce": { "start": [ "Night falls and the {faction} stir: {event}." ], "end": [ "The {faction} settle. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "militia-crackdown",
+      "name": "Militia crackdown",
+      "enabled": false,
+      "pillar": "empowerment",
+      "trigger": {
+        "type": "VBloodKilled",
+        "bosses": [
+          "CHAR_ChurchOfLight_Sommelier_VBlood", "CHAR_Militia_BishopOfDunley_VBlood", "CHAR_Militia_Glassblower_VBlood",
+          "CHAR_Militia_Guard_VBlood", "CHAR_Militia_Hound_VBlood", "CHAR_Militia_HoundMaster_VBlood",
+          "CHAR_Militia_Leader_VBlood", "CHAR_Militia_Longbowman_LightArrow_Vblood", "CHAR_Militia_Nun_VBlood",
+          "CHAR_Militia_Scribe_VBlood", "CHAR_ChurchOfLight_Overseer_VBlood", "CHAR_Militia_Fabian_VBlood",
+          "CHAR_Villager_Tailor_VBlood", "CHAR_ChurchOfLight_Cardinal_VBlood", "CHAR_ChurchOfLight_Paladin_VBlood"
+        ]
+      },
+      "conditions": { "cooldownMinutes": 30 },
+      "durationSeconds": 900,
+      "action": {
+        "type": "Empower",
+        "factions": [ "Faction_Militia", "Faction_ChurchOfLum" ],
+        "stats": { "maxHealth": 1.3 }
+      },
+      "announce": { "start": [ "The {faction} crack down: {event}." ], "end": [ "The {faction} stand down. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "bandit-ambush",
+      "name": "Bandit ambush",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 600,
+      "action": {
+        "type": "SpawnWaves",
+        "units": [ { "prefab": "CHAR_Bandit_Thug", "count": 4 }, { "prefab": "CHAR_Bandit_Hunter", "count": 2 } ],
+        "waves": 3, "intervalSeconds": 60, "radius": 10,
+        "location": { "type": "Admin" }
+      },
+      "announce": { "start": [ "Bandits lie in wait: {event}." ], "end": [ "The bandits scatter. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "undead-rising",
+      "name": "Undead rising",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 600,
+      "action": {
+        "type": "SpawnWaves",
+        "units": [
+          { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 5 },
+          { "prefab": "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "count": 2 }
+        ],
+        "waves": 2, "intervalSeconds": 90, "radius": 12,
+        "location": { "type": "Admin" }
+      },
+      "announce": { "start": [ "The dead claw their way up: {event}." ], "end": [ "The dead lie still. {event} is over." ], "warnings": false }
+    }
+  ]
+}

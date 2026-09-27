@@ -71,4 +71,45 @@ public class AuthorizationTests
         Assert.False(ran);
         Assert.Equal(1, log.Count("gateway: denied StartEvent for System"));
     }
+
+    // ---- event-library D17: the library's action kinds are the admin's alone
+
+    static readonly ActionKind[] LibraryKinds = [ActionKind.CreateEvent, ActionKind.DeleteEvent, ActionKind.SetPillar];
+
+    [Fact]
+    public void LibraryKinds_passes_admin_only()
+    {
+        foreach (var kind in LibraryKinds)
+            foreach (var actor in Enum.GetValues<Actor>())
+                foreach (var enabled in new[] { true, false })
+                    Assert.Equal(actor == Actor.Admin, ActionTable.Allows(kind, actor, enabled));
+    }
+
+    public static TheoryData<ActionKind, Actor> NonAdmins()
+    {
+        var data = new TheoryData<ActionKind, Actor>();
+        foreach (var kind in LibraryKinds)
+            foreach (var actor in Enum.GetValues<Actor>().Where(a => a != Actor.Admin))
+                data.Add(kind, actor);
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(NonAdmins))]
+    public void LibraryKinds_fails_when_not_admin(ActionKind kind, Actor actor)
+    {
+        var log = new LogLines();
+        var ran = false;
+        Assert.Equal(ActionGateway.DeniedReply, new ActionGateway(log.Add).Run(kind, actor, () => { ran = true; return "written"; }, true));
+        Assert.False(ran);
+        Assert.Equal([$"gateway: denied {kind} for {actor}"], log.Lines);
+    }
+
+    [Fact]
+    public void LibraryKinds_empty_work_reply()
+    {
+        var log = new LogLines();
+        Assert.Equal("", new ActionGateway(log.Add).Run(ActionKind.SetPillar, Actor.Admin, () => "", false));
+        Assert.Empty(log.Lines);
+    }
 }

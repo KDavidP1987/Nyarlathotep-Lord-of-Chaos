@@ -291,13 +291,14 @@ public partial class EngineTests
     {
         var events = Enumerable.Range(1, 11).Select(i => Json.Event($"e{i:00}")).Append(Json.Event("zz", trigger: "{ \"type\": \"Nope\" }")).ToArray();
         var set = EventValidator.Parse(Json.File(events), FakeUnits.Default()).Set;
-        var p1 = EventLines.List(set, 1, ["e01"]);
+        var open = new ControlState(false, true, Enum.GetValues<Pillar>().ToHashSet(), 0, 3);
+        var p1 = EventLines.List(set, 1, ["e01"], open);
         Assert.Equal("page 1/2", p1[0]);
         Assert.Equal(11, p1.Count);
-        Assert.Equal("e01 enabled spawns manual RUNNING", p1[1]);
-        var p2 = EventLines.List(set, 2, []);
-        Assert.Equal(["page 2/2", "e11 enabled spawns manual", "zz disabled: unknown trigger type Nope"], p2);
-        Assert.Equal([EventLines.NoEvents], EventLines.List(DefinitionSet.Empty, 1, []));
+        Assert.Equal("e01 ready spawns manual RUNNING", p1[1]);            // event-library D16: the readiness column
+        var p2 = EventLines.List(set, 2, [], open);
+        Assert.Equal(["page 2/2", "e11 ready spawns manual", "zz invalid: unknown trigger type Nope"], p2);
+        Assert.Equal([EventLines.NoEvents], EventLines.List(DefinitionSet.Empty, 1, [], open));
         Assert.Equal(1, EventLines.Pages(0));
     }
 

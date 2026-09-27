@@ -98,6 +98,9 @@ public static class EventValidator
     static readonly HashSet<string> EventKeys = new(StringComparer.Ordinal)
     { "id", "name", "enabled", "pillar", "trigger", "conditions", "durationSeconds", "action", "announce" };
 
+    /// <summary>The keys an event object may carry (event-library D1's template check).</summary>
+    public static IReadOnlySet<string> EventKeyNames => EventKeys;
+
     /// <summary>Parses events.json. <paramref name="factions"/> checks Empower factions; when null, a unit catalog that
     /// is also an <see cref="IFactionCatalog"/> serves, otherwise no faction is known.</summary>
     public static LoadResult Parse(string text, IUnitCatalog units, IFactionCatalog? factions = null)
@@ -185,12 +188,18 @@ public static class EventValidator
         }
         catch (Fail f)
         {
-            return Disabled(reportId, f.Message);
+            // Keep the pillar and name when they parse, so readiness follows the definition's own pillar switch
+            // (event-library A6, Business rules 7).
+            Pillar? pillar = null;
+            try { if (e.TryGetProperty("pillar", out var pe)) pillar = ParsePillar(pe); }
+            catch (Fail) { }
+            var name = e.TryGetProperty("name", out var ne) && ne.ValueKind == JsonValueKind.String && IsPlainText(ne.GetString()!, 40) ? ne.GetString() : null;
+            return Disabled(reportId, f.Message, pillar, name);
         }
     }
 
-    static EventDefinition Disabled(string id, string reason) =>
-        new(id, id, false, Pillar.Spawns, Trigger.Manual(), new Conditions(), 30, null, Announce.None, reason);
+    static EventDefinition Disabled(string id, string reason, Pillar? pillar = null, string? name = null) =>
+        new(id, name ?? id, false, pillar ?? Pillar.Spawns, Trigger.Manual(), new Conditions(), 30, null, Announce.None, reason);
 
     static JsonElement Required(JsonElement obj, string key, string rule) =>
         obj.TryGetProperty(key, out var v) ? v : throw new Fail(rule);

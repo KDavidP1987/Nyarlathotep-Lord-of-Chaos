@@ -34,17 +34,24 @@ public static class EventsEditor
         var ev = events.OfType<JsonObject>().FirstOrDefault(e => e["id"] is JsonValue v && v.TryGetValue<string>(out var s) && s == id);
         if (ev is null) { error = $"unknown event {id}"; return null; }
 
-        var node = value switch
-        {
-            bool b => JsonValue.Create(b),
-            int i => JsonValue.Create(i),
-            decimal m => JsonValue.Create(m),
-            string s => (JsonNode?)JsonValue.Create(s),
-            _ => null,
-        };
+        var node = ToNode(value);
         if (node is null) { error = $"{path} has an unsupported value"; return null; }
 
         var actionType = ev["action"] is JsonObject act && act["type"] is JsonValue tv && tv.TryGetValue<string>(out var t) ? t : null;
+        if (path.StartsWith("trigger.", StringComparison.Ordinal))
+            return SetTrigger(root, ev, path, node, out error);
+        if (path is "action.factions" or "action.units" or "action.location")
+        {
+            // event-library D10, D11: the new action fields name their own action type.
+            var need = path == "action.factions" ? "Empower" : "SpawnWaves";
+            if (actionType != need)
+            {
+                error = path == "action.location" ? "location is a SpawnWaves field" : $"{path} is not {Article(actionType)} field";
+                return null;
+            }
+            ((JsonObject)ev["action"]!)[path["action.".Length..]] = node;
+            return root.ToJsonString(Write) + Environment.NewLine;
+        }
         var isStat = path.StartsWith("action.stats.", StringComparison.Ordinal);
         if (isStat && actionType != "Empower") { error = $"{path} is not a field of a {actionType ?? "missing"} action"; return null; }
         if (CommandArgs.WaveFields.Contains(path) && actionType == "Empower") { error = $"{path} is not a field of an Empower action"; return null; }
@@ -70,6 +77,52 @@ public static class EventsEditor
         }
         return root.ToJsonString(Write) + Environment.NewLine;
     }
+
+    /// <summary>A command value as JSON: a scalar, a list of names (string[]), the units of action.units (UnitEntry[]) or
+    /// a map point (PointArg). JsonNode writes each as a JSON string or number, never as raw text (event-library 10.2).</summary>
+    static JsonNode? ToNode(object value) => value switch
+    {
+        bool b => JsonValue.Create(b),
+        int i => JsonValue.Create(i),
+        decimal m => JsonValue.Create(m),
+        string s => JsonValue.Create(s),
+        string[] list => new JsonArray(list.Select(x => (JsonNode?)JsonValue.Create(x)).ToArray()),
+        UnitEntry[] units => new JsonArray(units.Select(u => (JsonNode?)new JsonObject { ["prefab"] = u.Prefab, ["count"] = u.Count }).ToArray()),
+        PointArg p => new JsonObject { ["type"] = "Point", ["x"] = p.X, ["z"] = p.Z },
+        _ => null,
+    };
+
+    static string Article(string? type) => type switch
+    {
+        null => "a missing",
+        "Empower" => "an Empower",
+        _ => $"a {type}",
+    };
+
+    /// <summary>trigger.type replaces the whole trigger with that type's default (Schedule Sat 20:00, GameTime night,
+    /// VBloodKilled any, Manual), so no key of the old type stays; any other trigger field needs its trigger type
+    /// (event-library D9).</summary>
+    static string? SetTrigger(JsonNode root, JsonObject ev, string path, JsonNode node, out string? error)
+    {
+        error = null;
+        if (path == "trigger.type")
+        {
+            ev["trigger"] = node.GetValue<string>() switch
+            {
+                "Schedule" => new JsonObject { ["type"] = "Schedule", ["days"] = new JsonArray("Sat"), ["times"] = new JsonArray("20:00") },
+                "GameTime" => new JsonObject { ["type"] = "GameTime", ["phase"] = "night" },
+                "VBloodKilled" => new JsonObject { ["type"] = "VBloodKilled", ["bosses"] = new JsonArray("any") },
+                _ => new JsonObject { ["type"] = "Manual" },
+            };
+            return root.ToJsonString(Write) + Environment.NewLine;
+        }
+        var need = CommandArgs.TriggerTypeOf(path);
+        var trigger = ev["trigger"] as JsonObject;
+        var type = trigger?["type"] is JsonValue tv && tv.TryGetValue<string>(out var t) ? t : null;
+        if (need is null || trigger is null || type != need) { error = $"{path} needs a {need ?? "known"} trigger"; return null; }
+        trigger[path["trigger.".Length..]] = node;
+        return root.ToJsonString(Write) + Environment.NewLine;
+    }
 }
 
 /// <summary>`.nyar event list` and `.nyar event info` (admin-only, Design › UX).</summary>
@@ -80,19 +133,31 @@ public static class EventLines
 
     public static int Pages(int count) => Math.Max(1, (count + PageSize - 1) / PageSize);
 
-    /// <summary>"page p/n" then one line per event on that page, sorted by id (the set's order).</summary>
-    public static IReadOnlyList<string> List(DefinitionSet set, int page, IReadOnlyCollection<string> running)
+    /// <summary>The list's first line while the master switch is off (event-library D16).</summary>
+    public const string MasterOff = "General.Enabled is off: nothing starts";
+
+    /// <summary>"General.Enabled is off: nothing starts" while the master switch is off, "page p/n", then one line per
+    /// event on that page, sorted by id (the set's order), each with its readiness under <paramref name="controls"/>,
+    /// the ControlState an admin start would get (event-library D16).</summary>
+    public static IReadOnlyList<string> List(DefinitionSet set, int page, IReadOnlyCollection<string> running, ControlState controls)
     {
-        if (set.All.Count == 0) return [NoEvents];
-        var lines = new List<string> { $"page {page}/{Pages(set.All.Count)}" };
-        foreach (var d in set.All.Skip((page - 1) * PageSize).Take(PageSize)) lines.Add(Line(d, running.Contains(d.Id)));
+        var lines = new List<string>();
+        if (!controls.GeneralEnabled) lines.Add(MasterOff);
+        if (set.All.Count == 0) { lines.Add(NoEvents); return lines; }
+        lines.Add($"page {page}/{Pages(set.All.Count)}");
+        foreach (var d in set.All.Skip((page - 1) * PageSize).Take(PageSize)) lines.Add(Line(d, running.Contains(d.Id), controls));
         return lines;
     }
 
-    public static string Line(EventDefinition d, bool running) =>
-        d.DisabledReason is { } reason
-            ? $"{d.Id} disabled: {reason}"
-            : $"{d.Id} {(d.Enabled ? "enabled" : "disabled")} {Lower(d.Pillar)} {Trigger(d.Trigger)}{(running ? " RUNNING" : "")}";
+    /// <summary>"&lt;id&gt; &lt;readiness&gt; &lt;pillar&gt; &lt;trigger&gt;[ RUNNING]", or "&lt;id&gt; invalid: &lt;reason&gt;"
+    /// when the definition's own invalidity is the first blocker (event-library D16).</summary>
+    public static string Line(EventDefinition d, bool running, ControlState controls)
+    {
+        var readiness = Readiness.Of(d, controls);
+        return readiness.StartsWith(Readiness.Invalid, StringComparison.Ordinal)
+            ? $"{d.Id} {readiness}"
+            : $"{d.Id} {readiness} {Lower(d.Pillar)} {Trigger(d.Trigger)}{(running ? " RUNNING" : "")}";
+    }
 
     public static IReadOnlyList<string> Info(EventDefinition d, ActiveEvent? active, DateTime utcNow)
     {
@@ -143,4 +208,34 @@ public static class EventLines
     };
 
     static string Lower<T>(T value) where T : Enum => value.ToString().ToLowerInvariant();
+}
+
+/// <summary>A definition's readiness (event-library D16, S-14): the first blocker <see cref="Precedence.StartBlocker"/>
+/// reports for it, mapped one to one to a label. Readiness keeps no order of its own, so the column and a start refusal
+/// always name the same cause.</summary>
+public static class Readiness
+{
+    public const string Ready = "ready";
+    public const string Purge = "off (purge)";
+    public const string Mod = "off (mod)";
+    public const string PillarOff = "off (pillar)";
+    public const string Cap = "full (cap)";
+    public const string Invalid = "invalid: ";
+    public const string EventOff = "off (event)";
+
+    public static string Of(EventDefinition d, ControlState controls) => Label(d, Precedence.StartBlocker(d, controls));
+
+    /// <summary>The label of one StartBlocker reply for <paramref name="d"/>; an unknown reply throws, so a new
+    /// blocker cannot go unlabelled.</summary>
+    public static string Label(EventDefinition d, string? blocker)
+    {
+        if (blocker is null) return Ready;
+        if (blocker == Precedence.PurgeCooldown) return Purge;
+        if (blocker == "General.Enabled is false") return Mod;
+        if (blocker == $"pillar {d.Pillar.ToString().ToLowerInvariant()} is off") return PillarOff;
+        if (blocker == "skipped by MaxConcurrentEvents") return Cap;
+        if (d.DisabledReason is { } reason && blocker == $"event {d.Id} is disabled: {reason}") return Invalid + reason;
+        if (blocker == $"event {d.Id} is disabled") return EventOff;
+        throw new ArgumentException($"no readiness label for the start blocker '{blocker}'", nameof(blocker));
+    }
 }

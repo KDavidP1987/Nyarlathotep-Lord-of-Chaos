@@ -113,10 +113,18 @@ it. **Who:** *anyone*, or *admin* (VCF `adminOnly`, Epic D5). **Child:** the chi
 |---|---|---|---|
 | `.nyar` | anyone | Overview and the commands the caller may run | foundation |
 | `.nyar status` | anyone | Active events and time left; tracked-unit count for admins; never positions | foundation |
-| `.nyar event list [page]` / `info <id>` | admin | Definitions, 10 per page, enabled or why disabled, running; one event's trigger, action and time left | foundation |
+| `.nyar event list [page]` / `info <id>` | admin | Definitions, 10 per page, each with its readiness (`ready`, `off (purge\|mod\|pillar\|event)`, `full (cap)`, `invalid: <reason>`) and running (readiness: event-library); one event's trigger, action and time left | foundation |
 | `.nyar event start <id>` / `stop <id>` | admin | Manual trigger (an `Admin` location spawns around you) / early end, units despawned | foundation |
 | `.nyar event enable\|disable <id>` | admin | Toggle without editing JSON | foundation |
-| `.nyar event set <id> <field> <value>` | admin | Edit one validated field: `name`, `durationSeconds`, `conditions.minPlayers\|cooldownMinutes\|chancePercent`, `action.waves\|intervalSeconds\|radius` | foundation |
+| `.nyar event set <id> <field> <value>` | admin | Edit one validated field of the settable-field table below; `location here` takes your position | foundation; event-library (trigger, action and location fields) |
+| `.nyar event new <id> <pillar>` | admin | A disabled skeleton definition of that pillar, Manual trigger, 600 s | event-library |
+| `.nyar event copy <id> <newId>` | admin | A disabled verbatim copy under a new id | event-library |
+| `.nyar event delete <id> [confirm]` | admin | Delete a definition (two-step, 30 s; never a running one) | event-library |
+| `.nyar template list [pillar] [page]` | admin | The built-in templates, 10 per page, marked when already in events.json | event-library |
+| `.nyar template info <template>` | admin | One template's trigger, conditions and action | event-library |
+| `.nyar template use <template> [as <id>]` | admin | Copy a template into events.json, disabled | event-library |
+| `.nyar pillar list` | admin | The five pillar switches, on or off | event-library |
+| `.nyar pillar <name> on\|off` | admin | Switch a pillar and save it to the cfg; off ends that pillar's running events | event-library |
 | `.nyar event reload` | admin | Re-read events.json | foundation |
 | `.nyar spawn <unit> [count] [level] [hp×] [power×]` | admin | One-off test spawn through the full pipeline | foundation |
 | `.nyar purge [confirm]` | admin | Kill switch: end everything, despawn all tracked units (two-step) | foundation |
@@ -135,6 +143,35 @@ it. **Who:** *anyone*, or *admin* (VCF `adminOnly`, Epic D5). **Child:** the chi
 Stats: `kills` (event units), `events` (joined), `waves` (survived), `defences` (sieges won),
 `bossadds` (boss adds killed) and `deaths` (to our units). Counting rules are in the Epic plan's
 Business rules 11.
+
+### Settable fields
+
+Every field `.nyar event set` takes (event-library D20). A trigger field needs its trigger type, and an action field needs its
+action type; `trigger.type` replaces the trigger with that type's default. Values are checked before any write, and names on reload.
+
+| Field | Family | Who |
+|---|---|---|
+| `name` | definition | admin |
+| `durationSeconds` | definition | admin |
+| `conditions.minPlayers` | definition | admin |
+| `conditions.cooldownMinutes` | definition | admin |
+| `conditions.chancePercent` | definition | admin |
+| `trigger.type` | trigger | admin |
+| `trigger.days` | trigger | admin |
+| `trigger.times` | trigger | admin |
+| `trigger.phase` | trigger | admin |
+| `trigger.bosses` | trigger | admin |
+| `action.stats.physicalPower` | empower action | admin |
+| `action.stats.spellPower` | empower action | admin |
+| `action.stats.maxHealth` | empower action | admin |
+| `action.stats.attackSpeed` | empower action | admin |
+| `action.stats.moveSpeed` | empower action | admin |
+| `action.factions` | empower action | admin |
+| `action.waves` | spawn action | admin |
+| `action.intervalSeconds` | spawn action | admin |
+| `action.radius` | spawn action | admin |
+| `action.units` | spawn action | admin |
+| `location` | location | admin |
 
 ## 7. Build order
 

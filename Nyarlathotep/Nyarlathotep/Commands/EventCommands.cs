@@ -28,7 +28,7 @@ internal static class EventCommands
                 var page = CommandArgs.Page(id, EventLines.Pages(set.All.Count));
                 if (page.Error is not null) { ctx.Reply(page.Error); return; }
                 var running = EventRuntime.Engine.Active.Select(a => a.Id).ToHashSet();
-                Reply(ctx, EventLines.List(set, page.Value, running));
+                Reply(ctx, EventLines.List(set, page.Value, running, EventRuntime.Controls()));
                 return;
             }
             case "reload":
@@ -82,8 +82,17 @@ internal static class EventCommands
             {
                 var v = CommandArgs.SettableValue(field, value);
                 if (v.Error is not null) { ctx.Reply(v.Error); return; }
+                var newValue = v.Value;
+                if (newValue is LocationHere)                                 // the admin's position, rounded to 0.1 (D11)
+                {
+                    var sender = ctx.Event.SenderCharacterEntity;
+                    var p = LocationArg.FromContext(() =>
+                        sender.TryGetComponent<Translation>(out var at) ? (at.Value.x, at.Value.z) : null);
+                    if (p.Error is not null) { ctx.Reply(p.Error); return; }
+                    newValue = p.Value;
+                }
                 LogAdmin(ctx, $"event set {id} {field} {value}");
-                ctx.Reply(Gateway.Run(ActionKind.SetEventField, Actor.Admin, () => EventStore.Edit(id, field, v.Value)));
+                ctx.Reply(Gateway.Run(ActionKind.SetEventField, Actor.Admin, () => EventStore.Edit(id, field, newValue)));
                 return;
             }
         }

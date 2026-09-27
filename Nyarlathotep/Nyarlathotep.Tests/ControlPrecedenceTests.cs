@@ -106,4 +106,28 @@ public class ControlPrecedenceTests
         var end = spawn.AddMinutes(10);
         Assert.Equal(end.AddSeconds(30), Precedence.UnitExpiryUtc(spawn, null, end, 30));
     }
+
+    // ---- event-library D16: the readiness column names the same cause as a start refusal
+
+    [Theory]
+    [MemberData(nameof(Matrix))]
+    public void Readiness_passes_same_cause_as_start_refusal(int mask)
+    {
+        bool On(int bit) => (mask & (1 << bit)) != 0;
+        var def = Json.One(Json.Event()) with { Enabled = !On(4) };
+        var state = new ControlState(On(0), !On(1),
+            On(2) ? AllPillars.Where(p => p != Pillar.Spawns).ToHashSet() : AllPillars.ToHashSet(), On(3) ? 3 : 0, 3);
+        var blocker = Precedence.StartBlocker(def, state);
+        var labels = new[] { Readiness.Purge, Readiness.Mod, Readiness.PillarOff, Readiness.Cap, Readiness.EventOff };
+        var expected = blocker is null ? Readiness.Ready : labels[Array.IndexOf(Expected, blocker)];
+        Assert.Equal(expected, Readiness.Of(def, state));
+    }
+
+    [Fact]
+    public void Readiness_fails_when_blocker_unlabelled() =>
+        Assert.Throws<ArgumentException>(() => Readiness.Label(Json.One(Json.Event()), "skipped by a cap nobody labelled"));
+
+    [Fact]
+    public void Readiness_empty_open_controls() =>
+        Assert.Equal(Readiness.Ready, Readiness.Of(Json.One(Json.Event()), new ControlState(false, true, AllPillars.ToHashSet(), 0, 3)));
 }

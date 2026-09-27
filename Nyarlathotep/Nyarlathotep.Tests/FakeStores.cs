@@ -20,6 +20,11 @@ sealed class MemoryFileStore : IFileStore
     public TimeSpan WriteDelay { get; set; }
     /// <summary>Runs between the .tmp write and the promote (another writer, such as a hand edit, interleaving).</summary>
     public Action? BeforePromote { get; set; }
+    /// <summary>The promote replaces the main file, then throws (event-library D19: an uncertain write).</summary>
+    public bool ThrowAfterPromote { get; set; }
+    /// <summary>Writes of these files fail, others succeed (event-library D19: a state.json write failing after the
+    /// events.json write of a delete succeeded).</summary>
+    public HashSet<DataFile> FailWritesOf { get; } = [];
 
     public IEnumerable<(DataFile File, FileVariant Variant)> Keys => _files.Keys;
 
@@ -44,7 +49,7 @@ sealed class MemoryFileStore : IFileStore
     {
         Ops.Add($"write {DataPaths.FileName(file, variant)}");
         Now += WriteDelay;
-        if (FailWrites) throw new IOException("disk full");
+        if (FailWrites || FailWritesOf.Contains(file)) throw new IOException("disk full");
         if (PartialWrites)
         {
             _files[(file, variant)] = (content[..(content.Length / 2)], Now);
@@ -62,6 +67,7 @@ sealed class MemoryFileStore : IFileStore
         if (keepBackup && _files.TryGetValue((file, FileVariant.Main), out var old)) _files[(file, FileVariant.Bak)] = old;
         _files[(file, FileVariant.Main)] = tmp;
         _files.Remove((file, FileVariant.Tmp));
+        if (ThrowAfterPromote) throw new IOException("replaced, then the handle failed");
     }
 
     public void PromoteNew(DataFile file)
@@ -122,4 +128,123 @@ sealed class LogLines
     public List<string> Lines { get; } = [];
     public void Add(string line) => Lines.Add(line);
     public int Count(string fragment) => Lines.Count(l => l.Contains(fragment, StringComparison.Ordinal));
+}
+
+/// <summary>A cfg in memory for `.nyar pillar` (event-library D14, D19): <see cref="File"/> is the text on disk, one
+/// "Key = true|false" line per [Pillars] key plus other lines, and the entries are what BepInEx holds in memory. Reload
+/// reads the file into memory (a missing or unparsable key reads as off); Set writes memory and then only that key's
+/// line, as SaveOnConfigSet does. Faults: a throwing reload, and a save that truncates, or writes the line, then throws.</summary>
+sealed class FakePillarStore : IPillarStore
+{
+    public List<string> File { get; } =
+    [
+        "## Settings file was created by plugin Nyarlathotep",
+        "[General]", "Enabled = true",
+        "[Pillars]",
+        "FactionEmpowerment = false", "SiegeWaves = false", "DefendedZones = false", "BossReinforcements = false", "EventSpawns = false",
+        "[Debug]", "VerboseLogging = false",
+    ];
+
+    readonly Dictionary<Pillar, bool> _memory = Enum.GetValues<Pillar>().ToDictionary(p => p, _ => false);
+
+    public bool GeneralEnabled { get; set; } = true;
+    public bool FailReload { get; set; }
+    public bool TruncateThenThrow { get; set; }
+    public bool WriteThenThrow { get; set; }
+    public int Saves { get; private set; }
+    public int Reloads { get; private set; }
+    public List<string> Ops { get; } = [];
+
+    public bool Get(Pillar pillar) => _memory[pillar];
+
+    public void Reload()
+    {
+        Ops.Add("reload");
+        if (FailReload) throw new IOException("cfg locked");
+        Reloads++;
+        foreach (var (_, pillar, key) in PillarNames.All)
+        {
+            var line = File.FirstOrDefault(l => l.StartsWith(key + " = ", StringComparison.Ordinal));
+            _memory[pillar] = line is not null && bool.TryParse(line[(key.Length + 3)..], out var v) && v;
+        }
+    }
+
+    public void Set(Pillar pillar, bool on)
+    {
+        Ops.Add($"set {pillar} {on}");
+        _memory[pillar] = on;
+        if (TruncateThenThrow)
+        {
+            File.RemoveRange(1, File.Count - 1);
+            throw new IOException("disk full mid-save");
+        }
+        var key = PillarNames.Key(pillar);
+        var i = File.FindIndex(l => l.StartsWith(key + " = ", StringComparison.Ordinal));
+        File[i] = $"{key} = {(on ? "true" : "false")}";
+        if (WriteThenThrow) throw new IOException("save reported a failure after writing");
+        Saves++;
+    }
+
+    /// <summary>An operator's hand edit saved to disk (not yet in memory).</summary>
+    public void HandEdit(string key, string value)
+    {
+        var i = File.FindIndex(l => l.StartsWith(key + " = ", StringComparison.Ordinal));
+        File[i] = $"{key} = {value}";
+    }
+}
+
+/// <summary>events.json, its catalog and editor over a <see cref="MemoryFileStore"/>, loaded once (the boot load), for
+/// the chat-write tests of event-library.</summary>
+sealed class Library
+{
+    public MemoryFileStore Fs { get; } = new();
+    public LogLines Log { get; } = new();
+    public EventCatalog Catalog { get; } = new();
+    public EventsFile Events { get; }
+    public DefinitionEditor Editor { get; }
+    public StateStore State { get; }
+    public FakeUnits Units { get; }
+    public PushHub Hub { get; }
+
+    public Library(string events, FakeUnits? units = null)
+    {
+        Units = units ?? FakeUnits.Default();
+        Fs.Put(DataFile.Events, FileVariant.Main, events);
+        Events = new EventsFile(new DataStore(Fs, Log.Add), Log.Add);
+        Editor = new DefinitionEditor(Events, Fs, Catalog, Log.Add, Log.Add);
+        State = new StateStore(new DataStore(Fs, Log.Add), () => Fs.Now, Log.Add);
+        Assert.StartsWith("reloaded", Editor.Reload(Units));
+        Hub = new PushHub(new FakeUsers(), [60], Log.Add);
+        Catalog.Push = new CountingSink(this);
+    }
+
+    public static Library Of(params string[] events) => new(Json.File(events));
+
+    public string Text => Fs.Text(DataFile.Events, FileVariant.Main)!;
+    public string? Bak => Fs.Text(DataFile.Events, FileVariant.Bak);
+    public string Hash => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Text)));
+    /// <summary>The config-changed notices raised (the hub's queue coalesces pending ones, so it is counted at the sink).</summary>
+    public int ConfigChanged { get; private set; }
+
+    sealed class CountingSink(Library lib) : IPushSink
+    {
+        public void EventStarted(RunningInstance instance) => lib.Hub.EventStarted(instance);
+        public void EventEnded(string id) => lib.Hub.EventEnded(id);
+        public void Wave(string id, int wave) => lib.Hub.Wave(id, wave);
+        public void Purged(int cooldownSeconds) => lib.Hub.Purged(cooldownSeconds);
+        public void ConfigChanged()
+        {
+            lib.ConfigChanged++;
+            lib.Hub.ConfigChanged();
+        }
+    }
+
+    public string Write(Func<string, EditPlan> plan) => Editor.Write(plan, Units);
+
+    /// <summary>The set a hand edit of <paramref name="text"/> plus `.nyar event reload` gives.</summary>
+    public DefinitionSet HandEdit(string text)
+    {
+        var other = new Library(text, Units);
+        return other.Catalog.Current;
+    }
 }

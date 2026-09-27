@@ -97,5 +97,34 @@ public sealed class PurgeArming
     }
 }
 
+/// <summary>`.nyar event delete &lt;id&gt;` arms, `.nyar event delete &lt;id&gt; confirm` within 30 s by the same admin for
+/// the same id deletes (event-library D8, the <see cref="PurgeArming"/> pattern). Pending deletes are per admin and per
+/// id; another admin's confirm does not count, and a pending delete lives in memory only.</summary>
+public sealed class DeleteArming
+{
+    public static readonly TimeSpan Window = TimeSpan.FromSeconds(30);
+
+    readonly Dictionary<(ulong Admin, string Id), DateTime> _armedAt = [];
+
+    public void Arm(ulong adminId, string id, DateTime utcNow)
+    {
+        _armedAt[(adminId, id)] = utcNow;
+        if (_armedAt.Count > 256) Prune(utcNow);
+    }
+
+    /// <summary>True when <paramref name="adminId"/> armed <paramref name="id"/> within the last 30 s.</summary>
+    public bool IsArmed(ulong adminId, string id, DateTime utcNow) =>
+        _armedAt.TryGetValue((adminId, id), out var at) && utcNow >= at && utcNow - at <= Window;
+
+    public void Disarm(ulong adminId, string id) => _armedAt.Remove((adminId, id));
+
+    public int Count => _armedAt.Count;
+
+    void Prune(DateTime utcNow)
+    {
+        foreach (var k in _armedAt.Where(kv => utcNow - kv.Value > Window).Select(kv => kv.Key).ToList()) _armedAt.Remove(k);
+    }
+}
+
 /// <summary>A running instance holds the definition it started with; a reload never changes it (D6).</summary>
 public sealed record RunningInstance(EventDefinition Definition, DateTime StartedUtc, DateTime EndsUtc);

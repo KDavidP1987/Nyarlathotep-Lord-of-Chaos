@@ -78,7 +78,7 @@ public partial class ConfigChangedTests
         Assert.Equal("durationSeconds has an unsupported value",
             s.Editor.Edit("raid", "durationSeconds", new object(), FakeUnits.Default()));                     // a value it cannot write
         s.Fs.Put(DataFile.Events, FileVariant.Main, "{ broken");                                               // broken since the load
-        Assert.StartsWith("events.json does not parse", s.Editor.Edit("raid", "enabled", false, FakeUnits.Default()));
+        Assert.Equal(StaleFile.Refusal, s.Editor.Edit("raid", "enabled", false, FakeUnits.Default()));        // stale before parsed (event-library D12)
         Assert.Empty(s.Pushed());
     }
 
@@ -99,7 +99,7 @@ public partial class ConfigChangedTests
     {
         var s = New();
         s.Fs.FailWrites = true;
-        Assert.StartsWith("events.json write failed", s.Editor.Edit("raid", "enabled", false, FakeUnits.Default()));
+        Assert.StartsWith(EventsFile.WriteFailed, s.Editor.Edit("raid", "enabled", false, FakeUnits.Default()));   // event-library D19
         s.Fs.FailWrites = false;
         s.Fs.FailReads = true;
         Assert.StartsWith("events.json could not be read", s.Editor.Edit("raid", "enabled", false, FakeUnits.Default()));

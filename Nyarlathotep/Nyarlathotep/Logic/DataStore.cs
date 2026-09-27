@@ -51,27 +51,41 @@ public sealed class DataStore(IFileStore fs, Action<string> log)
 
     /// <summary>Null on success; otherwise the error, with the main file untouched and the .tmp removed.</summary>
     public string? WriteAtomic(DataFile file, byte[] content, bool keepBackup) =>
+        WriteThen(file, content, () => fs.Promote(file, keepBackup)).Error;
+
+    /// <summary>As <see cref="WriteAtomic"/>, but tells a failed .tmp write (the main file untouched) from a Promote
+    /// that threw, after which the main file may already be the new one (event-library D19).</summary>
+    public WriteOutcome WriteAtomicChecked(DataFile file, byte[] content, bool keepBackup) =>
         WriteThen(file, content, () => fs.Promote(file, keepBackup));
 
     /// <summary>As <see cref="WriteAtomic"/>, but fails instead of replacing a main file that exists.</summary>
     public string? WriteAtomicNew(DataFile file, byte[] content) =>
-        WriteThen(file, content, () => fs.PromoteNew(file));
+        WriteThen(file, content, () => fs.PromoteNew(file)).Error;
 
-    string? WriteThen(DataFile file, byte[] content, Action promote)
+    WriteOutcome WriteThen(DataFile file, byte[] content, Action promote)
     {
+        var promoting = false;
         try
         {
             fs.Write(file, FileVariant.Tmp, content);
+            promoting = true;
             promote();
-            return null;
+            return WriteOutcome.Ok;
         }
         catch (Exception ex)
         {
             try { if (fs.Exists(file, FileVariant.Tmp)) fs.Delete(file, FileVariant.Tmp); }
             catch (Exception) { /* the next load removes it */ }
-            return ex.Message;
+            return new WriteOutcome(ex.Message, promoting);
         }
     }
+}
+
+/// <summary>A write's result: <see cref="Error"/> is null on success; <see cref="Uncertain"/> is true when the
+/// Promote threw, so the main file may hold either version (event-library D19).</summary>
+public readonly record struct WriteOutcome(string? Error, bool Uncertain)
+{
+    public static readonly WriteOutcome Ok = new(null, false);
 }
 
 // ---------------------------------------------------------------- state.json v1
@@ -117,6 +131,7 @@ public sealed class StateDocument
             doc.Instances ??= [];
             doc.Units ??= [];
             doc.LastFired ??= new(StringComparer.Ordinal);
+            doc.LastStart ??= new(StringComparer.Ordinal);
             return doc;
         }
         catch (JsonException) { return null; }
@@ -186,6 +201,23 @@ public sealed class StateStore(DataStore store, Func<DateTime> utcNow, Action<st
 
     public void MarkDirty() => Dirty = true;
 
+    /// <summary>Writes state.json now, outside the one-second interval (event-library D8: a delete's second write).
+    /// Null on success, otherwise the error; the document stays dirty, so the next <see cref="Flush"/> retries it.
+    /// A read-only state.json is never written and returns its reason.</summary>
+    public string? SaveNow()
+    {
+        if (ReadOnly) return "state.json is read-only";
+        Dirty = true;
+        byte[] bytes;
+        try { bytes = Document.Serialize(); }
+        catch (Exception ex) { return ex.Message; }
+        var error = store.WriteAtomic(DataFile.State, bytes, keepBackup: false);
+        if (error is not null) return error;
+        Dirty = false;
+        _failures.Ok();
+        return null;
+    }
+
     /// <summary>Called every scheduler tick; <paramref name="force"/> at shutdown ignores the interval.</summary>
     public void Flush(bool force = false)
     {
@@ -224,6 +256,10 @@ public sealed class EventsFile(DataStore store, Action<string> log)
 {
     public bool ReadOnly { get; private set; }
     public int SchemaVersion { get; private set; }
+
+    /// <summary>Set by a chat write whose Promote threw (event-library D19); cleared by the next write that promotes
+    /// cleanly or the next applied load. HealthMonitor lists it as degraded (D32).</summary>
+    public bool WriteUncertain { get; set; }
 
     public bool Exists()
     {
@@ -277,14 +313,37 @@ public sealed class EventsFile(DataStore store, Action<string> log)
     /// since <paramref name="loaded"/>; otherwise written with one .bak. Null on success, with the new stamp.</summary>
     public string? WriteEdit(byte[] content, FileStamp? loaded, out FileStamp? written)
     {
+        var error = WriteEdit(content, loaded, out written, out var uncertain);
+        if (error is null) return null;
+        if (uncertain) return $"events.json write failed: {error}";
+        return error.StartsWith(WriteFailed, StringComparison.Ordinal) ? $"events.json write failed: {error[WriteFailed.Length..]}" : error;
+    }
+
+    /// <summary>The reply prefix of a write that failed before Promote (event-library D19).</summary>
+    public const string WriteFailed = "could not write events.json: ";
+
+    /// <summary>As <see cref="WriteEdit(byte[], FileStamp?, out FileStamp?)"/> for the chat writers (event-library D12,
+    /// D19): a failed .tmp write returns "could not write events.json: &lt;reason&gt;" with the file untouched; a Promote
+    /// that threw returns its reason with <paramref name="uncertain"/> set, the file then holding either version.</summary>
+    public string? WriteEdit(byte[] content, FileStamp? loaded, out FileStamp? written, out bool uncertain)
+    {
         written = null;
-        if (ReadOnly) return $"events.json SchemaVersion {SchemaVersion} is newer than this version of Nyarlathotep; it is read-only";
-        var stale = StaleFile.CheckWritable(loaded, CurrentStamp());
-        if (stale is not null) return stale;
-        var error = store.WriteAtomic(DataFile.Events, content, keepBackup: true);
-        if (error is not null) return $"events.json write failed: {error}";
+        uncertain = false;
+        if (Writable(loaded) is { } refusal) return refusal;
+        var outcome = store.WriteAtomicChecked(DataFile.Events, content, keepBackup: true);
+        if (outcome.Uncertain) { uncertain = true; return outcome.Error; }
+        if (outcome.Error is not null) return WriteFailed + outcome.Error;
+        WriteUncertain = false;
         written = CurrentStamp();
         return null;
+    }
+
+    /// <summary>The read-only or stale-file refusal a write against <paramref name="loaded"/> would get, or null. The chat
+    /// writers ask before they interpret the file, so a hand edit is refused as stale, never read as the edit's input.</summary>
+    public string? Writable(FileStamp? loaded)
+    {
+        if (ReadOnly) return $"events.json SchemaVersion {SchemaVersion} is newer than this version of Nyarlathotep; it is read-only";
+        return StaleFile.CheckWritable(loaded, CurrentStamp());
     }
 
     public FileStamp? CurrentStamp()
@@ -300,6 +359,6 @@ public sealed class EventsFile(DataStore store, Action<string> log)
     static string Decode(byte[] bytes)
     {
         var text = Encoding.UTF8.GetString(bytes);
-        return text.Length > 0 && text[0] == '﻿' ? text[1..] : text;
+        return text.Length > 0 && text[0] == '\uFEFF' ? text[1..] : text;
     }
 }
