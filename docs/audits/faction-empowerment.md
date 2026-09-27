@@ -105,8 +105,7 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - dod status: 19/30 verified (D4, D14, D19 added; D30 new)
 
 ### Step 6 · 2026-09-26 · ee13316 (the Session 3 build) → 19513df → 4f0d5d4
-- compile / preflight: 0 errors, 0 warnings; 871 tests passed; PREFLIGHT OK; -Paths "778 walked, all in manifest" after archiving %TEMP%
-yar-session; dod --check 0 problems (faction-empowerment and event-library)
+- compile / preflight: 0 errors, 0 warnings; 871 tests passed; PREFLIGHT OK; -Paths "778 walked, all in manifest" after archiving %TEMP%\nyar-session; dod --check 0 problems (faction-empowerment and event-library)
 - mutation checks: CooldownLeft with Floor instead of Ceiling fails CooldownLeft_rounds_the_seconds_up; with >= instead of > fails CooldownLeft_is_null_once_the_cooldown_is_over
 - /code-review (5a74b75..HEAD): EventRuntime matched the purge blocker by a second copy of its label, so renaming the label in Precedence would silently drop the seconds-left reply → one constant Precedence.PurgeCooldown (bfa863c), no behaviour or text change; fe3 and the Session 3 steps reviewed through the Codex rounds below
 - Codex verdict: READY (round 2 of the post-session pass) — pre-session pass: rounds 1-6 REVISE on the owner steps (listed under the pre-audit), round 7 READY; post-session record (bc6771a..19513df with redacted log excerpts): READY round 1, no findings; refactor and A8/A4 (19513df..bfa863c): round 1 REVISE, one low finding (A4 named only the damage check, not the by-eye view; fixed), round 2 READY; every round's log: 0 "blocked by policy" besides round 1's audit-text hit
