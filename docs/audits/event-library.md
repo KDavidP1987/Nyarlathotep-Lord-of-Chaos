@@ -121,6 +121,15 @@ and one under "### A22 probe · Session 4 · 2026-09-27 · 86f6f53
 - privacy grep (7656119, kdpenland): none in the diff
 - in-game: Session 5 (D35 confirm)
 
+### Step 4 · 2026-09-27 · 31e73ea..bc74beb (Sessions 2-5, A20-A24)
+- compile 0 errors, 0 warnings; 1333 tests passed; PREFLIGHT OK; -SelfTest 33/33; -Paths -DeclaredOf event-library "paths: 1011 walked, all in manifest; declared: 274/274 in event-library; plants: 12/12 fail, tempvar 15/15 lines"; -SessionsOf "session logs: event-library 5/5 checked; snapshots 5/5 from session 1"; dod --check event-library 0 problems
+- in-game: Sessions 2-5 recorded under EVENT_LIBRARY.md › Test results; D15, D21, D22, D23, D35 and Epic D11 pass
+- /code-review (self) of each fix: no findings (entries above)
+- Codex verdict: READY (round 2) — round 1 NOT READY over the step's code diff and the A18/A19 temp scan: F1 SpawnManual's anchor (rejected: A23's D35 names `.nyar spawn`), F2 spaced member access `os.environ .get("TEMP")` / `process . env . TEMP` missed by the temp-root scan (accepted: pattern widened, two plants, A24); round 2 READY with one advisory (WavePlan's stale height comment in Services/WaveAction.cs, fixed)
+- plan: A24 (gating 14.4) → review pending; Review 17 (codex, scope A24) REVISE, F1-F3 accepted (F1's fail-after-delete half rejected); Review 16's carried F2 (the -SessionsOf snapshot count) and F6 (matrix rows) built here
+- leftovers: %TEMP%\nyar-s4-logs and %TEMP%\nyar-s5-logs (hand copies of Sessions 4 and 5's logs) found by -Paths and deleted; later sessions copy logs to %TEMP%\nyar-soak-* or delete them in the session
+- privacy grep (7656119, kdpenland): only the audit's own grep lines
+
 ## Sessions
 - session 1 log check: 0 unhandled, 60 nyar lines, 0 orphan errors, 0 unity errors
   - one boot (23:10–23:48), unattended; run after the stop and before any restart; BepInEx: the three known warnings (Il2CppInterop, two Beelzebub TUNE); Unity log: 226 PrefabLookupMap lines at save load, the game's RepairVBloodProgressionSystem lookup notice and the hard stop's Crashpad and temp-memory notices; then "snapshot restored; hashes equal (s1, … deleted)"

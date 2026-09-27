@@ -1009,6 +1009,24 @@ function Get-ToolTempNames([string]$Root) {
     return @($out + @($names | Sort-Object -Unique | ForEach-Object { if ($_.EndsWith('-')) { "temp $($_)x" } else { "temp $_" } }))
 }
 
+# Every %TEMP% folder the child's own records name (event-library A24, Review 18): a %TEMP%\nyar-<name> token in its
+# audit (docs/audits/<slug>.md) or its feature docs (childDocs, else the slug-derived name), as "temp <name>" ("temp
+# nyar-soak-x" for nyar-soak-*). A folder made by hand in a session and deleted before the check leaves no trace on
+# disk, but its session record names it, so an omission from Paths walked still fails.
+function Get-RecordTempNames([string]$Root, [string]$Slug) {
+    $mt = Read-Text $Root 'tools/preflight-checks.json'
+    $mj = if ($mt) { $mt | ConvertFrom-Json } else { $null }
+    $entry = if ($mj -and $mj.childDocs) { $mj.childDocs.PSObject.Properties[$Slug] } else { $null }
+    $rels = @("docs/audits/$Slug.md") + $(if ($entry) { @($entry.Value | Where-Object { $_ }) } else { @("docs/features/$($Slug.ToUpperInvariant().Replace('-', '_')).md") })
+    $names = @()
+    foreach ($rel in $rels) {
+        $t = Read-Text $Root $rel
+        if ($null -eq $t) { continue }
+        $names += @([regex]::Matches($t, '%TEMP%\\(nyar-[a-z0-9]+(?:-[a-z0-9]+)*(?:-\*)?)') | ForEach-Object { $_.Groups[1].Value })
+    }
+    return @($names | Sort-Object -Unique | ForEach-Object { if ($_.EndsWith('-*')) { "temp $($_.Substring(0, $_.Length - 1))x" } else { "temp $_" } })
+}
+
 # The tool sources the %TEMP% name scans read: tools/*.ps1, *.psm1, *.py, *.mjs, *.js and tools/ingame/*.
 function Get-ToolSources([string]$Root) {
     return @(Get-TreeFiles $Root | Where-Object { $_ -match '^tools/(ingame/[^/]+|[^/]+\.(ps1|psm1|py|mjs|js))$' })
@@ -1221,7 +1239,7 @@ function Test-CheckPaths([string]$Root) {
         elseif (($unmarked = @(Get-UnmarkedTempRoots $Root)).Count) { $problems += "declared: a tool takes the %TEMP% root on a line that names no nyar-<name> folder and carries no '# nyar-temp: <reason>' registration: $(($unmarked | Select-Object -First 10) -join ', ')" }
         elseif (($composed = @(Get-ComposedTempNames $Root)).Count) { $problems += "declared: a tool composes a %TEMP% nyar- name the scan cannot read; spell its prefix: $(($composed | Select-Object -First 10) -join ', ')" }
         else {
-            $u = Get-UndeclaredPaths @(@($in.Declared.Changed) + @(Get-ToolTempNames $Root)) $tokens
+            $u = Get-UndeclaredPaths @(@($in.Declared.Changed) + @(Get-ToolTempNames $Root) + @(Get-RecordTempNames $Root $slug)) $tokens
             if ($u.Uncovered.Count) { $problems += "declared: $($u.Total - $u.Uncovered.Count)/$($u.Total) in $slug, not in its Paths walked: $(($u.Uncovered | Select-Object -First 10) -join ', ')" }
             else { $declLine = "; declared: $($u.Total)/$($u.Total) in $slug" }
         }
@@ -1232,7 +1250,7 @@ function Test-CheckPaths([string]$Root) {
     if ($null -ne $in.Declared -and -not (Test-IsFixture $Root)) {
         $plantDir = Join-Path $Root 'tools/preflight-fixtures/Paths'
         $plants = @(Get-ChildItem -LiteralPath $plantDir -Directory -Filter 'bad*' -ErrorAction SilentlyContinue | Sort-Object Name)
-        $need = @('bad-base', 'bad-composed', 'bad-scratch', 'bad-tempvar', 'bad-transient', 'bad-undeclared')
+        $need = @('bad-base', 'bad-composed', 'bad-record', 'bad-scratch', 'bad-tempvar', 'bad-transient', 'bad-undeclared')
         $absent = @($need | Where-Object { $plants.Name -notcontains $_ })
         $passing = @()
         foreach ($p in $plants) {

@@ -388,8 +388,7 @@ VERDICT: REVISE
 
 ### Dispositions
 Under the owner's final-round rule (plan mode 2026-09-26, option A: advisory findings and blocking findings that are local fixes are applied, confirmed against the code, recorded as accepted and the plan approved; scope or decision findings return to the owner), F1–F6 are all local fixes and are accepted and applied in revision 7. F1 and F2 name gating probes 6.2 and 14.3, and references/review.md never lets a gating finding converge without a READY, so revision 7 goes to a confirmation Review 8 before approval.
-- F1 · accepted · new D33 `pwsh tools/preflight.ps1 -DependencySuite event-library`: one command over nine required categories (events-write, events-promote, state-write, cfg-save with PillarSwitchTests SaveFailure, catalogue, location-context, phase-source in one trx-counted test run; the vcf part of -AuthSuite; release-verify and repo-rollback-drill selftests), failing on a missing category, a zero-test category or a missing success line; fixtures DependencySuite/{bad,bad-2,good,empty}; the 6.2 matrix row, the layer 6 pointer, step 2 and W4.1 name it; its trx folder %TEMP%
-yar-dep-* is a Design › Data row, a `temp:` glob and an inventory entry
+- F1 · accepted · new D33 `pwsh tools/preflight.ps1 -DependencySuite event-library`: one command over nine required categories (events-write, events-promote, state-write, cfg-save with PillarSwitchTests SaveFailure, catalogue, location-context, phase-source in one trx-counted test run; the vcf part of -AuthSuite; release-verify and repo-rollback-drill selftests), failing on a missing category, a zero-test category or a missing success line; fixtures DependencySuite/{bad,bad-2,good,empty}; the 6.2 matrix row, the layer 6 pointer, step 2 and W4.1 name it; its trx folder %TEMP%\nyar-dep-* is a Design › Data row, a `temp:` glob and an inventory entry
 - F2 · accepted · D29 gains `pwsh tools/preflight.ps1 -RollbackOf event-library`, which parses Rollout › Rollback and requires the repository revert, the dev-snapshot route, the server downgrade ("install the 0.4.0 DLL", "after data is written"), the published-release policy ("never deleted", "withdrawn by retitling") and the commit range, all equal to the rollback gate's -From v0.4.0 -To v0.5.0; fixtures RollbackRoutes/{bad,bad-2,bad-3,good,empty}; the 14.3 matrix row and step 3 name it (checked against the plan: all five bullets carry the required text today)
 - F3 · accepted · D7: the JSON definition is copied verbatim and validation re-derives the same disabled reason after the reload (checked: Logic/Validation.cs derives the reason at load; no reason field exists in the v1 shape)
 - F4 · accepted · D12 adds the two-admin sequential set: both edits survive, the second write uses the stamp of the first write's reload, exactly two config-changed notices
@@ -741,8 +740,23 @@ Fix: Update step 4’s “Satisfies” line to cite every D-item its amended wor
 VERDICT: REVISE
 
 ### Dispositions
-- F1 · accepted · the two log folders (%TEMP%
-yar-s4-logs, nyar-s5-logs) are named in Paths walked step 4; making -DeclaredOf fail on a hand-made folder already deleted is rejected: it leaves no trace to read, and D30 already puts a path created and deleted inside a step outside the set; later sessions copy logs to %TEMP%
-yar-soak-* (a declared glob) or delete them in the session
+- F1 · accepted · the two log folders (%TEMP%\nyar-s4-logs, nyar-s5-logs) are named in Paths walked step 4; making -DeclaredOf fail on a hand-made folder already deleted is rejected: it leaves no trace to read, and D30 already puts a path created and deleted inside a step outside the set; later sessions copy logs to %TEMP%\nyar-soak-* (a declared glob) or delete them in the session
 - F2 · accepted · bad-tempvar/unmarked.txt lists every plant line (15) and -DeclaredOf requires the temp-root scan to report exactly that set ("plants: 12/12 fail, tempvar 15/15 lines"); removing the spaced environ form made it fail naming tools/member_tool.py:2 (mutation check); D30's command line and fails-when name it
 - F3 · accepted · step 4's Satisfies line names D4, D11, D15, D21, D22, D23, D30, D35
+
+## Review 18 · 2026-09-27 · codex · plan commit bc74beb · plan 209097 B · 35 items · files 0 · e3b0c44298fc · prompt 87f8ac938604 · scope A24
+Prompt checked twice before recording: the prompt file's SHA-256 begins 87f8ac938604, and a rebuild from the plan at bc74beb gave the same prompt. Reviewer: Codex CLI, read-only (`codex exec -s read-only`, Windows sandbox on).
+
+F1 [blocking] 14.4 remains unanswered: `-Paths -DeclaredOf` cannot fail when the manually created Session 4/5 log folders are omitted because they are deleted before either scan; this misses minimal omission of one folder, maximal omission of both, and creation/removal between the two listings.
+Fix: make the command derive these paths from durable Session 4/5 records or a required-path registry and fail when either declared token is absent.
+
+F2 [blocking] 14.4 remains unanswered because the Step 4 tokens are split as `%TEMP%` newline `yar-s4-logs` and `%TEMP%` newline `yar-s5-logs`, so they do not name the actual paths in a form the declaration parser can consume.
+Fix: spell the exact parseable tokens as `%TEMP%\nyar-s4-logs` and `%TEMP%\nyar-s5-logs`, preferably in code spans, and cover their removal with D30’s evidence command.
+
+EARLIER: unresolved F1
+14/15 layers · 48/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · -DeclaredOf now also reads every %TEMP%\nyar-<name> folder the child's audit and feature docs name (Get-RecordTempNames in tools/preflight.ps1), so a hand-made folder deleted before the check must still be declared; plant Paths/bad-record (an audit naming %TEMP%\nyar-stray-logs that Paths walked omits) must fail and is required; mutation check: dropping %TEMP%\nyar-s5-logs from Paths walked fails with "not in its Paths walked: temp nyar-s5-logs"; the audit now spells both folders in full
+- F2 · accepted · a real defect of the author's edit: an escaped backslash became a line break, splitting %TEMP%\nyar-… in the plan (4), the reviews file (3) and the audit (2), none in the Baseline; all repaired

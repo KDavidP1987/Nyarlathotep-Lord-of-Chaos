@@ -318,6 +318,7 @@
         "bad-worktree": "a second (detached nyar-rollback-*) worktree in the worktree listing (faction-empowerment D26)",
         "bad-remote": "an undeclared tag v0.4.0 on origin in the ls-remote listing (faction-empowerment D26)",
         "bad-soak": "a leftover %TEMP%\\nyar-soak-* folder in the temp listing, with the manifest declaring temp: nyar-soak-* (event-library D30)",
+        "bad-record": "with -DeclaredOf event-library, the fixture audit names %TEMP%\\nyar-stray-logs (a hand-made session log copy, deleted, so nothing is on disk) and the plan's Rollout › Paths walked omits it (event-library A24, Review 18)",
         "bad-undeclared": "with -DeclaredOf event-library (declared-of.txt), a changed tools/stray-drill.ps1 (changed.txt) that tracked: tools/*.ps1 covers but the plan's Rollout › Paths walked omits (event-library D30, A13)",
         "bad-base": "with -DeclaredOf, the audit's Step 1 pre-audit heading names 2b083dc, a later commit than e84c8a3, the parent of the commit that created the audit (audit-added-parent.txt; event-library A14)",
         "bad-transient": "with -DeclaredOf, a tools/ script names a %TEMP%\\nyar-scratch-* folder that no Paths walked token declares, though no such folder exists at check time (event-library A14)",
