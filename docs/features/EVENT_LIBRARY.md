@@ -308,3 +308,48 @@ cross past them." Recorded under Open questions for a decision; the bandit-ambus
 old example-empowerment line at each reload, and the two stop summaries; Unity: 0 exceptions, no PrefabLookupMap line after
 "Startup Completed". Then `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s3,
 C:\Users\<user>\AppData\Local\Temp\nyar-snap-s3 deleted)".
+
+### Session 4 · 2026-09-27 · A22 ground-height probe (owner, 127.0.0.1:9876, build 86f6f53)
+
+Setup (Claude): `pwsh tools/dev-snapshot.ps1 -Save s4`; `Debug.VerboseLogging = true` in the dev cfg (the snapshot restores
+it); the Release DLL of 86f6f53 deployed (189334244498E48D). The build adds only Services/GroundProbe.cs, a log-only probe: for each
+spawned unit, at spawn and about 1 s and 5 s later, its position against its ring point's height, the game's `Height`
+component and whether it has `SnapToHeight` or `FallToHeight`. Both logs are copied before the stop.
+
+**Round 1 — admin, on the Round 3 hilltop (about -1771.6, -1808.6, height 5).**
+- P1. `.nyar spawn CHAR_Bandit_Thug 3` → "spawned 3 CHAR_Bandit_Thug"; note where each appears (radius 3).
+- P2. `.nyar pillar spawns on`, `.nyar template use bandit-ambush as ambush-p`,
+  `.nyar event set ambush-p action.units CHAR_Bandit_Thug:3`, `.nyar event set ambush-p action.waves 1`,
+  `.nyar event set ambush-p location here` (on the hilltop, near its edge).
+- P3. `.nyar event enable ambush-p`, walk about 20 m away down the hill, `.nyar event start ambush-p`; note how many
+  thugs you see and whether each stands on the surface, is inside the slope, or is floating.
+- P4. `.nyar event stop ambush-p`, then `.nyar status` → tracked units 0 (the three manual thugs may still count until
+  their lifetime ends; say what it shows).
+
+Observed (owner Chaos, 17:08–17:11 server time, one boot of 86f6f53):
+- P1: "spawned 3 CHAR_Bandit_Thug"; the owner: "the bandits spawned in nearby to me in the center of the platform". Probe:
+  pass 0 each at y 5.00 with Height 0.00 level 0 (not yet computed), SnapToHeight present, no FallToHeight; passes 1 and 2
+  each at y 5.00, Height 5.00, level 11.
+- P2: "pillar spawns already on", "template bandit-ambush added as ambush-p (disabled); …", "… action.units =
+  CHAR_Bandit_Thug:3", "… action.waves = 1"; `location here` → "event ambush-p action.location = Point -1764.9, -1807.4 at
+  height 5.0" (the plateau's edge).
+- P3: "event ambush-p enabled", "event ambush-p started"; log "wave 1/1: 3 units queued", "spawn batch: 3 of 3 spawned".
+  Probe: all three at planned y 5.00 in pass 0; after about 1 s the unit at -1774.9, -1808.2 stayed at y 5.00 (level 11),
+  and the units at -1760.6, -1798.3 and -1759.2, -1815.6 were at y 0.00 (Height 0.00, level 10), where they stayed at
+  pass 2. The owner: "one unit spawned in on top of the hill, and the other two units spawned in on the ground nearby the
+  hill"; "None of them were blocked or spawned in on the edge of the hill. However, they were on two different planes that
+  don't interact."
+- P4: "event ambush-p stopped" (log "3 units queued", "despawn batch: 3 of 3 destroyed, 0 requeued, 0 left"); `.nyar status`
+  → "No active events." / "tracked units: 0 (spawning 0, despawning 0)".
+
+**Finding.** The game already puts each spawned unit on the ground at its own ring point: every unit has SnapToHeight, and
+within about 1 s HeightCorrectionSystem moves it to the height of the terrain level under it (ServerHeightLevel 11 → y 5.0,
+10 → y 0.0). The mod's planned y does not bury a unit. What A22 has to solve is different: on a plateau, a ring point past
+the edge puts its unit on the level below, cut off from the others and from the players above. Session 3 Round 3's unit in
+the cliff face was likely a ring point on the slope itself (not reproduced here).
+
+**Logs.** Both logs copied before the stop, which came after AutoSave_1133 (17:13:06) followed the last action (17:11).
+-LogCheck: "0 unhandled, 80 nyar lines, 0 orphan errors, 0 unity errors"; BepInEx: the three known warnings, the dev world's
+old example-empowerment line at each reload, one stop summary; Unity: 0 exceptions, no PrefabLookupMap line after "Startup
+Completed". Then `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s4,
+C:\Users\<user>\AppData\Local\Temp\nyar-snap-s4 deleted)".

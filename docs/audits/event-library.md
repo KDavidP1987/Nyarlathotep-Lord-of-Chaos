@@ -1,7 +1,13 @@
 # Audit — event-library
 
 Build plan steps 1–6 of docs/dod/event-library.md. Each step has one "### Step <n>" entry under "## Pre-audit"
-and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line. Session log checks are lines
+and one under "### A22 probe · Session 4 · 2026-09-27 · 86f6f53
+- git tree clean at 86f6f53 (the Session 4 steps added after); compile 0 errors, 0 warnings, 1320 tests passed; PREFLIGHT OK
+- feature doc read: EVENT_LIBRARY.md › Test results › Session 4 (probe steps) and Session 3 Round 3
+- setup: `dev-snapshot.ps1 -Save s4` (28 files); Debug.VerboseLogging = true in the dev cfg; deploying build with the server stopped, DLL 189334244498E48D in plugins equals the build output
+- baseline boot: "templates: 6/6 valid", "triggers: all hooks available", boot marker and carrier sweeps 0 found; warnings only Il2CppInterop Class::Init, Beelzebub TUNE ×2 and the dev world's old example-empowerment line
+
+## Post-audit"; every post-audit entry carries a "Codex verdict:" line. Session log checks are lines
 "- session <n> log check: …". Rollback base: v0.4.0 = ae3821b.
 
 ## Pre-audit
@@ -107,3 +113,5 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
   - two boots (the first to 16:09, the second 16:10–16:15); the line is the second boot's, run after the final stop; the first boot's logs were overwritten by the restart before a copy was taken, so they were read only in part during the session (no [Error], no unexpected warning); BepInEx: the three known warnings; Unity log: 224 + 2 PrefabLookupMap lines at save load, 0 exceptions; then "snapshot restored; hashes equal (s2, … deleted)"
 - session 3 log check: 0 unhandled, 74 nyar lines, 0 orphan errors, 0 unity errors
   - one boot (16:2x–16:52), both logs copied before the stop, which followed an autosave after the last action; BepInEx: the three known warnings, the dev world's old example-empowerment line at each reload, two stop summaries; Unity log: 0 exceptions, no PrefabLookupMap line after startup; then "snapshot restored; hashes equal (s3, … deleted)"
+- session 4 log check: 0 unhandled, 80 nyar lines, 0 orphan errors, 0 unity errors
+  - one boot (17:0x–17:13), both logs copied before the stop, which followed AutoSave_1133 after the last action; BepInEx: the three known warnings, the old example-empowerment line at each reload, one stop summary; Unity log: 0 exceptions, no PrefabLookupMap line after startup; then "snapshot restored; hashes equal (s4, … deleted)"
