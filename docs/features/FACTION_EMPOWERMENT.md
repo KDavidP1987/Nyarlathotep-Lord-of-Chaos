@@ -132,7 +132,7 @@ physicalPower 1.5 and maxHealth 1.5: fe-short (Sat 12:28, 60 s) and fe-long (Sat
 - logs: each boot's BepInEx log has only the three known warnings (Beelzebub TUNE ×2, Il2CppInterop Class::Init); the Unity log's 226 "PrefabLookupMap.TryGet - Prefab with PrefabGUID <n> is in an unknown state" warnings all fall between the save load and "Startup Completed" (one per GUID, from the save), 0 after it, 0 exceptions
 - not covered here: the stop and purge paths (owner, Session 2); S-7 is decided after Session 2
 
-### Session 2 · faction-empowerment step 5 (with the owner) — steps
+### Owner steps for Session 2 · faction-empowerment step 5
 
 Setup (Claude, before the owner connects): `pwsh tools/dev-snapshot.ps1 -Save s2`, Release build deployed,
 `python tools/ingame/session-events.py fe2` (example-empowerment: Manual, Faction_Bandits, pp 1.5, sp 1.5, maxHealth 2.0,
@@ -259,7 +259,7 @@ comparison moves to Session 3. Chat lines are from the owner's notes; log lines 
   `pwsh tools/preflight.ps1 -LogCheck` → "log check: 0 unhandled, 575 nyar lines, 0 orphan errors, 0 unity errors"
 - [x] `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s2, … deleted)"
 
-### Session 3 · faction-empowerment step 6 (with the owner) — steps
+### Owner steps for Session 3 · faction-empowerment step 6
 
 Setup (Claude, before the owner connects): `pwsh tools/dev-snapshot.ps1 -Save s3`, Release build deployed,
 `python tools/ingame/session-events.py fe3` (fe2's events plus fe-u-empower, Bandits pp 1.5 and maxHealth 2.0 for 900 s, and
@@ -353,6 +353,28 @@ Owner connected 19:10–19:34 (Part 1) and 20:40 (Part 2). Every `.nyar debug he
 - [x] `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s3, … deleted)": both mods, their configs and the Bloodcraft player data gone; the fe2/fe3 backups in %TEMP%
 yar-session archived to the session scratchpad and the folder removed; `-Paths` → "paths: 778 walked, all in manifest"
 - logs: three boots (Part 1, without the mod, Part 2); -LogCheck "0 unhandled, 367 nyar lines" (Part 1) and "0 unhandled, 88 nyar lines" (Part 2), 0 orphan errors, 0 unity errors; BepInEx warnings: the known three plus Bloodcraft's own startup check and a NullReferenceException in its VSystemManager.AddSystem, KindredCommands' player-cache lines, and our purge warning; one [Error] from Bloodcraft (FamiliarBindingSystem.PreventDisableFamiliar on a familiar that no longer existed, after `.fam t`), none from Nyarlathotep; Unity logs: 226 PrefabLookupMap GUIDs, all before "Startup Completed", 0 exceptions
+
+### Session 4 · 2026-09-26 · faction-empowerment step 7 (c738f23 plus the uncommitted D23 drill change, dev world nyardev, unattended)
+The rollback drill with D23's readback, `pwsh tools/rollback-drill.ps1 -From HEAD -To v0.3.0 -LogsTo <scratch>`, before the
+release commit, to capture a real log pair for D23's fixtures. Dev world only; the server stopped before and after.
+- "range v0.3.0..HEAD: 148 paths, all in the manifest"; both builds; "boot HEAD (seed): log check: 0 unhandled, 7 nyar
+  lines, 0 orphan errors, 0 unity errors"; the drill renamed example-empowerment and scheduled drill-mark at 21:04;
+  "boot HEAD (drill-mark): … 15 nyar lines …"; "drill-mark fired; files: events.json, state.json".
+- "boot v0.3.0: log check: 0 unhandled, 8 nyar lines, …"; v0.3.0 logged "event example-empowerment: unknown action type
+  Empower"; "events.json: HEAD '6 valid, 0 disabled', v0.3.0 '5 valid, 1 disabled' (1 newer action types)"; "restored the
+  saved plugin DLL and config; hashes equal"; "rollback drill: pass".
+- The two logs became tools/rollback-drill-fixtures/pair-empower (one Beelzebub line's SteamID replaced by <steamid>)
+  and pair-other (the same pair with that reason changed to a validation reason).
+
+### Session 5 · 2026-09-26 · faction-empowerment step 7 (v0.4.0 = ae3821b, dev world nyardev, unattended)
+The release gate on the local tag before the push, `pwsh tools/rollback-gate.ps1 -From v0.3.0 -To v0.4.0` (D29).
+- repo (with -BeforePush, A9): 703 tests of the reverted tree passed; v0.3.0's preflight failed only "release tags: 3/4
+  (v0.4.0 not pushed)"; "rollback: clean".
+- drill: "range v0.3.0..v0.4.0: 182 paths, all in the manifest"; "boot v0.4.0 (seed): log check: 0 unhandled, 8 nyar
+  lines, 0 orphan errors, 0 unity errors"; "boot v0.4.0 (drill-mark): … 16 nyar lines …"; "boot v0.3.0: … 7 nyar
+  lines …"; "events.json: v0.4.0 '6 valid, 0 disabled', v0.3.0 '5 valid, 1 disabled' (1 newer action types)"; hashes
+  equal on restore; "rollback drill: pass".
+- snapshot: "snapshot selftest: 6/6". Result: "rollback gate: 3/3".
 
 ## Open questions
 
