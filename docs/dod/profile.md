@@ -10,6 +10,8 @@
 - Probe 11.2 (foundation report): every player-facing text is rendered in the real chat before release (chat eats "< >").
 - Probe 12.4 (raphael-api-core report): for every control, name the test seam before the build; a control placed where no test reaches it moves to Logic/ first.
 - Probe 14.3 (raphael-api-core report): a tool that changes a live install (the dev server's DLL or config) has its own rollback: an atomic snapshot manifest, a refusal on a leftover snapshot, a restore verified by hash, and a crash test.
+- Probe 14.3 (faction-empowerment report): a release plan copies every earlier child's release-step amendments (raphael-api-core A9, A10: the drill's own inputs, the unpushed-tag preflight failure) into its Build plan before approval.
+- Probe 7.3 (faction-empowerment report): for a timed effect on native entities, name every end path (natural end, stop, purge, restart, uninstall, partial creation) and the item proving each leaves nothing behind.
 
 ## Audience
 - who · project owner
