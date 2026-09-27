@@ -1,0 +1,15 @@
+tools/bare-tool.ps1:2
+tools/block-tool.ps1:2
+tools/block-tool.ps1:5
+tools/brace-tool.ps1:2
+tools/comment-tool.ps1:2
+tools/member_tool.py:2
+tools/member-tool.mjs:2
+tools/name_tool.py:2
+tools/name-tool.mjs:2
+tools/name-tool.ps1:3
+tools/named_tool.py:2
+tools/quoted-tool.ps1:2
+tools/spaced_tool.py:2
+tools/spaced-path-tool.ps1:2
+tools/tag-tool.ps1:2

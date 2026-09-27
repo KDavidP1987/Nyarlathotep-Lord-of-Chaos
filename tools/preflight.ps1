@@ -1240,9 +1240,18 @@ function Test-CheckPaths([string]$Root) {
             try { $r = Test-CheckPaths $p.FullName } finally { $script:FixtureRoot = $null }
             if ($r.Pass) { $passing += $p.Name }
         }
+        # bad-tempvar holds many unmarked %TEMP% roots, and one would mask another, so each is asserted on its own
+        # (event-library A24): the scan must report exactly the lines its unmarked.txt lists.
+        $tvRoot = Join-Path $plantDir 'bad-tempvar'
+        $tvWant = @(Get-Content -LiteralPath (Join-Path $tvRoot 'unmarked.txt') -ErrorAction SilentlyContinue | Where-Object { $_.Trim() } | Sort-Object -Unique)
+        $tvGot = @(Get-UnmarkedTempRoots $tvRoot)
+        $tvMiss = @($tvWant | Where-Object { $tvGot -notcontains $_ })
+        $tvExtra = @($tvGot | Where-Object { $tvWant -notcontains $_ })
         if ($absent) { $problems += "plants: missing $($absent -join ', ')" }
         elseif ($passing) { $problems += "plants: $($passing -join ', ') passed" }
-        else { $declLine += "; plants: $($plants.Count)/$($plants.Count) fail" }
+        elseif (-not $tvWant.Count) { $problems += "plants: bad-tempvar/unmarked.txt missing or empty" }
+        elseif ($tvMiss -or $tvExtra) { $problems += "plants: bad-tempvar lines not reported: $($tvMiss -join ', '); reported but not listed: $($tvExtra -join ', ')" }
+        else { $declLine += "; plants: $($plants.Count)/$($plants.Count) fail, tempvar $($tvWant.Count)/$($tvWant.Count) lines" }
         try { $late = @(Get-ChildItem -LiteralPath ([IO.Path]::GetTempPath()) -Directory -Filter 'nyar-*' -Force -ErrorAction Stop | ForEach-Object Name) }   # nyar-temp: the second listing, creates nothing
         catch { $late = $null; $problems += 'Temp listing unreadable (second pass)' }
         $first = @("$($in.Temp)" -split '\r?\n' | ForEach-Object { $_.Trim() })
@@ -1940,7 +1949,9 @@ function Test-CheckSessionLogs([string]$Root) {
         if ($unwrapped) { $why += "no snapshot save and matching restore in session $($unwrapped -join ', ') (a snapshotSessions start that is no session counts)" }
         return New-Result $false "session logs: $slug $ok/$($post.Count) checked$after$preNote ($($why -join '; '))"
     }
-    return New-Result $true "session logs: $slug $ok/$($post.Count) checked$after$preNote"
+    # The snapshot count shows an entry dropped from snapshotSessions (Review 16 F2): the line then has no "snapshots".
+    $snapNote = if ($snapFrom) { $w = @($sessions | Where-Object { $_ -ge [int]$snapFrom.Value }).Count; "; snapshots $w/$w from session $($snapFrom.Value)" } else { '' }
+    return New-Result $true "session logs: $slug $ok/$($post.Count) checked$after$preNote$snapNote"
 }
 
 # The externalSelfTests registry of tools/preflight-checks.json (faction-empowerment D22): every check that is not a

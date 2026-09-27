@@ -724,3 +724,25 @@ VERDICT: READY
 - F5 · rejected · the same boundary as D18 (a path the build creates and later deletes leaves nothing to roll back); no path has been deleted in this build (git log --diff-filter=D --name-only e84c8a3..HEAD is empty), and a later deletion is in its step's reviewed diff
 - F6 · accepted · the 12.4 and 14.4 matrix rows and the -SessionsOf row are brought in line with D30 and D24 word for word with the next amendment that touches them (they point to D30 and D24, which hold the rule)
 - F7 · accepted · step 6's pre-audit states in Rollout › Rollback that the revert range v0.4.0..v0.5.0 deliberately includes faction-empowerment's post-tag commits 027a246..e84c8a3 and names the close commits after the tag
+
+## Review 17 · 2026-09-27 · codex · plan commit 54a49a2 · plan 206712 B · 35 items · files 0 · e3b0c44298fc · prompt af2c4cbfdc86 · scope A24
+Prompt checked twice before recording: the prompt file's SHA-256 begins af2c4cbfdc86, and a rebuild from the plan at 54a49a2 gave the same prompt. Reviewer: Codex CLI, read-only (`codex exec -s read-only`, Windows sandbox on).
+
+F1 [blocking] Probe `14.4` remains unanswered for `%TEMP%\nyar-s4-logs` and `%TEMP%\nyar-s5-logs`: A24 admits these Session 4/5 artifacts were written, but Paths walked never declares them, and deleting them before the final scan lets D30 pass despite the omission.
+Fix: Add both temporary paths to Step 4’s Paths walked entry and make `-Paths -DeclaredOf event-library` fail from the step audit when either written path is undeclared, even if later deleted.
+
+F2 [blocking] Probe `14.4` lacks a mutation-sensitive evidence command for the two new `bad-tempvar` plants: both Python `os.environ.get("TEMP")` and Node `process.env.TEMP` share one fixture, so one detector can be removed while the other still makes the fixture fail and the reported `plants: <p>/<p> fail` remains green.
+Fix: Give the Python and Node forms separate fixtures or separately asserted plant cases so `pwsh tools/preflight.ps1 -Paths -DeclaredOf event-library` fails if either syntax is no longer detected.
+
+F3 [advisory] Build step 4 now performs the A20/A21/A23 implementation work and the A24 path-control repair, but its “Satisfies” line still cites only D15 and D21–D23, omitting D4, D11, D30 and D35.
+Fix: Update step 4’s “Satisfies” line to cite every D-item its amended work makes pass.
+
+14/15 layers · 48/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · the two log folders (%TEMP%
+yar-s4-logs, nyar-s5-logs) are named in Paths walked step 4; making -DeclaredOf fail on a hand-made folder already deleted is rejected: it leaves no trace to read, and D30 already puts a path created and deleted inside a step outside the set; later sessions copy logs to %TEMP%
+yar-soak-* (a declared glob) or delete them in the session
+- F2 · accepted · bad-tempvar/unmarked.txt lists every plant line (15) and -DeclaredOf requires the temp-root scan to report exactly that set ("plants: 12/12 fail, tempvar 15/15 lines"); removing the spaced environ form made it fail naming tools/member_tool.py:2 (mutation check); D30's command line and fails-when name it
+- F3 · accepted · step 4's Satisfies line names D4, D11, D15, D21, D22, D23, D30, D35
