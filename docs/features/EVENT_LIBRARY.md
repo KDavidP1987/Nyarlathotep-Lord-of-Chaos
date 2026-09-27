@@ -51,7 +51,12 @@ hand edit give the same result.
 
 ## Open questions
 
-None open. Decisions are recorded as the plan's assumptions S-1 to S-14 and amendments.
+Decisions are recorded as the plan's assumptions S-1 to S-14 and amendments. Open:
+
+- Ambush stealth (owner, Session 3): should bandit-ambush use units that stay hidden until a player passes? A
+  template-content decision for the owner.
+- Ground height on uneven terrain (Session 3 Round 3): a wave's ring takes the centre's height; units need their own
+  ground height at each ring point.
 
 ## Test results
 
@@ -255,4 +260,49 @@ main menu, Direct Connect again without `adminauth`, and send each command about
 after sending, if none comes): `.nyar event delete ambush-h`, `.nyar event delete ambush-h confirm`,
 `.nyar event set ambush-h durationSeconds 60`, `.nyar event set ambush-h location here`. Claude hashes both files again.
 
-Observed: (recorded when the session runs)
+Observed (owner Chaos, 16:34–16:50 server time, one boot of c95fcbe):
+
+**Round 1 — D21 cases 1 and 12 pass.**
+- R1: six whole lines; "militia-crackdown empowerment vbloodkilled 15 bosses "Militia crackdown"" arrived in the second
+  message; bandit-vengeance (eight bosses, it fits) still names them.
+- R2: "militia-crackdown "Militia crackdown" disabled pillar empowerment trigger vbloodkilled 15 bosses duration 900s", then
+  one "bosses: CHAR_ChurchOfLight_Sommelier_VBlood, … ,CHAR_ChurchOfLight_Paladin_VBlood" line with all 15 names, then
+  "conditions: minPlayers 0, cooldown 30 min, chance 100%, window none, mode any", "action: empower Militia, ChurchOfLum:
+  maxHealth x1.3", "not running".
+- R3: "pillar spawns already on" (the restored dev cfg has it on), "template bandit-ambush added as ambush-h (disabled); …",
+  "event ambush-h action.units = CHAR_Bandit_Thug:3", "event ambush-h action.waves = 1".
+- R4: "event ambush-h action.location = Point -1833.5, -1823.6 at height 0.3" — low, nearly flat ground.
+- R5: "event ambush-h enabled", "event ambush-h started"; log "wave 1/1: 3 units queued", "spawn batch: 3 of 3 spawned". The
+  owner: "Ambush units showed up appropriately."
+- R6: "action: 1 waves every 60s, radius 10, at -1833.5 -1823.6 height 0.3, units 3 CHAR_Bandit_Thug" and "running: started
+  by manual, 586s left, wave 1/1".
+- R7: "event ambush-h stopped" (log "3 units queued", then "despawn batch: 3 of 3 destroyed, 0 requeued, 0 left"); `.nyar
+  status` → "No active events." / "tracked units: 0 (spawning 0, despawning 0)".
+- Session 2's case 12 reread: that log had shown both waves spawned ("spawn batch: 3 of 3 spawned" twice, six units
+  despawned at the stop), so the units existed; with the ground here at 0.3, height 0 alone does not explain why none was
+  seen. A20 stays right on raised ground (Round 3), but the Session 2 cause is not established.
+
+**Round 2 — D22's four commands: each refused; a repeat within about a minute is not shown.** As a non-admin: `event delete
+ambush-h` → "[vcf] [denied] event" (16:42); `event delete ambush-h confirm` → nothing at 16:42, "[vcf] [denied] event" on the
+resend at 16:43; `event set ambush-h durationSeconds 60` → nothing twice at 16:44, refused on the third send at 16:45; `event
+set ambush-h location here` → refused (16:48). Every silent send came within about 60 s of the previous identical "[vcf]
+[denied] event" line, as in Session 2, where refusals of other groups (template, pillar) showed in between — consistent with
+an identical system reply being suppressed for about a minute (not in the mod: it patches no chat system). The log has no
+"admin ran" line between 16:36 and 16:49; the cfg hash is unchanged, and events.json.bak (written by the admin's 16:49 write)
+equals the events.json hash taken before this round (F9B59B4E…C707), so nothing changed while the non-admin typed.
+
+**Round 3 — raised ground: a finding.** As admin on a hilltop: "event ambush-h action.location = Point -1771.6, -1808.6 at
+height 5.0"; `event start` → 3 of 3 spawned. The owner: "They showed up on the side of the higher ground, so on the cliff face
+where they were stuck. Only saw one of them." Every unit of a wave spawns on a ring of action.radius (10 here) at the centre's
+height, so on a small rise the ring points lie beyond its edge at 5 m, inside the slope or above lower ground. `event stop`
+→ "3 of 3 destroyed, 0 left"; `.nyar status` → tracked units 0. Follow-up: an amendment for units placed on the ground at
+each ring point (research on the game's height lookup is under way).
+
+**Owner note (design):** "Ideally, for an ambush, it should utilize units with stealth … that appear as invisible until you
+cross past them." Recorded under Open questions for a decision; the bandit-ambush template is unchanged.
+
+**Logs.** Both logs copied before the stop, which came after AutoSave_1127 (16:51:44) followed the last action (16:50).
+-LogCheck: "0 unhandled, 74 nyar lines, 0 orphan errors, 0 unity errors"; BepInEx: the three known warnings, the dev world's
+old example-empowerment line at each reload, and the two stop summaries; Unity: 0 exceptions, no PrefabLookupMap line after
+"Startup Completed". Then `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s3,
+C:\Users\<user>\AppData\Local\Temp\nyar-snap-s3 deleted)".
