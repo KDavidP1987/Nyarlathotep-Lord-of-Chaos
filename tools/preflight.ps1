@@ -1054,24 +1054,14 @@ function Get-ComposedTempNames([string]$Root) {
 # (Split-CodeComment), so a literal or an API in the comment does not count and a marker in a string is no comment. A name built wholly from variables therefore cannot reach %TEMP% unseen. Comment lines and
 # PowerShell <# #> help blocks are not code. An unreadable source is reported as "unreadable <file>".
 function Get-UnmarkedTempRoots([string]$Root) {
-    $api = '\$\{?en[v]:(TEMP|TMP)\b|gete[n]v\s*\(\s*[''"](TEMP|TMP)[''"]|process\.en[v]\.(TEMP|TMP)\b|GetTempPath\(\)|environ(\.get\s*\(\s*|\[\s*)[''"](TEMP|TMP)[''"]|gettempdir\(|mkdtemp\(|mkstemp\(|TemporaryDirectory\(|NamedTemporaryFile\(|GetTempFileName\(|New-TemporaryFile\b|\btmpdir\(\)'   # nyar-temp: the pattern itself, it opens no folder
+    $api = '\$\{?en[v]:(TEMP|TMP)\b|gete[n]v\s*\(\s*[''"](TEMP|TMP)[''"]|process\.en[v]\.(TEMP|TMP)\b|GetTempPath\s*\(\s*\)|environ(\.get\s*\(\s*|\[\s*)[''"](TEMP|TMP)[''"]|gettempdir\s*\(|mkdtemp\s*\(|mkstemp\s*\(|TemporaryDirectory\s*\(|NamedTemporaryFile\(|GetTempFileName\s*\(|New-TemporaryFile\b|\btmpdir\s*\(\s*\)'   # nyar-temp: the pattern itself, it opens no folder
     $out = @()
     foreach ($f in @(Get-ToolSources $Root)) {
         $t = Read-ToolSource $Root $f
         if ($null -eq $t) { $out += "unreadable $f"; continue }
-        $lines = $t -split '\r?\n'; $inHelp = $false; $ps = $f -match '\.psm?1$'
+        $lines = $t -split '\r?\n'; $block = [ref]$false; $ps = $f -match '\.psm?1$'
         for ($i = 0; $i -lt $lines.Count; $i++) {
-            $l = $lines[$i]
-            if ($ps) {
-                # A PowerShell block comment: the code after its closing #> on the same line is still code.
-                if ($inHelp) { $k = $l.IndexOf('#>'); if ($k -lt 0) { continue }; $inHelp = $false; $l = $l.Substring($k + 2) }
-                while (($o = $l.IndexOf('<#')) -ge 0) {
-                    $c = $l.IndexOf('#>', $o + 2)
-                    if ($c -lt 0) { $l = $l.Substring(0, $o); $inHelp = $true; break }
-                    $l = $l.Substring(0, $o) + ' ' + $l.Substring($c + 2)
-                }
-            }
-            $code, $comment = Split-CodeComment $l ($f -match '\.m?js$')
+            $code, $comment = Split-CodeComment $lines[$i] ($f -match '\.m?js$') $ps $block
             if ($code -notmatch $api) { continue }
             if ($code -match '(?<![\w-])nyar-(?!temp:)[a-z]') { continue }
             if ($comment -match '^(#|//)\s*nyar-temp:\s*\S') { continue }
@@ -1081,23 +1071,33 @@ function Get-UnmarkedTempRoots([string]$Root) {
     return @($out | Sort-Object -Unique)
 }
 
-# A source line as (code, trailing comment): the comment starts at the first # (// in Node) outside a quoted string;
-# inside a string a backslash (Python, Node) or a backtick (PowerShell) escapes the next character. No comment: ''.
-function Split-CodeComment([string]$Line, [bool]$Node) {
-    $q = [char]0
-    for ($k = 0; $k -lt $Line.Length; $k++) {
+# A source line as (code, trailing comment), read left to right: a quoted string is code (inside it a backslash in
+# Python and Node, or a backtick in PowerShell, escapes the next character); outside strings a PowerShell <# ... #>
+# block comment is dropped, and may run over lines ($Block carries it); the trailing comment starts at the first # (//
+# in Node). No trailing comment: ''.
+function Split-CodeComment([string]$Line, [bool]$Node, [bool]$Ps, [ref]$Block) {
+    $code = [Text.StringBuilder]::new(); $q = [char]0; $k = 0
+    while ($k -lt $Line.Length) {
+        if ($Ps -and $Block.Value) {
+            $c = $Line.IndexOf('#>', $k)
+            if ($c -lt 0) { return @($code.ToString(), '') }
+            $Block.Value = $false; $k = $c + 2; [void]$code.Append(' '); continue
+        }
         $ch = $Line[$k]
         if ($q -ne [char]0) {
-            if ($ch -eq [char]92 -or $ch -eq [char]96) { $k++; continue }
+            [void]$code.Append($ch)
+            if (($ch -eq [char]92 -or $ch -eq [char]96) -and $k + 1 -lt $Line.Length) { [void]$code.Append($Line[$k + 1]); $k += 2; continue }
             if ($ch -eq $q) { $q = [char]0 }
-            continue
+            $k++; continue
         }
-        if ($ch -eq [char]39 -or $ch -eq [char]34) { $q = $ch; continue }
+        if ($ch -eq [char]39 -or $ch -eq [char]34) { $q = $ch; [void]$code.Append($ch); $k++; continue }
+        if ($Ps -and $ch -eq [char]60 -and $k + 1 -lt $Line.Length -and $Line[$k + 1] -eq [char]35) { $Block.Value = $true; $k += 2; continue }
         if ((-not $Node -and $ch -eq [char]35) -or ($Node -and $ch -eq [char]47 -and $k + 1 -lt $Line.Length -and $Line[$k + 1] -eq [char]47)) {
-            return @($Line.Substring(0, $k), $Line.Substring($k))
+            return @($code.ToString(), $Line.Substring($k))
         }
+        [void]$code.Append($ch); $k++
     }
-    return @($Line, '')
+    return @($code.ToString(), '')
 }
 
 # The path tokens of a plan's Rollout › Paths walked (event-library D30): words holding a / or \, a * or a file name,
@@ -1855,7 +1855,7 @@ function Test-CheckReadyGuard([string]$Root) {
 # ours citing the amendment that records it (A13).
 # A plan listed in tools/preflight-checks.json snapshotSessions (slug: first session) also needs, in each of those
 # sessions' blocks, the save "dev-snapshot.ps1 -Save <label>" and the restore "snapshot restored; hashes equal (<label>"
-# with the same label (event-library D30, A19).
+# with the same label (event-library D30, A19); the listed first session must exist.
 # A fixture names the slug in sessionsof.txt.
 $script:SessionsBeforeA10 = @{ 'foundation' = 7 }
 
@@ -1917,8 +1917,9 @@ function Test-CheckSessionLogs([string]$Root) {
     $snapFrom = if ($mj -and $mj.snapshotSessions) { $mj.snapshotSessions.PSObject.Properties[$slug] } else { $null }
     $unwrapped = @()
     if ($snapFrom) {
+        if ($sessions -notcontains [int]$snapFrom.Value) { $unwrapped += [int]$snapFrom.Value }
         foreach ($n in @($sessions | Where-Object { $_ -ge [int]$snapFrom.Value })) {
-            $save = [regex]::Match($blocks[$n], 'dev-snapshot\.ps1 -Save ([\w-]+)')
+            $save = [regex]::Match("$($blocks[$n])", 'dev-snapshot\.ps1 -Save ([\w-]+)')
             if (-not $save.Success -or $blocks[$n] -notmatch ('snapshot restored; hashes equal \(' + [regex]::Escape($save.Groups[1].Value) + '[,)]')) { $unwrapped += $n }
         }
     }
@@ -1935,7 +1936,7 @@ function Test-CheckSessionLogs([string]$Root) {
         if ($old) { $why += "no orphan count in session $($old -join ', ')" }
         if ($dupes) { $why += "more than one log check line for session $($dupes -join ', ')" }
         if ($unattributed) { $why += "unity error kinds not listed or not attributed in session $($unattributed -join ', ')" }
-        if ($unwrapped) { $why += "no snapshot save and matching restore in session $($unwrapped -join ', ')" }
+        if ($unwrapped) { $why += "no snapshot save and matching restore in session $($unwrapped -join ', ') (a snapshotSessions start that is no session counts)" }
         return New-Result $false "session logs: $slug $ok/$($post.Count) checked$after$preNote ($($why -join '; '))"
     }
     return New-Result $true "session logs: $slug $ok/$($post.Count) checked$after$preNote"
