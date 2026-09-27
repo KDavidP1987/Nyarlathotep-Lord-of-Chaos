@@ -412,6 +412,20 @@
       ]
     },
     {
+      "artifact": "Session log copies",
+      "covers": [
+        "nyar-s*-logs"
+      ],
+      "location": "%TEMP%\\nyar-s<n>-logs (copies of LogOutput.log and NyarDev.log taken by hand during event-library Sessions 4 and 5)",
+      "owner": "Claude during a server session",
+      "retention": "the session that made them",
+      "deletion": "deleted once the session is recorded; later sessions copy to nyar-soak-* instead; a leftover fails -Paths",
+      "singleCopy": true,
+      "rows": [
+        "event-library › Session log copies"
+      ]
+    },
+    {
       "artifact": "Self-test scratch folders",
       "covers": [
         "nyar-selftest-*",

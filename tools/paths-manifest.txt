@@ -98,6 +98,8 @@ temp: nyar-rollback-*
 temp: nyar-drill-*
 temp: nyar-session
 temp: nyar-soak-*
+# the session log copies Claude took by hand in event-library Sessions 4 and 5 (A24); deleted the same session
+temp: nyar-s*-logs
 # the self-test scratch folders (event-library A14): preflight -SelfTest, preflight -DependencySuite, dev-snapshot -SelfTest
 # and rollback-drill -SelfTest create one and remove it before they exit
 temp: nyar-selftest-*

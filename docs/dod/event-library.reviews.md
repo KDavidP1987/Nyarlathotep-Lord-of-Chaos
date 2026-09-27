@@ -760,3 +760,16 @@ VERDICT: REVISE
 ### Dispositions
 - F1 · accepted · -DeclaredOf now also reads every %TEMP%\nyar-<name> folder the child's audit and feature docs name (Get-RecordTempNames in tools/preflight.ps1), so a hand-made folder deleted before the check must still be declared; plant Paths/bad-record (an audit naming %TEMP%\nyar-stray-logs that Paths walked omits) must fail and is required; mutation check: dropping %TEMP%\nyar-s5-logs from Paths walked fails with "not in its Paths walked: temp nyar-s5-logs"; the audit now spells both folders in full
 - F2 · accepted · a real defect of the author's edit: an escaped backslash became a line break, splitting %TEMP%\nyar-… in the plan (4), the reviews file (3) and the audit (2), none in the Baseline; all repaired
+
+## Review 19 · 2026-09-27 · codex · plan commit 2e25a2b · plan 209350 B · 35 items · files 0 · e3b0c44298fc · prompt 9c0f20e95839 · scope A24
+Prompt checked twice before recording: the prompt file's SHA-256 begins 9c0f20e95839, and a rebuild from the plan at 2e25a2b gave the same prompt. Reviewer: Codex CLI, read-only (`codex exec -s read-only`, Windows sandbox on).
+
+F1 [blocking] A24 introduces `%TEMP%\nyar-s4-logs` and `%TEMP%\nyar-s5-logs`, but they appear only under Paths walked—not Design › Data or the inventory—so probe 3.3 remains unanswered for their owner, retention, deletion, and copies, while the stated data-inventory command cannot fail when that persistence declaration is absent.
+Fix: add the two session-log folders to a Design › Data row and `tools/data-inventory.json` mapping—stating owner, same-session deletion, and copy count—so `pwsh tools/preflight.ps1` fails if that row or inventory entry is removed.
+
+EARLIER: all resolved
+14/15 layers · 48/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · the two folders now have a Design › Data row "Session log copies" (%TEMP%\nyar-s<n>-logs: owner Claude during a server session, deleted in the session that made them, one per session), a tools/data-inventory.json entry naming that row and the manifest glob `temp: nyar-s*-logs`; mutation checks: removing the inventory entry fails pwsh tools/preflight.ps1 with "'nyar-s*-logs' has no entry; event-library row 'Session log copies' has no entry", and removing the plan row fails it with "inventory row 'event-library > Session log copies' matches no row of docs/dod/event-library.md"
