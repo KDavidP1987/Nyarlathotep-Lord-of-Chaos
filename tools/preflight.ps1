@@ -1054,7 +1054,7 @@ function Get-ComposedTempNames([string]$Root) {
 # (Split-CodeComment), so a literal or an API in the comment does not count and a marker in a string is no comment. A name built wholly from variables therefore cannot reach %TEMP% unseen. Comment lines and
 # PowerShell <# #> help blocks are not code. An unreadable source is reported as "unreadable <file>".
 function Get-UnmarkedTempRoots([string]$Root) {
-    $api = '\$\{?en[v]:(TEMP|TMP)\b|gete[n]v\s*\(\s*[''"](TEMP|TMP)[''"]|process\.en[v]\.(TEMP|TMP)\b|GetTempPath\s*\(\s*\)|environ(\.get\s*\(\s*|\[\s*)[''"](TEMP|TMP)[''"]|gettempdir\s*\(|mkdtemp\s*\(|mkstemp\s*\(|TemporaryDirectory\s*\(|NamedTemporaryFile\s*\(|GetTempFileName\s*\(|New-TemporaryFile\b|\btmpdir\s*\(\s*\)'   # nyar-temp: the pattern itself, it opens no folder
+    $api = '\$\{?en[v]:(TEMP|TMP)\b|\bgete[n]v\s*\(\s*[''"](TEMP|TMP)[''"]|process\.en[v]\.(TEMP|TMP)\b|\bGetTempPath\s*\(\s*\)|\benviron(\.get\s*\(\s*|\[\s*)[''"](TEMP|TMP)[''"]|\bgettempdir\s*\(|\bmkdtemp\s*\(|\bmkstemp\s*\(|\bTemporaryDirectory\s*\(|\bNamedTemporaryFile\s*\(|\bGetTempFileName\s*\(|(?<![\w-])New-TemporaryFile\b|\btmpdir\s*\(\s*\)'   # nyar-temp: the pattern itself, it opens no folder
     $out = @()
     foreach ($f in @(Get-ToolSources $Root)) {
         $t = Read-ToolSource $Root $f
