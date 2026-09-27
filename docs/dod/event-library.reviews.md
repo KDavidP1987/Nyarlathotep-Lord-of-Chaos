@@ -515,3 +515,32 @@ VERDICT: REVISE
 - F4 · accepted · A14: untracked paths follow the written-after-base rule
 - F5 · rejected · advisory, outside the scope A13 (S-8 and S-9); their fallbacks already apply to future operations only, and a change would be its own amendment
 - F6 · accepted · the scoring follows F1-F3: A14 answers 4.5 and 14.4, and a scoped re-review of A13 and A14 follows
+
+## Review 11 · 2026-09-26 · codex · plan commit 10cc182 · plan 182415 B · 34 items · files 0 · e3b0c44298fc · prompt 845034cf1c62 · scope A13,A14
+Prompt checked twice before recording: the prompt file's SHA-256 begins 845034cf1c62, and a rebuild from the plan at 10cc182 gave the same prompt.
+
+F1 `blocking` — Probe `14.4` remains unanswered because a repository or server path created and deleted within one step is explicitly excluded, although the probe covers every path written or regenerated; the promised post-step diff cannot observe such a path.
+Fix: Include transient repository/server paths in the walked set and make `pwsh tools/preflight.ps1 -Paths -DeclaredOf event-library` fail from a step-local write journal or equivalent durable record when one is undeclared.
+
+F2 `blocking` — Probe `12.4` remains unanswered because `Paths/bad-base` and `Paths/bad-transient` are named but not registered in the selftest matrix or Build step 3’s registry work, so no stated evidence command necessarily runs them; a stranger cannot verify that either missing control fails.
+Fix: Register both fixtures in `tools/preflight-checks.json`, list their expected failures in the 12.4 matrix, and require `pwsh tools/preflight.ps1 -SelfTest` or `-ControlSuite event-library` to fail if either fixture passes.
+
+F3 `blocking` — Probe `3.3` remains unanswered for `%TEMP%\nyar-{selftest,depsuite,snaptest,drilltest}-*`: A14 adds one inventory entry but Design › Data has no matching artifact row specifying its owner, retention, deletion, and copies, so the reverse inventory check has no unambiguous contract.
+Fix: Add a Design › Data row for these four scratch-folder classes with owner, retention/deletion and copy count, and bind the inventory entry to that exact row name.
+
+F4 `blocking` — Probe `4.5` remains unanswered because “every `%TEMP%\nyar-<name>` folder a script names” does not define how the source scan recognizes names or what valid constructions it misses; for example, `Join-Path $env:TEMP ('nyar-' + $mode)` can create an undeclared folder without matching a literal-name scan.
+Fix: Specify the accepted source syntax and fail scripts that construct `nyar-*` paths outside it, or instrument temp-directory creation so `-Paths -DeclaredOf` observes dynamically composed names; add a failing composed-path fixture.
+
+F5 `advisory` — Blind layer score: Considered—1 Purpose & typical use; 2 Design › Permissions; 5 Interfaces › Internal; 6 Interfaces › External and D33; 7 Design › States; 8 Use cases › Minimal stretch; 9 Use cases › Maximal stretch; 10 Security; 11 Design › UX; 13 Performance; 15 Out of scope. Gap—3 at `3.3`, 4 at `4.5`, 12 at `12.4`, and 14 at `14.4`; all layers are applicable.
+Fix: Apply F1–F4; the remaining probes are answered by the cited sections and each Considered layer 2–14 maps to at least one D-item.
+
+EARLIER: unresolved F5
+11/15 layers · 45/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · rejected · owner decision 2026-09-27 (NYARLATHOTEP_DESIGN.md §9 D18): a repository or server path created and deleted inside one step stays outside the declared-paths set; it leaves nothing to roll back, and the step's /code-review and Codex cross-inspection read the code that writes it; no write journal
+- F2 · accepted · A15: the 12.4 matrix, the 14.4 row and Build step 3 name Paths/bad-base, bad-transient and bad-composed, each a Paths plant in tools/preflight-checks.json, so -SelfTest fails when one passes
+- F3 · accepted · A15: Design › Data gains the "Self-test scratch folders" row, and the inventory entry names it
+- F4 · accepted · A15: the scan's syntax is stated in D30 (a literal nyar-<name> or a spelled prefix nyar-<name>-), a composed name fails -Paths -DeclaredOf, fixture Paths/bad-composed
+- F5 · accepted · the scoring follows F1-F4: A15 answers 3.3, 4.5 and 12.4; 14.4 waits on the owner's decision on F1
