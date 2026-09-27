@@ -1,0 +1,7 @@
+tracked tools/soak-report.ps1
+tracked tools/rollback-gate.ps1
+tracked Nyarlathotep/Nyarlathotep/Services/TemplateLibrary.cs
+ignored Nyarlathotep/Nyarlathotep/bin/
+server BepInEx/plugins/Nyarlathotep.dll
+server save-data-nyardev/
+tracked tools/stray-drill.ps1

@@ -98,7 +98,10 @@
       "owner": "server operator",
       "retention": "until the next deploy or uninstall",
       "deletion": "stop the server and delete the file (Epic D12)",
-      "singleCopy": false
+      "singleCopy": false,
+      "rows": [
+        "event-library › Template catalogue"
+      ]
     },
     {
       "artifact": "BepInEx configuration",
@@ -109,7 +112,10 @@
       "owner": "server admin",
       "retention": "until the admin deletes it; survives uninstall by design",
       "deletion": "delete the file",
-      "singleCopy": true
+      "singleCopy": true,
+      "rows": [
+        "event-library › Pillar switches"
+      ]
     },
     {
       "artifact": "Event, zone and runtime state files",
@@ -129,7 +135,9 @@
       "deletion": "delete the folder for a full removal (README Uninstall)",
       "singleCopy": false,
       "rows": [
-        "raphael-api-core › Dev world and mod data"
+        "raphael-api-core › Dev world and mod data",
+        "event-library › Chat-written definitions",
+        "event-library › events.json.tmp"
       ]
     },
     {
@@ -223,7 +231,8 @@
       "covers": [],
       "rows": [
         "raphael-api-core › Contract, handoff, feature doc, audit, plan, reviews",
-        "faction-empowerment › Feature doc, audit, plan, reviews, contract, handoff"
+        "faction-empowerment › Feature doc, audit, plan, reviews, contract, handoff",
+        "event-library › Feature doc, audit, plan, reviews"
       ],
       "location": "the repository (docs/, tools/, READMEs, changelogs)",
       "owner": "project owner",
@@ -236,7 +245,8 @@
       "covers": [],
       "rows": [
         "raphael-api-core › Test and preflight fixtures",
-        "faction-empowerment › Preflight and drill fixtures"
+        "faction-empowerment › Preflight and drill fixtures",
+        "event-library › Soak and preflight fixtures"
       ],
       "location": "tools/preflight-fixtures/**, tools/rollback-drill-fixtures/** (tracked)",
       "owner": "project owner",
@@ -298,7 +308,8 @@
         "nyar-snap-*"
       ],
       "rows": [
-        "faction-empowerment › Session snapshots"
+        "faction-empowerment › Session snapshots",
+        "event-library › Session snapshots, release download, rollback worktrees, drill config"
       ],
       "location": "%TEMP%\\nyar-snap-* (saved\\manifest.json plus the copies)",
       "owner": "tools/dev-snapshot.ps1",
@@ -359,6 +370,61 @@
       "retention": "for one drill; a crash leaves it, the next drill refuses and prints the restore, and -Paths fails until it is gone (faction-empowerment D23, D26)",
       "deletion": "restored and deleted once every hash matches, or by hand after restoring",
       "singleCopy": true
+    },
+    {
+      "artifact": "Event library server log lines",
+      "covers": [],
+      "location": "BepInEx/LogOutput.log and logs/NyarDev.log (the lines event-library adds: templates valid or invalid, catalogue unavailable, pillar on or off, the reload after each write, and the admin-ran line, which names the admin but never a position)",
+      "owner": "BepInEx and the game server",
+      "retention": "overwritten at each boot, after -LogCheck has read them",
+      "deletion": "by the operator; the soak copies are the soak log archive entry",
+      "singleCopy": true,
+      "rows": [
+        "event-library › Server logs (the lines this child adds: templates valid or invalid, catalogue unavailable, pillar on or off, the reload line after each write, and foundation's \"admin ran\" line for each new command, which names the admin but never a position)"
+      ]
+    },
+    {
+      "artifact": "Pending event deletes",
+      "covers": [],
+      "location": "server memory (Logic DeleteArming)",
+      "owner": "the mod",
+      "retention": "30 s, or until the server restarts",
+      "deletion": "expires by itself; a confirm or a restart ends it",
+      "singleCopy": true,
+      "rows": [
+        "event-library › Pending deletes"
+      ]
+    },
+    {
+      "artifact": "Soak log archive",
+      "covers": [
+        "nyar-soak-*"
+      ],
+      "location": "%TEMP%\\nyar-soak-<n> (copies of LogOutput.log and NyarDev.log taken before each soak restart)",
+      "owner": "Claude during event-library step 5",
+      "retention": "until soak-report's lines are copied into the feature doc",
+      "deletion": "deleted after the report; a leftover fails -Paths",
+      "singleCopy": true,
+      "rows": [
+        "event-library › Soak log archive"
+      ]
+    },
+    {
+      "artifact": "Self-test scratch folders",
+      "covers": [
+        "nyar-selftest-*",
+        "nyar-depsuite-*",
+        "nyar-snaptest-*",
+        "nyar-drilltest-*"
+      ],
+      "location": "%TEMP%\\nyar-selftest-<pid>, nyar-depsuite-<pid>, nyar-snaptest-<guid> and nyar-drilltest-<guid> (copies of fixtures and scratch installs)",
+      "owner": "the self-test that creates it: tools/preflight.ps1 -SelfTest and -DependencySuite, tools/dev-snapshot.ps1 -SelfTest, tools/rollback-drill.ps1 -SelfTest",
+      "retention": "the length of one self-test run",
+      "deletion": "removed by its self-test before it exits (dev-snapshot and rollback-drill in a finally block, preflight at the end of its run); a leftover fails -Paths",
+      "singleCopy": true,
+      "rows": [
+        "event-library › Self-test scratch folders"
+      ]
     }
   ]
 }

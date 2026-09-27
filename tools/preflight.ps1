@@ -17,6 +17,21 @@
                    any %TEMP%\nyar-* folder, any git worktree besides the main one, and any tag on origin or GitHub
                    release that no remote-tag: / remote-release: line of tools/paths-manifest.txt declares
                    (faction-empowerment D26).
+    -RollbackOf <slug> [-From <tag> -To <tag>]
+                 : Test-CheckRollbackRoutes (event-library D29): docs/dod/<slug>.md › Rollout › Rollback must hold the
+                   bullets **In the repository:** with `git revert --no-edit <From>..<To>`, **On the dev server during
+                   the build:** naming tools/dev-snapshot.ps1, **On a server:** with "install the <From version> DLL"
+                   and "after data is written", **Published release:** with "never deleted" and "withdrawn by
+                   retitling", and **Commit range:** exactly <From>..<To>. From and To are those of the plan's own
+                   `rollback-gate.ps1 -From <a> -To <b> -Plan <slug>` command; -From and -To, when given (the rollback
+                   gate passes its own), must equal them. → "rollback routes: <slug> 5/5".
+    -Paths -DeclaredOf <slug>
+                 : the paths walk, then every path the child's build created or changed must be covered by a path
+                   token of docs/dod/<slug>.md › Rollout › Paths walked, whatever the manifest globs say
+                   (event-library D30, A13). Created or changed: git diff --name-only against the commit of the
+                   audit's "### Step 1 · <date> · <sha>" pre-audit heading, the untracked paths, the walk's ignored
+                   and server paths holding a file written after that commit, and the %TEMP%\nyar-* folders present.
+                   → "paths: <n> walked, all in manifest; declared: <k>/<k> in <slug>".
     -SelfTest    : every check against its three fixtures; then every command of the externalSelfTests registry
                    (tools/preflight-checks.json: the tools scripts' -SelfTest and the unit-test run), each of which must
                    exit 0 and print its success line; then the secrets check on the real tracked tree. Prints "selftest:
@@ -80,6 +95,7 @@
 .EXAMPLE
     pwsh tools/preflight.ps1
     pwsh tools/preflight.ps1 -Paths
+    pwsh tools/preflight.ps1 -Paths -DeclaredOf event-library
     pwsh tools/preflight.ps1 -SelfTest
     pwsh tools/preflight.ps1 -ServerWrites -Snapshot $env:TEMP\nyarfoundation-before.tsv
     pwsh tools/preflight.ps1 -ServerWrites -Compare $env:TEMP\nyarfoundation-before.tsv
@@ -93,6 +109,10 @@
 param(
     [switch]$SelfTest,
     [switch]$Paths,
+    [string]$DeclaredOf,            # with -Paths: plan slug whose Rollout › Paths walked must cover the child's writes (event-library D30)
+    [string]$RollbackOf,            # plan slug: its Rollout › Rollback routes (event-library D29)
+    [string]$From,                  # with -RollbackOf: the rollback gate's -From, which must equal the plan's
+    [string]$To,                    # with -RollbackOf: the rollback gate's -To, which must equal the plan's
     [switch]$ServerWrites,          # with -Snapshot <file> (record) or -Compare <file> [-AfterCleanup] (check)
     [string]$Snapshot,
     [string]$Compare,
@@ -115,6 +135,9 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $manifestPath = Join-Path $repoRoot 'tools/preflight-checks.json'
 $script:FixtureRoot = $null   # set while a check runs against a fixture
+$script:DeclaredOf = $DeclaredOf
+$script:RollbackOf = $RollbackOf
+$script:RollbackRange = @($From, $To)
 
 $PkgRel = 'Nyarlathotep/Nyarlathotep'
 
@@ -776,6 +799,46 @@ function Test-CheckReleaseTags([string]$Root) {
     return New-Result $true "release tags: $($rel.Count)/$($rel.Count)"
 }
 
+# Every rollback route of a plan's Rollout › Rollback, machine-checked (event-library D29). The slug is -RollbackOf's, or a
+# fixture's rollback-of.txt; the range is the plan's own rollback-gate command, and the gate's -From and -To must match it.
+function Test-CheckRollbackRoutes([string]$Root) {
+    $slug = if (Test-IsFixture $Root) { "$(Read-Text $Root 'rollback-of.txt')".Trim() } else { $script:RollbackOf }
+    if (-not $slug) { return New-Result $false 'rollback routes: no plan slug' }
+    $plan = Read-Text $Root "docs/dod/$slug.md"
+    if ($null -eq $plan) { return New-Result $false "rollback routes: docs/dod/$slug.md not found" }
+    $sec = [regex]::Match($plan, '(?ms)^### Rollback[ \t]*\r?$(.*?)(?=^##)')
+    if (-not $sec.Success) { return New-Result $false "rollback routes: $slug has no Rollout › Rollback section" }
+    # Every rollback-gate command for this plan must name one range, so a stale quote elsewhere cannot set it.
+    $cmds = @([regex]::Matches($plan, "rollback-gate\.ps1 -From (v[\w.-]+) -To (v[\w.-]+) -Plan $([regex]::Escape($slug))\b") |
+        ForEach-Object { "$($_.Groups[1].Value)..$($_.Groups[2].Value)" } | Sort-Object -Unique)
+    if ($cmds.Count -eq 0) { return New-Result $false "rollback routes: $slug has no rollback-gate.ps1 -From <tag> -To <tag> -Plan $slug command" }
+    if ($cmds.Count -gt 1) { return New-Result $false "rollback routes: $slug's rollback-gate commands name $($cmds.Count) ranges ($($cmds -join ', '))" }
+    $from, $to = $cmds[0] -split '\.\.', 2
+    $gate = if (Test-IsFixture $Root) { @('', '') } else { $script:RollbackRange }
+    if (($gate[0] -and $gate[0] -ne $from) -or ($gate[1] -and $gate[1] -ne $to)) {
+        return New-Result $false "rollback routes: the gate's range $($gate[0])..$($gate[1]) is not the plan's $from..$to"
+    }
+    $bullets = @{}
+    foreach ($m in [regex]::Matches($sec.Groups[1].Value, '(?m)^- \*\*([^*\r\n]+?):\*\*[ \t]*([^\r\n]*)')) { $bullets[$m.Groups[1].Value.Trim()] = $m.Groups[2].Value }
+    $range = "$from..$to"
+    $routes = [ordered]@{
+        'In the repository'                = @("git revert --no-edit $range")
+        'On the dev server during the build' = @('tools/dev-snapshot.ps1')
+        'On a server'                      = @("install the $($from.TrimStart('v')) DLL", 'after data is written')
+        'Published release'                = @('never deleted', 'withdrawn by retitling')
+    }
+    $failed = @()   # one reason per route, so 5 minus its count is the routes that pass
+    foreach ($name in $routes.Keys) {
+        if (-not $bullets.ContainsKey($name)) { $failed += "$name missing"; continue }
+        $lack = @($routes[$name] | Where-Object { -not $bullets[$name].Contains($_) })
+        if ($lack) { $failed += "$name lacks '$($lack -join "', '")'" }
+    }
+    if (-not $bullets.ContainsKey('Commit range')) { $failed += 'Commit range missing' }
+    elseif ($bullets['Commit range'].Trim().TrimEnd('.').Trim('`') -ne $range) { $failed += "Commit range is '$($bullets['Commit range'].Trim())', not $range" }
+    if ($failed) { return New-Result $false "rollback routes: $slug $(5 - $failed.Count)/5, failed: $($failed -join '; ')" }
+    return New-Result $true "rollback routes: $slug 5/5"
+}
+
 # ---------------------------------------------------------------- checks: data and paths (Epic D33, D34)
 
 function Test-CheckDataInventory([string]$Root) {
@@ -815,6 +878,11 @@ function Test-CheckDataInventory([string]$Root) {
             $rows += "$slug › $name"
             if (-not ($entries | Where-Object { @($_.rows) -contains "$slug › $name" })) { $bad += "$slug row '$name' has no entry" }
         }
+        # The reverse direction (event-library D30): an entry's row name of this plan must be one of its table's rows,
+        # so a row dropped or renamed in the plan cannot leave a stale inventory name behind.
+        foreach ($named in @($entries | ForEach-Object { @($_.rows) } | Where-Object { $_ -like "$slug › *" })) {
+            if ($rows -notcontains $named) { $bad += "inventory row '$named' matches no row of $planRel" }
+        }
     }
     if ($bad) { return New-Result $false "data inventory: $($bad -join '; ')" }
     return New-Result $true "data inventory: $($entries.Count) entries; $($required.Count)/$($required.Count) globs and files, $($rows.Count)/$($rows.Count) plan rows"
@@ -828,15 +896,24 @@ function Test-CheckDataInventory([string]$Root) {
 #   Worktrees  `git worktree list --porcelain`                                             worktrees.txt
 #   RemoteTags `git ls-remote --tags origin`                                               ls-remote-tags.txt
 #   Releases   `gh release list --json tagName`                                            releases.json
+#   Declared   with -DeclaredOf <slug> only (else $null): the slug; the created or changed paths as
+#              "<kind> <path>" lines (kind tracked|ignored|server|temp), $null when a source failed;       declared-of.txt, changed.txt
+#              and the parent of the commit that created docs/audits/<slug>.md, $null when git failed    audit-added-parent.txt
 function Get-PathsListings([string]$Root) {
     if (Test-IsFixture $Root) {
         $w = Read-Text $Root 'walked.txt'
+        $slug = Read-Text $Root 'declared-of.txt'
+        $changed = Read-Text $Root 'changed.txt'
+        $parent = Read-Text $Root 'audit-added-parent.txt'
         return [pscustomobject]@{
             Walked     = if ($null -eq $w) { @() } else { @($w -split '\r?\n' | Where-Object { $_ }) }
             Temp       = Read-Text $Root 'temp.txt'
             Worktrees  = Read-Text $Root 'worktrees.txt'
             RemoteTags = Read-Text $Root 'ls-remote-tags.txt'
             Releases   = Read-Text $Root 'releases.json'
+            Declared   = if ($null -eq $slug) { $null } else {
+                [pscustomobject]@{ Slug = $slug.Trim(); Changed = if ($null -eq $changed) { $null } else { @($changed -split '\r?\n' | Where-Object { $_ }) }
+                    AddedParent = if ($null -eq $parent) { $null } else { $parent.Trim() } } }
         }
     }
     $wt = git -C $Root worktree list --porcelain 2>$null
@@ -852,7 +929,169 @@ function Get-PathsListings([string]$Root) {
     # An unreadable %TEMP% is a failed listing ($null), never an empty one (step 2 review).
     try { $temp = @(Get-ChildItem -LiteralPath $tempDir -Directory -Filter 'nyar-*' -Force -ErrorAction Stop | ForEach-Object Name) -join "`n" }
     catch { $temp = $null }
-    return [pscustomobject]@{ Walked = @(Get-WalkedPaths $Root); Temp = $temp; Worktrees = $wt; RemoteTags = $rt; Releases = $rel }
+    $walked = @(Get-WalkedPaths $Root)
+    $declared = if ($script:DeclaredOf) {
+        [pscustomobject]@{ Slug = $script:DeclaredOf; Changed = Get-ChangedPaths $Root $script:DeclaredOf $walked $temp
+            AddedParent = Get-AuditAddedParent $Root $script:DeclaredOf }
+    } else { $null }
+    return [pscustomobject]@{ Walked = $walked; Temp = $temp; Worktrees = $wt; RemoteTags = $rt; Releases = $rel; Declared = $declared }
+}
+
+# The base of a child's build: the commit of its first pre-audit ("### Step 1 · <date> · <sha>" under ## Pre-audit of
+# docs/audits/<slug>.md), or $null (event-library D30, A13).
+function Get-AuditBase([string]$Root, [string]$Slug) {
+    $audit = Read-Text $Root "docs/audits/$Slug.md"
+    if ($null -eq $audit) { return $null }
+    $pre = [regex]::Match($audit, '(?ms)^## Pre-audit[ \t]*\r?$(.*?)(?=^## )')
+    $m = if ($pre.Success) { [regex]::Match($pre.Groups[1].Value, '(?m)^### Step 1 · [^·\r\n]+ · ([0-9a-f]{7,40})\b') } else { $null }
+    if ($null -eq $m -or -not $m.Success) { return $null }
+    return $m.Groups[1].Value
+}
+
+# Git's own record of that base (event-library A14): the parent of the oldest commit that added docs/audits/<slug>.md,
+# which step 1 creates. The heading must name it, so a heading moved to a later commit cannot hide this child's changes.
+# $null when git fails or never saw the file added.
+function Get-AuditAddedParent([string]$Root, [string]$Slug) {
+    $added = @(git -C $Root log --diff-filter=A --format=%H -- "docs/audits/$Slug.md" 2>$null)
+    if ($LASTEXITCODE -ne 0 -or $added.Count -eq 0) { return $null }
+    $parent = git -C $Root rev-parse "$($added[-1])^" 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $parent) { return $null }
+    return "$parent".Trim()
+}
+
+# The paths a child's build created or changed, as "<kind> <path>" (event-library D30, A13, A14); only Get-PathsListings
+# calls it. Git knows what changed in tracked paths since the base (Get-AuditBase); an untracked, ignored or server path
+# counts when it holds a file written after the base commit (a directory git collapses by its newest file); every
+# %TEMP%\nyar-* folder present counts. Test-CheckPaths adds the %TEMP% folders the tools can create (Get-ToolTempNames).
+# $null when the audit, the base or git fails.
+function Get-ChangedPaths([string]$Root, [string]$Slug, [string[]]$Walked, [string]$Temp) {
+    $base = Get-AuditBase $Root $Slug
+    if ($null -eq $base) { return $null }
+    $ct = git -C $Root log -1 --format=%ct $base 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $ct) { return $null }
+    $since = [DateTimeOffset]::FromUnixTimeSeconds([long]"$ct".Trim()).UtcDateTime
+    $diff = @(git -C $Root diff --name-only $base 2>$null); if ($LASTEXITCODE -ne 0) { return $null }
+    $new = @(git -C $Root ls-files -o --exclude-standard 2>$null); if ($LASTEXITCODE -ne 0) { return $null }
+    $out = @($diff | Where-Object { $_ } | ForEach-Object { "tracked $_" })
+    # An unreadable file or folder throws, so the whole listing is unreadable ($null), never "not written".
+    $written = {
+        param($full)
+        if (-not (Test-Path -LiteralPath $full)) { return $false }
+        $i = Get-Item -LiteralPath $full -Force -ErrorAction Stop
+        if (-not $i.PSIsContainer) { return $i.LastWriteTimeUtc -gt $since }
+        return [bool](Get-ChildItem -LiteralPath $full -Recurse -File -Force -ErrorAction Stop |
+            Where-Object { $_.LastWriteTimeUtc -gt $since } | Select-Object -First 1)
+    }
+    try {
+    $out += @($new | Where-Object { $_ -and (& $written (Join-Path $Root $_)) } | ForEach-Object { "tracked $_" })
+    $sp = if (Test-Path $ServerPath) { (Resolve-Path $ServerPath).Path.TrimEnd('\') } else { $null }
+    foreach ($w in $Walked) {
+        $kind, $path = $w -split ' ', 2
+        $full = switch ($kind) { 'ignored' { Join-Path $Root $path } 'server' { if ($sp) { Join-Path $sp $path } } default { $null } }
+        if ($full -and (& $written $full)) { $out += "$kind $path" }
+    }
+    } catch { return $null }
+    $out += @("$Temp" -split '\r?\n' | ForEach-Object { $_.Trim() } | Where-Object { $_ -like 'nyar-*' } | ForEach-Object { "temp $_" })
+    return $out
+}
+
+# Every %TEMP% folder name the tools can create (event-library A14): the nyar-<name> literals of tools/*.ps1, tools/*.py and
+# tools/ingame/*, as "temp <name>" ("temp nyar-snap-x" for a prefix such as "nyar-snap-"). Read from source, so a
+# folder a tool made and removed before the check still counts. Fixtures under tools/ are not read. A listed source
+# that cannot be read comes back as "unreadable <file>", so the check fails closed (step 3 Codex cross-inspection).
+function Get-ToolTempNames([string]$Root) {
+    $names = @(); $out = @()
+    foreach ($f in @(Get-ToolSources $Root)) {
+        $t = Read-ToolSource $Root $f
+        if ($null -eq $t) { $out += "unreadable $f"; continue }
+        $names += @([regex]::Matches($t, '(?<![\w-])nyar-[a-z][a-z0-9]*(?:-[a-z0-9]+)*-?') | ForEach-Object { $_.Value })
+    }
+    return @($out + @($names | Sort-Object -Unique | ForEach-Object { if ($_.EndsWith('-')) { "temp $($_)x" } else { "temp $_" } }))
+}
+
+# The tool sources the %TEMP% name scans read: tools/*.ps1, *.psm1, *.py, *.mjs, *.js and tools/ingame/*.
+function Get-ToolSources([string]$Root) {
+    return @(Get-TreeFiles $Root | Where-Object { $_ -match '^tools/(ingame/[^/]+|[^/]+\.(ps1|psm1|py|mjs|js))$' })
+}
+
+# One tool source's text, or $null when it vanished or cannot be read (a lock throws in ReadAllText).
+function Read-ToolSource([string]$Root, [string]$Rel) {
+    try { return Read-Text $Root $Rel } catch { return $null }
+}
+
+# The places a tool composes a %TEMP% name instead of spelling its prefix (event-library A15), as "<file>:<line>": a
+# bare "nyar-" or a whole nyar-<name> literal followed at once by $ { % or a backtick (an interpolation or format
+# hole), or by a closing quote and a + (a concatenation); and a quoted nyar literal closed at once and concatenated with
+# a hyphen and a variable. Get-ToolTempNames cannot read such a name, so the paths check fails on
+# it; a tool spells the prefix ("nyar-snap-" + $id), which the scan reads as nyar-snap-*.
+function Get-ComposedTempNames([string]$Root) {
+    $out = @()
+    foreach ($f in @(Get-ToolSources $Root)) {
+        $t = Read-ToolSource $Root $f
+        if ($null -eq $t) { $out += "unreadable $f"; continue }
+        $lines = $t -split '\r?\n'
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            foreach ($m in [regex]::Matches($lines[$i], '(?<![\w-])nyar-(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*-?)?')) {
+                $rest = $lines[$i].Substring($m.Index + $m.Length)
+                # a spelled prefix ("nyar-snap-") may be followed by anything; the bare "nyar-" or a whole name may not
+                if ($m.Value -ne 'nyar-' -and $m.Value.EndsWith('-')) { continue }
+                if ($rest -match '^([${%`]|[''"]\s*\+)') {
+                    $out += "$($f):$($i + 1)"
+                }
+            }
+            if ($lines[$i] -match '(?<![\w-])nyar[''"]\s*\+') { $out += "$($f):$($i + 1)" }
+        }
+    }
+    return @($out | Sort-Object -Unique)
+}
+
+# The path tokens of a plan's Rollout › Paths walked (event-library D30): words holding a / or \, a * or a file name,
+# braces expanded ({a,b} and {,.bak} forms, several groups), globs kept. %TEMP%\<name> becomes the temp token "%TEMP%\<name>".
+function Get-DeclaredTokens([string]$Plan) {
+    $sec = [regex]::Match($Plan, '(?ms)^### Paths walked[ \t]*\r?$(.*?)(?=^##)')
+    if (-not $sec.Success) { return @() }
+    # Markdown bold markers (**Step 1:**) are not globs: one opening before a letter, one closing after a word or a colon.
+    $text = [regex]::Replace($sec.Groups[1].Value, '(?<![^ \t(`\n])[*][*](?=[A-Za-z])|(?<=[:.)A-Za-z0-9])[*][*](?=[ \t,.;:)`]|$)', '', 'Multiline')
+    $words = [Collections.Generic.List[string]]::new()
+    $cur = [Text.StringBuilder]::new(); $depth = 0
+    foreach ($ch in $text.ToCharArray()) {
+        $c = [string]$ch
+        if ($c -eq '{') { $depth++ } elseif ($c -eq '}' -and $depth -gt 0) { $depth-- }
+        if ($c -match '[\w.*%\\/{}+~$-]' -or ($c -eq ',' -and $depth -gt 0) -or ($c -eq '}')) { [void]$cur.Append($c); continue }
+        if ($cur.Length) { $words.Add($cur.ToString()) }
+        [void]$cur.Clear(); $depth = 0
+    }
+    if ($cur.Length) { $words.Add($cur.ToString()) }
+    $tokens = @()
+    foreach ($w in $words) {
+        $t = $w.Trim('.', '-', '+')
+        if (-not $t -or $t -notmatch '[/\\*]|^[\w-]+(\.[\w-]+)*\.[A-Za-z]\w*$') { continue }
+        # A token of only * and / (a stray ** or a bare glob) would cover every path.
+        if ($t -match '^[*/]+$') { continue }
+        $tokens += @(Expand-Braces $t)
+    }
+    return @($tokens | ForEach-Object { $_.Replace('\', '/') } | Sort-Object -Unique)
+}
+
+function Expand-Braces([string]$Token) {
+    $m = [regex]::Match($Token, '\{([^{}]*)\}')
+    if (-not $m.Success) { return @($Token) }
+    $head = $Token.Substring(0, $m.Index); $tail = $Token.Substring($m.Index + $m.Length)
+    return @($m.Groups[1].Value -split ',' | ForEach-Object { Expand-Braces "$head$_$tail" })
+}
+
+# The created or changed paths no declared token covers: a temp folder by a %TEMP%/<glob> token, any other path by a
+# token glob (Test-GlobMatch). Returns @{ Total; Uncovered }.
+function Get-UndeclaredPaths([string[]]$Changed, [string[]]$Tokens) {
+    $temps = @($Tokens | Where-Object { $_ -like '%TEMP%/*' } | ForEach-Object { $_.Substring(7) })
+    $globs = @($Tokens | Where-Object { $_ -notlike '%TEMP%/*' })
+    $un = @()
+    foreach ($c in @($Changed | Sort-Object -Unique)) {
+        $kind, $path = $c -split ' ', 2
+        $set = if ($kind -eq 'temp') { $temps } else { $globs }
+        if (-not ($set | Where-Object { Test-GlobMatch $path $_ })) { $un += $c }
+    }
+    return @{ Total = @($Changed | Sort-Object -Unique).Count; Uncovered = $un }
 }
 
 # Walked paths of the real repository as "<kind> <path>" (kind tracked|ignored|server); only Get-PathsListings calls it.
@@ -910,8 +1149,28 @@ function Test-CheckPaths([string]$Root) {
         $rk, $rn = $r -split ' ', 2
         if (-not ($manifest | Where-Object { $_.Kind -eq "remote-$rk" -and (Test-GlobMatch $rn $_.Glob) })) { $problems += "undeclared remote $r" }
     }
+    # -DeclaredOf <slug> (event-library D30, A13): the child's writes against its own Rollout › Paths walked.
+    $declLine = ''
+    if ($null -ne $in.Declared) {
+        $slug = $in.Declared.Slug
+        $plan = Read-Text $Root "docs/dod/$slug.md"
+        $tokens = if ($plan) { @(Get-DeclaredTokens $plan) } else { @() }
+        if ($null -eq $plan) { $problems += "declared: docs/dod/$slug.md not found" }
+        elseif ($tokens.Count -eq 0) { $problems += "declared: $slug has no Rollout › Paths walked tokens" }
+        elseif ($null -eq $in.Declared.Changed) { $problems += "declared: the created or changed paths of $slug are unreadable (audit Step 1 base or git)" }
+        elseif ($null -eq ($base = Get-AuditBase $Root $slug)) { $problems += "declared: docs/audits/$slug.md has no ### Step 1 · <date> · <sha> pre-audit" }
+        elseif ($null -eq $in.Declared.AddedParent) { $problems += "declared: git cannot say which commit created docs/audits/$slug.md" }
+        elseif (-not $in.Declared.AddedParent.StartsWith($base)) { $problems += "declared: the Step 1 pre-audit base $base is not $($in.Declared.AddedParent.Substring(0, [Math]::Min(12, $in.Declared.AddedParent.Length))), the parent of the commit that created docs/audits/$slug.md" }
+        elseif (($unread = @(@(Get-ToolTempNames $Root) + @(Get-ComposedTempNames $Root) | Where-Object { $_ -like 'unreadable *' } | ForEach-Object { $_.Substring(11) } | Sort-Object -Unique)).Count) { $problems += "declared: a tool source is unreadable, so its %TEMP% names are unknown: $(($unread | Select-Object -First 10) -join ', ')" }
+        elseif (($composed = @(Get-ComposedTempNames $Root)).Count) { $problems += "declared: a tool composes a %TEMP% nyar- name the scan cannot read; spell its prefix: $(($composed | Select-Object -First 10) -join ', ')" }
+        else {
+            $u = Get-UndeclaredPaths @(@($in.Declared.Changed) + @(Get-ToolTempNames $Root)) $tokens
+            if ($u.Uncovered.Count) { $problems += "declared: $($u.Total - $u.Uncovered.Count)/$($u.Total) in $slug, not in its Paths walked: $(($u.Uncovered | Select-Object -First 10) -join ', ')" }
+            else { $declLine = "; declared: $($u.Total)/$($u.Total) in $slug" }
+        }
+    }
     if ($problems) { return New-Result $false "paths: $($problems -join '; ')" }
-    return New-Result $true "paths: $($walked.Count) walked, all in manifest"
+    return New-Result $true "paths: $($walked.Count) walked, all in manifest$declLine"
 }
 
 # ---------------------------------------------------------------- checks: the spikes child (spikes D4, D13, D17)
@@ -1808,7 +2067,7 @@ function Copy-Fixture([string]$From, [string]$To) {
     }
 }
 
-$script:CheckModes = @('default', 'paths', 'serverwrites', 'auditof', 'logcheck', 'sessionsof', 'authsuite', 'fixture')
+$script:CheckModes = @('default', 'paths', 'serverwrites', 'auditof', 'logcheck', 'sessionsof', 'authsuite', 'fixture', 'rollbackof')
 
 # One check against its fixtures in scratch directories under $Tmp: good must pass, every bad/ and bad-<n>/ and empty
 # must fail, each printing a line. Returns Ok, Problems and Extra (the bad fixtures beyond bad/).
@@ -1895,6 +2154,18 @@ function Invoke-SelfTest {
     Write-Host "selftest: $($st.Passed)/$($st.Total) checks, $ext (3 fixtures each, $($st.Extra) extra bad fixtures; $($st.SecLine) on the real tree)" -ForegroundColor Green
     exit 0
 }
+
+# Usage, before any mode runs (step 3 code review, Codex cross-inspection round 4): one mode at a time, and each
+# qualifier only with its own mode, so no combination silently runs the first mode and drops the rest.
+$modes = @(@{ SelfTest = [bool]$SelfTest; Paths = [bool]$Paths; RollbackOf = [bool]$RollbackOf; ServerWrites = [bool]$ServerWrites
+    LogCheck = [bool]$LogCheck; AuditOf = [bool]$AuditOf; SessionsOf = [bool]$SessionsOf; AuthSuite = [bool]$AuthSuite; Tests = [bool]$Tests
+    ControlSuite = [bool]$ControlSuite; DependencySuite = [bool]$DependencySuite; ListCommands = [bool]$ListCommands }.GetEnumerator() |
+    Where-Object { $_.Value } | ForEach-Object { "-$($_.Key)" } | Sort-Object)
+if ($modes.Count -gt 1) { Write-Host "usage: one mode at a time, not $($modes -join ' ')" -ForegroundColor Red; exit 2 }
+if ($DeclaredOf -and -not $Paths) { Write-Host 'usage: -DeclaredOf <slug> needs -Paths' -ForegroundColor Red; exit 2 }
+if (($From -or $To) -and -not $RollbackOf) { Write-Host 'usage: -From and -To go with -RollbackOf' -ForegroundColor Red; exit 2 }
+if ([bool]$From -xor [bool]$To) { Write-Host 'usage: -From and -To name a range together, or neither is given' -ForegroundColor Red; exit 2 }
+if (($Snapshot -or $Compare -or $AfterCleanup) -and -not $ServerWrites) { Write-Host 'usage: -Snapshot, -Compare and -AfterCleanup go with -ServerWrites' -ForegroundColor Red; exit 2 }
 
 if ($SelfTest) { Invoke-SelfTest }
 
@@ -2024,7 +2295,7 @@ if ($AuthSuite) {
 }
 
 $manifest = Get-Manifest
-$mode = if ($Paths) { 'paths' } elseif ($ServerWrites) { 'serverwrites' } elseif ($AuditOf) { 'auditof' } elseif ($LogCheck) { 'logcheck' } elseif ($SessionsOf) { 'sessionsof' } else { 'default' }
+$mode = if ($Paths) { 'paths' } elseif ($RollbackOf) { 'rollbackof' } elseif ($ServerWrites) { 'serverwrites' } elseif ($AuditOf) { 'auditof' } elseif ($LogCheck) { 'logcheck' } elseif ($SessionsOf) { 'sessionsof' } else { 'default' }
 $failures = @()
 foreach ($c in @($manifest.checks | Where-Object { $_.mode -eq $mode })) {
     $r = Invoke-Check $c.function $repoRoot

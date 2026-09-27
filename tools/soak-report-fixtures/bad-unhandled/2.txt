@@ -1,0 +1,11 @@
+[Message:   BepInEx] Loading [Nyarlathotep 0.4.0]
+[Info   :Nyarlathotep] [nyar] event bandit-ambush cancelled by restart (it was due to end 2026-09-27 15:00:00Z)
+[Info   :Nyarlathotep] [nyar] boot carrier sweep: 0 found
+[Info   :Nyarlathotep] [nyar] tick timing: avg 0.412 ms, max 3.120 ms over 61 ticks
+[Info   :Nyarlathotep] [nyar] event legion-weekend-surge started by schedule (ends 2026-09-27 16:30:00Z)
+[Warning:Nyarlathotep] [nyar] empower legion-weekend-surge: 12 carriers queued for removal (stopped)
+[Info   :Nyarlathotep] [nyar] event legion-weekend-surge not started by schedule: pillar empowerment is off
+[Info   :Nyarlathotep] [nyar] tick timing: avg 0.412 ms, max 3.120 ms over 61 ticks
+[Error  :Nyarlathotep] [nyar] event bandit-ambush tick failed (1/3): Object reference not set
+System.NullReferenceException: Object reference not set to an instance of an object.
+  at Nyarlathotep.Services.WaveAction.QueueDueWave (Nyarlathotep.Logic.ActiveEvent active, System.DateTime now) [0x00012] in <x>:0

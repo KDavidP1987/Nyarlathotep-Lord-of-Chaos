@@ -1,0 +1,4 @@
+worktree C:/Users/KDPen/OneDrive/Documents/CURSOR PROJECTS/Games/V Rising/Nyarlathotep Lord of Chaos
+HEAD f4d08750c8cc11daccddf02d40e9b546255f5143
+branch refs/heads/main
+

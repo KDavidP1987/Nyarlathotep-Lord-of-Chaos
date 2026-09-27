@@ -50,3 +50,21 @@ hand edit give the same result.
 None open. Decisions are recorded as the plan's assumptions S-1 to S-14 and amendments.
 
 ## Test results
+
+### Session 1 · 2026-09-26 · event-library step 3 (build 13a123a, dev world nyardev, unattended)
+
+Setup: `pwsh tools/dev-snapshot.ps1 -Save s1` (28 files), the step 2 Release DLL deployed (hash equal to bin),
+`python tools/ingame/session-events.py el1`: events.json holds a copy of each of the six built-in templates, all disabled
+except legion-weekend-surge (Faction_Legion, pp 1.5, maxHealth 1.5, 1800 s, retimed to Sat 23:16) and undead-nightfall
+(GameTime night, Faction_Undead, pp 1.25, sp 1.25, 1200 s, as shipped); cfg: Pillars.FactionEmpowerment,
+Pillars.EventSpawns and Debug.TimingLog on. One boot, 23:10–23:48. No player connected.
+
+- [x] D3: "templates: 6/6 valid" at boot, and "events: reloaded: 6 valid, 0 disabled" for the six copies
+- [x] boot sweeps: "boot marker sweep: 0 found, 0 queued for despawn (0 listed in state.json)", "boot carrier sweep: 0 found, 0 queued for removal"
+- [x] legion-weekend-surge "started by Schedule 2026-09-26 23:16 (ends 2026-09-27 03:46:00Z)"; "query 1 of 1 faction entities", "sweep 0 applied, 1 skipped (vblood 1)" (no ordinary Legion unit loaded near the world's live chunks); "ended (0 carriers expire with it)" at 23:46
+- [x] undead-nightfall "started by GameTime night (ends 2026-09-27 03:47:45Z)" at the next in-game night, unprompted (S-12); "query 75 of 75 faction entities", "sweep 74 applied, 1 skipped (vblood 1)"; the next night check logged "not started by GameTime night: already active"; "ended (74 carriers expire with it)" at 23:47:45, and no "outlived the end" line followed
+- [x] tick timing: 37 lines, avg ≤ 1.032 ms per minute, max 29.3 ms (a sweep tick)
+- [x] soak-report dry run over this log (`-Templates` the six ids, `-MinMinutes 30`): "soak: 37 timing minutes, 2 starts, 2 ends, 0 cancelled by restart, 0 unpaired, 0 unhandled, tick avg max 1.032 ms, templates 2/6" and "soak: fail - never started: bandit-vengeance, militia-crackdown, bandit-ambush, undead-rising", the expected failure of a session that enabled two templates (step 5's soak enables all six)
+- [x] `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s1, … deleted)"; %TEMP%\nyar-session (the el1 backups of events.json and the cfg) deleted; `-Paths -DeclaredOf event-library` → "paths: 960 walked, all in manifest; declared: 212/212 in event-library"
+- logs: the BepInEx log has only the three known warnings (Il2CppInterop Class::Init, Beelzebub TUNE ×2); the Unity log's warnings are the 226 PrefabLookupMap lines at save load, the game's RepairVBloodProgressionSystem lookup notice and the Crashpad and temp-memory notices of the hard stop; none ours
+- not covered here: the authoring smoke and the owner's chat (Session 2, step 4); the 4-hour soak (Session 3, step 5)

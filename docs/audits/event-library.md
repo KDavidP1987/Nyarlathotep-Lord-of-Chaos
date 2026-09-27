@@ -27,6 +27,15 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - feature doc read: docs/features/EVENT_LIBRARY.md (Status: step 1 done); plan D3, D17, D18, D20, D32, D33, D34 and step 2; Plugin.cs, Services/EventStore.cs, EventRuntime.cs, HealthMonitor.cs, Gateway.cs, Commands/EventCommands.cs, RootCommands.cs, Config/Settings.cs; tools/preflight.ps1 and preflight-checks.json
 - server: not running; step 2 has no in-game test (Session 1 is step 3)
 
+### Step 3 · 2026-09-26 · 31fbe53
+- git status: clean at 31fbe53 (step 2 and the feature doc's Status)
+- compile: 0 errors, 0 warnings
+- tests: 1313 passed
+- preflight: PREFLIGHT OK; -Paths PREFLIGHT OK
+- dod status: event-library 0/34 checked; review codex, not pending (A12 is not gating)
+- feature doc read: docs/features/EVENT_LIBRARY.md (Status: steps 1 and 2 done); plan D3, D24, D29, D30, Design › Data and step 3; tools/rollback-gate.ps1, tools/data-inventory.json, tools/paths-manifest.txt, tools/preflight.ps1 (Test-CheckDataInventory, Get-PathsListings, Test-CheckPaths), tools/ingame/session-events.py
+- server: baseline boot of the deployed 0.4.0 DLL on nyardev before Session 1: -LogCheck "0 unhandled, 7 nyar lines, 0 orphan errors, 0 unity errors"; warnings only Il2CppInterop Class::Init, Beelzebub's own and ours "event example-empowerment: pillar empowerment takes an Empower action" (the leftover dev events.json, replaced by el1); stopped before the step 2 DLL was deployed
+
 ## Post-audit
 ### Step 1 · 2026-09-26 · e84c8a3 + working tree (committed as step 1)
 - compile / preflight: 0 errors, 0 warnings; 1309 tests passed (871 before the step); PREFLIGHT OK; dod --check 0 problems (6 warnings, all old review-round notes)
@@ -48,3 +57,18 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - in-game: none (step 2 has no in-game test; Session 1 is step 3)
 - dod status: 0/34 checked — D17, D18 (its soak-report selftest is step 3), D20, D33 and D34 have their evidence commands passing as above; the Commands and Services halves of D5-D14 and D32 wait for Session 2
 
+### Step 3 · 2026-09-27 · 63d3a80 + working tree (committed as step 3)
+- compile / tests: 0 errors, 0 warnings; 1313 passed (step 3 adds tooling only, no C#)
+- preflight: PREFLIGHT OK; -SelfTest "selftest: 33/33 checks, 7/7 external selftests (3 fixtures each, 126 extra bad fixtures; secrets: none …)"; soak-report -SelfTest 8/8; rollback-gate -SelfTest 6/6; -Paths -DeclaredOf event-library "paths: 969 walked, all in manifest; declared: 221/221 in event-library"; -SessionsOf event-library 1/1; -RollbackOf event-library "rollback routes: event-library 5/5"; dod --check 0 problems (12 warnings, all old review-round notes)
+- mutation checks: a locked tool source fails -Paths -DeclaredOf ("a tool source is unreadable"); scratch soak logs: a restart cancel in the same boot or two boots on, a second natural end, a pillar-off echo after an unrelated line, in the next boot, twice or out of stop order, and an empower plain stop followed by a pillar echo each fail as unpaired; a cancel in the next boot, pillar-off runs of one and two events and an empower pillar-off run pass; six bad preflight usage combinations each exit 2
+- /code-review: five findings, all fixed — a missing -Log file was skipped silently (now "soak: fail — no log <path>"); a pillar-off double end and a purge counted as unpaired; a bold marker at a line's start stayed in a Paths walked token; -RollbackOf took the first rollback-gate range anywhere in the plan (now every such command must name one range); an unreadable file under a walked path read as "not written" (now the listing is unreadable and the check fails); plus usage guards for -DeclaredOf, -RollbackOf, -From and -To
+- Codex verdict: READY (round 6) — round 1 REVISE: soak-report's frame regex (rejected: the backtick is literal in a single-quoted class, and bad-unhandled fails "1 unhandled"), bad fixtures not held to their planted reason, an unreadable tool source read as empty, -RollbackOf with only -From or -To; round 2 REVISE: a restart cancel paired from any boot, any later end forgiven after an end (A17, defect); round 3 REVISE: a pillar-off echo forgiven across unrelated lines (the real order is all stop lines, then all echoes: an unbroken run; fixture bad-echo); round 4 REVISE: usage guards ran after the early-exit modes (now one mode at a time, before any mode); round 5 REVISE: echoes unordered (now a queue in stop order); round 6 READY, "No material problems found"
+- plan reviews during the step: Review 10 (A13) REVISE → A14; Review 11 (A13, A14) REVISE → A15 and the owner's decision D18 on F1 (design §9); Review 12 (A13-A15) REVISE → A16 (F1 rejected by D18); a scoped re-review of A13-A17 waits on the owner's round-cap decision (it would be the fourth round since the last READY)
+- amendments: A13, A14 (discovered, ~D30, 14.4 / 4.5), A15 (discovered, ~D30, 12.4), A16 (discovered, ~D30, 3.3), A17 (defect, ~D24, 12.4); each recorded before it was built
+- privacy grep (7656119, kdpenland): none in the new or changed files
+- in-game: Session 1 (docs/features/EVENT_LIBRARY.md › Test results), unattended; D3 "templates: 6/6 valid"; log check "0 unhandled, 60 nyar lines, 0 orphan errors, 0 unity errors"; "snapshot restored; hashes equal (s1, … deleted)"
+- dod status: D3 (manual, Session 1) and D24 (soak-report -SelfTest 8/8) pass and are checked with the step 3 commit; D29's routes part and D30's paths, inventory and session parts pass as above and are checked at the release, with the gate and the last session
+
+## Sessions
+- session 1 log check: 0 unhandled, 60 nyar lines, 0 orphan errors, 0 unity errors
+  - one boot (23:10–23:48), unattended; run after the stop and before any restart; BepInEx: the three known warnings (Il2CppInterop, two Beelzebub TUNE); Unity log: 226 PrefabLookupMap lines at save load, the game's RepairVBloodProgressionSystem lookup notice and the hard stop's Crashpad and temp-memory notices; then "snapshot restored; hashes equal (s1, … deleted)"

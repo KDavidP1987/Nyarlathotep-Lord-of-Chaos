@@ -3,7 +3,8 @@
 # with an unknown unit), d23b (the same file with a comma removed), restore-valid (d23a again), cool (the last valid file
 # with t-cool due every minute from now+2 to now+13, so a purge right after it has due times inside its cooldown). State in
 # %TEMP%/nyar-session. s17a/s17b: session 17; rac2: raphael-api-core session 2; fe1, fe2, fe3 and show: faction-empowerment
-# sessions 1, 2 and 3 (see each mode's comment). `python session-events.py --help` lists the modes and writes nothing.
+# sessions 1, 2 and 3 (see each mode's comment); el1: event-library session 1. `python session-events.py --help` lists the
+# modes and writes nothing.
 import json, sys, datetime, io, os, shutil
 SERVER = r"C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer"
 CFG = os.path.join(SERVER, "BepInEx", "config", "Nyarlathotep", "events.json")
@@ -30,6 +31,11 @@ USAGE = """usage: python tools/ingame/session-events.py <mode> [args]
         Limits.EmpowerBatchPerTick = 50 (S-7, owner decision 1B: the purge drain shows the cap splitting it).
         Adds fe-u-empower (Bandits, 900 s) and fe-u-spawns (3 Thugs, 900 s, unit lifetime 840 s) for the Epic D12
         uninstall: started last, so the server stops mid-window.
+  el1 [--delay M] [--dry-run] [--server DIR]   event-library session 1 (step 3, unattended): events.json gets a copy
+        of each of the six built-in templates (Nyarlathotep/Nyarlathotep/Resources/templates.json), all disabled as a
+        template copy is, except legion-weekend-surge, enabled and retimed to today at 2 min after now + M (M defaults
+        to 3, the boot's own time), and undead-nightfall, enabled as shipped (the next in-game night); the cfg gets
+        Pillars.FactionEmpowerment, Pillars.EventSpawns and Debug.TimingLog = true. Backups and writes as fe1.
   show [--server DIR]   prints the server's events.json and the cfg keys fe1, fe2 and fe3 set; writes nothing.
 The server defaults to """ + SERVER + "."
 def here():
@@ -192,7 +198,7 @@ elif mode == "rac2":
                               "durationSeconds": 60, "action": point(unit(1))})
     write(doc)
     print("rac2 written:", len(doc["events"]), "definitions")
-elif mode in ("fe1", "fe2", "fe3", "show"):
+elif mode in ("fe1", "fe2", "fe3", "el1", "show"):
     # faction-empowerment session 1 (step 4, unattended, D17): fe-short ends by expiry and its sample line reverts one
     # tick later; fe-long is still running when the server is stopped mid-window, so the next boot's carrier sweep finds
     # k > 0. Only these two definitions are written (nothing else starts on its own); the -Save snapshot of
@@ -209,6 +215,7 @@ elif mode in ("fe1", "fe2", "fe3", "show"):
     events_path = os.path.join(server, "BepInEx", "config", "Nyarlathotep", "events.json")
     cfg_path = os.path.join(server, "BepInEx", "config", "kdpen.Nyarlathotep.cfg")
     CFG_KEYS = [("Pillars", "FactionEmpowerment", "true"), ("Debug", "VerboseLogging", "true")]
+    if mode == "el1": CFG_KEYS = [("Pillars", "FactionEmpowerment", "true"), ("Pillars", "EventSpawns", "true"), ("Debug", "TimingLog", "true")]
     if mode in ("fe2", "fe3", "show"): CFG_KEYS += [("Pillars", "EventSpawns", "true"), ("Debug", "TimingLog", "true"), ("Announcements", "EventBanners", "true")]
     if mode in ("fe3", "show"): CFG_KEYS += [("Limits", "PurgeCooldownSeconds", "60"), ("Limits", "EmpowerBatchPerTick", "50")]
     DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]   # the validator's names, whatever the locale
@@ -265,7 +272,7 @@ elif mode in ("fe1", "fe2", "fe3", "show"):
     if mode == "show":
         show(read(events_path), read(cfg_path), "current files:")
         sys.exit(0)
-    delay = int(opt("--delay", "0"))
+    delay = int(opt("--delay", "3" if mode == "el1" else "0"))
     now = datetime.datetime.now()
     def due(minutes):
         t = now + datetime.timedelta(minutes=minutes + delay)
@@ -280,6 +287,19 @@ elif mode in ("fe1", "fe2", "fe3", "show"):
     if mode == "fe1":
         doc = {"SchemaVersion": 1, "events": [empower("fe-short", "FE short (expires)", 2, 60),
                                               empower("fe-long", "FE long (stopped mid-window)", 5, 1200)]}
+    elif mode == "el1":
+        # event-library session 1 (step 3, D3): the shipped templates as `.nyar template use` copies them, disabled; the two
+        # the session watches are enabled. legion-weekend-surge keeps its 1800 s and stats, only its day and time move.
+        here_ = os.path.dirname(os.path.abspath(__file__))
+        catalogue = os.path.join(here_, "..", "..", "Nyarlathotep", "Nyarlathotep", "Resources", "templates.json")
+        doc = {"SchemaVersion": 1, "events": json.load(io.open(catalogue, encoding="utf-8-sig"))["events"]}
+        for e in doc["events"]:
+            e["enabled"] = e["id"] in ("legion-weekend-surge", "undead-nightfall")
+            if e["id"] == "legion-weekend-surge":
+                t = due(2)
+                e["trigger"] = {"type": "Schedule", "days": [DAYS[t.weekday()]], "times": [hhmm(t)]}
+        if sorted(e["id"] for e in doc["events"] if e["enabled"]) != ["legion-weekend-surge", "undead-nightfall"]:
+            sys.exit("templates.json lacks legion-weekend-surge or undead-nightfall")
     else:
         # faction-empowerment session 2 (step 5, with the owner, D14-D16, D18, D19): all Manual except fe-vblood, so
         # nothing starts before the owner asks. example-empowerment carries all five stats, set well above 1 so each

@@ -1,0 +1,1 @@
+The good logs with an unrelated line between the pillar-off stop lines and bandit-ambush's second line: the run is broken, so both of the pillar's second lines are ends with no open start (2 unpaired).

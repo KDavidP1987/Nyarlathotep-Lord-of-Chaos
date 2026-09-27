@@ -1,0 +1,7 @@
+[Message:   BepInEx] Loading [Nyarlathotep 0.4.0]
+[Info   :Nyarlathotep] [nyar] boot carrier sweep: 0 found
+[Info   :Nyarlathotep] [nyar] tick timing: avg 0.412 ms, max 3.120 ms over 61 ticks
+[Info   :Nyarlathotep] [nyar] event legion-weekend-surge started by schedule (ends 2026-09-27 16:30:00Z)
+[Warning:Nyarlathotep] [nyar] empower legion-weekend-surge: 12 carriers queued for removal (stopped)
+[Info   :Nyarlathotep] [nyar] event legion-weekend-surge not started by schedule: pillar empowerment is off
+[Info   :Nyarlathotep] [nyar] tick timing: avg 0.412 ms, max 3.120 ms over 61 ticks

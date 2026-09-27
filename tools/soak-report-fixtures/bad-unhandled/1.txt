@@ -1,0 +1,10 @@
+[Message:   BepInEx] Loading [Nyarlathotep 0.4.0]
+[Info   :Nyarlathotep] [nyar] templates: 6/6 valid
+[Info   :Nyarlathotep] [nyar] tick timing: avg 0.412 ms, max 3.120 ms over 61 ticks
+[Info   :Nyarlathotep] [nyar] tick timing: avg 0.412 ms, max 3.120 ms over 61 ticks
+[Info   :Nyarlathotep] [nyar] event legion-weekend-surge started by schedule (ends 2026-09-27 14:30:00Z)
+[Info   :Nyarlathotep] [nyar] tick timing: avg 0.412 ms, max 3.120 ms over 61 ticks
+[Info   :Nyarlathotep] [nyar] event legion-weekend-surge ended (41 carriers expire with it)
+[Info   :Nyarlathotep] [nyar] event bandit-ambush started by command (ends 2026-09-27 15:00:00Z)
+[Info   :Nyarlathotep] [nyar] event bandit-ambush wave 1/3: 6 units queued, due in 0s, lifetime 900s
+[Info   :Nyarlathotep] [nyar] tick timing: avg 0.412 ms, max 3.120 ms over 61 ticks

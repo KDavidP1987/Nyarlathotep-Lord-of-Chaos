@@ -544,3 +544,25 @@ VERDICT: REVISE
 - F3 · accepted · A15: Design › Data gains the "Self-test scratch folders" row, and the inventory entry names it
 - F4 · accepted · A15: the scan's syntax is stated in D30 (a literal nyar-<name> or a spelled prefix nyar-<name>-), a composed name fails -Paths -DeclaredOf, fixture Paths/bad-composed
 - F5 · accepted · the scoring follows F1-F4: A15 answers 3.3, 4.5 and 12.4; 14.4 waits on the owner's decision on F1
+
+## Review 12 · 2026-09-27 · codex · plan commit 63d3a80 · plan 185357 B · 34 items · files 0 · e3b0c44298fc · prompt f47f05474a43 · scope A13,A14,A15
+Prompt checked twice before recording: the prompt file's SHA-256 begins f47f05474a43, and a rebuild from the plan at 63d3a80 gave the same prompt.
+
+F1 `blocking` — Probe `14.4` remains unanswered for repository or server paths created and deleted within one step: D30 explicitly excludes them, so `pwsh tools/preflight.ps1 -Paths -DeclaredOf event-library` can pass although the build wrote an undeclared path.
+Fix: Include transient repository/server writes in the declared set using per-step tracing or mandatory post-audit declarations, and add a fixture where a step creates and removes an undeclared path.
+
+F2 `blocking` — Probe `3.3` lacks an effective deletion control for self-test scratch folders: Design › Data says leftovers fail `-Paths`, but declared `%TEMP%\nyar-{selftest,depsuite,snaptest,drilltest}-*` folders do not violate D30’s stated command rules; a crashed dependency-suite run can leave one behind while the evidence command passes.
+Fix: Make `pwsh tools/preflight.ps1 -Paths -DeclaredOf event-library` fail when any self-test scratch folder remains, with failing, silent, and empty fixtures covering that cleanup rule.
+
+F3 `advisory` — Scenario for probes `4.5`/`14.4`: a tool can construct `%TEMP%\nyar-<name>` as `'nyar' + '-' + $Mode` or from variables, evading A15’s finite composed-name patterns and disappearing before inspection.
+Fix: Replace syntax-pattern guessing with runtime path tracing or require tools to declare scratch paths through one checked helper or manifest.
+
+EARLIER: unresolved F1
+13/15 layers · 47/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · rejected · repeats Review 11 F1, which the owner decided on 2026-09-27 (NYARLATHOTEP_DESIGN.md §9 D18): a repository or server path created and deleted inside one step stays outside the declared-paths set
+- F2 · accepted · A16: D30's leftover rule names every %TEMP%
+yar-* folder, declared or not (the check already failed on any present one); fixture Paths/bad-scratch
+- F3 · accepted · A16 takes its example: a quoted nyar literal concatenated with + fails as a composed name (Paths/bad-composed's second line); a name built wholly from variables is stated as outside any source scan and read by the step's diff reviews

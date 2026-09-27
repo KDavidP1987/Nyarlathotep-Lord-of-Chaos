@@ -1,0 +1,1 @@
+Two boots, 6 timing minutes: bandit-ambush cancelled by restart in boot 2; legion-weekend-surge ended naturally, then stopped; in boot 2 one pillar off ends bandit-ambush and bandit-raid in one run (both stop lines, then both of the pillar's second lines; one end each) and legion-weekend-surge by a purge. Passes with -MinMinutes 5.

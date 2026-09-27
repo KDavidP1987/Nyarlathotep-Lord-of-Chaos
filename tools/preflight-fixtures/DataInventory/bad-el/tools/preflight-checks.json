@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "note": "The dataTables key of tools/preflight-checks.json, the only key Test-CheckDataInventory reads.",
+  "dataTables": [
+    "docs/dod/event-library.md"
+  ]
+}

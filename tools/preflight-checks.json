@@ -3,7 +3,8 @@
   "note": "Every preflight check (functions named Test-Check* in tools/preflight.ps1) with its fixtures. good/ holds copies of real repository files, bad/ the same with the planted change named in \"plant\", bad-<n>/ further planted faults (one each), empty/ nothing. Every check reads the \"inputs\" listed. `pwsh tools/preflight.ps1 -SelfTest` requires good to pass and bad and empty to fail (Epic D10). childDocs maps each Epic child to the feature docs whose \"## Test results\" it must fill (Epic D18).",
   "dataTables": [
     "docs/dod/raphael-api-core.md",
-    "docs/dod/faction-empowerment.md"
+    "docs/dod/faction-empowerment.md",
+    "docs/dod/event-library.md"
   ],
   "childDocs": {
     "spikes": [
@@ -281,13 +282,16 @@
         "tools/data-inventory.json",
         "tools/paths-manifest.txt ignored, server, external and temp globs",
         "Nyarlathotep/Nyarlathotep/Services/Persistence.cs const file names",
-        "tools/preflight-checks.json dataTables: each listed plan's Design › Data artifact table (raphael-api-core D19)"
+        "tools/preflight-checks.json dataTables: each listed plan's Design › Data artifact table (raphael-api-core D19), and every inventory row name of a listed plan, which must match one of its rows (event-library D30)"
       ],
       "plant": {
         "bad": "the artwork/** glob dropped from its inventory entry",
         "bad-2": "the raphael-api-core › Push queue row dropped from its entry's rows",
         "bad-3": "the push queue entry's retention is empty",
-        "bad-temp": "the nyar-snap-* temp glob of the manifest has no inventory entry (its entry's covers dropped; faction-empowerment D26)"
+        "bad-temp": "the nyar-snap-* temp glob of the manifest has no inventory entry (its entry's covers dropped; faction-empowerment D26)",
+        "bad-el": "event-library's Pending deletes row has no entry (the Pending event deletes entry dropped; event-library D30)",
+        "bad-tmp": "the inventory without the row name event-library › events.json.tmp (event-library D30)",
+        "bad-tmp-2": "event-library's Design › Data table without the events.json.tmp row the inventory still names: the reverse direction (event-library D30)"
       }
     },
     {
@@ -301,14 +305,21 @@
         "%TEMP% folders named nyar-* (temp.txt)",
         "git worktree list --porcelain (worktrees.txt)",
         "git ls-remote --tags origin (ls-remote-tags.txt)",
-        "gh release list --json tagName (releases.json)"
+        "gh release list --json tagName (releases.json)",
+        "with -DeclaredOf <slug>: docs/dod/<slug>.md › Rollout › Paths walked, and the paths created or changed since the commit of docs/audits/<slug>.md's Step 1 pre-audit (declared-of.txt, changed.txt; event-library D30, A13), that base checked against git's parent of the audit's creating commit (audit-added-parent.txt), and the %TEMP%\nyar-<name> folders tools/*.ps1, tools/*.py and tools/ingame/* name (A14)"
       ],
       "plant": {
         "bad": "an unmanifested tracked path (stray/notes.txt) added to the walk",
         "bad-temp": "a leftover %TEMP%\\nyar-snap-* folder in the temp listing (faction-empowerment D26)",
         "bad-rel": "a leftover %TEMP%\\nyar-rel-* folder in the temp listing (faction-empowerment D26)",
         "bad-worktree": "a second (detached nyar-rollback-*) worktree in the worktree listing (faction-empowerment D26)",
-        "bad-remote": "an undeclared tag v0.4.0 on origin in the ls-remote listing (faction-empowerment D26)"
+        "bad-remote": "an undeclared tag v0.4.0 on origin in the ls-remote listing (faction-empowerment D26)",
+        "bad-soak": "a leftover %TEMP%\nyar-soak-* folder in the temp listing, with the manifest declaring temp: nyar-soak-* (event-library D30)",
+        "bad-undeclared": "with -DeclaredOf event-library (declared-of.txt), a changed tools/stray-drill.ps1 (changed.txt) that tracked: tools/*.ps1 covers but the plan's Rollout › Paths walked omits (event-library D30, A13)",
+        "bad-base": "with -DeclaredOf, the audit's Step 1 pre-audit heading names 2b083dc, a later commit than e84c8a3, the parent of the commit that created the audit (audit-added-parent.txt; event-library A14)",
+        "bad-transient": "with -DeclaredOf, a tools/ script names a %TEMP%\nyar-scratch-* folder that no Paths walked token declares, though no such folder exists at check time (event-library A14)",
+        "bad-composed": "with -DeclaredOf, a tools/ script composes its %TEMP% folder as ('nyar-' + $Mode), a name no source scan can read, and again split as ('nyar' + '-' + $Mode) (event-library A15, A16)",
+        "bad-scratch": "a leftover %TEMP%\\nyar-depsuite-4242 folder in the temp listing, though the manifest declares temp: nyar-depsuite-* (event-library A16)"
       }
     },
     {
@@ -580,6 +591,22 @@
         "bad": "the events-write row names control EventsWrote, which matches no test",
         "bad-2": "the table without its cfg-save row"
       }
+    },
+    {
+      "name": "RollbackRoutes",
+      "function": "Test-CheckRollbackRoutes",
+      "mode": "rollbackof",
+      "fixtures": "tools/preflight-fixtures/RollbackRoutes",
+      "inputs": [
+        "docs/dod/<slug>.md › Rollout › Rollback: the bullets In the repository, On the dev server during the build, On a server, Published release and Commit range",
+        "docs/dod/<slug>.md: its rollback-gate.ps1 -From <tag> -To <tag> -Plan <slug> command (the range)",
+        "-RollbackOf <slug> and the rollback gate's -From and -To (a fixture's rollback-of.txt)"
+      ],
+      "plant": {
+        "bad": "the On a server bullet removed (event-library D29)",
+        "bad-2": "the Published release bullet without \"withdrawn by retitling\" (event-library D29)",
+        "bad-3": "the Commit range v0.3.0..v0.5.0 while the plan's gate command runs v0.4.0..v0.5.0 (event-library D29)"
+      }
     }
   ],
   "externalSelfTests": [
@@ -619,7 +646,7 @@
     },
     {
       "name": "rollback-gate",
-      "item": "faction-empowerment D29",
+      "item": "faction-empowerment D29, event-library D29",
       "command": [
         "pwsh",
         "-NoProfile",
@@ -627,10 +654,10 @@
         "tools/rollback-gate.ps1",
         "-SelfTest"
       ],
-      "success": "rollback gate selftest: 5/5",
+      "success": "rollback gate selftest: 6/6",
       "cases": {
-        "bad": "stub parts: repo, drill or snapshot failing alone fails the gate, naming it",
-        "good": "stub parts all passing print \"rollback gate: 3/3\"",
+        "bad": "stub parts: repo, drill, snapshot or routes failing alone fails the gate, naming it",
+        "good": "four stub parts all passing print \"rollback gate: 4/4\"",
         "empty": "a part exiting 0 without its success line fails the gate"
       }
     },
@@ -649,6 +676,23 @@
         "bad": "a local asset whose hash differs from the audit's line fails",
         "good": "a local asset whose hash equals the audit's \"zip sha256:\" line passes",
         "empty": "a missing asset, and an audit without the line, fail"
+      }
+    },
+    {
+      "name": "soak-report",
+      "item": "event-library D24",
+      "command": [
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "tools/soak-report.ps1",
+        "-SelfTest"
+      ],
+      "success": "soak selftest: 8/8",
+      "cases": {
+        "bad": "fixtures bad-unpaired (a start never ended), bad-tick (a timing average of 5 ms), bad-unhandled (a stack frame of our assembly), bad-short (4 of 5 timing minutes), bad-missing-template (a template id never started) and bad-echo (a pillar-off second line after an unrelated line) must each fail for that reason alone",
+        "good": "fixture good (two boots, a restart cancel, a pillar off ending two events in one run, a purge, 6 timing minutes, both templates started) must print \"soak: pass\"",
+        "empty": "fixture empty (no log) must print exactly \"soak: fail — no log\""
       }
     },
     {
