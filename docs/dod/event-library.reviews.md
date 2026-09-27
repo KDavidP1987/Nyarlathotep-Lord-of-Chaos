@@ -509,10 +509,9 @@ Fix: Close F1–F3, then restore layers 4 and 14 to Considered; the Build steps 
 VERDICT: REVISE
 
 ### Dispositions
-- F1 · accepted · A14: every %TEMP%
-yar-<name> folder a script under tools/ names joins the set, read from source; fixture Paths/bad-transient
+- F1 · accepted · A14: every %TEMP%\nyar-<name> folder a script under tools/ names joins the set, read from source; fixture Paths/bad-transient
 - F2 · accepted · A14: the complete set is defined in D30 (base diff, written-after-base untracked, ignored and server paths, present and source-named %TEMP% folders); a repository or server path created and deleted inside one step is outside it by definition and the step's post-audit reads the diff for one
 - F3 · accepted · A14: the Step 1 base must be the parent of the commit that created the audit (git log --diff-filter=A); fixture Paths/bad-base
 - F4 · accepted · A14: untracked paths follow the written-after-base rule
-- F5 · declined for this scope · S-8 and S-9 are outside A13; their fallbacks already apply to future operations only, and a change would be its own amendment
-- F6 · scoring · layers 4 and 14 return to Considered with A14; a scoped re-review of A13 and A14 follows
+- F5 · rejected · advisory, outside the scope A13 (S-8 and S-9); their fallbacks already apply to future operations only, and a change would be its own amendment
+- F6 · accepted · the scoring follows F1-F3: A14 answers 4.5 and 14.4, and a scoped re-review of A13 and A14 follows
