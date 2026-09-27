@@ -603,3 +603,4 @@ Completion                 vs baseline 29/29 · vs current 30/30
 Review                     codex · Review 8 READY after Reviews 1–7 · author 15/15 layers · 49/49 probes · reviewer 15/15 layers · 49/49 probes; every step's Codex cross-inspection READY (steps 5–7 after revise rounds)
 Timeline                   draft 09-26 · ready 09-26 · start 09-26 · done 09-26 · released 0.4.0
 Missed probes              7.3 lifecycle (A2, A4: a carrier's partial creation and a natural end that trusted every LifeTime); 12.3 observability (A6: a per-tick removal count no log showed); 11.2 admin feedback (A7: the cooldown reply without its seconds); 14.3 rollback (A9: raphael-api-core A10's unpushed-tag lesson was not carried into this plan) — add to docs/dod/profile.md: "a release plan copies every earlier child's release-step amendments into its own Build plan before approval"
+- 2026-09-26 · note · feedback sent · https://github.com/KDavidP1987/dod-skill/issues/5
