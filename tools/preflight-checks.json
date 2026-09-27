@@ -323,7 +323,7 @@
         "bad-transient": "with -DeclaredOf, a tools/ script names a %TEMP%\\nyar-scratch-* folder that no Paths walked token declares, though no such folder exists at check time (event-library A14)",
         "bad-composed": "with -DeclaredOf, a tools/ script composes its %TEMP% folder as ('nyar-' + $Mode), a name no source scan can read, and again split as ('nyar' + '-' + $Mode) (event-library A15, A16)",
         "bad-scratch": "a leftover %TEMP%\\nyar-depsuite-4242 folder in the temp listing, though the manifest declares temp: nyar-depsuite-* (event-library A16)",
-        "bad-tempvar": "with -DeclaredOf, tools/ scripts take the temp root as $env:TEMP, ${env:TEMP}, os.getenv(\"TEMP\") and process.env.TEMP with the folder named only by a variable, one with the marker inside a string, one with a spaced os.getenv (, one with its nyar- literal only in a trailing comment, two after a closing #>, one with a spaced GetTempPath( ) and one after a quoted <#, none registered (event-library A18, A19)"
+        "bad-tempvar": "with -DeclaredOf, tools/ scripts take the temp root as $env:TEMP, ${env:TEMP}, os.getenv(\"TEMP\") and process.env.TEMP with the folder named only by a variable, one with the marker inside a string, one with a spaced os.getenv (, one with its nyar- literal only in a trailing comment, two after a closing #>, one with a spaced GetTempPath( ), one after a quoted <#, a spaced NamedTemporaryFile ( and a bare Get-nyar-cache token outside any string, none registered (event-library A18, A19)"
       }
     },
     {

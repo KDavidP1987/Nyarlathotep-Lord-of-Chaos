@@ -1054,16 +1054,16 @@ function Get-ComposedTempNames([string]$Root) {
 # (Split-CodeComment), so a literal or an API in the comment does not count and a marker in a string is no comment. A name built wholly from variables therefore cannot reach %TEMP% unseen. Comment lines and
 # PowerShell <# #> help blocks are not code. An unreadable source is reported as "unreadable <file>".
 function Get-UnmarkedTempRoots([string]$Root) {
-    $api = '\$\{?en[v]:(TEMP|TMP)\b|gete[n]v\s*\(\s*[''"](TEMP|TMP)[''"]|process\.en[v]\.(TEMP|TMP)\b|GetTempPath\s*\(\s*\)|environ(\.get\s*\(\s*|\[\s*)[''"](TEMP|TMP)[''"]|gettempdir\s*\(|mkdtemp\s*\(|mkstemp\s*\(|TemporaryDirectory\s*\(|NamedTemporaryFile\(|GetTempFileName\s*\(|New-TemporaryFile\b|\btmpdir\s*\(\s*\)'   # nyar-temp: the pattern itself, it opens no folder
+    $api = '\$\{?en[v]:(TEMP|TMP)\b|gete[n]v\s*\(\s*[''"](TEMP|TMP)[''"]|process\.en[v]\.(TEMP|TMP)\b|GetTempPath\s*\(\s*\)|environ(\.get\s*\(\s*|\[\s*)[''"](TEMP|TMP)[''"]|gettempdir\s*\(|mkdtemp\s*\(|mkstemp\s*\(|TemporaryDirectory\s*\(|NamedTemporaryFile\s*\(|GetTempFileName\s*\(|New-TemporaryFile\b|\btmpdir\s*\(\s*\)'   # nyar-temp: the pattern itself, it opens no folder
     $out = @()
     foreach ($f in @(Get-ToolSources $Root)) {
         $t = Read-ToolSource $Root $f
         if ($null -eq $t) { $out += "unreadable $f"; continue }
         $lines = $t -split '\r?\n'; $block = [ref]$false; $ps = $f -match '\.psm?1$'
         for ($i = 0; $i -lt $lines.Count; $i++) {
-            $code, $comment = Split-CodeComment $lines[$i] ($f -match '\.m?js$') $ps $block
+            $code, $comment, $strings = Split-CodeComment $lines[$i] ($f -match '\.m?js$') $ps $block
             if ($code -notmatch $api) { continue }
-            if ($code -match '(?<![\w-])nyar-(?!temp:)[a-z]') { continue }
+            if ($strings -match '(?<![\w-])nyar-(?!temp:)[a-z]') { continue }
             if ($comment -match '^(#|//)\s*nyar-temp:\s*\S') { continue }
             $out += "$($f):$($i + 1)"
         }
@@ -1071,33 +1071,34 @@ function Get-UnmarkedTempRoots([string]$Root) {
     return @($out | Sort-Object -Unique)
 }
 
-# A source line as (code, trailing comment), read left to right: a quoted string is code (inside it a backslash in
-# Python and Node, or a backtick in PowerShell, escapes the next character); outside strings a PowerShell <# ... #>
-# block comment is dropped, and may run over lines ($Block carries it); the trailing comment starts at the first # (//
-# in Node). No trailing comment: ''.
+# A source line as (code, trailing comment, the text of its string literals), read left to right: a quoted string is
+# code (inside it a backslash in Python and Node, or a backtick in PowerShell, escapes the next character); outside
+# strings a PowerShell <# ... #> block comment is dropped, and may run over lines ($Block carries it); the trailing
+# comment starts at the first # (// in Node). No trailing comment: ''. A nyar-<name> counts only inside a string.
 function Split-CodeComment([string]$Line, [bool]$Node, [bool]$Ps, [ref]$Block) {
-    $code = [Text.StringBuilder]::new(); $q = [char]0; $k = 0
+    $code = [Text.StringBuilder]::new(); $str = [Text.StringBuilder]::new(); $q = [char]0; $k = 0
+    $esc = if ($Ps) { [char]96 } else { [char]92 }
     while ($k -lt $Line.Length) {
         if ($Ps -and $Block.Value) {
             $c = $Line.IndexOf('#>', $k)
-            if ($c -lt 0) { return @($code.ToString(), '') }
+            if ($c -lt 0) { return @($code.ToString(), '', $str.ToString()) }
             $Block.Value = $false; $k = $c + 2; [void]$code.Append(' '); continue
         }
         $ch = $Line[$k]
         if ($q -ne [char]0) {
             [void]$code.Append($ch)
-            if (($ch -eq [char]92 -or $ch -eq [char]96) -and $k + 1 -lt $Line.Length) { [void]$code.Append($Line[$k + 1]); $k += 2; continue }
-            if ($ch -eq $q) { $q = [char]0 }
+            if ($ch -eq $esc -and $k + 1 -lt $Line.Length) { [void]$code.Append($Line[$k + 1]); [void]$str.Append($Line[$k + 1]); $k += 2; continue }
+            if ($ch -eq $q) { $q = [char]0; [void]$str.Append(' ') } else { [void]$str.Append($ch) }
             $k++; continue
         }
         if ($ch -eq [char]39 -or $ch -eq [char]34) { $q = $ch; [void]$code.Append($ch); $k++; continue }
         if ($Ps -and $ch -eq [char]60 -and $k + 1 -lt $Line.Length -and $Line[$k + 1] -eq [char]35) { $Block.Value = $true; $k += 2; continue }
         if ((-not $Node -and $ch -eq [char]35) -or ($Node -and $ch -eq [char]47 -and $k + 1 -lt $Line.Length -and $Line[$k + 1] -eq [char]47)) {
-            return @($code.ToString(), $Line.Substring($k))
+            return @($code.ToString(), $Line.Substring($k), $str.ToString())
         }
         [void]$code.Append($ch); $k++
     }
-    return @($code.ToString(), '')
+    return @($code.ToString(), '', $str.ToString())
 }
 
 # The path tokens of a plan's Rollout › Paths walked (event-library D30): words holding a / or \, a * or a file name,
