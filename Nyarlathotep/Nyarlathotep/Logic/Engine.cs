@@ -93,12 +93,52 @@ public static class TriggerRouter
 
 /// <summary>How one wave is sized (Business rules 1, D22): the whole wave is clamped by MaxUnitsPerWave, then by the free
 /// MaxTrackedUnits slots, and the units left are given to the entries in order.</summary>
+/// <summary>What SpawnTracker does with a unit at one regroup look (event-library A23).</summary>
+public enum RegroupStep { Wait, Skip, Move }
+
 public static class WavePlan
 {
     /// <summary>Where a wave is centred: the starting admin's position for an Admin location, else the stored Point at
     /// its height, or 0 for a Point stored without one (event-library A20).</summary>
     public static (float X, float Y, float Z) Center(Location location, (float X, float Y, float Z)? origin) =>
         location.Type == LocationType.Admin && origin is { } o ? o : (location.X, location.Y ?? 0f, location.Z);
+
+    /// <summary>How far above or below the centre's height a snapped unit may stand and still count as on the centre's
+    /// terrain level (event-library A23): a plateau step is 5 m, a slope's rise within 1 m of a unit is well under 2.</summary>
+    public const float RegroupTolerance = 2f;
+
+    /// <summary>The point a wave's units regroup to when the game snaps one onto another terrain level (A23): the starting
+    /// admin's position for an Admin location, a Point with a stored height, or null (a Point saved without a height, or
+    /// an Admin location with no admin), which is never checked.</summary>
+    public static (float X, float Y, float Z)? Anchor(Location location, (float X, float Y, float Z)? origin) =>
+        location.Type == LocationType.Admin ? origin
+        : location.Y is { } y ? (location.X, y, location.Z)
+        : null;
+
+    /// <summary>True when a unit the game snapped to height <paramref name="unitY"/> stands on another terrain level than
+    /// its anchor at <paramref name="anchorY"/>, so it is moved to the anchor (A23).</summary>
+    public static bool Regroup(float unitY, float anchorY) => MathF.Abs(unitY - anchorY) > RegroupTolerance;
+
+    /// <summary>Looks at a unit on its spawn tick and on up to this many ticks after, waiting for the game's snap (A23).</summary>
+    public const int RegroupTries = 4;
+
+    /// <summary>How far from the anchor a regrouped unit lands, so a regrouped wave does not stack on one point (A23).</summary>
+    public const float RegroupJitter = 1f;
+
+    /// <summary>One regroup look at a unit (A23). <paramref name="level"/> is the game's Height.ServerHeightLevel, 0 until
+    /// its HeightCorrectionSystem has run for the unit; <paramref name="tries"/> counts earlier looks. Wait while unsnapped
+    /// and tries remain, Skip when unsnapped after the last try or on the anchor's level, Move otherwise.</summary>
+    public static RegroupStep Step(int level, float unitY, float anchorY, int tries) =>
+        level == 0 ? (tries + 1 < RegroupTries ? RegroupStep.Wait : RegroupStep.Skip)
+        : Regroup(unitY, anchorY) ? RegroupStep.Move : RegroupStep.Skip;
+
+    /// <summary>Where a regrouped unit goes: <paramref name="fraction"/> (0..1) of RegroupJitter from the anchor at
+    /// <paramref name="angle"/>, at the anchor's height (A23).</summary>
+    public static (float X, float Y, float Z) RegroupPoint((float X, float Y, float Z) anchor, double angle, double fraction)
+    {
+        var r = RegroupJitter * (float)Math.Clamp(fraction, 0, 1);
+        return (anchor.X + r * (float)Math.Cos(angle), anchor.Y, anchor.Z + r * (float)Math.Sin(angle));
+    }
 
     public static IReadOnlyList<UnitEntry> Split(IReadOnlyList<UnitEntry> units, int maxPerWave, int occupied, int maxTracked, List<string> log)
     {

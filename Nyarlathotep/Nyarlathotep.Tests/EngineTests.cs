@@ -32,6 +32,68 @@ public partial class EngineTests
         Assert.Equal((7f, 8f, 9f), WavePlan.Center(new Location(LocationType.Admin, 0, 0), (7, 8, 9)));
     }
 
+    /// <summary>event-library A23: a wave's anchor is the starting admin for an Admin location or a Point with a stored
+    /// height; a Point saved without a height has none and is never regrouped.</summary>
+    [Fact]
+    public void Wave_anchor_needs_a_known_height()
+    {
+        Assert.Equal((1f, 42.5f, 2f), WavePlan.Anchor(new Location(LocationType.Point, 1, 2, 42.5f), (9, 9, 9)));
+        Assert.Null(WavePlan.Anchor(new Location(LocationType.Point, 1, 2), (9, 9, 9)));
+        Assert.Equal((7f, 8f, 9f), WavePlan.Anchor(new Location(LocationType.Admin, 0, 0), (7, 8, 9)));
+        Assert.Null(WavePlan.Anchor(new Location(LocationType.Admin, 0, 0), null));
+    }
+
+    /// <summary>A23, from Session 4: a unit the game snapped from the plateau (5.0) to the ground below (0.0) regroups; one
+    /// within 2 m of its anchor's height does not.</summary>
+    [Theory]
+    [InlineData(0f, 5f, true)]
+    [InlineData(10f, 5f, true)]
+    [InlineData(2.9f, 5f, true)]
+    [InlineData(5f, 5f, false)]
+    [InlineData(3.1f, 5f, false)]
+    [InlineData(6.9f, 5f, false)]
+    public void Wave_unit_regroups_only_off_the_anchor_level(float unitY, float anchorY, bool regroup) =>
+        Assert.Equal(regroup, WavePlan.Regroup(unitY, anchorY));
+
+    /// <summary>A23: SpawnTracker's per-look decision. An unsnapped unit (level 0) waits while tries remain and is then
+    /// left; a snapped unit on another level moves, one on the anchor's level stays.</summary>
+    [Fact]
+    public void Wave_unit_regroup_step_waits_for_the_snap()
+    {
+        Assert.Equal(RegroupStep.Wait, WavePlan.Step(0, 5f, 5f, 0));
+        Assert.Equal(RegroupStep.Wait, WavePlan.Step(0, 5f, 5f, WavePlan.RegroupTries - 2));
+        Assert.Equal(RegroupStep.Skip, WavePlan.Step(0, 0f, 5f, WavePlan.RegroupTries - 1));
+        Assert.Equal(RegroupStep.Move, WavePlan.Step(10, 0f, 5f, 1));      // Session 4: level 10 below the level-11 plateau
+        Assert.Equal(RegroupStep.Skip, WavePlan.Step(11, 5f, 5f, 1));
+        Assert.Equal(RegroupStep.Move, WavePlan.Step(10, 0f, 5f, WavePlan.RegroupTries - 1));
+    }
+
+    /// <summary>A23: a regrouped unit lands within 1 m of the anchor, at the anchor's height.</summary>
+    [Theory]
+    [InlineData(0.0, 0.0)]
+    [InlineData(1.0, 1.0)]
+    [InlineData(4.0, 0.5)]
+    [InlineData(2.0, 7.0)]
+    public void Wave_unit_regroups_within_a_metre(double angle, double fraction)
+    {
+        var (x, y, z) = WavePlan.RegroupPoint((-1764.9f, 5f, -1807.4f), angle, fraction);
+        Assert.Equal(5f, y);
+        var d = MathF.Sqrt((x + 1764.9f) * (x + 1764.9f) + (z + 1807.4f) * (z + 1807.4f));
+        Assert.InRange(d, 0f, WavePlan.RegroupJitter + 0.001f);
+        if (fraction >= 1) Assert.InRange(d, WavePlan.RegroupJitter - 0.01f, WavePlan.RegroupJitter + 0.001f);
+    }
+
+    /// <summary>A23: every order of a request carries the anchor it was given, and none when given none.</summary>
+    [Fact]
+    public void Wave_orders_carry_their_anchor()
+    {
+        var l = new SpawnLedger(new LedgerLimits(10, 10, 10, 5));
+        l.Request("CHAR_Bandit_Thug", "raid", 2, new UnitLifetime(DateTime.MaxValue, 300), UnitTuning.None, _ => (0f, 0f, 0f), (1f, 5f, 2f));
+        l.Request("CHAR_Bandit_Thug", "raid", 1, new UnitLifetime(DateTime.MaxValue, 300), UnitTuning.None, _ => (0f, 0f, 0f));
+        var orders = l.TakeSpawns();
+        Assert.Equal(new (float, float, float)?[] { (1f, 5f, 2f), (1f, 5f, 2f), null }, orders.Select(o => o.Anchor).ToArray());
+    }
+
     [Fact]
     public void Waves_come_at_start_plus_k_intervals_once_each()
     {

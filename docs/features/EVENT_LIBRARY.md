@@ -2,7 +2,8 @@
 
 **Status:** in build (docs/dod/event-library.md, audit docs/audits/event-library.md); steps 1–3 of 6 (logic, services,
 commands, checks, Session 1 and the soak tool) done; step 4's Session 2 ran on 2026-09-27 (D15, D23 and Epic D11 pass; D21
-cases 1 and 12 and D22's four silent refusals open), and its fixes and a short Session 3 are next. Nothing of it ships
+cases 1 and 12 and D22's four silent refusals open); Session 3 passed both after the fixes; Session 4's probe led to
+A23 (waves regroup on the centre's level), to be confirmed in Session 5. Nothing of it ships
 yet; 0.4.0 is the current release.
 
 ## Goal
@@ -25,6 +26,10 @@ with no file edits.
   - `.nyar event set` gains the trigger fields (`trigger.type`, `days`, `times`, `phase`, `bosses`), `action.factions`,
     `action.units` (`CHAR_<name>[:<count>]` entries) and `location here`, which stores your x, height and z (a Point
     without `y`, written by hand or by an earlier version, still spawns at height 0).
+- **Waves stay on the centre's level (A23):** the game drops each unit onto the terrain under its ring point. A unit that
+  lands on another level than the wave's centre (more than 2 m above or below it, e.g. past a plateau's edge) is moved
+  once, about a second after it appears, to within 1 m of the centre. `.nyar spawn` does the same around the admin; a
+  Point without a stored height is left as it lands.
 - **Pillar commands:** `.nyar pillar list` and `.nyar pillar <name> on|off`, saved to the cfg.
 - **Readiness column:** `.nyar event list` shows why each event would or would not start: `ready`, `off (purge)`,
   `off (mod)`, `off (pillar)`, `full (cap)`, `invalid: <reason>` or `off (event)`.
@@ -53,9 +58,8 @@ hand edit give the same result.
 
 Decisions are recorded as the plan's assumptions S-1 to S-14 and amendments. Open:
 
-- Ground height on uneven terrain (Session 3 Round 3): a wave's ring takes the centre's height, so units need their
-  own ground height at each ring point. Owner decision 1A: a log-only probe of the game's height (SnapToHeight, a
-  CollisionWorld ray) first, then per-unit placement, or a 4 m spread cap if neither mechanism proves out (A22, D35).
+- Ground height on uneven terrain: settled. The Session 4 probe showed the game snaps each unit to the ground itself;
+  the owner chose to regroup units that land on another level than the centre (A23, D35), to be confirmed in Session 5.
 - Ambush stealth (owner, Session 3): units that stay hidden until a player passes. Owner decision 2A: new scope for a
   child plan after 0.5.0 (the game's AB_Bandit_Ambush_Buff / RevealBuff and Deadeye Camouflage are the leads);
   bandit-ambush ships unchanged.

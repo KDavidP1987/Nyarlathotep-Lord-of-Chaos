@@ -106,6 +106,15 @@ and one under "### A22 probe · Session 4 · 2026-09-27 · 86f6f53
 - privacy grep (7656119, kdpenland): none in the diff
 - in-game: Session 4 (the probe session)
 
+### A23 regroup · 2026-09-27 · 2242093 + working tree
+- compile 0 errors, 0 warnings; 1333 tests passed (1320 before); PREFLIGHT OK; dod --check event-library 0 problems
+- scope: WavePlan.Anchor, Regroup, Step, RegroupPoint (Logic/Engine.cs) and SpawnOrder.Anchor (Logic/SpawnLedger.cs); SpawnTracker.Regroup writes Translation, LastTranslation and AggroConsumer.PreCombatPosition on tracked units only; Services/GroundProbe.cs removed
+- mutation check: WavePlan.Regroup forced to false → 3 tests fail
+- /code-review (self): no findings
+- Codex verdict: READY (round 2) — round 1 NOT READY: F1 the runtime regroup path untested (partly accepted: the per-look decision and the target point moved into Logic with tests, Wave_unit_regroup_step_waits_for_the_snap and Wave_unit_regroups_within_a_metre; the ECS shell is D35's manual check, as for the plan's other Services halves), F2 AI home may stay at the ring point (accepted: PreCombatPosition follows, as Bloodcraft's familiar return does); round 2 one advisory: Session 5 checks units stay near the centre
+- privacy grep (7656119, kdpenland): none in the diff
+- in-game: Session 5 (D35 confirm)
+
 ## Sessions
 - session 1 log check: 0 unhandled, 60 nyar lines, 0 orphan errors, 0 unity errors
   - one boot (23:10–23:48), unattended; run after the stop and before any restart; BepInEx: the three known warnings (Il2CppInterop, two Beelzebub TUNE); Unity log: 226 PrefabLookupMap lines at save load, the game's RepairVBloodProgressionSystem lookup notice and the hard stop's Crashpad and temp-memory notices; then "snapshot restored; hashes equal (s1, … deleted)"

@@ -22,7 +22,9 @@ namespace Nyarlathotep.Services;
 /// edit through EntityExtensions; a unit saves normally with its children, and the boot sweep despawns it (A9);</item>
 /// <item>the spawn and despawn queues, drained once per tick within MaxSpawnsPerTick and MaxDespawnsPerTick;</item>
 /// <item>the boot marker sweep, which queues every marked survivor of an earlier run for despawn (D21);</item>
-/// <item>the tracked units in state.json, for the admin and the boot log.</item>
+/// <item>the tracked units in state.json, for the admin and the boot log;</item>
+/// <item>the regroup check (event-library A23): once the game has snapped a unit to the terrain level under its ring
+/// point, a unit on another level than its order's anchor is moved once to within 1 m of the anchor.</item>
 /// </list>
 /// </summary>
 internal static class SpawnTracker
@@ -35,6 +37,7 @@ internal static class SpawnTracker
     static readonly Dictionary<long, StateUnit> _stateUnits = new();
     static readonly System.Random _random = new();
     static readonly FailureStreak _destroyFaults = new();
+    static readonly List<(long Key, (float X, float Y, float Z) Anchor, int Tries)> _regroup = new();
 
     internal static SpawnLedger Ledger => _ledger;
 
@@ -53,6 +56,7 @@ internal static class SpawnTracker
             Settings.Limit(Limits.MaxDespawnsPerTick)));
         _entities.Clear();
         _stateUnits.Clear();
+        _regroup.Clear();
     }
 
     /// <summary>Once at IsReady, through Logic/SweepPlan (faction-empowerment D7): every unit carrying our unit marker is a
@@ -103,7 +107,7 @@ internal static class SpawnTracker
         {
             var (x, z) = SpawnLedger.Around(at.x, at.z, PlaceRadius, i, count, angle);
             return (x, at.y, z);
-        });
+        }, (at.x, at.y, at.z));
         if (result.Skipped is not null) Core.Log.LogWarning($"[nyar] spawn {prefab}: {result.Skipped}");
         return AdminLines.Spawned(result.Queued, prefab, result.Skipped);
     }
@@ -113,13 +117,13 @@ internal static class SpawnTracker
     /// <paramref name="center"/>. WaveAction has sized the wave already, so the ledger's own caps only guard.</summary>
     [Mutating]
     internal static int RequestWave(string prefab, string eventId, int count, UnitLifetime life, float3 center, float radius,
-        int first, int total, double angle)
+        int first, int total, double angle, (float X, float Y, float Z)? anchor)
     {
         var result = _ledger.Request(prefab, eventId, count, life, UnitTuning.None, i =>
         {
             var (x, z) = SpawnLedger.Around(center.x, center.z, radius, first + i, total, angle);
             return (x, center.y, z);
-        });
+        }, anchor);
         if (result.Skipped is not null) Core.Log.LogWarning($"[nyar] event {eventId} {prefab}: {result.Skipped}");
         return result.Queued;
     }
@@ -180,11 +184,11 @@ internal static class SpawnTracker
             spawned++;
             if (Settings.VerboseLogging.Value)
                 Core.Log.LogInfo($"[nyar] spawned {order.Prefab} for {order.EventId ?? "manual"} (lifetime {order.LifetimeSeconds}s)");
-            GroundProbe.Spawned(unit, order.Prefab, order.Y, now);
+            if (order.Anchor is { } a) _regroup.Add((key, a, 0));
         }
         if (spawns.Count > 0)
             Core.Log.LogInfo($"[nyar] spawn batch: {spawned} of {spawns.Count} spawned, {_ledger.PendingSpawns} waiting");
-        GroundProbe.Tick(now);
+        Regroup();
 
         // Units the game removed on its own (LifeTime ran out, DestroyWhenDisabled) leave the ledger here.
         foreach (var gone in _ledger.Units.Where(u => !_entities.TryGetValue(u.Key, out var e) || !e.Exists()).Select(u => u.Key).ToList())
@@ -227,6 +231,45 @@ internal static class SpawnTracker
         }
         if (despawns.Count > 0)
             Core.Log.LogInfo($"[nyar] despawn batch: {destroyed} of {despawns.Count} destroyed, {retried} requeued, {_ledger.PendingDespawns} left");
+    }
+
+    /// <summary>A23: each spawned unit with an anchor, once the game's HeightCorrectionSystem has given it a terrain level
+    /// (Height.ServerHeightLevel above 0, which it is not in its first frame; WavePlan.Step), is checked once against its
+    /// anchor; a unit on another level is moved to WavePlan.RegroupPoint, a random point within 1 m of the anchor, where
+    /// the game snaps it to the anchor's level, and its AggroConsumer.PreCombatPosition follows. Only tracked units are
+    /// written (CLAUDE.md › Spawn &amp; buff safety). A failure skips that unit and never reaches the tick.</summary>
+    static void Regroup()
+    {
+        for (var i = _regroup.Count - 1; i >= 0; i--)
+        {
+            var (key, anchor, tries) = _regroup[i];
+            _regroup.RemoveAt(i);
+            try
+            {
+                if (!_entities.TryGetValue(key, out var unit) || !unit.Exists()) continue;
+                if (!unit.TryGetComponent<Height>(out var height) || !unit.TryGetComponent<Translation>(out var pos)) continue;
+                var step = WavePlan.Step(height.ServerHeightLevel, pos.Value.y, anchor.Y, tries);
+                if (step == RegroupStep.Wait) _regroup.Add((key, anchor, tries + 1));
+                if (step != RegroupStep.Move) continue;
+                var (tx, ty, tz) = WavePlan.RegroupPoint(anchor, _random.NextDouble() * 2 * Math.PI, _random.NextDouble());
+                var to = new float3(tx, ty, tz);
+                unit.Write(new Translation { Value = to });
+                if (unit.Has<LastTranslation>()) unit.Write(new LastTranslation { Value = to });
+                // The spot the AI walks back to after a fight, as Bloodcraft's familiar return does, so it does not path
+                // back to the ring point on the other level.
+                if (unit.TryGetComponent<AggroConsumer>(out var aggro))
+                {
+                    aggro.PreCombatPosition = to;
+                    unit.Write(aggro);
+                }
+                if (Settings.VerboseLogging.Value)
+                    Core.Log.LogInfo($"[nyar] regrouped {(_stateUnits.TryGetValue(key, out var su) ? su.Prefab : "unit")} from height {pos.Value.y:0.0} to its centre at height {anchor.Y:0.0}");
+            }
+            catch (Exception ex)
+            {
+                Core.Log.LogWarning($"[nyar] regroup check failed: {ex.Message}");
+            }
+        }
     }
 
     /// <summary>`.nyar debug here`: one line per tracked unit within <paramref name="radius"/> m of

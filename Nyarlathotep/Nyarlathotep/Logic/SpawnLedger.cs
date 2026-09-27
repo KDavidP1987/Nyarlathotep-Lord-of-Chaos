@@ -17,7 +17,7 @@ public readonly record struct UnitLifetime(DateTime DueUtc, int LifetimeSeconds)
 /// <summary>One unit waiting in the spawn queue: what, for which event (null for `.nyar spawn`), where, and for how
 /// long. Its slot under MaxTrackedUnits is held from the request until it is confirmed or failed.</summary>
 public sealed record SpawnOrder(long Ticket, string Prefab, string? EventId, float X, float Y, float Z, int LifetimeSeconds,
-    DateTime DueUtc, UnitTuning Tuning);
+    DateTime DueUtc, UnitTuning Tuning, (float X, float Y, float Z)? Anchor = null);
 
 /// <summary>A unit the ledger tracks. <see cref="Key"/> is the service's handle for the entity; at
 /// <see cref="DueUtc"/> the ledger queues it for despawn (A21).</summary>
@@ -73,7 +73,7 @@ public sealed class SpawnLedger(LedgerLimits limits)
     /// <summary>Queues up to <paramref name="count"/> units, first clamped by MaxUnitsPerWave, then by the free
     /// MaxTrackedUnits slots. <paramref name="place"/> gives the position of the i-th unit.</summary>
     public SpawnRequestResult Request(string prefab, string? eventId, int count, UnitLifetime life, UnitTuning tuning,
-        Func<int, (float X, float Y, float Z)> place)
+        Func<int, (float X, float Y, float Z)> place, (float X, float Y, float Z)? anchor = null)
     {
         if (count < 1) return new SpawnRequestResult(0, null);
         var n = count;
@@ -92,7 +92,7 @@ public sealed class SpawnLedger(LedgerLimits limits)
         for (var i = 0; i < n; i++)
         {
             var (x, y, z) = place(i);
-            _spawnQueue.Enqueue(new SpawnOrder(++_nextTicket, prefab, eventId, x, y, z, life.LifetimeSeconds, life.DueUtc, tuning));
+            _spawnQueue.Enqueue(new SpawnOrder(++_nextTicket, prefab, eventId, x, y, z, life.LifetimeSeconds, life.DueUtc, tuning, anchor));
         }
         return new SpawnRequestResult(n, skipped);
     }

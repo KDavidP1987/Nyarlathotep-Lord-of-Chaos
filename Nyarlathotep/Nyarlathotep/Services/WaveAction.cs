@@ -35,10 +35,11 @@ internal static class WaveAction
             Settings.Limit(Limits.GraceSeconds), Settings.Limit(Limits.ManualSpawnLifetimeSeconds), SpawnTracker.DrainMargin());
         var total = plan.Sum(u => u.Count);
         var angle = _random.NextDouble() * 2 * Math.PI;
+        var anchor = WavePlan.Anchor(action.Location, active.Origin);
         var first = 0;
         foreach (var entry in plan)
         {
-            SpawnTracker.RequestWave(entry.Prefab, active.Id, entry.Count, life, center, action.Radius, first, total, angle);
+            SpawnTracker.RequestWave(entry.Prefab, active.Id, entry.Count, life, center, action.Radius, first, total, angle, anchor);
             first += entry.Count;
         }
         EventRuntime.Engine.WaveSpawned(active.Id);
