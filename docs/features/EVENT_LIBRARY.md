@@ -1,8 +1,9 @@
 # Event library — templates and in-game authoring
 
 **Status:** in build (docs/dod/event-library.md, audit docs/audits/event-library.md); steps 1–3 of 6 (logic, services,
-commands, checks, Session 1 and the soak tool) done, step 4 (Session 2 with the owner) in progress. Nothing of it ships yet;
-0.4.0 is the current release.
+commands, checks, Session 1 and the soak tool) done; step 4's Session 2 ran on 2026-09-27 (D15, D23 and Epic D11 pass; D21
+cases 1 and 12 and D22's four silent refusals open), and its fixes and a short Session 3 are next. Nothing of it ships
+yet; 0.4.0 is the current release.
 
 ## Goal
 
@@ -135,4 +136,92 @@ before saying "go".
   and EventSpawns = true), restarts it and says "go".
 - D2. Reconnect, `adminauth`, `.nyar pillar list` → "spawns on (Pillars.EventSpawns)". Disconnect; Session 2 is done.
 
-Observed: (recorded when the session runs)
+Observed (owner Chaos on 127.0.0.1:9876, 14:58–16:14 server time; two boots of the build at 31e73ea, DLL 93eddc69b87e9521):
+
+**Part A — D23 passes, with one deviation.**
+- The five commands, as sent: `.nyar template list` (six templates), `.nyar template use undead-nightfall` → "template undead-nightfall
+  added as undead-nightfall (disabled); .nyar event enable undead-nightfall to arm it", `.nyar pillar empowerment on` → "pillar
+  empowerment on (saved to cfg)", `.nyar event enable undead-nightfall` → "event undead-nightfall enabled". Two `.nyar status`
+  before dusk → "No active events." / "tracked units: 0 (spawning 0, despawning 0)". The owner then moved the clock with the
+  game's admin time commands (not a file edit). The log read "event undead-nightfall started by GameTime night" and "sweep 107
+  applied, 3 skipped", and `.nyar status` at 15:10 → "Undead nightfall: 20 min left" / "tracked units: 0 (spawning 0, despawning 0)".
+  No file was edited by hand between boot and that reply.
+- Damage. A Rotting Ghoul before `pillar empowerment on` hit 4, 4, 4 in armour, too small to show ×1.25. Retest without armour
+  against CHAR_Undead_SkeletonSoldier_Withered (sword): 8 per hit while undead-nightfall ran, 7 per hit after
+  `.nyar event stop undead-nightfall` ended it. 8 / 7 = ×1.14, inside ×1.25 ±10 % (1.125–1.375) with whole-number damage.
+  Deviation: the unbuffed number was measured after the event, not before `pillar empowerment on`; same unit type and gear
+  for both. Attack and move speed: no change seen, as expected — undead-nightfall sets physicalPower and spellPower 1.25 only
+  (no speed or health modifier); the step's "visibly faster" wording was wrong.
+
+**Part B — D21: 15 of 17 cases pass; cases 1 and 12 fail.** Each block below is the chat verbatim (timestamps dropped).
+1. FAIL — `.nyar template list` gave the six lines in three messages. Five are whole. The militia-crackdown line is cut:
+   "militia-crackdown empowerment vbloodkilled CHAR_ChurchOfLight_Sommelier_VBlood, … ,CHAR_ChurchOfLight_Cardinal_VBlood,CHAR_"
+   — the rest of its boss list and its title are eaten (chat message length). After case 4 undead-nightfall's line gained
+   "(in events.json)".
+2. pass — "no templates for pillar zones".
+3. pass — "bandit-ambush "Bandit ambush" disabled pillar spawns trigger manual duration 600s" / "conditions: minPlayers 0,
+   cooldown 0 min, chance 100%, window none, mode any" / "action: 3 waves every 60s, radius 10, at the admin, units 4
+   CHAR_Bandit_Thug, 2 CHAR_Bandit_Hunter" / "not running".
+4. pass — "template bandit-ambush added as bandit-ambush (disabled); .nyar event enable bandit-ambush to arm it".
+5. pass — "event bandit-ambush already exists; use .nyar template use bandit-ambush as new-id".
+6. pass — "template bandit-ambush added as ambush-2 (disabled); .nyar event enable ambush-2 to arm it".
+7. pass — "event my-surge created (disabled, empowerment); set its fields with .nyar event set".
+8. pass — "event ambush-2 copied to ambush-3 (disabled)".
+9. pass — "event my-surge trigger.type = Schedule", "event my-surge trigger.days = Sat,Sun".
+10. pass — "event my-surge action.factions = Faction_Legion".
+11. pass — "event ambush-2 action.units = CHAR_Bandit_Thug:3".
+12. FAIL — every reply whole: "event ambush-2 action.location = Point -1805.0, -1850.9", "event ambush-2 enabled", "pillar
+    spawns on (saved to cfg)", "event ambush-2 started". The owner, back at the marked spot, saw no bandits appear. Cause
+    (code): `location here` stores only x and z, and WaveAction.cs:34 spawns a Point location at height 0, under the terrain
+    of a spot above sea level. A defect amendment follows; the case is rerun after the fix.
+13. pass — "event ambush-2 is running; stop it first".
+14. pass — "event ambush-2 stopped", "delete ambush-3? run .nyar event delete ambush-3 confirm within 30 s", "event ambush-3
+    deleted (events.json.bak keeps the previous file)".
+15. pass — five lines: "empowerment on (Pillars.FactionEmpowerment)", "spawns on (Pillars.EventSpawns)", "boss off
+    (Pillars.BossReinforcements)", "zones off (Pillars.DefendedZones)", "sieges off (Pillars.SiegeWaves)".
+16. pass — "pillar spawns off (saved to cfg)".
+17. pass — "page 1/1" and nine lines; "bandit-ambush off (pillar) spawns manual", "my-surge off (event) empowerment schedule
+    Sat,Sun 20:00", "undead-nightfall ready empowerment gametime night RUNNING".
+
+**Part C — D22: nothing changed; not every command gave a refusal.** A non-admin client (no `adminauth`) ran the eleven
+commands at 15:50–15:52, then the ones without a reply again at 15:58–15:59. Seven were refused with "[vcf] [denied]
+template", "… pillar" or "… event" (template list, template info, pillar list, template use, event new, event copy, pillar
+spawns on); four gave no reply in either pass (event delete, delete confirm and both event set). The silence is not per
+command: template info and event copy were silent in the first pass and refused in the second, all eleven go to one
+`[Command]` method each (EventCommands.Event takes the verb as a parameter, so VCF has no overloads to resolve), and the mod
+patches no chat system; VCF 0.10.4 logs nothing for a denial, so the cause of the dropped replies is not established. The
+SHA-256 of events.json (5B049CF8…852F) and kdpen.Nyarlathotep.cfg (C7416CCE…CFEF3) were equal before part C, after the
+first pass and after the second, and the log had no "admin ran" line between them. The owner accepted the missing replies
+("okay as long as it's not running anything"); D22's "gets VCF's refusal for each" is recorded as not met for those four.
+
+**Part D — D15 passes.** Claude copied the cfg and set Debug.VerboseLogging = false → true by hand (1 byte shorter, no BOM
+before or after). `.nyar pillar spawns on` → "pillar spawns on (saved to cfg)". After round 3 the diff against the copy was
+exactly two lines, "VerboseLogging = true" and "EventSpawns = true". After the restart `.nyar pillar list` → "spawns on
+(Pillars.EventSpawns)", and the second boot logged "empower tick: 106 removals (batch 200), 0 still queued", a line
+EmpowerAction.cs:104 writes only with VerboseLogging on — the hand edit held.
+
+**Part E — Epic D11 (the kill switch with a spawn event and an empowerment event) passes.**
+- The four `event set` / `enable` replies were as expected. `.nyar event start undead-nightfall` → "already active" (the night
+  trigger had restarted it). `.nyar event start bandit-ambush` → "event bandit-ambush started"; the log shows wave 1/2 and
+  wave 2/2, 15 units each, in spawn batches of 10 and 5 (MaxSpawnsPerTick 10): 30 spawned. The owner killed 8.
+- `.nyar purge` → "purge ends 2 events and despawns 22 units; run .nyar purge confirm within 30 s"; `.nyar purge confirm` →
+  "purged: 2 events, 22 units queued"; the log "purge: 2 events ended, 22 units queued, 0 spawns cancelled, cooldown 60s",
+  "empower undead-nightfall stopped: 106 removed, 0 left to expire", and despawn batches 5, 5, 5, 5, 2 (MaxDespawnsPerTick 5)
+  ending "0 left". `.nyar status` in the same minute → "No active events." / "tracked units: 0 (spawning 0, despawning 0)".
+- The second `.nyar purge confirm` → "nothing to purge".
+
+**Restart after a hard stop.** Claude force-stopped the server after part E. Its last autosave (AutoSave_1115, 16:07:57) was
+taken after both waves and before the purge, so the second boot's sweeps found "boot marker sweep: 30 found, 30 queued for
+despawn (0 listed in state.json)" and "boot carrier sweep: 106 found, 106 queued for removal", despawned in batches of 5 to
+"0 left"; `.nyar status` then showed 0 tracked units. The orphan sweep is what makes a hard stop safe; next time a server is
+stopped only after an autosave that follows the purge.
+
+**Logs.** The second boot's -LogCheck: "0 unhandled, 15 nyar lines, 0 orphan errors, 0 unity errors"; BepInEx has the three
+known warnings (Il2CppInterop, two Beelzebub TUNE); the Unity log has 224 + 2 PrefabLookupMap "unknown state" lines, all
+before "Startup Completed", and 0 exceptions. The first boot's BepInEx and Unity logs were overwritten by that restart
+before a copy was taken; its lines above are the reads Claude took during the session (no [Error] line and no
+Nyarlathotep warning other than the purge summary in them), not a full scan. Then `pwsh tools/dev-snapshot.ps1 -Restore` →
+"snapshot restored; hashes equal (s2, C:\Users\<user>\AppData\Local\Temp\nyar-snap-s2 deleted)".
+
+Follow-ups: the two D21 failures become amendments (template list line length, a discovered gap in D4; the Point spawn
+height, a defect against D11), each fixed and rerun in a short Session 3 before step 5.

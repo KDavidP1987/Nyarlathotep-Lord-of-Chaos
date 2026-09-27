@@ -82,3 +82,5 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 ## Sessions
 - session 1 log check: 0 unhandled, 60 nyar lines, 0 orphan errors, 0 unity errors
   - one boot (23:10–23:48), unattended; run after the stop and before any restart; BepInEx: the three known warnings (Il2CppInterop, two Beelzebub TUNE); Unity log: 226 PrefabLookupMap lines at save load, the game's RepairVBloodProgressionSystem lookup notice and the hard stop's Crashpad and temp-memory notices; then "snapshot restored; hashes equal (s1, … deleted)"
+- session 2 log check: 0 unhandled, 15 nyar lines, 0 orphan errors, 0 unity errors
+  - two boots (the first to 16:09, the second 16:10–16:15); the line is the second boot's, run after the final stop; the first boot's logs were overwritten by the restart before a copy was taken, so they were read only in part during the session (no [Error], no unexpected warning); BepInEx: the three known warnings; Unity log: 224 + 2 PrefabLookupMap lines at save load, 0 exceptions; then "snapshot restored; hashes equal (s2, … deleted)"
