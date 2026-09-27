@@ -1,7 +1,8 @@
 # Event library — templates and in-game authoring
 
-**Status:** in build (docs/dod/event-library.md, audit docs/audits/event-library.md); step 1 of 6 (records and pure
-logic) done, step 2 (services and commands) next. Nothing of it ships yet; 0.4.0 is the current release.
+**Status:** in build (docs/dod/event-library.md, audit docs/audits/event-library.md); steps 1 and 2 of 6 (logic, services,
+commands and checks) done, step 3 (Session 1, an unattended boot, and the soak tool) next. Nothing of it ships yet; 0.4.0 is
+the current release.
 
 ## Goal
 
