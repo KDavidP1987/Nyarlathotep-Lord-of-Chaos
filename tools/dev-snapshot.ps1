@@ -242,6 +242,6 @@ if ($SelfTest) {
     exit ([int]($ok -ne $total))
 }
 
-$result = if ($Restore) { Invoke-Restore $ServerDir $env:TEMP ${function:Test-ServerRunning} } else { Invoke-Save $Save $ServerDir $env:TEMP ${function:Test-ServerRunning} }
+$result = if ($Restore) { Invoke-Restore $ServerDir $env:TEMP ${function:Test-ServerRunning} } else { Invoke-Save $Save $ServerDir $env:TEMP ${function:Test-ServerRunning} }   # nyar-temp: the root for Invoke-Save/Invoke-Restore, which name nyar-snap-<label>
 Write-Host $result.Message
 exit ([int](-not $result.Ok))

@@ -319,7 +319,8 @@
         "bad-base": "with -DeclaredOf, the audit's Step 1 pre-audit heading names 2b083dc, a later commit than e84c8a3, the parent of the commit that created the audit (audit-added-parent.txt; event-library A14)",
         "bad-transient": "with -DeclaredOf, a tools/ script names a %TEMP%\nyar-scratch-* folder that no Paths walked token declares, though no such folder exists at check time (event-library A14)",
         "bad-composed": "with -DeclaredOf, a tools/ script composes its %TEMP% folder as ('nyar-' + $Mode), a name no source scan can read, and again split as ('nyar' + '-' + $Mode) (event-library A15, A16)",
-        "bad-scratch": "a leftover %TEMP%\\nyar-depsuite-4242 folder in the temp listing, though the manifest declares temp: nyar-depsuite-* (event-library A16)"
+        "bad-scratch": "a leftover %TEMP%\\nyar-depsuite-4242 folder in the temp listing, though the manifest declares temp: nyar-depsuite-* (event-library A16)",
+        "bad-tempvar": "with -DeclaredOf, a tools/ script takes $env:TEMP on a line naming its folder only by a variable, with no # nyar-temp: registration (event-library A18)"
       }
     },
     {
@@ -688,9 +689,9 @@
         "tools/soak-report.ps1",
         "-SelfTest"
       ],
-      "success": "soak selftest: 8/8",
+      "success": "soak selftest: 9/9",
       "cases": {
-        "bad": "fixtures bad-unpaired (a start never ended), bad-tick (a timing average of 5 ms), bad-unhandled (a stack frame of our assembly), bad-short (4 of 5 timing minutes), bad-missing-template (a template id never started) and bad-echo (a pillar-off second line after an unrelated line) must each fail for that reason alone",
+        "bad": "fixtures bad-unpaired (a start never ended), bad-tick (a timing average of 5 ms), bad-unhandled (a stack frame of our assembly), bad-short (4 of 5 timing minutes), bad-missing-template (a template id never started), bad-echo (a pillar-off second line after an unrelated line) and bad-echo-order (two pillar-off second lines against the stop order) must each fail for that reason alone",
         "good": "fixture good (two boots, a restart cancel, a pillar off ending two events in one run, a purge, 6 timing minutes, both templates started) must print \"soak: pass\"",
         "empty": "fixture empty (no log) must print exactly \"soak: fail — no log\""
       }

@@ -563,6 +563,30 @@ VERDICT: REVISE
 
 ### Dispositions
 - F1 · rejected · repeats Review 11 F1, which the owner decided on 2026-09-27 (NYARLATHOTEP_DESIGN.md §9 D18): a repository or server path created and deleted inside one step stays outside the declared-paths set
-- F2 · accepted · A16: D30's leftover rule names every %TEMP%
-yar-* folder, declared or not (the check already failed on any present one); fixture Paths/bad-scratch
+- F2 · accepted · A16: D30's leftover rule names every %TEMP%\nyar-* folder, declared or not (the check already failed on any present one); fixture Paths/bad-scratch
 - F3 · accepted · A16 takes its example: a quoted nyar literal concatenated with + fails as a composed name (Paths/bad-composed's second line); a name built wholly from variables is stated as outside any source scan and read by the step's diff reviews
+
+## Review 13 · 2026-09-27 · codex · plan commit 24f0589 · plan 189094 B · 34 items · files 0 · e3b0c44298fc · prompt 76005fea3f56 · scope A13,A14,A15,A16,A17
+Prompt checked twice before recording: the prompt file's SHA-256 begins 76005fea3f56, and a rebuild from the plan at 24f0589 gave the same prompt.
+
+F1 `blocking` — `3.3` — `%TEMP%\nyar-session` is shipped in Paths walked but absent from Design › Data, so its owner, retention, deletion, and copy count are undefined and D30’s inventory command cannot detect that omission.
+Fix: Add a Design › Data row and inventory entry for `%TEMP%\nyar-session`, including cleanup and leftover behavior, and make D30 fail when either is absent.
+
+F2 `blocking` — `4.5` and `14.4` — a tool can construct a `%TEMP%\nyar-*` path wholly from variables, create and remove it before `-Paths -DeclaredOf`, and escape both the source scan and final filesystem walk; delegating detection to diff reviews is prose, not a gating control.
+Fix: Require machine-readable registration or journaling of every tool-created path and make `pwsh tools/preflight.ps1 -Paths -DeclaredOf event-library` fail on an unregistered variable-built transient path.
+
+F3 `blocking` — `12.4` — D24’s command is unverifiable for A17’s ordering rule: `bad-echo` inserts an unrelated line, but no fixture swaps two contiguous pillar-off echoes, so an implementation that ignores echo order can still report `8/8`.
+Fix: Add a two-event bad fixture with contiguous echoes in reversed order and require `pwsh tools/soak-report.ps1 -SelfTest` to fail it.
+
+F4 `advisory` — Blind scoring: layers 1–2, 5–11, 13, and 15 are Considered by Purpose & typical use; Design › Permissions; Interfaces; Design › States; Use cases; Security; Design › UX; Performance; and Out of scope respectively; layers 3, 4, 12, and 14 are Gaps for F1–F3, with no legitimate N/A layer.
+Fix: Retain the existing pointers for the eleven Considered layers and update the four affected rows after adding the controls above.
+
+EARLIER: all resolved
+11/15 layers · 45/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · A18: Design › Data gains the "Session working folder" row (%TEMP%\nyar-session: owner, one-session retention, deletion by hand, leftover fails -Paths, one copy), and the inventory entry names it, so D30's inventory check fails when either side is missing
+- F2 · accepted · A18: a registration contract instead of pattern guessing — every tool code line that takes the %TEMP% root spells a nyar-<name> literal or carries "# nyar-temp: <reason>", and -Paths -DeclaredOf fails otherwise; fixture Paths/bad-tempvar (a folder named only by a variable). A path created and deleted inside one step stays outside the declared set by D18
+- F3 · accepted · A18: fixture bad-echo-order (two contiguous pillar-off second lines against the stop order) must fail 2 unpaired; soak selftest 9/9
+- F4 · accepted · the scoring follows F1-F3: A18 answers 3.3, 4.5, 12.4 and 14.4

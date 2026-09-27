@@ -322,7 +322,9 @@
       "covers": [
         "nyar-session"
       ],
-      "rows": [],
+      "rows": [
+        "event-library › Session working folder"
+      ],
       "location": "%TEMP%\nyar-session (session-events.py definitions and cfg copies, session-watch.ps1 watcher.log)",
       "owner": "tools/ingame/session-events.py and tools/ingame/session-watch.ps1",
       "retention": "while a server session runs; -Paths fails while it remains",

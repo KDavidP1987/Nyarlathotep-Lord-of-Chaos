@@ -26,8 +26,8 @@
     pwsh tools/soak-report.ps1 -SelfTest
       Runs the fixtures under tools/soak-report-fixtures/ with -Templates legion-weekend-surge,bandit-ambush and
       -MinMinutes 5, each fixture's logs being its 1.txt, 2.txt, … in order (tools/ holds no .log files): good must
-      pass; bad-unpaired, bad-tick, bad-unhandled, bad-short, bad-missing-template and bad-echo must fail for their
-      planted reason alone; empty (no log) must print exactly "soak: fail — no log". → "soak selftest: 8/8".
+      pass; bad-unpaired, bad-tick, bad-unhandled, bad-short, bad-missing-template, bad-echo and bad-echo-order must
+      fail for their planted reason alone; empty (no log) must print exactly "soak: fail — no log". → "soak selftest: 9/9".
 #>
 [CmdletBinding()]
 param(
@@ -125,7 +125,7 @@ if ($SelfTest) {
     $root = Join-Path $PSScriptRoot 'soak-report-fixtures'
     $ids = @('legion-weekend-surge', 'bandit-ambush')
     $ok = 0
-    foreach ($name in 'good', 'bad-unpaired', 'bad-tick', 'bad-unhandled', 'bad-short', 'bad-missing-template', 'bad-echo', 'empty') {
+    foreach ($name in 'good', 'bad-unpaired', 'bad-tick', 'bad-unhandled', 'bad-short', 'bad-missing-template', 'bad-echo', 'bad-echo-order', 'empty') {
         $dir = Join-Path $root $name
         $files = @(Get-ChildItem -LiteralPath $dir -Filter '*.txt' -File -ErrorAction SilentlyContinue | Where-Object Name -Match '^\d+\.txt$' | Sort-Object Name)
         $r = Get-SoakReport @($files | ForEach-Object { @{ Name = $_.Name; Text = (Read-SharedText $_.FullName) } }) $ids 5
@@ -133,7 +133,7 @@ if ($SelfTest) {
         # each bad fixture fails for its planted reason alone (the verdict names only that reason)
         $reason = @{ 'bad-unpaired' = '^soak: fail — \d+ unpaired$'; 'bad-tick' = '^soak: fail — \d+ timing lines at or over 5 ms$'
             'bad-unhandled' = '^soak: fail — \d+ unhandled$'; 'bad-short' = '^soak: fail — \d+ of \d+ timing minutes$'
-            'bad-missing-template' = '^soak: fail — never started: bandit-ambush$'; 'bad-echo' = '^soak: fail — 2 unpaired$' }[$name]
+            'bad-missing-template' = '^soak: fail — never started: bandit-ambush$'; 'bad-echo' = '^soak: fail — 2 unpaired$'; 'bad-echo-order' = '^soak: fail — 2 unpaired$' }[$name]
         $good = switch ($name) {
             'good' { $printedPass -and $r.Pass }
             'empty' { $r.Lines.Count -eq 1 -and $r.Lines[0] -eq 'soak: fail — no log' -and $files.Count -eq 0 -and (Test-Path -LiteralPath $dir) }
@@ -141,8 +141,8 @@ if ($SelfTest) {
         }
         if ($good) { $ok++ } else { Write-Host "  - $name`: $($r.Lines -join ' / ')" }
     }
-    Write-Host "soak selftest: $ok/8"
-    exit ([int]($ok -ne 8))
+    Write-Host "soak selftest: $ok/9"
+    exit ([int]($ok -ne 9))
 }
 
 if (-not $Log) { Write-Host 'soak: fail — no log'; exit 1 }

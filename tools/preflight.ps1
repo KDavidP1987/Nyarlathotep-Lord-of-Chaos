@@ -925,7 +925,7 @@ function Get-PathsListings([string]$Root) {
     try { $rel = gh release list --limit 1000 --json tagName 2>$null; $rel = if ($LASTEXITCODE -eq 0) { @($rel) -join "`n" } else { $null } }
     catch { $rel = $null }
     finally { Pop-Location }
-    $tempDir = [IO.Path]::GetTempPath()
+    $tempDir = [IO.Path]::GetTempPath()   # nyar-temp: lists the nyar-* folders present, creates nothing
     # An unreadable %TEMP% is a failed listing ($null), never an empty one (step 2 review).
     try { $temp = @(Get-ChildItem -LiteralPath $tempDir -Directory -Filter 'nyar-*' -Force -ErrorAction Stop | ForEach-Object Name) -join "`n" }
     catch { $temp = $null }
@@ -1004,7 +1004,7 @@ function Get-ToolTempNames([string]$Root) {
     foreach ($f in @(Get-ToolSources $Root)) {
         $t = Read-ToolSource $Root $f
         if ($null -eq $t) { $out += "unreadable $f"; continue }
-        $names += @([regex]::Matches($t, '(?<![\w-])nyar-[a-z][a-z0-9]*(?:-[a-z0-9]+)*-?') | ForEach-Object { $_.Value })
+        $names += @([regex]::Matches($t, '(?<![\w-])nyar-[a-z][a-z0-9]*(?:-[a-z0-9]+)*-?(?!\w|-|:)') | ForEach-Object { $_.Value })
     }
     return @($out + @($names | Sort-Object -Unique | ForEach-Object { if ($_.EndsWith('-')) { "temp $($_)x" } else { "temp $_" } }))
 }
@@ -1040,6 +1040,33 @@ function Get-ComposedTempNames([string]$Root) {
                 }
             }
             if ($lines[$i] -match '(?<![\w-])nyar[''"]\s*\+') { $out += "$($f):$($i + 1)" }
+        }
+    }
+    return @($out | Sort-Object -Unique)
+}
+
+# The tool lines that take the %TEMP% root without naming their folder (event-library A18), as "<file>:<line>". A code
+# line of a tool source that reads the temp root ($env:TEMP or $env:TMP, [IO.Path]::GetTempPath(), Python's
+# os.environ TEMP/TMP, tempfile.gettempdir(), and the anonymous makers mkdtemp, mkstemp, TemporaryDirectory,
+# NamedTemporaryFile, GetTempFileName, New-TemporaryFile, Node's os.tmpdir) must spell a nyar-<name> literal on that
+# line, or carry the registration comment "# nyar-temp: <reason>" (a listing, or the root handed to a function that
+# spells the name). A name built wholly from variables therefore cannot reach %TEMP% unseen. Comment lines and
+# PowerShell <# #> help blocks are not code. An unreadable source is reported as "unreadable <file>".
+function Get-UnmarkedTempRoots([string]$Root) {
+    $api = '\$en[v]:(TEMP|TMP)\b|GetTempPath\(\)|environ(\.get\(|\[)[''"](TEMP|TMP)[''"]|gettempdir\(|mkdtemp\(|mkstemp\(|TemporaryDirectory\(|NamedTemporaryFile\(|GetTempFileName\(|New-TemporaryFile\b|\btmpdir\(\)'   # nyar-temp: the pattern itself, it opens no folder
+    $out = @()
+    foreach ($f in @(Get-ToolSources $Root)) {
+        $t = Read-ToolSource $Root $f
+        if ($null -eq $t) { $out += "unreadable $f"; continue }
+        $lines = $t -split '\r?\n'; $inHelp = $false
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            $l = $lines[$i]; $trim = $l.Trim()
+            if ($inHelp) { if ($l -match '#>') { $inHelp = $false }; continue }
+            if ($trim.StartsWith('<#')) { if ($trim -notmatch '#>') { $inHelp = $true }; continue }
+            if ($trim.StartsWith('#')) { continue }
+            if ($l -notmatch $api) { continue }
+            if ($l -match '(?<![\w-])nyar-[a-z]' -or $l -match '#\s*nyar-temp:\s*\S') { continue }
+            $out += "$($f):$($i + 1)"
         }
     }
     return @($out | Sort-Object -Unique)
@@ -1161,7 +1188,8 @@ function Test-CheckPaths([string]$Root) {
         elseif ($null -eq ($base = Get-AuditBase $Root $slug)) { $problems += "declared: docs/audits/$slug.md has no ### Step 1 · <date> · <sha> pre-audit" }
         elseif ($null -eq $in.Declared.AddedParent) { $problems += "declared: git cannot say which commit created docs/audits/$slug.md" }
         elseif (-not $in.Declared.AddedParent.StartsWith($base)) { $problems += "declared: the Step 1 pre-audit base $base is not $($in.Declared.AddedParent.Substring(0, [Math]::Min(12, $in.Declared.AddedParent.Length))), the parent of the commit that created docs/audits/$slug.md" }
-        elseif (($unread = @(@(Get-ToolTempNames $Root) + @(Get-ComposedTempNames $Root) | Where-Object { $_ -like 'unreadable *' } | ForEach-Object { $_.Substring(11) } | Sort-Object -Unique)).Count) { $problems += "declared: a tool source is unreadable, so its %TEMP% names are unknown: $(($unread | Select-Object -First 10) -join ', ')" }
+        elseif (($unread = @(@(Get-ToolTempNames $Root) + @(Get-ComposedTempNames $Root) + @(Get-UnmarkedTempRoots $Root) | Where-Object { $_ -like 'unreadable *' } | ForEach-Object { $_.Substring(11) } | Sort-Object -Unique)).Count) { $problems += "declared: a tool source is unreadable, so its %TEMP% names are unknown: $(($unread | Select-Object -First 10) -join ', ')" }
+        elseif (($unmarked = @(Get-UnmarkedTempRoots $Root)).Count) { $problems += "declared: a tool takes the %TEMP% root on a line that names no nyar-<name> folder and carries no '# nyar-temp: <reason>' registration: $(($unmarked | Select-Object -First 10) -join ', ')" }
         elseif (($composed = @(Get-ComposedTempNames $Root)).Count) { $problems += "declared: a tool composes a %TEMP% nyar- name the scan cannot read; spell its prefix: $(($composed | Select-Object -First 10) -join ', ')" }
         else {
             $u = Get-UndeclaredPaths @(@($in.Declared.Changed) + @(Get-ToolTempNames $Root)) $tokens

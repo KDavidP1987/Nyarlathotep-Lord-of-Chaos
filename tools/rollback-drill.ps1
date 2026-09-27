@@ -202,7 +202,7 @@ function Invoke-LogCheck([string]$Stage) {
 $tmp = $null; $saved = $false; $booted = $false; $hadDll = $true; $hadConfig = $true; $dllHash = $null; $result = $null
 try {
     if (Get-Process VRisingServer -ErrorAction SilentlyContinue) { Fail 'a VRisingServer process is running; stop it first' }
-    $refusal = Get-LeftoverRefusal $env:TEMP
+    $refusal = Get-LeftoverRefusal $env:TEMP   # nyar-temp: reads the nyar-drill-* folders present
     if ($refusal) { Fail $refusal }
     foreach ($old in @(Get-ChildItem -LiteralPath $env:TEMP -Directory -Filter 'nyar-drill-*' -ErrorAction SilentlyContinue)) {
         Write-Host "leftover from an earlier run removed: $($old.FullName)"
