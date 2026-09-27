@@ -228,3 +228,31 @@ Nyarlathotep warning other than the purge summary in them), not a full scan. The
 
 Follow-ups: the two D21 failures become amendments (template list line length, a discovered gap in D4; the Point spawn
 height, a defect against D11), each fixed and rerun in a short Session 3 before step 5.
+
+### Session 3 · 2026-09-27 · event-library step 4 retest (owner, 127.0.0.1:9876, build c95fcbe)
+
+Setup (Claude): `pwsh tools/dev-snapshot.ps1 -Save s3` (28 files); the Release DLL of c95fcbe deployed (ACDC9D8264A48658);
+the dev world booted: "templates: 6/6 valid", both boot sweeps 0 found, warnings only the three known ones and the dev
+world's old example-empowerment ("pillar empowerment takes an Empower action", the 0.4.0 migration note). No restart in
+this session; both logs are copied before the stop.
+
+**Round 1 — admin: D21 cases 1 and 12 again (A21, A20).**
+- R1. `.nyar template list` → six lines, each whole; militia-crackdown reads
+  `militia-crackdown empowerment vbloodkilled 15 bosses "Militia crackdown"`.
+- R2. `.nyar template info militia-crackdown` → the head line ending "trigger vbloodkilled 15 bosses duration 900s", then a
+  "bosses: …" line naming all 15, then conditions, action and "not running".
+- R3. `.nyar pillar spawns on`, `.nyar template use bandit-ambush as ambush-h`,
+  `.nyar event set ambush-h action.units CHAR_Bandit_Thug:3`, `.nyar event set ambush-h action.waves 1`.
+- R4. Stand on a recognisable spot on raised ground and run `.nyar event set ambush-h location here` → "event ambush-h
+  action.location = Point <x>, <z> at height <y>" with y not 0.
+- R5. `.nyar event enable ambush-h`, walk about 30 m away, `.nyar event start ambush-h` → 3 bandit thugs appear on the
+  ground at the marked spot.
+- R6. `.nyar event info ambush-h` → the action line ends "at <x> <z> height <y>, units 3 CHAR_Bandit_Thug".
+- R7. `.nyar event stop ambush-h`, then `.nyar status` → no active events, tracked units 0.
+
+**Round 2 — non-admin: D22's four silent commands, spaced.** Claude hashes events.json and the cfg first. Quit to the
+main menu, Direct Connect again without `adminauth`, and send each command about 15 s after the previous reply (or 15 s
+after sending, if none comes): `.nyar event delete ambush-h`, `.nyar event delete ambush-h confirm`,
+`.nyar event set ambush-h durationSeconds 60`, `.nyar event set ambush-h location here`. Claude hashes both files again.
+
+Observed: (recorded when the session runs)

@@ -45,6 +45,11 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - feature doc read: docs/features/EVENT_LIBRARY.md (Status: steps 1-3 done; Session 2 steps written); plan D15, D21, D22, D23, step 4; Epic D11 (docs/dod/nyarlathotep.md)
 - server: baseline boot of the deployed pre-session DLL (restored by s1) on nyardev: -LogCheck "0 unhandled, 12 nyar lines, 0 orphan errors, 0 unity errors"; the boot carrier sweep removed 74 carriers Session 1's world save held (undead-nightfall's sweep; designed behaviour, S-12); warnings only Il2CppInterop Class::Init, Beelzebub TUNE ×2 and the seeded example-empowerment note; Unity log only the game's 226 PrefabLookupMap lines
 - setup: `pwsh tools/dev-snapshot.ps1 -Save s2` → "snapshot saved: s2 (28 files)"; kdpen.Nyarlathotep.cfg and config/Nyarlathotep/ deleted; Release build deployed (hash 93eddc69b87e9521 equal to bin)
+### Step 4 · Session 3 · 2026-09-27 · c95fcbe
+- git tree clean at c95fcbe; compile 0 errors, 0 warnings, 1320 tests passed; PREFLIGHT OK; dod --check event-library 0 problems, verified 4/34
+- feature doc read: EVENT_LIBRARY.md › Test results › Session 3 (the retest steps) and Session 2's open cases
+- setup: `dev-snapshot.ps1 -Save s3` (28 files); deploying build with the server stopped, DLL ACDC9D8264A48658 in plugins equals the build output
+- baseline boot: "templates: 6/6 valid", "triggers: all hooks available", boot marker and carrier sweeps 0 found; warnings only Il2CppInterop Class::Init, Beelzebub TUNE ×2 and the dev world's old example-empowerment disabled line
 
 ## Post-audit
 ### Step 1 · 2026-09-26 · e84c8a3 + working tree (committed as step 1)
