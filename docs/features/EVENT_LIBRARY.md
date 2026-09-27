@@ -3,7 +3,7 @@
 **Status:** in build (docs/dod/event-library.md, audit docs/audits/event-library.md); steps 1–3 of 6 (logic, services,
 commands, checks, Session 1 and the soak tool) done; step 4's Session 2 ran on 2026-09-27 (D15, D23 and Epic D11 pass; D21
 cases 1 and 12 and D22's four silent refusals open); Session 3 passed both after the fixes; Session 4's probe led to
-A23 (waves regroup on the centre's level), to be confirmed in Session 5. Nothing of it ships
+A23 (waves regroup on the centre's level), confirmed in Session 5 (D35 passes). Nothing of it ships
 yet; 0.4.0 is the current release.
 
 ## Goal
@@ -59,7 +59,7 @@ hand edit give the same result.
 Decisions are recorded as the plan's assumptions S-1 to S-14 and amendments. Open:
 
 - Ground height on uneven terrain: settled. The Session 4 probe showed the game snaps each unit to the ground itself;
-  the owner chose to regroup units that land on another level than the centre (A23, D35), to be confirmed in Session 5.
+  the owner chose to regroup units that land on another level than the centre (A23, D35), confirmed in Session 5.
 - Ambush stealth (owner, Session 3): units that stay hidden until a player passes. Owner decision 2A: new scope for a
   child plan after 0.5.0 (the game's AB_Bandit_Ambush_Buff / RevealBuff and Deadeye Camouflage are the leads);
   bandit-ambush ships unchanged.
@@ -357,3 +357,39 @@ the cliff face was likely a ring point on the slope itself (not reproduced here)
 old example-empowerment line at each reload, one stop summary; Unity: 0 exceptions, no PrefabLookupMap line after "Startup
 Completed". Then `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s4,
 C:\Users\<user>\AppData\Local\Temp\nyar-snap-s4 deleted)".
+
+### Session 5 · 2026-09-27 · A23 confirm, D35 (owner, 127.0.0.1:9876, build b4beecf)
+
+Setup (Claude): `pwsh tools/dev-snapshot.ps1 -Save s5` (28 files); `Debug.VerboseLogging = true` in the dev cfg (the
+snapshot restores it), so each regroup logs "regrouped <unit> from height <y> to its centre at height <y>"; the Release DLL
+of b4beecf deployed (B665B0AE108E1ECB). Both logs are copied before the stop.
+
+**Round 1 — admin, at the Session 4 plateau edge (about -1764.9, -1807.4, height 5).**
+- C1. `.nyar template use bandit-ambush as ambush-q`, `.nyar event set ambush-q action.units CHAR_Bandit_Thug:3`,
+  `.nyar event set ambush-q action.waves 1`, and at the plateau's edge `.nyar event set ambush-q location here`.
+- C2. `.nyar event enable ambush-q`, step back onto the plateau about 10 m, `.nyar event start ambush-q` → all 3 thugs end
+  on the plateau within about 2 s (one may flash below first), and stay near the centre.
+- C3. `.nyar event stop ambush-q`, `.nyar event start ambush-q` again, and again after that: three starts in all, each
+  checked as in C2; then `.nyar event stop ambush-q` and `.nyar status` → tracked units 0.
+
+Observed (owner Chaos, 17:28–17:30 server time, one boot of b4beecf):
+- C1: "template bandit-ambush added as ambush-q (disabled); …", "event ambush-q action.units = CHAR_Bandit_Thug:3",
+  "event ambush-q action.waves = 1", "event ambush-q action.location = Point -1764.7, -1807.2 at height 5.0".
+- C2: "event ambush-q enabled", "event ambush-q started"; log "wave 1/1: 3 units queued", "spawn batch: 3 of 3 spawned",
+  then "regrouped CHAR_Bandit_Thug from height 0.0 to its centre at height 5.0" twice: two of the three ring points lay
+  past the edge, and both units were brought back. "event ambush-q stopped" (log "despawn batch: 3 of 3 destroyed, 0
+  requeued, 0 left").
+- C3: second start "event ambush-q started", "3 of 3 spawned", one "regrouped … from height 0.0 to its centre at height
+  5.0"; the third `event start` came while the second ran and replied "already active", so two waves ran (D35 asks for
+  at least two). `event stop` → "event ambush-q stopped", "3 of 3 destroyed"; `.nyar status` → "No active events." /
+  "tracked units: 0 (spawning 0, despawning 0)". The owner: "Everything seemed to work this time. All three of the mobs
+  showed up on the plateau."
+
+**D35 passes** (A23): on both waves every unit ended on the plateau; the three units the game had put on the ground below
+were moved back to the centre's level.
+
+**Logs.** Both logs copied before the stop, which came after AutoSave_1137 (17:31:29) followed the last action (17:30).
+-LogCheck: "0 unhandled, 69 nyar lines, 0 orphan errors, 0 unity errors"; BepInEx: the three known warnings, the dev world's
+old example-empowerment line at each reload, two stop summaries; Unity: 0 exceptions, no PrefabLookupMap line after
+"Startup Completed". Then `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s5,
+C:\Users\<user>\AppData\Local\Temp\nyar-snap-s5 deleted)".
