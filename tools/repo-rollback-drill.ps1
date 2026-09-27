@@ -50,6 +50,8 @@ function Invoke-RepoRollback([string]$RepoDir, [string]$Old, [string]$New, [scri
         git -C $RepoDir worktree remove --force $wt 2>&1 | Out-Null
         if (Test-Path -LiteralPath $wt) { Remove-Item -LiteralPath $wt -Recurse -Force -ErrorAction SilentlyContinue }
         git -C $RepoDir worktree prune 2>&1 | Out-Null
+        # A locked file can keep the worktree folder; that is a failure now, not a later -Paths surprise (code review).
+        if (Test-Path -LiteralPath $wt) { throw "leftover worktree folder $wt (a process still holds a file in it)" }
     }
 }
 

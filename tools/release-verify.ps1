@@ -37,8 +37,10 @@ function Get-AssetHash([string]$Name, [scriptblock]$Fetch) {
 
 # Compares the asset's hash with the audit's "zip sha256: <asset> <hash>" line. Returns $null or the reason it fails.
 function Test-ReleaseAsset([string]$Name, [string]$AuditText, [scriptblock]$Fetch) {
-    $m = [regex]::Match("$AuditText", "(?m)^\s*(?:-\s+)?zip sha256: $([regex]::Escape($Name)) ([0-9A-Fa-f]{64})\s*$")   # its own line (Codex F1)
-    if (-not $m.Success) { return "the audit has no ""zip sha256: $Name <hash>"" line" }
+    $all = [regex]::Matches("$AuditText", "(?m)^\s*(?:-\s+)?zip sha256: $([regex]::Escape($Name)) ([0-9A-Fa-f]{64})\s*$")   # its own line (Codex F1)
+    if ($all.Count -eq 0) { return "the audit has no ""zip sha256: $Name <hash>"" line" }
+    if ($all.Count -gt 1) { return "the audit has $($all.Count) ""zip sha256: $Name"" lines; keep only the one for the published zip" }
+    $m = $all[0]
     try { $hash = Get-AssetHash $Name $Fetch } catch { return "no asset $Name ($($_.Exception.Message))" }
     if ($hash -ne $m.Groups[1].Value.ToUpperInvariant()) { return "hashes differ (release $hash, audit $($m.Groups[1].Value))" }
     return $null
@@ -70,7 +72,8 @@ if ($SelfTest) {
 
 if (-not $Tag -or -not $Asset) { Write-Host 'usage: release-verify.ps1 -Tag <tag> -Asset <zip name> [-Audit <audit.md>] | -SelfTest'; exit 2 }
 $auditPath = if ([IO.Path]::IsPathRooted($Audit)) { $Audit } else { Join-Path $Repo $Audit }
-$gh = { param($d, $n) gh release download $Tag -R KDavidP1987/Nyarlathotep-Lord-of-Chaos -p $n -D $d }.GetNewClosure()
+# The closure has its own scope, so gh's exit code is checked here (step 7 code review).
+$gh = { param($d, $n) gh release download $Tag -R KDavidP1987/Nyarlathotep-Lord-of-Chaos -p $n -D $d; if ($LASTEXITCODE) { throw "gh release download exit $LASTEXITCODE" } }.GetNewClosure()
 $why = Test-ReleaseAsset $Asset (Get-Content -LiteralPath $auditPath -Raw) $gh
 if ($why) { Write-Host "release verify: fail — $why"; exit 1 }
 Write-Host 'release verify: hashes equal'
