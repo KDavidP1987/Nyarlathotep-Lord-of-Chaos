@@ -14,7 +14,7 @@ closed: none
 commit: 23f2ba4
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
-review: pending
+review: subagent
 ---
 
 # DoD: Event library — built-in templates and in-game authoring
@@ -581,3 +581,5 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-27 · note · Review 14 (codex, scope A13-A18) REVISE: F1, F2 blocking and F3, F4, F6 advisory answered by A19; F5 rejected; review stays pending
 - 2026-09-27 · note · Review 15 (codex, scope A13-A19) REVISE: F1, F2 rejected by D18 as widened by the owner; F3, F4 accepted (6eac3ae); review stays pending
 - 2026-09-27 · note · round cap · after Review 15 · owner: approved option A in plan mode — D18 widened to Review 15 F2's cases; Review 16 by a fresh-context subagent (scope A13-A19), Codex's REVISE kept beside it; a scope finding goes back to the owner
+- 2026-09-27 · note · re-review A13-A19 · Review 16 READY (subagent, 15/15 layers · 49/49 probes); Codex Review 15 REVISE (14/15 · 48/49, layer 14 under D18) kept beside it
+- 2026-09-27 · D24 · pass · cmd: pwsh tools/soak-report.ps1 -SelfTest → "soak selftest: 9/9" (A18's bad-echo-order included) · 49a6e94 · claude

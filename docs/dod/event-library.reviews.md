@@ -665,3 +665,62 @@ VERDICT: REVISE
 - F2 · rejected · owner decision 2026-09-27 widening D18 (§9, S-15): a timestamp-preserving copy into an ignored or server path and a %TEMP% folder created and removed between the two listings are the same case; the check observes what a step leaves, and no write journal or watcher is kept
 - F3 · accepted · 6eac3ae: the 12.4 soak row no longer counts its bad fixtures
 - F4 · accepted · 6eac3ae: D30 and -Paths name bad-base among the required plants
+
+## Review 16 · 2026-09-27 · subagent · plan commit f5943b9 · plan 194423 B · 34 items · files 0 · e3b0c44298fc · prompt b4a2c7f52b4a · scope A13,A14,A15,A16,A17,A18,A19
+Prompt checked twice before recording: the prompt file's SHA-256 begins b4a2c7f52b4a, and a rebuild from the plan at f5943b9 gave the same prompt. Reviewer: a fresh-context general-purpose subagent (not a fork), read-only, given only the prompt file, by the owner's decision after Review 15.
+
+Side by side, never averaged: Codex Review 15 scored 14/15 layers · 48/49 probes (REVISE; its layer 14 gap is 14.4 under D18); this review scores 15/15 · 49/49 and reads 14.4 as answered within the boundary the owner validated in S-15. The difference is layer 14 only, and it is the owner's D18 decision, not a missed probe.
+
+F1 `advisory` — D24 is checked `[x]`, but its only pass line in the Log records "soak selftest: 8/8" at 052da06. D24 was changed by A18 to require "soak selftest: 9/9", so the recorded evidence no longer matches the item. The tool itself now prints 9/9.
+Fix: add a new D24 pass line at the current commit with the 9/9 output, or uncheck D24 until that line exists.
+
+F2 `advisory` — Probes 12.4 and 14.3 (the dev-server rollback route): the snapshot-wrap control of A19 can be switched off without anything failing. If the `event-library` entry is removed from `snapshotSessions` in tools/preflight-checks.json, -SessionsOf skips the check silently (tools/preflight.ps1:1918) and still prints its success line. D30's fails-when names the missing dataTables entry but not a missing snapshotSessions entry. This is work, not a decision, so it is advisory.
+Fix: add "event-library is missing from snapshotSessions" to D30's fails-when with a fixture, or have -SessionsOf print a snapshot count in its success line.
+
+F3 `advisory` — Probe 4.5: the temp-root scan and the composed-name scan read only scripts under tools/. Nyarlathotep.Tests runs on every step and already calls `Path.GetTempPath()` (PersistencePathTests.cs:9). It only builds paths today, but a test that later leaves a folder not named `nyar-*` would be missed by both scans and both %TEMP% listings.
+Fix: extend the scan to `Nyarlathotep/**/*.cs`, or state the test-code exclusion in S-15 or D30.
+
+F4 `advisory` — Probe 4.5: the `# nyar-temp:` registration has no limit. A18 says "three lines registered", but the tree has five: preflight.ps1:928, 1057 and 1245, dev-snapshot.ps1:245 and rollback-drill.ps1:205. Nothing counts or allowlists them, so any new tool line can exempt itself from the temp-root rule.
+Fix: add an allowlist of registrations (file and count) to preflight-checks.json and fail on any line not on it; or correct the stated count and say that the diff reviews check registrations.
+
+F5 `advisory` — Probes 4.5 and 14.4: D30 builds the tracked set with `git diff --name-only <base>`, which sees only the final tree. A path committed in one step and deleted in a later step is therefore invisible. S-15 exempts only paths created and deleted within a single step, so the computation and the stated boundary disagree.
+Fix: build the set from `git log --name-only --format= <base>..HEAD` as well, or reword S-15 to "created and deleted within the build".
+
+F6 `advisory` — The earlier F4 is only half done: the matrices lag behind D30 and D24.
+- The gating-control 14.4 row still names only `nyar-soak-*` leftovers. It omits bad-scratch, bad-tempvar, the real-tree plant run, "plants: p/p fail" and the rule that any `nyar-*` leftover fails.
+- The 12.4 soak-report row omits bad-echo and bad-echo-order.
+- The -SessionsOf row omits bad-19.
+Fix: bring these rows in line with D30 and D24, word for word.
+
+F7 `advisory` (outside scope) — Probe 14.3: A13 shows that five faction-empowerment commits (027a246 through e84c8a3) come after v0.4.0. They include fixes to release-verify.ps1 and repo-rollback-drill.ps1 and faction-empowerment's dod close. `git revert --no-edit v0.4.0..v0.5.0` reverts them too. Meanwhile step 6's close commits, made after the tag, fall outside the range.
+Fix: say in Rollout › Rollback that the range deliberately returns the tree to v0.4.0 including those commits, and name the commits after the tag. Otherwise, state a different range.
+
+Layer scores:
+1 Considered — Purpose & typical use.
+2 Considered — Design › Permissions; D17, D22.
+3 Considered — Design › Data (with the Session working folder and Self-test scratch folders rows); D12, D19, D30.
+4 Considered — Business rules › 9 Every-X sets; D16, D30. The 4.5 computation is stated, including its bounds under S-15.
+5 Considered — Interfaces › Internal; D1, D12, D20.
+6 Considered — Interfaces › External; D19, D33.
+7 Considered — Design › States; D8, D12, D14, D26.
+8 Considered — Use cases › Minimal stretch; D4, D6, D8.
+9 Considered — Use cases › Maximal stretch; D5, D9–D11, D22, D27.
+10 Considered — Security; D17, D18, D22.
+11 Considered — Design › UX; D4, D16, D21, D23, D25.
+12 Considered — Failure & observability and the selftest matrix; D24, D30, D31–D34.
+13 Considered — Performance; D5, D12, D27.
+14 Considered — Rollout. 14.3 is answered by D29. 14.4 is answered by Paths walked and D30 within the boundary the owner validated in S-15 (§9 D18, widened after Review 15).
+15 Considered — Out of scope.
+
+EARLIER: unresolved F4
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · a D24 pass line with "soak selftest: 9/9" at 49a6e94 is added to the Log
+- F2 · accepted · -SessionsOf's success line gains the snapshot count, so an entry removed from snapshotSessions shows in the line; built with the step 4 post-audit (no D-item text changes: D30's command still prints the "session logs: event-library <n>/<n> checked" prefix)
+- F3 · rejected · the test project only builds paths: PersistencePathTests.cs:9 and :45 combine Path.GetTempPath() with names for DataPaths checks, and no test calls File.Write*, File.Create or Directory.CreateDirectory (the stores are FakeStores); a test that writes to disk would be a change the step's /code-review and Codex cross-inspection read
+- F4 · rejected · A18's "three lines" was the count when A18 was built; the later code rounds added the pattern line and the second listing, five in all, each a line of a reviewed diff; an allowlist would duplicate what the diff reviews already see, and every registration is a comment in the line it exempts
+- F5 · rejected · the same boundary as D18 (a path the build creates and later deletes leaves nothing to roll back); no path has been deleted in this build (git log --diff-filter=D --name-only e84c8a3..HEAD is empty), and a later deletion is in its step's reviewed diff
+- F6 · accepted · the 12.4 and 14.4 matrix rows and the -SessionsOf row are brought in line with D30 and D24 word for word with the next amendment that touches them (they point to D30 and D24, which hold the rule)
+- F7 · accepted · step 6's pre-audit states in Rollout › Rollback that the revert range v0.4.0..v0.5.0 deliberately includes faction-empowerment's post-tag commits 027a246..e84c8a3 and names the close commits after the tag
