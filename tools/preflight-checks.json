@@ -504,6 +504,122 @@
         "bad-3": "a Codex verdict line placed in a pre-audit entry instead of the post-audit one",
         "bad-4": "the plan renumbered so step 5 is missing (1-4, 6-9) and the audit keeps entries 1-9"
       }
+    },
+    {
+      "name": "SelfTestRegistry",
+      "function": "Test-CheckSelfTestRegistry",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/SelfTestRegistry",
+      "inputs": [
+        "tools/preflight-checks.json externalSelfTests",
+        "tools/*.ps1 declaring a [switch]$SelfTest"
+      ],
+      "plant": {
+        "bad": "an unregistered tools/x.ps1 with a -SelfTest switch (faction-empowerment D22)",
+        "bad-2": "the rollback-drill entry without its empty case (faction-empowerment D22)"
+      }
+    }
+  ],
+  "externalSelfTests": [
+    {
+      "name": "rollback-drill",
+      "item": "faction-empowerment D23",
+      "command": [
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "tools/rollback-drill.ps1",
+        "-SelfTest"
+      ],
+      "success": "drill selftest: 8/8",
+      "cases": {
+        "bad": "fixtures bad (no \"marker sweep\"), pair-other (v0.3.0 disabled a definition for another reason) and the complete leftover snapshot must fail",
+        "good": "fixture good (a real N-1 boot log) and pair-empower (v0.3.0 disabled the Empower definition) must pass; a leftover without saved\\ or its manifest is not refused",
+        "empty": "fixture empty (no log) must fail"
+      }
+    },
+    {
+      "name": "dev-snapshot",
+      "item": "faction-empowerment D28",
+      "command": [
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "tools/dev-snapshot.ps1",
+        "-SelfTest"
+      ],
+      "success": "snapshot selftest: 6/6",
+      "cases": {
+        "bad": "a leftover manifest, two held snapshots, another server path, a corrupted saved copy and a running server are refused with the live trees unchanged",
+        "good": "a save and restore round trip with a hidden file, where a DLL and a cfg added after the save are removed",
+        "empty": "an absent config folder and an empty directory are restored as saved; no scratch install prints 0/6"
+      }
+    },
+    {
+      "name": "rollback-gate",
+      "item": "faction-empowerment D29",
+      "command": [
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "tools/rollback-gate.ps1",
+        "-SelfTest"
+      ],
+      "success": "rollback gate selftest: 5/5",
+      "cases": {
+        "bad": "stub parts: repo, drill or snapshot failing alone fails the gate, naming it",
+        "good": "stub parts all passing print \"rollback gate: 3/3\"",
+        "empty": "a part exiting 0 without its success line fails the gate"
+      }
+    },
+    {
+      "name": "release-verify",
+      "item": "faction-empowerment D24",
+      "command": [
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "tools/release-verify.ps1",
+        "-SelfTest"
+      ],
+      "success": "release verify selftest: 4/4",
+      "cases": {
+        "bad": "a local asset whose hash differs from the audit's line fails",
+        "good": "a local asset whose hash equals the audit's \"zip sha256:\" line passes",
+        "empty": "a missing asset, and an audit without the line, fail"
+      }
+    },
+    {
+      "name": "repo-rollback-drill",
+      "item": "faction-empowerment D25",
+      "command": [
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "tools/repo-rollback-drill.ps1",
+        "-SelfTest"
+      ],
+      "success": "repo rollback selftest: 3/3",
+      "cases": {
+        "bad": "a scratch repository whose range holds a merge commit: git refuses the revert and the drill fails",
+        "good": "a scratch repository with a clean range reverts to the older tag and passes",
+        "empty": "a missing tag fails"
+      }
+    },
+    {
+      "name": "unit-tests",
+      "item": "faction-empowerment D1-D14, D20",
+      "command": [
+        "dotnet",
+        "test",
+        "Nyarlathotep/Nyarlathotep.Tests"
+      ],
+      "successPattern": "^\\s*Passed!\\s+-\\s+Failed:\\s+0,\\s+Passed:\\s+[1-9]\\d*,\\s+Skipped:\\s+0,",
+      "cases": {
+        "bad": "the fails-when inputs of faction-empowerment D1-D14 and D20, one test each; a failing or skipped test fails the run",
+        "good": "every test passes",
+        "empty": "a run with 0 tests passed (a filter matching nothing) has no success line and fails"
+      }
     }
   ]
 }

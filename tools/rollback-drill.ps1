@@ -17,7 +17,9 @@
          state.json lists its unit; stops.
       5. Installs N-1, boots again and checks its log: "Nyarlathotep initialized"; for each file N wrote its load
          line with no "SchemaVersion … is newer … read-only" warning (events.json: "events: reloaded: <v> valid, <x>
-         disabled", the same counts N logged; state.json: "(<n> listed in state.json)" with n ≥ 1; stats.json:
+         disabled" over as many definitions as N read, where every definition N-1 disabled beyond N's logs "unknown
+         action type <T>", an action type added after N-1 (faction-empowerment D23), printed as "events.json: <N> '<a>
+         valid, <b> disabled', <N-1> '<c> valid, <d> disabled' (<d-b> newer action types)"; state.json: "(<n> listed in state.json)" with n ≥ 1; stats.json:
          reported absent while no release writes it); and "marker sweep".
       After each boot it runs `preflight.ps1 -LogCheck` on that boot's logs and prints the "log check:" line.
       6. Always (finally): stops the server if the drill started one (a refusal never stops a running server), puts
@@ -31,14 +33,20 @@
     Runs the N-1 log check over tools/rollback-drill-fixtures/{good,bad,empty}/LogOutput.txt (a captured BepInEx LogOutput.log): good (a real boot log)
     must pass, bad (the same log without "marker sweep") and empty ("no log") must fail; then the leftover check over
     three scratch folders: none without saved\ or with a saved\ that has no manifest.json (an unfinished snapshot)
-    may be refused, a complete snapshot must be, with its restore steps (A11, A15) → "drill selftest: 6/6".
+    may be refused, a complete snapshot must be, with its restore steps (A11, A15); then the events.json readback over
+    two log pairs from a real v0.4.0 → v0.3.0 drill (-LogsTo), tools/rollback-drill-fixtures/pair-empower (v0.3.0
+    disabled the Empower definition: pass) and pair-other (the same pair with that definition disabled for another
+    reason: fail) → "drill selftest: 8/8".
+
+    -LogsTo <dir> keeps the logs of N's drill-mark boot and N-1's boot there as N.txt and N-1.txt.
 #>
 [CmdletBinding()]
 param(
     [string]$From,
     [string]$To,
     [switch]$SelfTest,
-    [int]$BootTimeoutSeconds = 300
+    [int]$BootTimeoutSeconds = 300,
+    [string]$LogsTo
 )
 $ErrorActionPreference = 'Stop'
 $Repo = Split-Path $PSScriptRoot -Parent
@@ -63,6 +71,39 @@ function Test-RollbackLog([string]$Text, [int]$MinListed = 0) {
     if ($Text -notmatch 'marker sweep') { return 'no "marker sweep" line' }
     if ($Text -match '(?m)^\[(Error|Fatal)\s*:\s*Nyarlathotep\]') { return 'N-1 logged an error' }
     return $null
+}
+
+# The "[nyar] event <id>: <reason>" warnings of a log's last events.json load, as "<id>`t<reason>": the lines after the
+# load before it and before its own "events: reloaded" line (DefinitionEditor.Reload logs them just before).
+function Get-DisabledLines([string]$Text) {
+    $cut = $Text.LastIndexOf('events: reloaded:')
+    if ($cut -lt 0) { return @() }
+    $before = $Text.Substring(0, $cut)
+    $start = $before.LastIndexOf('events: reloaded:')
+    if ($start -ge 0) { $before = $before.Substring($start) }
+    @([regex]::Matches($before, '(?m)^\[Warning:\s*Nyarlathotep\] \[nyar\] event ([a-z0-9-]+|#\d+): (.+?)\r?$') |
+        ForEach-Object { "$($_.Groups[1].Value)`t$($_.Groups[2].Value)" })
+}
+
+# N-1 must read the definitions N read (faction-empowerment D23). The only loss allowed is a definition whose action
+# type N-1 does not know: each definition N-1 disabled that N did not must say "unknown action type <T>". Returns
+# @{ Why = $null, or the failing stage; Line = the "events.json: ..." summary }.
+function Test-EventsReadback([string]$LogN, [string]$LogN1, [string]$TagN, [string]$TagN1) {
+    $rx = 'events: reloaded: (\d+) valid, (\d+) disabled'
+    $readN = [regex]::Matches("$LogN", $rx) | Select-Object -Last 1
+    $readN1 = [regex]::Matches("$LogN1", $rx) | Select-Object -Last 1
+    if (-not $readN -or -not $readN1) { return @{ Why = 'no events.json load line in both logs'; Line = $null } }
+    $a = [int]$readN.Groups[1].Value; $b = [int]$readN.Groups[2].Value
+    $c = [int]$readN1.Groups[1].Value; $d = [int]$readN1.Groups[2].Value
+    $line = "events.json: $TagN '$a valid, $b disabled', $TagN1 '$c valid, $d disabled' ($($d - $b) newer action types)"
+    if ($a + $b -ne $c + $d) { return @{ Why = "$TagN1 read $($c + $d) definitions, $TagN $($a + $b)"; Line = $line } }
+    if ($d -lt $b) { return @{ Why = "$TagN1 disabled fewer definitions than $TagN"; Line = $line } }
+    $offN = @(Get-DisabledLines "$LogN")
+    $extra = @(Get-DisabledLines "$LogN1" | Where-Object { $offN -notcontains $_ })
+    if ($extra.Count -ne $d - $b) { return @{ Why = "$TagN1 logged $($extra.Count) newly disabled definitions for a difference of $($d - $b)"; Line = $line } }
+    $other = @($extra | Where-Object { ($_ -split "`t", 2)[1] -notmatch '^unknown action type \S+$' })
+    if ($other) { return @{ Why = "$TagN1 disabled for another reason: $(($other | ForEach-Object { $_ -replace "`t", ': ' }) -join '; ')"; Line = $line } }
+    return @{ Why = $null; Line = $line }
 }
 
 # The snapshot, restore and leftover check (Get-LeftoverRefusal) are shared with tools/dev-snapshot.ps1 (D28).
@@ -100,7 +141,16 @@ if ($SelfTest) {
         $why = Get-LeftoverRefusal $scratch
         if ($why -match 'SHA-256 AB' -and $why -match 'there was none' -and $why -notmatch 'partial') { $ok++ } else { Write-Host "  - complete snapshot: expected a refusal with its restore, got: $why" }
     } finally { Remove-Item -LiteralPath $scratch -Recurse -Force -ErrorAction SilentlyContinue }
-    $total = $want.Count + 3
+    # Two real log pairs (D23): N-1 disabling one Empower definition passes; disabling one for another reason fails.
+    foreach ($pair in @(@{ Name = 'pair-empower'; Pass = $true }, @{ Name = 'pair-other'; Pass = $false })) {
+        $pn = Join-Path $fx "$($pair.Name)\N.txt"; $pn1 = Join-Path $fx "$($pair.Name)\N-1.txt"
+        $r = if ((Test-Path -LiteralPath $pn) -and (Test-Path -LiteralPath $pn1)) {
+            Test-EventsReadback (Get-Content -LiteralPath $pn -Raw) (Get-Content -LiteralPath $pn1 -Raw) 'N' 'N-1'
+        } else { @{ Why = 'fixture missing'; Line = $null } }
+        if ($r.Line -and ($null -eq $r.Why) -eq $pair.Pass) { $ok++ }
+        else { Write-Host "  - $($pair.Name): expected $(if ($pair.Pass) { 'pass' } else { 'fail' }), got $(if ($r.Why) { "fail — $($r.Why)" } else { 'pass' })" }
+    }
+    $total = $want.Count + 3 + 2
     Write-Host "drill selftest: $ok/$total"
     exit ([int]($ok -ne $total))
 }
@@ -247,14 +297,19 @@ try {
     Copy-Item -LiteralPath $dll[$To] -Destination $PluginDll -Force
     $logN1 = Invoke-Boot "boot $To" 20
     Stop-Server
+    if ($LogsTo) {
+        New-Item -ItemType Directory -Force -Path $LogsTo | Out-Null
+        Set-Content -LiteralPath (Join-Path $LogsTo 'N.txt') -Value $logN -NoNewline
+        Set-Content -LiteralPath (Join-Path $LogsTo 'N-1.txt') -Value $logN1 -NoNewline
+        Write-Host "logs of boot $From (drill-mark) and boot $To kept in $LogsTo"
+    }
     Invoke-LogCheck "boot ${To}:"
     $why = Test-RollbackLog $logN1 -MinListed 1
     if ($why) { Fail "boot $To — $why" }
-    # N-1 must read the same definitions N read: an event it disables is a rollback that loses content.
-    $readN = [regex]::Matches($logN, 'events: reloaded: (\d+ valid, \d+ disabled)') | Select-Object -Last 1
-    $readN1 = [regex]::Matches($logN1, 'events: reloaded: (\d+ valid, \d+ disabled)') | Select-Object -Last 1
-    if (-not $readN -or $readN.Groups[1].Value -ne $readN1.Groups[1].Value) { Fail "boot $To read events.json as '$($readN1.Groups[1].Value)', $From as '$($readN.Groups[1].Value)'" }
-    Write-Host "events.json: $From and $To both read '$($readN1.Groups[1].Value)'"
+    # N-1 must read the definitions N read; it may disable only those of an action type it does not know (D23).
+    $rb = Test-EventsReadback $logN $logN1 $From $To
+    if ($rb.Line) { Write-Host $rb.Line }
+    if ($rb.Why) { Fail "boot $To — $($rb.Why)" }
     Write-Host "boot ${To}: initialized on $From's files; events.json and state.json loaded without a read-only warning; marker sweep logged"
     $result = 'pass'
 }

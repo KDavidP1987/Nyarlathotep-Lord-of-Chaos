@@ -340,8 +340,8 @@
       "rows": [
         "faction-empowerment › Rollback worktrees"
       ],
-      "location": "%TEMP%\\nyar-rollback-* (a detached git worktree of the release tag)",
-      "owner": "tools/repo-rollback-drill.ps1",
+      "location": "%TEMP%\\nyar-rollback-* (a detached git worktree of the release tag; the scratch repository of tools/repo-rollback-drill.ps1 -SelfTest and the stub parts of tools/rollback-gate.ps1 -SelfTest)",
+      "owner": "tools/repo-rollback-drill.ps1 and tools/rollback-gate.ps1",
       "retention": "for one run; a leftover folder or worktree entry fails -Paths (faction-empowerment D25, D26, D29)",
       "deletion": "`git worktree remove --force` in the script's finally block; by hand, `git worktree prune` and delete the folder",
       "singleCopy": true

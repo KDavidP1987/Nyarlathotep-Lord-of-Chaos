@@ -17,7 +17,10 @@
                    any %TEMP%\nyar-* folder, any git worktree besides the main one, and any tag on origin or GitHub
                    release that no remote-tag: / remote-release: line of tools/paths-manifest.txt declares
                    (faction-empowerment D26).
-    -SelfTest    : every check against its three fixtures.
+    -SelfTest    : every check against its three fixtures; then every command of the externalSelfTests registry
+                   (tools/preflight-checks.json: the tools scripts' -SelfTest and the unit-test run), each of which must
+                   exit 0 and print its success line; then the secrets check on the real tracked tree. Prints "selftest:
+                   <n>/<n> checks, <k>/<k> external selftests (...)" (faction-empowerment D22).
     -ServerWrites -Snapshot <file>
                  : records the server directory and LocalLow\Stunlock Studios tree (path, size, write
                    time, SHA-256 under BepInEx/, logs/, save-data-*/ and LocalLow/) plus the owner's own test
@@ -1572,6 +1575,53 @@ function Test-CheckSessionLogs([string]$Root) {
     return New-Result $true "session logs: $slug $ok/$($post.Count) checked$after$preNote"
 }
 
+# The externalSelfTests registry of tools/preflight-checks.json (faction-empowerment D22): every check that is not a
+# Test-Check function (a tools script's -SelfTest, the unit-test run) with its command (an argument array run from the
+# repository root), its success line ("success", exact, or "successPattern", a regex) and its named bad, good and empty
+# cases. Returns @{ Entries; Problems }.
+function Get-SelfTestRegistry([string]$Root) {
+    $path = Join-Path $Root 'tools/preflight-checks.json'
+    if (-not (Test-Path -LiteralPath $path)) { return @{ Entries = @(); Problems = @('no tools/preflight-checks.json') } }
+    $entries = @((Get-Content -LiteralPath $path -Raw | ConvertFrom-Json).externalSelfTests | Where-Object { $_ })
+    $problems = @()
+    if ($entries.Count -eq 0) { $problems += 'no externalSelfTests entries' }
+    foreach ($dup in @($entries | Group-Object name | Where-Object Count -gt 1)) { $problems += "entry '$($dup.Name)' listed twice" }
+    foreach ($e in $entries) {
+        $n = if ($e.name) { $e.name } else { '(unnamed)' }
+        if (@($e.command).Count -lt 2) { $problems += "${n}: no command" }
+        if (-not $e.success -and -not $e.successPattern) { $problems += "${n}: no success line" }
+        foreach ($k in 'bad', 'good', 'empty') { if ("$($e.cases.$k)" -notmatch '\S') { $problems += "${n}: no $k case" } }
+    }
+    # Every tools/*.ps1 that declares a -SelfTest switch (preflight.ps1 itself aside) is registered by its path.
+    $named = @($entries | ForEach-Object { @($_.command) } | Where-Object { "$_" -like 'tools/*.ps1' })
+    foreach ($f in @(Get-ChildItem -LiteralPath (Join-Path $Root 'tools') -Filter '*.ps1' -File -ErrorAction SilentlyContinue)) {
+        if ($f.Name -eq 'preflight.ps1') { continue }
+        if ((Get-Content -LiteralPath $f.FullName -Raw) -match '\[switch\]\s*\$SelfTest\b' -and $named -notcontains "tools/$($f.Name)") {
+            $problems += "unregistered tools/$($f.Name)"
+        }
+    }
+    return @{ Entries = $entries; Problems = $problems }
+}
+
+function Test-CheckSelfTestRegistry([string]$Root) {
+    $reg = Get-SelfTestRegistry $Root
+    if ($reg.Problems) { return New-Result $false "selftest registry: $($reg.Problems -join '; ')" }
+    return New-Result $true "selftest registry: $($reg.Entries.Count) external selftests, each with its cases; every tools -SelfTest registered"
+}
+
+# Runs one registered external selftest from the repository root. Returns $null or why it failed.
+function Invoke-ExternalSelfTest($Entry) {
+    $cmd = @($Entry.command)
+    Push-Location $repoRoot
+    try { $out = @(& $cmd[0] @($cmd | Select-Object -Skip 1) 2>&1 | ForEach-Object { "$_" }); $code = $LASTEXITCODE }
+    finally { Pop-Location }
+    $hit = if ($Entry.success) { $out | Where-Object { $_.Trim() -eq $Entry.success } } else { $out | Where-Object { $_ -match $Entry.successPattern } }
+    Write-Verbose "$($Entry.name) -> exit $code; $(($out | Select-Object -Last 1))"
+    if ($code -ne 0) { return "$($Entry.name): exit $code ($(($out | Where-Object { $_ -match '\S' } | Select-Object -Last 1)))" }
+    if (-not $hit) { return "$($Entry.name): no success line '$($Entry.success)$($Entry.successPattern)'" }
+    return $null
+}
+
 # ---------------------------------------------------------------- runner
 
 function Get-Manifest {
@@ -1653,12 +1703,26 @@ function Invoke-SelfTest {
         if ($ok) { $passed++ }
     }
     if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
+
+    # Every registered external selftest runs and must print its success line (faction-empowerment D22).
+    $reg = Get-SelfTestRegistry $repoRoot
+    $problems += @($reg.Problems | ForEach-Object { "selftest registry: $_" })
+    $extOk = 0
+    foreach ($e in $reg.Entries) {
+        $why = Invoke-ExternalSelfTest $e
+        if ($why) { $problems += "external selftest $why" } else { $extOk++ }
+    }
+    # Then the secrets check on the real tracked tree: a token in the repository fails the selftest too (D22).
+    $sec = Invoke-Check 'Test-CheckSecrets' $repoRoot
+    if (-not $sec.Pass) { $problems += "real tree: $($sec.Line)" }
+
+    $ext = "$extOk/$($reg.Entries.Count) external selftests"
     if ($problems) {
-        Write-Host "selftest: $passed/$($checks.Count) checks — FAILED" -ForegroundColor Red
+        Write-Host "selftest: $passed/$($checks.Count) checks, $ext — FAILED" -ForegroundColor Red
         $problems | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
         exit 1
     }
-    Write-Host "selftest: $passed/$($checks.Count) checks, 3 fixtures each, $extra extra bad fixtures" -ForegroundColor Green
+    Write-Host "selftest: $passed/$($checks.Count) checks, $ext (3 fixtures each, $extra extra bad fixtures; $($sec.Line) on the real tree)" -ForegroundColor Green
     exit 0
 }
 
