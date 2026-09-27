@@ -1059,11 +1059,19 @@ function Get-UnmarkedTempRoots([string]$Root) {
     foreach ($f in @(Get-ToolSources $Root)) {
         $t = Read-ToolSource $Root $f
         if ($null -eq $t) { $out += "unreadable $f"; continue }
-        $lines = $t -split '\r?\n'; $inHelp = $false
+        $lines = $t -split '\r?\n'; $inHelp = $false; $ps = $f -match '\.psm?1$'
         for ($i = 0; $i -lt $lines.Count; $i++) {
-            $l = $lines[$i]; $trim = $l.Trim()
-            if ($inHelp) { if ($l -match '#>') { $inHelp = $false }; continue }
-            if ($trim.StartsWith('<#')) { if ($trim -notmatch '#>') { $inHelp = $true }; continue }
+            $l = $lines[$i]
+            if ($ps) {
+                # A PowerShell block comment: the code after its closing #> on the same line is still code.
+                if ($inHelp) { $k = $l.IndexOf('#>'); if ($k -lt 0) { continue }; $inHelp = $false; $l = $l.Substring($k + 2) }
+                while (($o = $l.IndexOf('<#')) -ge 0) {
+                    $c = $l.IndexOf('#>', $o + 2)
+                    if ($c -lt 0) { $l = $l.Substring(0, $o); $inHelp = $true; break }
+                    $l = $l.Substring(0, $o) + ' ' + $l.Substring($c + 2)
+                }
+            }
+            $trim = $l.Trim()
             if ($trim.StartsWith('#') -or $trim.StartsWith('//')) { continue }
             if ($l -notmatch $api) { continue }
             if ($l -match '(?<![\w-])nyar-(?!temp:)[a-z]') { continue }
@@ -1200,6 +1208,28 @@ function Test-CheckPaths([string]$Root) {
             if ($u.Uncovered.Count) { $problems += "declared: $($u.Total - $u.Uncovered.Count)/$($u.Total) in $slug, not in its Paths walked: $(($u.Uncovered | Select-Object -First 10) -join ', ')" }
             else { $declLine = "; declared: $($u.Total)/$($u.Total) in $slug" }
         }
+    }
+    # The real tree's -DeclaredOf also runs every planted Paths fixture, and each must fail (event-library A19), so
+    # the gating command cannot pass with a scan removed. A second listing of %TEMP% after the checks catches a nyar-*
+    # folder made while they ran.
+    if ($null -ne $in.Declared -and -not (Test-IsFixture $Root)) {
+        $plantDir = Join-Path $Root 'tools/preflight-fixtures/Paths'
+        $plants = @(Get-ChildItem -LiteralPath $plantDir -Directory -Filter 'bad*' -ErrorAction SilentlyContinue | Sort-Object Name)
+        $need = @('bad-composed', 'bad-scratch', 'bad-tempvar', 'bad-transient', 'bad-undeclared')
+        $absent = @($need | Where-Object { $plants.Name -notcontains $_ })
+        $passing = @()
+        foreach ($p in $plants) {
+            $script:FixtureRoot = $p.FullName
+            try { $r = Test-CheckPaths $p.FullName } finally { $script:FixtureRoot = $null }
+            if ($r.Pass) { $passing += $p.Name }
+        }
+        if ($absent) { $problems += "plants: missing $($absent -join ', ')" }
+        elseif ($passing) { $problems += "plants: $($passing -join ', ') passed" }
+        else { $declLine += "; plants: $($plants.Count)/$($plants.Count) fail" }
+        try { $late = @(Get-ChildItem -LiteralPath ([IO.Path]::GetTempPath()) -Directory -Filter 'nyar-*' -Force -ErrorAction Stop | ForEach-Object Name) }   # nyar-temp: the second listing, creates nothing
+        catch { $late = $null; $problems += 'Temp listing unreadable (second pass)' }
+        $first = @("$($in.Temp)" -split '\r?\n' | ForEach-Object { $_.Trim() })
+        foreach ($t in @($late | Where-Object { $_ -and $first -notcontains $_ })) { $problems += "leftover temp $t (second pass)" }
     }
     if ($problems) { return New-Result $false "paths: $($problems -join '; ')" }
     return New-Result $true "paths: $($walked.Count) walked, all in manifest$declLine"
@@ -1807,6 +1837,9 @@ function Test-CheckReadyGuard([string]$Root) {
 # From the first line carrying the counts on, every line must carry them. A line with Unity errors carries -LogCheck's
 # "[kind | kind]" list, and each kind has a sub-bullet '  - unity "<kind>": game <why>' or '... ours <why> (A<n>)',
 # ours citing the amendment that records it (A13).
+# A plan listed in tools/preflight-checks.json snapshotSessions (slug: first session) also needs, in each of those
+# sessions' blocks, the save "dev-snapshot.ps1 -Save <label>" and the restore "snapshot restored; hashes equal (<label>"
+# with the same label (event-library D30, A19).
 # A fixture names the slug in sessionsof.txt.
 $script:SessionsBeforeA10 = @{ 'foundation' = 7 }
 
@@ -1815,19 +1848,21 @@ function Test-CheckSessionLogs([string]$Root) {
     if (-not $slug) { return New-Result $false 'session logs: no plan named (-SessionsOf <slug>)' }
     # The feature docs are the ones childDocs maps the slug to; the slug-derived name only without a mapping (A8).
     $mt = Read-Text $Root 'tools/preflight-checks.json'
-    $entry = if ($mt) { ($mt | ConvertFrom-Json).childDocs.PSObject.Properties[$slug] } else { $null }
+    $mj = if ($mt) { $mt | ConvertFrom-Json } else { $null }
+    $entry = if ($mj -and $mj.childDocs) { $mj.childDocs.PSObject.Properties[$slug] } else { $null }
     $docRels = if ($entry) { @($entry.Value | Where-Object { $_ }) } else { @("docs/features/$($slug.ToUpperInvariant().Replace('-', '_')).md") }
     if ($docRels.Count -eq 0) { return New-Result $false "session logs: childDocs maps $slug to no doc" }
     $audit = Read-Text $Root "docs/audits/$slug.md"
     # One session number belongs to one doc: the audit names sessions by number only.
-    $owner = @{}; $shared = @()
+    $owner = @{}; $shared = @(); $blocks = @{}
     foreach ($docRel in $docRels) {
         $doc = Read-Text $Root $docRel
         if ($null -eq $doc) { return New-Result $false "session logs: $docRel not found" }
         $results = [regex]::Match($doc, '(?ms)^## Test results\s*$(.*?)(?=^## |\z)')
         if (-not $results.Success) { continue }
-        foreach ($n in @([regex]::Matches($results.Groups[1].Value, '(?m)^### Session (\d+) · ') | ForEach-Object { [int]$_.Groups[1].Value })) {
-            if ($owner.ContainsKey($n)) { $shared += "session $n in $($owner[$n]) and $docRel" } else { $owner[$n] = $docRel }
+        foreach ($bm in [regex]::Matches($results.Groups[1].Value, '(?ms)^### Session (\d+) · .*?(?=^### |\z)')) {
+            $n = [int]$bm.Groups[1].Value
+            if ($owner.ContainsKey($n)) { $shared += "session $n in $($owner[$n]) and $docRel" } else { $owner[$n] = $docRel; $blocks[$n] = $bm.Value }
         }
     }
     $docRel = $docRels -join ', '
@@ -1863,7 +1898,15 @@ function Test-CheckSessionLogs([string]$Root) {
     $old = @($sessions | Where-Object { $checks.ContainsKey($_) -and $checks[$_][2] -lt 0 -and ($_ -gt $cutoff -or ($first -and $_ -gt $first[0])) })
     $dupes = @($dupes | Sort-Object -Unique)
     $unattributed = @($unattributed | Sort-Object -Unique)
-    $bad = @($dirty + $old + $dupes + $unattributed | Sort-Object -Unique)
+    $snapFrom = if ($mj -and $mj.snapshotSessions) { $mj.snapshotSessions.PSObject.Properties[$slug] } else { $null }
+    $unwrapped = @()
+    if ($snapFrom) {
+        foreach ($n in @($sessions | Where-Object { $_ -ge [int]$snapFrom.Value })) {
+            $save = [regex]::Match($blocks[$n], 'dev-snapshot\.ps1 -Save ([\w-]+)')
+            if (-not $save.Success -or $blocks[$n] -notmatch ('snapshot restored; hashes equal \(' + [regex]::Escape($save.Groups[1].Value) + '[,)]')) { $unwrapped += $n }
+        }
+    }
+    $bad = @($dirty + $old + $dupes + $unattributed + $unwrapped | Sort-Object -Unique)
     $ok = @($post | Where-Object { $checks.ContainsKey($_) -and $bad -notcontains $_ }).Count
     $preOrphans = @($pre | Where-Object { $checks.ContainsKey($_) -and ([math]::Max($checks[$_][2], 0) + $checks[$_][3]) -gt 0 })
     $preNote = if ($pre.Count) { "; $($pre.Count) before A10 not counted$(if ($preOrphans) { " (orphan errors in session $($preOrphans -join ', '))" })" } else { '' }
@@ -1876,6 +1919,7 @@ function Test-CheckSessionLogs([string]$Root) {
         if ($old) { $why += "no orphan count in session $($old -join ', ')" }
         if ($dupes) { $why += "more than one log check line for session $($dupes -join ', ')" }
         if ($unattributed) { $why += "unity error kinds not listed or not attributed in session $($unattributed -join ', ')" }
+        if ($unwrapped) { $why += "no snapshot save and matching restore in session $($unwrapped -join ', ')" }
         return New-Result $false "session logs: $slug $ok/$($post.Count) checked$after$preNote ($($why -join '; '))"
     }
     return New-Result $true "session logs: $slug $ok/$($post.Count) checked$after$preNote"

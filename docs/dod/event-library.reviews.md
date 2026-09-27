@@ -590,3 +590,36 @@ VERDICT: REVISE
 - F2 · accepted · A18: a registration contract instead of pattern guessing — every tool code line that takes the %TEMP% root spells a nyar-<name> literal or carries "# nyar-temp: <reason>", and -Paths -DeclaredOf fails otherwise; fixture Paths/bad-tempvar (a folder named only by a variable). A path created and deleted inside one step stays outside the declared set by D18
 - F3 · accepted · A18: fixture bad-echo-order (two contiguous pillar-off second lines against the stop order) must fail 2 unpaired; soak selftest 9/9
 - F4 · accepted · the scoring follows F1-F3: A18 answers 3.3, 4.5, 12.4 and 14.4
+
+## Review 14 · 2026-09-27 · codex · plan commit 16b6a24 · plan 191301 B · 34 items · files 0 · e3b0c44298fc · prompt a655dfbcbf0a · scope A13,A14,A15,A16,A17,A18
+Prompt checked twice before recording: the prompt file's SHA-256 begins a655dfbcbf0a, and a rebuild from the plan at 16b6a24 gave the same prompt.
+
+F1 `blocking` — Probe 14.4 is unanswered: `pwsh tools/preflight.ps1 -Paths -DeclaredOf event-library` can still pass if the composed-name or TEMP-root scanner is removed, because `bad-composed` and `bad-tempvar` are exercised only by `-SelfTest`/`-ControlSuite`, not this gating command.
+Fix: Make the single 14.4 evidence command run those mutation fixtures fail-closed as part of `-Paths -DeclaredOf`, or replace it with one wrapper command that runs both the fixture selftests and the real-tree declared-path scan.
+
+F2 `blocking` — D30 is unverifiable and leaves probe 3.3 unanswered: it requires every session to be snapshot-wrapped and restored, but none of its stated commands or `fails when` clauses fails when a Session lacks the corresponding save/restore audit evidence, so a stranger cannot verify cleanup and retention from the declared evidence.
+Fix: Make `-SessionsOf event-library` fail unless every Session records its matching snapshot save and “snapshot restored” line, and add bad, silent-good, and empty fixtures for that rule.
+
+F3 `advisory` — Build step 3 does not explicitly add the pending-delete, session-working-folder, or self-test-scratch inventory entries even though D30 and Design › Data require them; a builder following only the step can reach the inventory command with missing rows.
+Fix: Name all three `tools/data-inventory.json` additions in step 3 and cite D30.
+
+F4 `advisory` — Concurrent scenario: a `%TEMP%\nyar-*` folder can be created after `-Paths` enumerates folders and before it exits, so the command may report clean while a concurrent selftest leaves a new scratch folder behind.
+Fix: Define the scan as a stable two-pass check or serialize temp-producing tools with the final paths gate.
+
+F5 `advisory` — Maximal-stretch scenario: many tools may legitimately take the TEMP root through helper functions whose call sites contain neither the root expression nor the final folder literal; the line-local registration rule will reject safe indirection or encourage meaningless comments.
+Fix: Document that TEMP-folder construction must remain at a registered factory symbol, then scan callers and the factory contract instead of relying only on same-line text.
+
+F6 `advisory` — Minimal-stretch scenario: a clean build creating no temp folders provides no live exercise of the new source-derived path discovery, so the real-tree `-Paths` success alone cannot distinguish a working detector from a deleted detector.
+Fix: Include the planted `bad-transient`, `bad-composed`, and `bad-tempvar` cases in the same command used as 14.4 evidence.
+
+EARLIER: all resolved
+13/15 layers · 47/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · A19: on the real tree -Paths -DeclaredOf runs every Paths plant and fails when one passes or a named one (bad-composed, bad-scratch, bad-tempvar, bad-transient, bad-undeclared) is missing; with the temp-root scan disabled the command prints "plants: bad-tempvar passed"
+- F2 · accepted · A19: -SessionsOf fails a session, from the first one snapshotSessions lists, whose block lacks `dev-snapshot.ps1 -Save <label>` and "snapshot restored; hashes equal (<label>" with the same label; fixtures SessionLogs/bad-17 and bad-18, and SessionLogs/good now holds a wrapped session
+- F3 · accepted · A19: step 3 names all five inventory entries and binds each to its Design › Data row
+- F4 · accepted · A19: -Paths lists %TEMP% a second time after its checks; a nyar-* folder new in the second listing is a leftover
+- F5 · rejected · a helper that builds the folder from a root it is handed is the case the registration covers: the call site that takes the root carries "# nyar-temp: <reason>" (dev-snapshot's Invoke-Save hand-off), and the helper's own nyar-<name> literal is read by the name scan; a factory symbol would add a second mechanism for the same two facts
+- F6 · accepted · A19, as F1: the plants run inside the gating command

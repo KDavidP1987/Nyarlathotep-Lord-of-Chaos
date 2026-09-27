@@ -6,6 +6,9 @@
     "docs/dod/faction-empowerment.md",
     "docs/dod/event-library.md"
   ],
+  "snapshotSessions": {
+    "event-library": 1
+  },
   "childDocs": {
     "spikes": [
       "docs/features/SIEGES.md",
@@ -306,7 +309,7 @@
         "git worktree list --porcelain (worktrees.txt)",
         "git ls-remote --tags origin (ls-remote-tags.txt)",
         "gh release list --json tagName (releases.json)",
-        "with -DeclaredOf <slug>: docs/dod/<slug>.md › Rollout › Paths walked, and the paths created or changed since the commit of docs/audits/<slug>.md's Step 1 pre-audit (declared-of.txt, changed.txt; event-library D30, A13), that base checked against git's parent of the audit's creating commit (audit-added-parent.txt), and the %TEMP%\nyar-<name> folders tools/*.ps1, tools/*.py and tools/ingame/* name (A14)"
+        "with -DeclaredOf <slug>: docs/dod/<slug>.md › Rollout › Paths walked, and the paths created or changed since the commit of docs/audits/<slug>.md's Step 1 pre-audit (declared-of.txt, changed.txt; event-library D30, A13), that base checked against git's parent of the audit's creating commit (audit-added-parent.txt), and the %TEMP%\\nyar-<name> folders tools/*.ps1, tools/*.py and tools/ingame/* name (A14)"
       ],
       "plant": {
         "bad": "an unmanifested tracked path (stray/notes.txt) added to the walk",
@@ -314,10 +317,10 @@
         "bad-rel": "a leftover %TEMP%\\nyar-rel-* folder in the temp listing (faction-empowerment D26)",
         "bad-worktree": "a second (detached nyar-rollback-*) worktree in the worktree listing (faction-empowerment D26)",
         "bad-remote": "an undeclared tag v0.4.0 on origin in the ls-remote listing (faction-empowerment D26)",
-        "bad-soak": "a leftover %TEMP%\nyar-soak-* folder in the temp listing, with the manifest declaring temp: nyar-soak-* (event-library D30)",
+        "bad-soak": "a leftover %TEMP%\\nyar-soak-* folder in the temp listing, with the manifest declaring temp: nyar-soak-* (event-library D30)",
         "bad-undeclared": "with -DeclaredOf event-library (declared-of.txt), a changed tools/stray-drill.ps1 (changed.txt) that tracked: tools/*.ps1 covers but the plan's Rollout › Paths walked omits (event-library D30, A13)",
         "bad-base": "with -DeclaredOf, the audit's Step 1 pre-audit heading names 2b083dc, a later commit than e84c8a3, the parent of the commit that created the audit (audit-added-parent.txt; event-library A14)",
-        "bad-transient": "with -DeclaredOf, a tools/ script names a %TEMP%\nyar-scratch-* folder that no Paths walked token declares, though no such folder exists at check time (event-library A14)",
+        "bad-transient": "with -DeclaredOf, a tools/ script names a %TEMP%\\nyar-scratch-* folder that no Paths walked token declares, though no such folder exists at check time (event-library A14)",
         "bad-composed": "with -DeclaredOf, a tools/ script composes its %TEMP% folder as ('nyar-' + $Mode), a name no source scan can read, and again split as ('nyar' + '-' + $Mode) (event-library A15, A16)",
         "bad-scratch": "a leftover %TEMP%\\nyar-depsuite-4242 folder in the temp listing, though the manifest declares temp: nyar-depsuite-* (event-library A16)",
         "bad-tempvar": "with -DeclaredOf, tools/ scripts take the temp root as $env:TEMP, ${env:TEMP}, os.getenv(\"TEMP\") and process.env.TEMP with the folder named only by a variable, one with the marker inside a string, none registered (event-library A18)"
@@ -482,7 +485,9 @@
         "bad-13": "tools/preflight-checks.json maps the slug to a second doc whose session 99 has no log check line (A8: every mapped doc is read)",
         "bad-14": "a second mapped doc reuses session 8, which the audit has one clean line for (A8: a session number belongs to one doc)",
         "bad-15": "the feature doc has two Session 8 headings (A8)",
-        "bad-16": "tools/preflight-checks.json maps the slug to an empty list (A8: an empty mapping is not the slug-derived doc)"
+        "bad-16": "tools/preflight-checks.json maps the slug to an empty list (A8: an empty mapping is not the slug-derived doc)",
+        "bad-17": "snapshotSessions lists foundation from session 8; session 8 records the -Save s8 but no snapshot restored line (event-library A19)",
+        "bad-18": "snapshotSessions lists foundation from session 8; session 8 restores a different label (s7) than it saved (event-library A19)"
       }
     },
     {

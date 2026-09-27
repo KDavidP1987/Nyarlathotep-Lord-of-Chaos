@@ -85,7 +85,7 @@ Boot after session 3's autosave; the server log held orphan errors from units sa
 ### Session 8 · 2026-09-25
 Setup: `pwsh tools/dev-snapshot.ps1 -Save s8`.
 Reboot; no orphan errors.
-`pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s8, 12 files)".
+`pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s7, 12 files)".
 
 ## Open questions
 
