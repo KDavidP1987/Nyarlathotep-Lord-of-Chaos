@@ -14,7 +14,7 @@ closed: none
 commit: 23f2ba4
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
-review: pending
+review: codex
 ---
 
 # DoD: Event library — built-in templates and in-game authoring
@@ -608,3 +608,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-27 · note · Review 18 (codex, scope A24) REVISE: F1 accepted (record-named %TEMP% folders are required to be declared; plant Paths/bad-record), F2 accepted (the split %TEMP%\nyar tokens repaired); review stays pending; Review 19 is the third round since Review 16's READY
 - 2026-09-27 · note · Review 19 (codex, scope A24) REVISE: F1 accepted (the Session log copies row, its inventory entry and the manifest glob `temp: nyar-s*-logs`); review stays pending; the three-round cap since Review 16's READY is reached and the next step goes to the owner
 - 2026-09-27 · note · round cap · after Review 19 · owner: approved option A in plan mode (one more scoped Codex round, scope A24; a REVISE comes back to the owner) · through Review 20
+- 2026-09-27 · note · review: codex, Review 20 (scope A24) READY, 15/15 layers · 49/49 probes, no findings; A24's pending review cleared

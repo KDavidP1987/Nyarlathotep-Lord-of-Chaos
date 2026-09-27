@@ -773,3 +773,13 @@ VERDICT: REVISE
 
 ### Dispositions
 - F1 · accepted · the two folders now have a Design › Data row "Session log copies" (%TEMP%\nyar-s<n>-logs: owner Claude during a server session, deleted in the session that made them, one per session), a tools/data-inventory.json entry naming that row and the manifest glob `temp: nyar-s*-logs`; mutation checks: removing the inventory entry fails pwsh tools/preflight.ps1 with "'nyar-s*-logs' has no entry; event-library row 'Session log copies' has no entry", and removing the plan row fails it with "inventory row 'event-library > Session log copies' matches no row of docs/dod/event-library.md"
+
+## Review 20 · 2026-09-27 · codex · plan commit 127b3f6 · plan 211087 B · 35 items · files 0 · e3b0c44298fc · prompt 0d0b7b616784 · scope A24
+Prompt checked twice before recording: the prompt file's SHA-256 begins 0d0b7b616784, and a rebuild from the plan at 127b3f6 gave the same prompt. Reviewer: Codex CLI, read-only (`codex exec -s read-only`, Windows sandbox on). The fourth round of the run after Review 16's READY, under the owner's round-cap note after Review 19.
+
+EARLIER: all resolved
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- no findings
