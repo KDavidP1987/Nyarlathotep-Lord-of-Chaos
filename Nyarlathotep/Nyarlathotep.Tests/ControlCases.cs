@@ -59,7 +59,7 @@ public static class ControlCases
             ["selftest VcfDependency/bad", "selftest VcfDependency/bad-2", "selftest VcfDependency/bad-3"], ["selftest VcfDependency/good"], ["selftest VcfDependency/empty"]),
         C("D18", "CfgWrites", "preflight -SelfTest › Test-CheckCfgWrites",
             ["selftest CfgWrites/bad", "selftest CfgWrites/bad-2", "selftest TemplatesJson/bad-3"], ["selftest CfgWrites/good"], ["selftest CfgWrites/empty"]),
-        T("D19", "SaveFailure", "PillarSwitchTests", ["save_truncates_then_throws"], ["line_written_then_throws", "off_ends_events_when_file_says_off"], ["file_after_truncate"]),
+        T("D19", "SaveFailure", "PillarSwitchTests", ["save_truncates_then_throws", "file_lacks_or_garbles_key"], ["line_written_then_throws", "off_ends_events_when_file_says_off", "file_values_read"], ["file_after_truncate"]),
         T("D19", "EventsWrite", "LibraryDependencyFailureTests", ["tmp_write_fails"], ["after_disk_recovers"], ["refused_plan_writes_nothing"]),
         T("D19", "EventsPromote", "LibraryDependencyFailureTests", ["promote_replaces_then_throws"], ["throw_before_replace_keeps_file"], ["events_file"]),
         T("D19", "StateWrite", "LibraryDependencyFailureTests", ["state_write_fails", "state_read_only"], ["both_writes"], ["no_cooldown_row", "null_cooldown_rows"]),

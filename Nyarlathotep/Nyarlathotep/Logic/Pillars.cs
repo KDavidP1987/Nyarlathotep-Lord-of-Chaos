@@ -126,3 +126,26 @@ public sealed class PillarCommand(IPillarStore store, Func<Pillar, IReadOnlyList
 
     static string OnOff(bool on) => on ? "on" : "off";
 }
+
+/// <summary>The [Pillars] switches as the cfg file on disk holds them (event-library D14, D19). BepInEx's ConfigFile.Reload
+/// sets only the keys it finds and can parse, so a missing or garbled key would keep its in-memory value; the keys this
+/// returns are the ones the file holds with true or false, and Services/PillarSwitches reads every other one as off.</summary>
+public static class PillarCfg
+{
+    public static IReadOnlyDictionary<string, bool> Read(string? text)
+    {
+        var values = new Dictionary<string, bool>(StringComparer.Ordinal);
+        var inPillars = false;
+        foreach (var raw in (text ?? "").Split('\n'))
+        {
+            var line = raw.Trim();
+            if (line.Length == 0 || line.StartsWith('#')) continue;
+            if (line.StartsWith('[') && line.EndsWith(']')) { inPillars = line == "[Pillars]"; continue; }
+            if (!inPillars) continue;
+            var eq = line.IndexOf('=');
+            if (eq <= 0) continue;
+            if (bool.TryParse(line[(eq + 1)..].Trim(), out var on)) values[line[..eq].Trim()] = on;
+        }
+        return values;
+    }
+}

@@ -1,0 +1,1 @@
+Passed!  - Failed:     0, Passed:    11, Skipped:     1, Total:    12, Duration: 40 ms - Nyarlathotep.Tests.dll (net6.0)

@@ -47,8 +47,20 @@
                    'ours <why> (A<n>)' citing its amendment (A13).
     -AuthSuite   : the authorization suite (raphael-api-core D7): dotnet test over AuthorizationTests and ApiAccessTests
                    (0 tests run is a failure), then the commands, admin-list and gateway checks, then .nyar api version,
-                   status and sub public and .nyar api events adminOnly; prints "auth suite: pass (tests, commands, admin
-                   list, gateway)".
+                   status and sub public and .nyar api events adminOnly, then Test-CheckVcfDependency (mode authsuite:
+                   VCF a hard 0.10.x dependency, event-library D17); prints "auth suite: pass (tests, commands, admin
+                   list, gateway, vcf dependency)".
+    -Tests <Class>[,<Class>...]
+                 : Invoke-ClassTests, one `dotnet test` per class, fail-closed (a non-zero exit, a failure, a skip, or no
+                   test run fails; a filter never uses the word "or"); prints "tests: <k>/<k> classes, <n> passed"
+                   (event-library D34; the TestRuns fixtures, mode fixture, prove the verdict).
+    -ControlSuite <slug>
+                 : -Tests over controlSuites.<slug> of tools/preflight-checks.json, then the -SelfTest body in the same
+                   process; prints "control suite: <slug> tests <k>/<n> classes, selftest <n>/<n> checks" (D34).
+    -DependencySuite <slug>
+                 : every category of dependencySuites.<slug>: tests rows one control at a time, check rows over their
+                   fixtures and the real tree, selftests rows with their success lines; prints "dependency suite: <slug>
+                   <n>/<n> (<categories>)", or "dependency suite: <slug> has no categories" (event-library D33).
     -ListCommands admin
                  : every admin-only command of the commands walk, one per line, then "admin commands: <n>"
                    (foundation D19); Test-CheckAdminList keeps that list equal to the commands check's count.
@@ -88,7 +100,10 @@ param(
     [switch]$LogCheck,              # the live BepInEx/LogOutput.log after an in-game session (foundation D33)
     [string]$AuditOf,               # plan slug: check its audit record covers every Build plan step
     [string]$SessionsOf,            # plan slug: check every in-game session has a clean log check line (foundation D33)
-    [switch]$AuthSuite,             # the authorization suite: its tests, then the commands, admin-list and gateway checks (raphael-api-core D7)
+    [switch]$AuthSuite,             # the authorization suite: its tests, then the commands, admin-list and gateway checks (raphael-api-core D7), and the VCF dependency (event-library D17)
+    [string]$Tests,                 # comma-separated test classes, each run on its own, fail-closed (event-library D34)
+    [string]$ControlSuite,          # plan slug: its controlSuites classes, then the selftest body (event-library D34)
+    [string]$DependencySuite,       # plan slug: every dependency-failure category of dependencySuites.<slug> (event-library D33)
     [ValidateSet('', 'admin')]
     [string]$ListCommands = '',     # 'admin': print every admin-only command, then "admin commands: <n>" (foundation D19)
     [string]$ServerPath = 'C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer',
@@ -1251,7 +1266,7 @@ function Get-ParenEnd([string]$Text, [int]$Open) {
 # Announcer runs ActionKind.Announce (`.nyar announce`, foundation step 6).
 # Pusher runs ActionKind.Subscribe (`.nyar api sub`, raphael-api-core step 3).
 # EmpowerAction is the empowerment service EventRuntime and SpawnTracker call directly (faction-empowerment D21).
-$script:DispatchedServices = @('EventRuntime', 'SpawnTracker', 'UnitSetup', 'WaveAction', 'Persistence', 'EventStore', 'Announcer', 'Pusher', 'EmpowerAction') |
+$script:DispatchedServices = @('EventRuntime', 'SpawnTracker', 'UnitSetup', 'WaveAction', 'Persistence', 'EventStore', 'Announcer', 'Pusher', 'EmpowerAction', 'TemplateLibrary', 'PillarSwitches') |
     ForEach-Object { "$PkgRel/Services/$_.cs" }
 
 # Every method marked [Mutating] in a dispatched service is a mutating method. Any other file under Commands/,
@@ -1622,6 +1637,146 @@ function Invoke-ExternalSelfTest($Entry) {
     return $null
 }
 
+# ---------------------------------------------------------------- checks: event-library (D17, D18, D33, D34)
+
+# The [Pillars] switches of Config/Settings.cs are set, and the cfg reloaded, only by Services/PillarSwitches.cs, and
+# nothing calls ConfigFile.Save: BepInEx saves the cfg itself (event-library D18, S-11). A reload rewrites every entry in
+# memory (Review 6 F3), so one outside PillarSwitches fails too. The count is PillarSwitches' entry writes and reloads.
+$script:PillarEntryRx = '\b(?:EmpowermentEnabled|EventSpawnsEnabled|BossReinforcementsEnabled|DefendedZonesEnabled|SiegeWavesEnabled)\s*\.\s*Value\s*=(?!=)'
+$script:CfgSaveRx = '(?i)\bconfig(?:file)?\s*\.\s*Save\s*\('
+$script:CfgReloadRx = '(?i)\bconfig(?:file)?\s*\.\s*Reload\s*\('
+
+function Test-CheckCfgWrites([string]$Root) {
+    $owner = "$PkgRel/Services/PillarSwitches.cs"
+    if ($null -eq (Read-Text $Root $owner)) { return New-Result $false "cfg writes: $owner not found" }
+    $sites = 0; $bad = @()
+    foreach ($f in @(Get-CsFiles $Root)) {
+        $t = Remove-CsLiterals (Read-Text $Root $f)
+        if ([regex]::IsMatch($t, $script:CfgSaveRx)) { $bad += "ConfigFile.Save in $f" }
+        $writes = [regex]::Matches($t, $script:PillarEntryRx).Count
+        $reloads = [regex]::Matches($t, $script:CfgReloadRx).Count
+        if ($f -eq $owner) { $sites += $writes + $reloads; continue }
+        if ($writes) { $bad += "a [Pillars] entry set in $f" }
+        if ($reloads) { $bad += "ConfigFile.Reload in $f" }
+    }
+    if ($bad) { return New-Result $false "cfg writes: $($bad -join '; ')" }
+    if ($sites -eq 0) { return New-Result $false "cfg writes: $owner sets no [Pillars] entry" }
+    return New-Result $true "cfg writes: only PillarSwitches ($sites call sites)"
+}
+
+# VCF, the command-ingress and authorization boundary, is a hard dependency of 0.10.x only (event-library D17): Plugin.cs
+# declares [BepInDependency("gg.deca.VampireCommandFramework", ">=0.10.0 <0.11.0")], never a SoftDependency, and the
+# csproj references VRising.VampireCommandFramework 0.10.*. The fifth part of -AuthSuite.
+function Test-CheckVcfDependency([string]$Root) {
+    $plugin = Read-Text $Root "$PkgRel/Plugin.cs"
+    $proj = Read-Text $Root "$PkgRel/Nyarlathotep.csproj"
+    if ($null -eq $plugin -or $null -eq $proj) { return New-Result $false 'vcf dependency: Plugin.cs or Nyarlathotep.csproj not found' }
+    $deps = @([regex]::Matches((Remove-CsComments $plugin), '\[\s*BepInDependency\s*\(([^\]]*)\)\s*\]') |
+        Where-Object { $_.Groups[1].Value -match '"gg\.deca\.VampireCommandFramework"' })
+    if ($deps.Count -ne 1) { return New-Result $false "vcf dependency: Plugin.cs declares the VCF BepInDependency $($deps.Count) times, not once" }
+    $args0 = $deps[0].Groups[1].Value
+    if ($args0 -match 'SoftDependency') { return New-Result $false 'vcf dependency: VCF is a SoftDependency' }
+    if ($args0 -notmatch '^\s*"gg\.deca\.VampireCommandFramework"\s*,\s*">=0\.10\.0 <0\.11\.0"\s*$') {
+        return New-Result $false 'vcf dependency: the VCF BepInDependency lacks its range ">=0.10.0 <0.11.0"'
+    }
+    if ($proj -notmatch '<PackageReference\s+Include="VRising\.VampireCommandFramework"\s+Version="0\.10\.\*"') {
+        return New-Result $false 'vcf dependency: Nyarlathotep.csproj lacks PackageReference VRising.VampireCommandFramework 0.10.*'
+    }
+    return New-Result $true 'vcf dependency: hard, >=0.10.0 <0.11.0, PackageReference 0.10.*'
+}
+
+# One `dotnet test` run, fail-closed (event-library D34): $null when it passed, else why. A non-zero exit, a Failed count
+# above 0, a Passed count of 0 or none at all (a filter matching nothing exits 0 with "Passed: 0" or no summary), a
+# skipped test, and no output fail.
+function Get-TestRunVerdict([string]$Output, [int]$Code) {
+    if ($Output -notmatch '\S') { return 'no output' }
+    $passed = if ($Output -match 'Passed:\s*(\d+)') { [int]$Matches[1] } else { 0 }
+    $failed = if ($Output -match 'Failed:\s*(\d+)') { [int]$Matches[1] } else { 0 }
+    $skipped = if ($Output -match 'Skipped:\s*(\d+)') { [int]$Matches[1] } else { 0 }
+    if ($failed -gt 0) { return "$failed failed" }
+    if ($Code -ne 0) { return "exit code $Code" }
+    if ($passed -eq 0) { return 'no tests ran' }
+    if ($skipped -gt 0) { return "$skipped skipped" }
+    return $null
+}
+
+# The fixture half of D34: output.txt and exitcode.txt of a canned run, judged by Get-TestRunVerdict (selftest only).
+function Test-CheckTestRuns([string]$Root) {
+    $out = "$(Read-Text $Root 'output.txt')"
+    $code = if ("$(Read-Text $Root 'exitcode.txt')" -match '-?\d+') { [int]$Matches[0] } else { 0 }
+    $why = Get-TestRunVerdict $out $code
+    if ($why) { return New-Result $false "test run: $why" }
+    $n = if ($out -match 'Passed:\s*(\d+)') { $Matches[1] } else { '0' }
+    return New-Result $true "test run: $n passed"
+}
+
+function Get-ClassFilter([string]$Class) { "FullyQualifiedName~Nyarlathotep.Tests.$Class." }
+
+# Runs `dotnet test` once per VSTest filter, each written with | and & only (the word "or" is refused), building once
+# first; one row per filter: Filter, Passed and Why ($null when it passed).
+function Invoke-ClassTests([string[]]$Filters) {
+    $project = Join-Path $repoRoot 'Nyarlathotep/Nyarlathotep.Tests'
+    $built = $false
+    foreach ($f in $Filters) {
+        if ($f -match '(?i)\bor\b') { [pscustomobject]@{ Filter = $f; Passed = 0; Why = "filter uses the word 'or'" }; continue }
+        $out = if ($built) { & dotnet test $project --no-build --filter $f 2>&1 | Out-String } else { & dotnet test $project --filter $f 2>&1 | Out-String }
+        $code = $LASTEXITCODE
+        $built = $true
+        $n = if ($out -match 'Passed:\s*(\d+)') { [int]$Matches[1] } else { 0 }
+        [pscustomobject]@{ Filter = $f; Passed = $n; Why = (Get-TestRunVerdict $out $code) }
+    }
+}
+
+# The dependency suite's category table (event-library D33): tools/preflight-checks.json dependencySuites.<slug>, rows
+# of kind "tests" (class, control), "check" (function, run over its fixtures and the real tree) or "selftests" (names
+# of externalSelfTests entries).
+$script:DependencyCategories = @('events-write', 'events-promote', 'state-write', 'cfg-save', 'catalogue', 'location-context', 'phase-source', 'vcf', 'release-tools')
+
+function Get-DependencyTable([string]$Root, [string]$Slug) {
+    $path = Join-Path $Root 'tools/preflight-checks.json'
+    if (-not (Test-Path -LiteralPath $path)) { return @() }
+    $json = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+    return @($json.dependencySuites.$Slug | Where-Object { $_ })
+}
+
+# Every way the table of $Slug is wrong, statically: no rows, a required category missing or doubled, a tests row whose
+# class has no <Control>_ test method under Nyarlathotep.Tests, a check row naming no Test-Check function of the manifest,
+# a selftests row naming no externalSelfTests entry.
+function Get-DependencyTableProblems([string]$Root, [string]$Slug) {
+    $rows = @(Get-DependencyTable $Root $Slug)
+    if ($rows.Count -eq 0) { return @("dependency suite: $Slug has no categories") }
+    $p = @()
+    foreach ($want in $script:DependencyCategories) {
+        $n = @($rows | Where-Object name -eq $want).Count
+        if ($n -eq 0) { $p += "category $want missing" } elseif ($n -gt 1) { $p += "category $want listed $n times" }
+    }
+    $json = Get-Content -LiteralPath (Join-Path $Root 'tools/preflight-checks.json') -Raw | ConvertFrom-Json
+    $tests = @(Get-TreeFiles $Root | Where-Object { $_ -like 'Nyarlathotep/Nyarlathotep.Tests/*.cs' } | ForEach-Object { Remove-CsComments (Read-Text $Root $_) })
+    foreach ($r in $rows) {
+        switch ($r.kind) {
+            'tests' {
+                $cls = "$($r.class)"; $ctl = "$($r.control)"
+                if ($cls -notmatch '^\w+$' -or $ctl -notmatch '^\w+$') { $p += "$($r.name): class and control must be names"; break }
+                $hit = @($tests | Where-Object { $_ -match "\bclass\s+$cls\b" -and $_ -match "\bvoid\s+${ctl}_\w+\s*\(" })
+                if ($hit.Count -eq 0) { $p += "$($r.name): no test $cls.${ctl}_*" }
+            }
+            'check' { if (@($json.checks | Where-Object function -eq $r.function).Count -ne 1) { $p += "$($r.name): no check $($r.function)" } }
+            'selftests' {
+                if (@($r.selftests).Count -eq 0) { $p += "$($r.name): no selftests named" }
+                foreach ($s in @($r.selftests)) { if (@($json.externalSelfTests | Where-Object name -eq $s).Count -ne 1) { $p += "$($r.name): no external selftest $s" } }
+            }
+            default { $p += "$($r.name): kind '$($r.kind)' is not tests, check or selftests" }
+        }
+    }
+    return $p
+}
+
+function Test-CheckDependencySuite([string]$Root) {
+    $problems = @(Get-DependencyTableProblems $Root 'event-library')
+    if ($problems) { return New-Result $false "dependency table: $($problems -join '; ')" }
+    return New-Result $true "dependency table: event-library $($script:DependencyCategories.Count)/$($script:DependencyCategories.Count) categories"
+}
+
 # ---------------------------------------------------------------- runner
 
 function Get-Manifest {
@@ -1653,7 +1808,36 @@ function Copy-Fixture([string]$From, [string]$To) {
     }
 }
 
-function Invoke-SelfTest {
+$script:CheckModes = @('default', 'paths', 'serverwrites', 'auditof', 'logcheck', 'sessionsof', 'authsuite', 'fixture')
+
+# One check against its fixtures in scratch directories under $Tmp: good must pass, every bad/ and bad-<n>/ and empty
+# must fail, each printing a line. Returns Ok, Problems and Extra (the bad fixtures beyond bad/).
+function Invoke-FixtureBattery($Check, [string]$Tmp) {
+    $ok = $true; $problems = @()
+    $fx = Join-Path $repoRoot $Check.fixtures
+    # good and empty, plus every bad fixture: bad/ and any bad-<n>/ (one planted fault each).
+    $bads = @(Get-ChildItem $fx -Directory -Filter 'bad*' -ErrorAction SilentlyContinue | ForEach-Object Name | Sort-Object)
+    if ($bads -notcontains 'bad') { $bads = @('bad') + $bads }
+    foreach ($b in $bads) { if (-not $Check.plant.$b) { $ok = $false; $problems += "$($Check.name): no plant description for $b" } }
+    foreach ($kind in @(@('good') + $bads + @('empty'))) {
+        if (-not (Test-Path (Join-Path $fx $kind))) { $ok = $false; $problems += "$($Check.name): $kind fixture missing ($($Check.fixtures)/$kind)"; continue }
+        $dir = Join-Path $Tmp "$($Check.name)-$kind"
+        if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+        Copy-Fixture (Join-Path $fx $kind) $dir
+        $script:FixtureRoot = $dir
+        $r = Invoke-Check $Check.function $dir
+        $script:FixtureRoot = $null
+        Write-Verbose "$($Check.name) $kind -> $($r.Line)"
+        $want = $kind -eq 'good'
+        if ($r.Pass -ne $want) { $ok = $false; $problems += "$($Check.name) $kind fixture: expected $(if ($want) {'pass'} else {'fail'}), got '$($r.Line)'" }
+        if ($r.Line -notmatch '\S') { $ok = $false; $problems += "$($Check.name) $kind fixture printed nothing" }
+    }
+    return @{ Ok = $ok; Problems = $problems; Extra = $bads.Count - 1 }
+}
+
+# The -SelfTest body, returning Passed, Total, Extra, ExtOk, ExtTotal, SecLine and Problems (-SelfTest and -ControlSuite).
+function Get-SelfTestResult {
     $manifest = Get-Manifest
     $checks = @($manifest.checks)
     $problems = @()
@@ -1670,7 +1854,7 @@ function Invoke-SelfTest {
     foreach ($dup in @($checks | Group-Object function | Where-Object Count -gt 1)) { $problems += "function '$($dup.Name)' listed twice" }
     foreach ($c in $checks) {
         if ($c.function -ne "Test-Check$($c.name)") { $problems += "$($c.name): function must be Test-Check$($c.name)" }
-        if (@('default', 'paths', 'serverwrites', 'auditof', 'logcheck', 'sessionsof') -notcontains $c.mode) { $problems += "$($c.name): mode '$($c.mode)' is not default, paths, serverwrites, auditof, logcheck or sessionsof" }
+        if ($script:CheckModes -notcontains $c.mode) { $problems += "$($c.name): mode '$($c.mode)' is not $($script:CheckModes -join ', ')" }
         if ($c.fixtures -ne "tools/preflight-fixtures/$($c.name)") { $problems += "$($c.name): fixtures must be tools/preflight-fixtures/$($c.name)" }
         if (@($c.inputs | Where-Object { "$_" -match '\S' }).Count -eq 0) { $problems += "$($c.name): no inputs listed" }
         if (@($c.plant.PSObject.Properties).Count -eq 0) { $problems += "$($c.name): no plant descriptions" }
@@ -1679,28 +1863,10 @@ function Invoke-SelfTest {
     $tmp = Join-Path ([IO.Path]::GetTempPath()) "nyar-selftest-$PID"
     $passed = 0; $extra = 0
     foreach ($c in $checks) {
-        $ok = $true
-        $fx = Join-Path $repoRoot $c.fixtures
-        # good and empty, plus every bad fixture: bad/ and any bad-<n>/ (one planted fault each).
-        $bads = @(Get-ChildItem $fx -Directory -Filter 'bad*' -ErrorAction SilentlyContinue | ForEach-Object Name | Sort-Object)
-        if ($bads -notcontains 'bad') { $bads = @('bad') + $bads }
-        $extra += $bads.Count - 1
-        foreach ($b in $bads) { if (-not $c.plant.$b) { $ok = $false; $problems += "$($c.name): no plant description for $b" } }
-        foreach ($kind in @(@('good') + $bads + @('empty'))) {
-            if (-not (Test-Path (Join-Path $fx $kind))) { $ok = $false; $problems += "$($c.name): $kind fixture missing ($($c.fixtures)/$kind)"; continue }
-            $dir = Join-Path $tmp "$($c.name)-$kind"
-            if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
-            New-Item -ItemType Directory -Force -Path $dir | Out-Null
-            Copy-Fixture (Join-Path $fx $kind) $dir
-            $script:FixtureRoot = $dir
-            $r = Invoke-Check $c.function $dir
-            $script:FixtureRoot = $null
-            Write-Verbose "$($c.name) $kind -> $($r.Line)"
-            $want = $kind -eq 'good'
-            if ($r.Pass -ne $want) { $ok = $false; $problems += "$($c.name) $kind fixture: expected $(if ($want) {'pass'} else {'fail'}), got '$($r.Line)'" }
-            if ($r.Line -notmatch '\S') { $ok = $false; $problems += "$($c.name) $kind fixture printed nothing" }
-        }
-        if ($ok) { $passed++ }
+        $b = Invoke-FixtureBattery $c $tmp
+        $problems += $b.Problems
+        $extra += $b.Extra
+        if ($b.Ok) { $passed++ }
     }
     if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
 
@@ -1715,18 +1881,102 @@ function Invoke-SelfTest {
     # Then the secrets check on the real tracked tree: a token in the repository fails the selftest too (D22).
     $sec = Invoke-Check 'Test-CheckSecrets' $repoRoot
     if (-not $sec.Pass) { $problems += "real tree: $($sec.Line)" }
+    return @{ Passed = $passed; Total = $checks.Count; Extra = $extra; ExtOk = $extOk; ExtTotal = $reg.Entries.Count; SecLine = $sec.Line; Problems = $problems }
+}
 
-    $ext = "$extOk/$($reg.Entries.Count) external selftests"
-    if ($problems) {
-        Write-Host "selftest: $passed/$($checks.Count) checks, $ext — FAILED" -ForegroundColor Red
-        $problems | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
+function Invoke-SelfTest {
+    $st = Get-SelfTestResult
+    $ext = "$($st.ExtOk)/$($st.ExtTotal) external selftests"
+    if ($st.Problems) {
+        Write-Host "selftest: $($st.Passed)/$($st.Total) checks, $ext — FAILED" -ForegroundColor Red
+        $st.Problems | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
         exit 1
     }
-    Write-Host "selftest: $passed/$($checks.Count) checks, $ext (3 fixtures each, $extra extra bad fixtures; $($sec.Line) on the real tree)" -ForegroundColor Green
+    Write-Host "selftest: $($st.Passed)/$($st.Total) checks, $ext (3 fixtures each, $($st.Extra) extra bad fixtures; $($st.SecLine) on the real tree)" -ForegroundColor Green
     exit 0
 }
 
 if ($SelfTest) { Invoke-SelfTest }
+
+if ($Tests) {
+    # One run per class, fail-closed (event-library D34).
+    $classes = @($Tests -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    $rows = @(Invoke-ClassTests @($classes | ForEach-Object { Get-ClassFilter $_ }))
+    $bad = @($rows | Where-Object Why)
+    $n = ($rows | Measure-Object Passed -Sum).Sum
+    if ($classes.Count -eq 0 -or $bad) {
+        Write-Host "tests: $($rows.Count - $bad.Count)/$($classes.Count) classes — FAILED: $(@($bad | ForEach-Object { "$($_.Filter) $($_.Why)" }) -join '; ')" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "tests: $($classes.Count)/$($classes.Count) classes, $n passed" -ForegroundColor Green
+    exit 0
+}
+
+if ($ControlSuite) {
+    # The D31 classes (controlSuites.<slug> of tools/preflight-checks.json), then the selftest body in this process
+    # (event-library D34): both parts must pass.
+    $classes = @((Get-Manifest).controlSuites.$ControlSuite | Where-Object { $_ })
+    $rows = @(Invoke-ClassTests @($classes | ForEach-Object { Get-ClassFilter $_ }))
+    $bad = @($rows | Where-Object Why)
+    $st = Get-SelfTestResult
+    $line = "control suite: $ControlSuite tests $($rows.Count - $bad.Count)/$($classes.Count) classes, selftest $($st.Passed)/$($st.Total) checks"
+    $why = @($bad | ForEach-Object { "$($_.Filter) $($_.Why)" }) + @($st.Problems)
+    if ($classes.Count -eq 0) { $why = @("$ControlSuite has no classes") + $why }
+    if ($why) {
+        Write-Host "$line — FAILED" -ForegroundColor Red
+        $why | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
+        exit 1
+    }
+    Write-Host $line -ForegroundColor Green
+    exit 0
+}
+
+if ($DependencySuite) {
+    # Every dependency-failure category of the slug in one command (event-library D33): its tests one control at a time,
+    # the VCF check over its fixtures and the real tree, and the release tools' selftests with their success lines.
+    $slug = $DependencySuite
+    $static = @(Get-DependencyTableProblems $repoRoot $slug)
+    if ($static.Count -eq 1 -and $static[0] -eq "dependency suite: $slug has no categories") { Write-Host $static[0] -ForegroundColor Red; exit 1 }
+    if ($static) { Write-Host "dependency suite: $slug — FAILED: $($static -join '; ')" -ForegroundColor Red; exit 1 }
+    $manifest = Get-Manifest
+    $reg = Get-SelfTestRegistry $repoRoot
+    $tmp = Join-Path ([IO.Path]::GetTempPath()) "nyar-depsuite-$PID"
+    $done = @(); $fail = @()
+    foreach ($want in $script:DependencyCategories) {
+        $r = @(Get-DependencyTable $repoRoot $slug | Where-Object name -eq $want)[0]
+        $why = @()
+        switch ($r.kind) {
+            'tests' {
+                $row = @(Invoke-ClassTests @("FullyQualifiedName~Nyarlathotep.Tests.$($r.class).$($r.control)_"))[0]
+                if ($row.Why) { $why += "$($r.class).$($r.control)_ $($row.Why)" }
+            }
+            'check' {
+                $c = @($manifest.checks | Where-Object function -eq $r.function)[0]
+                $b = Invoke-FixtureBattery $c $tmp
+                $why += $b.Problems
+                $real = Invoke-Check $r.function $repoRoot
+                if (-not $real.Pass) { $why += $real.Line }
+            }
+            'selftests' {
+                foreach ($s in @($r.selftests)) {
+                    $e = @($reg.Entries | Where-Object name -eq $s)[0]
+                    $w = Invoke-ExternalSelfTest $e
+                    if ($w) { $why += $w }
+                }
+            }
+        }
+        if ($why) { $fail += "${want}: $($why -join ', ')" } else { $done += $want }
+    }
+    if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
+    $total = $script:DependencyCategories.Count
+    if ($fail) {
+        Write-Host "dependency suite: $slug $($done.Count)/$total — FAILED" -ForegroundColor Red
+        $fail | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
+        exit 1
+    }
+    Write-Host "dependency suite: $slug $total/$total ($($done -join ', '))" -ForegroundColor Green
+    exit 0
+}
 
 if ($ServerWrites -and $Snapshot) {
     if (-not (Test-Path $ServerPath)) { Write-Host "server writes: server directory $ServerPath not found" -ForegroundColor Red; exit 1 }
@@ -1754,18 +2004,11 @@ if ($AuthSuite) {
     $parts = @(); $fail = @()
     # Each class runs on its own, so a deleted, renamed or fully skipped class is "no tests ran", not hidden by the other.
     $testsOk = $true
-    foreach ($cls in @('AuthorizationTests', 'ApiAccessTests')) {
-        $out = & dotnet test (Join-Path $repoRoot 'Nyarlathotep/Nyarlathotep.Tests') --filter "FullyQualifiedName~Nyarlathotep.Tests.$cls." 2>&1 | Out-String
-        $code = $LASTEXITCODE
-        $ran = if ($out -match 'Passed:\s*(\d+)') { [int]$Matches[1] } else { 0 }
-        $failed = if ($out -match 'Failed:\s*(\d+)') { [int]$Matches[1] } else { 0 }
-        $skipped = if ($out -match 'Skipped:\s*(\d+)') { [int]$Matches[1] } else { 0 }
-        if ($code -ne 0 -or $failed -gt 0) { $fail += "$cls failed ($failed)"; $testsOk = $false }
-        elseif ($ran -eq 0) { $fail += "${cls}: no tests ran"; $testsOk = $false }
-        elseif ($skipped -gt 0) { $fail += "${cls}: $skipped skipped"; $testsOk = $false }
+    foreach ($row in @(Invoke-ClassTests @(Get-ClassFilter 'AuthorizationTests'; Get-ClassFilter 'ApiAccessTests'))) {
+        if ($row.Why) { $fail += "$($row.Filter) $($row.Why)"; $testsOk = $false }
     }
     if ($testsOk) { $parts += 'tests' }
-    foreach ($c in @(@('commands', 'Test-CheckCommands'), @('admin list', 'Test-CheckAdminList'), @('gateway', 'Test-CheckGatewayOnly'))) {
+    foreach ($c in @(@('commands', 'Test-CheckCommands'), @('admin list', 'Test-CheckAdminList'), @('gateway', 'Test-CheckGatewayOnly'), @('vcf dependency', 'Test-CheckVcfDependency'))) {
         $r = Invoke-Check $c[1] $repoRoot
         if ($r.Pass) { $parts += $c[0] } else { $fail += $r.Line }
     }

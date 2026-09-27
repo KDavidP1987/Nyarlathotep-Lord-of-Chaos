@@ -6,23 +6,41 @@ using VampireCommandFramework;
 
 namespace Nyarlathotep.Commands;
 
-/// <summary>`.nyar event list|info|start|stop|enable|disable|set|reload` (foundation Design › UX; D6, D22, D23, D29).
+/// <summary>`.nyar event list|info|start|stop|enable|disable|set|reload` (foundation Design › UX; D6, D22, D23, D29) and
+/// `new|copy|delete` (event-library D6-D8; their forms checked by Logic's CommandForms, A7).
 /// Admin-only; every mutation runs through the gateway (D10, D11). One command with a verb, as `.nyar debug here` is,
 /// so VCF routes `.nyar event &lt;verb&gt;` here. A value with spaces is quoted: `.nyar event set raid name "Night raid"`.</summary>
 [CommandGroup("nyar")]
 internal static class EventCommands
 {
-    const string Verbs = "argument must be list, info, start, stop, enable, disable, set or reload";
+    const string Verbs = "argument must be list, info, start, stop, enable, disable, set, reload, new, copy or delete";
 
-    [Command("event", usage: "list [page] | info|start|stop|enable|disable <id> | set <id> <field> <value> | reload",
-        description: "List, inspect, start, stop, enable, disable, edit or reload event definitions.", adminOnly: true)]
+    [Command("event", usage: "list [page] | info|start|stop|enable|disable <id> | set <id> <field> <value> | reload | new <id> <pillar> | copy <id> <newId> | delete <id> [confirm]",
+        description: "List, inspect, start, stop, enable, disable, edit, reload, create, copy or delete event definitions.", adminOnly: true)]
     public static void Event(ChatCommandContext ctx, string verb = "", string id = "", string field = "", string value = "")
     {
         if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }
+        if (CommandForms.Check("event", [verb, id, field, value], out var usage) is null && usage is not null) { ctx.Reply(usage); return; }
         var now = DateTime.UtcNow;
         var set = EventStore.Catalog.Current;
         switch (verb)
         {
+            case "new":
+                LogAdmin(ctx, $"event new {id} {field}");
+                ctx.Reply(Gateway.Run(ActionKind.CreateEvent, Actor.Admin, () => EventStore.Author(text => Authoring.New(text, id, field))));
+                return;
+            case "copy":
+                LogAdmin(ctx, $"event copy {id} {field}");
+                ctx.Reply(Gateway.Run(ActionKind.CreateEvent, Actor.Admin, () => EventStore.Author(text => Authoring.Copy(text, id, field))));
+                return;
+            case "delete":
+            {
+                var confirm = field == "confirm";
+                LogAdmin(ctx, confirm ? $"event delete {id} confirm" : $"event delete {id}");
+                var admin = ctx.User.PlatformId;
+                ctx.Reply(Gateway.Run(ActionKind.DeleteEvent, Actor.Admin, () => EventStore.DeleteDefinition(admin, id, confirm)));
+                return;
+            }
             case "list":
             {
                 var page = CommandArgs.Page(id, EventLines.Pages(set.All.Count));
@@ -98,11 +116,11 @@ internal static class EventCommands
         }
     }
 
-    static void Reply(ChatCommandContext ctx, System.Collections.Generic.IReadOnlyList<string> lines)
+    internal static void Reply(ChatCommandContext ctx, System.Collections.Generic.IReadOnlyList<string> lines)
     {
         foreach (var message in AdminLines.Pack(lines)) ctx.Reply(message);      // a burst of replies loses lines (A8)
     }
 
-    static void LogAdmin(ChatCommandContext ctx, string command) =>
+    internal static void LogAdmin(ChatCommandContext ctx, string command) =>
         Core.Log.LogInfo($"[nyar] {AdminLines.AdminRan(ctx.Name, ctx.User.PlatformId, command)}");
 }

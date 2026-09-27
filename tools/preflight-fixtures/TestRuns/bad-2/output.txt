@@ -1,0 +1,2 @@
+No test matches the given testcase filter `FullyQualifiedName~Nyarlathotep.Tests.GhostTests.` in Nyarlathotep.Tests.dll
+Passed!  - Failed:     0, Passed:     0, Skipped:     0, Total:     0 - Nyarlathotep.Tests.dll (net6.0)

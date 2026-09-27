@@ -47,6 +47,24 @@ internal static class EventStore
     [Mutating]
     internal static string Edit(string id, string path, object value) => Editor.Edit(id, path, value, new PrefabUnitCatalog());
 
+    /// <summary>`.nyar event new`, `copy` and `template use` (event-library D5-D7, D12): one write of events.json that
+    /// <paramref name="plan"/> edits, with the stale, newer-schema and 1 MB refusals, one .bak, then a reload.</summary>
+    [Mutating]
+    internal static string Author(Func<string, EditPlan> plan) => Editor.Write(plan, new PrefabUnitCatalog());
+
+    static readonly DeleteArming _deleteArming = new();
+
+    /// <summary>`.nyar event delete &lt;id&gt; [confirm]` (event-library D8): the first call arms, the same admin's confirm
+    /// within 30 s writes events.json without the definition, then drops its cooldown row and writes state.json.</summary>
+    [Mutating]
+    internal static string DeleteDefinition(ulong adminId, string id, bool confirm)
+    {
+        var deleter = new EventDeleter(_deleteArming, Editor, Catalog, x => EventRuntime.Engine.Find(x) is not null, Persistence.State,
+            line => Core.Log.LogWarning($"[nyar] {line}"));
+        var now = DateTime.UtcNow;
+        return confirm ? deleter.Confirm(adminId, id, now, new PrefabUnitCatalog()) : deleter.Request(adminId, id, now);
+    }
+
     static void Seed()
     {
         try

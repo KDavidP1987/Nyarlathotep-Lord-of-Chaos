@@ -17,15 +17,14 @@ internal static class TriggerBus
 {
     static HookSet _hooks = new(new Registry(), _ => { });
     static readonly TriggerDedupe _dedupe = new();
-    static DayNightEdges _edges = new();
+    static PhaseSampler _phases = NewSampler();
     static EntityQuery _dayNight;
-    static readonly FailureStreak _dayNightFaults = new();
 
     internal static HookSet Hooks => _hooks;
 
     internal static void Initialize()
     {
-        _edges = new DayNightEdges();
+        _phases = NewSampler();
         _hooks = new HookSet(new Registry(), line => Core.Log.LogWarning($"[nyar] {line}"));
         _hooks.RegisterAll();
         var down = _hooks.Unavailable.Count == 0 ? "all hooks available" : $"unavailable: {string.Join(", ", _hooks.Unavailable)}";
@@ -36,34 +35,27 @@ internal static class TriggerBus
     /// state.json whether or not the start is allowed, so it is never retried or replayed, D4), then the day/night edge.</summary>
     internal static void Tick(DateTime now)
     {
-        var set = EventStore.Catalog.Current;
         var fired = Persistence.State.Document.LastFired;
-        foreach (var (def, occurrence) in TriggerRouter.ScheduleDue(set, now, TimeZoneInfo.Local,
-                     id => fired.TryGetValue(id, out var last) ? last.Occurrence : null))
+        var due = TriggerTick.Collect(EventStore.Catalog.Current, now, TimeZoneInfo.Local,
+            id => fired.TryGetValue(id, out var last) ? last.Occurrence : null, _hooks.IsAvailable(Hook.DayNight) ? _phases : null);
+        foreach (var (def, occurrence) in due.Scheduled)
         {
             fired[def.Id] = new LastFired(occurrence, now);
             Persistence.State.MarkDirty();
             Fire(def, $"Schedule {occurrence}");
         }
 
-        if (!_hooks.IsAvailable(Hook.DayNight)) return;
-        bool isDay;
-        try
-        {
-            // DayNightCycle.TimeOfDay (A14): the plan named DayNightCycleExtensions.IsDay, which the pinned assemblies lack.
-            isDay = _dayNight.GetSingleton<DayNightCycle>().TimeOfDay == TimeOfDay.Day;
-            _dayNightFaults.Ok();
-        }
-        catch (Exception ex)
-        {
-            if (_dayNightFaults.Fail()) Core.Log.LogError($"[nyar] day/night read failed: {ex.Message}; GameTime triggers wait");
-            return;
-        }
-        if (_edges.Sample(isDay) is not { } phase) return;
+        if (due.Entered is not { } phase) return;
         Core.Log.LogInfo($"[nyar] trigger: GameTime {phase.ToString().ToLowerInvariant()} began");
-        foreach (var def in TriggerRouter.PhaseEntered(set, phase))
+        foreach (var def in due.PhaseStarts)
             if (_dedupe.ShouldFire($"{def.Id}|GameTime {phase}", now)) Fire(def, $"GameTime {phase.ToString().ToLowerInvariant()}");
     }
+
+    /// <summary>The day and night read through Logic's PhaseSampler (event-library A5, D19): a read that throws logs once
+    /// per failure streak and starts no GameTime event, and the tick's Schedule starts still fire.</summary>
+    // DayNightCycle.TimeOfDay (A14): the plan named DayNightCycleExtensions.IsDay, which the pinned assemblies lack.
+    static PhaseSampler NewSampler() => new(() => _dayNight.GetSingleton<DayNightCycle>().TimeOfDay == TimeOfDay.Day,
+        line => Core.Log.LogError($"[nyar] {line}"));
 
     /// <summary>A V Blood died (Patches/DeathEventPatch). <paramref name="prefab"/> is its prefab name.</summary>
     internal static void VBloodKilled(string prefab)

@@ -86,7 +86,8 @@
       ],
       "plant": {
         "bad": "the closing brace of the template removed (unterminated JSON)",
-        "bad-2": "the real template with example-empowerment's \"enabled\" set true (faction-empowerment D22)"
+        "bad-2": "the real template with example-empowerment's \"enabled\" set true (faction-empowerment D22)",
+        "bad-3": "Resources/templates.json ships with bandit-ambush \"enabled\": true (event-library D18)"
       }
     },
     {
@@ -521,6 +522,64 @@
         "bad": "an unregistered tools/x.ps1 with a -SelfTest switch (faction-empowerment D22)",
         "bad-2": "the rollback-drill entry without its empty case (faction-empowerment D22)"
       }
+    },
+    {
+      "name": "CfgWrites",
+      "function": "Test-CheckCfgWrites",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/CfgWrites",
+      "inputs": [
+        "every .cs file git sees (a [Pillars] entry's .Value =, ConfigFile.Save and ConfigFile.Reload calls)",
+        "Nyarlathotep/Nyarlathotep/Services/PillarSwitches.cs"
+      ],
+      "plant": {
+        "bad": "Commands/PillarCommands.cs sets Settings.EventSpawnsEnabled.Value itself",
+        "bad-2": "Services/PillarSwitches.cs calls Plugin.Instance.Config.Save() after its set"
+      }
+    },
+    {
+      "name": "VcfDependency",
+      "function": "Test-CheckVcfDependency",
+      "mode": "authsuite",
+      "fixtures": "tools/preflight-fixtures/VcfDependency",
+      "inputs": [
+        "Nyarlathotep/Nyarlathotep/Plugin.cs [BepInDependency]",
+        "Nyarlathotep/Nyarlathotep/Nyarlathotep.csproj PackageReference VRising.VampireCommandFramework"
+      ],
+      "plant": {
+        "bad": "Plugin.cs without the VCF BepInDependency",
+        "bad-2": "Nyarlathotep.csproj without the VRising.VampireCommandFramework 0.10.* reference",
+        "bad-3": "the VCF BepInDependency without its version range"
+      }
+    },
+    {
+      "name": "TestRuns",
+      "function": "Test-CheckTestRuns",
+      "mode": "fixture",
+      "fixtures": "tools/preflight-fixtures/TestRuns",
+      "inputs": [
+        "output.txt (a captured dotnet test output)",
+        "exitcode.txt (its exit code)"
+      ],
+      "plant": {
+        "bad": "a run with Failed: 1",
+        "bad-2": "Passed: 0 with exit code 0, as a filter matching nothing gives",
+        "bad-3": "a run with one skipped test"
+      }
+    },
+    {
+      "name": "DependencySuite",
+      "function": "Test-CheckDependencySuite",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/DependencySuite",
+      "inputs": [
+        "tools/preflight-checks.json dependencySuites.event-library, checks and externalSelfTests",
+        "Nyarlathotep/Nyarlathotep.Tests/*.cs (the <Control>_ test methods of each tests row)"
+      ],
+      "plant": {
+        "bad": "the events-write row names control EventsWrote, which matches no test",
+        "bad-2": "the table without its cfg-save row"
+      }
     }
   ],
   "externalSelfTests": [
@@ -624,5 +683,81 @@
         "empty": "a run with 0 tests passed (a filter matching nothing) has no success line and fails"
       }
     }
-  ]
+  ],
+  "dependencySuites": {
+    "event-library": [
+      {
+        "name": "events-write",
+        "kind": "tests",
+        "class": "LibraryDependencyFailureTests",
+        "control": "EventsWrite"
+      },
+      {
+        "name": "events-promote",
+        "kind": "tests",
+        "class": "LibraryDependencyFailureTests",
+        "control": "EventsPromote"
+      },
+      {
+        "name": "state-write",
+        "kind": "tests",
+        "class": "LibraryDependencyFailureTests",
+        "control": "StateWrite"
+      },
+      {
+        "name": "cfg-save",
+        "kind": "tests",
+        "class": "PillarSwitchTests",
+        "control": "SaveFailure"
+      },
+      {
+        "name": "catalogue",
+        "kind": "tests",
+        "class": "LibraryDependencyFailureTests",
+        "control": "Catalogue"
+      },
+      {
+        "name": "location-context",
+        "kind": "tests",
+        "class": "LibraryDependencyFailureTests",
+        "control": "LocationContext"
+      },
+      {
+        "name": "phase-source",
+        "kind": "tests",
+        "class": "LibraryDependencyFailureTests",
+        "control": "PhaseSource"
+      },
+      {
+        "name": "vcf",
+        "kind": "check",
+        "function": "Test-CheckVcfDependency"
+      },
+      {
+        "name": "release-tools",
+        "kind": "selftests",
+        "selftests": [
+          "release-verify",
+          "repo-rollback-drill"
+        ]
+      }
+    ]
+  },
+  "controlSuites": {
+    "event-library": [
+      "ControlCaseTests",
+      "TemplateLibraryTests",
+      "TemplateCommandTests",
+      "AuthoringTests",
+      "AuthoringCapacityTests",
+      "PillarSwitchTests",
+      "ReadinessTests",
+      "LibraryDependencyFailureTests",
+      "CommandArgTests",
+      "ConfigChangedTests",
+      "AuthorizationTests",
+      "ContractDocTests",
+      "ControlPrecedenceTests"
+    ]
+  }
 }

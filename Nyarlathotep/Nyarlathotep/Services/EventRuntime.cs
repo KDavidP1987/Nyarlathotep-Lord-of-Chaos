@@ -182,6 +182,12 @@ internal static class EventRuntime
         }
     }
 
+    /// <summary>`.nyar pillar &lt;name&gt; off` (event-library D14, S-7): ends every running event of that pillar through the
+    /// stop path and returns their ids, in ordinal order.</summary>
+    internal static IReadOnlyList<string> EndPillar(Pillar pillar) =>
+        Engine.Active.Where(a => a.Definition.Pillar == pillar).Select(a => a.Id).OrderBy(x => x, StringComparer.Ordinal).ToList()
+            .Where(id => End(id, "ended (pillar off)")).ToList();
+
     static bool End(string id, string why)
     {
         var ended = Engine.Cancel(id);

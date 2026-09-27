@@ -18,6 +18,15 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
   - A5 (discovered, ~D19, layer 6.2): the day and night read lives in Services/TriggerBus.cs, so D19's phase-source case gets a Logic seam, PhaseSampler in Logic/Schedule.cs.
   - A6 (discovered, ~D16, layer 4.4): the validator gives every definition it disables the pillar spawns, so the readiness of an invalid empowerment definition would follow the wrong switch; the validator keeps the parsed pillar.
 
+### Step 2 · 2026-09-26 · 2b083dc
+- git status: clean at 2b083dc (step 1)
+- compile: 0 errors, 0 warnings
+- tests: 1309 passed
+- preflight: PREFLIGHT OK; -Paths "822 walked, all in manifest"
+- dod status: event-library 0/34 checked (step 1's items wait for their Services, Commands, preflight or in-game halves); review codex, not pending (A9-A11 are not gating)
+- feature doc read: docs/features/EVENT_LIBRARY.md (Status: step 1 done); plan D3, D17, D18, D20, D32, D33, D34 and step 2; Plugin.cs, Services/EventStore.cs, EventRuntime.cs, HealthMonitor.cs, Gateway.cs, Commands/EventCommands.cs, RootCommands.cs, Config/Settings.cs; tools/preflight.ps1 and preflight-checks.json
+- server: not running; step 2 has no in-game test (Session 1 is step 3)
+
 ## Post-audit
 ### Step 1 · 2026-09-26 · e84c8a3 + working tree (committed as step 1)
 - compile / preflight: 0 errors, 0 warnings; 1309 tests passed (871 before the step); PREFLIGHT OK; dod --check 0 problems (6 warnings, all old review-round notes)
@@ -27,3 +36,15 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - privacy grep (7656119, kdpenland): only the plans' own "Grep for" lines and earlier audit lines; none in the new files
 - in-game: none (step 1 is pure logic)
 - dod status: 0/34 checked — every step-1 item also has a Services, Commands, preflight or in-game half (steps 2–5); the Logic and unit-test halves of D1, D2, D4–D14, D16, D19, D27, D31 and D32 pass their named tests
+
+### Step 2 · 2026-09-26 · 2b083dc + working tree (committed as step 2)
+- compile / preflight: 0 errors, 0 warnings; 1313 tests passed; PREFLIGHT OK with "templates: 2 valid", "pillar defaults: all off (5 switches, 2 templates)", "secrets: none", "cfg writes: only PillarSwitches (6 call sites)", "dependency table: event-library 9/9 categories"; -Paths "867 walked, all in manifest"; dod --check 0 problems
+- suites: `-SelfTest` → "selftest: 32/32 checks, 6/6 external selftests"; `-AuthSuite` → "auth suite: pass (tests, commands, admin list, gateway, vcf dependency)"; `-Tests ReadinessTests,ControlPrecedenceTests` → "tests: 2/2 classes, 145 passed"; `-DependencySuite event-library` → "dependency suite: event-library 9/9 (events-write, events-promote, state-write, cfg-save, catalogue, location-context, phase-source, vcf, release-tools)"; `-ControlSuite event-library` → "control suite: event-library tests 13/13 classes, selftest 32/32 checks"; fail-closed: `-DependencySuite ghost` → "dependency suite: ghost has no categories", exit 1; `-Tests GhostTests` → "no tests ran", exit 1
+- found while building: Invoke-ClassTests' `--no-build` flag came from an `if` expression, which unwrapped the one-element array, so every class after the first failed; the two calls are now written out
+- mutation checks: the new fixtures (CfgWrites bad/bad-2, VcfDependency bad to bad-3, TestRuns bad to bad-3, DependencySuite bad/bad-2, TemplatesJson bad-3) each fail and their good fixtures pass in -SelfTest; PillarCfg's section tracking and its bool parse, each removed, fail 2 SaveFailure tests
+- /code-review: one finding, fixed (defect) — BepInEx's ConfigFile.Reload sets only the keys it finds and parses, so a [Pillars] key a truncated save or a hand edit removed or garbled kept its old in-memory value, against D19's "reads as its default, off"; Services/PillarSwitches Reload now reads the file through Logic's PillarCfg.Read and sets each missing or unparsable pillar off in memory without a save; SaveFailure_fails_when_file_lacks_or_garbles_key, SaveFailure_passes_file_values_read
+- Codex verdict: READY (round 2) — round 1 READY with no findings (its log shows every new file and the preflight functions read); round 2, over the PillarCfg fix, READY with no findings
+- amendments: A12 (discovered, ~D30, 14.4): Core.cs and TemplatesJson/good were not in step 2's Paths walked
+- in-game: none (step 2 has no in-game test; Session 1 is step 3)
+- dod status: 0/34 checked — D17, D18 (its soak-report selftest is step 3), D20, D33 and D34 have their evidence commands passing as above; the Commands and Services halves of D5-D14 and D32 wait for Session 2
+

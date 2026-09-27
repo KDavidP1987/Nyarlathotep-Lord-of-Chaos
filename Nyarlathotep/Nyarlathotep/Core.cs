@@ -66,6 +66,7 @@ internal static class Core
             // → EventScheduler.
             Services.Persistence.Initialize();
             Services.EventStore.Initialize();
+            Services.TemplateLibrary.Initialize();
             Services.SpawnTracker.Initialize();
             Services.EmpowerAction.Initialize();
             Services.TriggerBus.Initialize();

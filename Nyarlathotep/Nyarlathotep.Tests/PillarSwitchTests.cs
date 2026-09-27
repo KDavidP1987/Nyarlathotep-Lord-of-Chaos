@@ -240,6 +240,20 @@ public class PillarSwitchTests
         Assert.Empty(r.Lib.Catalog.Running);
     }
 
+    [Theory]
+    [InlineData("## Settings file\n[General]\nEnabled = true\n")]                     // the key is gone (a truncated save)
+    [InlineData("[Pillars]\nEventSpawns = maybe\n")]                                   // a garbled value
+    [InlineData("[General]\nEventSpawns = true\n")]                                    // the key under another section
+    public void SaveFailure_fails_when_file_lacks_or_garbles_key(string cfg) =>
+        Assert.False(PillarCfg.Read(cfg).ContainsKey("EventSpawns"));
+
+    [Fact]
+    public void SaveFailure_passes_file_values_read()
+    {
+        var read = PillarCfg.Read("[General]\r\nEnabled = true\r\n\r\n[Pillars]\r\n# Setting type: Boolean\r\nEventSpawns = true\r\nSiegeWaves = False\r\n[Debug]\r\nVerboseLogging = true\r\n");
+        Assert.Equal(new Dictionary<string, bool> { ["EventSpawns"] = true, ["SiegeWaves"] = false }, read);
+    }
+
     [Fact]
     public void SaveFailure_empty_file_after_truncate()
     {

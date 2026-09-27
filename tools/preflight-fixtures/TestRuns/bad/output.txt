@@ -1,0 +1,2 @@
+  Failed Nyarlathotep.Tests.ReadinessTests.Readiness_passes_order [3 ms]
+Failed!  - Failed:     1, Passed:    11, Skipped:     0, Total:    12, Duration: 40 ms - Nyarlathotep.Tests.dll (net6.0)

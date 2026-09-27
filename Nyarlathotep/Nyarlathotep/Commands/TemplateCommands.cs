@@ -1,0 +1,42 @@
+using System.Linq;
+using Nyarlathotep.Logic;
+using Nyarlathotep.Services;
+using VampireCommandFramework;
+
+namespace Nyarlathotep.Commands;
+
+/// <summary>`.nyar template list|info|use` (event-library D4, D5; Design › UX). Admin-only; `use` writes events.json
+/// through the gateway as CreateEvent (D17). The forms are checked by Logic's CommandForms (A7).</summary>
+[CommandGroup("nyar")]
+internal static class TemplateCommands
+{
+    const string Verbs = "argument must be list, info or use";
+
+    [Command("template", usage: "list [pillar] [page] | info <template> | use <template> [as <id>]",
+        description: "List, inspect or copy the starter event templates into events.json.", adminOnly: true)]
+    public static void Template(ChatCommandContext ctx, string verb = "", string a = "", string b = "", string c = "")
+    {
+        if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }
+        var form = CommandForms.Check("template", [verb, a, b, c], out var usage);
+        if (form is null) { ctx.Reply(usage ?? Verbs); return; }
+        switch (form.Words)
+        {
+            case "template list":
+            {
+                var inEvents = EventStore.Catalog.Current.All.Select(d => d.Id).ToHashSet();
+                EventCommands.Reply(ctx, TemplateLines.List(TemplateLibrary.Catalog, [a, b], inEvents));
+                return;
+            }
+            case "template info":
+                EventCommands.Reply(ctx, TemplateLines.Info(TemplateLibrary.Catalog, a, DateTime.UtcNow));
+                return;
+            default:
+            {
+                var asId = b == "as" ? c : null;
+                EventCommands.LogAdmin(ctx, asId is null ? $"template use {a}" : $"template use {a} as {asId}");
+                ctx.Reply(Gateway.Run(ActionKind.CreateEvent, Actor.Admin, () => TemplateLibrary.UseTemplate(a, asId)));
+                return;
+            }
+        }
+    }
+}
