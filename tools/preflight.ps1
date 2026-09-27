@@ -1049,11 +1049,12 @@ function Get-ComposedTempNames([string]$Root) {
 # line of a tool source that reads the temp root ($env:TEMP or $env:TMP, [IO.Path]::GetTempPath(), Python's
 # os.environ TEMP/TMP, tempfile.gettempdir(), and the anonymous makers mkdtemp, mkstemp, TemporaryDirectory,
 # NamedTemporaryFile, GetTempFileName, New-TemporaryFile, Node's os.tmpdir) must spell a nyar-<name> literal on that
-# line, or carry the registration comment "# nyar-temp: <reason>" (a listing, or the root handed to a function that
+# line, or end with the registration comment "# nyar-temp: <reason>" ("// nyar-temp:" in Node; a marker inside a string
+# does not count) (a listing, or the root handed to a function that
 # spells the name). A name built wholly from variables therefore cannot reach %TEMP% unseen. Comment lines and
 # PowerShell <# #> help blocks are not code. An unreadable source is reported as "unreadable <file>".
 function Get-UnmarkedTempRoots([string]$Root) {
-    $api = '\$en[v]:(TEMP|TMP)\b|GetTempPath\(\)|environ(\.get\(|\[)[''"](TEMP|TMP)[''"]|gettempdir\(|mkdtemp\(|mkstemp\(|TemporaryDirectory\(|NamedTemporaryFile\(|GetTempFileName\(|New-TemporaryFile\b|\btmpdir\(\)'   # nyar-temp: the pattern itself, it opens no folder
+    $api = '\$\{?en[v]:(TEMP|TMP)\b|gete[n]v\(\s*[''"](TEMP|TMP)[''"]|process\.en[v]\.(TEMP|TMP)\b|GetTempPath\(\)|environ(\.get\(|\[)[''"](TEMP|TMP)[''"]|gettempdir\(|mkdtemp\(|mkstemp\(|TemporaryDirectory\(|NamedTemporaryFile\(|GetTempFileName\(|New-TemporaryFile\b|\btmpdir\(\)'   # nyar-temp: the pattern itself, it opens no folder
     $out = @()
     foreach ($f in @(Get-ToolSources $Root)) {
         $t = Read-ToolSource $Root $f
@@ -1063,9 +1064,12 @@ function Get-UnmarkedTempRoots([string]$Root) {
             $l = $lines[$i]; $trim = $l.Trim()
             if ($inHelp) { if ($l -match '#>') { $inHelp = $false }; continue }
             if ($trim.StartsWith('<#')) { if ($trim -notmatch '#>') { $inHelp = $true }; continue }
-            if ($trim.StartsWith('#')) { continue }
+            if ($trim.StartsWith('#') -or $trim.StartsWith('//')) { continue }
             if ($l -notmatch $api) { continue }
-            if ($l -match '(?<![\w-])nyar-[a-z]' -or $l -match '#\s*nyar-temp:\s*\S') { continue }
+            if ($l -match '(?<![\w-])nyar-(?!temp:)[a-z]') { continue }
+            # A registration is a trailing comment: outside any string (the quotes before it balance) and no quote after it.
+            $m = [regex]::Match($l, '(#|//)\s*nyar-temp:\s*\S[^''"]*$')
+            if ($m.Success) { $pre = $l.Substring(0, $m.Index); if ((($pre -split "'").Count - 1) % 2 -eq 0 -and (($pre -split '"').Count - 1) % 2 -eq 0) { continue } }
             $out += "$($f):$($i + 1)"
         }
     }
