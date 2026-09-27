@@ -53,10 +53,12 @@ hand edit give the same result.
 
 Decisions are recorded as the plan's assumptions S-1 to S-14 and amendments. Open:
 
-- Ambush stealth (owner, Session 3): should bandit-ambush use units that stay hidden until a player passes? A
-  template-content decision for the owner.
-- Ground height on uneven terrain (Session 3 Round 3): a wave's ring takes the centre's height; units need their own
-  ground height at each ring point.
+- Ground height on uneven terrain (Session 3 Round 3): a wave's ring takes the centre's height, so units need their
+  own ground height at each ring point. Owner decision 1A: a log-only probe of the game's height (SnapToHeight, a
+  CollisionWorld ray) first, then per-unit placement, or a 4 m spread cap if neither mechanism proves out (A22, D35).
+- Ambush stealth (owner, Session 3): units that stay hidden until a player passes. Owner decision 2A: new scope for a
+  child plan after 0.5.0 (the game's AB_Bandit_Ambush_Buff / RevealBuff and Deadeye Camouflage are the leads);
+  bandit-ambush ships unchanged.
 
 ## Test results
 
