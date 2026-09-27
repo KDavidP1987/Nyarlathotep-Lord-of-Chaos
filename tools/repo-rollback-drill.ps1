@@ -52,6 +52,9 @@ function Invoke-RepoRollback([string]$RepoDir, [string]$Old, [string]$New, [scri
         git -C $RepoDir worktree prune 2>&1 | Out-Null
         # A locked file can keep the worktree folder; that is a failure now, not a later -Paths surprise (code review).
         if (Test-Path -LiteralPath $wt) { throw "leftover worktree folder $wt (a process still holds a file in it)" }
+        # and its registration: `git worktree list` must no longer name it (Codex step 7 post-audit F3).
+        $listed = @(git -C $RepoDir worktree list --porcelain 2>&1 | Where-Object { "$_" -match '^worktree ' -and ("$_".Substring(9) -replace '/', '\') -ieq ($wt -replace '/', '\') })
+        if ($LASTEXITCODE -or $listed) { throw "leftover worktree registration $wt (git worktree prune did not remove it)" }
     }
 }
 

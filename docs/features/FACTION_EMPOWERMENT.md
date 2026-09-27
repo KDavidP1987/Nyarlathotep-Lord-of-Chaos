@@ -5,7 +5,7 @@ The Empower action (pillar `empowerment`, five stats ×1.0–3.0 on 1–5 factio
 expire on their own; sweeps every 15 s, `Limits.EmpowerBatchPerTick` pacing, one empowerment per faction, the boot
 carrier sweep, `.nyar debug here` natives and api 3 empower rows. Verified on the dev server in Sessions 1–3 below
 (stat readings, lifecycle, purge drain, restart, uninstall, Bloodcraft and KindredCommands coexistence). The damage
-numbers and the by-eye attack and move speed view are taken in event-library's Session 2 (event-library D23,
+numbers and the by-eye attack and move speed view are deferred to event-library's Session 2 (not yet run; event-library D23,
 faction-empowerment A8). The example definition below is the original design sketch; the shipped schema is in the
 Thunderstore README (Faction empowerment) and `Resources/events.default.json`.
 
