@@ -16,10 +16,13 @@ public sealed record ControlState(
 /// manual start meets the same controls as a schedule.</summary>
 public static class Precedence
 {
+    /// <summary>The purge blocker's label; EventRuntime matches it to add the seconds left (faction-empowerment D30).</summary>
+    public const string PurgeCooldown = "purge cooldown active";
+
     /// <summary>The reason the start is refused, highest control first, or null when it may start.</summary>
     public static string? StartBlocker(EventDefinition def, ControlState s)
     {
-        if (s.PurgeCooldownActive) return "purge cooldown active";
+        if (s.PurgeCooldownActive) return PurgeCooldown;
         if (!s.GeneralEnabled) return "General.Enabled is false";
         if (!s.EnabledPillars.Contains(def.Pillar)) return $"pillar {def.Pillar.ToString().ToLowerInvariant()} is off";
         if (s.ActiveEvents >= s.MaxConcurrentEvents) return "skipped by MaxConcurrentEvents";
