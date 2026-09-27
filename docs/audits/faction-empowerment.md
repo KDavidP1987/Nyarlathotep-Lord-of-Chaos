@@ -64,6 +64,16 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - session setup (ee13316 → 980b1ae): `pwsh tools/dev-snapshot.ps1 -Save s3` → "snapshot saved: s3 (28 files)"; Release build deployed (0 warnings); fe3 written; Bloodcraft 1.13.22 and KindredCommands 2.5.8 (Thunderstore zips, SHA-256 7283dbea… and 80b9cf90…) in plugins with only Bloodcraft's FamiliarSystem switched on; setup boots' log checks "0 unhandled, 6 nyar lines" and "0 unhandled, 13 nyar lines", 0 orphan and 0 unity errors; new warnings are Bloodcraft's own (startup check before bootstrap, a NullReferenceException in its VSystemManager.AddSystem; it then logs "Initialized [1.13.22]") and KindredCommands' player-cache lines
 - pre-session Codex cross-inspection of the D30 and fe3 diff and the Session 3 steps: READY (round 7); rounds 1-6 REVISE, all on the owner steps: the cooldown wait, the native Thug baseline, .despawnnpc near the camp, the speed baseline, the uninstall events outliving the autosave wait (300 s → 900 s), the respawn fallback (KindredCommands units are admin-owned and skipped, so no stand-in), the tracked-units line, Thug rows read before each damage sample; one rejected with evidence (debug rows are logged, SpawnCommands.cs Debug); every round's log: 0 "blocked by policy" except round 1's hit, which is the text of this audit file
 
+### Step 7 · 2026-09-26 · 3a535c1
+- git status: clean, level with origin/main after the step 6 post-audit (3a535c1)
+- compile: 0 errors, 0 warnings; tests: 871 passed
+- preflight: PREFLIGHT OK; -Paths "778 walked, all in manifest"
+- dod status: faction-empowerment 24/30 verified; open D22, D23, D24, D25, D26, D29, all Build plan step 7
+- feature doc read: docs/features/FACTION_EMPOWERMENT.md Status and Open questions; Build plan step 7 and Rollout › Compatibility and Rollback of docs/dod/faction-empowerment.md
+- baseline boot: Session 3's boots of ee13316 (log checks "0 unhandled, 367 nyar lines" and "0 unhandled, 88 nyar lines"); the server is stopped and the s3 snapshot restored
+- releases: tags v0.2.0, v0.2.1, v0.3.0, each a GitHub pre-release; v0.3.0 = ee36a7d is the rollback base
+- privacy grep (7656119, kdpenland): only the plans' own "Grep for" lines, their fixtures and the raphael-api-core audit sentence
+
 ## Post-audit
 ### Step 1 · 2026-09-26 · 0559d4c → 23f2ba4 → 5ca6812
 - compile / preflight: 0 errors, 0 warnings; 848 tests passed; PREFLIGHT OK; dod --check 0 problems, 0 warnings
