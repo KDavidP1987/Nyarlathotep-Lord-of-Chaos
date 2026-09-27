@@ -483,3 +483,36 @@ READY on revision 8 (4bfd849), with EARLIER: all resolved. The three advisory fi
 - F1 · accepted · A1 ~D8: a confirm refused because the event is running keeps the pending delete (its 30 s still run), so stop then confirm inside the window deletes; the sequence joins AuthoringTests Delete
 - F2 · accepted · A2 ~D20: malformed arity and binding (a dangling `as`, surplus arguments, a missing `event set` value) get VCF's own usage reply and never reach the gateway; representative forms join CommandArgTests
 - F3 · accepted · A3 ~D25: the Session 3 kick-off records one observation of CHAR_Bandit_Hunter's attack (ranged or melee), the trigger of S-6's fallback
+
+## Review 10 · 2026-09-26 · codex · plan commit 71458d8 · plan 180066 B · 34 items · files 0 · e3b0c44298fc · prompt 3ce216869a54 · scope A13
+Prompt checked twice before recording: the prompt file's SHA-256 begins 3ce216869a54, and a rebuild from the plan at 71458d8 gave the same prompt.
+
+F1 `blocking` — Probe `14.4` is unanswered for transient paths: A13’s final-state diff and filesystem walk cannot detect an undeclared untracked, ignored, server, or `%TEMP%` path that the build creates and deletes before `-Paths -DeclaredOf` runs, so the gating command can pass with a shipped workflow path absent from “Paths walked.”
+Fix: State how transient writes are recorded durably during each step and make `pwsh tools/preflight.ps1 -Paths -DeclaredOf event-library` fail from a selftest fixture when that recorded path is undeclared even though it no longer exists.
+
+F2 `blocking` — Probe `4.5` is unanswered because the amended “every path” computation does not state what valid members its final-state scan misses or who verifies those omissions; deleted transient paths are a concrete missed member and no current D30 failure case exercises it.
+Fix: Define the complete set as the durable path-write record plus the base diff and live walks, name who checks that record, and add failing, silent, and empty fixtures covering a created-then-deleted path.
+
+F3 `blocking` — Probe `14.4` is unanswered when the audit’s Step 1 pre-audit heading names a wrong, missing, non-ancestor, or post-build commit: D30 neither validates that base nor gives a failing fixture, so moving the heading forward can hide this child’s tracked changes while the evidence command passes.
+Fix: Require the command to validate the recorded SHA as the actual pre-build HEAD and an ancestor of the reviewed range, with a fixture where a later SHA causes `-Paths -DeclaredOf` to fail.
+
+F4 `advisory` — Concurrent scenario: A13 takes every current untracked path without an age or provenance rule, so an unrelated pre-existing untracked file can fail this child’s gate even though the amended rule carefully excludes equivalent pre-existing ignored and server files.
+Fix: Apply a stated pre-build snapshot or timestamp/provenance rule consistently to untracked paths and add a silent fixture for an unrelated pre-build untracked file.
+
+F5 `advisory` — The reversible labels overstate reversibility: S-8 changes the public authoring interface and documentation, while S-9 changes retention only prospectively and cannot recover definitions already deleted; S-5, S-6, S-10 and S-12 are pre-release catalogue or operating adjustments but still require coordinated evidence updates.
+Fix: Mark S-8 and S-9 as release-bound policy decisions, explicitly limit their fallbacks to pre-release or future operations, and retain the listed coordinated amendments for S-5, S-6, S-10 and S-12.
+
+F6 `advisory` — Blind scoring: layers 1–3, 5–13 and 15 are Considered by their named plan sections and mapped D-items; layer 4 is Gap at `4.5`, layer 14 is Gap at `14.4`, and no layer has a valid N/A claim.
+Fix: Close F1–F3, then restore layers 4 and 14 to Considered; the Build steps already cite their D-items and every other Considered layer 2–13 maps to evidence.
+
+13/15 layers · 47/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · A14: every %TEMP%
+yar-<name> folder a script under tools/ names joins the set, read from source; fixture Paths/bad-transient
+- F2 · accepted · A14: the complete set is defined in D30 (base diff, written-after-base untracked, ignored and server paths, present and source-named %TEMP% folders); a repository or server path created and deleted inside one step is outside it by definition and the step's post-audit reads the diff for one
+- F3 · accepted · A14: the Step 1 base must be the parent of the commit that created the audit (git log --diff-filter=A); fixture Paths/bad-base
+- F4 · accepted · A14: untracked paths follow the written-after-base rule
+- F5 · declined for this scope · S-8 and S-9 are outside A13; their fallbacks already apply to future operations only, and a change would be its own amendment
+- F6 · scoring · layers 4 and 14 return to Considered with A14; a scoped re-review of A13 and A14 follows
