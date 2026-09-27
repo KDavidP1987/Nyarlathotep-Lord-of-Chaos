@@ -6,6 +6,7 @@
     pwsh tools/rollback-gate.ps1 -From v0.3.0 -To v0.4.0
       Runs, in order, each in its own pwsh process:
         1. repo      tools/repo-rollback-drill.ps1 -From <From> -To <To>   → "rollback: clean" (D25)
+                     (with -BeforePush while <To> is not on origin, faction-empowerment A9)
         2. drill     tools/rollback-drill.ps1 -From <To> -To <From>        → "rollback drill: pass" (D23)
         3. snapshot  tools/dev-snapshot.ps1 -SelfTest                      → "snapshot selftest: 6/6" (D28)
       A part passes only when it exits 0 and prints its success line. Every part runs even after one fails.
@@ -81,8 +82,12 @@ if ($SelfTest) {
 if (-not $From -or -not $To) { Write-Host 'usage: rollback-gate.ps1 -From <older tag> -To <newer tag> | -SelfTest'; exit 2 }
 $releases = @(git -C $Repo tag -l 'v[0-9]*')
 if ($releases.Count -lt 2) { Write-Host 'rollback gate: 0/3, failed: needs two releases'; exit 1 }
+# Before the push the newer tag is not on origin, and the older release's preflight fails on exactly that
+# (faction-empowerment A9): the repository drill then runs with -BeforePush, which accepts that one failure only.
+$repoArgs = @('-From', $From, '-To', $To)
+if (-not (git -C $Repo ls-remote --tags origin "refs/tags/$To")) { $repoArgs += '-BeforePush'; Write-Host "rollback gate: $To is not on origin yet; the repository drill runs with -BeforePush" }
 $r = Invoke-Gate @(
-    @{ Name = 'repo'; Script = (Join-Path $PSScriptRoot 'repo-rollback-drill.ps1'); Args = @('-From', $From, '-To', $To); Success = 'rollback: clean' },
+    @{ Name = 'repo'; Script = (Join-Path $PSScriptRoot 'repo-rollback-drill.ps1'); Args = $repoArgs; Success = 'rollback: clean' },
     @{ Name = 'drill'; Script = (Join-Path $PSScriptRoot 'rollback-drill.ps1'); Args = @('-From', $To, '-To', $From); Success = 'rollback drill: pass' },
     @{ Name = 'snapshot'; Script = (Join-Path $PSScriptRoot 'dev-snapshot.ps1'); Args = @('-SelfTest'); Success = 'snapshot selftest: 6/6' })
 Write-Host $r.Line

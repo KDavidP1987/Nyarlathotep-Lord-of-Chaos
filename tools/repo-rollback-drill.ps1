@@ -15,13 +15,19 @@
       Three cases on a scratch git repository under %TEMP%\nyar-rollback-selftest-<guid> (removed when done), with the build,
       test and preflight stage replaced by a stub: a clean range passes; a range whose revert git cannot apply fails
       (a merge commit in the range; a linear range reverted from its tip never conflicts, so this is how a whole-range
-      revert of this repository stops); a missing tag fails.
-      → "repo rollback selftest: 3/3".
+      revert of this repository stops); a missing tag fails; and the -BeforePush rule over captured preflight output:
+      the unpushed tag as the one failure passes, the same with a second failed check fails.
+      → "repo rollback selftest: 5/5".
+
+    -BeforePush (faction-empowerment A9): on the local tag before it is pushed, the older release's preflight fails
+      its release-tags check ("release tags: <n>/<m> (<To> not pushed)"); that one failed check, and nothing else,
+      is accepted. After the push, run without it: D25's command unchanged.
 #>
 [CmdletBinding()]
 param(
     [string]$From,
     [string]$To,
+    [switch]$BeforePush,
     [switch]$SelfTest
 )
 $ErrorActionPreference = 'Stop'
@@ -47,12 +53,30 @@ function Invoke-RepoRollback([string]$RepoDir, [string]$Old, [string]$New, [scri
     }
 }
 
+# -BeforePush (faction-empowerment A9): the older release's preflight fails its release-tags check while the newer
+# tag is unpushed. Accepted only when that is the one failed check and its only complaint is <Tag> not pushed.
+# Returns $null when accepted, else why not.
+function Test-PreflightBeforePush([string[]]$Out, [int]$Code, [string]$Tag) {
+    if ($Code -eq 0) { return $null }
+    $failed = $Out | Where-Object { $_ -match '^PREFLIGHT FAILED: \d+ check' } | Select-Object -Last 1
+    if (-not $failed -or $failed -notmatch '^PREFLIGHT FAILED: 1 check') { return "preflight: $(if ($failed) { $failed } else { "exit $Code" })" }
+    $want = "^release tags: \d+/\d+ \($([regex]::Escape($Tag)) not pushed\)$"
+    if (-not ($Out | Where-Object { $_ -match $want })) { return "preflight: its one failed check is not 'release tags: <n>/<m> ($Tag not pushed)'" }
+    return $null
+}
+
 $RealVerify = {
     param($wt)
     $PSNativeCommandUseErrorActionPreference = $true   # a non-zero build, test or preflight exit stops the drill (D25)
     dotnet build "$wt\Nyarlathotep\Nyarlathotep.sln" -c Release -p:VRisingServerPath=C:\__nodeploy__ | Out-Host
     dotnet test "$wt\Nyarlathotep\Nyarlathotep.Tests" | Out-Host
-    pwsh -NoProfile -File "$wt\tools\preflight.ps1" | Out-Host
+    if (-not $BeforePush) { pwsh -NoProfile -File "$wt\tools\preflight.ps1" | Out-Host; return }
+    $PSNativeCommandUseErrorActionPreference = $false
+    $out = @(pwsh -NoProfile -File "$wt\tools\preflight.ps1" 2>&1 | ForEach-Object { "$_" }); $code = $LASTEXITCODE
+    $out | Out-Host
+    $why = Test-PreflightBeforePush $out $code $To
+    if ($why) { throw $why }
+    if ($code) { Write-Host "preflight: the one failure is $To not pushed (-BeforePush, faction-empowerment A9)" }
 }
 
 if ($SelfTest) {
@@ -85,10 +109,16 @@ if ($SelfTest) {
         $missing = $false
         try { $null = Invoke-RepoRollback $scratch 'v1' 'v9' $stub } catch { $missing = $true; Write-Host "  - missing tag: fails — $($_.Exception.Message)" }
         if ($missing) { $ok++ } else { Write-Host '  - missing tag: expected fail, got pass' }
+        # -BeforePush (A9) over captured preflight output: the unpushed tag alone is accepted, a second failure is not.
+        $only = @('release tags: 3/4 (v2 not pushed)', '', 'PREFLIGHT FAILED: 1 check(s)')
+        if ($null -eq (Test-PreflightBeforePush $only 1 'v2')) { $ok++ } else { Write-Host '  - before push, only v2 not pushed: expected pass' }
+        $more = @('changelogs: 0.2.0 missing from CHANGELOG.md', 'release tags: 3/4 (v2 not pushed)', '', 'PREFLIGHT FAILED: 2 check(s)')
+        $why = Test-PreflightBeforePush $more 1 'v2'
+        if ($why) { $ok++; Write-Host "  - before push, another failure: fails - $why" } else { Write-Host '  - before push, another failure: expected fail, got pass' }
     } catch { Write-Host "  - scratch repository: $($_.Exception.Message)" }
     finally { Remove-Item -LiteralPath $scratch -Recurse -Force -ErrorAction SilentlyContinue }
-    Write-Host "repo rollback selftest: $ok/3"
-    exit ([int]($ok -ne 3))
+    Write-Host "repo rollback selftest: $ok/5"
+    exit ([int]($ok -ne 5))
 }
 
 if (-not $From -or -not $To) { Write-Host 'usage: repo-rollback-drill.ps1 -From <older tag> -To <newer tag> | -SelfTest'; exit 2 }

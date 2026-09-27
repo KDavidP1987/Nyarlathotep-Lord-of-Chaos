@@ -77,11 +77,11 @@
         "tools/repo-rollback-drill.ps1",
         "-SelfTest"
       ],
-      "success": "repo rollback selftest: 3/3",
+      "success": "repo rollback selftest: 5/5",
       "cases": {
         "bad": "a scratch repository whose range holds a merge commit: git refuses the revert and the drill fails",
         "good": "a scratch repository with a clean range reverts to the older tag and passes",
-        "empty": "a missing tag fails"
+        "empty": "a missing tag fails; -BeforePush accepts the unpushed tag as the one preflight failure and refuses a second failed check (A9)"
       }
     },
     {
