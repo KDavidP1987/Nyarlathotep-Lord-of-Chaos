@@ -1049,12 +1049,12 @@ function Get-ComposedTempNames([string]$Root) {
 # line of a tool source that reads the temp root ($env:TEMP or $env:TMP, [IO.Path]::GetTempPath(), Python's
 # os.environ TEMP/TMP, tempfile.gettempdir(), and the anonymous makers mkdtemp, mkstemp, TemporaryDirectory,
 # NamedTemporaryFile, GetTempFileName, New-TemporaryFile, Node's os.tmpdir) must spell a nyar-<name> literal on that
-# line, or end with the registration comment "# nyar-temp: <reason>" ("// nyar-temp:" in Node; a marker inside a string
-# does not count) (a listing, or the root handed to a function that
-# spells the name). A name built wholly from variables therefore cannot reach %TEMP% unseen. Comment lines and
+# line's code, or end with the registration comment "# nyar-temp: <reason>" ("// nyar-temp:" in Node) (a listing, or the
+# root handed to a function that spells the name). Each line is split at its trailing comment, found outside quotes
+# (Split-CodeComment), so a literal or an API in the comment does not count and a marker in a string is no comment. A name built wholly from variables therefore cannot reach %TEMP% unseen. Comment lines and
 # PowerShell <# #> help blocks are not code. An unreadable source is reported as "unreadable <file>".
 function Get-UnmarkedTempRoots([string]$Root) {
-    $api = '\$\{?en[v]:(TEMP|TMP)\b|gete[n]v\(\s*[''"](TEMP|TMP)[''"]|process\.en[v]\.(TEMP|TMP)\b|GetTempPath\(\)|environ(\.get\(|\[)[''"](TEMP|TMP)[''"]|gettempdir\(|mkdtemp\(|mkstemp\(|TemporaryDirectory\(|NamedTemporaryFile\(|GetTempFileName\(|New-TemporaryFile\b|\btmpdir\(\)'   # nyar-temp: the pattern itself, it opens no folder
+    $api = '\$\{?en[v]:(TEMP|TMP)\b|gete[n]v\s*\(\s*[''"](TEMP|TMP)[''"]|process\.en[v]\.(TEMP|TMP)\b|GetTempPath\(\)|environ(\.get\s*\(\s*|\[\s*)[''"](TEMP|TMP)[''"]|gettempdir\(|mkdtemp\(|mkstemp\(|TemporaryDirectory\(|NamedTemporaryFile\(|GetTempFileName\(|New-TemporaryFile\b|\btmpdir\(\)'   # nyar-temp: the pattern itself, it opens no folder
     $out = @()
     foreach ($f in @(Get-ToolSources $Root)) {
         $t = Read-ToolSource $Root $f
@@ -1071,17 +1071,33 @@ function Get-UnmarkedTempRoots([string]$Root) {
                     $l = $l.Substring(0, $o) + ' ' + $l.Substring($c + 2)
                 }
             }
-            $trim = $l.Trim()
-            if ($trim.StartsWith('#') -or $trim.StartsWith('//')) { continue }
-            if ($l -notmatch $api) { continue }
-            if ($l -match '(?<![\w-])nyar-(?!temp:)[a-z]') { continue }
-            # A registration is a trailing comment: outside any string (the quotes before it balance) and no quote after it.
-            $m = [regex]::Match($l, '(#|//)\s*nyar-temp:\s*\S[^''"]*$')
-            if ($m.Success) { $pre = $l.Substring(0, $m.Index); if ((($pre -split "'").Count - 1) % 2 -eq 0 -and (($pre -split '"').Count - 1) % 2 -eq 0) { continue } }
+            $code, $comment = Split-CodeComment $l ($f -match '\.m?js$')
+            if ($code -notmatch $api) { continue }
+            if ($code -match '(?<![\w-])nyar-(?!temp:)[a-z]') { continue }
+            if ($comment -match '^(#|//)\s*nyar-temp:\s*\S') { continue }
             $out += "$($f):$($i + 1)"
         }
     }
     return @($out | Sort-Object -Unique)
+}
+
+# A source line as (code, trailing comment): the comment starts at the first # (// in Node) outside a quoted string;
+# inside a string a backslash (Python, Node) or a backtick (PowerShell) escapes the next character. No comment: ''.
+function Split-CodeComment([string]$Line, [bool]$Node) {
+    $q = [char]0
+    for ($k = 0; $k -lt $Line.Length; $k++) {
+        $ch = $Line[$k]
+        if ($q -ne [char]0) {
+            if ($ch -eq [char]92 -or $ch -eq [char]96) { $k++; continue }
+            if ($ch -eq $q) { $q = [char]0 }
+            continue
+        }
+        if ($ch -eq [char]39 -or $ch -eq [char]34) { $q = $ch; continue }
+        if ((-not $Node -and $ch -eq [char]35) -or ($Node -and $ch -eq [char]47 -and $k + 1 -lt $Line.Length -and $Line[$k + 1] -eq [char]47)) {
+            return @($Line.Substring(0, $k), $Line.Substring($k))
+        }
+    }
+    return @($Line, '')
 }
 
 # The path tokens of a plan's Rollout › Paths walked (event-library D30): words holding a / or \, a * or a file name,
@@ -1215,7 +1231,7 @@ function Test-CheckPaths([string]$Root) {
     if ($null -ne $in.Declared -and -not (Test-IsFixture $Root)) {
         $plantDir = Join-Path $Root 'tools/preflight-fixtures/Paths'
         $plants = @(Get-ChildItem -LiteralPath $plantDir -Directory -Filter 'bad*' -ErrorAction SilentlyContinue | Sort-Object Name)
-        $need = @('bad-composed', 'bad-scratch', 'bad-tempvar', 'bad-transient', 'bad-undeclared')
+        $need = @('bad-base', 'bad-composed', 'bad-scratch', 'bad-tempvar', 'bad-transient', 'bad-undeclared')
         $absent = @($need | Where-Object { $plants.Name -notcontains $_ })
         $passing = @()
         foreach ($p in $plants) {
