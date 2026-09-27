@@ -37,7 +37,9 @@ public sealed record Conditions(
 
 public sealed record UnitEntry(string Prefab, int Count);
 
-public sealed record Location(LocationType Type, float X, float Z);
+/// <summary>Where a SpawnWaves action spawns. A Point's Y is the height (event-library A20); a Point stored without one
+/// spawns at height 0, as before.</summary>
+public sealed record Location(LocationType Type, float X, float Z, float? Y = null);
 
 public sealed record SpawnWavesAction(
     IReadOnlyList<UnitEntry> Units,

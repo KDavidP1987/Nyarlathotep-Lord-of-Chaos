@@ -453,14 +453,15 @@ public static class EventValidator
 
     static Location ParseLocation(JsonElement l, Trigger trigger)
     {
-        const string rule = "action.location must be { \"type\": \"Point\", \"x\": number, \"z\": number } or { \"type\": \"Admin\" }";
+        const string rule = "action.location must be { \"type\": \"Point\", \"x\": number, \"z\": number, optional \"y\": number } or { \"type\": \"Admin\" }";
         if (l.ValueKind != JsonValueKind.Object) throw new Fail(rule);
         var type = l.TryGetProperty("type", out var ty) && ty.ValueKind == JsonValueKind.String ? ty.GetString() : null;
         switch (type)
         {
             case "Point":
-                OnlyKeys(l, "action.location", "type", "x", "z");
-                return new Location(LocationType.Point, Coord(Required(l, "x", rule), "x"), Coord(Required(l, "z", rule), "z"));
+                OnlyKeys(l, "action.location", "type", "x", "y", "z");
+                float? y = l.TryGetProperty("y", out var yv) ? Coord(yv, "y") : null;   // absent: height 0 (A20)
+                return new Location(LocationType.Point, Coord(Required(l, "x", rule), "x"), Coord(Required(l, "z", rule), "z"), y);
             case "Admin":
                 OnlyKeys(l, "action.location", "type");
                 if (trigger.Type != TriggerType.Manual) throw new Fail("action.location Admin needs a Manual trigger");

@@ -280,10 +280,10 @@ public sealed class LocationHere
     LocationHere() { }
 }
 
-/// <summary>A map point for action.location, x and z rounded to 0.1 (event-library D11).</summary>
-public readonly record struct PointArg(decimal X, decimal Z)
+/// <summary>A map point for action.location, x, y (the height, A20) and z rounded to 0.1 (event-library D11).</summary>
+public readonly record struct PointArg(decimal X, decimal Y, decimal Z)
 {
-    public override string ToString() => FormattableString.Invariant($"Point {X}, {Z}");
+    public override string ToString() => FormattableString.Invariant($"Point {X}, {Z} at height {Y}");
 }
 
 public static class LocationArg
@@ -293,26 +293,27 @@ public static class LocationArg
     public const string NoCharacter = "location here needs your character in the world";
 
     /// <summary>The admin's position as a point, each axis rounded to 0.1; a position beyond ±10000 is refused.</summary>
-    public static Arg<PointArg> FromPosition(float x, float z)
+    public static Arg<PointArg> FromPosition(float x, float y, float z)
     {
-        if (!float.IsFinite(x) || !float.IsFinite(z) || Math.Abs(x) > (float)Bound || Math.Abs(z) > (float)Bound)
-            return Arg<PointArg>.Bad(OutOfBounds);
-        // + 0.0m gives every value one decimal place, so 10000 reads "10000.0" like 800.0 (the scale of a sum is the larger).
-        var px = Math.Round((decimal)x, 1, MidpointRounding.AwayFromZero) + 0.0m;
-        var pz = Math.Round((decimal)z, 1, MidpointRounding.AwayFromZero) + 0.0m;
-        if (Math.Abs(px) > Bound || Math.Abs(pz) > Bound) return Arg<PointArg>.Bad(OutOfBounds);
-        return Arg<PointArg>.Of(new PointArg(px, pz));
+        float[] axes = [x, y, z];
+        if (axes.Any(a => !float.IsFinite(a) || Math.Abs(a) > (float)Bound)) return Arg<PointArg>.Bad(OutOfBounds);
+        var (px, py, pz) = (Round(x), Round(y), Round(z));
+        if (Math.Abs(px) > Bound || Math.Abs(py) > Bound || Math.Abs(pz) > Bound) return Arg<PointArg>.Bad(OutOfBounds);
+        return Arg<PointArg>.Of(new PointArg(px, py, pz));
     }
+
+    // + 0.0m gives every value one decimal place, so 10000 reads "10000.0" like 800.0 (the scale of a sum is the larger).
+    static decimal Round(float v) => Math.Round((decimal)v, 1, MidpointRounding.AwayFromZero) + 0.0m;
 
     /// <summary>`location here` from a context that may have no character or position (the server console, or a
     /// character not yet in the world): <paramref name="read"/> returns null, or throws, and the reply is
     /// <see cref="NoCharacter"/> (event-library D19).</summary>
-    public static Arg<PointArg> FromContext(Func<(float X, float Z)?> read)
+    public static Arg<PointArg> FromContext(Func<(float X, float Y, float Z)?> read)
     {
-        (float X, float Z)? at;
+        (float X, float Y, float Z)? at;
         try { at = read(); }
         catch (Exception) { at = null; }
-        return at is { } p ? FromPosition(p.X, p.Z) : Arg<PointArg>.Bad(NoCharacter);
+        return at is { } p ? FromPosition(p.X, p.Y, p.Z) : Arg<PointArg>.Bad(NoCharacter);
     }
 }
 

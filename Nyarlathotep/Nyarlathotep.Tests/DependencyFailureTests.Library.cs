@@ -221,9 +221,9 @@ public class LibraryDependencyFailureTests
     [Fact]
     public void LocationContext_passes_character_in_world()
     {
-        var p = LocationArg.FromContext(() => (1.26f, -2.24f));
+        var p = LocationArg.FromContext(() => (1.26f, 3.04f, -2.24f));
         Assert.True(p.Ok);
-        Assert.Equal(new PointArg(1.3m, -2.2m), p.Value);
+        Assert.Equal(new PointArg(1.3m, 3.0m, -2.2m), p.Value);
     }
 
     [Fact]

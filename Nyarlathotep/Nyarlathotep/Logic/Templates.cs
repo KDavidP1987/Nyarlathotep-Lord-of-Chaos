@@ -171,9 +171,9 @@ public static class TemplateLines
     public static string Line(TemplateEntry t, bool inEvents)
     {
         var d = t.Definition;
-        return $"{d.Id} {PillarNames.Name(d.Pillar)} {EventLines.Trigger(d.Trigger)} \"{d.Name}\"" +
+        return EventLines.Fit(tr => $"{d.Id} {PillarNames.Name(d.Pillar)} {tr} \"{d.Name}\"" +
                (inEvents ? " (in events.json)" : "") +
-               (t.Invalid is { } reason ? $" invalid: {reason}" : "");
+               (t.Invalid is { } reason ? $" invalid: {reason}" : ""), d.Trigger, out _);
     }
 
     /// <summary>`.nyar template info &lt;id&gt;`: EventLines.Info of the template.</summary>

@@ -95,6 +95,11 @@ public static class TriggerRouter
 /// MaxTrackedUnits slots, and the units left are given to the entries in order.</summary>
 public static class WavePlan
 {
+    /// <summary>Where a wave is centred: the starting admin's position for an Admin location, else the stored Point at
+    /// its height, or 0 for a Point stored without one (event-library A20).</summary>
+    public static (float X, float Y, float Z) Center(Location location, (float X, float Y, float Z)? origin) =>
+        location.Type == LocationType.Admin && origin is { } o ? o : (location.X, location.Y ?? 0f, location.Z);
+
     public static IReadOnlyList<UnitEntry> Split(IReadOnlyList<UnitEntry> units, int maxPerWave, int occupied, int maxTracked, List<string> log)
     {
         var requested = units.Sum(u => u.Count);

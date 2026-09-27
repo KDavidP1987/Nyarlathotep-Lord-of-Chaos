@@ -22,6 +22,16 @@ public partial class EngineTests
     }
 
     // ValidAction: 3 waves every 60 s; duration 600 s.
+    /// <summary>A20: a Point spawns at its stored height; one stored without a height at 0; an Admin location at the
+    /// starting admin's position.</summary>
+    [Fact]
+    public void Wave_center_uses_point_height()
+    {
+        Assert.Equal((1f, 42.5f, 2f), WavePlan.Center(new Location(LocationType.Point, 1, 2, 42.5f), (9, 9, 9)));
+        Assert.Equal((1f, 0f, 2f), WavePlan.Center(new Location(LocationType.Point, 1, 2), null));
+        Assert.Equal((7f, 8f, 9f), WavePlan.Center(new Location(LocationType.Admin, 0, 0), (7, 8, 9)));
+    }
+
     [Fact]
     public void Waves_come_at_start_plus_k_intervals_once_each()
     {

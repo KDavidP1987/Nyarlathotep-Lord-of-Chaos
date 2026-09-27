@@ -79,6 +79,14 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - in-game: Session 1 (docs/features/EVENT_LIBRARY.md › Test results), unattended; D3 "templates: 6/6 valid"; log check "0 unhandled, 60 nyar lines, 0 orphan errors, 0 unity errors"; "snapshot restored; hashes equal (s1, … deleted)"
 - dod status: D3 (manual, Session 1) and D24 (soak-report -SelfTest 8/8) pass and are checked with the step 3 commit; D29's routes part and D30's paths, inventory and session parts pass as above and are checked at the release, with the gate and the last session
 
+### Step 4 fixes · 2026-09-27 · 50c992c + working tree (A20, A21, committed with this record)
+- compile / tests: 0 errors, 0 warnings; 1320 passed (7 new: the Point height load and two y refusals, the rounded height and its bounds, the long militia-crackdown trigger in list, info and event list with BossLines wrapping 40 names, and WavePlan.Center)
+- mutation checks: Fits forced true and a dropped stored y failed 5 tests; WavePlan.Center without the height failed Wave_center_uses_point_height; each restored and green
+- preflight: PREFLIGHT OK; dod --check event-library 0 problems
+- /code-review: no findings (a schedule trigger with very many days or times could still pass 480 bytes; outside A21, which names vbloodkilled lines)
+- Codex verdict: READY (round 1) — F1 advisory accepted: the spawn centre moved to Logic WavePlan.Center with a test, so dropping the height fails a test; F2 advisory rejected: an action line of ten 96-character prefabs could still be cut, outside A21/D4, which name trigger lines, and no shipped or authored event comes near it; F3 advisory rejected: ±10000 is D11's bound for every axis, `location here` reads the admin's real position, and a hand-edited height is admin-authored like x and z; F4 confirmation
+- in-game: D21 cases 1 and 12 and D22's four silent commands are rerun in Session 3
+
 ## Sessions
 - session 1 log check: 0 unhandled, 60 nyar lines, 0 orphan errors, 0 unity errors
   - one boot (23:10–23:48), unattended; run after the stop and before any restart; BepInEx: the three known warnings (Il2CppInterop, two Beelzebub TUNE); Unity log: 226 PrefabLookupMap lines at save load, the game's RepairVBloodProgressionSystem lookup notice and the hard stop's Crashpad and temp-memory notices; then "snapshot restored; hashes equal (s1, … deleted)"

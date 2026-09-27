@@ -33,7 +33,7 @@ public static class ControlCases
         T("D1", "TemplateCatalogue", "TemplateLibraryTests", ["template_breaks_a_rule", "file_is_broken"], ["real_file"], ["zero_templates"]),
         T("D2", "StarterTemplates", "TemplateLibraryTests", ["a_field_differs"], ["six_as_business_rules"], ["no_templates"]),
         T("D4", "TemplateList", "TemplateCommandTests", ["arguments_are_bad", "catalogue_unavailable", "info_id_unknown"],
-            ["real_catalogue", "invalid_template_with_reason", "three_pages"], ["catalogue"]),
+            ["real_catalogue", "invalid_template_with_reason", "three_pages", "long_trigger_within_one_message"], ["catalogue"]),
         T("D5", "TemplateUse", "TemplateCommandTests", ["refused", "used_twice"], ["copy_disabled", "enabled_template_copied_disabled"], ["catalogue_unavailable"]),
         T("D6", "New", "AuthoringTests", ["refused"], ["skeleton"], ["events_file"]),
         T("D7", "Copy", "AuthoringTests", ["refused"], ["verbatim_disabled", "invalid_source_keeps_reason"], ["events_file"]),

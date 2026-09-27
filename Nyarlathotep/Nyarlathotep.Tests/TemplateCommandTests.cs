@@ -50,6 +50,41 @@ public class TemplateCommandTests
         Assert.Equal(EventLines.Info(c.Find("bandit-ambush")!.Definition, null, Now), TemplateLines.Info(c, "bandit-ambush", Now));
     }
 
+    /// <summary>A21: the shipped militia-crackdown names 16 bosses, a 480-byte line that AdminLines.Pack cut in Session 2.</summary>
+    [Fact]
+    public void TemplateList_passes_long_trigger_within_one_message()
+    {
+        var c = TemplateLibraryTests.Real();
+        var militia = c.Find("militia-crackdown")!.Definition;
+        var bosses = militia.Trigger.Bosses;
+        Assert.True(Bytes(EventLines.Trigger(militia.Trigger)) > 400);                // the case is real, not a fixture
+        var lines = TemplateLines.List(c, [], ["militia-crackdown"]);
+        Assert.All(lines, l => Assert.True(Bytes(l) <= Wire.MaxBytes, l));
+        Assert.Equal($"militia-crackdown empowerment vbloodkilled {bosses.Count} bosses \"Militia crackdown\" (in events.json)", lines[3]);
+        Assert.Equal("bandit-vengeance empowerment " + EventLines.Trigger(c.Find("bandit-vengeance")!.Definition.Trigger) + " \"Bandit vengeance\"", lines[1]);
+
+        var info = TemplateLines.Info(c, "militia-crackdown", Now);
+        Assert.All(info, l => Assert.True(Bytes(l) <= Wire.MaxBytes, l));
+        Assert.Equal($"militia-crackdown \"Militia crackdown\" disabled pillar empowerment trigger vbloodkilled {bosses.Count} bosses duration 900s", info[0]);
+        var named = info.Skip(1).TakeWhile(l => l.StartsWith("bosses: ", StringComparison.Ordinal)).ToList();
+        Assert.NotEmpty(named);
+        Assert.Equal(bosses, named.SelectMany(l => l["bosses: ".Length..].Split(',')).ToArray());
+        Assert.StartsWith("conditions: ", info[1 + named.Count]);
+
+        var controls = new ControlState(false, true, new HashSet<Pillar> { Pillar.Empowerment }, 0, 3);
+        var row = EventLines.Line(militia, false, controls);
+        Assert.True(Bytes(row) <= Wire.MaxBytes, row);
+        Assert.EndsWith($"vbloodkilled {bosses.Count} bosses", row);
+        Assert.Empty(EventLines.BossLines([]));
+        var many = Enumerable.Range(1, 40).Select(i => $"CHAR_Some_Long_Boss_Name_Number_{i:00}_VBlood").ToArray();
+        var wrapped = EventLines.BossLines(many);
+        Assert.True(wrapped.Count >= 3);
+        Assert.All(wrapped, l => Assert.True(Bytes(l) <= Wire.MaxBytes && l.StartsWith("bosses: ", StringComparison.Ordinal), l));
+        Assert.Equal(many, wrapped.SelectMany(l => l["bosses: ".Length..].Split(',')).ToArray());
+    }
+
+    static int Bytes(string s) => System.Text.Encoding.UTF8.GetByteCount(s);
+
     [Fact]
     public void TemplateList_passes_invalid_template_with_reason()
     {

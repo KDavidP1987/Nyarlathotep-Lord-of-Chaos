@@ -20,6 +20,15 @@ public partial class EventValidationTests
         Assert.Equal(3, a.Waves);
         Assert.Equal(LocationType.Point, a.Location.Type);
         Assert.Equal(-1200.5f, a.Location.X);
+        Assert.Null(a.Location.Y);                                    // no stored height: WaveAction spawns at 0 (A20)
+    }
+
+    [Fact]
+    public void A_point_height_loads_when_given()
+    {
+        var d = Json.One(Json.Event(action: Action(location: "{ \"type\": \"Point\", \"x\": 1, \"y\": 42.5, \"z\": 2 }")));
+        Assert.Null(d.DisabledReason);
+        Assert.Equal(42.5f, Assert.IsType<SpawnWavesAction>(d.Action).Location.Y);
     }
 
     [Fact]
@@ -94,7 +103,9 @@ public partial class EventValidationTests
         [Action(radius: "31"), "action.radius must be 2-30"],
         [Action(radius: "2.5"), "action.radius must be 2-30"],
         [Action(location: "{ \"type\": \"Point\", \"x\": 1e9, \"z\": 0 }"), "action.location.x must be a number within -10000..10000"],
-        [Action(location: "{ \"type\": \"Zone\" }"), "action.location must be { \"type\": \"Point\", \"x\": number, \"z\": number } or { \"type\": \"Admin\" }"],
+        [Action(location: "{ \"type\": \"Zone\" }"), "action.location must be { \"type\": \"Point\", \"x\": number, \"z\": number, optional \"y\": number } or { \"type\": \"Admin\" }"],
+        [Action(location: "{ \"type\": \"Point\", \"x\": 0, \"y\": \"high\", \"z\": 0 }"), "action.location.y must be a number within -10000..10000"],
+        [Action(location: "{ \"type\": \"Point\", \"x\": 0, \"y\": 10000.5, \"z\": 0 }"), "action.location.y must be a number within -10000..10000"],
         [Action(extra: "\"unitLifetimeSeconds\": 10"), "action.unitLifetimeSeconds must be 30-7200"],
         [Action(extra: "\"loot\": true"), "unknown field action.loot"],
     ];

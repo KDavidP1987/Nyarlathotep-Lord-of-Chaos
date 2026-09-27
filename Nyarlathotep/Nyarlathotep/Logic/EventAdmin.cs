@@ -88,7 +88,7 @@ public static class EventsEditor
         string s => JsonValue.Create(s),
         string[] list => new JsonArray(list.Select(x => (JsonNode?)JsonValue.Create(x)).ToArray()),
         UnitEntry[] units => new JsonArray(units.Select(u => (JsonNode?)new JsonObject { ["prefab"] = u.Prefab, ["count"] = u.Count }).ToArray()),
-        PointArg p => new JsonObject { ["type"] = "Point", ["x"] = p.X, ["z"] = p.Z },
+        PointArg p => new JsonObject { ["type"] = "Point", ["x"] = p.X, ["y"] = p.Y, ["z"] = p.Z },
         _ => null,
     };
 
@@ -156,7 +156,7 @@ public static class EventLines
         var readiness = Readiness.Of(d, controls);
         return readiness.StartsWith(Readiness.Invalid, StringComparison.Ordinal)
             ? $"{d.Id} {readiness}"
-            : $"{d.Id} {readiness} {Lower(d.Pillar)} {Trigger(d.Trigger)}{(running ? " RUNNING" : "")}";
+            : Fit(tr => $"{d.Id} {readiness} {Lower(d.Pillar)} {tr}{(running ? " RUNNING" : "")}", d.Trigger, out _);
     }
 
     public static IReadOnlyList<string> Info(EventDefinition d, ActiveEvent? active, DateTime utcNow)
@@ -165,10 +165,12 @@ public static class EventLines
         var c = d.Conditions;
         var lines = new List<string>
         {
-            $"{d.Id} \"{d.Name}\" {(d.Enabled ? "enabled" : "disabled")} pillar {Lower(d.Pillar)} trigger {Trigger(d.Trigger)} duration {d.DurationSeconds}s",
-            $"conditions: minPlayers {c.MinPlayers}, cooldown {c.CooldownMinutes} min, chance {c.ChancePercent}%, " +
-            $"window {(c.Window is { } w ? $"{w.From:HH\\:mm}-{w.To:HH\\:mm}" : "none")}, mode {Lower(c.Mode)}",
+            Fit(tr => $"{d.Id} \"{d.Name}\" {(d.Enabled ? "enabled" : "disabled")} pillar {Lower(d.Pillar)} trigger {tr} duration {d.DurationSeconds}s",
+                d.Trigger, out var shortened),
         };
+        if (shortened) lines.AddRange(BossLines(d.Trigger.Bosses));
+        lines.Add($"conditions: minPlayers {c.MinPlayers}, cooldown {c.CooldownMinutes} min, chance {c.ChancePercent}%, " +
+            $"window {(c.Window is { } w ? $"{w.From:HH\\:mm}-{w.To:HH\\:mm}" : "none")}, mode {Lower(c.Mode)}");
         if (d.Empower is { } emp)
         {
             var s = emp.Stats;
@@ -187,7 +189,9 @@ public static class EventLines
         }
         if (d.Action is { } a)
         {
-            var where = a.Location.Type == LocationType.Admin ? "at the admin" : FormattableString.Invariant($"at {a.Location.X:0.#} {a.Location.Z:0.#}");
+            var where = a.Location.Type == LocationType.Admin ? "at the admin"
+                : FormattableString.Invariant($"at {a.Location.X:0.#} {a.Location.Z:0.#}") +
+                  (a.Location.Y is { } h ? FormattableString.Invariant($" height {h:0.#}") : "");
             lines.Add($"action: {a.Waves} waves every {a.IntervalSeconds}s, radius {a.Radius}, {where}, units " +
                 string.Join(", ", a.Units.Select(u => $"{u.Count} {u.Prefab}")) +
                 (a.UnitLifetimeSeconds is { } l ? $", unit lifetime {l}s" : ""));
@@ -206,6 +210,34 @@ public static class EventLines
         TriggerType.VBloodKilled => $"vbloodkilled {string.Join(",", t.Bosses)}",
         _ => "manual",
     };
+
+    /// <summary>A line built around <paramref name="trigger"/>: the whole trigger when the line fits one chat message
+    /// (Wire.MaxBytes), else a vbloodkilled trigger as "vbloodkilled &lt;n&gt; bosses", since AdminLines.Pack would cut
+    /// the line (event-library A21). <paramref name="shortened"/> says the names were left out.</summary>
+    public static string Fit(Func<string, string> build, Trigger trigger, out bool shortened)
+    {
+        var full = build(Trigger(trigger));
+        shortened = trigger.Type == TriggerType.VBloodKilled && !Fits(full);
+        return shortened ? build($"vbloodkilled {trigger.Bosses.Count} bosses") : full;
+    }
+
+    /// <summary>"bosses: a,b,…" lines, each within one chat message, together naming every boss once, in order.</summary>
+    public static IReadOnlyList<string> BossLines(IReadOnlyList<string> bosses)
+    {
+        const string Head = "bosses: ";
+        var lines = new List<string>();
+        var current = Head;
+        foreach (var boss in bosses)
+        {
+            var next = current.Length == Head.Length ? current + boss : current + "," + boss;
+            if (!Fits(next) && current.Length > Head.Length) { lines.Add(current); next = Head + boss; }
+            current = next;
+        }
+        if (current.Length > Head.Length) lines.Add(current);
+        return lines;
+    }
+
+    static bool Fits(string line) => System.Text.Encoding.UTF8.GetByteCount(line) <= Wire.MaxBytes;
 
     static string Lower<T>(T value) where T : Enum => value.ToString().ToLowerInvariant();
 }

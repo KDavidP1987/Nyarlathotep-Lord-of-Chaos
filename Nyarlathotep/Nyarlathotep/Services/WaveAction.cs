@@ -29,9 +29,8 @@ internal static class WaveAction
         var plan = WavePlan.Split(action.Units, ledger.Limits.MaxPerWave, ledger.Occupied, ledger.Limits.MaxTracked, clamps);
         foreach (var line in clamps) Core.Log.LogWarning($"[nyar] event {active.Id} wave {due.Wave}: {line}");
 
-        var center = action.Location.Type == LocationType.Admin && active.Origin is { } o
-            ? new float3(o.X, o.Y, o.Z)
-            : new float3(action.Location.X, 0f, action.Location.Z);
+        var (cx, cy, cz) = WavePlan.Center(action.Location, active.Origin);
+        var center = new float3(cx, cy, cz);
         var life = SpawnLedger.Lifetime(now, active.Instance.EndsUtc, action.UnitLifetimeSeconds,
             Settings.Limit(Limits.GraceSeconds), Settings.Limit(Limits.ManualSpawnLifetimeSeconds), SpawnTracker.DrainMargin());
         var total = plan.Sum(u => u.Count);

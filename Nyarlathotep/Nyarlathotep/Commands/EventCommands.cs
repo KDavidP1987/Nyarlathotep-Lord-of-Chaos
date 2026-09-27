@@ -105,7 +105,7 @@ internal static class EventCommands
                 {
                     var sender = ctx.Event.SenderCharacterEntity;
                     var p = LocationArg.FromContext(() =>
-                        sender.TryGetComponent<Translation>(out var at) ? (at.Value.x, at.Value.z) : null);
+                        sender.TryGetComponent<Translation>(out var at) ? (at.Value.x, at.Value.y, at.Value.z) : null);
                     if (p.Error is not null) { ctx.Reply(p.Error); return; }
                     newValue = p.Value;
                 }

@@ -19,7 +19,7 @@ public class AuthoringTests
 
     /// <summary>`.nyar event set` as the command runs it: the value is checked first, then `location here` reads the
     /// position, then the editor writes.</summary>
-    internal static string Set(Library lib, string id, string field, string value, (float X, float Z)? at = null)
+    internal static string Set(Library lib, string id, string field, string value, (float X, float Y, float Z)? at = null)
     {
         var arg = CommandArgs.SettableValue(field, value);
         if (!arg.Ok) return arg.Error!;
@@ -380,23 +380,26 @@ public class AuthoringTests
     {
         var lib = Lib(Json.Event("raid", action: Json.ValidAction.Replace("{ \"type\": \"Point\", \"x\": -1200.5, \"z\": -800 }", "{ \"type\": \"Admin\" }")));
         Assert.Equal(LocationType.Admin, lib.Catalog.Current.Find("raid")!.Action!.Location.Type);
-        Assert.Equal("event raid action.location = Point -1234.6, 800.0", Set(lib, "raid", "location", "here", (-1234.56f, 800.04f)));
+        Assert.Equal("event raid action.location = Point -1234.6, 800.0 at height 45.7", Set(lib, "raid", "location", "here", (-1234.56f, 45.66f, 800.04f)));
         var loc = Entry(lib.Text, "raid")["action"]!["location"]!.AsObject();
-        Assert.Equal("{\"type\":\"Point\",\"x\":-1234.6,\"z\":800.0}", loc.ToJsonString());
+        Assert.Equal("{\"type\":\"Point\",\"x\":-1234.6,\"y\":45.7,\"z\":800.0}", loc.ToJsonString());
         var l = lib.Catalog.Current.Find("raid")!.Action!.Location;
-        Assert.Equal((LocationType.Point, -1234.6, 800.0), (l.Type, Math.Round((double)l.X, 1), Math.Round((double)l.Z, 1)));
-        Assert.Equal("event raid action.location = Point 10000.0, -10000.0", Set(lib, "raid", "location", "here", (10000f, -10000f)));
+        Assert.Equal((LocationType.Point, -1234.6, 45.7, 800.0), (l.Type, Math.Round((double)l.X, 1), Math.Round((double)l.Y!.Value, 1), Math.Round((double)l.Z, 1)));
+        Assert.Contains("at -1234.6 800 height 45.7", string.Join("\n", EventLines.Info(lib.Catalog.Current.Find("raid")!, null, Now)));
+        Assert.Equal("event raid action.location = Point 10000.0, -10000.0 at height -10000.0", Set(lib, "raid", "location", "here", (10000f, -10000f, -10000f)));
     }
 
     [Theory]
-    [InlineData("raid", 10000.1f, 0f, "location here must be within -10000..10000")]
-    [InlineData("raid", 0f, -20000f, "location here must be within -10000..10000")]
-    [InlineData("raid", float.NaN, 0f, "location here must be within -10000..10000")]
-    [InlineData("surge", 5f, 5f, "location is a SpawnWaves field")]
-    public void Location_fails_when_refused(string id, float x, float z, string reply)
+    [InlineData("raid", 10000.1f, 0f, 0f, "location here must be within -10000..10000")]
+    [InlineData("raid", 0f, 0f, -20000f, "location here must be within -10000..10000")]
+    [InlineData("raid", float.NaN, 0f, 0f, "location here must be within -10000..10000")]
+    [InlineData("raid", 0f, 10000.1f, 0f, "location here must be within -10000..10000")]
+    [InlineData("raid", 0f, float.PositiveInfinity, 0f, "location here must be within -10000..10000")]
+    [InlineData("surge", 5f, 5f, 5f, "location is a SpawnWaves field")]
+    public void Location_fails_when_refused(string id, float x, float y, float z, string reply)
     {
         var lib = Lib(Json.Event("raid"), Json.Empower("surge"));
-        Unchanged(lib, () => Assert.Equal(reply, Set(lib, id, "location", "here", (x, z))));
+        Unchanged(lib, () => Assert.Equal(reply, Set(lib, id, "location", "here", (x, y, z))));
         Assert.Null(Entry(lib.Text, "surge")["action"]!["location"]);
     }
 
@@ -461,8 +464,8 @@ public class AuthoringTests
                 Ev("raid")["action"]!["units"] = JsonNode.Parse("[ { \"prefab\": \"CHAR_Bandit_Deadeye\", \"count\": 4 } ]");
                 break;
             default:
-                reply = Set(lib, "raid", "location", "here", (12.34f, -56.78f));
-                Ev("raid")["action"]!["location"] = JsonNode.Parse("{ \"type\": \"Point\", \"x\": 12.3, \"z\": -56.8 }");
+                reply = Set(lib, "raid", "location", "here", (12.34f, 5.66f, -56.78f));
+                Ev("raid")["action"]!["location"] = JsonNode.Parse("{ \"type\": \"Point\", \"x\": 12.3, \"y\": 5.7, \"z\": -56.8 }");
                 break;
         }
         Assert.DoesNotContain("refused", reply);

@@ -23,10 +23,13 @@ with no file edits.
 - **Authoring commands:**
   - `.nyar event new <id> <pillar>`, `.nyar event copy <id> <newId>` and `.nyar event delete <id> [confirm]`;
   - `.nyar event set` gains the trigger fields (`trigger.type`, `days`, `times`, `phase`, `bosses`), `action.factions`,
-    `action.units` (`CHAR_<name>[:<count>]` entries) and `location here`.
+    `action.units` (`CHAR_<name>[:<count>]` entries) and `location here`, which stores your x, height and z (a Point
+    without `y`, written by hand or by an earlier version, still spawns at height 0).
 - **Pillar commands:** `.nyar pillar list` and `.nyar pillar <name> on|off`, saved to the cfg.
 - **Readiness column:** `.nyar event list` shows why each event would or would not start: `ready`, `off (purge)`,
   `off (mod)`, `off (pillar)`, `full (cap)`, `invalid: <reason>` or `off (event)`.
+- **Long triggers:** a list or info line that would pass one chat message (480 bytes) shows a V Blood trigger as
+  `vbloodkilled <n> bosses`; `template info` and `event info` then list the bosses on `bosses:` lines.
 
 Every chat write is a file edit plus a reload (the stale-file and newer-schema refusals, one .bak), so a chat write and a
 hand edit give the same result.
