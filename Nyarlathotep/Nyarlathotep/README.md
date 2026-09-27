@@ -3,10 +3,10 @@
 ![Nyarlathotep, Lord of Chaos](https://raw.githubusercontent.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/main/docs/img/nyarlathotep-cover.jpg)
 
 A **server-side** event layer for V Rising. Admins stage NPC events the base game doesn't have: waves of
-enemies on a schedule, at nightfall or after a V Blood falls, with warnings and banners for players, and in
-later releases empowered factions, castle sieges, defended zones and boss-fight adds.
+enemies and empowered factions on a schedule, at nightfall or after a V Blood falls, with warnings and banners
+for players, and in later releases castle sieges, defended zones and boss-fight adds.
 
-> **Public beta (0.3.0).** Every pillar and automatic announcement is off by default; no event runs until an
+> **Public beta (0.4.0).** Every pillar and automatic announcement is off by default; no event runs until an
 > admin turns on its pillar and enables it.
 
 ## What it does
@@ -47,11 +47,29 @@ more than chat or `.nyar status` does, and no line carries a position. The panel
 </details>
 
 <details>
-<summary><b>Faction empowerment</b> · <i>in development</i></summary>
+<summary><b>Faction empowerment</b> · <i>0.4.0</i></summary>
 
-Every NPC of a faction is buffed for a set time, on a schedule or after a trigger such as a V Blood kill.
-It works like a Blood Moon for the NPCs. The buff rides on a timed effect that expires on its own, so nothing
-stays changed after the event.
+Every NPC of up to five factions is buffed for the event's duration, on a schedule, at nightfall or daybreak,
+after a V Blood kill, or by command: a Blood Moon for the NPCs. Physical and spell power, max health, attack speed
+and move speed each take a multiplier from 1.0 to 3.0. The buff is a timed effect that expires on its own, so no
+NPC stays changed after the event, even if the mod is removed mid-event. NPCs that respawn or load in during the
+event are buffed within about 15 s. Players' servants, traders, Bloodcraft familiars and the mod's own units are
+never buffed, and V Bloods only when `includeVBloods` is true. One empowerment per faction runs at a time. Turn it on
+with `[Pillars] FactionEmpowerment = true`.
+
+The seeded `example-empowerment` (off by default) looks like this; `{faction}` in a message names the factions:
+
+```json
+{ "id": "example-empowerment", "name": "Bandits rally after a V Blood falls", "enabled": false,
+  "pillar": "empowerment", "trigger": { "type": "VBloodKilled", "bosses": ["any"] },
+  "conditions": { "minPlayers": 1, "cooldownMinutes": 60 }, "durationSeconds": 600,
+  "action": { "type": "Empower", "factions": ["Faction_Bandits"],
+    "stats": { "physicalPower": 1.3, "spellPower": 1.3, "maxHealth": 1.5, "attackSpeed": 1.15, "moveSpeed": 1.1 } },
+  "announce": { "start": ["The {faction} rally: {event}."], "end": ["The {faction} lose heart. {event} is over."], "warnings": false } }
+```
+
+Optional action keys: `includeUnits` / `excludeUnits` (unit names such as `CHAR_Bandit_Thug`) and
+`includeVBloods` (default `false`). Faction names are the game's `Faction_*` names.
 </details>
 
 <details>
@@ -91,7 +109,7 @@ deaths, for today, this week and all time. Players can leave the boards; positio
 *Screenshots are added as features reach live servers. Slots so far:*
 
 - **Wave warning, event banner and daily banner:** *coming soon*
-- **Faction empowerment in progress:** *coming with faction empowerment*
+- **Faction empowerment in progress:** *coming soon*
 - **Leaderboard:** *coming with stats*
 - **Raphael panel:** *coming with the Raphael integration*
 </details>
@@ -151,10 +169,10 @@ set running.
 | `.nyar event list [page]` / `info <id>` | Event definitions and their state |
 | `.nyar event start <id>` / `stop <id>` | Start now / end early |
 | `.nyar event enable <id>` / `disable <id>` | Switch an event on or off (saved to `events.json`) |
-| `.nyar event set <id> <field> <value>` | Change `name`, `durationSeconds`, `conditions.minPlayers`, `conditions.cooldownMinutes`, `conditions.chancePercent`, `action.waves`, `action.intervalSeconds` or `action.radius` |
+| `.nyar event set <id> <field> <value>` | Change `name`, `durationSeconds`, `conditions.minPlayers`, `conditions.cooldownMinutes`, `conditions.chancePercent`, `action.waves`, `action.intervalSeconds` or `action.radius`; on an empowerment, `action.stats.<stat>` (1.0-3.0) |
 | `.nyar event reload` | Re-read `events.json` |
 | `.nyar spawn <unit> [count] [level\|+n\|-n] [hp] [power]` | One-off test spawn beside you, removed after `ManualSpawnLifetimeSeconds` |
-| `.nyar debug here [radius]` | The mod's units near you, with lifetime, level and stats |
+| `.nyar debug here [radius]` | The mod's units near you, with lifetime, level and stats, then up to 10 native NPCs with their empowerment buff |
 | `.nyar announce <text>` | Broadcast a line to everyone (quote text longer than 16 words) |
 | `.nyar api events [page]` | Event definitions as machine-readable lines, for Raphael |
 </details>
@@ -162,8 +180,8 @@ set running.
 <details>
 <summary><b>Kill switch</b> <i>(admin)</i></summary>
 
-`.nyar purge`, then `.nyar purge confirm`, ends every event, removes every unit the mod spawned and holds off
-new events for `PurgeCooldownSeconds` (60 s). To take the mod out entirely, stop the server and delete
+`.nyar purge`, then `.nyar purge confirm`, ends every event, removes every unit the mod spawned and every
+empowerment buff, and holds off new events for `PurgeCooldownSeconds` (60 s). To take the mod out entirely, stop the server and delete
 `Nyarlathotep.dll`; the mod's units expire on their own.
 </details>
 
@@ -183,6 +201,7 @@ Out-of-range values are clamped at load, with a log line.
 | Limits | GraceSeconds | `30` | How long units outlive their event before removal (0-600) |
 | Limits | PurgeCooldownSeconds | `60` | Pause after a purge (0-3600) |
 | Limits | ManualSpawnLifetimeSeconds | `300` | Lifetime of a `.nyar spawn` unit (30-3600) |
+| Limits | EmpowerBatchPerTick | `200` | Empowerment buffs applied or removed per server tick (50-1000) |
 | Announcements | WaveWarnings · EventBanners · DailyBanner | `false` | Wave warnings, start/end banners, the daily banner |
 | Announcements | WarningOffsets | `300,60,10` | Seconds before a wave at which warnings fire (1-5 values, each 5-3600) |
 | Announcements | DailyBannerTime | `20:00` | Server-local time of the daily banner |
@@ -191,9 +210,15 @@ Out-of-range values are clamped at load, with a log line.
 
 **Upgrading from 0.1.0:** `General.AnnounceEvents` is retired and ignored; use the `[Announcements]` switches.
 
+**Upgrading from 0.2 or 0.3:** an `example-empowerment` written by an earlier release now loads disabled ("pillar
+empowerment takes an Empower action"). Change its `pillar` to `spawns`, or replace it with the template under
+Faction empowerment above.
+
 ## Uninstall
 
-Stop the server and delete `Nyarlathotep.dll`. The mod's units carry a timer and expire on their own. To
+Stop the server and delete `Nyarlathotep.dll`. The mod's units carry a timer and expire on their own, and so
+do empowerment buffs. To downgrade to 0.3.0, run `.nyar purge confirm` first: 0.3.0 does not remove the buffs,
+which otherwise stay until their event's time runs out. To
 remove its data too, delete `BepInEx/config/kdpen.Nyarlathotep.cfg` and the `BepInEx/config/Nyarlathotep/`
 folder.
 

@@ -3,6 +3,47 @@
 The complete technical history. The concise, player-facing changelog that ships to Thunderstore lives at
 `Nyarlathotep/Nyarlathotep/CHANGELOG.md`. Public beta from 0.2.0; features stay experimental until validated on live servers.
 
+## [0.4.0] - 2026-09-26
+
+The `faction-empowerment` child of the DoD Epic (`docs/dod/faction-empowerment.md`): **Pillar A, faction
+empowerment**. Design: `docs/features/FACTION_EMPOWERMENT.md`; sessions 1–3 there; audit:
+`docs/audits/faction-empowerment.md`.
+
+- **`Empower` action** (pillar `empowerment`, which it must pair with): `factions` (1–5 `Faction_` names; players,
+  servants, traders, critters, prisoners and `Faction_Ignored` refused), optional `includeUnits` / `excludeUnits`
+  and `includeVBloods` (default false), and `stats`: `physicalPower`, `spellPower`, `maxHealth`, `attackSpeed`,
+  `moveSpeed`, each a multiplier 1.0–3.0, at least one above 1.0. The seeded `example-empowerment` (disabled) rallies
+  the bandits for 10 minutes after any V Blood kill.
+- **Carriers, not stat writes.** Each eligible NPC gets one carrier buff (`BuffType.Replace`, marked
+  `SpellLevel = 1313952069`, `LifeTime` = the event's seconds left, `EndAction Destroy`) holding the stat modifiers;
+  the NPC's own stats are never written, so a carrier ends on its own even without the mod. Eligibility skips
+  prefabs, the dead, V Bloods (unless included), our own spawned units and familiars' `Faction_Ignored`.
+- **Sweeps and budget.** An event sweeps its factions at start and again every 15 s while active, so respawned and
+  newly loaded NPCs are caught; applies and removals share `Limits.EmpowerBatchPerTick` (new cfg key, default 200,
+  50–1000), removals first. Stop, purge and restart remove carriers; a carrier still present 5 s after its event's
+  natural end is removed. The boot sweep splits our markers: units are despawned, carriers removed, their NPCs kept.
+- **One empowerment per faction.** A start that overlaps an active Empower event's factions or units is refused
+  ("faction <name> already empowered by <id>").
+- **Messages and admin.** `{faction}` in announcements names the factions; `.nyar event set <id>
+  action.stats.<stat> <1.0–3.0>`; `.nyar debug here` also lists up to 10 native NPCs with their carrier and stats;
+  a manual start refused by the purge cooldown says how many seconds are left. The V Blood trigger now needs
+  `VBloodConsumeSource`, so gate bosses no longer fire it.
+- **Raphael api 3.** `.nyar api status` rows for an Empower event carry `kind=empower`, `faction=<names>`,
+  `wave=-`, and for admins `units` = NPCs holding its carrier. api 3 only adds values; an api 2 client keeps working
+  (`docs/RAPHAEL_HANDOFF.md` › api 3).
+- **Release tooling.** `tools/dev-snapshot.ps1` (wraps every dev-server session), `tools/repo-rollback-drill.ps1`,
+  `tools/rollback-gate.ps1` (the repository revert, the N-1 boot drill and the snapshot selftest as one gate),
+  `tools/release-verify.ps1` (the pre-release zip's hash against the audit); `tools/rollback-drill.ps1` accepts that
+  N-1 disables a definition of an action type it does not know. `preflight -SelfTest` runs every registered external
+  selftest and the unit tests.
+- **Upgrading.** events.json stays SchemaVersion 1 and existing definitions are unchanged. An `example-empowerment`
+  written by an earlier release (a SpawnWaves action under pillar empowerment) now loads disabled with "pillar
+  empowerment takes an Empower action": set its pillar to `spawns`, or replace it with the Empower template in the
+  README (Faction empowerment). **Rolling back to 0.3.0:** it loads Empower definitions disabled ("unknown action type Empower") and
+  does not remove carriers, which then expire within their event's remaining time (at most 2 h); run `.nyar purge
+  confirm` on 0.4.0 first to remove them at once.
+- 871 tests.
+
 ## [0.3.0] - 2026-09-26
 
 The `raphael-api-core` child of the DoD Epic (`docs/dod/raphael-api-core.md`): the Raphael wire moves from api 1

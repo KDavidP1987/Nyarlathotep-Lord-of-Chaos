@@ -102,6 +102,8 @@ temp: nyar-session
 remote-tag: v0.2.0
 remote-tag: v0.2.1
 remote-tag: v0.3.0
+remote-tag: v0.4.0
 remote-release: v0.2.0
 remote-release: v0.2.1
 remote-release: v0.3.0
+remote-release: v0.4.0

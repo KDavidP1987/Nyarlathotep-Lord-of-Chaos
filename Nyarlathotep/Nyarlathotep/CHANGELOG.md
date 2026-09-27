@@ -2,6 +2,22 @@
 
 Public beta. Event pillars and automatic announcements default off; admins opt in per feature.
 
+## 0.4.0 (2026-09-26)
+
+- **Faction empowerment.** A new event action, `Empower`, buffs every NPC of up to five factions for the event's
+  duration: physical and spell power, max health, attack and move speed, each ×1.0–3.0. It is a timed buff that
+  ends on its own, so no NPC stays changed, even if the mod is removed mid-event. NPCs that respawn or load in
+  during the event are buffed within about 15 s; V Bloods are left alone unless you include them. One empowerment
+  per faction at a time. Turn it on with `[Pillars] FactionEmpowerment = true`; the example `example-empowerment`
+  (off by default) rallies the bandits for 10 minutes after any V Blood kill.
+- **Admin.** `.nyar event set <id> action.stats.<stat> <value>`; `.nyar debug here` also shows nearby native NPCs
+  and their buff; a start blocked by the purge cooldown says how many seconds are left. New cfg key
+  `Limits.EmpowerBatchPerTick` (200) paces buffing over server ticks.
+- **Fix.** The V Blood trigger no longer fires for gate bosses that are not true V Bloods.
+- **Upgrading from 0.2/0.3:** an `example-empowerment` from an earlier release now loads disabled; change its
+  pillar to `spawns`, or replace it with the template in the README. **Rolling back to 0.3.0:** run `.nyar purge
+  confirm` first, or the buffs already applied stay until their event's time runs out.
+
 ## 0.3.0 (2026-09-26)
 
 - **Raphael API 2.** The optional Raphael client can now read the active events (`.nyar api status`) and, for

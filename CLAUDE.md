@@ -20,9 +20,9 @@ Everything ships **disabled**; admins opt in per pillar and per event.
 Same family as the author's other mods — **Beelzebub** (server), **Uriel** (server), **Faust** (server),
 and **Raphael** (client, formerly BloodCraftHub). Nyarlathotep mirrors the Faust/Uriel architecture.
 
-> **Status:** v0.1.0 scaffold; no pillar implemented. Development is tracked by the DoD Epic
-> `docs/dod/nyarlathotep.md` (children: spikes → foundation → faction-empowerment → event-spawns →
-> boss-reinforcements → defended-zones → sieges). Design decisions D1–D12 are settled in
+> **Status:** v0.4.0 public beta: the event engine with spawn waves (foundation), Raphael api 3
+> (raphael-api-core) and faction empowerment are released; event-library is next. Development is tracked by the
+> DoD Epic `docs/dod/nyarlathotep.md` (its child manifest and `docs/dod/README.md` give the order). Design decisions D1–D12 are settled in
 > `docs/NYARLATHOTEP_DESIGN.md` §9; new decisions go to the user in plan mode before dependent code.
 
 The only buildable project lives at `Nyarlathotep/` (`Nyarlathotep.sln`). When the user says "the mod",

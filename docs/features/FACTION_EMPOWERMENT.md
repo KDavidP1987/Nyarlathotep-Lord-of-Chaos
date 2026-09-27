@@ -1,13 +1,13 @@
 # Faction empowerment (Pillar A)
 
-**Status:** in build (docs/dod/faction-empowerment.md, approved 2026-09-26). Steps 1–2 of 7 done: the Empower action's
-schema and pairing rule, eligibility, the carrier recipe and ledger, the boot-sweep split, the one-per-faction rule,
-{faction} in messages and the stat fields of `event set`, all pure logic under unit test (audit:
-docs/audits/faction-empowerment.md). Step 2 (post-audited, Codex READY): Services/EmpowerAction.cs applies and removes carriers in game
-through the ledger, EventRuntime dispatches Empower events, the boot sweep removes leftover carriers without touching
-their NPCs, `.nyar debug here` lists native NPCs with their carrier read back, and the V Blood trigger needs
-VBloodConsumeSource. A carrier still present 5 s after its event's natural end is queued for removal (A4). Not yet run on a server: Session 1 is step 4. Spike S3: go (2026-09-24; carrier recipe in Test
-results).
+**Status:** released in **0.4.0** (2026-09-26; docs/dod/faction-empowerment.md, audit docs/audits/faction-empowerment.md).
+The Empower action (pillar `empowerment`, five stats ×1.0–3.0 on 1–5 factions) runs through timed carrier buffs that
+expire on their own; sweeps every 15 s, `Limits.EmpowerBatchPerTick` pacing, one empowerment per faction, the boot
+carrier sweep, `.nyar debug here` natives and api 3 empower rows. Verified on the dev server in Sessions 1–3 below
+(stat readings, lifecycle, purge drain, restart, uninstall, Bloodcraft and KindredCommands coexistence). The damage
+numbers and the by-eye attack and move speed view are taken in event-library's Session 2 (event-library D23,
+faction-empowerment A8). The example definition below is the original design sketch; the shipped schema is in the
+Thunderstore README (Faction empowerment) and `Resources/events.default.json`.
 
 ## Goal
 
