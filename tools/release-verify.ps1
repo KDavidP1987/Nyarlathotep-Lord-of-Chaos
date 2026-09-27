@@ -11,7 +11,7 @@
     pwsh tools/release-verify.ps1 -SelfTest
       Four cases with a local folder as the asset source instead of gh (scratch under %TEMP%\nyar-rel-<guid>, removed
       when done): a matching hash passes; a differing hash fails; a missing asset fails; an audit without the line
-      fails. → "release verify selftest: 4/4".
+      fails, including one that quotes the line inside another bullet (the line must stand on its own). → "release verify selftest: 4/4".
 #>
 [CmdletBinding()]
 param(
@@ -37,7 +37,7 @@ function Get-AssetHash([string]$Name, [scriptblock]$Fetch) {
 
 # Compares the asset's hash with the audit's "zip sha256: <asset> <hash>" line. Returns $null or the reason it fails.
 function Test-ReleaseAsset([string]$Name, [string]$AuditText, [scriptblock]$Fetch) {
-    $m = [regex]::Match("$AuditText", "zip sha256: $([regex]::Escape($Name)) ([0-9A-Fa-f]{64})")
+    $m = [regex]::Match("$AuditText", "(?m)^\s*(?:-\s+)?zip sha256: $([regex]::Escape($Name)) ([0-9A-Fa-f]{64})\s*$")   # its own line (Codex F1)
     if (-not $m.Success) { return "the audit has no ""zip sha256: $Name <hash>"" line" }
     try { $hash = Get-AssetHash $Name $Fetch } catch { return "no asset $Name ($($_.Exception.Message))" }
     if ($hash -ne $m.Groups[1].Value.ToUpperInvariant()) { return "hashes differ (release $hash, audit $($m.Groups[1].Value))" }
@@ -57,7 +57,7 @@ if ($SelfTest) {
             @{ Name = 'matching hash'; Asset = $name; Audit = "- zip sha256: $name $hash"; Pass = $true },
             @{ Name = 'differing hash'; Asset = $name; Audit = "- zip sha256: $name $('0' * 64)"; Pass = $false },
             @{ Name = 'missing asset'; Asset = 'kdpen-Nyarlathotep-9.9.8.zip'; Audit = "- zip sha256: kdpen-Nyarlathotep-9.9.8.zip $hash"; Pass = $false },
-            @{ Name = 'audit without the line'; Asset = $name; Audit = '- tcli build: done'; Pass = $false })
+            @{ Name = 'audit without the line'; Asset = $name; Audit = "- tcli build: done`n- an old note: zip sha256: $name $hash"; Pass = $false })
         foreach ($c in $cases) {
             $why = Test-ReleaseAsset $c.Asset $c.Audit $local
             if (($null -eq $why) -eq $c.Pass) { $ok++; if ($why) { Write-Host "  - $($c.Name): fails — $why" } }

@@ -98,8 +98,9 @@ function Test-EventsReadback([string]$LogN, [string]$LogN1, [string]$TagN, [stri
     $line = "events.json: $TagN '$a valid, $b disabled', $TagN1 '$c valid, $d disabled' ($($d - $b) newer action types)"
     if ($a + $b -ne $c + $d) { return @{ Why = "$TagN1 read $($c + $d) definitions, $TagN $($a + $b)"; Line = $line } }
     if ($d -lt $b) { return @{ Why = "$TagN1 disabled fewer definitions than $TagN"; Line = $line } }
-    $offN = @(Get-DisabledLines "$LogN")
-    $extra = @(Get-DisabledLines "$LogN1" | Where-Object { $offN -notcontains $_ })
+    # Newly disabled means by definition id: one both releases disable, for whatever reasons, is not new (Codex F2).
+    $idsN = @(Get-DisabledLines "$LogN" | ForEach-Object { ($_ -split "`t", 2)[0] })
+    $extra = @(Get-DisabledLines "$LogN1" | Where-Object { $idsN -notcontains ($_ -split "`t", 2)[0] })
     if ($extra.Count -ne $d - $b) { return @{ Why = "$TagN1 logged $($extra.Count) newly disabled definitions for a difference of $($d - $b)"; Line = $line } }
     $other = @($extra | Where-Object { ($_ -split "`t", 2)[1] -notmatch '^unknown action type \S+$' })
     if ($other) { return @{ Why = "$TagN1 disabled for another reason: $(($other | ForEach-Object { $_ -replace "`t", ': ' }) -join '; ')"; Line = $line } }
