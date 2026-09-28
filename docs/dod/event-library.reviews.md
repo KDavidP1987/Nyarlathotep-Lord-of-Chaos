@@ -783,3 +783,16 @@ VERDICT: READY
 
 ### Dispositions
 - no findings
+
+## Review 21 · 2026-09-28 · codex · plan commit 6a73e9e · plan 218059 B · 36 items · files 0 · e3b0c44298fc · prompt 629baed12f6b · scope A28
+Reviewer: Codex CLI, read-only (`codex exec -s read-only`, Windows sandbox on); the prompt redacted of Steam IDs before sending. The first round since Review 20's READY.
+
+F1 [blocking] Probe `14.4` remains unanswered for concurrent store writes: after the final `-Paths -DeclaredOf` run, the next child could create `event-spawns.review.html`, add another plan artifact, or rename/delete either A28 file before this child closes, leaving the certified path set stale.
+Fix: require the final D30 command to run under an exclusive plan-store lock—or after named quiescence of other plan writers—and immediately before close, which would satisfy `14.4` by making its evidence cover the final shipped state.
+
+14/15 layers · 48/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · with a different control: A28 declares the glob docs/dod/event-spawns.*, so a review page, a new artifact or a rename of that plan's files stays declared, and step 6's last -Paths -DeclaredOf run is named as immediately before `dod close event-library`; no store lock, since the only writer of the store is the same builder working in sequence
+

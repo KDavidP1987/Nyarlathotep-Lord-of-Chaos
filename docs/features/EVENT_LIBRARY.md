@@ -519,6 +519,20 @@ kick-off only):
   sweep: 0 found", "boot carrier sweep: 138 found, 138 queued for removal"; stop after AutoSave_1552, logs copied to
   %TEMP%\nyar-soak-3, -LogCheck "0 unhandled, 10 nyar lines, 0 orphan errors, 0 unity errors".
 - D36: no "slow tick" line in any boot (the largest single tick in a timing window was 108.9 ms, under the 250 ms mark).
+- First start and end line per template (D25, A29):
+  - legion-weekend-surge: "event legion-weekend-surge started by Schedule 2026-09-27 22:42 (ends 2026-09-28 03:12:00Z)",
+    "event legion-weekend-surge ended (0 carriers expire with it)";
+  - bandit-vengeance: "event bandit-vengeance started by VBloodKilled CHAR_Bandit_Frostarrow_VBlood (ends 2026-09-28
+    02:52:02Z)", "event bandit-vengeance ended (243 carriers expire with it)";
+  - undead-nightfall: "event undead-nightfall started by GameTime night (ends 2026-09-28 02:48:56Z)", "event
+    undead-nightfall ended (138 carriers expire with it)";
+  - militia-crackdown: "event militia-crackdown started by VBloodKilled CHAR_Militia_Nun_VBlood (ends 2026-09-28
+    02:58:42Z)", "event militia-crackdown ended (131 carriers expire with it)";
+  - bandit-ambush: "event bandit-ambush started by manual (ends 2026-09-28 02:54:24Z)", "event bandit-ambush ended (3 of
+    3 waves)";
+  - undead-rising: "event undead-rising started by manual (ends 2026-09-28 03:04:47Z)", "event undead-rising ended (2 of
+    2 waves)".
+- CHAR_Bandit_Hunter's attack (D25): observed at Session 6's kick-off (ranged), not again here (A29).
 - `pwsh tools/soak-report.ps1 -Log <nyar-soak-1, -2, -3 LogOutput.log> -Templates
   legion-weekend-surge,bandit-vengeance,undead-nightfall,militia-crackdown,bandit-ambush,undead-rising -MinMinutes 240` →
   "soak: 565 timing minutes, 27 starts, 25 ends, 2 cancelled by restart, 0 unpaired, 0 unhandled, tick avg max 3.528 ms,
