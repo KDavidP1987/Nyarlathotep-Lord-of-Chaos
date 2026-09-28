@@ -494,4 +494,36 @@ copy to %TEMP%\nyar-soak-3, -LogCheck; `pwsh tools/soak-report.ps1 -Log <the thr
 -Templates legion-weekend-surge,bandit-vengeance,undead-nightfall,militia-crackdown,bandit-ambush,undead-rising
 -MinMinutes 240`; delete the %TEMP%\nyar-soak-* folders, `pwsh tools/dev-snapshot.ps1 -Restore`.
 
-Observed: (recorded when the session runs)
+Observed (three boots: 22:24–07:38, 07:40–08:02 and the A26 short boot 08:02–08:05 on 09-28; the owner connected for the
+kick-off only):
+- Legion surges started by Schedule at 22:42, 23:26, 00:10, 00:54, 01:38 and 02:22, each ending 30 min later with "0
+  carriers"; the six times between logged "already active", as in Session 6.
+- undead-nightfall started at every GameTime night (16 in the first boot) and ended with the day, 138 carriers at most
+  ends; every sweep again logged "5 failed" (the same 5 units the game refuses, the open question of Session 6).
+- K1: bandit-vengeance started by "VBloodKilled CHAR_Bandit_Frostarrow_VBlood" (Keely), ended with 243 carriers.
+- K2: militia-crackdown started by "VBloodKilled CHAR_Militia_Nun_VBlood" (Christina), ended with 131 carriers.
+- K3: bandit-ambush at Point -912.9, -828.8, three waves of 6, ended "(3 of 3 waves)". One unit stood in a pond at the
+  centre's level, stuck; the owner killed it at range (A27, the known issue for 0.5.0; the fix is event-spawns step 1).
+- K4: undead-rising first answered "skipped by MaxConcurrentEvents" (22:47, five events active), started at 22:55 at Point
+  -933.0, -913.6, two waves of 7 (melee and ranged), ended "(2 of 2 waves)"; one unit again stood in water, stuck (A27).
+  No wave unit logged a level move (A23 had nothing to do here).
+- D26, **deviation**: the mid-soak restart was planned at about two hours during a Legion surge; it ran at 07:39, after the
+  owner's soak decision arrived at 07:37, while undead-nightfall was active (no surge was running then). Both logs were
+  copied to %TEMP%\nyar-soak-1 after AutoSave_1540, -LogCheck "0 unhandled, 2097 nyar lines, 0 orphan errors, 0 unity
+  errors". The boot logged "events: reloaded: 6 valid", "templates: 6/6 valid", "event undead-nightfall cancelled by
+  restart (it was due to end 2026-09-28 11:49:15Z)", "boot marker sweep: 0 found, 0 queued for despawn (0 listed in
+  state.json)" and "boot carrier sweep: 138 found, 138 queued for removal"; the next night started undead-nightfall again.
+- Stop at 08:02 after AutoSave_1551, logs copied to %TEMP%\nyar-soak-2, -LogCheck "0 unhandled, 95 nyar lines, 0 orphan
+  errors, 0 unity errors". undead-nightfall was still active.
+- A26 short boot: "event undead-nightfall cancelled by restart (it was due to end 2026-09-28 12:07:53Z)", "boot marker
+  sweep: 0 found", "boot carrier sweep: 138 found, 138 queued for removal"; stop after AutoSave_1552, logs copied to
+  %TEMP%\nyar-soak-3, -LogCheck "0 unhandled, 10 nyar lines, 0 orphan errors, 0 unity errors".
+- D36: no "slow tick" line in any boot (the largest single tick in a timing window was 108.9 ms, under the 250 ms mark).
+- `pwsh tools/soak-report.ps1 -Log <nyar-soak-1, -2, -3 LogOutput.log> -Templates
+  legion-weekend-surge,bandit-vengeance,undead-nightfall,militia-crackdown,bandit-ambush,undead-rising -MinMinutes 240` →
+  "soak: 565 timing minutes, 27 starts, 25 ends, 2 cancelled by restart, 0 unpaired, 0 unhandled, tick avg max 3.528 ms,
+  templates 6/6" and **"soak: pass"** (D25).
+- Warnings, all three boots: Beelzebub's two TUNE lines and Il2CppInterop's Class::Init line; Unity log: the game's 226
+  PrefabLookupMap notices at save load only; no mod warning or error.
+Then `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s7,
+C:\Users\<user>\AppData\Local\Temp\nyar-snap-s7 deleted)"; %TEMP%\nyar-session and the %TEMP%\nyar-soak-* folders deleted.
