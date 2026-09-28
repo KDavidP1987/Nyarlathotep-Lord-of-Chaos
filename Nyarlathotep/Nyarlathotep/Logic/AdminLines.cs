@@ -34,6 +34,20 @@ public static partial class AdminLines
     public static string DegradedNotice(IReadOnlyCollection<string> degraded) =>
         $"nyar: degraded: {string.Join(", ", degraded)} (see .nyar status and the server log)";
 
+    /// <summary>The sources a `debug walk` reading names (walkable-spawns D1, A8): the tile world (the live singleton,
+    /// or XPRising's empty construction when the singleton is missing) and the coordinate space (world metres or the
+    /// tile grid).</summary>
+    public static readonly IReadOnlyList<string> WalkSources = ["singleton world", "singleton tile", "empty world", "empty tile"];
+
+    /// <summary>The `debug walk` reply when no source answered (walkable-spawns D1, D5).</summary>
+    public static string WalkUnavailable(string reason) => $"walk check unavailable: {reason}";
+
+    /// <summary>The `debug walk` reply (walkable-spawns D1, A4): the admin's own x and z, the height level, the radius,
+    /// the verdict and the grounded read, and the source that answered. It goes to the admin only (D11).</summary>
+    public static string WalkReply(float x, float z, int heightLevel, float radius, bool free, bool grounded, string source) =>
+        string.Create(System.Globalization.CultureInfo.InvariantCulture,
+            $"walk {x:0.0} {z:0.0} h {heightLevel} r {radius:0.00}: {(free ? "free" : "blocked")} grounded {(grounded ? "yes" : "no")} ({source})");
+
     public static string Tracked(int tracked, int pendingSpawns, int pendingDespawns) =>
         $"tracked units: {tracked} (spawning {pendingSpawns}, despawning {pendingDespawns})";
 

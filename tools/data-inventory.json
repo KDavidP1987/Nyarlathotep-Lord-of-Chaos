@@ -51,7 +51,10 @@
       "owner": "developer",
       "retention": "overwritten by every build",
       "deletion": "dotnet clean, or delete bin/ and obj/",
-      "singleCopy": false
+      "singleCopy": false,
+      "rows": [
+        "walkable-spawns › build outputs"
+      ]
     },
     {
       "artifact": "Thunderstore staging and package",
@@ -67,7 +70,9 @@
       "singleCopy": false,
       "rows": [
         "raphael-api-core › Release zip",
-        "faction-empowerment › Release zip"
+        "faction-empowerment › Release zip",
+        "walkable-spawns › release zip",
+        "walkable-spawns › tag and GitHub release v0.5.1"
       ]
     },
     {
@@ -154,7 +159,9 @@
       "rows": [
         "raphael-api-core › Server logs",
         "raphael-api-core › Dev world and mod data",
-        "faction-empowerment › Server logs, dev world, mod config"
+        "faction-empowerment › Server logs, dev world, mod config",
+        "walkable-spawns › walk probe replies",
+        "walkable-spawns › dev-server files"
       ]
     },
     {
@@ -232,7 +239,9 @@
       "rows": [
         "raphael-api-core › Contract, handoff, feature doc, audit, plan, reviews",
         "faction-empowerment › Feature doc, audit, plan, reviews, contract, handoff",
-        "event-library › Feature doc, audit, plan, reviews"
+        "event-library › Feature doc, audit, plan, reviews",
+        "walkable-spawns › review pages",
+        "walkable-spawns › plan, reviews, audit, feature doc"
       ],
       "location": "the repository (docs/, tools/, READMEs, changelogs)",
       "owner": "project owner",
@@ -309,7 +318,8 @@
       ],
       "rows": [
         "faction-empowerment › Session snapshots",
-        "event-library › Session snapshots, release download, rollback worktrees, drill config"
+        "event-library › Session snapshots, release download, rollback worktrees, drill config",
+        "walkable-spawns › snapshot"
       ],
       "location": "%TEMP%\\nyar-snap-* (saved\\manifest.json plus the copies)",
       "owner": "tools/dev-snapshot.ps1",
@@ -323,7 +333,8 @@
         "nyar-session"
       ],
       "rows": [
-        "event-library › Session working folder"
+        "event-library › Session working folder",
+        "walkable-spawns › session marker"
       ],
       "location": "%TEMP%\nyar-session (session-events.py definitions and cfg copies, session-watch.ps1 watcher.log)",
       "owner": "tools/ingame/session-events.py and tools/ingame/session-watch.ps1",
@@ -422,7 +433,8 @@
       "deletion": "deleted once the session is recorded; later sessions copy to nyar-soak-* instead; a leftover fails -Paths",
       "singleCopy": true,
       "rows": [
-        "event-library › Session log copies"
+        "event-library › Session log copies",
+        "walkable-spawns › session log copies"
       ]
     },
     {
@@ -439,7 +451,33 @@
       "deletion": "removed by its self-test before it exits (dev-snapshot and rollback-drill in a finally block, preflight at the end of its run); a leftover fails -Paths",
       "singleCopy": true,
       "rows": [
-        "event-library › Self-test scratch folders"
+        "event-library › Self-test scratch folders",
+        "walkable-spawns › release and drill temp folders"
+      ]
+    },
+    {
+      "artifact": "Walk check failure streak",
+      "covers": [],
+      "location": "server memory (Services/WalkCheck, Logic SpawnHealth)",
+      "owner": "the mod",
+      "retention": "the process",
+      "deletion": "reset when the walk check succeeds and on restart",
+      "singleCopy": true,
+      "rows": [
+        "walkable-spawns › walk failure-streak state"
+      ]
+    },
+    {
+      "artifact": "Plan review prompts and Claude's scratchpad",
+      "covers": [],
+      "location": "%TEMP%\\dod-review-*.txt and the per-session scratchpad, outside the repository",
+      "owner": "the dod skill; Claude",
+      "retention": "until the next prompt; the session",
+      "deletion": "replaced by the next prompt; removed with the session; never committed, SteamIDs redacted before any Codex prompt",
+      "singleCopy": false,
+      "rows": [
+        "walkable-spawns › review prompts",
+        "walkable-spawns › Claude's scratchpad (Codex prompts, outputs)"
       ]
     }
   ]

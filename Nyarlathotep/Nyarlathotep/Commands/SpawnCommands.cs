@@ -1,12 +1,14 @@
+using System.Linq;
 using Nyarlathotep.Config;
 using Nyarlathotep.Logic;
 using Nyarlathotep.Services;
+using ProjectM;
 using Unity.Transforms;
 using VampireCommandFramework;
 
 namespace Nyarlathotep.Commands;
 
-/// <summary>`.nyar spawn`, `.nyar purge [confirm]` and `.nyar debug here [radius]` (foundation Design › UX; D20,
+/// <summary>`.nyar spawn`, `.nyar purge [confirm]` and `.nyar debug here|walk [radius]` (foundation Design › UX; D20,
 /// D27). Admin-only; every mutation runs through the gateway (D10, D11).</summary>
 [CommandGroup("nyar")]
 internal static class SpawnCommands
@@ -64,17 +66,35 @@ internal static class SpawnCommands
         }
     }
 
-    [Command("debug", usage: "here [radius]", description: "List tracked units near you with lifetime, level and stats.", adminOnly: true)]
-    public static void Debug(ChatCommandContext ctx, string where = "", string radius = "")
+    [Command("debug", usage: "here [radius] | walk [radius]", description: "List tracked units near you with lifetime, level and stats.", adminOnly: true)]
+    public static void Debug(ChatCommandContext ctx, string where = "", string radius = "", string extra = "")
     {
         if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }
-        if (where != "here") { ctx.Reply("argument must be here"); return; }
+        if (where == "walk") { Walk(ctx, radius, extra); return; }
+        if (where != "here") { ctx.Reply("argument must be here or walk"); return; }
         var r = CommandArgs.Radius(radius);
         if (r.Error is not null) { ctx.Reply(r.Error); return; }
         if (!ctx.Event.SenderCharacterEntity.TryGetComponent<Translation>(out var at)) { ctx.Reply("your position could not be read"); return; }
         var lines = SpawnTracker.DebugHere(at.Value, r.Value);
         foreach (var message in AdminLines.Pack(lines)) ctx.Reply(message);      // a burst of replies loses lines (A8)
         foreach (var line in lines) Core.Log.LogInfo($"[nyar] debug: {line}");  // no position in the line; kept for the test record
+    }
+
+    /// <summary>`.nyar debug walk [radius]` (walkable-spawns D1, D7, A8): the temporary walk probe, removed in step 2
+    /// (D9). Read-only; the reply carries the admin's own position to the admin only, the log line no SteamID (D11).</summary>
+    static void Walk(ChatCommandContext ctx, string radius, string extra)
+    {
+        var r = CommandArgs.WalkRadius(radius, extra);
+        if (r.Error is not null) { ctx.Reply(r.Error); return; }
+        var character = ctx.Event.SenderCharacterEntity;
+        if (!character.TryGetComponent<Translation>(out var at) || !character.TryGetComponent<Height>(out var height))
+        { ctx.Reply("your position could not be read"); return; }
+        var level = height.ServerHeightLevel;
+        var readings = WalkCheck.Probe(at.Value.x, at.Value.z, level, r.Value, out var reason);
+        var lines = readings.Select(w => AdminLines.WalkReply(at.Value.x, at.Value.z, level, r.Value, w.Free, w.Grounded, w.Source)).ToList();
+        if (reason != "") lines.Add(AdminLines.WalkUnavailable(reason));
+        foreach (var message in AdminLines.Pack(lines)) ctx.Reply(message);
+        foreach (var line in lines) Core.Log.LogInfo($"[nyar] debug: {line}");  // the Session 1 record; no SteamID
     }
 
     static void LogAdmin(ChatCommandContext ctx, string command) =>

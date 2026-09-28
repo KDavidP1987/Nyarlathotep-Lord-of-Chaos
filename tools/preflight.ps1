@@ -1951,13 +1951,19 @@ function Test-CheckSessionLogs([string]$Root) {
             if (-not $save.Success -or $blocks[$n] -notmatch ('snapshot restored; hashes equal \(' + [regex]::Escape($save.Groups[1].Value) + '[,)]')) { $unwrapped += $n }
         }
     }
+    # A plan listed in probeRecords (slug: session) has labelled walk readings and a go/no-go line per source in that
+    # session's block; the verdict is recomputed and must agree (walkable-spawns D1, D10, A4, A8, A9).
+    $probeFrom = if ($mj -and $mj.probeRecords) { $mj.probeRecords.PSObject.Properties[$slug] } else { $null }
+    $probeWhy = $null
+    if ($probeFrom) { $probeWhy = Get-ProbeRecordProblem $slug ([int]$probeFrom.Value) $blocks }
     $bad = @($dirty + $old + $dupes + $unattributed + $unwrapped | Sort-Object -Unique)
     $ok = @($post | Where-Object { $checks.ContainsKey($_) -and $bad -notcontains $_ }).Count
     $preOrphans = @($pre | Where-Object { $checks.ContainsKey($_) -and ([math]::Max($checks[$_][2], 0) + $checks[$_][3]) -gt 0 })
     $preNote = if ($pre.Count) { "; $($pre.Count) before A10 not counted$(if ($preOrphans) { " (orphan errors in session $($preOrphans -join ', '))" })" } else { '' }
     $after = if ($cutoff) { ' after A10' } else { '' }
-    if ($missing -or $bad -or $post.Count -eq 0) {
+    if ($missing -or $bad -or $post.Count -eq 0 -or $probeWhy) {
         $why = @()
+        if ($probeWhy) { $why += $probeWhy }
         if ($post.Count -eq 0) { $why += "no session after A10 (session $cutoff)" }
         if ($missing) { $why += "no log check line for session $($missing -join ', ')" }
         if ($dirty) { $why += "unhandled exceptions, no nyar lines or orphan errors in session $($dirty -join ', ')" }
@@ -1969,7 +1975,41 @@ function Test-CheckSessionLogs([string]$Root) {
     }
     # The snapshot count shows an entry dropped from snapshotSessions (Review 16 F2): the line then has no "snapshots".
     $snapNote = if ($snapFrom) { $w = @($sessions | Where-Object { $_ -ge [int]$snapFrom.Value }).Count; "; snapshots $w/$w from session $($snapFrom.Value)" } else { '' }
-    return New-Result $true "session logs: $slug $ok/$($post.Count) checked$after$preNote$snapNote"
+    $probeNote = if ($probeFrom) { '; probe records 1/1' } else { '' }
+    return New-Result $true "session logs: $slug $ok/$($post.Count) checked$after$preNote$snapNote$probeNote"
+}
+
+# The probe record of one session (walkable-spawns D1, D10, A4, A8): readings "- <label>: walk <x> <z> h <n> r <r>:
+# <free|blocked> grounded <yes|no> (<source>)" with the labels dry, pond, river, cliff, building and ledge, and one line
+# "- go/no-go (<source>): <go|no-go|incomplete>" per source. Per source the verdict is incomplete without a dry, pond,
+# river, cliff and building reading; else go when every dry reading is free and grounded and every pond, river, cliff
+# and building reading is blocked (ledge is not counted), else no-go. An incomplete record fails: the session is
+# repeated. Returns the problem, or $null.
+function Get-ProbeRecordProblem([string]$Slug, [int]$Session, $Blocks) {
+    if (-not $Blocks.ContainsKey($Session)) { return "probe records: $Slug session $Session not found" }
+    $block = "$($Blocks[$Session])"
+    $readings = @([regex]::Matches($block, '(?m)^- (dry|pond|river|cliff|building|ledge): walk \S+ \S+ h \d+ r [\d.]+: (free|blocked) grounded (yes|no) \(([^)\r\n]+)\)'))
+    if ($readings.Count -eq 0) { return "probe records: $Slug session $Session has no readings" }
+    $lines = @{}
+    $problems = @()
+    foreach ($g in [regex]::Matches($block, '(?m)^- go/no-go \(([^)\r\n]+)\): (go|no-go|incomplete)\s*$')) {
+        if ($lines.ContainsKey($g.Groups[1].Value)) { $problems += "two go/no-go lines for $($g.Groups[1].Value)" }
+        $lines[$g.Groups[1].Value] = $g.Groups[2].Value
+    }
+    $sources = @(@($readings | ForEach-Object { $_.Groups[4].Value }) + @($lines.Keys) | Sort-Object -Unique)
+    foreach ($source in $sources) {
+        $mine = @($readings | Where-Object { $_.Groups[4].Value -eq $source })
+        $labels = @($mine | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+        $want = if (@('dry', 'pond', 'river', 'cliff', 'building' | Where-Object { $labels -notcontains $_ }).Count) { 'incomplete' }
+            elseif (@($mine | Where-Object { ($_.Groups[1].Value -eq 'dry' -and ($_.Groups[2].Value -ne 'free' -or $_.Groups[3].Value -ne 'yes')) -or
+                ($_.Groups[1].Value -in 'pond', 'river', 'cliff', 'building' -and $_.Groups[2].Value -ne 'blocked') }).Count) { 'no-go' }
+            else { 'go' }
+        if (-not $lines.ContainsKey($source)) { $problems += "no go/no-go line for $source"; continue }
+        if ($lines[$source] -ne $want) { $problems += "$source reads $($lines[$source]), the readings give $want" }
+        elseif ($want -eq 'incomplete') { $problems += "$source is incomplete (repeat the session)" }
+    }
+    if ($problems) { return "probe records: $Slug session ${Session}: $($problems -join '; ')" }
+    return $null
 }
 
 # The externalSelfTests registry of tools/preflight-checks.json (faction-empowerment D22): every check that is not a

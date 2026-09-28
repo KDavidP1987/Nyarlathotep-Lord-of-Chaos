@@ -81,6 +81,18 @@ public static class CommandArgs
             : Arg<int>.Bad("radius must be 5-100");
     }
 
+    /// <summary>`debug walk [radius]` (walkable-spawns D7): absent 0.5 m, else 0.1–5 with at most two decimals, '.' as
+    /// the separator (invariant culture); a second argument is refused like a bad radius.</summary>
+    public static Arg<float> WalkRadius(string? text, string? extra = null)
+    {
+        const string bad = "radius must be 0.1-5";
+        if (!string.IsNullOrEmpty(extra)) return Arg<float>.Bad(bad);
+        if (string.IsNullOrEmpty(text)) return Arg<float>.Of(0.5f);
+        if (!decimal.TryParse(text, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var r)) return Arg<float>.Bad(bad);
+        if (r < 0.1m || r > 5m || decimal.Round(r, 2) != r) return Arg<float>.Bad(bad);
+        return Arg<float>.Of((float)r);
+    }
+
     /// <summary>The settable stat fields of an Empower action (faction-empowerment D12).</summary>
     public static readonly IReadOnlyList<string> StatFields = EventValidator.StatKeys.Select(k => "action.stats." + k).ToList();
 

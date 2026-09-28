@@ -4,10 +4,15 @@
   "dataTables": [
     "docs/dod/raphael-api-core.md",
     "docs/dod/faction-empowerment.md",
-    "docs/dod/event-library.md"
+    "docs/dod/event-library.md",
+    "docs/dod/walkable-spawns.md"
   ],
   "snapshotSessions": {
-    "event-library": 1
+    "event-library": 1,
+    "walkable-spawns": 1
+  },
+  "probeRecords": {
+    "walkable-spawns": 1
   },
   "childDocs": {
     "spikes": [
@@ -26,6 +31,9 @@
     ],
     "event-library": [
       "docs/features/EVENT_LIBRARY.md"
+    ],
+    "walkable-spawns": [
+      "docs/features/WALKABLE_SPAWNS.md"
     ],
     "event-spawns": [
       "docs/features/EVENT_SPAWNS.md"
@@ -468,6 +476,7 @@
       "inputs": [
         "the feature docs tools/preflight-checks.json childDocs maps the slug to (else docs/features/<SLUG>.md) › Test results (### Session <n> headings)",
         "docs/audits/<slug>.md (- session <n> log check: lines)",
+        "tools/preflight-checks.json probeRecords (slug: session): that session's labelled walk readings and go/no-go lines (walkable-spawns D10)",
         "the plan slug (-SessionsOf; sessionsof.txt in a fixture)"
       ],
       "plant": {
@@ -489,7 +498,11 @@
         "bad-16": "tools/preflight-checks.json maps the slug to an empty list (A8: an empty mapping is not the slug-derived doc)",
         "bad-17": "snapshotSessions lists foundation from session 8; session 8 records the -Save s8 but no snapshot restored line (event-library A19)",
         "bad-18": "snapshotSessions lists foundation from session 8; session 8 restores a different label (s7) than it saved (event-library A19)",
-        "bad-19": "snapshotSessions lists foundation from session 9, which the feature doc does not have (event-library A19)"
+        "bad-19": "snapshotSessions lists foundation from session 9, which the feature doc does not have (event-library A19)",
+        "bad-probe": "probeRecords lists foundation session 8; its go/no-go line for singleton world reads no-go while the readings give go (walkable-spawns D10)",
+        "bad-probe-2": "probeRecords lists foundation session 8; the river reading is missing and the go/no-go line still reads go (walkable-spawns D10)",
+        "bad-probe-3": "probeRecords lists foundation session 8; the pond reading is missing and the go/no-go line reads incomplete, which is neither go nor a pass (walkable-spawns D1, D10)",
+        "bad-probe-4": "probeRecords lists foundation session 8, which has no walk readings: \"probe records: foundation session 8 has no readings\" (walkable-spawns D10, A9: the empty-probe case)"
       }
     },
     {

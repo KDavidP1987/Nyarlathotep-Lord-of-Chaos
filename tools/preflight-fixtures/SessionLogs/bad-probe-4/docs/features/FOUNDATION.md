@@ -84,21 +84,6 @@ Boot after session 3's autosave; the server log held orphan errors from units sa
 
 ### Session 8 · 2026-09-25
 Setup: `pwsh tools/dev-snapshot.ps1 -Save s8`.
-Walk readings:
-- dry: walk -1200.0 -700.0 h 1 r 0.50: free grounded yes (singleton world)
-- pond: walk -912.9 -828.8 h 1 r 0.50: blocked grounded yes (singleton world)
-- river: walk -1500.2 -640.5 h 1 r 0.50: blocked grounded no (singleton world)
-- cliff: walk -1310.0 -710.0 h 1 r 0.50: blocked grounded no (singleton world)
-- building: walk -1250.4 -690.1 h 2 r 0.50: blocked grounded yes (singleton world)
-- ledge: walk -1305.0 -705.0 h 2 r 0.50: free grounded no (singleton world)
-- dry: walk -1200.0 -700.0 h 1 r 0.50: blocked grounded yes (singleton tile)
-- pond: walk -912.9 -828.8 h 1 r 0.50: blocked grounded yes (singleton tile)
-- river: walk -1500.2 -640.5 h 1 r 0.50: blocked grounded no (singleton tile)
-- cliff: walk -1310.0 -710.0 h 1 r 0.50: blocked grounded no (singleton tile)
-- building: walk -1250.4 -690.1 h 2 r 0.50: blocked grounded yes (singleton tile)
-- ledge: walk -1305.0 -705.0 h 2 r 0.50: free grounded no (singleton tile)
-- go/no-go (singleton world): go
-- go/no-go (singleton tile): no-go
 Reboot; no orphan errors.
 `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s8, 12 files)".
 

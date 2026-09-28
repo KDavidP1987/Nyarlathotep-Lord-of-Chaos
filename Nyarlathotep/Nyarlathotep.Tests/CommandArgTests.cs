@@ -132,4 +132,42 @@ public partial class CommandArgTests
     {
         Assert.Equal(error, CommandArgs.SettableValue(field, value).Error);
     }
+
+    /// <summary>walkable-spawns D7: `debug walk [radius]` takes 0.1–5 m with at most two decimals, default 0.5.</summary>
+    [Theory]
+    [InlineData(null, null, 0.5f, null)]
+    [InlineData("", null, 0.5f, null)]
+    [InlineData("0.1", null, 0.1f, null)]
+    [InlineData("5", null, 5f, null)]
+    [InlineData("2.25", null, 2.25f, null)]
+    [InlineData("0", null, 0f, "radius must be 0.1-5")]
+    [InlineData("0.09", null, 0f, "radius must be 0.1-5")]
+    [InlineData("5.01", null, 0f, "radius must be 0.1-5")]
+    [InlineData("1.005", null, 0f, "radius must be 0.1-5")]
+    [InlineData("1,5", null, 0f, "radius must be 0.1-5")]
+    [InlineData("abc", null, 0f, "radius must be 0.1-5")]
+    [InlineData("-1", null, 0f, "radius must be 0.1-5")]
+    [InlineData("1", "2", 0f, "radius must be 0.1-5")]
+    public void WalkRadius(string? text, string? extra, float value, string? error)
+    {
+        var a = CommandArgs.WalkRadius(text, extra);
+        Assert.Equal(error, a.Error);
+        if (error is null) Assert.Equal(value, a.Value);
+    }
+
+    /// <summary>walkable-spawns D8: the walk reply and its refusals fit one chat line (480 bytes) at the maximum lengths
+    /// of their fields, for every source name.</summary>
+    [Fact]
+    public void ChatBytes()
+    {
+        var lines = AdminLines.WalkSources.SelectMany(source => new[]
+        {
+            AdminLines.WalkReply(-10000f, -10000f, 255, 5f, false, false, source),
+            AdminLines.WalkReply(10000f, 10000f, 255, 5f, true, true, source),
+        }).ToList();
+        lines.Add(CommandArgs.WalkRadius("abc").Error!);
+        lines.Add(AdminLines.WalkUnavailable(string.Join("; ", AdminLines.WalkSources.Select(s => $"{s}: InvalidOperationException"))));
+        Assert.All(lines, l => Assert.True(System.Text.Encoding.UTF8.GetByteCount(l) < 480, l));
+        Assert.Equal("walk -10000.0 -10000.0 h 255 r 5.00: blocked grounded no (singleton world)", lines[0]);
+    }
 }
