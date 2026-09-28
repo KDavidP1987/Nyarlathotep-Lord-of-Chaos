@@ -34,10 +34,9 @@ public static partial class AdminLines
     public static string DegradedNotice(IReadOnlyCollection<string> degraded) =>
         $"nyar: degraded: {string.Join(", ", degraded)} (see .nyar status and the server log)";
 
-    /// <summary>The sources a `debug walk` reading names (walkable-spawns D1, A8): the tile world (the live singleton,
-    /// or XPRising's empty construction when the singleton is missing) and the coordinate space (world metres or the
-    /// tile grid).</summary>
-    public static readonly IReadOnlyList<string> WalkSources = ["singleton world", "singleton tile", "empty world", "empty tile"];
+    /// <summary>The sources a `debug walk` reading names (walkable-spawns D1, A8, A10): the live tile world in world
+    /// metres or in the tile grid.</summary>
+    public static readonly IReadOnlyList<string> WalkSources = ["singleton world", "singleton tile"];
 
     /// <summary>The `debug walk` reply when no source answered (walkable-spawns D1, D5).</summary>
     public static string WalkUnavailable(string reason) => $"walk check unavailable: {reason}";

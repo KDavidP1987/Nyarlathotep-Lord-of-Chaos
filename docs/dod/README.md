@@ -12,7 +12,7 @@
 | [nyarlathotep](nyarlathotep.md) | Nyarlathotep, Lord of Chaos, v0.1 to v1.0 | in-progress | Epic | 38/47 | 36 | 75 % |  |
 | [raphael-api-core](raphael-api-core.md) | Raphael api 2 — status, events, push subscription, paging, contract check | done | L | 22/22 | 22 | 63 % | nyarlathotep |
 | [spikes](spikes.md) | Spikes S1-S3, march, restart marker, carrier buff | done | M | 20/20 | 20 | 50 % | nyarlathotep |
-| [walkable-spawns](walkable-spawns.md) | Walkable spawns — the walk probe, walkable spawn points and release 0.5.1 | in-progress | M | 0/12 | 12 | 52 % | nyarlathotep |
+| [walkable-spawns](walkable-spawns.md) | Walkable spawns — the walk probe, walkable spawn points and release 0.5.1 | in-progress | M | 0/12 | 12 | 50 % | nyarlathotep |
 
 Most-missed layers — done plans: layer 6.1 (13), layer 7.3 (7), layer 14.4 (7), layer 4.5 (7), layer 3.1 (5); open plans (provisional): layer 6.1 (4), layer 12.4 (3), layer 5.1 (2), layer 14.1 (2), layer 4.1 (2).
 

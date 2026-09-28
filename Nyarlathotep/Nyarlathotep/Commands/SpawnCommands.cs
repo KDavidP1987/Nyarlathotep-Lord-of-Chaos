@@ -72,6 +72,7 @@ internal static class SpawnCommands
         if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }
         if (where == "walk") { Walk(ctx, radius, extra); return; }
         if (where != "here") { ctx.Reply("argument must be here or walk"); return; }
+        if (extra != "") { ctx.Reply("arguments must be 1-2"); return; }        // `here [radius]`, as before walk (review F4)
         var r = CommandArgs.Radius(radius);
         if (r.Error is not null) { ctx.Reply(r.Error); return; }
         if (!ctx.Event.SenderCharacterEntity.TryGetComponent<Translation>(out var at)) { ctx.Reply("your position could not be read"); return; }

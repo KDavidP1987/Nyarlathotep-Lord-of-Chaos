@@ -14,10 +14,11 @@ ring, then half the ring, then the centre, without adding, dropping or reorderin
 
 - **Step 1 (temporary, removed in step 2):** `.nyar debug walk [radius]`, a verb of the admin-only `debug` command.
   Radius 0.1–5 m, default 0.5. It reads the tile collision at the admin's position and replies one line per source:
-  `walk <x> <z> h <heightLevel> r <radius>: <free|blocked> grounded <yes|no> (<source>)`. The source names the
-  tile world (`singleton`, the server's live one; `empty`, XPRising's construction, read only when the singleton
-  is missing) and the coordinate space (`world` metres or the `tile` grid, floor(x·2) + 6400), since the game's
-  metadata does not say which one the calls take (A8). A source that fails adds `walk check unavailable: <reason>`.
+  `walk <x> <z> h <heightLevel> r <radius>: <free|blocked> grounded <yes|no> (<source>)`. The source is the
+  server's live tile world (`singleton`) and the coordinate space of the circle test (`world` metres or the `tile`
+  grid, x·2 + 6400), since the game's metadata does not say which one it takes (A8); grounded is read once, in tile
+  space, for both lines. A missing singleton or a failing read adds `walk check unavailable: <reason>`; XPRising's
+  empty TileWorld is never read, since a default struct could fault in native code (A10).
 - **Step 2 (if Session 1 is go):** Logic SpawnPoints and WavePoints, the per-tick WalkBudget, the moved and unchecked
   counts on the wave line, the health entry "spawns: walk check unavailable", and release 0.5.1.
 

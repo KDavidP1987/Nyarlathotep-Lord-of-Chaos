@@ -1988,17 +1988,21 @@ function Test-CheckSessionLogs([string]$Root) {
 function Get-ProbeRecordProblem([string]$Slug, [int]$Session, $Blocks) {
     if (-not $Blocks.ContainsKey($Session)) { return "probe records: $Slug session $Session not found" }
     $block = "$($Blocks[$Session])"
-    $readings = @([regex]::Matches($block, '(?m)^- (dry|pond|river|cliff|building|ledge): walk \S+ \S+ h \d+ r [\d.]+: (free|blocked) grounded (yes|no) \(([^)\r\n]+)\)'))
+    $readings = @([regex]::Matches($block, '(?m)^- (dry|pond|river|cliff|building|ledge): walk -?\d+\.\d -?\d+\.\d h \d+ r \d\.\d\d: (free|blocked) grounded (yes|no) \(([^)\r\n]+)\)\s*$'))
     if ($readings.Count -eq 0) { return "probe records: $Slug session $Session has no readings" }
-    $lines = @{}
+    $lines = New-Object System.Collections.Hashtable ([StringComparer]::Ordinal)
     $problems = @()
+    # The sources AdminLines.WalkSources names, compared case-sensitively (step 1 code review F6).
+    $known = @('singleton world', 'singleton tile')
     foreach ($g in [regex]::Matches($block, '(?m)^- go/no-go \(([^)\r\n]+)\): (go|no-go|incomplete)\s*$')) {
         if ($lines.ContainsKey($g.Groups[1].Value)) { $problems += "two go/no-go lines for $($g.Groups[1].Value)" }
         $lines[$g.Groups[1].Value] = $g.Groups[2].Value
     }
-    $sources = @(@($readings | ForEach-Object { $_.Groups[4].Value }) + @($lines.Keys) | Sort-Object -Unique)
+    # Both sources are required: a record that drops one is not a record of the probe (Codex cross-inspection F4).
+    $sources = @(@($known) + @($readings | ForEach-Object { $_.Groups[4].Value }) + @($lines.Keys) | Sort-Object -Unique -CaseSensitive)
     foreach ($source in $sources) {
-        $mine = @($readings | Where-Object { $_.Groups[4].Value -eq $source })
+        if ($known -cnotcontains $source) { $problems += "unknown source $source"; continue }
+        $mine = @($readings | Where-Object { $_.Groups[4].Value -ceq $source })
         $labels = @($mine | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
         $want = if (@('dry', 'pond', 'river', 'cliff', 'building' | Where-Object { $labels -notcontains $_ }).Count) { 'incomplete' }
             elseif (@($mine | Where-Object { ($_.Groups[1].Value -eq 'dry' -and ($_.Groups[2].Value -ne 'free' -or $_.Groups[3].Value -ne 'yes')) -or
