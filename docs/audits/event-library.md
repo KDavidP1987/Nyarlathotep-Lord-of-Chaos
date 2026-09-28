@@ -1,19 +1,7 @@
 # Audit — event-library
 
 Build plan steps 1–6 of docs/dod/event-library.md. Each step has one "### Step <n>" entry under "## Pre-audit"
-and one under "### A22 probe · Session 4 · 2026-09-27 · 86f6f53
-- git tree clean at 86f6f53 (the Session 4 steps added after); compile 0 errors, 0 warnings, 1320 tests passed; PREFLIGHT OK
-- feature doc read: EVENT_LIBRARY.md › Test results › Session 4 (probe steps) and Session 3 Round 3
-- setup: `dev-snapshot.ps1 -Save s4` (28 files); Debug.VerboseLogging = true in the dev cfg; deploying build with the server stopped, DLL 189334244498E48D in plugins equals the build output
-- baseline boot: "templates: 6/6 valid", "triggers: all hooks available", boot marker and carrier sweeps 0 found; warnings only Il2CppInterop Class::Init, Beelzebub TUNE ×2 and the dev world's old example-empowerment line
-
-### A23 · Session 5 · 2026-09-27 · b4beecf
-- git tree clean at b4beecf; compile 0 errors, 0 warnings, 1333 tests passed; PREFLIGHT OK; dod --check event-library 0 problems
-- feature doc read: EVENT_LIBRARY.md › Test results › Session 5 (the D35 confirm) and Session 4's finding
-- setup: `dev-snapshot.ps1 -Save s5` (28 files); Debug.VerboseLogging = true in the dev cfg; deploying build with the server stopped, DLL B665B0AE108E1ECB in plugins equals the build output
-- baseline boot: "templates: 6/6 valid", "triggers: all hooks available", boot marker and carrier sweeps 0 found; warnings only Il2CppInterop Class::Init, Beelzebub TUNE ×2 and the dev world's old example-empowerment line
-
-## Post-audit"; every post-audit entry carries a "Codex verdict:" line. Session log checks are lines
+and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line. Session log checks are lines
 "- session <n> log check: …". Rollback base: v0.4.0 = ae3821b.
 
 ## Pre-audit
@@ -62,6 +50,18 @@ and one under "### A22 probe · Session 4 · 2026-09-27 · 86f6f53
 - feature doc read: EVENT_LIBRARY.md › Test results › Session 3 (the retest steps) and Session 2's open cases
 - setup: `dev-snapshot.ps1 -Save s3` (28 files); deploying build with the server stopped, DLL ACDC9D8264A48658 in plugins equals the build output
 - baseline boot: "templates: 6/6 valid", "triggers: all hooks available", boot marker and carrier sweeps 0 found; warnings only Il2CppInterop Class::Init, Beelzebub TUNE ×2 and the dev world's old example-empowerment disabled line
+
+### A22 probe · Session 4 · 2026-09-27 · 86f6f53
+- git tree clean at 86f6f53 (the Session 4 steps added after); compile 0 errors, 0 warnings, 1320 tests passed; PREFLIGHT OK
+- feature doc read: EVENT_LIBRARY.md › Test results › Session 4 (probe steps) and Session 3 Round 3
+- setup: `dev-snapshot.ps1 -Save s4` (28 files); Debug.VerboseLogging = true in the dev cfg; deploying build with the server stopped, DLL 189334244498E48D in plugins equals the build output
+- baseline boot: "templates: 6/6 valid", "triggers: all hooks available", boot marker and carrier sweeps 0 found; warnings only Il2CppInterop Class::Init, Beelzebub TUNE ×2 and the dev world's old example-empowerment line
+
+### A23 · Session 5 · 2026-09-27 · b4beecf
+- git tree clean at b4beecf; compile 0 errors, 0 warnings, 1333 tests passed; PREFLIGHT OK; dod --check event-library 0 problems
+- feature doc read: EVENT_LIBRARY.md › Test results › Session 5 (the D35 confirm) and Session 4's finding
+- setup: `dev-snapshot.ps1 -Save s5` (28 files); Debug.VerboseLogging = true in the dev cfg; deploying build with the server stopped, DLL B665B0AE108E1ECB in plugins equals the build output
+- baseline boot: "templates: 6/6 valid", "triggers: all hooks available", boot marker and carrier sweeps 0 found; warnings only Il2CppInterop Class::Init, Beelzebub TUNE ×2 and the dev world's old example-empowerment line
 
 ### Step 5 · Session 6 · 2026-09-27 · b084e47
 - git tree clean at b084e47 (Review 19 dispositions; the DLL source unchanged since b4beecf); compile 0 errors, 0 warnings, 1333 tests passed; PREFLIGHT OK (data inventory 31 entries, 54/54 globs and files, 32/32 plan rows); dod --check event-library 0 problems, verified 7/35; review pending (A24, Review 19 REVISE, the round cap reached and put to the owner)
