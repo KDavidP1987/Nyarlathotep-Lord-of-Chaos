@@ -26,6 +26,7 @@
 		<None Include="..\Nyarlathotep\Resources\templates.json" Link="Resources\templates.json" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\Nyarlathotep\Config\Settings.cs" Link="Resources\Settings.cs.txt" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\dod\event-library.md" Link="Resources\event-library.md" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\..\docs\dod\walkable-spawns.md" Link="Resources\walkable-spawns.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\RAPHAEL_INTEGRATION_CONTRACT.md" Link="Resources\RAPHAEL_INTEGRATION_CONTRACT.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\NYARLATHOTEP_DESIGN.md" Link="Resources\NYARLATHOTEP_DESIGN.md" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>

@@ -285,6 +285,14 @@ function Test-CheckChangelogs([string]$Root) {
         if ($null -eq $t -or $t -notmatch "(?m)^##\s*\[?$e\]?") { $missing += $rel }
     }
     if ($missing) { return New-Result $false "changelogs: no entry for $v in $($missing -join ', ')" }
+    # 0.5.1 fixed the 0.5.0 known issue (units in water, walkable-spawns D12): from 0.5.1 on neither README carries it.
+    $parsed = $null
+    if ([version]::TryParse(($v -replace '[-+].*$', ''), [ref]$parsed) -and $parsed -ge [version]'0.5.1') {
+        foreach ($rel in @('README.md', "$PkgRel/README.md")) {
+            $t = Read-Text $Root $rel
+            if ($t -and $t -match 'Known issue \(0\.5\.0\)|Known issue in 0\.5\.0') { return New-Result $false "changelogs: $rel still carries the 0.5.0 known issue" }
+        }
+    }
     return New-Result $true "changelogs: $v in both"
 }
 
@@ -1873,6 +1881,72 @@ function Test-CheckReadyGuard([string]$Root) {
     return New-Result $true "ready guard: $n/$n commands start with the IsReady guard"
 }
 
+# The `.nyar debug` command ships no temporary verb (walkable-spawns D9, A7): for every `debug` [Command], its usage
+# text and the string literals its method compares one of its own parameters with name only "here": ==, !=, an `is`
+# pattern (with or/and/not), Equals in either form, a case label of a switch statement on it, or an arm of a switch
+# expression on it (code review F1). A temporary verb added for a test session (as step 1's `walk` was) fails the check until it
+# is removed. The method is its parameter list and its brace-balanced body; one that cannot be parsed fails.
+function Test-CheckDebugCommands([string]$Root) {
+    $files = @(Get-CsFiles $Root | Where-Object { $_ -like 'Nyarlathotep/Nyarlathotep/Commands/*' })
+    if ($files.Count -eq 0) { return New-Result $false 'debug commands: no command files' }
+    $n = 0; $bad = @()
+    foreach ($f in $files) {
+        $t = Remove-CsComments (Read-Text $Root $f)
+        foreach ($attr in [regex]::Matches($t, '\[Command(?:Attribute)?\s*\(\s*(?:name\s*:\s*)?"debug"(?<args>(?:[^()]|\((?:[^()])*\))*)\)\s*\]')) {
+            $n++
+            $usage = [regex]::Match($attr.Groups['args'].Value, 'usage\s*:\s*"(?<u>[^"]*)"')
+            foreach ($w in [regex]::Matches($usage.Groups['u'].Value, '[A-Za-z]+')) {
+                if ($w.Value -cne 'here' -and $w.Value -cne 'radius') { $bad += "$f usage names '$($w.Value)'" }
+            }
+            $open = $t.IndexOf('(', $attr.Index + $attr.Length)
+            $close = if ($open -gt 0) { Get-ParenEnd $t $open } else { -1 }
+            $brace = if ($close -gt 0) { [regex]::new('\G\s*\{').Match($t, $close + 1) } else { $null }
+            if (-not $brace -or -not $brace.Success) { $bad += "$f debug: method not parsed"; continue }
+            $depth = 0; $end = -1
+            for ($i = $brace.Index + $brace.Length - 1; $i -lt $t.Length; $i++) {
+                if ($t[$i] -eq '{') { $depth++ } elseif ($t[$i] -eq '}') { $depth--; if ($depth -eq 0) { $end = $i; break } }
+            }
+            if ($end -lt 0) { $bad += "$f debug: method body not closed"; continue }
+            $params = @([regex]::Matches($t.Substring($open + 1, $close - $open - 1), '(\w+)\s*(?:=\s*[^,]*)?(?:,|$)') | ForEach-Object { $_.Groups[1].Value })
+            $body = $t.Substring($brace.Index, $end - $brace.Index + 1)
+            foreach ($prm in $params) {
+                $e = [regex]::Escape($prm)
+                $rx = "\b$e\s*(?:==|!=)\s*""(?<v>[^""]*)""|""(?<v>[^""]*)""\s*(?:==|!=)\s*$e\b"
+                $vals = @([regex]::Matches($body, $rx) | ForEach-Object { $_.Groups['v'].Value })
+                $lit = '"(?<v>[^"]*)"'
+                foreach ($pat in [regex]::Matches($body, "\b$e\s+is\s+(?<pat>[^;{}&|]*)")) {
+                    $vals += @([regex]::Matches($pat.Groups['pat'].Value, $lit) | ForEach-Object { $_.Groups['v'].Value })
+                }
+                $eq = "\b$e\s*\.\s*Equals\s*\(\s*$lit|$lit\s*\.\s*Equals\s*\(\s*$e\b|\bEquals\s*\(\s*$e\s*,\s*$lit|\bEquals\s*\(\s*$lit\s*,\s*$e\b"
+                $vals += @([regex]::Matches($body, $eq) | ForEach-Object { $_.Groups['v'].Value })
+                foreach ($sx in [regex]::Matches($body, "\b$e\s+switch\s*\{")) {
+                    $d = 0; $sxEnd = -1
+                    for ($i = $sx.Index + $sx.Length - 1; $i -lt $body.Length; $i++) {
+                        if ($body[$i] -eq '{') { $d++ } elseif ($body[$i] -eq '}') { $d--; if ($d -eq 0) { $sxEnd = $i; break } }
+                    }
+                    if ($sxEnd -lt 0) { $bad += "$f debug: switch expression on $prm not closed"; continue }
+                    $arms = $body.Substring($sx.Index, $sxEnd - $sx.Index + 1)
+                    foreach ($arm in [regex]::Matches($arms, '(?:\{|,)\s*(?<pat>[^,{}]*?)=>')) {
+                        $vals += @([regex]::Matches($arm.Groups['pat'].Value, $lit) | ForEach-Object { $_.Groups['v'].Value })
+                    }
+                }
+                foreach ($sw in [regex]::Matches($body, "switch\s*\(\s*$e\s*\)\s*\{")) {
+                    $d = 0; $swEnd = -1
+                    for ($i = $sw.Index + $sw.Length - 1; $i -lt $body.Length; $i++) {
+                        if ($body[$i] -eq '{') { $d++ } elseif ($body[$i] -eq '}') { $d--; if ($d -eq 0) { $swEnd = $i; break } }
+                    }
+                    if ($swEnd -lt 0) { $bad += "$f debug: switch on $prm not closed"; continue }
+                    $vals += @([regex]::Matches($body.Substring($sw.Index, $swEnd - $sw.Index + 1), 'case\s+"(?<v>[^"]*)"') | ForEach-Object { $_.Groups['v'].Value })
+                }
+                foreach ($v in $vals) { if ($v -cne 'here' -and $v -cne '') { $bad += "$f debug compares $prm with '$v'" } }
+            }
+        }
+    }
+    if ($n -eq 0) { return New-Result $false 'debug commands: no debug command found' }
+    if ($bad) { return New-Result $false "debug commands: temporary verb present: $($bad -join '; ')" }
+    return New-Result $true 'debug commands: none temporary'
+}
+
 # Every "### Session <n> · <date>" under "## Test results" in docs/features/<SLUG>.md has exactly one line
 # "- session <n> log check: 0 unhandled, <s> nyar lines, 0 orphan errors, <u> unity errors" in docs/audits/<slug>.md
 # (foundation D33). Only sessions after the plan's last pre-A10 session (below; a plan not listed has none) count as
@@ -2259,6 +2333,10 @@ function Invoke-FixtureBattery($Check, [string]$Tmp) {
         $want = $kind -eq 'good'
         if ($r.Pass -ne $want) { $ok = $false; $problems += "$($Check.name) $kind fixture: expected $(if ($want) {'pass'} else {'fail'}), got '$($r.Line)'" }
         if ($r.Line -notmatch '\S') { $ok = $false; $problems += "$($Check.name) $kind fixture printed nothing" }
+        # A check whose manifest entry names emptyLine must print exactly that line on its empty fixture (walkable-spawns D9).
+        if ($kind -eq 'empty' -and $Check.emptyLine -and $r.Line -cne $Check.emptyLine) {
+            $ok = $false; $problems += "$($Check.name) empty fixture: expected '$($Check.emptyLine)', got '$($r.Line)'"
+        }
     }
     return @{ Ok = $ok; Problems = $problems; Extra = $bads.Count - 1 }
 }

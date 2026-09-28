@@ -70,10 +70,13 @@
       "inputs": [
         "Nyarlathotep/Nyarlathotep/Nyarlathotep.csproj <Version>",
         "CHANGELOG.md",
-        "Nyarlathotep/Nyarlathotep/CHANGELOG.md"
+        "Nyarlathotep/Nyarlathotep/CHANGELOG.md",
+        "README.md and Nyarlathotep/Nyarlathotep/README.md (from 0.5.1 on: no 0.5.0 known-issue note)"
       ],
       "plant": {
-        "bad": "package CHANGELOG heading for 0.1.0 renamed to 0.0.9"
+        "bad": "package CHANGELOG heading for 0.1.0 renamed to 0.0.9",
+        "bad-knownissue": "version 0.5.1 with both changelog entries, but the Thunderstore README still carries \"Known issue (0.5.0)\"",
+        "bad-knownissue-2": "version 0.5.1, the Thunderstore README clean, but the GitHub README still carries \"Known issue in 0.5.0\" (code review F3)"
       }
     },
     {
@@ -450,6 +453,26 @@
         "bad": "an admin-only command declared in Services/Hidden.cs, outside Commands/",
         "bad-2": "Commands/ApiCommands.cs holds two groups (a real two-group file: the nyar class, then the nyar api class) with the two [CommandGroup] names swapped, so .nyar events and .nyar api announce are undocumented; good holds the same file unswapped, which only the nearest-group walk labels right (raphael-api-core D9)",
         "bad-3": "an admin-only command in the suffixed [CommandAttribute(...)] form, declared in Patches/HiddenPatch.cs"
+      }
+    },
+    {
+      "name": "DebugCommands",
+      "function": "Test-CheckDebugCommands",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/DebugCommands",
+      "emptyLine": "debug commands: no command files",
+      "inputs": [
+        "Nyarlathotep/Nyarlathotep/Commands/*.cs the git tree sees (the `debug` [Command] attribute's usage and the string literals its method compares an argument with)"
+      ],
+      "plant": {
+        "bad": "Commands/SpawnCommands.cs: the usage names `walk [radius]` again",
+        "bad-2": "Commands/SpawnCommands.cs: the usage is clean but Debug still compares its argument with \"walk\"",
+        "bad-3": "Commands/SpawnCommands.cs: Debug switches on its argument with case \"walk\"",
+        "bad-4": "Commands/DebugExtraCommands.cs: a second `debug` command (another group) whose usage names `walk` (Codex F1)",
+        "bad-5": "Commands/SpawnCommands.cs: Debug tests its argument with the pattern `is \"here\" or \"walk\"` (code review F1)",
+        "bad-6": "Commands/SpawnCommands.cs: Debug compares its argument with string.Equals(where, \"walk\") (code review F1)",
+        "bad-7": "Commands/SpawnCommands.cs: Debug switches on its argument with a switch expression arm \"walk\" => (code review F1)",
+        "bad-8": "Commands/SpawnCommands.cs: Debug compares its argument with \"walk\".Equals(where) (Codex round 2 F1)"
       }
     },
     {

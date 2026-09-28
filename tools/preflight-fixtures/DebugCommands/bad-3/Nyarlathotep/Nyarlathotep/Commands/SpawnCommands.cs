@@ -70,6 +70,7 @@ internal static class SpawnCommands
     public static void Debug(ChatCommandContext ctx, string where = "", string radius = "", string extra = "")
     {
         if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }
+        switch (where) { case "walk": return; }
         if (where != "here") { ctx.Reply("argument must be here"); return; }
         if (extra != "") { ctx.Reply("arguments must be 1-2"); return; }        // `here [radius]` only (walkable-spawns review F4)
         var r = CommandArgs.Radius(radius);

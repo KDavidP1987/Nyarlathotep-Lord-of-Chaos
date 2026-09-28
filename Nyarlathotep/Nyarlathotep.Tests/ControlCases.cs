@@ -1,15 +1,26 @@
 namespace Nyarlathotep.Tests;
 
-/// <summary>One control of event-library (D31): the D-item it belongs to, its name, and its failing, passing and empty
-/// cases. A test row names test methods of <see cref="Class"/> (`&lt;Name&gt;_fails_when_…`, `&lt;Name&gt;_passes_…`,
+/// <summary>One control of a plan (event-library D31, walkable-spawns D9): the plan's slug and the D-item it belongs to
+/// (its key, "walkable-spawns D2"), its name, and its failing, passing and empty cases. A test row names test methods of <see cref="Class"/> (`&lt;Name&gt;_fails_when_…`, `&lt;Name&gt;_passes_…`,
 /// `&lt;Name&gt;_empty_…`); a cmd row names the script check or selftest in <see cref="Class"/> and its fixture paths
 /// (under tools/) or selftest case names.</summary>
-public sealed record ControlRow(string Control, string Name, string Kind, string Class, string[] Bad, string[] Good, string[] Empty);
+public sealed record ControlRow(string Control, string Name, string Kind, string Class, string[] Bad, string[] Good, string[] Empty,
+    string Plan = ControlCases.EventLibrary)
+{
+    /// <summary>The row's key: plan slug and D-id.</summary>
+    public string Key => $"{Plan} {Control}";
+}
 
-/// <summary>The authoritative list of event-library's control cases (D31), compared with the plan's own D-items by
-/// ControlCaseTests.</summary>
+/// <summary>The authoritative list of the plans' control cases (event-library D31, walkable-spawns D9), compared with
+/// each listed plan's own D-items by ControlCaseTests.</summary>
 public static class ControlCases
 {
+    public const string EventLibrary = "event-library";
+    public const string WalkableSpawns = "walkable-spawns";
+
+    /// <summary>The plans whose controls the table lists; each is copied to the test output under Resources/.</summary>
+    public static readonly string[] Plans = [EventLibrary, WalkableSpawns];
+
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
         new(control, name, "test", cls, bad.Select(x => $"{name}_fails_when_{x}").ToArray(), good.Select(x => $"{name}_passes_{x}").ToArray(),
             empty.Select(x => $"{name}_empty_{x}").ToArray());
@@ -17,16 +28,17 @@ public static class ControlCases
     static ControlRow C(string control, string name, string check, string[] bad, string[] good, string[] empty) =>
         new(control, name, "cmd", check, bad, good, empty);
 
-    /// <summary>The seven test classes this child adds; every test method in them follows one of the three forms.</summary>
+    /// <summary>The test classes the listed plans add (event-library's seven, walkable-spawns' two); every test method
+    /// in them follows one of the three forms.</summary>
     public static readonly string[] NewClasses =
     [
         "TemplateLibraryTests", "TemplateCommandTests", "AuthoringTests", "AuthoringCapacityTests", "PillarSwitchTests",
-        "ReadinessTests", "LibraryDependencyFailureTests",
+        "ReadinessTests", "LibraryDependencyFailureTests", "SpawningTests", "HealthTests",
     ];
 
-    /// <summary>The five existing classes that gain this child's cases; their earlier methods keep their names.</summary>
+    /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
     public static readonly string[] ExistingClasses =
-        ["CommandArgTests", "ConfigChangedTests", "AuthorizationTests", "ContractDocTests", "ControlPrecedenceTests"];
+        ["CommandArgTests", "ConfigChangedTests", "AuthorizationTests", "ContractDocTests", "ControlPrecedenceTests", "DependencyFailureTests"];
 
     public static readonly IReadOnlyList<ControlRow> Table =
     [
@@ -88,5 +100,31 @@ public static class ControlCases
         C("D34", "TestRuns", "preflight Invoke-ClassTests",
             ["selftest TestRuns/bad", "selftest TestRuns/bad-2", "selftest TestRuns/bad-3"], ["selftest TestRuns/good"], ["selftest TestRuns/empty"]),
         T("D36", "SlowTick", "EngineTests", ["tick_reaches_250ms", "ticks_repeat_within_a_minute"], ["ticks_under_250ms"], ["no_phase_timings"]),
+
+        // ---- walkable-spawns (D9): a cmd row names the fixtures under tools/ that fail and pass it
+        T("D2", "SpawnPoints", "SpawningTests", ["all_blocked", "blocked_point_kept"],
+            ["free_ring_point_kept", "search_order", "first_free_in_order", "centre_when_only_centre_free"], ["radius_zero"]) with { Plan = WalkableSpawns },
+        T("D3", "WavePoints", "SpawningTests", ["not_grounded", "budget_spent", "budget_spent_mid_search", "check_throws", "point_is_nan"],
+            ["one_point_per_unit_in_order", "blocked_ring_point_moved", "counts_match_kinds"], ["no_probe"]) with { Plan = WalkableSpawns },
+        T("D5", "WalkCheck", "DependencyFailureTests",
+            ["check_throws", "streak_repeats", "unanswered_wave_closes_streak", "tile_world_missing", "height_out_of_range"],
+            ["recovered_check_used_again", "height_in_range"], ["no_height"]) with { Plan = WalkableSpawns },
+        T("D6", "WalkHealth", "HealthTests", ["streak_open"], ["recovered_check_clears_entry"], ["healthy"]) with { Plan = WalkableSpawns },
+        T("D7", "WalkRadius", "CommandArgTests", ["refused"], ["in_range"], ["absent"]) with { Plan = WalkableSpawns },
+        C("D9", "DebugCommands", "preflight › Test-CheckDebugCommands",
+            ["tools/preflight-fixtures/DebugCommands/bad", "tools/preflight-fixtures/DebugCommands/bad-2", "tools/preflight-fixtures/DebugCommands/bad-3",
+             "tools/preflight-fixtures/DebugCommands/bad-4", "tools/preflight-fixtures/DebugCommands/bad-5", "tools/preflight-fixtures/DebugCommands/bad-6",
+             "tools/preflight-fixtures/DebugCommands/bad-7", "tools/preflight-fixtures/DebugCommands/bad-8"],
+            ["tools/preflight-fixtures/DebugCommands/good"], ["tools/preflight-fixtures/DebugCommands/empty"]) with { Plan = WalkableSpawns },
+        C("D10", "ProbeRecords", "preflight -SessionsOf › Test-CheckSessionLogs",
+            ["tools/preflight-fixtures/SessionLogs/bad-probe", "tools/preflight-fixtures/SessionLogs/bad-probe-2", "tools/preflight-fixtures/SessionLogs/bad-probe-3",
+             "tools/preflight-fixtures/SessionLogs/bad-probe-4", "tools/preflight-fixtures/SessionLogs/bad-probe-5", "tools/preflight-fixtures/SessionLogs/bad-probe-6"],
+            ["tools/preflight-fixtures/SessionLogs/good"], ["tools/preflight-fixtures/SessionLogs/empty"]) with { Plan = WalkableSpawns },
+        C("D11", "Secrets", "preflight › Test-CheckSecrets",
+            ["tools/preflight-fixtures/Secrets/bad", "tools/preflight-fixtures/Secrets/bad-9"],
+            ["tools/preflight-fixtures/Secrets/good"], ["tools/preflight-fixtures/Secrets/empty"]) with { Plan = WalkableSpawns },
+        C("D12", "KnownIssue", "preflight › Test-CheckChangelogs",
+            ["tools/preflight-fixtures/Changelogs/bad-knownissue", "tools/preflight-fixtures/Changelogs/bad-knownissue-2"], ["tools/preflight-fixtures/Changelogs/good"],
+            ["tools/preflight-fixtures/Changelogs/empty"]) with { Plan = WalkableSpawns },
     ];
 }

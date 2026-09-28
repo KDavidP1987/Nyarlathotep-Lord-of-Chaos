@@ -133,27 +133,40 @@ public partial class CommandArgTests
         Assert.Equal(error, CommandArgs.SettableValue(field, value).Error);
     }
 
-    /// <summary>walkable-spawns D7: `debug walk [radius]` takes 0.1–5 m with at most two decimals, default 0.5.</summary>
+    // ---- walkable-spawns D7: `debug walk [radius]` took 0.1–5 m with at most two decimals, default 0.5
+
     [Theory]
-    [InlineData(null, null, 0.5f, null)]
-    [InlineData("", null, 0.5f, null)]
-    [InlineData("0.1", null, 0.1f, null)]
-    [InlineData("5", null, 5f, null)]
-    [InlineData("2.25", null, 2.25f, null)]
-    [InlineData("0", null, 0f, "radius must be 0.1-5")]
-    [InlineData("0.09", null, 0f, "radius must be 0.1-5")]
-    [InlineData("5.01", null, 0f, "radius must be 0.1-5")]
-    [InlineData("1.005", null, 0f, "radius must be 0.1-5")]
-    [InlineData("1,5", null, 0f, "radius must be 0.1-5")]
-    [InlineData("abc", null, 0f, "radius must be 0.1-5")]
-    [InlineData("-1", null, 0f, "radius must be 0.1-5")]
-    [InlineData("1", "2", 0f, "radius must be 0.1-5")]
-    public void WalkRadius(string? text, string? extra, float value, string? error)
+    [InlineData(null)]
+    [InlineData("")]
+    public void WalkRadius_empty_absent(string? text)
     {
-        var a = CommandArgs.WalkRadius(text, extra);
-        Assert.Equal(error, a.Error);
-        if (error is null) Assert.Equal(value, a.Value);
+        var a = CommandArgs.WalkRadius(text, null);
+        Assert.Null(a.Error);
+        Assert.Equal(0.5f, a.Value);
     }
+
+    [Theory]
+    [InlineData("0.1", 0.1f)]
+    [InlineData("5", 5f)]
+    [InlineData("2.25", 2.25f)]
+    public void WalkRadius_passes_in_range(string text, float value)
+    {
+        var a = CommandArgs.WalkRadius(text, null);
+        Assert.Null(a.Error);
+        Assert.Equal(value, a.Value);
+    }
+
+    [Theory]
+    [InlineData("0", null)]
+    [InlineData("0.09", null)]
+    [InlineData("5.01", null)]
+    [InlineData("1.005", null)]
+    [InlineData("1,5", null)]
+    [InlineData("abc", null)]
+    [InlineData("-1", null)]
+    [InlineData("1", "2")]
+    public void WalkRadius_fails_when_refused(string text, string? extra) =>
+        Assert.Equal("radius must be 0.1-5", CommandArgs.WalkRadius(text, extra).Error);
 
     /// <summary>walkable-spawns D8: the walk reply and its refusals fit one chat line (480 bytes) at the maximum lengths
     /// of their fields, for every source name.</summary>

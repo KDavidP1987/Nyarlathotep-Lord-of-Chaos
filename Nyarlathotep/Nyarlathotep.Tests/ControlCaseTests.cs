@@ -3,14 +3,17 @@ using System.Text.RegularExpressions;
 
 namespace Nyarlathotep.Tests;
 
-/// <summary>event-library D31: the control list parsed from docs/dod/event-library.md (copied to the test output) and
-/// ControlCases.Table agree both ways, every named method exists as a [Fact] or [Theory] of its class, every named
+/// <summary>event-library D31, walkable-spawns D9: the control lists parsed from every plan of ControlCases.Plans (each
+/// copied to the test output) and ControlCases.Table agree both ways, keyed by plan slug and D-id, every named method exists as a [Fact] or [Theory] of its class, every named
 /// fixture under tools/ exists, and every method of the twelve classes that follows the naming forms is named by a row.</summary>
 public class ControlCaseTests
 {
     static readonly Regex Form = new(@"^(?<name>[A-Za-z0-9]+)_(?<kind>fails_when|passes|empty)_(?<input>.+)$");
 
-    static string PlanText => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Resources", "event-library.md"));
+    static string PlanText(string slug) => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Resources", $"{slug}.md"));
+
+    /// <summary>The keys ("&lt;slug&gt; &lt;D-id&gt;") of every listed plan's controls, plan by plan.</summary>
+    static List<string> AllPlanKeys() => ControlCases.Plans.SelectMany(slug => PlanControls(PlanText(slug)).Select(id => $"{slug} {id}")).ToList();
 
     /// <summary>The control ids of a plan: every `## Definition of Done` item whose evidence is test: or cmd: with a
     /// `(fails when: …)` clause.</summary>
@@ -43,8 +46,8 @@ public class ControlCaseTests
     {
         var p = new List<string>();
         if (planIds.Count == 0) p.Add("the plan lists no control id");
-        foreach (var id in planIds.Distinct().Where(id => table.All(r => r.Control != id))) p.Add($"control {id} has no row");
-        foreach (var r in table.Where(r => !planIds.Contains(r.Control))) p.Add($"row {r.Name} names {r.Control}, which the plan does not list as a control");
+        foreach (var id in planIds.Distinct().Where(id => table.All(r => r.Key != id))) p.Add($"control {id} has no row");
+        foreach (var r in table.Where(r => !planIds.Contains(r.Key))) p.Add($"row {r.Name} names {r.Key}, which the plan does not list as a control");
 
         var named = new HashSet<(string Class, string Method)>();
         foreach (var r in table)
@@ -87,18 +90,20 @@ public class ControlCaseTests
     [Fact]
     public void ControlCases_passes_plan_and_table_agree()
     {
-        var ids = PlanControls(PlanText);
         Assert.Equal(
             ["D1", "D2", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12", "D13", "D14", "D16", "D17", "D18", "D19", "D20", "D24",
              "D27", "D28", "D29", "D31", "D30", "D32", "D33", "D34", "D36"],
-            ids);
-        Assert.Empty(Problems(ControlCases.Table, ids, TestMethods, RepoRoot()));
+            PlanControls(PlanText(ControlCases.EventLibrary)));
+        Assert.Equal(["D2", "D3", "D5", "D6", "D7", "D9", "D10", "D11", "D12"], PlanControls(PlanText(ControlCases.WalkableSpawns)));
+        Assert.Empty(Problems(ControlCases.Table, AllPlanKeys(), TestMethods, RepoRoot()));
     }
 
     [Theory]
-    [InlineData("drop a control", "control D13 has no row")]
-    [InlineData("unknown control", "row Ghost names D99, which the plan does not list as a control")]
-    [InlineData("manual control", "row Manual names D3, which the plan does not list as a control")]
+    [InlineData("drop a control", "control event-library D13 has no row")]
+    [InlineData("unknown control", "row Ghost names event-library D99, which the plan does not list as a control")]
+    [InlineData("manual control", "row Manual names event-library D3, which the plan does not list as a control")]
+    [InlineData("drop a walkable control", "control walkable-spawns D5 has no row")]
+    [InlineData("row under the other plan", "row WavePoints names event-library D3, which the plan does not list as a control")]
     [InlineData("no empty case", "row PillarMap lacks its bad, good or empty case")]
     [InlineData("missing method", "PillarSwitchTests.PillarMap_passes_nothing is not a [Fact] or [Theory]")]
     [InlineData("bad empty name", "PillarSwitchTests.PillarMap_empty_ is not named PillarMap_empty_<input>")]
@@ -110,7 +115,7 @@ public class ControlCaseTests
     public void ControlCases_fails_when_table_breaks_a_rule(string plant, string problem)
     {
         var table = ControlCases.Table.ToList();
-        var ids = PlanControls(PlanText);
+        var ids = AllPlanKeys();
         Func<string, IReadOnlyList<string>?> methods = TestMethods;
         int At(string name) => table.FindIndex(r => r.Name == name);
         switch (plant)
@@ -118,6 +123,8 @@ public class ControlCaseTests
             case "drop a control": table.RemoveAt(At("PillarMap")); break;
             case "unknown control": table.Add(table[0] with { Control = "D99", Name = "Ghost" }); break;
             case "manual control": table.Add(table[0] with { Control = "D3", Name = "Manual" }); break;
+            case "drop a walkable control": table.RemoveAt(At("WalkCheck")); break;
+            case "row under the other plan": table[At("WavePoints")] = table[At("WavePoints")] with { Plan = ControlCases.EventLibrary }; break;
             case "no empty case": table[At("PillarMap")] = table[At("PillarMap")] with { Empty = [] }; break;
             case "missing method": table[At("PillarMap")] = table[At("PillarMap")] with { Good = ["PillarMap_passes_nothing"] }; break;
             case "bad empty name": table[At("PillarMap")] = table[At("PillarMap")] with { Empty = ["PillarMap_empty_"] }; break;

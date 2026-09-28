@@ -80,6 +80,8 @@ internal static class SpawnCommands
         foreach (var line in lines) Core.Log.LogInfo($"[nyar] debug: {line}");  // no position in the line; kept for the test record
     }
 
+    static bool IsWalkLabel(string label) => label == "walk";      // not an argument of debug (Codex F2)
+
     static void LogAdmin(ChatCommandContext ctx, string command) =>
         Core.Log.LogInfo($"[nyar] {AdminLines.AdminRan(ctx.Name, ctx.User.PlatformId, command)}");
 }

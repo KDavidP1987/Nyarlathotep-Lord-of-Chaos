@@ -66,7 +66,7 @@ internal static class SpawnCommands
         }
     }
 
-    [Command("debug", usage: "here [radius]", description: "List tracked units near you with lifetime, level and stats.", adminOnly: true)]
+    [Command("debug", usage: "here [radius] | walk [radius]", description: "List tracked units near you with lifetime, level and stats.", adminOnly: true)]
     public static void Debug(ChatCommandContext ctx, string where = "", string radius = "", string extra = "")
     {
         if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }

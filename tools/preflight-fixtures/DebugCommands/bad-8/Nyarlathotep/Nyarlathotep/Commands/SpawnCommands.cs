@@ -70,6 +70,7 @@ internal static class SpawnCommands
     public static void Debug(ChatCommandContext ctx, string where = "", string radius = "", string extra = "")
     {
         if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }
+        if ("walk".Equals(where)) return;
         if (where != "here") { ctx.Reply("argument must be here"); return; }
         if (extra != "") { ctx.Reply("arguments must be 1-2"); return; }        // `here [radius]` only (walkable-spawns review F4)
         var r = CommandArgs.Radius(radius);
@@ -79,6 +80,8 @@ internal static class SpawnCommands
         foreach (var message in AdminLines.Pack(lines)) ctx.Reply(message);      // a burst of replies loses lines (A8)
         foreach (var line in lines) Core.Log.LogInfo($"[nyar] debug: {line}");  // no position in the line; kept for the test record
     }
+
+    static bool IsWalkLabel(string label) => label == "walk";      // not an argument of debug (Codex F2)
 
     static void LogAdmin(ChatCommandContext ctx, string command) =>
         Core.Log.LogInfo($"[nyar] {AdminLines.AdminRan(ctx.Name, ctx.User.PlatformId, command)}");
