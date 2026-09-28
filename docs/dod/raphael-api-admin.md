@@ -1,0 +1,370 @@
+---
+dod: 2
+rubric: 2
+id: dod-20260928-raa1
+slug: raphael-api-admin
+title: Raphael api 4 — admin action twins, admin reads and release 0.5.2
+status: draft
+size: L
+parent: nyarlathotep
+kind: feature
+created: 2026-09-28
+baselined: none
+closed: none
+commit: b6b04a5
+coverage_author: 15/15 layers · 49/49 probes
+coverage_reviewer: pending
+review: pending
+---
+
+# DoD: Raphael api 4 — admin action twins, admin reads and release 0.5.2
+
+**Size:** L. It touches several modules: Logic (a new Outcome type returned by every admin mutation path, Wire builders, a rate gate, new WireError codes), Services (EventRuntime, EventStore, PillarSwitches, TemplateLibrary return Outcome), Commands (a new Commands/ApiAdminCommands.cs; the human commands reply Outcome.Human), tools (preflight's wire-contract and admin-list checks and fixtures) and an external contract, docs/RAPHAEL_INTEGRATION_CONTRACT.md, from api 3 to api 4. No new dependency, no data file, no config key.
+
+**Planned:** interactively, by Claude under the owner's standing directive of 2026-09-28 ("proceed autonomously … present decisions in plan mode"). This plan is a child of the approved Epic `nyarlathotep`; its `## Child constraints` › raphael-api-admin entry and amendment A27 govern it, and contract §10.1–10.3 (PLANNED, written for this child) is its starting shape. The reversible assumptions below are decisions taken inside that scope, each with its fallback; none needs the owner before the build.
+
+**Request:** the owner's Decision 2 of 2026-09-28 (Epic A27): "new child raphael-api-admin (api 4) so Nyar can be managed fully from Raphael": a wire twin for every admin action, answering `[NYAR:ok]` or `[NYAR:err]`, and the reads templates, template info, pillar list and killswitch.
+
+## Definition of Done
+- [ ] D1 · **Typed outcomes, human text unchanged** Logic/Outcome.cs defines `Outcome` (Ok, Human, Code, Arg, Secs, Reason, Fields) with two factories, `Outcome.Done(human, fields…)` and `Outcome.Refused(human, WireError code, arg, secs, reason)`, the only constructors, so no refusal exists without a code; every path an admin mutation takes returns it: EventRuntime.StartEvent, StopEvent and Purge, Precedence.StartBlocker (as a typed blocker), EventEngine.Start, DefinitionEditor.Reload, Edit and Write, EventsEditor.Apply's error, Authoring.New, Copy and TemplateUse, EventDeleter.Request and Confirm, PillarCommand.Switch, TemplateLibrary.UseTemplate, the purge arming reply and ActionGateway's denial; each human command replies `outcome.Human`, byte-equal to 0.5.1's reply for the same input · test: Nyarlathotep.Tests HumanReplyTests, a table of every refusal and success text of those paths as 0.5.1 builds it, captured at the Step 1 pre-audit commit into Nyarlathotep.Tests/Fixtures/human-replies-0.5.1.txt (fails when: a Human text differs from its captured line, a path in the list still returns string, an Outcome is built other than through the two factories, or the table holds fewer rows than the capture)
+- [ ] D2 · **Refusal codes per source** each refusal carries the code, arg and reason of Business rules 3's table, the reason a wire-safe snake_case word from a closed list in Logic/Outcome.cs (`Reasons`); WireError gains Exists, State, Invalid, Full, Io, Confirm and Limit, the last for "skipped by MaxConcurrentEvents" (S-3) · test: Nyarlathotep.Tests OutcomeCodeTests, one case per row of Business rules 3, driving the real Logic path with fakes (fails when: a row's code, arg or reason differs, a reason outside `Reasons` is produced, a refusal of a listed path is missing from the test table, or a new WireError member has no contract row)
+- [ ] D3 · **Event twins** `.nyar api event <verb> …` for verbs start, stop, enable, disable, set (with `location here`), reload, new, copy and delete [confirm] runs the same Services call through Gateway.Run with the same ActionKind, Actor.Admin and admin log line as `.nyar event <verb>` (the log line prefixed "api "), and answers exactly one line: `[NYAR:ok] cmd=event verb=<verb> id=<id>` plus the verb's keys of contract §10.1 (changed, field, value, count, pillar, from, confirm, done), or `[NYAR:err] cmd=event verb=<verb> code=<code> [secs=] [arg=] [reason=]` from the Outcome; any other verb, list and info included, answers `code=badarg arg=verb`, and a missing or malformed argument `code=badarg arg=<id|field|value|pillar|newId|confirm>` · test: Nyarlathotep.Tests ApiTwinTests Event (fails when: a verb answers other than one line, a twin reaches a service outside Gateway.Run or with another ActionKind than its human command, an ok line lacks a key of §10.1 or adds one, an err line's keys are out of order, or a refusal answers ok)
+- [ ] D4 · **Template, pillar and purge twins** `.nyar api template use <template> [as <id>]`, `.nyar api pillar <name> on|off` and `.nyar api purge [confirm]` answer per contract §10.1 through the same gateway rows as their human commands: `cmd=template verb=use id=<id> tpl=<template>`; `cmd=pillar verb=set id=<name> on=<0|1> changed=<0|1>` plus `ended=<n>` when `off` ended events; `cmd=purge verb=ask id=- confirm=30`, then `cmd=purge verb=confirm id=- events=<n> units=<n> secs=<cooldown>` · test: Nyarlathotep.Tests ApiTwinTests TemplatePillarPurge (fails when: a success line differs from §10.1, a pillar already in the asked state answers other than changed=0, a pillar save failure answers ok, or a purge confirm answers without the cooldown)
+- [ ] D5 · **Idempotency and two-step confirm** enable, disable and pillar on the state they hold answer ok with changed=0 and write nothing; start on an active event and stop on one that is not active answer code=state with reason already_active and not_active; a delete or purge confirm answers code=confirm unless the same admin asked in the last 30 s, and a second confirm answers code=confirm (event delete) or code=state reason=nothing_to_purge (purge); an ask with nothing to purge answers code=state reason=nothing_to_purge; a human ask and a twin confirm by the same admin pair, since both use the one arming · test: Nyarlathotep.Tests ApiTwinTests Idempotency (fails when: a repeated enable writes events.json, a repeated pillar writes the cfg, a confirm by another admin or after 30 s fires, a double confirm fires twice, or a human ask followed by a twin confirm does not fire)
+- [ ] D6 · **Rate limit per admin** Logic/RateGate.cs admits at most 5 twins per admin SteamID in any 1-second window (S-4); the sixth answers `[NYAR:err] cmd=<cmd> verb=<verb> code=ratelimit secs=1` without running the work or writing the admin log line; reads (templates, template info, pillar list, killswitch) and the human commands are not counted; the gate holds at most 64 admin entries, pruning entries idle for more than 1 s when full, and a full gate of active admins refuses the newcomer with the same line · test: Nyarlathotep.Tests RateGateTests (fails when: a sixth twin within 1 s runs, a twin 1 s after the first is refused, a read or a human command is counted, one admin's twins limit another's, the gate grows past 64, or a refused twin logs "admin … ran")
+- [ ] D7 · **Admin reads** `.nyar api templates [pillar] [page]` answers `[NYAR:tpl] id= pillar= trigger= duration= summary=` rows paged per contract §4, filtered by pillar name when given (unknown pillar: code=notfound arg=pillar); `.nyar api template info <template>` the one row then `[NYAR:end] cmd=template count=1`, or code=notfound arg=template; `.nyar api pillar list` five `[NYAR:pillar] id= on=` rows in PillarNames order (empowerment, spawns, boss, zones, sieges) then `[NYAR:end] cmd=pillar count=5`; `.nyar api killswitch` one `[NYAR:ks] on= secs= events= units=` row (on=1 while the purge cooldown runs, secs its time left, else 0) then `[NYAR:end] cmd=killswitch count=1`; all four are adminOnly and change nothing · test: Nyarlathotep.Tests ApiLinesTests AdminReads (fails when: a row's keys differ from contract §10.2, the pillar rows are out of order or not five, a templates page past the last sends rows, an unknown pillar filter answers rows, or killswitch reports on=1 after the cooldown)
+- [ ] D8 · **Wire shape from the contract** WireFormatTests reads the contract's example lines and, for tags ok, err, tpl, pillar and ks, asserts each builder's keys equal the example's in order; every twin and read line passes the grammar check (at most 480 bytes; no '<', '>' or newline; values free of space, '=', ';' and ':'), with value, reason and summary cut to 120 UTF-8 bytes on a character boundary after mapping, measured on a 32-character id, a 200-character field value of 4-byte characters and the longest template summary · test: Nyarlathotep.Tests WireFormatTests AdminTwins (fails when: a key set or order differs from the contract, a line exceeds 480 bytes, a cut splits a character, or a forbidden character survives)
+- [ ] D9 · **Same pushes, one per change** a twin queues exactly the pushes its human command queues: config-changed after an applied events.json write (set, enable, disable, reload, new, copy, template use, delete confirm), event-start and event-end on start and stop, killswitch on purge confirm; a pillar switch that changes the cfg now queues one config-changed as well, for the human command and the twin alike (S-5); a refused or changed=0 action queues nothing · test: Nyarlathotep.Tests ConfigChangedTests Twins and PushTests Twins (fails when: a twin and its human command queue different pushes, a refusal or changed=0 queues a push, or a changed pillar queues other than one config-changed)
+- [ ] D10 · **Contract at api 4** Wire.Api is 4; docs/RAPHAEL_INTEGRATION_CONTRACT.md says "**Current api:** 4", its Tags and commands table marks tpl, pillar and ks (tags) and event, template, templates, pillar, purge and killswitch (commands) IMPLEMENTED with api 4; §10.1–10.3 move into §3 (reads), §4 (codes, with limit) and a new §5a "Admin action twins — IMPLEMENTED (api 4)", with S-4's rate and the reason list; §10 keeps only the later children's rows; §9 gains the api 4 entry; docs/NYARLATHOTEP_DESIGN.md §6 lists the new commands; docs/RAPHAEL_HANDOFF_API4.md's "When api 4 lands" part says "api 4 ships in Nyarlathotep 0.5.2" and names the §5a twins · test: Nyarlathotep.Tests ContractDocTests (fails when: Wire.Api differs from the contract's current api, a new tag or command is not IMPLEMENTED (api 4), a WireError member has no row in §4, §10 still lists a raphael-api-admin row, or the handoff lacks the 0.5.2 line); cmd: pwsh tools/preflight.ps1 → "wire contract: <n> tags, <m> api commands, all documented (api 4)"
+- [ ] D11 · **Authorization and static checks** every twin and read is `adminOnly: true` in a `[CommandGroup("nyar api")]` class (Commands/ApiAdminCommands.cs) and starts with the ready guard; every twin reaches a [Mutating] method only inside Gateway.Run; ActionTable gains no new kind (each twin uses its human command's); -AuthSuite's admin list shows each new command admin-only; ControlCases gains a row per control of this plan (D1, D2, D5, D6, D7, D8, D9, D12, D14), a cmd item's row naming the fixture that fails it · cmd: pwsh tools/preflight.ps1 -AuthSuite → "auth suite: pass (…)"; pwsh tools/preflight.ps1 → PREFLIGHT OK with "commands: <n> admin-only, <m> public (allow-listed)" and "ready guard: <k>/<k>"; pwsh tools/preflight.ps1 -SelfTest → "selftest: <n>/<n> checks, <k>/<k> external selftests" (fails when: a new command loses adminOnly or its ready guard, a twin calls a [Mutating] method outside Gateway.Run, fixture AdminList/bad-3 (a twin without adminOnly) or WireContract/bad-10 (an `api event` command the table leaves PLANNED) passes, or a control lacks its row)
+- [ ] D12 · **Twin failures are answered** a twin whose work throws answers `[NYAR:err] cmd=<cmd> verb=<verb> code=io reason=internal` and logs "api <cmd> <verb> failed: <exception type>" once per failure streak per command; an events.json or cfg that cannot be read, parsed or saved answers code=io with reason read, parse, save, stale, read_only or write_uncertain, and nothing in memory changes except what the file now holds (event-library D19); the admin who sent it gets exactly one line in every case · test: Nyarlathotep.Tests DependencyFailureTests Twins, also run as dotnet test Nyarlathotep/Nyarlathotep.Tests --filter Twin_ → "Passed!" with at least 6 tests (fails when: a throwing work answers nothing or two lines, the log line repeats within a streak, a failed save answers ok, memory changes after a refused write, or the filter runs fewer than 6 tests)
+- [ ] D13 · **Twins in game** on the local server (127.0.0.1:9876) with the owner as admin and `.nyar api sub on`: `.nyar api version` shows api=4 plugin=0.5.2; each twin of D3 and D4 on the example event bandit-ambush answers its ok line and its human effect shows in `.nyar event info` or `.nyar pillar list`; start twice shows code=state; a purge ask then confirm shows the two ok lines and the killswitch push; seven twins pasted within one second show code=ratelimit; the four reads answer their rows; every line shows whole in chat · manual: Session 1 in docs/features/RAPHAEL_API_ADMIN.md › Test results records each observed line (SteamIDs redacted)
+- [ ] D14 · **Sessions, records, paths and data** every server session is "### Session <n> · <date>" under docs/features/RAPHAEL_API_ADMIN.md › Test results, with its -LogCheck line in docs/audits/raphael-api-admin.md before the next restart and "snapshot restored; hashes equal" from tools/dev-snapshot.ps1; the audit has a pre-audit, a post-audit and a "Codex verdict:" line per Build plan step; tools/preflight-checks.json gains `childDocs`, `snapshotSessions` (1) and `dataTables` entries for raphael-api-admin; tools/data-inventory.json has a "raphael-api-admin › <artifact>" entry per Design › Data row · cmd: pwsh tools/preflight.ps1 -AuditOf raphael-api-admin → "audit steps: raphael-api-admin 3/3 pre, 3/3 post, 3/3 Codex verdicts"; pwsh tools/preflight.ps1 -SessionsOf raphael-api-admin → "session logs: raphael-api-admin 1/1 checked; snapshots 1/1 from session 1"; pwsh tools/preflight.ps1 -Paths -DeclaredOf raphael-api-admin → "paths: <n> walked, all in manifest; declared: <d>/<d> in raphael-api-admin" (fails when: a step lacks an entry or verdict, a session lacks its log-check or snapshot line, a walked path matches no manifest glob or is undeclared, a %TEMP%\nyar-* folder outlives its session, or a Data row lacks an inventory entry or field)
+- [ ] D15 · **Secrets and privacy** this child adds no credential; no tracked file, built zip, dist/ or build/ file holds a token; no wire line carries a SteamID, a player name or a coordinate other than the `location here` value the admin set; the admin log line keeps its existing form, and no audit or feature-doc line copies an "admin … (<id>)" log line · cmd: pwsh tools/preflight.ps1 → "secrets: none (<n> files scanned…)"; then, before each push, git grep -n -E "7656119|kdpenland" → only lines that quote the pattern; test: Nyarlathotep.Tests PrivacyTests Twins (fails when: a token shape is in the scanned set, which the existing Secrets fixtures plant under -SelfTest, a twin or read line carries a SteamID or player name, or the grep finds a SteamID digit run or the owner's address on any other line)
+- [ ] D16 · **Release 0.5.2** csproj Version and thunderstore.toml versionNumber are 0.5.2; both changelogs describe the api 4 twins and reads; both READMEs say Raphael can manage Nyarlathotep with api 4; the annotated tag v0.5.2 is pushed and the GitHub pre-release carries the tcli zip; after a failed or ambiguous `gh release create` the step runs `gh release view v0.5.2` and retries only when the release is absent; no tcli publish · cmd: pwsh tools/preflight.ps1 → PREFLIGHT OK and "release tags: <n>/<n>"; then pwsh tools/rollback-gate.ps1 -From v0.5.1 -To v0.5.2 -Plan raphael-api-admin → "rollback gate: 4/4"; then pwsh tools/release-verify.ps1 -Tag v0.5.2 -Asset kdpen-Nyarlathotep-0.5.2.zip → "release verify: hashes equal" (fails when: a surface differs, 0.5.1 does not initialize on 0.5.2's files, the repository revert of v0.5.1..v0.5.2 is not clean, a Rollback route is missing or names another range, the tag is missing or unpushed, the release has no zip, or the hashes differ)
+
+## Purpose & typical use
+- **Who:** a server admin who uses the Raphael client. They'd say "I want to switch events on and off from the panel and see whether it worked, without reading chat".
+- **Job:** every admin action Nyarlathotep has in chat also exists as a machine-readable command, so Raphael can press the button, read one answer line, and show success or the reason it failed. Admins without Raphael see no change: the human commands reply exactly as before.
+- **Coexists with:**
+  - raphael-api-core's reads, pushes and paging, unchanged;
+  - event-library's authoring, templates and pillar switches, whose code paths the twins reuse;
+  - every later child, which adds its own twin rows (contract §10).
+
+## Use cases
+### Typical
+In Raphael, the admin ticks "enabled" on bandit-ambush. Raphael sends `.nyar api event enable bandit-ambush`, reads `[NYAR:ok] cmd=event verb=enable id=bandit-ambush changed=1` (D3), updates the row, and the config-changed push that follows confirms it (D9). Pressing Start during a purge cooldown shows "cooldown, 240 s left" from `code=cooldown secs=240` (D2).
+
+### Minimal stretch
+- **Least use (8.1):** an admin who never installs Raphael runs the human commands and sees their 0.5.1 replies byte for byte (D1). A server with no events answers `templates` with the six templates and `killswitch` with `on=0 secs=0 events=0 units=0` (D7).
+- **Once and never again (8.2):** the twins keep no state beyond the rate gate's one-second window and the existing 30-second armings (D5, D6), both in memory and cleared on restart.
+
+### Maximal stretch
+- **Volume (9.1):** a Raphael bug that loops a twin is held to 5 per second per admin (D6); each twin costs what its human command costs, which runs in the command handler, not the scheduler tick.
+- **Abuse (9.2):** players cannot run a twin (VCF adminOnly, D11); arguments pass the same validators as the human commands and anything else answers badarg (D3); two admins racing an edit meet event-library's stale-file refusal, answered as code=io reason=stale (D12).
+- **Repeated use (9.3):** enable, disable and pillar are idempotent with changed=0; start and stop answer code=state; a double confirm fires once (D5).
+
+## Business rules
+1. **Twins are the human command (4.1, D3, D4):** same arguments, same validation, same Gateway.Run row, same service call, same push; only the reply differs. There is no path a twin has that the human command lacks.
+2. **One line per twin (4.2, D3, D12):** every twin answers exactly one `[NYAR:ok]` or `[NYAR:err]` line, success or failure, thrown or not; a refusal changes nothing on the server.
+3. **Codes (4.1, D2):**
+
+| Source | Human text (0.5.1) | code | arg | reason |
+|---|---|---|---|---|
+| Precedence | purge cooldown active | cooldown (secs = time left) | — | — |
+| Precedence | General.Enabled is false | disabled | — | general |
+| Precedence | pillar <p> is off | disabled | pillar | pillar_off |
+| Precedence | skipped by MaxConcurrentEvents | limit | — | max_concurrent |
+| Precedence | event <id> is disabled[: <reason>] | state | id | disabled |
+| Engine / Catalog | unknown event <id> | notfound | id | — |
+| Engine / Catalog | already active | state | id | already_active |
+| Engine | faction or unit already empowered by <id> | state | id | empower_clash |
+| Engine | spawns at the admin: start it with .nyar event start | badarg | location | admin_location |
+| StopEvent | not active | state | id | not_active |
+| EventsEditor | unknown event / has no <part> | notfound | id / field | — |
+| EventsEditor | not a field, unsupported value, needs a trigger, stats rule | invalid | field | the validator's word (field, value, trigger, stats) |
+| DefinitionEditor | could not be read / not found / does not parse / no events array | io | — | read / read / parse / parse |
+| DefinitionEditor | stale, read-only (newer schema) | io | — | stale / read_only |
+| DefinitionEditor | would exceed 1 MB | full | — | size |
+| DefinitionEditor | write uncertain | io | — | write_uncertain |
+| Authoring | id exists | exists | id or newId | — |
+| Authoring | holds 200 definitions | full | — | count |
+| Authoring | unknown pillar / unknown template | notfound | pillar / template | — |
+| EventDeleter | running; stop it first | state | id | running |
+| EventDeleter | no delete pending | confirm | — | — |
+| PillarCommand | unknown pillar / use on or off | notfound / badarg | pillar / state | — |
+| PillarCommand | could not read or save the cfg | io | — | read / save |
+| Purge | nothing to purge | state | — | nothing_to_purge |
+| Purge | run .nyar purge first | confirm | — | — |
+| Gateway | denied | noaccess | — | — |
+| CommandArgs | a usage or argument refusal | badarg | the argument's name | — |
+
+4. **Idempotency (4.2, D5):** enable, disable, pillar: changed=0 on the held state, no write, no push. start/stop: the engine's one-instance rule.
+5. **Time (4.3, D5, D6):** confirms within 30 s of the same admin's ask (the existing armings); the rate window is 1 s, sliding; both in memory, both cleared on restart; `secs` is whole seconds rounded up.
+6. **Precedence (4.4):** the controls decide first (purge cooldown > General.Enabled > pillar > MaxConcurrentEvents > the definition, Precedence.StartBlocker, unchanged); the rate gate comes before them and before the admin log line (D6); VCF's adminOnly comes before everything. There is no exception path: the twins run as Actor.Admin, as the human commands do.
+7. **"Every" sets (4.5):**
+   - "Every admin action" is the §5 admin rows that mutate: event start, stop, enable, disable, set, reload, new, copy, delete; template use; pillar; purge. `spawn`, `announce`, `zone` and `stats reset` get no twin in this child: spawn and announce are test and chat tools with no panel state, and zone and stats belong to later children (Out of scope).
+   - "Every path an admin mutation takes" (D1) is the list in D1, which OutcomeCodeTests enumerates; a new refusal string in those files fails HumanReplyTests' count.
+   - "Every control" is ControlCases' raphael-api-admin rows (D11).
+   - "Every path this child writes" is computed by `-Paths -DeclaredOf raphael-api-admin` (D14; known exclusion: a path created and deleted inside one step, S-7).
+
+## Interfaces
+### Internal — reads / writes / changes (paths or symbols)
+- **Reads:** Commands/EventCommands.cs, TemplateCommands.cs, PillarCommands.cs and SpawnCommands.cs (PurgeCommand) for the flows the twins mirror; Logic/CommandArgs.cs CommandForms; Logic/Paging.cs; Logic/Templates.cs TemplateCatalog; Services/SpawnTracker.cs Ledger; Services/Persistence.cs State (PurgeUntilUtc).
+- **Writes:**
+  - Logic/Outcome.cs (new): Outcome, its factories and `Reasons`.
+  - The D1 paths return Outcome: Logic/Precedence.cs, Engine.cs, EventCatalog.cs, DefinitionEditor.cs, EventAdmin.cs (EventsEditor), Authoring.cs, Pillars.cs, Idempotency.cs, ActionGateway.cs (a generic `Run<T>` beside the string one); Services/EventRuntime.cs, EventStore.cs, PillarSwitches.cs, TemplateLibrary.cs, Gateway.cs.
+  - The human commands reply `.Human` (Commands/EventCommands.cs, TemplateCommands.cs, PillarCommands.cs, SpawnCommands.cs).
+  - The shared flow: each human command's body moves into an internal `…Flow` method returning Outcome, called by the human command and by its twin, so the two cannot drift (Business rules 1).
+  - Commands/ApiAdminCommands.cs (new): `[CommandGroup("nyar api")]` event, template, templates, pillar, purge, killswitch.
+  - Logic/Wire.cs: Api = 4; WireError's seven new members; builders Done(cmd, verb, id, fields), Refusal(cmd, verb, code, secs, arg, reason), Tpl, Pillar, Ks.
+  - Logic/RateGate.cs (new, D6); Logic/ApiLines.cs (the read rows, D7).
+  - PillarCommand.Switch queues config-changed through the existing IPushSink when the cfg changed (D9, S-5).
+- **What breaks if wrong:** a human reply that drifts breaks admins' muscle memory and 0.5.1's documented lines (D1's capture); a twin that bypasses the flow could skip a control (Business rules 1, D3's gateway assertion).
+- **Shared types (5.3):** Outcome replaces string on the listed methods; every caller in the plugin and the tests changes in step 1 in one commit; no public API outside the assembly exists. WireError gains members; Wire.Error keeps its signature for api 2 and 3 lines.
+
+### External — dependencies and their failure behaviour
+- **Raphael (6.1):** the only client. It reads `api=4` from the handshake before sending a twin; until then it keeps the human commands (contract §5). The owner's Raphael session builds against docs/RAPHAEL_HANDOFF_API4.md; this child never edits the Raphael workspace. No quota and no cost.
+- **VampireCommandFramework 0.10.* (6.1):** registers one command per argument count (a known VCF behaviour, raphael-api-core); `[CommandGroup("nyar api")]` routing of a word that is also a human group (`event`, `pillar`, `template`, `purge`) is proved in Session 1 (D13) and by the admin-list check (D11).
+- **Build and release tooling (6.1):** versions recorded at each pre-audit; floors git 2.40, gh 2.40 (the owner's account), tcli 0.2.4 (`tcli build` only), Codex CLI (`exec -s read-only`), pwsh 7.2, a .NET SDK building net6.0.
+- **Failure behaviour (6.2):**
+  - The files: events.json and the cfg fail as event-library D19 defines (stale, read-only, unwritable, uncertain); each is a coded io answer (D12).
+  - A throwing work item is caught in the twin, answered io/internal and logged once per streak (D12).
+  - Garbage input: every argument goes through CommandArgs and CommandForms; anything they refuse is badarg (D3).
+  - The dev tools get no injected failures: they run only at build time and stop the step on any error; git, gh, tcli and Codex stop under $ErrorActionPreference Stop; an ambiguous `gh release create` is checked with `gh release view` before any retry (D16); a Codex run at capacity or timed out is retried and not counted as a round.
+- **No sandbox (6.3):** the dev server (127.0.0.1:9876, save-data-nyardev), wrapped by tools/dev-snapshot.ps1 (D14). The unit tests drive the flows over the in-memory stores of Nyarlathotep.Tests/FakeStores.cs.
+
+## Design
+### Data
+| Artifact | Where | Owner | Kept | Deleted |
+|---|---|---|---|---|
+| rate gate entries | memory | RateGate | 1 s per entry | pruned when idle; cleared on restart (D6) |
+| human-reply capture | Nyarlathotep.Tests/Fixtures/human-replies-0.5.1.txt (committed) | the repository | for ever | only by a later commit |
+| session log copies | %TEMP%\nyar-s*-logs | Claude | the session | deleted in the same session (D14) |
+| snapshot | %TEMP%\nyar-snap-* | tools/dev-snapshot.ps1 | the session | on restore (D14) |
+| session marker | %TEMP%\nyar-session | tools/dev-snapshot.ps1 | the session | when the session ends (D14) |
+| review prompts | %TEMP%\dod-review-*.txt | the dod skill | until the next prompt | replaced by it; never committed |
+| Claude's scratchpad (Codex prompts, outputs) | the per-session scratchpad, outside the repository | Claude | the session | removed with it; SteamIDs redacted before any Codex prompt |
+| build outputs | Nyarlathotep/**/bin, obj, *.binlog (git-ignored) | Claude | until the next build | overwritten by each build; never shipped |
+| release zip | Nyarlathotep/Nyarlathotep/build/*.zip, dist/ (git-ignored) | Claude | until the next release | replaced by the next tcli build; its SHA-256 is kept in the audit |
+| release and drill temp folders | %TEMP%\nyar-rel-*, nyar-rollback-*, nyar-drill-*, nyar-{selftest,depsuite,snaptest,drilltest}-* | release-verify, rollback-gate, preflight -SelfTest | the run | deleted by the script that made it (D14) |
+| review pages | docs/dod/raphael-api-admin.review.html, docs/dod/raphael-api-admin.html | the dod skill | until the next render | overwritten by it |
+| dev-server files | the server's Nyarlathotep.dll, cfg, events.json and state.json with .bak and .tmp, save-data-nyardev, NyarDev.log, LogOutput.log | Claude (Session 1) | the session | restored by tools/dev-snapshot.ps1 (D14) |
+| tag and GitHub release v0.5.2 | origin | the owner | for ever (exist only once) | never deleted; a bad one is retitled (Epic S-19) |
+| plan, reviews, audit, feature doc | docs/ (committed) | the repository | for ever | only by a later commit |
+
+Inputs (3.1): the twin arguments, validated as the human commands' (D3). Outputs (3.2): one wire line per twin, the read rows, the same file writes and pushes as the human commands (D3, D7, D9). Nothing new is persisted: events.json, state.json and the cfg keep their schema, so there is no migration (3.4). Every row has a tools/data-inventory.json entry (D14).
+
+### States
+- **Empty and first run (7.1):** before Core.IsReady every twin replies "still loading" like every command (contract §4 notready rule); with no events, the reads answer their empty shapes (D7).
+- **Partial and error:** a write that applied but whose reload failed answers what the file now holds (event-library D19), coded io write_uncertain when the read-back differs (D12).
+- **Concurrent use (7.2):** VCF runs every command on the server's main thread, so two admins' twins never interleave inside a flow; two admins editing the same events.json meet the stale-file refusal (D12); the armings and the rate gate are keyed per admin (D5, D6). Actors: admins in game (with or without Raphael), the scheduler, and Claude (builder and tester); Claude never runs two sessions on one server (D14).
+- **Stale data, cancel and re-entry (7.3):** Raphael's view can be stale; the answer line and the next config-changed push correct it (D9). A twin for a deleted event answers notfound. A restart clears the armings and the gate (D5, D6).
+
+### Permissions
+- **Actors (2.1):**
+  - Admins run every twin and read, through Raphael or typed.
+  - Players have no twin; VCF refuses them with its own human line (contract §4 noaccess rule, D11), and the Raphael client greys the controls.
+  - The System actor (scheduler, triggers) is unchanged and never runs a twin.
+  - Unauthenticated connections never reach chat; the operator may edit the files or remove the DLL.
+  - Claude builds, deploys to the dev server and pushes; the owner alone publishes. Codex reads only.
+- **Unauthorised path (2.2):** every new command is adminOnly (D11); a twin that reaches a service outside Gateway.Run fails -AuthSuite's GatewayOnly check (D11).
+- **Ownership (2.3):** any admin may change any definition, as for the human commands (Epic Design › Permissions); an arming belongs to the admin who asked (D5); the rate gate counts per admin (D6).
+
+### UX
+- **Where it lives (11.1):** in Raphael's panels; typed twins work too. The README's Raphael section says api 4 lets Raphael manage events, templates, pillars and the kill switch (D16).
+- **Feedback (11.2):** one answer line per twin (D3, D4), rendered by Raphael, which hides `[NYAR:` lines from chat; typed by hand they show whole in chat (D13).
+- **Accessibility (11.3):** the lines are machine text for Raphael, which owns presentation; the human commands, unchanged (D1), remain the accessible surface: plain text, no colour meaning, keyboard only; no screen reader, an inherited limitation the README states.
+- **Activation (11.4):** the twins are reached when Raphael's handshake reads api>=4 (docs/RAPHAEL_HANDOFF_API4.md, D10); Session 1 proves each twin answers in the real game (D13). Nothing activates for an admin who does not use them.
+
+## Security
+- **Authorization (10.1):** adminOnly on every new command; every mutation through Gateway.Run with its human command's ActionKind; no new grant (D11).
+- **Injection (10.2):** arguments reach only the existing validators; a value lands in events.json through System.Text.Json (no string concatenation); wire values are mapped by TextSink.WireValue and cut (D8).
+- **Secrets (10.3):** none added; the Secrets check and the privacy grep (D15). gh keeps its token in the Windows credential store; TCLI_AUTH_TOKEN lives only in the owner's environment while the owner publishes.
+- **Personal data (10.4):** no wire line names a player or carries a SteamID; the admin log line keeps its existing form on the server only (D15).
+
+## Failure & observability
+- **What the admin sees (12.1):**
+
+| Failure class | Admin sees | Next action |
+|---|---|---|
+| A control refuses (D2) | Raphael shows the code and reason (cooldown with seconds, disabled pillar, limit) | wait, or switch the pillar on |
+| File refused (D12) | code=io reason=stale, read_only, parse, save or write_uncertain | run `.nyar event reload`, or fix the file |
+| Twin threw (D12) | code=io reason=internal; the server log names the exception | report it with the log |
+| Too fast (D6) | code=ratelimit secs=1 | Raphael retries after a second |
+
+- **Logs (12.2):** each twin logs the admin line with the "api " prefix (D3); a thrown twin logs once per streak (D12); the pushes are unchanged (D9).
+- **Knowing it is broken (12.3):** the one-line rule (Business rules 2) means Raphael always gets an answer; a missing answer is a bug Raphael reports by timeout; -LogCheck covers every dev session (D14).
+- **Failing cases (12.4):** each check this plan introduces:
+
+| Check | Reports a failure on | Stays silent on | Empty input |
+|---|---|---|---|
+| HumanReplyTests (D1) | a Human text that differs from the capture | the captured text | an empty capture file: fail ("no captured replies") |
+| OutcomeCodeTests (D2) | a code, arg or reason off the table | the table's rows | a path with no refusal: its Done case |
+| ApiTwinTests (D3, D4, D5) | two answer lines, a gateway bypass, a double confirm | the §10.1 lines | no arguments: badarg arg=verb |
+| RateGateTests (D6) | a sixth twin in 1 s running | five in 1 s | a first twin: admitted |
+| ApiLinesTests AdminReads (D7) | a wrong key set or row count | the §10.2 rows | no templates: `count=0` |
+| WireFormatTests AdminTwins (D8) | a key order off the contract, a 481-byte line | the example lines | an empty value: `-` |
+| ConfigChangedTests / PushTests Twins (D9) | a push on refusal, a missing push on change | one push per change | changed=0: no push |
+| ContractDocTests (D10) | Wire.Api 3 against contract 4 | api 4 in both | a contract without the table: fail |
+| WireContract (preflight, D11) | fixture WireContract/bad-10 | the real tree | the existing WireContract/empty |
+| AdminList (preflight, D11) | fixture AdminList/bad-3 | the real tree | the existing AdminList/empty |
+| DependencyFailureTests Twins (D12) | a silent or doubled answer | one io line | no failure: no log |
+| PrivacyTests Twins (D15) | a SteamID in a line | the built lines | an empty line set: pass with count 0 stated |
+| Secrets (D15, existing) | Secrets/bad…bad-9 | Secrets/good | Secrets/empty |
+
+Each fixture is registered under `-SelfTest` in the step that adds its check; `-SelfTest` fails when a bad or empty fixture passes or a good one fails. The WireContract and AdminList fixtures are copies of the real files with one planted change.
+
+The empty input of each Logic control (each a `<Name>_empty_<input>` test):
+
+| Control | Empty input | Result |
+|---|---|---|
+| D1 Outcome | an empty Human text | refused by the factory (ArgumentException) |
+| D2 codes | a reason not in `Reasons` | refused by the factory |
+| D5 armings | a confirm with no ask | code=confirm |
+| D6 RateGate | no prior twins | admitted |
+| D7 reads | no templates, no events | `page=1/1 count=0`; killswitch zeros |
+
+One evidence command per gating probe:
+
+| Probe | Command | Item |
+|---|---|---|
+| 2.1 actors | pwsh tools/preflight.ps1 -AuthSuite | D11 |
+| 3.3 persistence | pwsh tools/preflight.ps1 -Paths -DeclaredOf raphael-api-admin | D14 |
+| 4.4 precedence | dotnet test Nyarlathotep/Nyarlathotep.Tests --filter OutcomeCodeTests | D2 |
+| 6.2 dependency failure | dotnet test Nyarlathotep/Nyarlathotep.Tests --filter Twin_ | D12 |
+| 10.1 authorization | pwsh tools/preflight.ps1 -AuthSuite | D11 |
+| 10.3 secrets | pwsh tools/preflight.ps1 ("secrets: none") | D15 |
+| 12.4 failing cases | pwsh tools/preflight.ps1 -SelfTest | D11 |
+| 14.3 rollback | pwsh tools/rollback-gate.ps1 -From v0.5.1 -To v0.5.2 -Plan raphael-api-admin | D16 |
+| 14.4 paths | pwsh tools/preflight.ps1 -Paths -DeclaredOf raphael-api-admin | D14 |
+
+## Performance
+- **Budget and hot path (13.1):** the twins run in VCF's command handler, not the scheduler tick; each costs what its human command costs (one events.json read and write at most, 1 MB cap). The rate gate bounds a looping client at 5 per second per admin (D6). The scheduler tick budget (Epic D24, 5 ms) is untouched: no twin adds tick work.
+- **Limits (13.2):**
+
+| Bound | Source | At the bound | Valid case excluded |
+|---|---|---|---|
+| 5 twins per admin per second | S-4 | the sixth answers ratelimit secs=1 | a bulk edit of more than 5 fields a second, which Raphael spreads |
+| 64 rate-gate entries | more admins than a server has | idle entries pruned; a 65th active admin refused for that second (D6) | none in practice |
+| 480 bytes a line | contract §1 | value, reason and summary cut to 120 bytes | a longer value shown whole (it is stored whole) |
+| 10 rows a page | contract §4 | paged | none |
+| 200 definitions, 1 MB | foundation MaxDefinitions, MaxFileBytes | code=full | none new |
+
+## Build plan
+Every step runs inside the Epic's `## Rollout` › Procedure: a pre-audit and a post-audit in docs/audits/raphael-api-admin.md (template docs/audits/README.md), `/code-review`, and a Codex read-only cross-inspection of the step's diff (`codex exec -s read-only -c features.experimental_windows_sandbox=true`, prompt via stdin, SteamIDs redacted) until "VERDICT: READY", its line written to the audit. Compile check: `dotnet build Nyarlathotep/Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__`. Tests: `dotnet test Nyarlathotep/Nyarlathotep.Tests`.
+1. **Typed outcomes, no behaviour change.**
+   - Pre-audit; create docs/audits/raphael-api-admin.md (rollback base v0.5.1) and docs/features/RAPHAEL_API_ADMIN.md with a `## Test results` section; add the `childDocs`, `snapshotSessions` and `dataTables` entries and the data-inventory rows (D14).
+   - Capture 0.5.1's human replies: add HumanReplyTests' table source by running every D1 path over FakeStores at the pre-audit commit and writing Nyarlathotep.Tests/Fixtures/human-replies-0.5.1.txt (copied to the test output by the test csproj).
+   - Add Logic/Outcome.cs; convert every D1 path to return Outcome; generic ActionGateway.Run<T> and Gateway.Run overload with the denial as Outcome.Refused("denied", NoAccess); the human commands reply `.Human`; move each human command body into its `…Flow` method.
+   - Add the seven WireError members (code strings only; no wire line uses them yet) and OutcomeCodeTests; update the existing tests to read `.Human`.
+   - Satisfies D1, D2.
+2. **Twins, reads and contract api 4.**
+   - Add Commands/ApiAdminCommands.cs (event, template, templates, pillar, purge, killswitch; adminOnly; ready guard), Logic/RateGate.cs, the Wire builders and Logic/ApiLines.cs read rows; PillarCommand.Switch's config-changed (S-5).
+   - Set Wire.Api = 4; update the contract per D10, docs/NYARLATHOTEP_DESIGN.md §6 and docs/RAPHAEL_HANDOFF_API4.md.
+   - Add fixtures WireContract/bad-10 and AdminList/bad-3 in tools/preflight-fixtures/, registered in tools/preflight-checks.json; ControlCases rows for this plan.
+   - Add ApiTwinTests, RateGateTests, ApiLinesTests AdminReads, WireFormatTests AdminTwins, ConfigChangedTests and PushTests Twins, DependencyFailureTests Twins, PrivacyTests Twins, and the ContractDocTests changes.
+   - Satisfies D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D15.
+3. **Session 1 (owner) and release 0.5.2.**
+   - Stop the server; -LogCheck on the last logs; `pwsh tools/dev-snapshot.ps1 -Save raa1`; deploy with `dotnet build Nyarlathotep/Nyarlathotep.sln -c Release`; boot the dev world ($env:SteamAppId='1604030'; VRisingServer.exe -persistentDataPath .\save-data-nyardev -serverName "Nyar Dev" -saveName nyardev -logFile .\logs\NyarDev.log).
+   - Write the exact numbered Session 1 steps (server 127.0.0.1:9876) into docs/features/RAPHAEL_API_ADMIN.md and hand them to the owner; record every observed line (D13); stop after an autosave; -LogCheck; read every [Error] and [Warning] line; restore the snapshot.
+   - Release 0.5.2 on the six surfaces; `tcli build`; annotated tag v0.5.2; `pwsh tools/rollback-gate.ps1 -From v0.5.1 -To v0.5.2 -Plan raphael-api-admin` (4/4); privacy grep; push; GitHub pre-release; release-verify.
+   - -AuditOf, -SessionsOf and -Paths -DeclaredOf raphael-api-admin; `dod close raphael-api-admin`. The owner publishes.
+   - Satisfies D13, D14, D15, D16.
+
+## Work breakdown
+- W1 · **Outcomes**
+- W1.1 · **Typed outcomes and codes** · items: D1 D2 · steps: 1
+- W2 · **Wire**
+- W2.1 · **Twins** · items: D3 D4 D5 D6 D12 · steps: 2
+- W2.2 · **Reads, shape and pushes** · items: D7 D8 D9 · steps: 2
+- W2.3 · **Contract and checks** · items: D10 D11 D15 · steps: 2
+- W3 · **Verification and release**
+- W3.1 · **Session, records and release** · items: D13 D14 D16 · steps: 3
+
+## Rollout
+### Shipping
+One release, 0.5.2, a GitHub pre-release; D16 ends there, with release-verify. The owner publishes to Thunderstore, outside the plan. Nothing is switched on by it: the twins answer only when an admin or Raphael sends them. Who turns it off: the operator, by installing 0.5.1 (Raphael then sees api=3 and falls back to the human commands); any admin keeps every existing switch.
+
+### Compatibility
+- api 3 lines, keys and commands are unchanged; api only goes from 3 to 4. A Raphael built for api 3 ignores the new tags and keeps using the human commands (contract §1, §5).
+- The human commands' replies are byte-equal to 0.5.1 (D1). One behaviour is added to them: a pillar switch that changes the cfg queues config-changed (D9, S-5), which an api 3 Raphael already handles by re-reading.
+- events.json, state.json and the cfg are unchanged.
+
+### Rollback
+- **In the repository:** `git revert --no-edit v0.5.1..v0.5.2`, drilled by the rollback gate with -Plan (D16). Commits in the range that are not this child's (records of other plans) are re-applied after a revert with `git cherry-pick`, listed from `git log v0.5.1..v0.5.2` minus those touching this child's exclusive paths.
+- **On the dev server during the build:** Session 1 is wrapped by tools/dev-snapshot.ps1 (D14).
+- **On a server:** install the 0.5.1 DLL; nothing was persisted by this child, so 0.5.1 runs on 0.5.2's files, and the rollback gate proves it.
+- **Published release:** tags and releases are never deleted; a bad release is retitled and versions move forward only (Epic S-19).
+- **Commit range:** v0.5.1..v0.5.2
+
+### Paths walked
+Walking the Build plan. The walker (-Paths, Epic D33) reads git's tracked, untracked and ignored files, the dev server's paths, %TEMP%\nyar-* and the remote tags and releases.
+- **Step 1:**
+  - docs/audits/raphael-api-admin.md, docs/features/RAPHAEL_API_ADMIN.md, tools/preflight-checks.json, tools/data-inventory.json, tools/paths-manifest.txt.
+  - Nyarlathotep/Nyarlathotep/Logic/{Outcome,Precedence,Engine,EventCatalog,DefinitionEditor,EventAdmin,Authoring,Pillars,Idempotency,ActionGateway,Wire}.cs, Nyarlathotep/Nyarlathotep/Services/{EventRuntime,EventStore,PillarSwitches,TemplateLibrary,Gateway}.cs, Nyarlathotep/Nyarlathotep/Commands/{EventCommands,TemplateCommands,PillarCommands,SpawnCommands}.cs.
+  - Nyarlathotep/Nyarlathotep.Tests/{HumanReplyTests,OutcomeCodeTests}.cs, Nyarlathotep/Nyarlathotep.Tests/Fixtures/human-replies-0.5.1.txt, Nyarlathotep/Nyarlathotep.Tests/Nyarlathotep.Tests.csproj, and the existing test files whose assertions move to `.Human` (Nyarlathotep/Nyarlathotep.Tests/*.cs).
+- **Step 2:**
+  - Nyarlathotep/Nyarlathotep/Commands/ApiAdminCommands.cs, Nyarlathotep/Nyarlathotep/Logic/{RateGate,ApiLines,Wire,Pillars}.cs, Nyarlathotep/Nyarlathotep/Services/PillarSwitches.cs.
+  - Nyarlathotep/Nyarlathotep.Tests/{ApiTwinTests,RateGateTests,ApiLinesTests,WireFormatTests,ConfigChangedTests,PushTests,DependencyFailureTests,PrivacyTests,ContractDocTests,ControlCases}.cs.
+  - docs/RAPHAEL_INTEGRATION_CONTRACT.md, docs/NYARLATHOTEP_DESIGN.md, docs/RAPHAEL_HANDOFF_API4.md.
+  - tools/preflight-checks.json, tools/preflight-fixtures/WireContract/bad-10/**, tools/preflight-fixtures/AdminList/bad-3/**, tools/paths-manifest.txt.
+- **Step 3:**
+  - The six release surfaces: Nyarlathotep/Nyarlathotep/Nyarlathotep.csproj, Nyarlathotep/Nyarlathotep/thunderstore.toml, CHANGELOG.md, Nyarlathotep/Nyarlathotep/CHANGELOG.md, README.md, Nyarlathotep/Nyarlathotep/README.md.
+  - The remote tag v0.5.2 and the GitHub release v0.5.2 (`remote-tag:` and `remote-release:` lines of tools/paths-manifest.txt).
+  - docs/features/RAPHAEL_API_ADMIN.md, docs/audits/raphael-api-admin.md, docs/dod/raphael-api-admin.md, docs/dod/nyarlathotep.md, docs/dod/README.md.
+- **Session 1, on the server:** BepInEx/plugins/Nyarlathotep.dll, BepInEx/config/kdpen.Nyarlathotep.cfg, BepInEx/config/Nyarlathotep/{events,state}.json{,.bak,.tmp}, save-data-nyardev/**, logs/NyarDev.log and BepInEx/LogOutput.log.
+- **Outside the repository** (existing `temp:` lines): %TEMP%\nyar-snap-*, %TEMP%\nyar-s*-logs, %TEMP%\nyar-session, %TEMP%\nyar-{selftest,depsuite,snaptest,drilltest}-*, nyar-rel-*, nyar-rollback-*, nyar-drill-*.
+- **Build outputs** (existing ignored globs): Nyarlathotep/**/bin/**, Nyarlathotep/**/obj/**, *.binlog, Nyarlathotep/Nyarlathotep/dist/**, Nyarlathotep/Nyarlathotep/build/**.
+- **Review process:** docs/dod/raphael-api-admin.reviews.md, docs/dod/raphael-api-admin.review.html and docs/dod/raphael-api-admin.html.
+
+## Out of scope
+- **Considered and excluded (15.1):**
+  - Twins for `spawn` and `announce`: test and chat tools with no panel state; Raphael sends the human commands.
+  - A twin for `event list` and `event info`: `api events` and `api status` already give the rows.
+  - Changing any human reply text (D1 pins them).
+- **Deferred (15.2):** the `regions` read and region keys (regions, 0.6.0); `zones` and the zone twins (anti-farming); `stats reset` (stats); every later child adds its own rows per contract §10.
+
+## Also considered
+- **Documentation:** the six surfaces (D16), the contract and the Raphael handoff (D10), docs/features/RAPHAEL_API_ADMIN.md. **Decommissioning:** contract §10.1–10.3 as PLANNED text (moved, D10). **Ownership:** the server admin; the Raphael session owns the panels.
+- **Compliance:** none; no personal data is stored or sent (Security 10.4).
+- **Localisation and time formats:** wire values are invariant-culture; `secs` is whole seconds; human text stays English and unchanged.
+- **Running cost:** none; no quota.
+- **Success measurement:** Session 1's observed lines (D13); no analytics.
+- **Support tooling:** the admin log lines with the "api " prefix and the io/internal log (D3, D12).
+
+## Assumptions
+- S-1 · validated · This child builds api 4 after walkable-spawns and before regions, and every admin action gets a wire twin · source: owner Decision 2, plan mode 2026-09-28 (Epic A27, S-18)
+- S-2 · validated · Plans are reviewed by a fresh-context subagent (up to 3 rounds); Codex cross-inspects code diffs only · source: owner Decision 7, plan mode 2026-09-28 (design §9 D26)
+- S-3 · reversible · A start refused by MaxConcurrentEvents answers a new code `limit` (reason max_concurrent), since none of §4 or §10.3 fits · fallback: if the Raphael session prefers one code, a corrected amendment maps it to `state` with the same reason before step 2
+- S-4 · reversible · The twin rate is 5 per admin per second, as contract §10.1 proposes · fallback: a corrected amendment changes the constant in Logic/RateGate.cs and contract §5a before release; nothing persists it
+- S-5 · reversible · A pillar switch that changes the cfg queues one config-changed push, for the human command and the twin alike, so a second admin's Raphael sees the change · fallback: if an api 3 Raphael misbehaves on the extra push in Session 1, a corrected amendment limits it to twins
+- S-6 · reversible · A twin whose work throws answers code=io reason=internal rather than a new code · fallback: a corrected amendment adds an `internal` code to §4 before release
+- S-7 · validated · Paths a step creates and deletes inside the same step are outside the declared-paths check · source: owner decision, docs/NYARLATHOTEP_DESIGN.md §9 D18 (event-library Review 11 F1, 2026-09-27)
+- S-8 · validated · The profile notes apply: in-game claims have a session item (6.1), every chat text is rendered before release (11.2), every control has a test seam (12.4), and the release copies the earlier release-step amendments (14.3: release-verify, the rollback gate with -Plan, the privacy grep, the unpushed-tag check) · source: docs/dod/profile.md
+
+## Coverage
+| # | Layer | Status | Probes | Pointer / reason |
+|---|---|---|---|---|
+| 1 | Purpose & typical use | Considered | 3/3 | Purpose & typical use |
+| 2 | Actors & permissions | Considered | 3/3 | Design › Permissions › 2.1 D11 D13; 2.2 D11; 2.3 D5 D6 |
+| 3 | Inputs, outputs & data | Considered | 4/4 | Design › Data › 3.1 D3 D4; 3.2 D3 D7 D9; 3.3 D14 D16; 3.4 D16 |
+| 4 | Business rules & invariants | Considered | 5/5 | Business rules › 4.1 D2 D3 D4; 4.2 D3 D5 D12; 4.3 D5 D6; 4.4 D2 D6; 4.5 D1 D11 D14 |
+| 5 | Internal interfaces | Considered | 3/3 | Interfaces › 5.1 D1 D3; 5.2 D1 D9; 5.3 D1 D10 |
+| 6 | External dependencies & contracts | Considered | 3/3 | Interfaces › 6.1 D10 D13; 6.2 D12 D16; 6.3 D14 D13 |
+| 7 | States & lifecycle | Considered | 3/3 | Design › States › 7.1 D7 D12; 7.2 D5 D6 D12; 7.3 D9 D5 |
+| 8 | Minimal stretch | Considered | 2/2 | Use cases › Minimal stretch › 8.1 D1 D7; 8.2 D5 D6 |
+| 9 | Maximal stretch | Considered | 3/3 | Use cases › Maximal stretch › 9.1 D6; 9.2 D11 D3 D12; 9.3 D5 |
+| 10 | Security & privacy | Considered | 4/4 | Security › 10.1 D11; 10.2 D3 D8; 10.3 D15; 10.4 D15 |
+| 11 | Design & UX | Considered | 4/4 | Design › UX › 11.1 D16; 11.2 D3 D13; 11.3 D1; 11.4 D10 D13 |
+| 12 | Failure handling & observability | Considered | 4/4 | Failure & observability › 12.1 D2 D12 D6; 12.2 D3 D12; 12.3 D12 D14; 12.4 D11 D1 D2 D6 D12 |
+| 13 | Performance & scale | Considered | 2/2 | Performance › 13.1 D6; 13.2 D6 D8 |
+| 14 | Rollout & compatibility | Considered | 4/4 | Rollout › 14.1 D16; 14.2 D1 D10 D16; 14.3 D16; 14.4 D14 |
+| 15 | Out of scope | Considered | 2/2 | Out of scope |
+Gate — acceptance & testability: passed — every Considered layer 2–14 maps to ≥ 1 D-item
+
+## Baseline
+
+## Log
+- 2026-09-28 · status → draft · plan
+- 2026-09-28 · note · planned from contract §10.1–10.3, Epic A27 and recon at b6b04a5
