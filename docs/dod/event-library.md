@@ -14,7 +14,7 @@ closed: none
 commit: 23f2ba4
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
-review: pending
+review: codex
 ---
 
 # DoD: Event library — built-in templates and in-game authoring
@@ -630,3 +630,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-28 · note · Review 21 (codex, scope A28) REVISE: F1 accepted with a different control (the glob docs/dod/event-spawns.* and the last -DeclaredOf run immediately before close, no store lock); review stays pending
 - 2026-09-28 · note · A29 and A30 recorded in step 5's post-audit (layer 7.3, not gating; Codex step 5 post-audit F1 and F2): D25's and D26's Session 3 named as feature-doc Sessions 6 and 7
 - 2026-09-28 · D26 · pass · manual: re-verified against D26 as amended by A30 (Session 3 = feature-doc Session 6): docs/features/EVENT_LIBRARY.md › Test results › Session 6 records the restart at 20:34 during legion-weekend-surge, "event legion-weekend-surge cancelled by restart (it was due to end 2026-09-28 00:50:00Z)", "boot carrier sweep: 256 found, 256 queued for removal", the next surge's start at 20:42 and end at 21:12, and `.nyar status` at 21:06 with no stale instance · b084e47 · claude
+- 2026-09-28 · note · review: codex, Review 22 (scope A28) READY, 15/15 layers · 49/49 probes, no findings; A28's pending review cleared

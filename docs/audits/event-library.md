@@ -149,6 +149,15 @@ and one under "### A22 probe · Session 4 · 2026-09-27 · 86f6f53
 - Codex verdict: READY (round 2) — round 1 NOT READY: F1 the quiet minute was measured from the tick's start, so a tick of a minute or more could let the next warning through at once (accepted: DateTime.UtcNow at the warning)
 - privacy grep (7656119, kdpenland): none in the diff
 - in-game: Session 7 (the soak run again, A26)
+
+### Step 5 · 2026-09-28 · aaaf4d9..92a21ce (records of Session 7; no code since A25's post-audit)
+- compile / preflight: 0 errors, 0 warnings; SlowTick 4/4 passed; PREFLIGHT OK; -Paths -DeclaredOf event-library "paths: 1024 walked, all in manifest; declared: 294/294 in event-library; plants: 13/13 fail, tempvar 15/15 lines" after A28; -SessionsOf event-library "7/7 checked; snapshots 7/7 from session 1"; dod --check event-library 0 problems
+- soak: soak-report over Session 7's three boots "soak: pass" (565 timing minutes, 0 unpaired, tick avg max 3.528 ms); no "slow tick" line; D25 and D36 pass, D26 re-verified on Session 6 (A30)
+- /code-review (self, records only): the Session 7 block lacked D25's first start and end lines per template (added, from the soak-1 log read before its deletion); the restart deviation is stated in the feature doc, the audit and the plan's log
+- plan: A28 (14.4, the next child's plan files declared as docs/dod/event-spawns.*), Reviews 21 REVISE (F1 accepted with a different control) and 22 READY (scope A28); A29 and A30 (7.3) name the plan's Session 3 as feature-doc Sessions 6 and 7
+- Codex verdict: READY (round 2) — round 1 REVISE: F1 D25's first start and end lines and the Hunter observation's session (A29, lines added), F2 D26 named Session 3 while its pass was Session 6 (A30, pass re-verified); round 2 READY, "No findings", EARLIER: all resolved
+- privacy grep (7656119, kdpenland): none in the diff
+- in-game: Session 7 (above); dod status: D25, D26, D36 checked with pass lines
 ## Sessions
 - session 1 log check: 0 unhandled, 60 nyar lines, 0 orphan errors, 0 unity errors
   - one boot (23:10–23:48), unattended; run after the stop and before any restart; BepInEx: the three known warnings (Il2CppInterop, two Beelzebub TUNE); Unity log: 226 PrefabLookupMap lines at save load, the game's RepairVBloodProgressionSystem lookup notice and the hard stop's Crashpad and temp-memory notices; then "snapshot restored; hashes equal (s1, … deleted)"

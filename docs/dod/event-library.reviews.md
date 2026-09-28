@@ -796,3 +796,13 @@ VERDICT: REVISE
 ### Dispositions
 - F1 · accepted · with a different control: A28 declares the glob docs/dod/event-spawns.*, so a review page, a new artifact or a rename of that plan's files stays declared, and step 6's last -Paths -DeclaredOf run is named as immediately before `dod close event-library`; no store lock, since the only writer of the store is the same builder working in sequence
 
+## Review 22 · 2026-09-28 · codex · plan commit 92a21ce · plan 220273 B · 36 items · files 0 · e3b0c44298fc · prompt 6b14d32e6c5a · scope A28
+Reviewer: Codex CLI, read-only (`codex exec -s read-only`, Windows sandbox on); the prompt redacted of Steam IDs before sending. The second round since Review 20's READY (the first attempt stopped on "Selected model is at capacity" before reading and is not counted).
+
+EARLIER: all resolved
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- no findings
+
