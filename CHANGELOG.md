@@ -13,7 +13,7 @@ machine-readable twins for the Raphael client. Design and session: `docs/feature
 - **Typed outcomes.** Every admin path (`Logic/AdminFlows.cs`, one flow per verb, shared by the human command and its
   twin) returns an `Outcome`: ok with keys, or a refusal with a code, an argument and a reason
   (`Logic/Outcome.cs`, contract §4). The human commands reply `outcome.Human`, pinned to 0.5.1's texts by
-  `HumanReplyTests` (89 captured replies), so no human reply changes.
+  `HumanReplyTests` (85 captured replies covering all 89 of 0.5.1's reply literals), so no human reply changes.
 - **Twins.** `.nyar api event <verb> …` (start, stop, enable, disable, set, reload, new, copy, delete),
   `.nyar api template use <template> [as <id>]`, `.nyar api pillar <name> on|off` and `.nyar api purge [confirm]`
   answer exactly one `[NYAR:ok]` or `[NYAR:err]` line (admin-only). Order: rate gate, verb, argument count, argument

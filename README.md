@@ -48,7 +48,7 @@ which everything the event created is reverted or despawned. Four services carry
 | Faction empowerment: the `Empower` action (five stats ×1.0–3.0 on up to five factions, timed carrier buffs), api 3 empower rows | 0.4.0 | [`docs/features/FACTION_EMPOWERMENT.md`](docs/features/FACTION_EMPOWERMENT.md) |
 | Event library: six built-in templates, chat authoring (`template`, `event new/copy/delete/set`, `pillar`), readiness column | 0.5.0 | [`docs/features/EVENT_LIBRARY.md`](docs/features/EVENT_LIBRARY.md) |
 | Walkable spawn points: wave units moved off water, cliffs and walls by the game's tile collision | 0.5.1 | [`docs/features/WALKABLE_SPAWNS.md`](docs/features/WALKABLE_SPAWNS.md) |
-| Raphael api 4: admin action twins (`api event`, `api template use`, `api pillar`, `api purge`) and reads (`api templates`, `api template info`, `api pillar list`, `api killswitch`), one line each, 5 per admin per second | 0.5.2 | [`docs/features/RAPHAEL_API_ADMIN.md`](docs/features/RAPHAEL_API_ADMIN.md) |
+| Raphael api 4: admin action twins (`api event`, `api template use`, `api pillar`, `api purge`) that answer one line each, at most 5 per admin per second, and reads (`api templates`, `api template info`, `api pillar list`, `api killswitch`) that answer rows and an end line | 0.5.2 | [`docs/features/RAPHAEL_API_ADMIN.md`](docs/features/RAPHAEL_API_ADMIN.md) |
 | Boss reinforcements | in development | [`docs/features/BOSS_REINFORCEMENTS.md`](docs/features/BOSS_REINFORCEMENTS.md) |
 | Defended zones | in development | [`docs/features/DEFENDED_ZONES.md`](docs/features/DEFENDED_ZONES.md) |
 | Sieges | in development | [`docs/features/SIEGES.md`](docs/features/SIEGES.md) |
