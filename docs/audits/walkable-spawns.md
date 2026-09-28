@@ -52,4 +52,10 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - Codex verdict: REVISE (round 1) — F1 a default TileWorld from an existing singleton could reach CreateMapData → fixed: ChunkAllocation and WorldCells must be created and WorldCells non-empty ("singleton: not created"); F2 the budget reserved two calls per check while a blocked point makes one → fixed: one unit per game call; F3 as the code review's F1 → fixed; F4 a throwing Dispose escaped and stopped the wave → fixed: caught and recorded as the wave's failure
 - Codex verdict: READY (round 2) — "Round 1 findings F1–F4 are addressed, and no new correctness or safety issue was identified"
 - deferred within step 2, by dependency: ControlCases re-keying (D9) lands with the DebugCommands check and its fixtures after Session 2, since its D9 row names DebugCommands fixtures that exist only once the verb is removed
+- in-game: deployed 0.5.0+7f02abb on nyardev inside snapshot ws2 (`dev-snapshot.ps1 -Save ws2`, 28 files); initialized cleanly ("triggers: all hooks available", both boot sweeps 0)
+- Session 2 (owner): five waves at the Session 7 pond shore, none in water; moved 2, 3, 3, 3, 3, unchecked 0; walk h 10 equal to `debug walk` h 10; tick avg ≤ 0.929 ms
+- session 2 log check: 0 unhandled, 60 nyar lines, 0 orphan errors, 0 unity errors
+- session 2 logs read (both, copied to %TEMP%
+yar-s2-logs before the stop, deleted after): BepInEx warnings only the known four (Il2CppInterop Class::Init; Beelzebub's two TUNE lines; "event example-empowerment: pillar empowerment takes an Empower action", 3 reloads) and ours "event bandit-ambush stopped: 0 units queued, 0 spawns cancelled" (the owner's stop); NyarDev.log: 225 PrefabLookupMap traces (the game's), the game's RepairVBloodProgressionSystem Lookup notice, and two JobTempAlloc lines before the first autosave (boot, as in Session 1); no [Error] line
+- snapshot restored; hashes equal (ws2)
 

@@ -102,3 +102,20 @@ not at the Session 7 point (-912.9, -828.8).
   that followed the last reading (13:45:43); -LogCheck "0 unhandled, 158 nyar lines, 0 orphan errors, 0 unity errors".
   Then `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (ws1, …
 yar-snap-ws1 deleted)".
+
+### Session 2 · 2026-09-28 · waves at a pond shore (owner, 0.5.0+7f02abb, snapshot ws2)
+The owner stood on the shore of event-library's Session 7 pond, 3-5 m from the water, where `.nyar debug walk` replied
+"walk -919.7 -825.5 h 10 r 0.50: free grounded yes (singleton world)", and started bandit-ambush (radius 10, 6 units a
+wave, 3 waves 60 s apart) twice: the first run was stopped after wave 2, the second ran all three waves.
+- Wave lines:
+  - run 1: wave 1/3 "6 units queued (2 moved, 0 unchecked) … walk h 10"; wave 2/3 "6 units queued (3 moved, 0 unchecked) … walk h 10"
+  - run 2: waves 1/3, 2/3 and 3/3 each "6 units queued (3 moved, 0 unchecked) … walk h 10"
+- In water: none, in any of the five waves (owner, by sight).
+- Height level (A13): the wave's level, from the admin's y, is 10, equal to the `debug walk` h at the same spot.
+- Tick timing (Debug.TimingLog) over the waves: avg 0.929, 0.246, 0.269, 0.104, 0.124 ms, all under 5 ms (D4); the
+  highest single tick was 24.9 ms, the tick that spawned run 1's first wave.
+- Health line during run 2: "nyar health: 1 events, 3 tracked, degraded: none"; no "walk check unavailable" line.
+- Setup (Claude): `pwsh tools/dev-snapshot.ps1 -Save ws2` before 7f02abb was deployed; stopped after AutoSave 1654,
+  which followed the last wave; -LogCheck "0 unhandled, 60 nyar lines, 0 orphan errors, 0 unity errors". Then
+  `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (ws2, …nyar-snap-ws2 deleted)".
+
