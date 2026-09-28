@@ -82,3 +82,38 @@ VERDICT: REVISE
 - F6 · accepted · Logic/ApiCommandTable.cs with ApiOverloadTests, matched to ApiAdminCommands by the WireContract check (D11)
 - F7 · accepted · Performance 13.2 row for the unmetered reads
 - F8 · accepted · OutcomeReturns forbids branches in AdminOps bodies, fixture OutcomeReturns/bad-2
+
+## Review 3 · 2026-09-28 · subagent · plan commit ffe4712 · plan 60906 B · 16 items · files 0 · e3b0c44298fc · prompt 05719d9dff83
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, given the prompt file and read access to the repository (design §9 D26); the prompt held no Steam ID.
+
+F1 · blocking · 4.5. "Every control is ControlCases' raphael-api-admin rows" defines the set by the list itself, and nothing checks it: ControlCaseTests compares only Resources/event-library.md (Nyarlathotep.Tests.csproj line 28), so D11's "a control lacks its row" is run by none of D11's commands. By the project's definition (every D-item with a `(fails when:` clause) D4, D10, D11, D15 and D16 are controls too.
+Fix: link this plan into the test Resources in step 2, extend ControlCaseTests to compare its controls with its rows, define the set as every fails-when item, and add the missing rows or reasons.
+
+F2 · advisory. D1's OutcomeReturns rule contradicts IAdminOps' purge counts and admin position (a position read needs `?`). Fix: take the position from the shim's reader; return the counts as fields or exempt named read members.
+
+F3 · advisory. D11's GatewayOnly clause drops the dispatched-service exemption and matches by name, so generic names (Reload, Edit, Purge, StartEvent) in EventRuntime, EventStore and PillarSwitches would fail. Fix: keep the exemption and give IAdminOps members distinct names (e.g. `Op*`).
+
+F4 · advisory. The human `.nyar purge` ask writes no admin log line today (SpawnCommands.cs:45-51); a shared flow that always logs changes that, and nothing tests that argument refusals come before the log. Fix: state whether the ask logs; add ApiTwinTests cases.
+
+F5 · advisory. Contract §10.1 ("A refusal changes nothing") and §10.3 io ("Nothing changed") contradict Business rules 2 and D12; D10 moves the text without correcting it. Fix: reword the moved rows and add a ContractDocTests case.
+
+F6 · advisory. HumanReplies' fixture mode cannot run `git show v0.5.1:`; capture rows carry no reproducing input. Fix: a `v0.5.1/<path>` copy in the fixture; a scenario id per row.
+
+F7 · advisory. A rate-limited or unknown-verb err line echoes the raw verb before any check. Fix: WireValue-map it, `-` when empty, cut to 120 bytes, in D8's grammar case.
+
+F8 · advisory. Step 3's Paths walked omits tools/paths-manifest.txt (the remote-tag and remote-release lines). Fix: list it.
+
+EARLIER: all resolved
+
+14/15 layers · 48/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · controls are every D-item with a fails-when clause (D1-D12, D14-D16); step 2 links this plan into the test Resources and ControlCaseTests compares it, on walkable-spawns step 2's per-slug ControlCases (D11, Business rules 7)
+- F2 · accepted · IAdminOps' mutating members return Outcome; OpPurgeCounts is a read outside the rule; the position comes from the shim (D1, Interfaces)
+- F3 · accepted · the dispatched-service exemption stays and IAdminOps members are named Op* (D11)
+- F4 · accepted · the purge ask logs nothing, as in 0.5.1; ApiTwinTests cases for badarg and the ask (D3)
+- F5 · accepted · §5a and §4's io row carry Business rules 2's wording, with a ContractDocTests case (D10)
+- F6 · accepted · fixture copies under `v0.5.1/<path>`; scenario ids per capture row (D1, Failure & observability)
+- F7 · accepted · D8 covers the echoed verb
+- F8 · accepted · step 3 lists tools/paths-manifest.txt
