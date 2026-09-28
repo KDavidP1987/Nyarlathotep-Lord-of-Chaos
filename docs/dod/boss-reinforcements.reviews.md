@@ -70,3 +70,31 @@ VERDICT: REVISE
 - F3 · accepted · the postfix only appends; burst firings start on the next fight tick
 - F4 · accepted · CarrierLedgerTests Boss: a faction sweep skips a boss carried by EmpowerBoss
 - F5 · accepted · step 1's pre-audit re-reads the fixture folders; a renumbering is a corrected amendment
+
+## Review 3 · 2026-09-28 · subagent · plan commit 19bcc3a · plan 86623 B · 20 items · files 0 · e3b0c44298fc · prompt 46eac03d80e3
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, given the prompt file and read access to the repository (design §9 D26); the prompt held no Steam ID.
+
+F1 · advisory · 7.3/4.3. A fight joining a shared instance later has no stated wave schedule (the engine schedules wave k at instance start + k × interval, Engine.cs:231-237). Fix: a fight's wave k is due at its join + k × interval, cut off at EndsUtc; an EngineTests BossFights case.
+F2 · advisory · 14.1/11.4. The Session 1 probe build's exception (fights for every V Blood) has no item proving 0.8.0 lacks it. Fix: gate or remove it in step 3; a D1 case or Session 2 line.
+F3 · advisory · 9.1/13.2. Engage ignores the trigger scope; out-of-region bosses can fill the global cap. Fix: gate Engage on scope or accept it in 13.2.
+F4 · advisory · 7.3. An instance end's grace Cleanup (Engine.cs:175-179) and D9's EndFightUnits could both queue the adds. Fix: boss-instance ends skip the grace Cleanup, or EndFightUnits supersedes it; a BossEndPaths case.
+F5 · advisory · 4.4. WaveGate's skip order is stated but not asserted. Fix: a WavePrecedence case with several skips.
+F6 · advisory · 5.3. Contract §10.4 says `boss=<V Blood name>`; D14 emits the prefab. Fix: D14 names the change; ContractDocTests checks it.
+F7 · advisory · 14.4. The twin's reason mapping file is not named in step 3; `%TEMP%\dod-review-*.txt` is a Data row outside the walker. Fix: name the file; add the path or an exclusion.
+F8 · advisory · 14.3/3.4. Whether state.json's tracked-unit shape gains a fight field is unstated. Fix: memory-only link, shape unchanged, or cover the extra field in the drill.
+
+No reversible assumption overrides an owner decision.
+
+EARLIER: all resolved
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · amendment at `start`: a fight's wave k is due at its join + k × interval, cut off at EndsUtc (D6)
+- F2 · accepted · amendment at `start`: the probe exception is removed in step 3, and a Session 2 line shows a V Blood with no matching definition opens no fight (D1, D16)
+- F3 · accepted · amendment at `start`: Engage is gated on the trigger scope at the boss's position (D1)
+- F4 · accepted · amendment at `start`: boss-instance ends skip the grace Cleanup; EndFightUnits supersedes it (D9)
+- F5 · accepted · amendment at `start`: a WavePrecedence case asserts the skip order (D7)
+- F6 · accepted · amendment at `start`: D14 changes §10.4's `boss=` to the prefab, checked by ContractDocTests
+- F7 · accepted · amendment at `start`: step 3 names the twin's file; the review-prompt temp path is an exclusion under S-3
+- F8 · accepted · amendment at `start`: the fight link is memory-only and state.json's unit shape is unchanged (D17)
