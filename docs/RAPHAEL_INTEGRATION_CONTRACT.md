@@ -17,6 +17,9 @@
 > child that fills them (stats, defended-zones) ships; each bumps the api (the Epic plan, `docs/dod/nyarlathotep.md`, A20).
 > api 3 ships with the `faction-empowerment` release (0.4.0): `status` rows of `kind=empower` (§3). It adds no tag or
 > key; the change log (§9) lists every api.
+>
+> api 4 and later are PLANNED in §10: admin actions over the wire (raphael-api-admin, 0.5.2), then the rows each
+> later child adds. Nothing in §10 is sent yet.
 
 ### Tags and commands
 
@@ -35,6 +38,10 @@ is listed here as IMPLEMENTED with the api that added it.
 | `me` | tag | PLANNED (stats) | — |
 | `top` | tag | PLANNED (stats) | — |
 | `zone` | tag | PLANNED (defended-zones) | — |
+| `tpl` | tag | PLANNED (raphael-api-admin) | — |
+| `pillar` | tag | PLANNED (raphael-api-admin) | — |
+| `ks` | tag | PLANNED (raphael-api-admin) | — |
+| `region` | tag | PLANNED (regions) | — |
 | `version` | command | IMPLEMENTED | 1 |
 | `status` | command | IMPLEMENTED | 2 |
 | `events` | command | IMPLEMENTED | 2 |
@@ -42,6 +49,16 @@ is listed here as IMPLEMENTED with the api that added it.
 | `me` | command | PLANNED (stats) | — |
 | `top` | command | PLANNED (stats) | — |
 | `zones` | command | PLANNED (defended-zones) | — |
+| `event` | command | PLANNED (raphael-api-admin) | — |
+| `template` | command | PLANNED (raphael-api-admin) | — |
+| `templates` | command | PLANNED (raphael-api-admin) | — |
+| `pillar` | command | PLANNED (raphael-api-admin) | — |
+| `purge` | command | PLANNED (raphael-api-admin) | — |
+| `killswitch` | command | PLANNED (raphael-api-admin) | — |
+| `regions` | command | PLANNED (regions) | — |
+
+`zone` and `zones` keep their defended-zones label: the anti-farming child absorbs defended-zones (Epic, 2026-09-28)
+and relabels both rows when it is planned (§10.4).
 
 ---
 
@@ -236,6 +253,10 @@ single command surface, which `docs/NYARLATHOTEP_DESIGN.md` §6 lists in full. T
 | Enable / disable an event | `.nyar event enable <id>` / `.nyar event disable <id>` | admin |
 | Edit one field | `.nyar event set <id> <field> <value>` | admin |
 | Reload definitions from disk | `.nyar event reload` | admin |
+| New / copy / delete an event | `.nyar event new <id> <pillar>` / `.nyar event copy <id> <newId>` / `.nyar event delete <id>` then `… confirm` | admin |
+| Set an event's location to the admin's position | `.nyar event set <id> location here` | admin |
+| Create an event from a template | `.nyar template list [pillar] [page]` / `.nyar template info <template>` / `.nyar template use <template> [as <id>]` | admin |
+| Switch a pillar (saved to the cfg) | `.nyar pillar list` / `.nyar pillar <name> on\|off` | admin |
 | Test spawn | `.nyar spawn <unit> [count] [level] [hp×] [power×]` | admin |
 | Kill switch | `.nyar purge` then `.nyar purge confirm` (two presses, with a confirmation dialog) | admin |
 | Broadcast now | `.nyar announce <text>` / `.nyar announce digest` (text 1-200 characters, no `<`, `>` or control characters; otherwise `badarg`) | admin |
@@ -245,7 +266,8 @@ single command surface, which `docs/NYARLATHOTEP_DESIGN.md` §6 lists in full. T
 | Share my board line | `.nyar top <stat> <window> share` | anyone, when `annshare=1` |
 
 Every admin action is logged on the server with the admin's name. A non-admin gets VCF's standard refusal.
-Raphael should grey these controls out rather than hide them.
+Raphael should grey these controls out rather than hide them. api 4 (§10.1) gives each admin action a wire twin that
+answers `[NYAR:ok]` or `[NYAR:err]`; until the handshake reports `api>=4`, Raphael keeps sending the human commands.
 
 ---
 
@@ -270,6 +292,7 @@ The panels:
 - **Admin › Zones:** the `api zones` list and map pins, add-here and remove.
 - **Admin › Announcements:** free-text and digest broadcast, and the five switches read-only.
 - **Admin › Kill switch:** purge with confirmation, and the `killswitch` countdown.
+- **From api 4 (§10):** Admin › Templates, Admin › Pillars, a region picker, and a live horde and anti-farming readout.
 
 Gate the panels on the handshake:
 - A pillar tab shows only when its switch is 1.
@@ -302,3 +325,143 @@ Gate the panels on the handshake:
 | 1 | 0.2.0 (foundation) | The handshake: `.nyar api version`, tag `version`. |
 | 2 | 0.3.0 (raphael-api-core) | `status`, `events` and `sub`; tags `event`, `def`, `end`, `err`, `ok`, `ev`; paging and errors (§4). |
 | 3 | 0.4.0 (faction-empowerment) | `status` rows of `kind=empower`: `faction=<names joined by ','>`, `wave=-`, admin `units` = NPCs holding the event's empowerment. No new tag or key. |
+| 4 (planned) | 0.5.2 (raphael-api-admin) | 2026-09-28 api 4 planned: admin action twins, `templates`, `pillar`, `killswitch`, error codes `exists`, `state`, `invalid`, `full`, `io`, `confirm` (§10). Later children add rows with their own api number. |
+
+---
+
+## 10. api 4 and later — PLANNED
+
+Nothing in this section is sent yet. Every shape is PLANNED under the child named with it, and can change until that
+child ships. The Tags and commands table carries one row per new tag and command. A child that grows the wire bumps
+`api` by one when it ships, so the number is assigned then. This section names the child and its release, in the
+Epic's order, not the api. The first bump is api 4, with raphael-api-admin (0.5.2).
+
+| Child | Release | Adds |
+|---|---|---|
+| raphael-api-admin | 0.5.2 | admin action twins (§10.1); the `templates`, `template info`, `pillar list` and `killswitch` reads (§10.2); six error codes (§10.3) |
+| regions | 0.6.0 | the `regions` read; `region=` on `[NYAR:def]` and `[NYAR:event]` rows and on `event-start` and `event-end` pushes (§10.4) |
+| event-spawns | 0.7.0 | new settable fields (hunt, modifiers, AroundPlayer, loot), set through the `event set` twin; no new tag |
+| boss-reinforcements | 0.8.0 | the push `boss-adds` |
+| anti-farming | 0.9.0 | the push `farm-tier`; `zones` and `zone`, relabelled from defended-zones, which it absorbs |
+| outbreak | 0.10.0 | the pushes `horde-wave`, `horde-boss-down` and `horde-spread` |
+
+The sieges and castle-takeover child adds its rows when it is planned. Siege pushes keep §3's rule: they go only to
+members of the target clan and to admins.
+
+### 10.1 Admin action twins — PLANNED (raphael-api-admin)
+
+Each twin is `.nyar api` followed by the human command of §5, with the same arguments. It runs through the same
+gateway as the human command: the same validation, the same admin log line, and the same pushes (`config-changed`,
+`event-start`, `event-end`, `killswitch`). It answers exactly one line:
+- on success, `[NYAR:ok] cmd=<cmd> verb=<verb> id=<id> …`;
+- on refusal, `[NYAR:err] cmd=<cmd> verb=<verb> code=<code> [secs=<n>] [arg=<name>] [reason=<text>]`.
+
+`id` names the object: the event, the pillar, or `-` for purge. The twins are admin-only. As in §4, VCF refuses a
+non-admin with its own human line.
+
+| Twin | Success line |
+|---|---|
+| `.nyar api event start <id>` / `… stop <id>` | `[NYAR:ok] cmd=event verb=start id=<id>` (`verb=stop`) |
+| `.nyar api event enable <id>` / `… disable <id>` | `[NYAR:ok] cmd=event verb=enable id=<id> changed=<0\|1>` |
+| `.nyar api event set <id> <field> <value>` | `[NYAR:ok] cmd=event verb=set id=<id> field=<field> value=<stored value>` |
+| `.nyar api event set <id> location here` | `… field=location value=<x>,<z>`, from the admin's position |
+| `.nyar api event reload` | `[NYAR:ok] cmd=event verb=reload id=- count=<definitions loaded>` |
+| `.nyar api event new <id> <pillar>` | `[NYAR:ok] cmd=event verb=new id=<id> pillar=<pillar>`; the event is created disabled |
+| `.nyar api event copy <id> <newId>` | `[NYAR:ok] cmd=event verb=copy id=<newId> from=<id>`; the copy is disabled |
+| `.nyar api event delete <id>`, then `… delete <id> confirm` | `… verb=delete id=<id> confirm=30`, then `… verb=delete id=<id> done=1` |
+| `.nyar api template use <template> [as <id>]` | `[NYAR:ok] cmd=template verb=use id=<id> tpl=<template>` |
+| `.nyar api pillar <name> on\|off` | `[NYAR:ok] cmd=pillar verb=set id=<name> on=<0\|1> changed=<0\|1>`; saved to the cfg |
+| `.nyar api purge`, then `.nyar api purge confirm` | `[NYAR:ok] cmd=purge verb=ask id=- confirm=30`, then `[NYAR:ok] cmd=purge verb=confirm id=- events=<ended> units=<to despawn> secs=<cooldown>` |
+
+Rules:
+- **Idempotency:**
+  - `enable`, `disable` and `pillar` repeated on the state they already hold answer `ok` with `changed=0`.
+  - `start` on an active event and `stop` on one that is not active answer `code=state`. This is the engine's
+    one-instance rule.
+- **Two-step confirm:** the confirm must come from the same admin within 30 s of the ask; otherwise it answers
+  `code=confirm`. `confirm=<secs>` on the ask is that window. Raphael shows its confirmation dialog between the two
+  presses.
+- **After an `ok`:** Raphael may update its state on the `ok` line and treat the push that follows as confirmation.
+  A refusal changes nothing on the server.
+- **Rate:** at most 5 twins per admin per second. Past that the twin answers `code=ratelimit secs=1`. This number is
+  planned; the child's plan settles it.
+- **Line length:** every line fits 480 bytes. `value` and `reason` are cut to 120 bytes on a character boundary.
+
+```
+[NYAR:ok] cmd=event verb=set id=undead-nightfall field=duration value=1800
+[NYAR:ok] cmd=event verb=enable id=undead-nightfall changed=1
+[NYAR:ok] cmd=purge verb=ask id=- confirm=30
+[NYAR:err] cmd=event verb=start code=state arg=id reason=already_active
+[NYAR:err] cmd=event verb=start code=cooldown secs=240
+[NYAR:err] cmd=template verb=use code=exists arg=id
+```
+
+### 10.2 New reads — PLANNED
+
+| Read | Child | Rows | Who |
+|---|---|---|---|
+| `.nyar api templates [pillar] [page]` | raphael-api-admin | `[NYAR:tpl] id=<template> pillar=<pillar> trigger=<kind> duration=<secs> summary=<text>`, then `[NYAR:end] cmd=templates page= count=` | admin |
+| `.nyar api template info <template>` | raphael-api-admin | the same single row, then `[NYAR:end] cmd=template count=1`; an unknown template answers `code=notfound arg=template` | admin |
+| `.nyar api pillar list` | raphael-api-admin | `[NYAR:pillar] id=<name> on=<0\|1>` for `empowerment`, `spawns`, `boss`, `zones` and `sieges`, then `[NYAR:end] cmd=pillar count=5` | admin |
+| `.nyar api killswitch` | raphael-api-admin | `[NYAR:ks] on=<0\|1> secs=<cooldown left> events=<active events> units=<tracked units>`, then `[NYAR:end] cmd=killswitch count=1` | admin |
+| `.nyar api regions [page]` | regions | `[NYAR:region] id=<region> events=<active events scoped to it>`, then `[NYAR:end] cmd=regions page= count=` | anyone |
+| `.nyar api zones [page]` | anti-farming | §3's shape; the row is relabelled when anti-farming is planned | admin |
+
+- `summary` is cut to 120 bytes.
+- The region ids are the game's region names, as `.nyar region list` prints them (the regions child).
+- A `[NYAR:def]` row gains `region=<id,…>`, or `-` for a global event, from the regions release. A new key is
+  additive (§7), so an api 3 parser skips it.
+
+```
+[NYAR:tpl] id=undead-nightfall pillar=spawns trigger=gametime duration=1800 summary=Undead_rise_at_night
+[NYAR:pillar] id=empowerment on=1
+[NYAR:ks] on=1 secs=240 events=0 units=12
+[NYAR:region] id=CursedForest events=1
+```
+
+### 10.3 Error codes — PLANNED (raphael-api-admin)
+
+The twins reuse §4's codes and add six. When the twins ship, the new codes move into §4's table and the `WireError`
+enum together.
+
+| Code | Meaning |
+|---|---|
+| `exists` | `new`, `copy` or `template use` named an id that is taken. |
+| `state` | The event is in the wrong state: `start` on an active event, `stop` on one that is not active, or `delete` of a running event. |
+| `invalid` | The change would fail validation. `arg` names the field and `reason` gives the validator's wire-safe message. |
+| `full` | The definitions file already holds its 200 definitions. |
+| `io` | The definitions file or the cfg could not be saved. Nothing changed. |
+| `confirm` | A confirm arrived with no ask from the same admin in the last 30 s. |
+
+The §4 codes the twins also send:
+- `disabled`, where the human command refuses because the mod or the pillar is off;
+- `notfound`, for an unknown event, template, pillar or region, with `arg` naming which;
+- `badarg`, for a missing or malformed argument;
+- `ratelimit`, past the rate;
+- `cooldown`, for a manual start during the purge cooldown, with `secs` the time left.
+
+### 10.4 Push events — PLANNED
+
+New `[NYAR:ev]` types and keys. §3's fairness rule holds for all of them: a push never says more than chat or
+`.nyar status` tells every player. The new keys follow `secs`, which is 0 for every new type.
+
+| Type or key | Child | Payload |
+|---|---|---|
+| `region=<id,…>` on `event-start` and `event-end` | regions (0.6.0) | the event's regions, or `-` for a global event |
+| `boss-adds` | boss-reinforcements (0.8.0) | `id=<event> boss=<V Blood name> phase=<n> count=<adds that joined>` |
+| `farm-tier` | anti-farming (0.9.0) | `id=<event> tier=<n> region=<id>` |
+| `horde-wave` | outbreak (0.10.0) | `id=<event> wave=<n> count=<units> region=<id>` |
+| `horde-boss-down` | outbreak (0.10.0) | `id=<event> boss=<name> empowered=<0\|1>`; `0` once the last leading boss is down and the horde has lost its empowerment |
+| `horde-spread` | outbreak (0.10.0) | `id=<event> hotspots=<n> region=<id>` |
+
+Privacy:
+- `farm-tier` never names the targeted players and never carries a position. It carries only the region, and it
+  sends the same line to the targeted group, to everyone else and to admins. Admins find positions with
+  `.nyar debug here`, not on the wire.
+- No push names a player.
+
+```
+[NYAR:ev] type=event-start id=undead-nightfall secs=1800 region=CursedForest
+[NYAR:ev] type=horde-wave id=undead-nightfall secs=0 wave=3 count=60 region=-
+[NYAR:ev] type=farm-tier id=anti-farm secs=0 tier=2 region=FarbaneWoods
+```
