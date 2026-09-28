@@ -264,7 +264,7 @@ Constraints each child inherits (a child's review checks they appear verbatim or
 - walkable-spawns · in-progress · A26
 - raphael-api-admin · planned · A27
 - regions · planned · A28
-- event-spawns · ready
+- event-spawns · planned
 - boss-reinforcements · planned
 - anti-farming · planned · A29
 - outbreak · planned · A30
