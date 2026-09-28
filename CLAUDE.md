@@ -143,9 +143,10 @@ mid-implementation. Record settled answers in `docs/NYARLATHOTEP_DESIGN.md` §9 
 Settled with the user 2026-09-23 (`docs/dod/nyarlathotep.md` S-15). The product is the DoD Epic
 `docs/dod/nyarlathotep.md`; each pillar is a child plan built in the order listed there.
 
-1. **Plan** — `/dod plan <child>` (parent `nyarlathotep`). The plan is reviewed by **Codex, read-only**
-   (Claudex phase 2, dod `references/review.md`) until `VERDICT: READY`, then `dod approve`. Decisions the
-   user must make go to plan mode first (see above).
+1. **Plan** — `/dod plan <child>` (parent `nyarlathotep`). The plan is reviewed by a **fresh-context Claude
+   subagent, read-only** (design §9 D26, owner 2026-09-28; dod `references/review.md`), up to 3 rounds, until
+   `VERDICT: READY`, then `dod approve`. A finding that repeats a settled decision is rejected by reference.
+   Codex stays the reviewer of the code (step 4). Decisions the user must make go to plan mode first.
 2. **Pre-audit** before every Build-plan step, recorded in `docs/audits/<child>.md` (template:
    `docs/audits/README.md`): git tree clean, compile check, `pwsh tools/preflight.ps1`, `dod status
    <child>`, feature doc Status/Open questions read; for in-game steps a baseline boot of the current DLL

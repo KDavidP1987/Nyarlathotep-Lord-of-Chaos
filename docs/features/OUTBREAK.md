@@ -1,7 +1,7 @@
 # Outbreak: undead and Dracul hordes (planned child)
 
-> **Status:** planned. The owner asked for this on 2026-09-26, and it is in the Epic as child `outbreak` after
-> sieges (docs/dod/nyarlathotep.md, A24). **Nothing here is designed yet.** The questions below are for the
+> **Status:** planned. The owner asked for this on 2026-09-26, and it is in the Epic as child `outbreak`, after
+> anti-farming and before sieges (docs/dod/nyarlathotep.md, A24, A30). **Nothing here is designed yet.** The questions below are for the
 > child's dod planning, and the owner decides them in plan mode before any code is written.
 
 ## Goal
@@ -29,6 +29,28 @@ theirs. The point is to rely on the player base to stop the horde.
 - **Planning consequence:** outbreak is one event type with a horde profile (which faction, which units, which
   bosses, where it starts), and undead and Dracul are its first two profiles, rather than two separate features.
   Boss copies are spawned units (tracked, capped, despawned like any other), never the world's own V Bloods.
+
+## Spawning rules, horde waves and castle takeover (owner, 2026-09-28)
+
+Settled in plan mode (design §9 D23, D24; Epic A30, A31). The child's dod plan turns these into items.
+
+- **Where a horde starts:** at run time, from where that faction's native NPCs actually stand, grouped into
+  hotspots. Undead hordes grow out of undead areas; the Draculin horde out of Dracula's castle and his generals'
+  areas. The regions child filters them: global (a map-wide takeover) or listed regions only (for example the
+  Cursed Forest).
+- **Spread:** hotspots push outward on a timer and hordes march towards the nearest players and populated areas.
+  Converting killed units stays an option for the child's planning (the open questions below).
+- **Horde waves:** optional per event, every M minutes: 30-100 units spawn at one hotspot and fan out across the
+  map, led by one or more empowered boss copies.
+- **Boss-linked empowerment:** while a leading boss copy lives, its horde carries faction-empowerment's carrier
+  buff; when that boss dies, the buff is removed from the horde.
+- **Caps:** a 100-unit wave plus spread units needs MaxTrackedUnits above the default 150 (hard ceiling 500); the
+  tick-budget test is repeated at horde size.
+- **Taking over castles:** horde units may assault a castle and destroy its heart. This is the documented
+  exception to "every change is reversible", so it is off unless the cfg switch AllowCastleDestruction (default
+  false) and the event's own flag are both on; assaults run only inside the game's castle raid window, never on an
+  offline-protected castle; the owning clan is warned 5 minutes before; the heart falls only through the game's
+  own damage path; `.nyar purge` stops every assault. It is built in the sieges child, after outbreak.
 
 ## Constraints it inherits
 
