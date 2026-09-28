@@ -58,14 +58,22 @@ not at the Session 7 point (-912.9, -828.8).
 - cliff: walk -934.4 -889.7 h 10 r 1.00: blocked grounded yes (singleton world)
 - floor: walk -898.2 -927.8 h 11 r 0.50: free grounded yes (singleton world)
 - ledge: walk -915.6 -890.8 h 12 r 0.50: blocked grounded yes (singleton world)
+- wall: walk -910.9 -883.0 h 12 r 0.50: blocked grounded yes (singleton world)
+- wall: walk -910.9 -882.9 h 12 r 1.00: blocked grounded yes (singleton world)
+- pond: walk -939.8 -921.6 h 10 r 0.50: blocked grounded yes (singleton world)
+- water: walk -1087.6 -947.1 h 10 r 0.50: blocked grounded yes (singleton world)
 - dry: walk -939.8 -904.4 h 10 r 0.50: free grounded yes (singleton tile)
 - pond: walk -940.7 -920.8 h 10 r 0.50: free grounded yes (singleton tile)
 - cliff: walk -934.4 -889.7 h 10 r 0.50: free grounded yes (singleton tile)
 - cliff: walk -934.4 -889.7 h 10 r 1.00: free grounded yes (singleton tile)
 - floor: walk -898.2 -927.8 h 11 r 0.50: free grounded yes (singleton tile)
 - ledge: walk -915.6 -890.8 h 12 r 0.50: free grounded yes (singleton tile)
-- go/no-go (singleton world): incomplete
-- go/no-go (singleton tile): incomplete
+- wall: walk -910.9 -883.0 h 12 r 0.50: free grounded yes (singleton tile)
+- wall: walk -910.9 -882.9 h 12 r 1.00: free grounded yes (singleton tile)
+- pond: walk -939.8 -921.6 h 10 r 0.50: free grounded yes (singleton tile)
+- water: walk -1087.6 -947.1 h 10 r 0.50: free grounded yes (singleton tile)
+- go/no-go (singleton world): go
+- go/no-go (singleton tile): no-go
 - Refusals: `.nyar debug walk abc` and `.nyar debug walk 1 2` both replied "radius must be 0.1-5" (D7).
 - Chat: every reply showed whole, two lines per walk; readability without colour not yet stated by the owner (D8).
 - Reading: the world source separates dry from water and cliff; the tile source reads free everywhere, including the
@@ -73,3 +81,15 @@ not at the Session 7 point (-912.9, -828.8).
   source reads free inside the building (a floor the admin stands on) and blocked on the ledge the admin stood on.
 - Owner decision in plan mode (option A, A12): the interior reading is a floor (recorded, not counted); a building's
   outer wall (label wall) and a second water body (label water) are read next.
+- Second part, same server run (A12, review F6): pressed against a map building's outer wall at r 0.50 and r 1.00,
+  then at the edge of the first pond again (pond) and of a second pond at about -1087.6, -947.1 (water); a player cannot
+  walk into a pond, so every water reading was taken at its edge.
+- Verdict: singleton world is go (dry free and grounded; pond, water, cliff and wall blocked); singleton tile is no-go
+  (it reads free everywhere). Step 2 uses the world source (A8). The world check is cautious at edges: a pond edge and
+  a ledge the admin stood on read blocked, so placement moves units inward, the safe direction.
+- D8: every reply showed whole in chat; the walk reply is plain text with no colour markup (Logic/AdminLines.cs WalkReply),
+  so it reads the same without colour.
+- Setup (Claude): `pwsh tools/dev-snapshot.ps1 -Save ws1` before the step 1 DLL was deployed; stopped after the autosave
+  that followed the last reading (13:45:43); -LogCheck "0 unhandled, 158 nyar lines, 0 orphan errors, 0 unity errors".
+  Then `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (ws1, …
+yar-snap-ws1 deleted)".

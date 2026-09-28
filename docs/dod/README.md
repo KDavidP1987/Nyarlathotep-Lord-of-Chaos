@@ -15,7 +15,7 @@
 | [raphael-api-core](raphael-api-core.md) | Raphael api 2 — status, events, push subscription, paging, contract check | done | L | 22/22 | 22 | 63 % | nyarlathotep |
 | [regions](regions.md) | Regions — global or regional scope for triggers and actions, and release 0.6.0 | ready | L | 0/16 | 16 | 100 % | nyarlathotep |
 | [spikes](spikes.md) | Spikes S1-S3, march, restart marker, carrier buff | done | M | 20/20 | 20 | 50 % | nyarlathotep |
-| [walkable-spawns](walkable-spawns.md) | Walkable spawns — the walk probe, walkable spawn points and release 0.5.1 | in-progress | M | 0/12 | 12 | 46 % | nyarlathotep |
+| [walkable-spawns](walkable-spawns.md) | Walkable spawns — the walk probe, walkable spawn points and release 0.5.1 | in-progress | M | 3/12 | 12 | 46 % | nyarlathotep |
 
 Most-missed layers — done plans: layer 6.1 (13), layer 7.3 (7), layer 14.4 (7), layer 4.5 (7), layer 3.1 (5); open plans (provisional): layer 6.1 (4), layer 4.1 (3), layer 12.4 (3), layer 5.1 (2), layer 14.1 (2).
 
