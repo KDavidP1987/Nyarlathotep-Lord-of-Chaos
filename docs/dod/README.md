@@ -6,7 +6,7 @@
 | Plan | Title | Status | Size | Verified | Baseline items | Prediction | Parent |
 |---|---|---|---|---|---|---|---|
 | [event-library](event-library.md) | Event library — built-in templates and in-game authoring | done | L | 36/36 | 34 | 55 % | nyarlathotep |
-| [event-spawns](event-spawns.md) | Event spawns — modifiers, behaviours, ambush and player locations | draft | L | 0/28 | — | — | nyarlathotep |
+| [event-spawns](event-spawns.md) | Event spawns — modifiers, Hunt and player locations | draft | L | 0/24 | — | — | nyarlathotep |
 | [faction-empowerment](faction-empowerment.md) | Faction empowerment — timed carrier buffs on every NPC of a faction | done | L | 30/30 | 29 | 69 % | nyarlathotep |
 | [foundation](foundation.md) | Foundation engine, store, spawner, scheduler, announcer and commands | done | L | 40/40 | 38 | 63 % | nyarlathotep |
 | [nyarlathotep](nyarlathotep.md) | Nyarlathotep, Lord of Chaos, v0.1 to v1.0 | in-progress | Epic | 38/47 | 36 | 75 % |  |

@@ -492,3 +492,43 @@ VERDICT: REVISE
 - F7 · accepted · "unknown field action.units.chance" accepted; a chance-only selftest case
 - F8 · accepted · a regrouped Guard unit's home is its regroup point; a Behaviour fails-when case
 - F9 · accepted · HuntPlan.Targets takes the in-territory and PvP-combat flags, the territory flag read each tick from the wave's TerritoryMap; Hunt fails-when cases
+
+## Review 10 · 2026-09-28 · subagent · plan commit afd181a · plan 97605 B · 28 items · files 0 · e3b0c44298fc · prompt f8e328e1f474
+Reviewer: a fresh-context general-purpose subagent (never a fork), read-only, the first round after the walkable-spawns split (owner option A, Epic A26). It checked the plan against tools/preflight.ps1, the test project and the mod's sources.
+
+F1 `[blocking]` 10.1 (also 12.4): D34's "the real tree at the step 1 commit must pass" fails: SpawnTracker.Tick (Services/SpawnTracker.cs:155, internal static, not [Mutating]) calls DestroySafe (:211), a non-private writing method of a dispatched service. Marking it [Mutating] breaks the gateway check (its caller is EventScheduler.cs:52), and moving the write into a private helper is an escape route the check does not see.
+Fix: (a) make the tick and boot entry points [Mutating] and let the gateway check accept their scheduler, Core and Patches callers as the System actor, and/or (b) treat a non-private method calling a private writing method as a writer; add fixture bad-privatehelper.
+
+F2 `[advisory]` 6.2 / 12.4: step 1 adds the dependencySuites.event-spawns entry with its test rows, but DependencyFailureTests Spawns arrive in step 2, so step 1's preflight fails.
+Fix: add the entry and its test rows in step 2; step 1 keeps only the per-slug change and fixture bad-spawns-missing.
+
+F3 `[advisory]` 14.4: Paths walked omits tools/paths-manifest.txt (steps 1 and 4), the audit and feature doc under steps 1-4, and the six surface paths at step 4.
+Fix: declare them.
+
+F4 `[advisory]` 4.2 / 7.2: D13 can seed a player the AggroBuffer already holds as a game entry, then remove the game's entry as its own.
+Fix: HuntAction never seeds a player already in the buffer and removes a seed only while exactly its own entry remains; fails-when "a player already in the buffer is seeded".
+
+F5 `[advisory]` 9.1 / 13.1: D24's span may never finish while 150 Hunt units attack the owner's character.
+Fix: allow admin invulnerability during the span, recorded in Session 2.
+
+F6 `[advisory]` 8.1 / 13.2: D23's 30-unit wave exceeds the default MaxUnitsPerWave 20.
+Fix: "30 units over two waves at default caps".
+
+F7 `[advisory]` 12.3: step 1's "HealthMonitor.Degraded adds SpawnHealth.Entries" re-wires what walkable-spawns already wires.
+Fix: "SpawnHealth gains the event-spawns entries (D30); the HealthMonitor wiring is walkable-spawns'".
+
+Confirmed: the 36 hiding prefabs (30 Bandit, 6 Blackfang); guids -133411573 and 697095869; KindredCommands' territory conversion; the rollback gate; every Review 9 fix handled.
+
+EARLIER: all resolved
+14/15 layers · 48/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · both parts: (a) SpawnTracker.Tick, EventRuntime.Tick, EmpowerAction's tick and the boot marker sweep (step 1) and HuntAction's tick (step 2) become [Mutating]; the gateway check accepts EventScheduler.cs, Core.cs and Patches/ as System-actor callers, fixture GatewayOnly/bad-tickcaller (D22, Security 10.1); (b) EntityWrites treats a non-private method calling a private writing method of the same class as a writer, fixture bad-privatehelper must fail; D34's real-tree list names the ticks marked by D22
+- F2 · accepted · the dependencySuites.event-spawns entry and its categories move to step 2 with DependencyFailureTests Spawns; step 1 keeps the per-slug -DependencySuite change and fixture bad-spawns-missing (D21, Build plan)
+- F3 · accepted · Paths walked declares tools/paths-manifest.txt at steps 1 and 4, the audit and feature doc under steps 1-4, and the six surface paths at step 4
+- F4 · accepted · D13: HuntAction never seeds a player the AggroBuffer already holds and removes a seed only while exactly its own entry remains; fails-when "a player already in the buffer is seeded"
+- F5 · accepted · D24 and step 3: the owner's character may use admin invulnerability during the span, recorded in Session 2
+- F6 · accepted · D23: a modified Hunt event of 30 units over two waves at the default caps (MaxUnitsPerWave 20)
+- F7 · accepted · step 1: "SpawnHealth gains the event-spawns entries (D30); the HealthMonitor wiring is walkable-spawns'"; HealthMonitor.cs leaves step 1's Paths walked
+- Trim (owner Decision 3, plan mode 2026-09-28): D7, D12, D14 and D15 with their rules, fields, tests, fixtures, session steps and rows move to a later child spawn-extras; the release is 0.7.0 after regions 0.6.0 (S-14, S-15)
