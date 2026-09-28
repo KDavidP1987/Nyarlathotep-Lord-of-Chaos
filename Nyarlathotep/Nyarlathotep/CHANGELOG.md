@@ -2,6 +2,26 @@
 
 Public beta. Event pillars and automatic announcements default off; admins opt in per feature.
 
+## 0.5.0 (2026-09-28)
+
+- **Event templates.** Six ready-made events ship inside the mod, all off: `legion-weekend-surge`,
+  `bandit-vengeance`, `undead-nightfall` and `militia-crackdown` (empowerment), `bandit-ambush` and `undead-rising`
+  (spawn waves). `.nyar template list`, `.nyar template info <id>`, and `.nyar template use <id> [as <newId>]` copies
+  one into your events, disabled, ready to adjust and enable.
+- **Build events in chat.** `.nyar event new <id> <pillar>`, `.nyar event copy <id> <newId>` and
+  `.nyar event delete <id>` (then `confirm`); `.nyar event set` now also sets the trigger (`trigger.type`, `days`,
+  `times`, `phase`, `bosses`), `action.factions`, `action.units` (`CHAR_<name>[:<count>]`) and `location here`
+  (your position, height included). Every chat change is a normal edit of `events.json` plus a reload, with one
+  `.bak` kept.
+- **Pillar switches in chat.** `.nyar pillar list` and `.nyar pillar <name> on|off`, saved to the cfg.
+  `.nyar event list` shows why each event would or would not start (`ready`, `off (pillar)`, `full (cap)`, …).
+- **Waves keep to their level.** A wave unit the game drops onto another terrain level than the event's centre
+  (past a cliff or plateau edge) is moved back beside the centre.
+- **Slow-tick warning.** A mod tick of 250 ms or more logs one warning naming the slowest part, at most once a minute.
+- **Known issue:** a wave unit whose spawn point falls in deep water (a pond or river) stands stuck until its wave
+  ends and is removed. Put event centres on open, dry ground; a fix is planned for 0.5.1.
+- No new cfg keys; `events.json` is unchanged (SchemaVersion 1). Rolling back to 0.4.0 keeps your events.
+
 ## 0.4.0 (2026-09-26)
 
 - **Faction empowerment.** A new event action, `Empower`, buffs every NPC of up to five factions for the event's

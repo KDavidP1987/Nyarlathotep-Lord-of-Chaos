@@ -3,18 +3,31 @@
 <p align="center"><img src="docs/img/nyarlathotep-cover.jpg" alt="Nyarlathotep, Lord of Chaos" width="512"></p>
 
 A server-side BepInEx IL2CPP plugin for V Rising that adds admin-configured, event-driven NPC behaviour.
-0.4.x ships the event engine with spawn-wave events, timed faction empowerment, wave warnings and banners,
-and a kill switch; castle sieges, defended zones, boss-fight reinforcements, spawn modifiers and leaderboards
+0.5.x ships the event engine with spawn-wave events, timed faction empowerment, six built-in event templates
+with in-game authoring, wave warnings and banners, and a kill switch; castle sieges, defended zones, boss-fight reinforcements, spawn modifiers and leaderboards
 are planned, one release each. The companion client Raphael reads a machine-readable API (api 3): live event
 status, event definitions for admins, and pushed updates.
 
-0.4.x is a public beta. Every pillar and automatic announcement starts disabled; admins opt in. The 0.1.0 key
+0.5.x is a public beta. Every pillar and automatic announcement starts disabled; admins opt in. The 0.1.0 key
 `General.AnnounceEvents` is retired and ignored; the `[Announcements]` switches replace it.
 
 ## Status
 
-**v0.4.0.** See [`CHANGELOG.md`](CHANGELOG.md) for what ships and [`docs/dod/`](docs/dod/) for the
+**v0.5.0.** See [`CHANGELOG.md`](CHANGELOG.md) for what ships and [`docs/dod/`](docs/dod/) for the
 build plan.
+
+## Quick start
+
+Install the package on a dedicated server and start it once. Then, in game as an admin, no file edits needed:
+
+1. `.nyar template list`
+2. `.nyar template use undead-nightfall`
+3. `.nyar pillar empowerment on`
+4. `.nyar event enable undead-nightfall`
+5. `.nyar status`: at the next nightfall the undead are empowered for 20 minutes, and this shows it running.
+
+`.nyar purge` then `.nyar purge confirm` is the kill switch. Known issue in 0.5.0: a wave unit whose spawn point
+falls in deep water stands stuck until its wave ends; put event centres on dry ground (fix planned for 0.5.1).
 
 ## How it works
 
@@ -33,6 +46,7 @@ which everything the event created is reverted or despawned. Four services carry
 | Raphael api 2: `api status`, `api events`, `api sub` pushes | 0.3.0 | [`docs/features/RAPHAEL_API.md`](docs/features/RAPHAEL_API.md) |
 | Event spawn modifiers and locations | in development | [`docs/features/EVENT_SPAWNS.md`](docs/features/EVENT_SPAWNS.md) |
 | Faction empowerment: the `Empower` action (five stats ×1.0–3.0 on up to five factions, timed carrier buffs), api 3 empower rows | 0.4.0 | [`docs/features/FACTION_EMPOWERMENT.md`](docs/features/FACTION_EMPOWERMENT.md) |
+| Event library: six built-in templates, chat authoring (`template`, `event new/copy/delete/set`, `pillar`), readiness column | 0.5.0 | [`docs/features/EVENT_LIBRARY.md`](docs/features/EVENT_LIBRARY.md) |
 | Boss reinforcements | in development | [`docs/features/BOSS_REINFORCEMENTS.md`](docs/features/BOSS_REINFORCEMENTS.md) |
 | Defended zones | in development | [`docs/features/DEFENDED_ZONES.md`](docs/features/DEFENDED_ZONES.md) |
 | Sieges | in development | [`docs/features/SIEGES.md`](docs/features/SIEGES.md) |

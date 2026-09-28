@@ -6,7 +6,7 @@ A **server-side** event layer for V Rising. Admins stage NPC events the base gam
 enemies and empowered factions on a schedule, at nightfall or after a V Blood falls, with warnings and banners
 for players, and in later releases castle sieges, defended zones and boss-fight adds.
 
-> **Public beta (0.4.0).** Every pillar and automatic announcement is off by default; no event runs until an
+> **Public beta (0.5.0).** Every pillar and automatic announcement is off by default; no event runs until an
 > admin turns on its pillar and enables it.
 
 ## What it does
@@ -24,8 +24,14 @@ minimum players online, a cooldown, a chance, a time window. After the event end
 `GraceSeconds` (30 s by default), then are removed a few at a time; each also carries a timer, so none is left
 behind, even across a restart. Every event sits under one pillar switch.
 
+Each unit is placed on the ground at the centre's level: one the game drops past a cliff or plateau edge is moved
+back beside the centre.
+
 *In development:* waves at chosen levels, health and damage, spawn areas by zone or around players, and loot
 only if the event allows it.
+
+*Known issue (0.5.0):* a unit whose spawn point falls in deep water (a pond or river) stands stuck until its
+wave ends and is removed. Put event centres on open, dry ground; a fix is planned for 0.5.1.
 </details>
 
 <details>
@@ -70,6 +76,29 @@ The seeded `example-empowerment` (off by default) looks like this; `{faction}` i
 
 Optional action keys: `includeUnits` / `excludeUnits` (unit names such as `CHAR_Bandit_Thug`) and
 `includeVBloods` (default `false`). Faction names are the game's `Faction_*` names.
+</details>
+
+<details>
+<summary><b>Event templates and chat authoring</b> · <i>0.5.0</i></summary>
+
+Six ready-made events ship inside the mod. `.nyar template use <id>` copies one into your `events.json`,
+disabled, ready to adjust and enable.
+
+| Template | What it does | Starts |
+|---|---|---|
+| `legion-weekend-surge` | Legion ×1.5 physical power and max health, 30 min | Saturday 20:00 |
+| `bandit-vengeance` | Bandits ×1.3 physical power and attack speed, 10 min | A bandit V Blood dies (30 min cooldown) |
+| `undead-nightfall` | Undead ×1.25 physical and spell power, 20 min | Nightfall |
+| `militia-crackdown` | Militia and Church ×1.3 max health, 15 min | A Militia or Church V Blood dies (30 min cooldown) |
+| `bandit-ambush` | 3 waves of 4 thugs and 2 hunters | By command |
+| `undead-rising` | 2 waves of 5 armoured skeletons and 2 crossbowmen | By command |
+
+You can build and change events without touching the file. Use `.nyar event new <id> <pillar>`,
+`.nyar event copy <id> <newId>` and `.nyar event delete <id>` (then `confirm`). `.nyar event set` also changes
+the trigger, factions, units and location. `location here` stores your position, height included.
+`.nyar pillar <name> on|off` switches a pillar and saves the cfg. Every chat change is an ordinary edit of
+`events.json` followed by a reload, and one `.bak` copy is kept. `.nyar event list` shows why each event would
+or would not start (`ready`, `off (pillar)`, `full (cap)`, …).
 </details>
 
 <details>
@@ -134,15 +163,20 @@ copy `Nyarlathotep.dll` into `BepInEx/plugins`.
 
 ## Quick start
 
-1. In `BepInEx/config/kdpen.Nyarlathotep.cfg`, turn on a pillar: `[Pillars] EventSpawns = true`.
-2. Optionally turn on `[Announcements] WaveWarnings` and `EventBanners`.
-3. Start the server. The first boot writes five disabled example events to `BepInEx/config/Nyarlathotep/events.json`.
-4. In game, as an admin: `.nyar event list`, `.nyar event enable example-spawns`, then stand where you want the
-   raid and type `.nyar event start example-spawns`.
-5. Watch it with `.nyar status`. If anything goes wrong, `.nyar purge` then `.nyar purge confirm` ends everything.
+Install and start the server once. Then, in game as an admin, no file edits needed:
+
+1. `.nyar template list`
+2. `.nyar template use undead-nightfall`
+3. `.nyar pillar empowerment on`
+4. `.nyar event enable undead-nightfall`
+5. `.nyar status`: at the next nightfall the undead are empowered for 20 minutes, and this shows it running.
+
+If anything goes wrong, `.nyar purge` then `.nyar purge confirm` ends everything. Announcements stay off until
+you turn on `[Announcements] WaveWarnings` and `EventBanners` in `BepInEx/config/kdpen.Nyarlathotep.cfg`.
 
 Scheduled and triggered events spawn at a `Point` location (world `x` and `z` in `events.json`); an `Admin`
-location spawns around the admin and works for manual starts only. Edit the file, then `.nyar event reload`. A
+location spawns around the admin and works for manual starts only; `.nyar event set <id> location here` stores
+your position as a `Point`. Edit the file, then `.nyar event reload`. A
 bad entry is disabled with a log line naming the event and the reason; a file that doesn't parse leaves the last good
 set running.
 
@@ -169,12 +203,25 @@ set running.
 | `.nyar event list [page]` / `info <id>` | Event definitions and their state |
 | `.nyar event start <id>` / `stop <id>` | Start now / end early |
 | `.nyar event enable <id>` / `disable <id>` | Switch an event on or off (saved to `events.json`) |
-| `.nyar event set <id> <field> <value>` | Change `name`, `durationSeconds`, `conditions.minPlayers`, `conditions.cooldownMinutes`, `conditions.chancePercent`, `action.waves`, `action.intervalSeconds` or `action.radius`; on an empowerment, `action.stats.<stat>` (1.0-3.0) |
+| `.nyar event set <id> <field> <value>` | Change `name`, `durationSeconds`, `conditions.minPlayers`, `conditions.cooldownMinutes`, `conditions.chancePercent`, `trigger.type`, `trigger.days`, `trigger.times`, `trigger.phase`, `trigger.bosses`, `action.factions`, `action.units` (`CHAR_<name>[:<count>]`), `action.waves`, `action.intervalSeconds`, `action.radius` or `location here`; on an empowerment, `action.stats.<stat>` (1.0-3.0) |
 | `.nyar event reload` | Re-read `events.json` |
 | `.nyar spawn <unit> [count] [level\|+n\|-n] [hp] [power]` | One-off test spawn beside you, removed after `ManualSpawnLifetimeSeconds` |
 | `.nyar debug here [radius]` | The mod's units near you, with lifetime, level and stats, then up to 10 native NPCs with their empowerment buff |
 | `.nyar announce <text>` | Broadcast a line to everyone (quote text longer than 16 words) |
 | `.nyar api events [page]` | Event definitions as machine-readable lines, for Raphael |
+</details>
+
+<details>
+<summary><b>Templates and authoring</b> <i>(admin)</i></summary>
+
+| Command | What it does |
+|---|---|
+| `.nyar template list [pillar] [page]` / `info <id>` | The built-in templates |
+| `.nyar template use <id> [as <newId>]` | Copy a template into your events, disabled |
+| `.nyar event new <id> <pillar>` | A disabled skeleton event of that pillar |
+| `.nyar event copy <id> <newId>` | Copy an event, disabled |
+| `.nyar event delete <id>`, then `.nyar event delete <id> confirm` | Delete an event (the confirm is valid for 30 s) |
+| `.nyar pillar list` / `.nyar pillar <name> on\|off` | Show or switch the pillars (saved to the cfg; switching one off ends its running events) |
 </details>
 
 <details>

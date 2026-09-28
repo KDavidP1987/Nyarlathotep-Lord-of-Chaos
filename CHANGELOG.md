@@ -3,6 +3,41 @@
 The complete technical history. The concise, player-facing changelog that ships to Thunderstore lives at
 `Nyarlathotep/Nyarlathotep/CHANGELOG.md`. Public beta from 0.2.0; features stay experimental until validated on live servers.
 
+## [0.5.0] - 2026-09-28
+
+The `event-library` child of the DoD Epic (`docs/dod/event-library.md`): built-in templates and in-game authoring.
+Design: `docs/features/EVENT_LIBRARY.md`; sessions 1–7 there; audit: `docs/audits/event-library.md`.
+
+- **Template catalogue.** `Resources/templates.json`, embedded and read-only, six templates (all `enabled: false`):
+  legion-weekend-surge (Schedule Sat 20:00, Legion ×1.5 physical power and max health, 30 min), bandit-vengeance
+  (8 bandit V Bloods, ×1.3 physical power and attack speed, 10 min, 30 min cooldown), undead-nightfall (GameTime
+  night, ×1.25 physical and spell power, 20 min), militia-crackdown (15 Militia/Church V Bloods, ×1.3 max health,
+  15 min, 30 min cooldown), bandit-ambush (manual, 3 waves of 4 CHAR_Bandit_Thug + 2 CHAR_Bandit_Hunter, radius 10)
+  and undead-rising (manual, 2 waves of 5 armoured skeletons + 2 skeleton crossbows, radius 12). Validated at boot
+  ("templates: 6/6 valid"); a bad catalogue disables the template commands, never the mod.
+- **Commands.** `.nyar template list [pillar] [page] | info <id> | use <id> [as <newId>]`; `.nyar event new | copy
+  | delete [confirm]` (30 s arming); `.nyar event set` gains trigger, faction, unit and `location here` fields
+  (Point with x, y, z); `.nyar pillar list | <name> on|off` (written to the cfg, a running event of a pillar
+  switched off ends). Every chat write is a whole-file edit through `.tmp` + replace with one `.bak`, refused when
+  the file changed on disk since load or holds a newer schema, then reloaded, so a chat write equals a hand edit.
+- **Readiness.** `.nyar event list` shows `ready`, `off (purge)`, `off (mod)`, `off (pillar)`, `full (cap)`,
+  `invalid: <reason>` or `off (event)`; long V Blood triggers print as `vbloodkilled <n> bosses` with the bosses
+  on `bosses:` lines of `info`.
+- **Wave placement.** A Point keeps its height (`y`); a wave unit the game snaps onto another terrain level than
+  the centre (more than 2 m off) is moved once to within 1 m of the centre, with its AI home
+  (`AggroConsumer.PreCombatPosition`) (A23).
+- **Slow-tick warning.** `[nyar] slow tick: <t> ms (<phase> <ms> ms, …; outside phases <r> ms)` for a tick of
+  250 ms or more, at most one a minute with a held-back count, independent of `Debug.TimingLog` (A25).
+- **Known issue.** A ring point in deep water at the centre's level is not detected; the unit is stuck until its
+  wave ends (A27). A walkability check is planned for 0.5.1.
+- **Soak.** Session 7: three boots with the six templates, a restart mid-event and a short boot after the final
+  stop; `tools/soak-report.ps1` → "soak: 565 timing minutes, 27 starts, 25 ends, 2 cancelled by restart, 0 unpaired,
+  0 unhandled, tick avg max 3.528 ms, templates 6/6", pass; no slow-tick line.
+- **Tooling.** `tools/soak-report.ps1`, `preflight -Paths -DeclaredOf`, `-SessionsOf`, `-AuditOf`, `-RollbackOf`,
+  `-DependencySuite`, `rollback-gate.ps1 -Plan`, `tools/ingame/session-events.py`.
+- **Upgrading / rollback.** No new cfg keys; events.json stays SchemaVersion 1. 0.4.0 loads 0.5.0's files with the
+  same valid and disabled counts (rollback gate, D29).
+
 ## [0.4.0] - 2026-09-26
 
 The `faction-empowerment` child of the DoD Epic (`docs/dod/faction-empowerment.md`): **Pillar A, faction
