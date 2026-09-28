@@ -447,3 +447,48 @@ VERDICT: REVISE
 - F7 · accepted · IsFree takes the centre's height level and a tile not grounded at that level (TileWorld.GetIsGrounded) counts as blocked; Session 1 adds a sixth reading, ledge, outside the verdict
 - F8 · accepted · D12 gains the probe branch: if PreCombatPosition is overwritten on combat entry, a discovered amendment before step 5 rewrites it every 5 s or removes Guard, the owner deciding in plan mode
 - F9 · accepted · admins are eligible like any player; an admin who does not want waves stops the event
+
+## Review 9 · 2026-09-28 · subagent · plan commit 97a9026 · plan 106059 B · 34 items · files 0 · e3b0c44298fc · prompt 678870300484
+Reviewer: a fresh-context general-purpose subagent (never a fork), read-only, the last round under the owner's round-cap note after Review 7. It checked the plan against tools/preflight.ps1, the test project and the mod's sources.
+
+F1 `[blocking]` 6.2 (also 12.4): -DependencySuite requires event-library's fixed nine categories for every slug ($script:DependencyCategories, preflight.ps1:2115, Get-DependencyTableProblems :2127, the run loop :2339, Test-CheckDependencySuite :2156), so an event-spawns entry with Spawns categories fails "category events-write missing", and copying event-library's categories would run no Spawns control.
+Fix: read the required categories per slug from dependencySuites.<slug>, name event-spawns' categories, add the preflight change and a failing fixture to step 3.
+
+F2 `[blocking]` 12.4 (D22): ControlCaseTests reads only event-library.md and its ids; ControlCases keys rows by bare D-id, so event-spawns rows collide; the csproj copies only event-library.md; D11, D12 and D13's evidence does not contain a literal "(fails when:".
+Fix: key rows by slug and D-id, read each plan, copy event-spawns.md, reword D11-D13, add the csproj to Paths walked.
+
+F3 `[blocking]` 6.1: D3 and D10 read positions, SpellPower, MovementSpeed and attack speeds from `.nyar debug here`, which prints none of them (SpawnTracker.cs:277-300, AdminLines.DebugUnit).
+Fix: extend DebugHere/AdminLines.DebugUnit within D32's 480 bytes, or name another command; add the files to Paths walked.
+
+F4 `[advisory]` 10.1 / 12.4: D34's split-statement rule matches only a `DynamicBuffer<`-typed local, while the real tree writes `var mods = …GetBuffer<…>(…)`.
+Fix: match any local assigned from GetBuffer< or ReadBuffer; bad-split in the real spelling.
+
+F5 `[advisory]` 12.4 / 13.1: TickTimer's window is one wall-clock minute, not 60 ticks.
+Fix: emit "hunt targets" with TickTimer's line and fix the wording.
+
+F6 `[advisory]` 14.3: v0.5.0..v0.6.0 holds commits that are not this child's (event-library's close records, the release-verify fixes); a revert would undo them.
+Fix: name them and re-apply them after the revert.
+
+F7 `[advisory]` 14.3 / 3.4: 0.5.0 reports a per-unit chance as "unknown field action.units.chance", not among D25's accepted reasons.
+Fix: accept it and add a chance-only selftest pair.
+
+F8 `[advisory]` 6.1 / 4.1: foundation's Regroup rewrites PreCombatPosition for a unit landed on another level; D12 does not say so.
+Fix: a regrouped Guard unit's home is its regroup point; cover it in the Behaviour test.
+
+F9 `[advisory]` 4.4 / 13.1: D13 drops seeds for territory and PvP-combat ineligibility, but HuntPlan.Targets filters only online, alive and range, and TerritoryMap is built per wave.
+Fix: say which territory set the tick uses; add in-territory and PvP-combat cases.
+
+EARLIER: all resolved
+13/15 layers · 47/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · step 3 changes -DependencySuite and Test-CheckDependencySuite to read required categories per slug from dependencySuites.<slug>; event-spawns' categories are walk-check, territory, hunt-seed, ambush-hide, player-query, unit-recipe and release-tools; fixture DependencySuite/bad-spawns-missing
+- F2 · accepted · ControlCases rows keyed by slug and D-id, ControlCaseTests reads each listed plan, the csproj copies event-spawns.md (Paths walked step 3); D11 and D12's evidence reworded so "(fails when:" is literal (D13's already was)
+- F3 · accepted · step 4 extends AdminLines.DebugUnit and SpawnTracker.DebugHere with position, SpellPower, MovementSpeed and the primary attack speed, bound by D32's 480 bytes with an AdminLines test; D3 and D10 name it; Paths walked step 4
+- F4 · accepted · any local assigned from GetBuffer< or ReadBuffer, `var` included; bad-split written as the real spelling
+- F5 · accepted · "hunt targets" is emitted with TickTimer's line, a one-minute wall-clock window
+- F6 · accepted · Rollback › In the repository names the shared commits and re-applies them with git cherry-pick after a revert
+- F7 · accepted · "unknown field action.units.chance" accepted; a chance-only selftest case
+- F8 · accepted · a regrouped Guard unit's home is its regroup point; a Behaviour fails-when case
+- F9 · accepted · HuntPlan.Targets takes the in-territory and PvP-combat flags, the territory flag read each tick from the wave's TerritoryMap; Hunt fails-when cases
