@@ -65,8 +65,10 @@ public interface IPillarStore
 
 /// <summary>`.nyar pillar list` and `.nyar pillar &lt;name&gt; on|off` (event-library D14, D19; Business rules 6).
 /// A switch reloads the cfg first, so an operator's saved hand edit is in memory and kept by the save; it then sets only
-/// that entry. `off` ends the pillar's running events through the stop path (<paramref name="endEvents"/>, S-7).</summary>
-public sealed class PillarCommand(IPillarStore store, Func<Pillar, IReadOnlyList<string>> endEvents, Action<string> log)
+/// that entry. `off` ends the pillar's running events through the stop path (<paramref name="endEvents"/>, S-7). A switch
+/// that changed the cfg calls <paramref name="configChanged"/> once, for the human command and the twin alike
+/// (raphael-api-admin D9, S-5).</summary>
+public sealed class PillarCommand(IPillarStore store, Func<Pillar, IReadOnlyList<string>> endEvents, Action<string> log, Action? configChanged = null)
 {
     public IReadOnlyList<string> List()
     {
@@ -78,10 +80,13 @@ public sealed class PillarCommand(IPillarStore store, Func<Pillar, IReadOnlyList
 
     /// <summary>The switch's reply lines joined with "\n" (raphael-api-admin D1, D4): a success carries on, changed and,
     /// when `off` ended events, ended; a refusal its code (Business rules 3).</summary>
+    /// <summary>A state other than on or off (Business rules 3: badarg, arg state).</summary>
+    public static Outcome UseOnOff => Outcome.Refused("use on or off", RefusalCode.BadArg, "state");
+
     public Outcome Switch(string name, string state)
     {
         if (!PillarNames.TryParse(name, out var pillar)) return Outcome.Refused(PillarNames.Unknown(name), RefusalCode.NotFound, "pillar");
-        if (state is not ("on" or "off")) return Outcome.Refused("use on or off", RefusalCode.BadArg, "state");
+        if (state is not ("on" or "off")) return UseOnOff;
         var want = state == "on";
         try { store.Reload(); }
         catch (Exception ex)
@@ -114,6 +119,7 @@ public sealed class PillarCommand(IPillarStore store, Func<Pillar, IReadOnlyList
         }
 
         log($"pillar {name} {state} (saved to cfg)");
+        configChanged?.Invoke();
         var lines = new List<string> { $"pillar {name} {state} (saved to cfg)" };
         if (!want) lines.AddRange(End(pillar));
         return Switched(lines, want, changed: true);

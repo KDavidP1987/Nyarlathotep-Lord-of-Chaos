@@ -249,7 +249,7 @@ public class OutcomeCodeTests
 
     [Theory]
     [MemberData(nameof(Names))]
-    public void Refusal_carries_its_code(string name)
+    public void OutcomeCode_passes_each_refusal_row(string name)
     {
         var c = Cases.Single(x => $"{x.Row} · {x.Name}" == name);
         var o = c.Run();
@@ -313,7 +313,7 @@ public class OutcomeCodeTests
     }
 
     [Fact]
-    public void Every_row_of_business_rules_3_has_a_case()
+    public void OutcomeCode_passes_every_row_has_a_case()
     {
         var rows = PlanRows(Plan());
         var cased = Cases.Select(c => c.Row).ToHashSet(StringComparer.Ordinal);
@@ -322,14 +322,14 @@ public class OutcomeCodeTests
     }
 
     [Fact]
-    public void A_plan_without_the_table_fails()
+    public void OutcomeCode_empty_plan_table()
     {
         Assert.Contains("no Business rules 3", Assert.ThrowsAny<Exception>(() => PlanRows("## Business rules\n1. nothing\n")).Message);
         Assert.Contains("lists no row", Assert.ThrowsAny<Exception>(() => PlanRows("3. **Codes (4.1, D2):**\n\n4. **Idempotency\n")).Message);
     }
 
     [Fact]
-    public void A_cell_allows_its_words_and_a_changed_cell_refuses()
+    public void OutcomeCode_fails_when_cell_changes()
     {
         Assert.Equal(["cooldown"], Allowed("cooldown (secs = time left)")!);
         Assert.Equal(["read", "parse"], Allowed("the reload's reason (read or parse)")!);
@@ -345,8 +345,30 @@ public class OutcomeCodeTests
         Assert.False(new PlanRow("not active", "state", "id", "—").Admits(stale));               // the reason cell changed
     }
 
+    /// <summary>The RefusalCode names without a WireError of the same name, and the WireError names without a RefusalCode.</summary>
+    internal static IReadOnlyList<string> Unpaired(IEnumerable<string> refusals, IEnumerable<string> wires)
+    {
+        var r = refusals.ToHashSet(StringComparer.Ordinal);
+        var w = wires.ToHashSet(StringComparer.Ordinal);
+        return r.Except(w).Select(x => $"RefusalCode.{x} has no WireError").Concat(w.Except(r).Select(x => $"WireError.{x} has no RefusalCode")).ToList();
+    }
+
     [Fact]
-    public void Reasons_all_lists_every_reason_constant()
+    public void OutcomeCode_passes_codes_map_one_to_one()
+    {
+        Assert.Empty(Unpaired(Enum.GetNames<RefusalCode>(), Enum.GetNames<WireError>()));
+        foreach (var code in Enum.GetValues<RefusalCode>()) Assert.Equal(code.ToString(), Wire.Code(code).ToString());
+    }
+
+    [Fact]
+    public void OutcomeCode_fails_when_a_code_has_no_twin()
+    {
+        Assert.Equal(["RefusalCode.Limit has no WireError"], Unpaired(Enum.GetNames<RefusalCode>(), Enum.GetNames<WireError>().Where(n => n != "Limit")));
+        Assert.Equal(["WireError.Extra has no RefusalCode"], Unpaired(Enum.GetNames<RefusalCode>(), Enum.GetNames<WireError>().Append("Extra")));
+    }
+
+    [Fact]
+    public void OutcomeCode_passes_reasons_closed_list()
     {
         var constants = typeof(Reasons).GetFields(BindingFlags.Public | BindingFlags.Static)
             .Where(f => f.IsLiteral).Select(f => (string)f.GetRawConstantValue()!).OrderBy(x => x, StringComparer.Ordinal);
@@ -355,7 +377,7 @@ public class OutcomeCodeTests
     }
 
     [Fact]
-    public void The_factories_are_the_only_constructors()
+    public void OutcomeCode_fails_when_built_outside_factories()
     {
         Assert.Empty(typeof(Outcome).GetConstructors(BindingFlags.Public | BindingFlags.Instance));
         Assert.Throws<ArgumentException>(() => Outcome.Done(""));

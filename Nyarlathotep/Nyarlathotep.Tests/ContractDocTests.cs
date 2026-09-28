@@ -5,7 +5,7 @@ namespace Nyarlathotep.Tests;
 
 /// <summary>raphael-api-core D14: docs/RAPHAEL_INTEGRATION_CONTRACT.md (and the design doc's command table) describe
 /// api 2 as built. Both files are copied to the test output, so a doc edit that breaks the contract fails here.</summary>
-public class ContractDocTests
+public partial class ContractDocTests
 {
     static string Read(string name) => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Resources", name));
     static string Contract => Read("RAPHAEL_INTEGRATION_CONTRACT.md");
@@ -31,7 +31,7 @@ public class ContractDocTests
         var m = Regex.Match(Contract, @"\*\*Current api:\*\* (\d+)");
         Assert.True(m.Success);
         Assert.Equal(Wire.Api, int.Parse(m.Groups[1].Value));
-        Assert.Equal(3, Wire.Api);   // faction-empowerment D11
+        Assert.Equal(4, Wire.Api);   // faction-empowerment D11, raphael-api-admin D10
     }
 
     [Theory]
@@ -98,7 +98,7 @@ public class ContractDocTests
         var flat = Regex.Replace(Contract, @"\s+", " ");
         Assert.Contains("a push never tells a subscriber more than chat or `.nyar status` tells every player", flat);
         Assert.Contains("`wave-warn` is pushed only when the chat warning would fire", flat);
-        Assert.Contains("| `notready` | Reserved, never sent (api 2 and 3)", flat);
+        Assert.Contains("| `notready` | Reserved, never sent (api 2 to 4)", flat);
     }
 
     /// <summary>The command forms of the design doc's § 6 table: each backticked form in a row's first cell, its words up

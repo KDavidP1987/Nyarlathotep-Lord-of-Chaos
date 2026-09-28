@@ -93,6 +93,57 @@ public static class ApiLines
         : d.Trigger.Type != TriggerType.Manual ? "scheduled"
         : "idle";
 
+    // ---- the admin reads (raphael-api-admin D7): adminOnly, never rate-gated, changing nothing
+
+    /// <summary>One `[NYAR:tpl]` row: the template's id, pillar name, trigger, duration and name as its summary.</summary>
+    public static string Tpl(TemplateEntry t) =>
+        Wire.Tpl(t.Id, PillarNames.Name(t.Definition.Pillar), Trigger(t.Definition.Trigger.Type), t.Definition.DurationSeconds, t.Definition.Name);
+
+    /// <summary>`api templates [pillar] [page]`: the rows of one page, filtered by pillar name when given, then
+    /// `[NYAR:end] cmd=templates page= count=`. One word is a page when it is digits, else a pillar; two words are a
+    /// pillar then a page. An unknown pillar is notfound, an unavailable catalogue io read (A11), a bad page badarg.</summary>
+    public static IReadOnlyList<string> Templates(TemplateCatalog catalog, string first, string second)
+    {
+        const string cmd = "templates";
+        if (catalog.Error is not null) return [Wire.Error(cmd, WireError.Io, reason: Reasons.Read)];
+        string? pillarWord = null, pageWord = null;
+        if (second.Length > 0) { pillarWord = first; pageWord = second; }
+        else if (first.Length > 0) { if (first.All(c => c is >= '0' and <= '9')) pageWord = first; else pillarWord = first; }
+        Pillar? pillar = null;
+        if (pillarWord is not null)
+        {
+            if (!PillarNames.TryParse(pillarWord, out var p)) return [Wire.Error(cmd, WireError.NotFound, arg: "pillar")];
+            pillar = p;
+        }
+        var rows = catalog.Templates.Where(t => pillar is null || t.Definition.Pillar == pillar).Select(Tpl).ToList();
+        return Paging.Reply(cmd, rows, pageWord);
+    }
+
+    /// <summary>`api template info &lt;template&gt;`: its row, then `[NYAR:end] cmd=template count=1`.</summary>
+    public static IReadOnlyList<string> TemplateInfo(TemplateCatalog catalog, string id)
+    {
+        const string cmd = "template";
+        if (catalog.Error is not null) return [Wire.Error(cmd, WireError.Io, reason: Reasons.Read)];
+        if (id.Length == 0) return [Wire.Error(cmd, WireError.BadArg, arg: "template")];
+        return catalog.Find(id) is { } t ? [Tpl(t), Wire.End(cmd, 1)] : [Wire.Error(cmd, WireError.NotFound, arg: "template")];
+    }
+
+    /// <summary>`api pillar list`: one `[NYAR:pillar]` row per pillar in PillarNames order, then the end line.</summary>
+    public static IReadOnlyList<string> Pillars(Func<Pillar, bool> on)
+    {
+        var rows = PillarNames.All.Select(p => Wire.Pillar(p.Name, on(p.Pillar))).ToList();
+        rows.Add(Wire.End("pillar", rows.Count));
+        return rows;
+    }
+
+    /// <summary>`api killswitch`: on=1 and the seconds left while the purge cooldown runs, the active events and the
+    /// tracked units, then the end line.</summary>
+    public static IReadOnlyList<string> KillSwitch(DateTime? purgeUntilUtc, int events, int units, DateTime utcNow)
+    {
+        var secs = purgeUntilUtc is { } until ? SecondsLeft(until, utcNow) : 0;
+        return [Wire.Ks(secs > 0, secs, events, units), Wire.End("killswitch", 1)];
+    }
+
     /// <summary>Whole seconds until <paramref name="atUtc"/>, rounded up, never below 0.</summary>
     public static int SecondsLeft(DateTime atUtc, DateTime utcNow) => Math.Max(0, (int)Math.Ceiling((atUtc - utcNow).TotalSeconds));
 }

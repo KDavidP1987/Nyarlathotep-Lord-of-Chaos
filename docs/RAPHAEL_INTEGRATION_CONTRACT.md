@@ -10,7 +10,7 @@
 > **IMPLEMENTED (api N)**. Build against IMPLEMENTED only. A PLANNED shape can still change before it ships;
 > once it is IMPLEMENTED it only grows (§7).
 >
-> **Current api:** 3
+> **Current api:** 4
 >
 > api 1 shipped with the `foundation` release (0.2.0): the handshake. api 2 ships with the `raphael-api-core`
 > release (0.3.0): `status`, `events` and the push subscription. `me`, `top` and `zones` stay PLANNED until the
@@ -18,8 +18,9 @@
 > api 3 ships with the `faction-empowerment` release (0.4.0): `status` rows of `kind=empower` (§3). It adds no tag or
 > key; the change log (§9) lists every api.
 >
-> api 4 and later are PLANNED in §10: admin actions over the wire (raphael-api-admin, 0.5.2), then the rows each
-> later child adds. Nothing in §10 is sent yet.
+> api 4 ships with the `raphael-api-admin` release (0.5.2): a wire twin for every admin action (§5a), the
+> `templates`, `template info`, `pillar list` and `killswitch` reads (§3) and seven error codes (§4). api 5 and later
+> are PLANNED in §10, the rows each later child adds. Nothing in §10 is sent yet.
 
 ### Tags and commands
 
@@ -38,9 +39,9 @@ is listed here as IMPLEMENTED with the api that added it.
 | `me` | tag | PLANNED (stats) | — |
 | `top` | tag | PLANNED (stats) | — |
 | `zone` | tag | PLANNED (defended-zones) | — |
-| `tpl` | tag | PLANNED (raphael-api-admin) | — |
-| `pillar` | tag | PLANNED (raphael-api-admin) | — |
-| `ks` | tag | PLANNED (raphael-api-admin) | — |
+| `tpl` | tag | IMPLEMENTED | 4 |
+| `pillar` | tag | IMPLEMENTED | 4 |
+| `ks` | tag | IMPLEMENTED | 4 |
 | `region` | tag | PLANNED (regions) | — |
 | `version` | command | IMPLEMENTED | 1 |
 | `status` | command | IMPLEMENTED | 2 |
@@ -49,12 +50,12 @@ is listed here as IMPLEMENTED with the api that added it.
 | `me` | command | PLANNED (stats) | — |
 | `top` | command | PLANNED (stats) | — |
 | `zones` | command | PLANNED (defended-zones) | — |
-| `event` | command | PLANNED (raphael-api-admin) | — |
-| `template` | command | PLANNED (raphael-api-admin) | — |
-| `templates` | command | PLANNED (raphael-api-admin) | — |
-| `pillar` | command | PLANNED (raphael-api-admin) | — |
-| `purge` | command | PLANNED (raphael-api-admin) | — |
-| `killswitch` | command | PLANNED (raphael-api-admin) | — |
+| `event` | command | IMPLEMENTED | 4 |
+| `template` | command | IMPLEMENTED | 4 |
+| `templates` | command | IMPLEMENTED | 4 |
+| `pillar` | command | IMPLEMENTED | 4 |
+| `purge` | command | IMPLEMENTED | 4 |
+| `killswitch` | command | IMPLEMENTED | 4 |
 | `regions` | command | PLANNED (regions) | — |
 
 `zone` and `zones` keep their defended-zones label: the anti-farming child absorbs defended-zones (Epic, 2026-09-28)
@@ -114,8 +115,8 @@ only after an answer with `ready=1`. Before the server world has loaded, the com
 | `stats` | `1` when stats are collected, which enables `me`/`top`. |
 | `annwarn annbanner anndaily annlogin annshare` | The five announcement switches: wave warnings, event banners, daily banner, login stats and player share. `annshare=1` means the Share button works. |
 
-The switches live in `BepInEx/config/kdpen.Nyarlathotep.cfg`. They are shown read-only; v1 has no chat
-command that changes them.
+The switches live in `BepInEx/config/kdpen.Nyarlathotep.cfg`. The five pillar switches change with `.nyar pillar`
+and its api 4 twin (§5a); the others only by editing the cfg.
 
 ---
 
@@ -185,6 +186,39 @@ All live under `.nyar api …`. Paged commands take an optional 1-based `[page]`
 ```
 - `state` ∈ `idle | alert | cooldown`. Coordinates are sent to admins only.
 
+### `templates` and `template info` — the template catalogue (admin) — IMPLEMENTED (api 4)
+`.nyar api templates [pillar] [page]` sends up to 10 rows, then `[NYAR:end] cmd=templates page= count=`; one word is
+a page when it is all digits, else a pillar name. `.nyar api template info <template>` sends the one row, then
+`[NYAR:end] cmd=template count=1`:
+```
+[NYAR:tpl] id=undead-nightfall pillar=spawns trigger=ingame duration=1800 summary=Undead_rise_at_night
+```
+- `pillar` ∈ `empowerment | spawns | boss | zones | sieges`; `trigger` takes the values of `events`' `trigger`.
+- `summary` is the template's name, cut to 120 UTF-8 bytes on a character boundary.
+- An unknown pillar answers `[NYAR:err] cmd=templates code=notfound arg=pillar`, an unknown template
+  `[NYAR:err] cmd=template code=notfound arg=template`, and a bad page `code=badarg arg=page`.
+- While the template catalogue is unavailable (it failed to load at boot), both answer `code=io reason=read`.
+```
+[NYAR:err] cmd=templates code=io reason=read
+```
+
+### `pillar list` — the pillar switches (admin) — IMPLEMENTED (api 4)
+`.nyar api pillar list` sends five rows, in this order, then `[NYAR:end] cmd=pillar count=5`:
+```
+[NYAR:pillar] id=empowerment on=1
+```
+- `id` ∈ `empowerment | spawns | boss | zones | sieges`; `on` is the switch as the cfg holds it.
+
+### `killswitch` — the purge cooldown (admin) — IMPLEMENTED (api 4)
+`.nyar api killswitch` sends one row, then `[NYAR:end] cmd=killswitch count=1`:
+```
+[NYAR:ks] on=1 secs=240 events=0 units=12
+```
+- `on=1` while the purge cooldown runs, and `secs` is its time left, rounded up; otherwise `on=0 secs=0`.
+- `events` is the active events and `units` the tracked units.
+
+These four reads change nothing and are not rate-limited (§5a's rate counts twins only).
+
 ### Push events — `.nyar api sub on|off` (anyone) — IMPLEMENTED (api 2)
 After `sub on`, the server pushes lines to that player until `sub off`, a disconnect or a server restart. Subscriptions live only in memory: a reconnect starts unsubscribed, so Raphael sends `sub on` again after every successful handshake. Lines go only to connected subscribers:
 ```
@@ -194,7 +228,8 @@ After `sub on`, the server pushes lines to that player until `sub off`, a discon
 - `id` names the event; it is `-` for `killswitch` and `config-changed`.
 - `secs` is the event's length for `event-start`, the time until the wave for `wave-warn`, the purge cooldown for
   `killswitch`, and 0 for `event-end`, `wave` and `config-changed`. `wave=<n>` follows it on `wave` and `wave-warn`.
-- `config-changed` asks Raphael to re-read `version` and `events`; it has no other payload.
+- `config-changed` asks Raphael to re-read `version` and `events`; it has no other payload. It follows every applied
+  events.json write and, from api 4, every pillar switch that changed the cfg, from a human command or a twin alike.
 - Siege events go only to subscribers who are members of the target clan, and to admins.
 - The subscribe command answers `[NYAR:ok] cmd=sub on=1` (`on=0` for `sub off`); any other argument answers
   `[NYAR:err] cmd=sub code=badarg arg=state`. At most 128 players are subscribed at once; a new `sub on` past that
@@ -217,17 +252,25 @@ After `sub on`, the server pushes lines to that player until `sub off`, a discon
 - **Unpaged reads** (`status`, `me`) end with `[NYAR:end] cmd=<cmd> count=<rows sent>` and take no page.
   - Raphael asks for `cur+1` until `cur == total`.
 - **Acknowledgement:** `[NYAR:ok] cmd=<cmd> …` for `api` commands that change nothing but a subscription.
-- **Errors:** `[NYAR:err] cmd=<cmd> code=<code> [secs=<n>] [arg=<name>]`. The codes:
+- **Errors:** `[NYAR:err] cmd=<cmd> code=<code> [secs=<n>] [arg=<name>] [reason=<word>]`; a twin's error carries
+  `verb=<verb>` after `cmd` (§5a). `reason` (api 4) is one wire-safe word from §5a's list. The codes:
 
 | Code | Meaning |
 |---|---|
-| `notready` | Reserved, never sent (api 2 and 3): before the world is ready every command replies the plain line `still loading`, and no player can connect before then. |
+| `notready` | Reserved, never sent (api 2 to 4): before the world is ready every command replies the plain line `still loading`, and no player can connect before then. |
 | `noaccess` | Reserved. Admin-only commands are refused by VCF before the mod runs, with VCF's own human-readable line, so Raphael shows admin panels only when `version` says `admin=1`. |
 | `disabled` | The pillar, the stats or the mod is switched off. |
 | `notfound` | Unknown event id, zone or stat. |
 | `badarg` | Bad argument; `arg` names it. |
-| `ratelimit` | A share limit was hit; `secs` is the time until the next share is allowed. |
+| `ratelimit` | A share limit was hit, or an admin sent more than 5 twins in a second (§5a); `secs` is the time until the next is allowed. |
 | `cooldown` | The kill-switch cooldown is active; `secs` is the time left. |
+| `exists` | (api 4) `new`, `copy` or `template use` named an id that is taken; `arg` is `id` or `newId`. |
+| `state` | (api 4) The event or the kill switch is in the wrong state: `start` on an active event (`reason=already_active`), `stop` on one that is not active (`not_active`), `delete` of a running event (`running`), a start on a disabled event (`disabled`), a clashing empowerment (`empower_clash`), or a purge with nothing to purge (`nothing_to_purge`). |
+| `invalid` | (api 4) The change would fail validation, or the template is invalid; `arg` names the field or `template` and `reason` the validator's word. |
+| `full` | (api 4) The definitions file holds its 200 definitions (`reason=count`) or would pass 1 MB (`reason=size`). |
+| `io` | (api 4) The definitions file, the cfg or the template catalogue could not be read, parsed or saved, or the twin failed on the server; `reason` ∈ `read`, `parse`, `save`, `stale`, `read_only`, `write_uncertain`, `internal`. A refusal changes nothing on the server except what a file now holds after a failed save and the events a pillar `off` ends (§5a). `internal` may leave the action partly or fully applied; re-read state (§5a). |
+| `confirm` | (api 4) A confirm arrived with no ask from the same admin in the last 30 s. |
+| `limit` | (api 4) A manual start was skipped because `MaxConcurrentEvents` events are running (`reason=max_concurrent`). |
 
 Examples — the end of page 1 of 3 of a 24-row read, the end of an unpaged read, a bad page, an error with a wait
 (`secs` comes before `arg` when both are sent) and a subscription:
@@ -243,9 +286,11 @@ Examples — the end of page 1 of 3 of a 24-row read, the end of an unpaged read
 
 ## 5. Admin actions and player actions (human commands, not wire)
 
-Raphael changes things by sending the **human** commands and then re-reading state (`api events`,
-`api status`, or waiting for `[NYAR:ev] type=config-changed`). It does not parse the human replies. This keeps a
-single command surface, which `docs/NYARLATHOTEP_DESIGN.md` §6 lists in full. The ones a panel needs:
+When the handshake reports `api>=4`, Raphael sends the admin actions as their §5a wire twins and reads the one
+`[NYAR:ok]` or `[NYAR:err]` line each answers. Against an api 1–3 server, and for the actions that have no twin yet,
+Raphael sends the **human** commands below and then re-reads state (`api events`, `api status`, or waiting for
+`[NYAR:ev] type=config-changed`); it does not parse the human replies. Both paths run the same flow, which
+`docs/NYARLATHOTEP_DESIGN.md` §6 lists in full. The human commands a panel needs:
 
 | Panel action | Command | Who |
 |---|---|---|
@@ -266,8 +311,84 @@ single command surface, which `docs/NYARLATHOTEP_DESIGN.md` §6 lists in full. T
 | Share my board line | `.nyar top <stat> <window> share` | anyone, when `annshare=1` |
 
 Every admin action is logged on the server with the admin's name. A non-admin gets VCF's standard refusal.
-Raphael should grey these controls out rather than hide them. api 4 (§10.1) gives each admin action a wire twin that
+Raphael should grey these controls out rather than hide them. api 4 (§5a) gives each admin action a wire twin that
 answers `[NYAR:ok]` or `[NYAR:err]`; until the handshake reports `api>=4`, Raphael keeps sending the human commands.
+
+---
+
+## 5a. Admin action twins — IMPLEMENTED (api 4)
+
+Each twin is `.nyar api` followed by the human command of §5, with the same arguments. It runs the same flow as the
+human command: the same validation, the same gateway row, the same admin log line (prefixed `api `), the same file
+writes and the same pushes (`config-changed`, `event-start`, `event-end`, `killswitch`). It answers exactly one line:
+- on success, `[NYAR:ok] cmd=<cmd> verb=<verb> id=<id> …`;
+- on refusal, `[NYAR:err] cmd=<cmd> verb=<verb> code=<code> [secs=<n>] [arg=<name>] [reason=<word>]`.
+
+`id` names the object: the event, the pillar, or `-` for purge and reload. The twins are admin-only; as in §4, VCF
+refuses a non-admin with its own human line, and before the world is ready a twin replies `still loading`.
+
+| Twin | Success line |
+|---|---|
+| `.nyar api event start <id>` / `… stop <id>` | `[NYAR:ok] cmd=event verb=start id=<id>` (`verb=stop`) |
+| `.nyar api event enable <id>` / `… disable <id>` | `[NYAR:ok] cmd=event verb=enable id=<id> changed=<0\|1>` |
+| `.nyar api event set <id> <field> <value>` | `[NYAR:ok] cmd=event verb=set id=<id> field=<field> value=<stored value>` |
+| `.nyar api event set <id> location here` | `… field=location value=<x>,<z>`, from the admin's position, each rounded to 0.1 and written with one decimal (`value=-912.9,-828.8`) |
+| `.nyar api event reload` | `[NYAR:ok] cmd=event verb=reload id=- count=<definitions loaded>` |
+| `.nyar api event new <id> <pillar>` | `[NYAR:ok] cmd=event verb=new id=<id> pillar=<pillar>`; the event is created disabled |
+| `.nyar api event copy <id> <newId>` | `[NYAR:ok] cmd=event verb=copy id=<newId> from=<id>`; the copy is disabled |
+| `.nyar api event delete <id>`, then `… delete <id> confirm` | `… verb=delete id=<id> confirm=30`, then `… verb=delete id=<id> done=1` |
+| `.nyar api template use <template> [as <id>]` | `[NYAR:ok] cmd=template verb=use id=<id> tpl=<template>` |
+| `.nyar api pillar <name> on\|off` | `[NYAR:ok] cmd=pillar verb=set id=<name> on=<0\|1> changed=<0\|1>`, plus `ended=<n>` when `off` ended running events; saved to the cfg |
+| `.nyar api purge`, then `.nyar api purge confirm` | `[NYAR:ok] cmd=purge verb=ask id=- confirm=30`, then `[NYAR:ok] cmd=purge verb=confirm id=- events=<ended> units=<to despawn> secs=<cooldown>` |
+
+Rules:
+- **Idempotency:**
+  - `enable` and `disable` on the state the event already holds answer `ok` with `changed=0` and write nothing.
+  - `pillar` on the state it already holds answers `ok` with `changed=0` and writes nothing; `off` still ends that
+    pillar's running events (an operator may have switched it off in the cfg), with `ended=<n>` and their `event-end`
+    pushes.
+  - `start` on an active event and `stop` on one that is not active answer `code=state`: the engine's one-instance rule.
+  - `set` to the value a field already holds writes the file and answers `ok`, as the human command does.
+- **Two-step confirm:** the confirm must come from the same admin within 30 s of the ask, otherwise it answers
+  `code=confirm`. `confirm=<secs>` on the ask is that window. A human ask and a twin confirm pair, since they share one
+  arming. A purge confirm with nothing left to purge answers `code=state reason=nothing_to_purge`, armed or not.
+  Raphael shows its confirmation dialog between the two presses.
+- **After an `ok`:** Raphael may update its state on the `ok` line and treat the push that follows as confirmation.
+- **A refusal** changes nothing on the server except what a file now holds after a failed save (the server then
+  follows the file) and the events a pillar `off` ends. A twin that answers `code=io reason=internal` is the
+  exception: its server operation threw, possibly after it changed state, so the action may be partly or fully
+  applied; Raphael re-reads state (`api status`, `api events`, `api pillar list`, `api killswitch`) before acting on
+  it.
+- **Arguments:** an unknown verb (`list` and `info` of `event` included) answers `code=badarg arg=verb`; a missing or
+  malformed argument answers `code=badarg` with `arg` ∈ `id`, `field`, `value`, `pillar`, `state`, `newId`, `template`,
+  `confirm`, `location`; one surplus word answers `code=badarg arg=extra`. Two or more surplus words are refused by
+  VCF with its own human line before the mod runs, so Raphael never sends them.
+- **Rate:** at most 5 twins per admin per second, sliding. The sixth answers `code=ratelimit secs=1` before anything
+  else runs; every twin counts, whatever it answers. The reads of §3 are not counted.
+- **Failure:** a twin that fails on the server answers `code=io reason=internal`; the server log names the exception.
+  The failure may come after the action changed state, and nothing is rolled back (see **A refusal** above).
+  No push is promised after `internal`; re-read, then re-send only if the state shows the action did not apply (a repeated start answers `code=state`, a repeated purge confirm `code=confirm` or `state reason=nothing_to_purge`).
+- **Reasons** (the `reason` word): `general`, `pillar_off`, `max_concurrent`, `disabled`, `already_active`,
+  `empower_clash`, `admin_location`, `no_position`, `condition`, `not_active`, `field`, `value`, `trigger`, `stats`,
+  `read`, `parse`, `stale`, `read_only`, `size`, `write_uncertain`, `count`, `running`, `save`, `nothing_to_purge`,
+  `internal`, `template`.
+- **Line length:** every line fits 480 bytes. `value`, `verb` and `reason` are cut to 120 bytes on a character
+  boundary; an empty echoed word is `-`.
+
+```
+[NYAR:ok] cmd=event verb=set id=undead-nightfall field=duration value=1800
+[NYAR:ok] cmd=event verb=enable id=undead-nightfall changed=1
+[NYAR:ok] cmd=event verb=copy id=raid-2 from=raid
+[NYAR:ok] cmd=template verb=use id=undead-nightfall tpl=undead-nightfall
+[NYAR:ok] cmd=pillar verb=set id=spawns on=0 changed=1 ended=2
+[NYAR:ok] cmd=purge verb=ask id=- confirm=30
+[NYAR:ok] cmd=purge verb=confirm id=- events=1 units=12 secs=300
+[NYAR:err] cmd=event verb=start code=state arg=id reason=already_active
+[NYAR:err] cmd=event verb=start code=cooldown secs=240
+[NYAR:err] cmd=event verb=set code=io reason=stale
+[NYAR:err] cmd=template verb=use code=exists arg=id
+[NYAR:err] cmd=event verb=launch code=ratelimit secs=1
+```
 
 ---
 
@@ -292,7 +413,8 @@ The panels:
 - **Admin › Zones:** the `api zones` list and map pins, add-here and remove.
 - **Admin › Announcements:** free-text and digest broadcast, and the five switches read-only.
 - **Admin › Kill switch:** purge with confirmation, and the `killswitch` countdown.
-- **From api 4 (§10):** Admin › Templates, Admin › Pillars, a region picker, and a live horde and anti-farming readout.
+- **From api 4 (§3, §5a):** Admin › Templates and Admin › Pillars; later (§10) a region picker and a live horde and
+  anti-farming readout.
 
 Gate the panels on the handshake:
 - A pillar tab shows only when its switch is 1.
@@ -325,22 +447,22 @@ Gate the panels on the handshake:
 | 1 | 0.2.0 (foundation) | The handshake: `.nyar api version`, tag `version`. |
 | 2 | 0.3.0 (raphael-api-core) | `status`, `events` and `sub`; tags `event`, `def`, `end`, `err`, `ok`, `ev`; paging and errors (§4). |
 | 3 | 0.4.0 (faction-empowerment) | `status` rows of `kind=empower`: `faction=<names joined by ','>`, `wave=-`, admin `units` = NPCs holding the event's empowerment. No new tag or key. |
-| 4 (planned) | 0.5.2 (raphael-api-admin) | 2026-09-28 api 4 planned: admin action twins, `templates`, `pillar`, `killswitch`, error codes `exists`, `state`, `invalid`, `full`, `io`, `confirm` (§10). Later children add rows with their own api number. |
+| 4 | 0.5.2 (raphael-api-admin) | Admin action twins `event`, `template`, `pillar`, `purge` (§5a); reads `templates`, `template info`, `pillar list`, `killswitch`; tags `tpl`, `pillar`, `ks`; `verb=` on twin `ok` and `err` lines; `reason=` on `err` lines; error codes `exists`, `state`, `invalid`, `full`, `io`, `confirm`, `limit` (§4); `config-changed` after a pillar switch. |
 
 ---
 
-## 10. api 4 and later — PLANNED
+## 10. api 5 and later — PLANNED
 
 Nothing in this section is sent yet. Every shape is PLANNED under the child named with it, and can change until that
 child ships. The Tags and commands table carries one row per new tag and command. A child that grows the wire bumps
 `api` by one when it ships, so the number is assigned then. This section names the child and its release, in the
-Epic's order, not the api. The first bump is api 4, with raphael-api-admin (0.5.2).
+Epic's order, not the api. §10.1 and §10.3 moved into §5a and §4 when api 4 shipped (raphael-api-admin, 0.5.2); the
+numbers of §10.2 and §10.4 are kept so references to them stay valid.
 
 | Child | Release | Adds |
 |---|---|---|
-| raphael-api-admin | 0.5.2 | admin action twins (§10.1); the `templates`, `template info`, `pillar list` and `killswitch` reads (§10.2); six error codes (§10.3) |
 | regions | 0.6.0 | the `regions` read; `region=` on `[NYAR:def]` and `[NYAR:event]` rows and on `event-start` and `event-end` pushes (§10.4) |
-| event-spawns | 0.7.0 | new settable fields (hunt, modifiers, AroundPlayer, loot), set through the `event set` twin; no new tag |
+| event-spawns | 0.7.0 | new settable fields (hunt, modifiers, AroundPlayer, loot), set through the `event set` twin (§5a); no new tag |
 | boss-reinforcements | 0.8.0 | the push `boss-adds` |
 | anti-farming | 0.9.0 | the push `farm-tier`; `zones` and `zone`, relabelled from defended-zones, which it absorbs |
 | outbreak | 0.10.0 | the pushes `horde-wave`, `horde-boss-down` and `horde-spread` |
@@ -348,97 +470,20 @@ Epic's order, not the api. The first bump is api 4, with raphael-api-admin (0.5.
 The sieges and castle-takeover child adds its rows when it is planned. Siege pushes keep §3's rule: they go only to
 members of the target clan and to admins.
 
-### 10.1 Admin action twins — PLANNED (raphael-api-admin)
-
-Each twin is `.nyar api` followed by the human command of §5, with the same arguments. It runs through the same
-gateway as the human command: the same validation, the same admin log line, and the same pushes (`config-changed`,
-`event-start`, `event-end`, `killswitch`). It answers exactly one line:
-- on success, `[NYAR:ok] cmd=<cmd> verb=<verb> id=<id> …`;
-- on refusal, `[NYAR:err] cmd=<cmd> verb=<verb> code=<code> [secs=<n>] [arg=<name>] [reason=<text>]`.
-
-`id` names the object: the event, the pillar, or `-` for purge. The twins are admin-only. As in §4, VCF refuses a
-non-admin with its own human line.
-
-| Twin | Success line |
-|---|---|
-| `.nyar api event start <id>` / `… stop <id>` | `[NYAR:ok] cmd=event verb=start id=<id>` (`verb=stop`) |
-| `.nyar api event enable <id>` / `… disable <id>` | `[NYAR:ok] cmd=event verb=enable id=<id> changed=<0\|1>` |
-| `.nyar api event set <id> <field> <value>` | `[NYAR:ok] cmd=event verb=set id=<id> field=<field> value=<stored value>` |
-| `.nyar api event set <id> location here` | `… field=location value=<x>,<z>`, from the admin's position |
-| `.nyar api event reload` | `[NYAR:ok] cmd=event verb=reload id=- count=<definitions loaded>` |
-| `.nyar api event new <id> <pillar>` | `[NYAR:ok] cmd=event verb=new id=<id> pillar=<pillar>`; the event is created disabled |
-| `.nyar api event copy <id> <newId>` | `[NYAR:ok] cmd=event verb=copy id=<newId> from=<id>`; the copy is disabled |
-| `.nyar api event delete <id>`, then `… delete <id> confirm` | `… verb=delete id=<id> confirm=30`, then `… verb=delete id=<id> done=1` |
-| `.nyar api template use <template> [as <id>]` | `[NYAR:ok] cmd=template verb=use id=<id> tpl=<template>` |
-| `.nyar api pillar <name> on\|off` | `[NYAR:ok] cmd=pillar verb=set id=<name> on=<0\|1> changed=<0\|1>`; saved to the cfg |
-| `.nyar api purge`, then `.nyar api purge confirm` | `[NYAR:ok] cmd=purge verb=ask id=- confirm=30`, then `[NYAR:ok] cmd=purge verb=confirm id=- events=<ended> units=<to despawn> secs=<cooldown>` |
-
-Rules:
-- **Idempotency:**
-  - `enable`, `disable` and `pillar` repeated on the state they already hold answer `ok` with `changed=0`.
-  - `start` on an active event and `stop` on one that is not active answer `code=state`. This is the engine's
-    one-instance rule.
-- **Two-step confirm:** the confirm must come from the same admin within 30 s of the ask; otherwise it answers
-  `code=confirm`. `confirm=<secs>` on the ask is that window. Raphael shows its confirmation dialog between the two
-  presses.
-- **After an `ok`:** Raphael may update its state on the `ok` line and treat the push that follows as confirmation.
-  A refusal changes nothing on the server.
-- **Rate:** at most 5 twins per admin per second. Past that the twin answers `code=ratelimit secs=1`. This number is
-  planned; the child's plan settles it.
-- **Line length:** every line fits 480 bytes. `value` and `reason` are cut to 120 bytes on a character boundary.
-
-```
-[NYAR:ok] cmd=event verb=set id=undead-nightfall field=duration value=1800
-[NYAR:ok] cmd=event verb=enable id=undead-nightfall changed=1
-[NYAR:ok] cmd=purge verb=ask id=- confirm=30
-[NYAR:err] cmd=event verb=start code=state arg=id reason=already_active
-[NYAR:err] cmd=event verb=start code=cooldown secs=240
-[NYAR:err] cmd=template verb=use code=exists arg=id
-```
-
 ### 10.2 New reads — PLANNED
 
 | Read | Child | Rows | Who |
 |---|---|---|---|
-| `.nyar api templates [pillar] [page]` | raphael-api-admin | `[NYAR:tpl] id=<template> pillar=<pillar> trigger=<kind> duration=<secs> summary=<text>`, then `[NYAR:end] cmd=templates page= count=` | admin |
-| `.nyar api template info <template>` | raphael-api-admin | the same single row, then `[NYAR:end] cmd=template count=1`; an unknown template answers `code=notfound arg=template` | admin |
-| `.nyar api pillar list` | raphael-api-admin | `[NYAR:pillar] id=<name> on=<0\|1>` for `empowerment`, `spawns`, `boss`, `zones` and `sieges`, then `[NYAR:end] cmd=pillar count=5` | admin |
-| `.nyar api killswitch` | raphael-api-admin | `[NYAR:ks] on=<0\|1> secs=<cooldown left> events=<active events> units=<tracked units>`, then `[NYAR:end] cmd=killswitch count=1` | admin |
 | `.nyar api regions [page]` | regions | `[NYAR:region] id=<region> events=<active events scoped to it>`, then `[NYAR:end] cmd=regions page= count=` | anyone |
 | `.nyar api zones [page]` | anti-farming | §3's shape; the row is relabelled when anti-farming is planned | admin |
 
-- `summary` is cut to 120 bytes.
 - The region ids are the game's region names, as `.nyar region list` prints them (the regions child).
 - A `[NYAR:def]` row gains `region=<id,…>`, or `-` for a global event, from the regions release. A new key is
-  additive (§7), so an api 3 parser skips it.
+  additive (§7), so an older parser skips it.
 
 ```
-[NYAR:tpl] id=undead-nightfall pillar=spawns trigger=gametime duration=1800 summary=Undead_rise_at_night
-[NYAR:pillar] id=empowerment on=1
-[NYAR:ks] on=1 secs=240 events=0 units=12
 [NYAR:region] id=CursedForest events=1
 ```
-
-### 10.3 Error codes — PLANNED (raphael-api-admin)
-
-The twins reuse §4's codes and add six. When the twins ship, the new codes move into §4's table and the `WireError`
-enum together.
-
-| Code | Meaning |
-|---|---|
-| `exists` | `new`, `copy` or `template use` named an id that is taken. |
-| `state` | The event is in the wrong state: `start` on an active event, `stop` on one that is not active, or `delete` of a running event. |
-| `invalid` | The change would fail validation. `arg` names the field and `reason` gives the validator's wire-safe message. |
-| `full` | The definitions file already holds its 200 definitions. |
-| `io` | The definitions file or the cfg could not be saved. Nothing changed. |
-| `confirm` | A confirm arrived with no ask from the same admin in the last 30 s. |
-
-The §4 codes the twins also send:
-- `disabled`, where the human command refuses because the mod or the pillar is off;
-- `notfound`, for an unknown event, template, pillar or region, with `arg` naming which;
-- `badarg`, for a missing or malformed argument;
-- `ratelimit`, past the rate;
-- `cooldown`, for a manual start during the purge cooldown, with `secs` the time left.
 
 ### 10.4 Push events — PLANNED
 

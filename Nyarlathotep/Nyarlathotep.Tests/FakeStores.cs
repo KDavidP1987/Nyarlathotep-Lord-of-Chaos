@@ -268,12 +268,31 @@ sealed class FakeAdminOps : IAdminOps
     public int CooldownSeconds { get; set; } = 300;
     public List<string> Calls { get; } = [];
 
+    /// <summary>A call whose record starts with this text throws (raphael-api-admin D12's failing op); null throws nothing.</summary>
+    public string? ThrowOn { get; set; }
+
+    /// <summary>A call whose record starts with this text throws after it changed state (raphael-api-admin A16: an
+    /// announcement or carrier step failing after the event started); null throws nothing.</summary>
+    public string? ThrowAfterOn { get; set; }
+
+    void Call(string call)
+    {
+        Calls.Add(call);
+        if (ThrowOn is { } prefix && call.StartsWith(prefix, StringComparison.Ordinal)) throw new InvalidOperationException($"fake {call} failed");
+    }
+
+    T After<T>(string call, T result) =>
+        ThrowAfterOn is { } prefix && call.StartsWith(prefix, StringComparison.Ordinal)
+            ? throw new InvalidOperationException($"fake {call} failed after it ran")
+            : result;
+
     public FakeAdminOps(Library lib)
     {
         Lib = lib;
-        Engine = new EventEngine(lib.Catalog);
+        Engine = new EventEngine(lib.Catalog) { Push = lib.Catalog.Push };      // start, stop and purge push as EventRuntime's engine does
         PillarCommand = new PillarCommand(Pillars, p => Engine.Active.Where(a => a.Definition.Pillar == p).Select(a => a.Id)
-            .OrderBy(x => x, StringComparer.Ordinal).ToList().Where(id => Engine.Cancel(id) is not null).ToList(), lib.Log.Add);
+            .OrderBy(x => x, StringComparer.Ordinal).ToList().Where(id => Engine.Cancel(id) is not null).ToList(), lib.Log.Add,
+            () => lib.Catalog.Push?.ConfigChanged());
     }
 
     public DateTime Now => Lib.Fs.Now;
@@ -283,69 +302,76 @@ sealed class FakeAdminOps : IAdminOps
 
     public DefinitionSet Definitions => Lib.Catalog.Current;
 
+    /// <summary>The tracked units `api killswitch` reports.</summary>
+    public int TrackedUnits { get; set; }
+
+    public bool PillarOn(Pillar pillar) => Pillars.Get(pillar);
+
+    public (DateTime? PurgeUntilUtc, int Events, int Units) KillSwitch => (PurgeUntilUtc, Engine.Active.Count, TrackedUnits);
+
     public Outcome OpStartEvent(string id, (float X, float Y, float Z)? origin)
     {
-        Calls.Add($"start {id}");
+        Call($"start {id}");
         var refused = Engine.Start(id, "manual", Now, Controls(), origin);
-        return refused is null ? AdminLines.Started(id) : AdminLines.StartRefused(refused, true, PurgeUntilUtc, Now);
+        return After($"start {id}", refused is null ? AdminLines.Started(id) : AdminLines.StartRefused(refused, true, PurgeUntilUtc, Now));
     }
 
     public Outcome OpStopEvent(string id)
     {
-        Calls.Add($"stop {id}");
+        Call($"stop {id}");
         return Engine.Cancel(id) is null ? AdminLines.NotActive(id) : AdminLines.Stopped(id);
     }
 
     public Outcome OpPurge()
     {
-        Calls.Add("purge");
+        Call("purge");
         var ended = Engine.CancelAll(CooldownSeconds);
         var units = PurgeableUnits;
         PurgeableUnits = 0;
         PurgeUntilUtc = Now.AddSeconds(CooldownSeconds);
-        return AdminLines.PurgeDone(ended.Count, units, CooldownSeconds);
+        return After("purge", AdminLines.PurgeDone(ended.Count, units, CooldownSeconds));
     }
 
     public (int Events, int Units) OpPurgeCounts()
     {
-        Calls.Add("purge counts");
+        Call("purge counts");
         return (Engine.Active.Count, PurgeableUnits);
     }
 
     public Outcome OpEdit(string id, string path, object value)
     {
-        Calls.Add($"edit {id} {path}");
+        Call($"edit {id} {path}");
         return Lib.Editor.Edit(id, path, value, Lib.Units);
     }
 
     public Outcome OpReload()
     {
-        Calls.Add("reload");
+        Call("reload");
         return Lib.Editor.Reload(Lib.Units);
     }
 
     public Outcome OpAuthor(Func<string, EditPlan> plan)
     {
-        Calls.Add("author");
+        Call("author");
         return Lib.Editor.Write(plan, Lib.Units);
     }
 
     public Outcome OpDelete(ulong adminId, string id, bool confirm)
     {
-        Calls.Add(confirm ? $"delete {id} confirm" : $"delete {id}");
+        Call(confirm ? $"delete {id} confirm" : $"delete {id}");
         var deleter = new EventDeleter(DeleteArming, Lib.Editor, Lib.Catalog, x => Engine.Find(x) is not null, Lib.State, Lib.Log.Add);
         return confirm ? deleter.Confirm(adminId, id, Now, Lib.Units) : deleter.Request(adminId, id, Now);
     }
 
     public Outcome OpUseTemplate(string template, string? asId)
     {
-        Calls.Add($"template {template}");
+        Call($"template {template}");
         return Lib.Editor.Write(text => Authoring.TemplateUse(text, Templates, template, asId), Lib.Units);
     }
 
     public Outcome OpSetPillar(string name, string state)
     {
-        Calls.Add($"pillar {name} {state}");
-        return PillarCommand.Switch(name, state);
+        Call($"pillar {name} {state}");
+        return After($"pillar {name} {state}", PillarCommand.Switch(name, state));
     }
 }

@@ -6,7 +6,7 @@ namespace Nyarlathotep.Tests;
 
 /// <summary>foundation D15: no player-facing builder takes a position or radius, every template uses only the allowed
 /// placeholders, and with every source seeded with planted coordinates no emitted line carries one.</summary>
-public class PrivacyTests
+public partial class PrivacyTests
 {
     const float PlantedCoord = 12345.6f;
     const int PlantedRadius = 987;

@@ -17,9 +17,10 @@ public static class ControlCases
 {
     public const string EventLibrary = "event-library";
     public const string WalkableSpawns = "walkable-spawns";
+    public const string RaphaelApiAdmin = "raphael-api-admin";
 
     /// <summary>The plans whose controls the table lists; each is copied to the test output under Resources/.</summary>
-    public static readonly string[] Plans = [EventLibrary, WalkableSpawns];
+    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
         new(control, name, "test", cls, bad.Select(x => $"{name}_fails_when_{x}").ToArray(), good.Select(x => $"{name}_passes_{x}").ToArray(),
@@ -28,17 +29,19 @@ public static class ControlCases
     static ControlRow C(string control, string name, string check, string[] bad, string[] good, string[] empty) =>
         new(control, name, "cmd", check, bad, good, empty);
 
-    /// <summary>The test classes the listed plans add (event-library's seven, walkable-spawns' two); every test method
-    /// in them follows one of the three forms.</summary>
+    /// <summary>The test classes the listed plans add (event-library's seven, walkable-spawns' two, raphael-api-admin's
+    /// five); every test method in them follows one of the three forms.</summary>
     public static readonly string[] NewClasses =
     [
         "TemplateLibraryTests", "TemplateCommandTests", "AuthoringTests", "AuthoringCapacityTests", "PillarSwitchTests",
         "ReadinessTests", "LibraryDependencyFailureTests", "SpawningTests", "HealthTests",
+        "HumanReplyTests", "OutcomeCodeTests", "ApiTwinTests", "RateGateTests", "ApiOverloadTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
     public static readonly string[] ExistingClasses =
-        ["CommandArgTests", "ConfigChangedTests", "AuthorizationTests", "ContractDocTests", "ControlPrecedenceTests", "DependencyFailureTests"];
+        ["CommandArgTests", "ConfigChangedTests", "AuthorizationTests", "ContractDocTests", "ControlPrecedenceTests", "DependencyFailureTests",
+         "ApiLinesTests", "WireFormatTests", "PushTests", "PrivacyTests"];
 
     public static readonly IReadOnlyList<ControlRow> Table =
     [
@@ -126,5 +129,57 @@ public static class ControlCases
         C("D12", "KnownIssue", "preflight › Test-CheckChangelogs",
             ["tools/preflight-fixtures/Changelogs/bad-knownissue", "tools/preflight-fixtures/Changelogs/bad-knownissue-2"], ["tools/preflight-fixtures/Changelogs/good"],
             ["tools/preflight-fixtures/Changelogs/empty"]) with { Plan = WalkableSpawns },
+        // ---- raphael-api-admin (D11): a cmd row names the fixtures under tools/ that fail and pass it
+        T("D1", "HumanReply", "HumanReplyTests", ["reply_differs"], ["captured_rows", "every_row_has_a_scenario", "newest_capture_wins"], ["capture"])
+            with { Plan = RaphaelApiAdmin },
+        C("D1", "HumanReplies", "preflight › Test-CheckHumanReplies and Test-CheckOutcomeReturns",
+            ["tools/preflight-fixtures/HumanReplies/bad", "tools/preflight-fixtures/HumanReplies/bad-2", "tools/preflight-fixtures/HumanReplies/bad-3", "tools/preflight-fixtures/HumanReplies/bad-4", "tools/preflight-fixtures/HumanReplies/bad-5", "tools/preflight-fixtures/OutcomeReturns/bad", "tools/preflight-fixtures/OutcomeReturns/bad-2", "tools/preflight-fixtures/OutcomeReturns/bad-3"],
+            ["tools/preflight-fixtures/HumanReplies/good", "tools/preflight-fixtures/OutcomeReturns/good"], ["tools/preflight-fixtures/HumanReplies/empty", "tools/preflight-fixtures/OutcomeReturns/empty"])
+            with { Plan = RaphaelApiAdmin },
+        T("D2", "OutcomeCode", "OutcomeCodeTests", ["cell_changes", "a_code_has_no_twin", "built_outside_factories"],
+            ["each_refusal_row", "every_row_has_a_case", "codes_map_one_to_one", "reasons_closed_list"], ["plan_table"]) with { Plan = RaphaelApiAdmin },
+        T("D3", "Event", "ApiTwinTests", ["verb_unknown", "argument_bad", "human_badarg_would_log", "refused"],
+            ["each_verb_ok_line", "gateway_kind_before_op", "log_line_prefixed", "one_grammar_line_each"], ["arguments"]) with { Plan = RaphaelApiAdmin },
+        T("D4", "TemplatePillarPurge", "ApiTwinTests", ["argument_bad", "pillar_save_fails", "purge_confirm_lacks_cooldown"], ["ok_lines"], ["nothing_to_purge"])
+            with { Plan = RaphaelApiAdmin },
+        T("D5", "Idempotency", "ApiTwinTests", ["start_or_stop_repeats", "confirm_is_not_the_askers"],
+            ["held_enable_writes_nothing", "held_pillar_writes_nothing", "held_off_ends_running", "set_to_held_value_writes", "human_ask_twin_confirm",
+             "two_admins_confirm_in_one_second"], ["confirm_without_ask"]) with { Plan = RaphaelApiAdmin },
+        T("D6", "RateGate", "RateGateTests", ["sixth_within_a_second", "gate_full_of_active_admins"],
+            ["five_in_a_second", "sliding_window", "admins_apart", "idle_admins_pruned", "clock_stepped_back"], ["no_prior_twins"]) with { Plan = RaphaelApiAdmin },
+        T("D6", "RateOrder", "ApiTwinTests", ["sixth_twin_runs"], ["reads_and_human_not_counted", "one_second_later_and_per_admin"], ["first_twin"])
+            with { Plan = RaphaelApiAdmin },
+        T("D7", "AdminReads", "ApiLinesTests", ["cooldown_is_over", "catalogue_unavailable", "filter_or_page_is_bad"],
+            ["templates_rows", "template_info", "pillar_list_in_order", "killswitch_during_cooldown", "through_the_flows"], ["no_templates_no_events"])
+            with { Plan = RaphaelApiAdmin },
+        T("D8", "AdminTwins", "WireFormatTests", ["key_order_differs", "forbidden_character_given"], ["contract_examples", "longest_values_cut"], ["value"])
+            with { Plan = RaphaelApiAdmin },
+        T("D9", "Twins", "ConfigChangedTests", ["refused_or_unchanged"], ["same_pushes_as_human", "changed_pillar_one_notice"], ["reads_queue_nothing"])
+            with { Plan = RaphaelApiAdmin },
+        T("D9", "Twins", "PushTests", ["refused"], ["start_stop_purge_as_human", "pillar_off_ends_running"], ["nothing_to_purge"]) with { Plan = RaphaelApiAdmin },
+        T("D10", "ContractApi4", "ContractDocTests", ["contract_regresses", "handoff_or_design_lags"], ["contract_handoff_and_design"], ["contract"])
+            with { Plan = RaphaelApiAdmin },
+        C("D10", "WireContract", "preflight › Test-CheckWireContract", ["tools/preflight-fixtures/WireContract/bad", "tools/preflight-fixtures/WireContract/bad-2", "tools/preflight-fixtures/WireContract/bad-3", "tools/preflight-fixtures/WireContract/bad-9"],
+            ["tools/preflight-fixtures/WireContract/good"], ["tools/preflight-fixtures/WireContract/empty"]) with { Plan = RaphaelApiAdmin },
+        T("D11", "ApiOverload", "ApiOverloadTests", ["two_commands_share_a_count"], ["real_table"], ["table"]) with { Plan = RaphaelApiAdmin },
+        T("D11", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule"], ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = RaphaelApiAdmin },
+        C("D11", "AdminStatic", "preflight -AuthSuite › Test-CheckCommands, Test-CheckGatewayOnly and Test-CheckWireContract",
+            ["tools/preflight-fixtures/Commands/bad-2", "tools/preflight-fixtures/Commands/bad-3", "tools/preflight-fixtures/Commands/bad-4", "tools/preflight-fixtures/GatewayOnly/bad-6", "tools/preflight-fixtures/GatewayOnly/bad-7", "tools/preflight-fixtures/GatewayOnly/bad-8", "tools/preflight-fixtures/WireContract/bad-10", "tools/preflight-fixtures/WireContract/bad-11",
+             "tools/preflight-fixtures/WireContract/bad-12", "tools/preflight-fixtures/WireContract/bad-13"],
+            ["tools/preflight-fixtures/Commands/good", "tools/preflight-fixtures/GatewayOnly/good", "tools/preflight-fixtures/WireContract/good"],
+            ["tools/preflight-fixtures/Commands/empty", "tools/preflight-fixtures/GatewayOnly/empty", "tools/preflight-fixtures/WireContract/empty"]) with { Plan = RaphaelApiAdmin },
+        T("D12", "Twin", "DependencyFailureTests", ["op_throws", "other_twin_op_throws", "streak_repeats", "save_fails"],
+            ["throw_after_clean_run_logged_again", "memory_equals_file_after_refused_write", "throw_after_change_is_internal"], ["clean_run_warns_nothing"]) with { Plan = RaphaelApiAdmin },
+        C("D14", "Records", "preflight -AuditOf, -SessionsOf and -Paths -DeclaredOf › AuditSteps, SessionLogs, Paths and DataInventory",
+            ["tools/preflight-fixtures/AuditSteps/bad", "tools/preflight-fixtures/AuditSteps/bad-2", "tools/preflight-fixtures/SessionLogs/bad", "tools/preflight-fixtures/SessionLogs/bad-2", "tools/preflight-fixtures/Paths/bad-undeclared", "tools/preflight-fixtures/Paths/bad-temp", "tools/preflight-fixtures/DataInventory/bad", "tools/preflight-fixtures/DataInventory/bad-2"],
+            ["tools/preflight-fixtures/AuditSteps/good", "tools/preflight-fixtures/SessionLogs/good", "tools/preflight-fixtures/Paths/good", "tools/preflight-fixtures/DataInventory/good"],
+            ["tools/preflight-fixtures/AuditSteps/empty", "tools/preflight-fixtures/SessionLogs/empty", "tools/preflight-fixtures/Paths/empty", "tools/preflight-fixtures/DataInventory/empty"]) with { Plan = RaphaelApiAdmin },
+        C("D15", "Secrets", "preflight › Test-CheckSecrets", ["tools/preflight-fixtures/Secrets/bad", "tools/preflight-fixtures/Secrets/bad-9"], ["tools/preflight-fixtures/Secrets/good"],
+            ["tools/preflight-fixtures/Secrets/empty"]) with { Plan = RaphaelApiAdmin },
+        T("D15", "Twins", "PrivacyTests", ["a_line_carries_the_id"], ["no_id_name_or_position", "location_here_value_only"], ["no_events"]) with { Plan = RaphaelApiAdmin },
+        C("D16", "Release", "preflight › Test-CheckVersion; -RollbackOf › RollbackRoutes; release-verify.ps1 -SelfTest",
+            ["tools/preflight-fixtures/Version/bad", "tools/preflight-fixtures/RollbackRoutes/bad", "tools/preflight-fixtures/RollbackRoutes/bad-2", "tools/preflight-fixtures/RollbackRoutes/bad-3", "selftest missing asset", "selftest differing hash"],
+            ["tools/preflight-fixtures/Version/good", "tools/preflight-fixtures/RollbackRoutes/good", "selftest hashes equal"],
+            ["tools/preflight-fixtures/Version/empty", "tools/preflight-fixtures/RollbackRoutes/empty", "selftest no release"]) with { Plan = RaphaelApiAdmin },
     ];
 }

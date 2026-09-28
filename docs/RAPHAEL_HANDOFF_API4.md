@@ -1,18 +1,19 @@
-# Raphael handoff — api 3 today, api 4 next (Nyarlathotep 0.5.x)
+# Raphael handoff — api 4 (Nyarlathotep 0.5.2) and what comes next
 
-This page is for a session working **in the Raphael workspace**. It says what Raphael can build now against the
-wire Nyarlathotep ships today (**api 3**), and what to build when **api 4** and the later children land. The wire
-is specified in `docs/RAPHAEL_INTEGRATION_CONTRACT.md`: §1–§5 for what ships, §10 for what is planned. The first
+This page is for a session working **in the Raphael workspace**. It says what Raphael can build against the
+wire Nyarlathotep ships (**api 4**, Nyarlathotep 0.5.2; api 3 servers are 0.5.0 and 0.5.1), and what to build when the
+later children land. The wire
+is specified in `docs/RAPHAEL_INTEGRATION_CONTRACT.md`: §1–§5a for what ships, §10 for what is planned. The first
 handoff, `docs/RAPHAEL_HANDOFF.md`, covers the parser, the handshake and the api 2 panels; this page doesn't repeat
 it.
 
 Nyarlathotep never edits the Raphael workspace, so this page is not copied there. Open it from this repository.
 
-> **Everything under "When api 4 lands" is PLANNED.** A PLANNED row in the contract can change until the child
-> that owns it ships and marks it IMPLEMENTED. Build it behind an `api>=4` gate (or the api the change log gives
-> that child), and re-read contract §10 and §9 before starting each part.
+> **api 4 is IMPLEMENTED in the contract** (§3, §4, §5a) and ships in Nyarlathotep 0.5.2. Everything under "When the
+> later children land" is PLANNED: a PLANNED row can change until the child that owns it ships and marks it
+> IMPLEMENTED. Build each part behind its `api>=N` gate, and re-read contract §9 and §10 before starting it.
 
-## What exists today (api 3, Nyarlathotep 0.5.0)
+## What api 3 servers have (Nyarlathotep 0.5.0 and 0.5.1; api 4 has all of it)
 
 | Command | Answer | Who |
 |---|---|---|
@@ -39,9 +40,12 @@ The read-only panels need nothing new from the server:
 
 ## When api 4 lands (raphael-api-admin, 0.5.2)
 
-Every admin action gets a wire twin: `.nyar api` plus the human command. Each twin answers exactly one
-`[NYAR:ok] cmd= verb= id= …` or `[NYAR:err] cmd= verb= code= [secs=] [arg=] [reason=]` line (contract §10.1). Switch
-the send path to the twins when the handshake reports `api>=4`, and keep the human path for older servers.
+api 4 ships in Nyarlathotep 0.5.2. Every admin action gets a wire twin (contract §5a): `.nyar api event <verb> …`,
+`.nyar api template use <template> [as <id>]`, `.nyar api pillar <name> on|off` and `.nyar api purge [confirm]`, the
+human command with `.nyar api` in front. Each twin answers exactly one `[NYAR:ok] cmd= verb= id= …` or
+`[NYAR:err] cmd= verb= code= [secs=] [arg=] [reason=]` line. Switch the send path to the twins when the handshake
+reports `api>=4`, and keep the human path for older servers. The twins are limited to 5 a second per admin; past
+that they answer `code=ratelimit secs=1`, so a bulk edit is spread out.
 
 | Panel | Built from |
 |---|---|
@@ -54,8 +58,11 @@ the send path to the twins when the handshake reports `api>=4`, and keep the hum
 Handling the answers:
 - Match an `ok` or `err` line to the button on `cmd` and `verb`. Update the panel from the `ok` line, and treat
   the push that follows as confirmation.
-- The new error codes are `exists`, `state`, `invalid`, `full`, `io` and `confirm` (contract §10.3). The api 2 codes
-  still apply. Show `secs` as a countdown on `cooldown` and `ratelimit`.
+- The new error codes are `exists`, `state`, `invalid`, `full`, `io`, `confirm` and `limit` (contract §4), each
+  with its `reason` word (§5a). The api 2 codes still apply. Show `secs` as a countdown on `cooldown` and `ratelimit`.
+- `code=io reason=internal` means the action failed on the server, possibly after it changed something; its log
+  names the exception. Nothing is rolled back, so re-read state (`api status`, `api events`, `api pillar list`,
+  `api killswitch`) before showing the result. No push is promised after `internal`; re-read, then re-send only if the state shows the action did not apply (a repeated start answers `code=state`, a repeated purge confirm `code=confirm` or `state reason=nothing_to_purge`).
 - `changed=0` on `enable`, `disable` or `pillar` means that state was already set. Nothing is wrong.
 
 ## When the later children land
@@ -75,7 +82,7 @@ what the line carries.
 
 If a panel needs a shape, key or command that isn't in the contract, add a row to contract §8 in this repository.
 Give it the date, the request and the status `open`. The next child's plan picks the row up. A request made before
-raphael-api-admin is planned can still change api 4's shapes.
+a child is planned can still change that child's shapes; api 4's are IMPLEMENTED and only grow (contract §7).
 - Never work around a missing key by parsing a human reply.
 - To report a wire bug, attach the client log line (with `NyarDiagnostics` on) and the server's `LogOutput.log`
   lines from the same minute.

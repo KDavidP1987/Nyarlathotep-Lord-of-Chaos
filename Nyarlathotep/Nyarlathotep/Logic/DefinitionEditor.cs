@@ -9,6 +9,12 @@ namespace Nyarlathotep.Logic;
 public readonly record struct EditPlan(string? Text, Outcome? Refusal, string Done, string? CheckId, params (string Key, string Value)[] Fields)
 {
     public static EditPlan Refuse(Outcome refusal) => new(null, refusal, "", null);
+
+    /// <summary>The file already holds the change (raphael-api-admin D5): nothing is written or reloaded, and the reply
+    /// is the applied one's, so the human text stays 0.5.1's.</summary>
+    public static EditPlan Hold(string done, string checkId, params (string Key, string Value)[] fields) => new(null, null, done, checkId, fields);
+
+    public bool Held => Text is null && Refusal is null && CheckId is not null;
 }
 
 /// <summary>The definition load and the admin edits without the game (foundation D6, D23; raphael-api-core A7;
@@ -56,9 +62,13 @@ public sealed class DefinitionEditor(EventsFile file, IFileStore files, EventCat
             _ => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture),
         };
         var done = path == "enabled" ? $"event {id} {((bool)value ? "enabled" : "disabled")}" : $"event {id} {path} = {shown}";
-        (string, string)[] fields = path == "enabled" ? [] : [("field", path), ("value", shown ?? "")];
+        // a location's wire value is "x,z" with one decimal (contract §5a); the human text keeps its own form
+        var wireValue = value is PointArg pt ? FormattableString.Invariant($"{pt.X:0.0},{pt.Z:0.0}") : shown ?? "";
+        (string, string)[] fields = path == "enabled" ? [("changed", "1")] : [("field", path), ("value", wireValue)];
         return Write(text =>
         {
+            // enable and disable on the state the file holds write nothing and answer changed=0 (raphael-api-admin D5)
+            if (path == "enabled" && EventsEditor.Holds(text, id, (bool)value)) return EditPlan.Hold(done, id, ("changed", "0"));
             var edited = EventsEditor.Apply(text, id, path, value, out var refusal);
             return edited is null
                 ? EditPlan.Refuse(refusal ?? EditRefused(id))
@@ -82,6 +92,7 @@ public sealed class DefinitionEditor(EventsFile file, IFileStore files, EventCat
         EditPlan p;
         try { p = plan(text); }
         catch (Exception ex) { return Outcome.Refused($"edit refused: {ex.Message}", RefusalCode.Io, reason: Reasons.Internal); }
+        if (p.Held) return Applied(p);
         if (p.Text is null) return p.Refusal ?? Outcome.Refused("edit refused", RefusalCode.Io, reason: Reasons.Internal);
         var content = Encoding.UTF8.GetBytes(p.Text);
         if (content.Length > EventValidator.MaxFileBytes) return Outcome.Refused(TooLarge, RefusalCode.Full, reason: Reasons.Size);
@@ -92,10 +103,14 @@ public sealed class DefinitionEditor(EventsFile file, IFileStore files, EventCat
         var reload = Reload(units);
         info($"{p.Done}; {reload.Human}");
         if (!reload.Ok) return reload.WithHuman($"{p.Done}; {reload.Human}");
-        return p.CheckId is { } id && catalog.Current.Find(id)?.DisabledReason is { } reason
+        return Applied(p);
+    }
+
+    /// <summary>The reply of a plan the file now holds, with the checked definition's disabled reason appended.</summary>
+    Outcome Applied(EditPlan p) =>
+        p.CheckId is { } id && catalog.Current.Find(id)?.DisabledReason is { } reason
             ? Outcome.Done($"{p.Done}; now disabled: {reason}", p.Fields)
             : Outcome.Done(p.Done, p.Fields);
-    }
 
     /// <summary>A Promote threw, so the main file may be the old or the new version (event-library D19): the file is read
     /// back and memory follows it, applied (one config-changed) only when it differs from what was loaded. The reply

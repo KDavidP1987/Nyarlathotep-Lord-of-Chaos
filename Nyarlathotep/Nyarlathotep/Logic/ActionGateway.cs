@@ -69,8 +69,9 @@ public static class ActionTable
 }
 
 /// <summary>The one door for mutations (D10, D11). The caller passes the work as a delegate; the gateway runs it only
-/// when the table allows, and logs every denial.</summary>
-public sealed class ActionGateway(Action<string> log)
+/// when the table allows, and logs every denial. <paramref name="entered"/>, when given, sees each kind and actor as a
+/// call enters (the tests record it to prove the flows reach IAdminOps through the gateway, raphael-api-admin D3).</summary>
+public sealed class ActionGateway(Action<string> log, Action<ActionKind, Actor>? entered = null)
 {
     public const string DeniedReply = "denied";
 
@@ -88,6 +89,7 @@ public sealed class ActionGateway(Action<string> log)
     /// (raphael-api-admin D1, D11: the admin flows reach IAdminOps only inside this call).</summary>
     public T Run<T>(ActionKind kind, Actor actor, Func<T> work, Func<T> denied, bool definitionEnabled = true)
     {
+        entered?.Invoke(kind, actor);
         if (!ActionTable.Allows(kind, actor, definitionEnabled))
         {
             log($"gateway: denied {kind} for {actor}");

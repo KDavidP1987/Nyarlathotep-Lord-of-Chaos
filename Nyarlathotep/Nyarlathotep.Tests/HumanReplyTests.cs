@@ -51,15 +51,32 @@ public class HumanReplyTests
 
     [Theory]
     [MemberData(nameof(Rows))]
-    public void Reply_is_the_captured_reply(string id, string template, string file)
+    public void HumanReply_passes_captured_rows(string id, string template, string file) =>
+        Assert.Null(Mismatch(id, template) is { } m ? $"{file}: {m}" : null);
+
+    /// <summary>Why scenario <paramref name="id"/>'s reply is not <paramref name="template"/> rendered, or null.</summary>
+    static string? Mismatch(string id, string template)
     {
-        Assert.True(Scenarios.TryGetValue(id, out var scenario), $"{file}: row {id} has no scenario");
-        var (human, values) = scenario!();
-        Assert.Equal(Render(template, values), human);
+        if (!Scenarios.TryGetValue(id, out var scenario)) return $"row {id} has no scenario";
+        var (human, values) = scenario();
+        var want = Render(template, values);
+        return want == human ? null : $"row {id}: the capture says \"{want}\", the flow replied \"{human}\"";
     }
 
     [Fact]
-    public void Every_scenario_has_a_row_and_every_row_a_scenario()
+    public void HumanReply_fails_when_reply_differs()
+    {
+        foreach (var (id, template, _) in Load(Captures()).Take(5))
+        {
+            Assert.Null(Mismatch(id, template));
+            Assert.NotNull(Mismatch(id, template + " (changed)"));
+            Assert.NotNull(Mismatch(id, "x" + template));
+        }
+        Assert.Equal("row nowhere has no scenario", Mismatch("nowhere", "x"));
+    }
+
+    [Fact]
+    public void HumanReply_passes_every_row_has_a_scenario()
     {
         var ids = Load(Captures()).Select(r => r.Id).ToHashSet(StringComparer.Ordinal);
         Assert.Equal(Array.Empty<string>(), Scenarios.Keys.Where(k => !ids.Contains(k)).ToArray());
@@ -67,14 +84,14 @@ public class HumanReplyTests
     }
 
     [Fact]
-    public void An_empty_capture_fails()
+    public void HumanReply_empty_capture()
     {
         Assert.Contains("no captured replies", Assert.ThrowsAny<Exception>(() => Load([("human-replies-0.5.1.txt", "# comments only\n")])).Message);
         Assert.Contains("no captured replies", Assert.ThrowsAny<Exception>(() => Load([])).Message);
     }
 
     [Fact]
-    public void The_newest_capture_wins_and_a_newline_renders()
+    public void HumanReply_passes_newest_capture_wins()
     {
         var rows = Load([
             ("human-replies-0.5.1.txt", "a · old · x.cs:1\r\nb · kept · x.cs:2\r\n"),
@@ -98,13 +115,19 @@ public class HumanReplyTests
         public (float X, float Y, float Z)? Position { get; set; } = (5f, 5f, 5f);
         public AdminCaller Who { get; }
 
-        public Rig(Library lib, bool pillarsOn = true)
+        /// <summary>The flows' warnings (a twin's failure line, raphael-api-admin D12).</summary>
+        public List<string> Warns { get; } = [];
+
+        /// <summary>The flows over the fakes; the gateway records "gate &lt;kind&gt;" into Ops.Calls as a call enters it,
+        /// and <paramref name="gate"/> is the twins' rate gate (by default one no test reaches).</summary>
+        public Rig(Library lib, bool pillarsOn = true, RateGate? gate = null)
         {
             Lib = lib;
             Ops = new FakeAdminOps(lib);
             if (pillarsOn)
                 foreach (var (_, pillar, _) in PillarNames.All) Ops.Pillars.Set(pillar, true);
-            Flows = new AdminFlows(Ops, new ActionGateway(lib.Log.Add), new PurgeArming(), lib.Log.Add, () => Ops.Now);
+            Flows = new AdminFlows(Ops, new ActionGateway(lib.Log.Add, (kind, _) => Ops.Calls.Add($"gate {kind}")), new PurgeArming(),
+                lib.Log.Add, () => Ops.Now, gate ?? new RateGate(perSecond: 100_000), Warns.Add);
             Who = new AdminCaller(7, "Chaos", () => Position);
         }
     }

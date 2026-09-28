@@ -4,8 +4,13 @@ using System.Text.RegularExpressions;
 
 namespace Nyarlathotep.Logic;
 
-/// <summary>The contract's error codes (docs/RAPHAEL_INTEGRATION_CONTRACT.md §4).</summary>
-public enum WireError { NotReady, NoAccess, Disabled, NotFound, BadArg, RateLimit, Cooldown }
+/// <summary>The contract's error codes (docs/RAPHAEL_INTEGRATION_CONTRACT.md §4). The last seven are the admin twins'
+/// (raphael-api-admin D2, api 4); each member has one <see cref="RefusalCode"/> of the same name (<see cref="Wire.Code"/>).</summary>
+public enum WireError
+{
+    NotReady, NoAccess, Disabled, NotFound, BadArg, RateLimit, Cooldown,
+    Exists, State, Invalid, Full, Io, Confirm, Limit,
+}
 
 /// <summary>What `.nyar api version` reports (contract §2).</summary>
 public sealed record VersionInfo(
@@ -18,7 +23,7 @@ public sealed record VersionInfo(
 /// through <see cref="TextSink.WireValue"/>, so it holds no space, '=', ';' or ':'.</summary>
 public static class Wire
 {
-    public const int Api = 3;
+    public const int Api = 4;
     public const int MaxBytes = 480;
 
     static readonly Regex NameRx = new("^[a-z][a-z0-9-]*$", RegexOptions.CultureInvariant);
@@ -102,12 +107,46 @@ public static class Wire
         return Record("ev", tokens.ToArray());
     }
 
-    /// <summary>`[NYAR:err] cmd=&lt;cmd&gt; code=&lt;code&gt; [secs=] [arg=]` (contract §4).</summary>
-    public static string Error(string cmd, WireError code, int? secs = null, string? arg = null)
+    /// <summary>`[NYAR:err] cmd=&lt;cmd&gt; code=&lt;code&gt; [secs=] [arg=] [reason=]` (contract §4).</summary>
+    public static string Error(string cmd, WireError code, int? secs = null, string? arg = null, string? reason = null) =>
+        Record("err", ErrorTokens([("cmd", cmd)], code, secs, arg, reason));
+
+    static (string, string)[] ErrorTokens(List<(string, string)> tokens, WireError code, int? secs, string? arg, string? reason)
     {
-        var tokens = new List<(string, string)> { ("cmd", cmd), ("code", code.ToString().ToLowerInvariant()) };
+        tokens.Add(("code", code.ToString().ToLowerInvariant()));
         if (secs is { } s) tokens.Add(("secs", s.ToString()));
         if (arg is not null) tokens.Add(("arg", arg));
-        return Record("err", tokens.ToArray());
+        if (reason is not null) tokens.Add(("reason", Cut(reason, ReasonBytes)));
+        return tokens.ToArray();
     }
+
+    /// <summary>The wire code of a refusal: the member of the same name (raphael-api-admin D2, one to one).</summary>
+    public static WireError Code(RefusalCode code) => Enum.Parse<WireError>(code.ToString());
+
+    /// <summary>A twin's echoed word (a verb, a field value) on the wire: mapped, "-" when empty, cut to
+    /// <see cref="ValueBytes"/> on a character boundary (raphael-api-admin D8).</summary>
+    public static string Echo(string? raw) => Cut(raw, ValueBytes);
+
+    /// <summary>The longest echoed value, verb, reason or summary on a twin or read line (contract §5a).</summary>
+    public const int ValueBytes = 120;
+
+    /// <summary>`[NYAR:ok] cmd= verb= id= …`, an admin twin's success (contract §5a): the verb's keys in its order, each
+    /// value mapped and cut to <see cref="ValueBytes"/>.</summary>
+    public static string Done(string cmd, string verb, string id, params (string Key, string Value)[] fields) =>
+        Record("ok", new[] { ("cmd", cmd), ("verb", Echo(verb)), ("id", id) }.Concat(fields.Select(f => (f.Key, Echo(f.Value)))).ToArray());
+
+    /// <summary>`[NYAR:err] cmd= verb= code= [secs=] [arg=] [reason=]`, an admin twin's refusal (contract §5a).</summary>
+    public static string Refusal(string cmd, string verb, WireError code, int? secs = null, string? arg = null, string? reason = null) =>
+        Record("err", ErrorTokens([("cmd", cmd), ("verb", Echo(verb))], code, secs, arg, reason));
+
+    /// <summary>`[NYAR:tpl] id= pillar= trigger= duration= summary=`, one `templates` or `template info` row (contract §3).</summary>
+    public static string Tpl(string id, string pillar, string trigger, int duration, string summary) =>
+        Record("tpl", ("id", id), ("pillar", pillar), ("trigger", trigger), ("duration", duration.ToString()), ("summary", Cut(summary, ValueBytes)));
+
+    /// <summary>`[NYAR:pillar] id= on=`, one `pillar list` row (contract §3).</summary>
+    public static string Pillar(string id, bool on) => Record("pillar", ("id", id), ("on", Bool(on)));
+
+    /// <summary>`[NYAR:ks] on= secs= events= units=`, the `killswitch` row (contract §3).</summary>
+    public static string Ks(bool on, int secs, int events, int units) =>
+        Record("ks", ("on", Bool(on)), ("secs", secs.ToString()), ("events", events.ToString()), ("units", units.ToString()));
 }

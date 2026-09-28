@@ -13,6 +13,13 @@ internal sealed class AdminOps : IAdminOps
 
     public DefinitionSet Definitions => EventStore.Catalog.Current;
 
+    public TemplateCatalog Templates => TemplateLibrary.Catalog;
+
+    public bool PillarOn(Pillar pillar) => PillarSwitches.On(pillar);
+
+    public (DateTime? PurgeUntilUtc, int Events, int Units) KillSwitch =>
+        (Persistence.State.Document.PurgeUntilUtc, EventRuntime.Engine.Active.Count, SpawnTracker.Ledger.Units.Count);
+
     [Mutating]
     public Outcome OpStartEvent(string id, (float X, float Y, float Z)? origin) => EventRuntime.StartEvent(id, "manual", Actor.Admin, origin);
 

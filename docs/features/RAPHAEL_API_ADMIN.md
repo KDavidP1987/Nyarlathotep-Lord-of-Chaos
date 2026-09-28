@@ -1,14 +1,14 @@
 # Raphael api 4 — admin action twins and admin reads
 
-**Status:** in build (docs/dod/raphael-api-admin.md, audit docs/audits/raphael-api-admin.md); step 1 (typed outcomes,
-no behaviour change) next. Nothing of it ships yet; 0.5.1 is the current release.
+**Status:** in build (docs/dod/raphael-api-admin.md, audit docs/audits/raphael-api-admin.md); steps 1 (typed outcomes)
+and 2 (twins, reads, api 4) built; step 3 (Session 1, release 0.5.2) next. 0.5.1 is the current release.
 
 ## Goal
 
 Every admin action Nyarlathotep has in chat gets a machine-readable twin, so the Raphael client can press a button,
 read one answer line and show success or the reason it failed. Admins without Raphael see no change: the human
-commands reply exactly as in 0.5.1. The wire contract is docs/RAPHAEL_INTEGRATION_CONTRACT.md (§10.1–10.3 until
-api 4 ships, then §3, §4 and §5a).
+commands reply exactly as in 0.5.1. The wire contract is docs/RAPHAEL_INTEGRATION_CONTRACT.md §3 (reads), §4 (codes)
+and §5a (twins).
 
 ## What ships
 
@@ -18,7 +18,8 @@ api 4 ships, then §3, §4 and §5a).
   `Human` text. A capture of 0.5.1's replies (Nyarlathotep.Tests/Fixtures/human-replies-0.5.1.txt) pins them.
 - **Step 2:** `.nyar api event|template|pillar|purge …` twins answering one `[NYAR:ok]` or `[NYAR:err]` line; the
   reads `templates`, `template info`, `pillar list` and `killswitch`; a rate gate of 5 twins per admin per second;
-  contract api 4.
+  contract api 4. Logic/ApiCommandTable.cs copies the `nyar api` signatures, which preflight's WireContract check holds
+  equal to the command classes, so ApiOverloadTests can prove no two commands share a VCF overload.
 - **Step 3:** Session 1 in game, then release 0.5.2.
 
 ## Test plan

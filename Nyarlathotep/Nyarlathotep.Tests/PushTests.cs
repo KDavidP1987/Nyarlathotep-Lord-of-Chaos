@@ -6,7 +6,7 @@ namespace Nyarlathotep.Tests;
 /// <summary>raphael-api-core D6: each transition queues one `[NYAR:ev]` line; wave-warn follows the chat warning's
 /// gates (S-1); config-changed collapses; the queue holds 50 and drops the oldest with one log line per overflow
 /// streak; a tick sends at most 5 lines to each connected subscriber; no push line carries a coordinate.</summary>
-public class PushTests
+public partial class PushTests
 {
     static readonly DateTime T0 = new(2026, 9, 25, 20, 0, 0, DateTimeKind.Utc);
     static readonly int[] Offsets = [300, 60, 10];

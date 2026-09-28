@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Nyarlathotep.Logic;
 
 /// <summary>Why an admin action was refused (raphael-api-admin D2, Business rules 3). The first seven are contract §4's
-/// codes; the rest are the twins' (contract §10.3, S-3). Step 2 maps each member one to one to <see cref="WireError"/>.</summary>
+/// codes; the rest are the twins' (contract §4 and §5a, S-3). Each maps one to one to <see cref="WireError"/> (Wire.Code).</summary>
 public enum RefusalCode
 {
     NotReady, NoAccess, Disabled, NotFound, BadArg, RateLimit, Cooldown,

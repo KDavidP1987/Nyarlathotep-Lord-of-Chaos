@@ -6,7 +6,7 @@ namespace Nyarlathotep.Tests;
 
 /// <summary>foundation D12: the wire grammar, and the handshake keys read from docs/RAPHAEL_INTEGRATION_CONTRACT.md
 /// itself (copied to the test output), so a contract change without a code change fails here.</summary>
-public class WireFormatTests
+public partial class WireFormatTests
 {
     static string Contract => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Resources", "RAPHAEL_INTEGRATION_CONTRACT.md"));
 
@@ -61,8 +61,8 @@ public class WireFormatTests
     {
         Assert.Contains(" ready=0 ", Wire.Version(Sample with { Ready = false }));
         Assert.Contains(" ready=1 ", Wire.Version(Sample with { Ready = true }));
-        Assert.Contains(" api=3 ", Wire.Version(Sample with { Api = Wire.Api }));
-        Assert.Equal(3, Wire.Api);   // raphael-api-core D4, faction-empowerment D11
+        Assert.Contains(" api=4 ", Wire.Version(Sample with { Api = Wire.Api }));
+        Assert.Equal(4, Wire.Api);   // raphael-api-core D4, faction-empowerment D11, raphael-api-admin D10
         Assert.Contains(" plugin=0.2.0 ", Wire.Version(Sample));
     }
 
@@ -161,7 +161,8 @@ public class WireFormatTests
                 var parts = page.Split('/');
                 return Wire.EndPaged(t["cmd"], int.Parse(parts[0]), int.Parse(parts[1]), int.Parse(t["count"]));
             case "err":
-                return Wire.Error(t["cmd"], Enum.Parse<WireError>(t["code"], ignoreCase: true), Opt("secs"), t.GetValueOrDefault("arg"));
+                return Wire.Error(t["cmd"], Enum.Parse<WireError>(t["code"], ignoreCase: true), Opt("secs"), t.GetValueOrDefault("arg"),
+                    t.GetValueOrDefault("reason"));
             case "ok":
                 // The only ok line of api 2 is the subscription's.
                 return Wire.Ok(t["cmd"], ("on", t["on"]));

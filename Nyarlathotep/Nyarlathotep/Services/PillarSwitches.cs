@@ -13,7 +13,11 @@ namespace Nyarlathotep.Services;
 internal sealed class PillarSwitches : IPillarStore
 {
     static readonly PillarSwitches Store = new();
-    static readonly PillarCommand Command = new(Store, EventRuntime.EndPillar, line => Core.Log.LogInfo($"[nyar] {line}"));
+    static readonly PillarCommand Command = new(Store, EventRuntime.EndPillar, line => Core.Log.LogInfo($"[nyar] {line}"),
+        () => EventStore.Catalog.Push?.ConfigChanged());
+
+    /// <summary>A pillar's switch, for `.nyar api pillar list` (raphael-api-admin D7).</summary>
+    internal static bool On(Pillar pillar) => Store.Get(pillar);
 
     /// <summary>`.nyar pillar list`: reads only.</summary>
     internal static IReadOnlyList<string> List() => Command.List();

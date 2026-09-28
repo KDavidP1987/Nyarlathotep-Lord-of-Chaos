@@ -365,8 +365,26 @@ function Test-CheckAnnouncementDefaults([string]$Root) {
 
 $script:PublicCommands = @('nyar', 'status', 'help', 'me', 'top', 'hide', 'show', 'version', 'sub')   # Epic D5 (A4)
 
+# The command walks read `[Command(` and `[CommandGroup(` written bare, each alone in its brackets. A qualified attribute
+# ([VampireCommandFramework.Command(…)], [global::…CommandAttribute(…)]), a using alias of either type, a space after
+# the bracket ([ Command(…)]), an escaped name ([@CommandAttribute(…)]) or an entry of an attribute list
+# ([Obsolete, Command(…)]) would register a command the walks never see, so each fails here; so does a Unicode escape in
+# an identifier ([Comm\u0061ndGroup(…)]), found as any \u or \U left once literals and comments are blanked
+# (raphael-api-admin D11; Codex step 2 rounds 2, 7, 8 and 10). The last pattern holds them all: the attribute name
+# must follow its [ directly, so a target ([method: Command(…)]) fails too (round 11).
+function Get-HiddenCommandAttributes([string]$Root) {
+    foreach ($f in Get-CsFiles $Root) {
+        $text = Remove-CsComments (Read-Text $Root $f)
+        foreach ($m in [regex]::Matches($text, '[\[,]\s*(?:[\w.:\s@]+?\s*(?:\.|::)\s*)@?(?:Command|CommandGroup)(?:Attribute)?\s*[\(\],]')) { "a qualified command attribute in $f" }
+        foreach ($m in [regex]::Matches((Remove-CsLiterals (Read-Text $Root $f)), '(?:\[\s*@|\[\s+|,\s*@?)(?:Command|CommandGroup)(?:Attribute)?\s*[\(\],]')) { "a command attribute not written [Command(…)] alone in its brackets in $f" }
+        if ((Remove-CsLiterals (Read-Text $Root $f)) -match '\\[uU][0-9A-Fa-f]') { "a Unicode escape in an identifier in $f" }
+        foreach ($m in [regex]::Matches((Remove-CsLiterals (Read-Text $Root $f)), '(?<!\[)\b(?:Command|CommandGroup)(?:Attribute)?\s*[\(\],]')) { "a Command or CommandGroup attribute not directly after its [ in $f" }
+        foreach ($m in [regex]::Matches($text, '(?m)^\s*(?:global\s+)?using\s+@?\w+\s*=\s*[\w.:\s@]*?@?\b(?:Command|CommandGroup)(?:Attribute)?\s*;')) { "a using alias of a command attribute in $f" }
+    }
+}
+
 function Test-CheckCommands([string]$Root) {
-    $admin = 0; $public = 0; $bad = @()
+    $admin = 0; $public = 0; $bad = @(Get-HiddenCommandAttributes $Root)
     foreach ($c in @(Get-CommandWalk $Root)) {
         if (-not $c.InCommands) { $bad += "$($c.Name) outside Commands/ ($($c.File))"; continue }
         if ($c.Admin) { $admin++ }
@@ -2039,8 +2057,16 @@ function Get-CommandWalk([string]$Root) {
             $group = if ($above.Count) { $above[-1].Groups[1].Value } else { '' }
             $a = $m.Groups['args'].Value
             $name = if ($a -match '^\s*(?:name\s*:\s*)?"([^"]*)"') { $Matches[1] } else { '?' }
+            # The method's parameter names after the context, in order (raphael-api-admin D11: the api command table).
+            $sig = [regex]::Match($text.Substring($m.Index + $m.Length), '^\s*(?:\[[^\]]*\]\s*)*(?:(?:public|internal|private|static)\s+)+[\w<>]+\s+\w+\s*\(([^)]*)\)')
+            $after = if ($sig.Success) { @(@($sig.Groups[1].Value -split ',') | Select-Object -Skip 1) } else { @() }
+            $params = @($after | ForEach-Object { (($_ -replace '=.*$', '').Trim() -split '\s+')[-1] })
+            # Parameters with no default: VCF then registers fewer argument counts than ApiCommandTable.Overloads lists.
+            $required = @($after | Where-Object { $_ -notmatch '=' } | ForEach-Object { ($_.Trim() -split '\s+')[-1] })
             [pscustomobject]@{
                 Name       = $name
+                Params     = $params
+                Required   = $required
                 Full       = '.' + ((@($group, $name) | Where-Object { $_ }) -join ' ')
                 Admin      = $a -match 'adminOnly\s*:\s*true'
                 File       = $f
@@ -2114,8 +2140,44 @@ function Test-CheckWireContract([string]$Root) {
         $present = if ($kind -eq 'tag') { $tags.ContainsKey($name) } else { $apiCmds -contains $name }
         if (-not $present) { $bad += "$key is IMPLEMENTED in the contract but not in the plugin" }
     }
+    # Logic/ApiCommandTable.cs is a copy of every `.nyar api` command's word, adminOnly and parameters, which
+    # ApiOverloadTests reads without the game (raphael-api-admin D11); from api 4 it must exist, and when it exists it
+    # equals the walked commands both ways.
+    $tableText = Read-Text $Root "$PkgRel/Logic/ApiCommandTable.cs"
+    if (-not $tableText -and $docApi -ge 4) { $bad += 'Logic/ApiCommandTable.cs not found (api 4 and later)' }
+    if ($tableText) {
+        # A name twice on either side fails: VCF would route one word to two commands, and a keyed comparison would
+        # hide the second declaration.
+        # Every entry of the Commands initializer must be a row the check reads (`new(…)` or `new ApiCommand(…)`); an
+        # entry in any other form fails, so a row cannot hide from the comparison (Codex step 2 round 6 F1).
+        $copy = @{}
+        $rowRx = 'new\s*(?:ApiCommand\s*)?\(\s*"([^"]+)"\s*,\s*(true|false)\s*,\s*\[([^\]]*)\]\s*\)'
+        $init = [regex]::Match((Remove-CsComments $tableText), '(?s)\bCommands\s*=\s*\[(.*?)\]\s*;')
+        if (-not $init.Success) { $bad += 'Logic/ApiCommandTable.cs has no Commands = [ … ]; initializer' }
+        elseif (([regex]::Replace($init.Groups[1].Value, $rowRx, '') -replace '[\s,]', '') -ne '') {
+            $bad += 'Logic/ApiCommandTable.cs holds a Commands entry that is not a new(name, adminOnly, [parameters]) row'
+        }
+        foreach ($e in [regex]::Matches($init.Groups[1].Value, $rowRx)) {
+            $ps = @([regex]::Matches($e.Groups[3].Value, '"([^"]*)"') | ForEach-Object { $_.Groups[1].Value })
+            if ($copy.ContainsKey($e.Groups[1].Value)) { $bad += "Logic/ApiCommandTable.cs lists api $($e.Groups[1].Value) twice" }
+            $copy[$e.Groups[1].Value] = "adminOnly=$($e.Groups[2].Value) ($($ps -join ', '))"
+        }
+        $walked = @{}
+        foreach ($c in @(Get-CommandWalk $Root | Where-Object { $_.Full -like '.nyar api *' })) {
+            if ($walked.ContainsKey($c.Name)) { $bad += "api $($c.Name) is declared twice ($($c.File))" }
+            # Every parameter after the context is optional, so VCF answers each count the table lists (Codex step 2 round 7 F2).
+            if (@($c.Required).Count) { $bad += "api $($c.Name) parameter $(@($c.Required) -join ', ') has no default ($($c.File))" }
+            $walked[$c.Name] = "adminOnly=$(if ($c.Admin) { 'true' } else { 'false' }) ($(@($c.Params) -join ', '))"
+        }
+        foreach ($n in @($walked.Keys | Sort-Object)) {
+            if (-not $copy.ContainsKey($n)) { $bad += "api $n is not in Logic/ApiCommandTable.cs" }
+            elseif ($copy[$n] -cne $walked[$n]) { $bad += "api $n is $($walked[$n]) but Logic/ApiCommandTable.cs says $($copy[$n])" }
+        }
+        foreach ($n in @($copy.Keys | Sort-Object | Where-Object { -not $walked.ContainsKey($_) })) { $bad += "Logic/ApiCommandTable.cs lists api $n, which no command declares" }
+    }
     if ($bad) { return New-Result $false "wire contract: $(@($bad | Select-Object -Unique) -join '; ')" }
-    return New-Result $true "wire contract: $($tags.Count) tags, $($apiCmds.Count) api commands, all documented (api $codeApi)"
+    $tableNote = if ($tableText) { '; command table equal' } else { '' }
+    return New-Result $true "wire contract: $($tags.Count) tags, $($apiCmds.Count) api commands, all documented (api $codeApi)$tableNote"
 }
 
 # The admin list (-ListCommands admin) holds every admin-only command of the walk, wherever it is declared; the

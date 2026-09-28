@@ -147,7 +147,18 @@
         "$script:PublicCommands allow-list in tools/preflight.ps1"
       ],
       "plant": {
-        "bad": "a [Command] planted in Services/Leak.cs (outside Commands/, not adminOnly)"
+        "bad": "a [Command] planted in Services/Leak.cs (outside Commands/, not adminOnly)",
+        "bad-2": "a `nyar api event` twin in Commands/ApiAdminCommands.cs without adminOnly (raphael-api-admin D11)",
+        "bad-3": "a second events command in Commands/ApiAdminCommands.cs declared as [VampireCommandFramework.Command(…, adminOnly: true)], which the walk would not see (Codex step 2 round 2 F1)",
+        "bad-4": "Commands/ApiAdminCommands.cs aliases the attribute (using Cmd = VampireCommandFramework.CommandAttribute;) and declares [Cmd(\"events\", adminOnly: true)] (Codex step 2 round 2 F1)",
+        "bad-5": "a second events command in Commands/ApiAdminCommands.cs declared [ Command(…, adminOnly: true)] with a space after the bracket, which the walks would not see (Codex step 2 round 7 F1)",
+        "bad-6": "a second events command in Commands/ApiAdminCommands.cs declared in an attribute list [Obsolete, Command(…, adminOnly: true)] (Codex step 2 round 7 F1)",
+        "bad-7": "a second events command in Commands/ApiAdminCommands.cs declared in an attribute list with a qualified name [Obsolete, VampireCommandFramework.Command(…)] (Codex step 2 round 7 F1)",
+        "bad-8": "a second events command in Commands/ApiAdminCommands.cs declared with an escaped name [@CommandAttribute(…, adminOnly: true)] (Codex step 2 round 8 F1)",
+        "bad-9": "a second events command in Commands/ApiAdminCommands.cs declared qualified with an escaped name [VampireCommandFramework.@CommandAttribute(…)] (Codex step 2 round 8 F1)",
+        "bad-10": "Commands/ApiAdminCommands.cs declares its group [Comm\\u0061ndGroup(\"nyar api\")], an escaped identifier the walks would read as no group (Codex step 2 round 10 F1)",
+        "bad-11": "a second events command in Commands/ApiAdminCommands.cs declared with an attribute target [method: Command(…, adminOnly: true)] (Codex step 2 round 11 F1)",
+        "bad-12": "Commands/ApiAdminCommands.cs declares its group with an attribute target [type: CommandGroup(\"nyar api\")] (Codex step 2 round 11 F1)"
       }
     },
     {
@@ -521,7 +532,8 @@
       "inputs": [
         "every plugin .cs file (Nyarlathotep/Nyarlathotep/): Wire.Record/Wire.Line calls (Record(/Line( in Logic/Wire.cs), aliases and static imports of Wire, and \"[NYAR:\" string literals",
         "Nyarlathotep/Nyarlathotep/Logic/Wire.cs const Api",
-        "every [Command] of a [CommandGroup(\"nyar api\")] class (the commands walk)",
+        "every [Command] of a [CommandGroup(\"nyar api\")] class (the commands walk), with its adminOnly and parameter names",
+        "Nyarlathotep/Nyarlathotep/Logic/ApiCommandTable.cs (required from api 4; equal to the walked api commands)",
         "docs/RAPHAEL_INTEGRATION_CONTRACT.md **Current api:** and ### Tags and commands table"
       ],
       "plant": {
@@ -533,7 +545,14 @@
         "bad-6": "Commands/ApiCommands.cs imports Wire under a global::-qualified alias written with spaces (using W = global :: Nyarlathotep . Logic . Wire;) and calls W.Line with a variable tag",
         "bad-7": "Wire.Line(\"x\", …) with a literal tag the contract's table does not list, in Commands/ApiCommands.cs",
         "bad-8": "Commands/ApiCommands.cs imports Wire under an escaped alias (using @class = Nyarlathotep.Logic.Wire;) and calls @class.Line with a variable tag",
-        "bad-9": "Commands/ApiCommands.cs without the sub command, which the contract's table marks IMPLEMENTED (the reverse direction, A4)"
+        "bad-9": "Commands/ApiCommands.cs without the sub command, which the contract's table marks IMPLEMENTED (the reverse direction, A4)",
+        "bad-10": "a Commands/ApiAdminCommands.cs `nyar api event` command (in Logic/ApiCommandTable.cs too) that the contract's table leaves PLANNED (raphael-api-admin D11)",
+        "bad-11": "Logic/ApiCommandTable.cs lists sub without its state parameter, so the copy differs from the command (raphael-api-admin D11)",
+        "bad-12": "a second [Command(\"events\")] in Commands/ApiAdminCommands.cs, equal in signature to the first, which a keyed comparison would hide (Codex step 2 F2)",
+        "bad-13": "Logic/ApiCommandTable.cs lists the events row twice (Codex step 2 F2)",
+        "bad-14": "Logic/ApiCommandTable.cs lists a phantom command as an explicit new ApiCommand(…) row, which no command declares (Codex step 2 round 6 F1)",
+        "bad-15": "Logic/ApiCommandTable.cs holds a Commands entry built by a helper call the check cannot read (Codex step 2 round 6 F1)",
+        "bad-16": "Commands/ApiCommands.cs declares sub's state parameter without a default, so VCF would not register sub with 0 arguments (Codex step 2 round 7 F2)"
       }
     },
     {

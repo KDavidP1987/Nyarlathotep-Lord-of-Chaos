@@ -19,6 +19,19 @@ public static class EventsEditor
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
+    /// <summary>True when the first event with that id holds `"enabled": <paramref name="on"/>` (raphael-api-admin D5); false
+    /// when the text does not parse or the event or its flag is missing, so Apply gives the refusal.</summary>
+    public static bool Holds(string text, string id, bool on)
+    {
+        try
+        {
+            var root = JsonNode.Parse(text, documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
+            var ev = (root?["events"] as JsonArray)?.OfType<JsonObject>().FirstOrDefault(e => e["id"] is JsonValue v && v.TryGetValue<string>(out var s) && s == id);
+            return ev?["enabled"] is JsonValue flag && flag.TryGetValue<bool>(out var held) && held == on;
+        }
+        catch (JsonException) { return false; }
+    }
+
     /// <summary>The new file text, or null with the reply line in <paramref name="error"/>. <paramref name="path"/> is
     /// "enabled", "name", "durationSeconds", "conditions.&lt;key&gt;", "action.&lt;key&gt;" or "action.stats.&lt;stat&gt;";
     /// a missing conditions or stats object is created, a missing action is an error. A field of the other action type

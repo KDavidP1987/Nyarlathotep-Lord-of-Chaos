@@ -139,6 +139,8 @@ it. **Who:** *anyone*, or *admin* (VCF `adminOnly`, Epic D5). **Child:** the chi
 | `.nyar api status\|me\|top …` | anyone | Machine-readable twins of the player reads | raphael-api-core (status); stats (me, top) |
 | `.nyar api events\|zones [page]` | admin | Machine-readable definitions and zones | raphael-api-core (events); defended-zones (zones) |
 | `.nyar api sub on\|off` | anyone | Push events `[NYAR:ev]` to this player | raphael-api-core |
+| `.nyar api event <verb> …` / `.nyar api template use <template> [as <id>]` / `.nyar api pillar <name> on\|off` / `.nyar api purge [confirm]` | admin | Wire twins of the admin actions: the human command's flow, answered by one `[NYAR:ok]` or `[NYAR:err]` line; 5 a second per admin (contract §5a) | raphael-api-admin |
+| `.nyar api templates [pillar] [page]` / `.nyar api template info <template>` / `.nyar api pillar list` / `.nyar api killswitch` | admin | Machine-readable template catalogue, pillar switches and kill switch (contract §3) | raphael-api-admin |
 
 Stats: `kills` (event units), `events` (joined), `waves` (survived), `defences` (sieges won),
 `bossadds` (boss adds killed) and `deaths` (to our units). Counting rules are in the Epic plan's

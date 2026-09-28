@@ -4,7 +4,7 @@ using Nyarlathotep.Logic;
 namespace Nyarlathotep.Tests;
 
 /// <summary>raphael-api-core D1 and D2: the `api status` and `api events` rows.</summary>
-public class ApiLinesTests
+public partial class ApiLinesTests
 {
     static readonly DateTime Now = new(2026, 9, 25, 12, 0, 0, DateTimeKind.Utc);
 
