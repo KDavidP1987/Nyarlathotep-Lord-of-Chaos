@@ -9,7 +9,7 @@
 | [event-spawns](event-spawns.md) | Event spawns — modifiers, Hunt and player locations | ready | L | 0/24 | 24 | 100 % | nyarlathotep |
 | [faction-empowerment](faction-empowerment.md) | Faction empowerment — timed carrier buffs on every NPC of a faction | done | L | 30/30 | 29 | 69 % | nyarlathotep |
 | [foundation](foundation.md) | Foundation engine, store, spawner, scheduler, announcer and commands | done | L | 40/40 | 38 | 63 % | nyarlathotep |
-| [nyarlathotep](nyarlathotep.md) | Nyarlathotep, Lord of Chaos, v0.1 to v1.0 | in-progress | Epic | 38/47 | 36 | 75 % |  |
+| [nyarlathotep](nyarlathotep.md) | Nyarlathotep, Lord of Chaos, v0.1 to v1.0 | in-progress | Epic | 38/47 | 36 | 73 % |  |
 | [raphael-api-admin](raphael-api-admin.md) | Raphael api 4 — admin action twins, admin reads and release 0.5.2 | draft | L | 0/16 | — | — | nyarlathotep |
 | [raphael-api-core](raphael-api-core.md) | Raphael api 2 — status, events, push subscription, paging, contract check | done | L | 22/22 | 22 | 63 % | nyarlathotep |
 | [spikes](spikes.md) | Spikes S1-S3, march, restart marker, carrier buff | done | M | 20/20 | 20 | 50 % | nyarlathotep |
