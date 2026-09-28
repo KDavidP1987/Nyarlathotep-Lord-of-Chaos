@@ -72,9 +72,21 @@ internal static class WalkCheck
     /// <summary>World metres to a tile index (two tiles per metre, offset 6400; KindredCommands' conversion).</summary>
     static int TileIndex(float v) => (int)math.floor(v * 2) + 6400;
 
+    /// <summary>The game keeps TileWorldSingleton on a system entity, which a default query leaves out (A11): the game's
+    /// own singleton lookup first, then a query that includes system entities.</summary>
     static TileWorld? LiveTileWorld()
     {
-        var query = Core.EntityManager.CreateEntityQuery(ComponentType.ReadOnly(Il2CppType.Of<TileWorldSingleton>()));
+        Entity mapped;
+        try { mapped = Core.ServerScriptMapper.GetSingletonEntity<TileWorldSingleton>(); }
+        catch (Exception) { mapped = Entity.Null; }                        // no unique singleton: try the query
+        if (mapped.Has<TileWorldSingleton>())
+            return Core.EntityManager.GetComponentData<TileWorldSingleton>(mapped).GetTileWorld();
+
+        var query = Core.EntityManager.CreateEntityQuery(new EntityQueryDesc
+        {
+            All = new[] { ComponentType.ReadOnly(Il2CppType.Of<TileWorldSingleton>()) },
+            Options = EntityQueryOptions.IncludeSystems
+        });
         try
         {
             var entities = query.ToEntityArray(Allocator.Temp);
