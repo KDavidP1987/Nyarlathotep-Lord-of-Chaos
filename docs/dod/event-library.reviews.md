@@ -826,3 +826,15 @@ VERDICT: REVISE
 - F2 · accepted · the 12.4 matrix row names all eight cases and "release verify selftest: 8/8"
 - F3 · accepted · the same case as F1; its failure names the asset (the audit is the one the search found)
 
+## Review 24 · 2026-09-28 · codex · plan commit fb4982b · plan 226640 B · 36 items · files 0 · e3b0c44298fc · prompt 44d032b28b20 · scope A31
+Reviewer: Codex CLI, read-only (`codex exec -s read-only`, Windows sandbox on); the prompt redacted of Steam IDs before sending. The second round of scope A31.
+
+No findings. A31 handles the zero-match, multiple-audit, and duplicate-line ambiguity paths, with fail-closed selftests exercised by the gating control command.
+
+EARLIER: all resolved
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- no findings
+
