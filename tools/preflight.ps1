@@ -1980,15 +1980,16 @@ function Test-CheckSessionLogs([string]$Root) {
 }
 
 # The probe record of one session (walkable-spawns D1, D10, A4, A8): readings "- <label>: walk <x> <z> h <n> r <r>:
-# <free|blocked> grounded <yes|no> (<source>)" with the labels dry, pond, river, cliff, building and ledge, and one line
+# <free|blocked> grounded <yes|no> (<source>)" with the labels dry, pond, water (a second water body), cliff, wall (a
+# building's outer wall), floor and ledge (floor and ledge recorded, not counted; A12), and one line
 # "- go/no-go (<source>): <go|no-go|incomplete>" per source. Per source the verdict is incomplete without a dry, pond,
-# river, cliff and building reading; else go when every dry reading is free and grounded and every pond, river, cliff
+# water, cliff and wall reading; else go when every dry reading is free and grounded and every pond, water, cliff
 # and building reading is blocked (ledge is not counted), else no-go. An incomplete record fails: the session is
 # repeated. Returns the problem, or $null.
 function Get-ProbeRecordProblem([string]$Slug, [int]$Session, $Blocks) {
     if (-not $Blocks.ContainsKey($Session)) { return "probe records: $Slug session $Session not found" }
     $block = "$($Blocks[$Session])"
-    $readings = @([regex]::Matches($block, '(?m)^- (dry|pond|river|cliff|building|ledge): walk -?\d+\.\d -?\d+\.\d h \d+ r \d\.\d\d: (free|blocked) grounded (yes|no) \(([^)\r\n]+)\)\s*$'))
+    $readings = @([regex]::Matches($block, '(?m)^- (dry|pond|water|cliff|wall|floor|ledge): walk -?\d+\.\d -?\d+\.\d h \d+ r \d\.\d\d: (free|blocked) grounded (yes|no) \(([^)\r\n]+)\)\s*$'))
     if ($readings.Count -eq 0) { return "probe records: $Slug session $Session has no readings" }
     $lines = New-Object System.Collections.Hashtable ([StringComparer]::Ordinal)
     $problems = @()
@@ -2004,9 +2005,9 @@ function Get-ProbeRecordProblem([string]$Slug, [int]$Session, $Blocks) {
         if ($known -cnotcontains $source) { $problems += "unknown source $source"; continue }
         $mine = @($readings | Where-Object { $_.Groups[4].Value -ceq $source })
         $labels = @($mine | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
-        $want = if (@('dry', 'pond', 'river', 'cliff', 'building' | Where-Object { $labels -notcontains $_ }).Count) { 'incomplete' }
+        $want = if (@('dry', 'pond', 'water', 'cliff', 'wall' | Where-Object { $labels -notcontains $_ }).Count) { 'incomplete' }
             elseif (@($mine | Where-Object { ($_.Groups[1].Value -eq 'dry' -and ($_.Groups[2].Value -ne 'free' -or $_.Groups[3].Value -ne 'yes')) -or
-                ($_.Groups[1].Value -in 'pond', 'river', 'cliff', 'building' -and $_.Groups[2].Value -ne 'blocked') }).Count) { 'no-go' }
+                ($_.Groups[1].Value -in 'pond', 'water', 'cliff', 'wall' -and $_.Groups[2].Value -ne 'blocked') }).Count) { 'no-go' }
             else { 'go' }
         if (-not $lines.ContainsKey($source)) { $problems += "no go/no-go line for $source"; continue }
         if ($lines[$source] -ne $want) { $problems += "$source reads $($lines[$source]), the readings give $want" }

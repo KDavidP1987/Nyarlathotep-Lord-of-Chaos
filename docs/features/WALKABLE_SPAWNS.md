@@ -24,10 +24,11 @@ ring, then half the ring, then the centre, without adding, dropping or reorderin
 
 ## Test plan
 
-- **Session 1 (owner):** `.nyar debug walk` at six places: dry open ground, the pond of event-library's Session 7
-  (about -912.9, -828.8), a river, against a cliff face, inside a building, and on a cliff-top ledge. Each reply is
-  recorded under its label. Per source, go when every dry reading is free and grounded and every pond, river, cliff
-  and building reading is blocked; the ledge is recorded but not counted. Also `.nyar debug walk abc` and
+- **Session 1 (owner):** `.nyar debug walk` on dry open ground (dry), in a pond (pond), in a second water body such as
+  the pond of event-library's Session 7 at about -912.9, -828.8 or a river (water), against a cliff face (cliff), against
+  a building's outer wall (wall), on a building's floor (floor) and on a cliff-top ledge (ledge). Per source, go when
+  every dry reading is free and grounded and every pond, water, cliff and wall reading is blocked; floor and ledge are
+  recorded but not counted (A12). Also `.nyar debug walk abc` and
   `.nyar debug walk 1 2` (the refusal line), and whether each line shows whole in chat without colour (D8).
 - **Session 2 (owner):** bandit-ambush centred on the pond shore, radius 10, three times: no unit in water, moved > 0
   on each wave line, the tick timing under 5 ms.
@@ -45,3 +46,30 @@ ring, then half the ring, then the centre, without adding, dropping or reorderin
 - CommandArgTests WalkRadius (13 cases) and ChatBytes: pass; 1351 tests in all.
 - preflight -SelfTest: SessionLogs good (with a probe record) passes; bad-probe to bad-probe-4 fail with the planted
   reason.
+
+### Session 1 · 2026-09-28 · walk probe (owner, 0.5.0+37b1ea8, snapshot ws1)
+The first attempt on 2536488 replied "walk check unavailable: singleton: none" to every `.nyar debug walk`; A11 (defect)
+fixed the singleton lookup and the session went on at 37b1ea8. Labels follow the step order the owner ran (dry, pond, cliff
+twice with `walk` and `walk 1`, inside a building (label floor since A12), ledge); the owner found no river. The pond reading was taken at the owner's pond,
+not at the Session 7 point (-912.9, -828.8).
+- dry: walk -939.8 -904.4 h 10 r 0.50: free grounded yes (singleton world)
+- pond: walk -940.7 -920.8 h 10 r 0.50: blocked grounded yes (singleton world)
+- cliff: walk -934.4 -889.7 h 10 r 0.50: blocked grounded yes (singleton world)
+- cliff: walk -934.4 -889.7 h 10 r 1.00: blocked grounded yes (singleton world)
+- floor: walk -898.2 -927.8 h 11 r 0.50: free grounded yes (singleton world)
+- ledge: walk -915.6 -890.8 h 12 r 0.50: blocked grounded yes (singleton world)
+- dry: walk -939.8 -904.4 h 10 r 0.50: free grounded yes (singleton tile)
+- pond: walk -940.7 -920.8 h 10 r 0.50: free grounded yes (singleton tile)
+- cliff: walk -934.4 -889.7 h 10 r 0.50: free grounded yes (singleton tile)
+- cliff: walk -934.4 -889.7 h 10 r 1.00: free grounded yes (singleton tile)
+- floor: walk -898.2 -927.8 h 11 r 0.50: free grounded yes (singleton tile)
+- ledge: walk -915.6 -890.8 h 12 r 0.50: free grounded yes (singleton tile)
+- go/no-go (singleton world): incomplete
+- go/no-go (singleton tile): incomplete
+- Refusals: `.nyar debug walk abc` and `.nyar debug walk 1 2` both replied "radius must be 0.1-5" (D7).
+- Chat: every reply showed whole, two lines per walk; readability without colour not yet stated by the owner (D8).
+- Reading: the world source separates dry from water and cliff; the tile source reads free everywhere, including the
+  pond, so it cannot be go. GetIsGrounded read yes everywhere, water included, so it does not tell water apart. The world
+  source reads free inside the building (a floor the admin stands on) and blocked on the ledge the admin stood on.
+- Owner decision in plan mode (option A, A12): the interior reading is a floor (recorded, not counted); a building's
+  outer wall (label wall) and a second water body (label water) are read next.
