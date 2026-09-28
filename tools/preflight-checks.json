@@ -500,10 +500,11 @@
         "bad-18": "snapshotSessions lists foundation from session 8; session 8 restores a different label (s7) than it saved (event-library A19)",
         "bad-19": "snapshotSessions lists foundation from session 9, which the feature doc does not have (event-library A19)",
         "bad-probe": "probeRecords lists foundation session 8; its go/no-go line for singleton world reads no-go while the readings give go (walkable-spawns D10)",
-        "bad-probe-2": "probeRecords lists foundation session 8; the river reading is missing and the go/no-go line still reads go (walkable-spawns D10)",
+        "bad-probe-2": "probeRecords lists foundation session 8; the water reading is missing and the go/no-go line still reads go (walkable-spawns D10)",
         "bad-probe-3": "probeRecords lists foundation session 8; the pond reading is missing and the go/no-go line reads incomplete, which is neither go nor a pass (walkable-spawns D1, D10)",
         "bad-probe-4": "probeRecords lists foundation session 8, which has no walk readings: \"probe records: foundation session 8 has no readings\" (walkable-spawns D10, A9: the empty-probe case)",
-        "bad-probe-5": "probeRecords lists foundation session 8; the singleton tile readings and go/no-go line are missing, so one of the two sources is not recorded (walkable-spawns A8; Codex cross-inspection F4)"
+        "bad-probe-5": "probeRecords lists foundation session 8; the singleton tile readings and go/no-go line are missing, so one of the two sources is not recorded (walkable-spawns A8; Codex cross-inspection F4)",
+        "bad-probe-6": "probeRecords lists foundation session 8; the singleton world wall reading is free while its go/no-go line reads go (walkable-spawns A12 review F5)"
       }
     },
     {

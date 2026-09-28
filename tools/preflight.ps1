@@ -1984,7 +1984,7 @@ function Test-CheckSessionLogs([string]$Root) {
 # building's outer wall), floor and ledge (floor and ledge recorded, not counted; A12), and one line
 # "- go/no-go (<source>): <go|no-go|incomplete>" per source. Per source the verdict is incomplete without a dry, pond,
 # water, cliff and wall reading; else go when every dry reading is free and grounded and every pond, water, cliff
-# and building reading is blocked (ledge is not counted), else no-go. An incomplete record fails: the session is
+# and wall reading is blocked (ledge and floor are not counted), else no-go. An incomplete record fails: the session is
 # repeated. Returns the problem, or $null.
 function Get-ProbeRecordProblem([string]$Slug, [int]$Session, $Blocks) {
     if (-not $Blocks.ContainsKey($Session)) { return "probe records: $Slug session $Session not found" }
