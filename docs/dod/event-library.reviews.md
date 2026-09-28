@@ -806,3 +806,23 @@ VERDICT: READY
 ### Dispositions
 - no findings
 
+## Review 23 · 2026-09-28 · codex · plan commit 25d122f · plan 226069 B · 36 items · files 0 · e3b0c44298fc · prompt c00a2452aecc · scope A31
+Reviewer: Codex CLI, read-only (`codex exec -s read-only`, Windows sandbox on); the prompt redacted of Steam IDs before sending. The first round of scope A31.
+
+F1 [blocking] Probe 12.4 leaves the same-audit retry case unanswered: A31 rejects zero or multiple matching audits but gives no rule when one audit contains two `zip sha256:` lines for the same asset, so verification could select a stale hash nondeterministically.
+Fix: State that exactly one matching hash line may exist across all audits—or define explicit precedence—and add that duplicate-line fixture to `release-verify.ps1 -SelfTest`, exercised by `pwsh tools/preflight.ps1 -ControlSuite event-library`.
+
+F2 [advisory] The 12.4 selftest matrix still says `release-verify -SelfTest` passes at `4/4`, contradicting A31 and `tools/preflight-checks.json` expecting `7/7`; a stranger cannot tell which recorded expectation is authoritative.
+Fix: Update the matrix to `7/7` and name the one-audit, no-audit, and two-audit cases.
+
+F3 [advisory] The three scoped hunt scenarios are: no matching audit (covered), two matching audits (covered), and two matching hash lines in one audit after a rerun (unhandled); the last is the concurrent/retry form of layer 12.4's failing-case probe.
+Fix: Add a same-audit duplicate fixture and require an ambiguity error naming that audit and asset.
+
+14/15 layers · 48/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · exactly one matching line across all audits: Find-ReleaseAudit takes the one audit holding the line and Test-ReleaseAsset already fails an audit with two such lines ("the audit has 2 ... lines; keep only the one for the published zip"); the case is now a selftest case (two lines in one audit, a rebuilt zip), 8/8, run by -SelfTest and so by -ControlSuite event-library
+- F2 · accepted · the 12.4 matrix row names all eight cases and "release verify selftest: 8/8"
+- F3 · accepted · the same case as F1; its failure names the asset (the audit is the one the search found)
+

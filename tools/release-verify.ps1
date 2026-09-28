@@ -10,10 +10,11 @@
       zip was built. → "release verify: hashes equal", else "release verify: fail — <why>" and exit 1.
 
     pwsh tools/release-verify.ps1 -SelfTest
-      Seven cases with a local folder as the asset source instead of gh (scratch under %TEMP%\nyar-rel-<guid>, removed
+      Eight cases with a local folder as the asset source instead of gh (scratch under %TEMP%\nyar-rel-<guid>, removed
       when done): a matching hash passes; a differing hash fails; a missing asset fails; an audit without the line
-      fails, including one that quotes the line inside another bullet (the line must stand on its own); and the audit
-      search: one audit recording the asset is found, no audit and two audits fail. → "release verify selftest: 7/7".
+      fails, including one that quotes the line inside another bullet (the line must stand on its own); an audit with two
+      lines for the asset fails; and the audit
+      search: one audit recording the asset is found, no audit and two audits fail. → "release verify selftest: 8/8".
 #>
 [CmdletBinding()]
 param(
@@ -71,7 +72,8 @@ if ($SelfTest) {
             @{ Name = 'matching hash'; Asset = $name; Audit = "- zip sha256: $name $hash"; Pass = $true },
             @{ Name = 'differing hash'; Asset = $name; Audit = "- zip sha256: $name $('0' * 64)"; Pass = $false },
             @{ Name = 'missing asset'; Asset = 'kdpen-Nyarlathotep-9.9.8.zip'; Audit = "- zip sha256: kdpen-Nyarlathotep-9.9.8.zip $hash"; Pass = $false },
-            @{ Name = 'audit without the line'; Asset = $name; Audit = "- tcli build: done`n- an old note: zip sha256: $name $hash"; Pass = $false })
+            @{ Name = 'audit without the line'; Asset = $name; Audit = "- tcli build: done`n- an old note: zip sha256: $name $hash"; Pass = $false },
+            @{ Name = 'two lines in one audit (a rebuilt zip)'; Asset = $name; Audit = "- zip sha256: $name $('0' * 64)`n- zip sha256: $name $hash"; Pass = $false })
         foreach ($c in $cases) {
             $why = Test-ReleaseAsset $c.Asset $c.Audit $local
             if (($null -eq $why) -eq $c.Pass) { $ok++; if ($why) { Write-Host "  - $($c.Name): fails — $why" } }
@@ -89,8 +91,8 @@ if ($SelfTest) {
             else { Write-Host "  - $($c.Name): expected $(if ($c.Pass) { 'a.md' } else { 'fail' }), got $(if ($r[1]) { "fail — $($r[1])" } else { $r[0] })" }
         }
     } finally { Remove-Item -LiteralPath $src -Recurse -Force -ErrorAction SilentlyContinue }
-    Write-Host "release verify selftest: $ok/7"
-    exit ([int]($ok -ne 7))
+    Write-Host "release verify selftest: $ok/8"
+    exit ([int]($ok -ne 8))
 }
 
 if (-not $Tag -or -not $Asset) { Write-Host 'usage: release-verify.ps1 -Tag <tag> -Asset <zip name> [-Audit <audit.md>] | -SelfTest'; exit 2 }
