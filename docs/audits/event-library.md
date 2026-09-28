@@ -13,6 +13,11 @@ and one under "### A22 probe · Session 4 · 2026-09-27 · 86f6f53
 - setup: `dev-snapshot.ps1 -Save s5` (28 files); Debug.VerboseLogging = true in the dev cfg; deploying build with the server stopped, DLL B665B0AE108E1ECB in plugins equals the build output
 - baseline boot: "templates: 6/6 valid", "triggers: all hooks available", boot marker and carrier sweeps 0 found; warnings only Il2CppInterop Class::Init, Beelzebub TUNE ×2 and the dev world's old example-empowerment line
 
+### Step 6 · 2026-09-28 · d989523
+- git tree clean at d989523 (step 5 closed at afe59bf; the next child's Review 4 revision committed beside it); compile 0 errors, 0 warnings; 1337 tests passed; PREFLIGHT OK; -AuditOf event-library "5/6 pre, 5/6 post, 5/6 Codex verdicts" before this entry; dod --check event-library 0 problems
+- dod status: every test and cmd item run again and recorded (D1, D2, D4-D14, D16-D20, D27, D31-D34 pass); D15, D21-D23 and D35 carry their manual pass lines from Sessions 2, 3 and 5; verified 33/36, the open three being D28, D29 and D30, which this step's release, rollback gate and records close
+- feature doc read: EVENT_LIBRARY.md › Status, Open questions (units in water, A27, the 0.5.0 known issue) and Session 7; plan step 6 and the release checklist; the scratchpad release drafts checked against the six surfaces
+- no server session in this step; the server is stopped (rollback-gate needs it stopped)
 ## Post-audit"; every post-audit entry carries a "Codex verdict:" line. Session log checks are lines
 "- session <n> log check: …". Rollback base: v0.4.0 = ae3821b.
 
