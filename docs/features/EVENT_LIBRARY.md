@@ -416,4 +416,43 @@ Debug.TimingLog on); the Release DLL of b084e47 deployed; boot.
 legion-weekend-surge,bandit-vengeance,undead-nightfall,militia-crackdown,bandit-ambush,undead-rising -MinMinutes 240`,
 delete the %TEMP%\nyar-soak-* folders, `pwsh tools/dev-snapshot.ps1 -Restore`.
 
-Observed: (recorded when the session runs)
+Observed (two boots, 17:55–20:34 and 20:34–22:09; the owner connected for the kick-off and two checks):
+- Legion surges started by Schedule at 18:08, 18:52, 19:36, 20:20, 20:42 and 21:26, each ending 30 min later ("ended (0
+  carriers expire with it)": no Legion unit stood in the loaded world); the 18:30, 19:14, 19:58, 21:04 and 21:48 times
+  logged "not started by Schedule …: already active", since each surge outlasts the 22-minute gap.
+- undead-nightfall started at every GameTime night and ended with the day ("102 carriers" in the first boot, "135" in the
+  second); every sweep of it logged "5 failed" (one "apply failed: carrier buff could not be applied" per streak): the
+  game refused the carrier on 5 of 142 undead units (TryInstantiateBuffEntityImmediate false); the staged apply skipped them
+  and left nothing behind. Which units, and why the game refuses them, is an open question.
+- K1: bandit-vengeance started by "VBloodKilled CHAR_Bandit_Chaosarrow_VBlood" (Lidia, killed before Rufus; also on its list),
+  160 bandits carried on the first sweep and 202 at its end; Rufus's kill logged "not started by VBloodKilled
+  CHAR_Bandit_Foreman_VBlood: already active". No chat line: announcements are off by default ("announcements: all off").
+- K2: militia-crackdown started by "VBloodKilled CHAR_Militia_Nun_VBlood" (Christina), 191 carried on the first sweep.
+- K3: bandit-ambush from the template at Point -1120.0, -892.1 (height 0.0), three waves of 6 queued, ended "(3 of 3 waves)".
+- K4: `.nyar event start undead-rising` at 20:24 answered "skipped by MaxConcurrentEvents": five events were active
+  (legion-weekend-surge, bandit-vengeance, militia-crackdown, bandit-ambush, undead-nightfall) and MaxConcurrentEvents is 5,
+  the cap working as designed; at 20:33, after bandit-ambush ended, it started.
+- S-6: the owner watched two `.nyar spawn CHAR_Bandit_Hunter 2` hunters: "They shot arrows from range" (the prefab's only
+  attack is AB_Bandit_Hunter_Bow); CHAR_Bandit_Hunter stays, S-6's fallback is not taken.
+- D26: at 20:34, during the 20:20 surge, both logs were copied to %TEMP%\nyar-soak-1 after AutoSave_1216, -LogCheck "0 unhandled,
+  340 nyar lines, 0 orphan errors, 0 unity errors", and the server was restarted. The boot logged "event
+  legion-weekend-surge cancelled by restart (it was due to end 2026-09-28 00:50:00Z)" (also militia-crackdown,
+  undead-nightfall and undead-rising), "boot marker sweep: 7 found, 7 queued for despawn (7 listed in state.json)" with the
+  despawn batches 5 + 2 of 7 destroyed, and "boot carrier sweep: 256 found, 256 queued for removal"; the next surge started
+  by Schedule at 20:42 and ended at 21:12; the owner's `.nyar status` at 21:06 answered "Legion weekend surge: 6 min left"
+  and nothing else.
+- Stop at 22:09 after AutoSave_1263, logs copied to %TEMP%\nyar-soak-2, -LogCheck "0 unhandled, 373 nyar lines, 0 orphan
+  errors, 0 unity errors". `pwsh tools/soak-report.ps1 -Log <nyar-soak-1, nyar-soak-2 LogOutput.log> -Templates
+  legion-weekend-surge,bandit-vengeance,undead-nightfall,militia-crackdown,bandit-ambush,undead-rising -MinMinutes 240` →
+  "soak: 246 timing minutes, 18 starts, 13 ends, 4 cancelled by restart, 1 unpaired, 0 unhandled, tick avg max 163.452 ms,
+  templates 6/6" and **"soak: fail — 1 unpaired; 1 timing lines at or over 5 ms"**:
+  - the unpaired start is the undead-nightfall night that began at about 21:57 and was still active at the stop;
+  - the slow window is "tick timing: avg 163.452 ms, max 8484.964 ms over 52 ticks" at about 21:56–21:57 (every other
+    window: avg 0.07–0.6 ms, 61 ticks). In it the 21:26 surge ended, which writes state.json from the tick
+    (Services/Persistence.cs, File.WriteAllBytes and File.Replace on the main thread), and Windows' System log shows a
+    Volume Shadow Copy (HarddiskVolumeShadowCopy11, servicing hives reorganized) at 21:57:25; a shadow copy freezes disk
+    writes for up to about 10 s, so the tick waited on the write and the whole server stood still for 8.5 s.
+- Unity log, both boots: 0 exceptions; the game's 226 PrefabLookupMap notices at save load only (905 lines, 4 per notice).
+- D25 not passed; the stall and the stop rule go to the owner (plan mode).
+Then `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s6,
+C:\Users\<user>\AppData\Local\Temp\nyar-snap-s6 deleted)"; %TEMP%\nyar-session deleted.
