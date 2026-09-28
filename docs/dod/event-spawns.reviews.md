@@ -532,3 +532,40 @@ VERDICT: REVISE
 - F6 · accepted · D23: a modified Hunt event of 30 units over two waves at the default caps (MaxUnitsPerWave 20)
 - F7 · accepted · step 1: "SpawnHealth gains the event-spawns entries (D30); the HealthMonitor wiring is walkable-spawns'"; HealthMonitor.cs leaves step 1's Paths walked
 - Trim (owner Decision 3, plan mode 2026-09-28): D7, D12, D14 and D15 with their rules, fields, tests, fixtures, session steps and rows move to a later child spawn-extras; the release is 0.7.0 after regions 0.6.0 (S-14, S-15)
+
+## Review 11 · 2026-09-28 · subagent · plan commit 0f45f53 · plan 94189 B · 24 items · files 0 · e3b0c44298fc · prompt 539d36cb5636
+Reviewer: a fresh-context general-purpose subagent (never a fork), read-only, the last round under the owner's round-cap note (through Review 11). It verified the plan against tools/preflight.ps1, tools/preflight-checks.json, Services/SpawnTracker.cs, Services/EventScheduler.cs, Core.cs, Logic/Engine.cs and KindredCommands' territory conversion.
+
+F1 `[advisory]` 6.2: D21 and External › Build tooling cite a release-tools "case gh-ambiguous" in `-DependencySuite event-spawns`; no tool implements it (the release-tools row is `kind: selftests` over release-verify and repo-rollback-drill, and no script in tools/ runs `gh release create`).
+Fix: add a small release-publish script with a selftest stubbing `gh`, or drop the "case" wording and keep `view` before any retry as a recorded procedure of the release step, as walkable-spawns D12 does.
+
+F2 `[advisory]` 10.1: Test-CheckGatewayOnly enumerates only Commands/, Patches/ and Services/ (tools/preflight.ps1:1642), so "the gateway check accepts callers in … Core.cs" is empty and a stray [Mutating] call from Plugin.cs or Config/ would pass.
+Fix: widen the enumeration to every non-Logic .cs file, allow Core.cs only as a System-actor caller, and add fixture GatewayOnly/bad-rootcaller.
+
+F3 `[advisory]` 12.4: the Paths fixture names contradict each other (D27's bad-datatests is the empty entry; the 12.4 table and step 1 use bad-datatests for a planted failing test and empty-datatests for the empty entry), and Invoke-ClassTests always runs the real test project, so a fixture cannot plant a failing test class.
+Fix: one naming across D27, the table and step 1; the failing case names a class that runs zero tests ("tests: <class> ran 0 tests").
+
+F4 `[advisory]` 12.4: D24 lists fixture TimingSpan/bad-notarget but the check table's TimingSpan row lists only bad-avg, bad-slow and bad-gap.
+Fix: add bad-notarget (a window without a "hunt targets: n ≥ 1" line) to that row.
+
+F5 `[advisory]` 12.2: D11's manual evidence relies on the verbose line "drops <unit>: <n> before, <m> after setup", which does not exist and which step 2 does not add.
+Fix: step 2 adds that VerboseLogging line in SpawnTracker.Prepare next to the DropTableBuffer clear, and Logs (12.2) names it.
+
+F6 `[advisory]` 4.2, 7.2: D13's seed record cannot tell our seed from a game entry for the same player when the game drops our seed and adds its own between two ticks; HuntAction would remove the game's entry later.
+Fix: an entry whose game-maintained fields changed since HuntAction wrote it is the game's and its record is dropped; a matching race fixture in SpawningTests Hunt.
+
+F7 `[advisory]` 5.1: D34's real-tree list names "DataStore.cs fs.Write", but DataStore.cs is in Logic/, outside D34's own scan.
+Fix: drop DataStore.cs from the list or say it is outside the scan.
+
+EARLIER: all resolved (Review 10 F1-F7 reflected in the plan text)
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · applied as an amendment when the build starts (the reviewed revision stays frozen until approve; the child is built after raphael-api-admin and regions)
+- F2 · accepted · applied as an amendment when the build starts
+- F3 · accepted · applied as an amendment when the build starts
+- F4 · accepted · applied as an amendment when the build starts
+- F5 · accepted · applied as an amendment when the build starts
+- F6 · accepted · applied as an amendment when the build starts
+- F7 · accepted · applied as an amendment when the build starts

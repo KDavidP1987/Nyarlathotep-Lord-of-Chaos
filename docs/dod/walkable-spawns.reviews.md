@@ -58,3 +58,40 @@ VERDICT: REVISE
 - F11 · accepted · narrowly: Permissions 2.2 states adminOnly is VCF's and the -AuthSuite admin list fails when `debug` loses it; no non-admin session is planned
 - F12 · accepted · Also considered gains one line each for compliance, localisation and time formats, running cost, success measurement and support tooling
 - F13 · accepted · S-8's fallback is one this child can do now: add walk-check to the fixed $script:DependencyCategories list in tools/preflight.ps1 with a test class, if a suite entry is wanted before event-spawns
+
+## Review 2 · 2026-09-28 · subagent · plan commit cb7e022 · plan 44452 B · 12 items · files 0 · e3b0c44298fc · prompt 3fce7f2dd6a8
+Reviewer: a fresh-context general-purpose subagent (never a fork), read-only, the primary plan reviewer by design §9 D26. It verified the plan against ControlCaseTests.cs, Services/WaveAction.cs, SpawnTracker.RequestWave, SpawnLedger.Request and the preflight helpers.
+
+F1 `[advisory]` 12.4: ControlCaseTests.PlanControls treats every test or cmd item with a "(fails when:" clause as a control, so this plan yields D2, D3, D5-D7 and D9-D12; D9 lists rows only for D2, D3, D5, D6 and D7, so the two-way check would report "control D9 has no row" and the like.
+Fix: give D9-D12 their own cmd rows in the `C(...)` form, or state that cmd items reusing existing checks are skipped; correct D9's row list.
+
+F2 `[advisory]` 3.2, 5.1, 14.4: RequestWave runs once per unit entry, called from Services/WaveAction.cs, and the wave line is written in WaveAction.Tick ("event <id> wave <n>/<N>: <total> units queued, due in …"); the per-wave moved and unchecked counts must be summed in WaveAction, which is in neither Interfaces › Writes nor Paths walked step 2.
+Fix: add Services/WaveAction.cs; state that each entry plans its slice of the ring and WaveAction totals the kinds, extending the existing line.
+
+F3 `[advisory]` 9.1, 13.1: SpawnLedger.Request calls place(i) for every unit when the wave is queued, so a whole wave's search runs in one tick; with MaxConcurrentEvents 10 the worst case is 10 × 50 × 25 = 12,500 checks in one tick, not 1,250.
+Fix: restate the bound per tick, say whether map data is created once per wave, and optionally cap the checks per tick with the excess falling open.
+
+F4 `[advisory]` 4.1, S-5: the grounded rule is not tested on dry ground before step 2 builds on it; if GetIsGrounded reads false everywhere, every unit collapses onto the centre as unchecked.
+Fix: each Session 1 reading prints the grounded result; "dry ground reads grounded" joins the go condition, with the probe-record fixtures updated.
+
+F5 `[advisory]` 6.2, D5: fail open still calls the game for every point, so a throwing WalkCheck costs up to 25 exceptions per unit in one tick.
+Fix: after a failure, treat the rest of that wave as free and try again on the next wave.
+
+F6 `[advisory]` 8.1: at radius 0 all 25 search points are the centre, while the empty-case table says one isFree call.
+Fix: radius 0 checks once and returns the centre (kind centre when free, unchecked when blocked).
+
+F7 `[advisory]` 12.4: the `walk` verb is a string literal compared inside Debug and part of the usage text, not a [Command]; the shared helpers strip literals or read attributes only.
+Fix: state that the DebugCommands check reads the `debug` command's usage text and its compared literal.
+
+EARLIER: all resolved
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · applied after approve as A1 (the grammar keeps the reviewed revision frozen until approve)
+- F2 · accepted · applied after approve as A2
+- F3 · accepted · applied after approve as A3
+- F4 · accepted · applied after approve as A4
+- F5 · accepted · applied after approve as A5
+- F6 · accepted · applied after approve as A6
+- F7 · accepted · applied after approve as A7
