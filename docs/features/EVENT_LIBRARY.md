@@ -448,10 +448,11 @@ Observed (two boots, 17:55–20:34 and 20:34–22:09; the owner connected for th
   templates 6/6" and **"soak: fail — 1 unpaired; 1 timing lines at or over 5 ms"**:
   - the unpaired start is the undead-nightfall night that began at about 21:57 and was still active at the stop;
   - the slow window is "tick timing: avg 163.452 ms, max 8484.964 ms over 52 ticks" at about 21:56–21:57 (every other
-    window: avg 0.07–0.6 ms, 61 ticks). In it the 21:26 surge ended, which writes state.json from the tick
-    (Services/Persistence.cs, File.WriteAllBytes and File.Replace on the main thread), and Windows' System log shows a
-    Volume Shadow Copy (HarddiskVolumeShadowCopy11, servicing hives reorganized) at 21:57:25; a shadow copy freezes disk
-    writes for up to about 10 s, so the tick waited on the write and the whole server stood still for 8.5 s.
+    window: avg 0.07–0.6 ms, 61 ticks). In it the 21:26 surge ended, and Windows' System log shows a Volume Shadow Copy
+    (HarddiskVolumeShadowCopy11, servicing hives reorganized) at 21:57:25; a shadow copy freezes disk writes for up to
+    about 10 s. The state.json write was not the stalled step: DataStore.Flush logs "state.json write slow (<ms> ms)" past
+    its interval and no such line was logged. Which phase of the tick waited is unknown (the tick logs only its total);
+    another synchronous disk write in the tick, such as a BepInEx log line, is the likeliest suspect, unproven.
 - Unity log, both boots: 0 exceptions; the game's 226 PrefabLookupMap notices at save load only (905 lines, 4 per notice).
 - D25 not passed; the stall and the stop rule go to the owner (plan mode).
 Then `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s6,
