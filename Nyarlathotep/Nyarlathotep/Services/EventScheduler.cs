@@ -12,12 +12,15 @@ namespace Nyarlathotep.Services;
 /// tick). Each tick runs its phases in order: the spawn and despawn queues, the triggers, the events, the announcement
 /// queue, the push lines, the health line, then the state.json flush. Every phase has its own try/catch, logged once per failure streak, so a fault in one never stops the others,
 /// and an event's own fault is counted inside EventRuntime (D25). Nothing ticks before Core.IsReady (D28). With
-/// Debug.TimingLog the tick's average and maximum are logged once a minute (D24).
+/// Debug.TimingLog the tick's average and maximum are logged once a minute (D24); a tick of 250 ms or more logs one
+/// warning naming its slowest phases, at most once a minute, whatever TimingLog says (event-library D36).
 /// </summary>
 internal static class EventScheduler
 {
     static Coroutine _tick;
     static readonly TickTimer _timer = new();
+    static readonly SlowTickLog _slow = new();
+    static readonly List<(string Phase, double Ms)> _phases = new();
     static readonly Dictionary<string, FailureStreak> _faults = new();
 
     internal static void Start() => _tick = Core.StartCoroutine(Loop());
@@ -45,6 +48,7 @@ internal static class EventScheduler
     {
         var watch = Stopwatch.StartNew();
         var now = DateTime.UtcNow;
+        _phases.Clear();
         Phase("spawn queues", SpawnTracker.Tick);
         Phase("triggers", () => TriggerBus.Tick(now));
         Phase("events", () => EventRuntime.Tick(now));
@@ -53,13 +57,21 @@ internal static class EventScheduler
         Phase("health", () => HealthMonitor.Tick(now));
         Phase("state flush", () => Persistence.State.Flush());
         watch.Stop();
-        if (Settings.TimingLog.Value && _timer.Add(watch.Elapsed.TotalMilliseconds, now) is { } line)
+        var ms = watch.Elapsed.TotalMilliseconds;
+        if (Settings.TimingLog.Value && _timer.Add(ms, now) is { } line)
             Core.Log.LogInfo($"[nyar] {line}");
+        try
+        {
+            // the tick's end, not its start: a tick of a minute or more must not open the next quiet minute early
+            if (_slow.Add(ms, _phases, DateTime.UtcNow) is { } slow) Core.Log.LogWarning($"[nyar] {slow}");
+        }
+        catch { /* a diagnostic never breaks the tick */ }
     }
 
     static void Phase(string name, Action work)
     {
         if (!_faults.TryGetValue(name, out var streak)) _faults[name] = streak = new FailureStreak();
+        var start = Stopwatch.GetTimestamp();
         try
         {
             work();
@@ -69,5 +81,6 @@ internal static class EventScheduler
         {
             if (streak.Fail()) Core.Log.LogError($"[nyar] tick phase {name} failed: {ex.Message}; retrying every second");
         }
+        _phases.Add((name, (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency));
     }
 }

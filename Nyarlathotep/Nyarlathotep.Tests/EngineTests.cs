@@ -326,6 +326,51 @@ public partial class EngineTests
         Assert.Null(t.Add(5.0, T0.AddSeconds(61)));
     }
 
+    // ---- slow-tick warning (event-library D36)
+
+    static readonly (string, double)[] SlowPhases =
+        { ("spawn queues", 0.2), ("events", 180.4), ("state flush", 0.4), ("push", 2.0), ("triggers", 60.0) };
+
+    [Fact]
+    public void SlowTick_fails_when_tick_reaches_250ms()
+    {
+        var s = new SlowTickLog();
+        Assert.Equal("slow tick: 250 ms (events 180 ms, triggers 60 ms, push 2 ms; outside phases 7 ms)",
+            s.Add(250.0, SlowPhases, T0));
+    }
+
+    [Fact]
+    public void SlowTick_passes_ticks_under_250ms()
+    {
+        var s = new SlowTickLog();
+        Assert.Null(s.Add(249.9, SlowPhases, T0));
+        Assert.Null(s.Add(0.3, System.Array.Empty<(string, double)>(), T0));
+    }
+
+    [Fact]
+    public void SlowTick_empty_no_phase_timings()
+    {
+        var s = new SlowTickLog();
+        Assert.Equal("slow tick: 8485 ms (no phase of 1 ms; outside phases 8485 ms)",
+            s.Add(8484.964, System.Array.Empty<(string, double)>(), T0));
+        Assert.Equal("slow tick: 300 ms (no phase of 1 ms; outside phases 300 ms)",
+            new SlowTickLog().Add(300, new[] { ("events", 0.1) }, T0));
+    }
+
+    [Fact]
+    public void SlowTick_fails_when_ticks_repeat_within_a_minute()
+    {
+        var s = new SlowTickLog();
+        Assert.NotNull(s.Add(300, SlowPhases, T0));
+        Assert.Null(s.Add(300, SlowPhases, T0.AddSeconds(1)));
+        Assert.Null(s.Add(300, SlowPhases, T0.AddSeconds(59)));
+        Assert.Null(s.Add(10, SlowPhases, T0.AddSeconds(60)));        // a normal tick neither logs nor counts
+        var line = s.Add(300, SlowPhases, T0.AddSeconds(60));
+        Assert.EndsWith("; 2 more since the last line", line);
+        Assert.DoesNotContain("more since", s.Add(300, SlowPhases, T0.AddSeconds(121)));
+        Assert.NotNull(s.Add(300, SlowPhases, T0.AddHours(-1)));        // the clock stepped back: not silenced for an hour
+    }
+
     // ---- events.json editor (event set / enable / disable)
 
     [Fact]

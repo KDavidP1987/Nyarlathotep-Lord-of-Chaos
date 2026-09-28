@@ -136,6 +136,14 @@ and one under "### A22 probe · Session 4 · 2026-09-27 · 86f6f53
 - leftovers: %TEMP%\nyar-s4-logs and %TEMP%\nyar-s5-logs (hand copies of Sessions 4 and 5's logs) found by -Paths and deleted; later sessions copy logs to %TEMP%\nyar-soak-* or delete them in the session
 - privacy grep (7656119, kdpenland): only the audit's own grep lines
 
+### A25 slow-tick warning · 2026-09-27 · b297046 + working tree
+- compile 0 errors, 0 warnings; 1337 tests passed (1333 before); PREFLIGHT OK; -Paths -DeclaredOf event-library "paths: 1022 walked, all in manifest; declared: 291/291 in event-library; plants: 13/13 fail, tempvar 15/15 lines"; dod --check event-library 0 problems
+- scope: Logic SlowTickLog (Logic/Engine.cs) and its wiring in Services/EventScheduler.cs (a Stopwatch sample per phase; the warning built in its own try/catch); D36's row in ControlCases.Table and D31's control list
+- mutation check: threshold 250 → >250, the phase order dropped, the quiet minute removed, the held-back count dropped → each fails one SlowTick test
+- /code-review (self): one finding fixed — a clock stepped back would have silenced the warning until it caught up (utcNow >= last guard, asserted in SlowTick_fails_when_ticks_repeat_within_a_minute)
+- Codex verdict: READY (round 2) — round 1 NOT READY: F1 the quiet minute was measured from the tick's start, so a tick of a minute or more could let the next warning through at once (accepted: DateTime.UtcNow at the warning)
+- privacy grep (7656119, kdpenland): none in the diff
+- in-game: Session 7 (the soak run again, A26)
 ## Sessions
 - session 1 log check: 0 unhandled, 60 nyar lines, 0 orphan errors, 0 unity errors
   - one boot (23:10–23:48), unattended; run after the stop and before any restart; BepInEx: the three known warnings (Il2CppInterop, two Beelzebub TUNE); Unity log: 226 PrefabLookupMap lines at save load, the game's RepairVBloodProgressionSystem lookup notice and the hard stop's Crashpad and temp-memory notices; then "snapshot restored; hashes equal (s1, … deleted)"

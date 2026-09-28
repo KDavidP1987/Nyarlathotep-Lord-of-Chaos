@@ -334,3 +334,37 @@ public sealed class TickTimer
         return line;
     }
 }
+
+/// <summary>The slow-tick warning (event-library D36, A25): a tick of <see cref="ThresholdMs"/> or more returns
+/// "slow tick: &lt;t&gt; ms (&lt;phase&gt; &lt;ms&gt; ms, …; outside phases &lt;r&gt; ms)" naming its slowest phases, at most
+/// one line per <see cref="Quiet"/>; the next line carries the count it held back. Independent of Debug.TimingLog, so a
+/// stall on any server names the phase that waited (Session 6's 8.5 s tick could not be placed).</summary>
+public sealed class SlowTickLog
+{
+    public const double ThresholdMs = 250;
+    public const int MaxPhases = 3;
+    public const double MinPhaseMs = 1;
+    public static readonly TimeSpan Quiet = TimeSpan.FromMinutes(1);
+
+    DateTime? _last;
+    int _held;
+
+    public string? Add(double totalMs, IReadOnlyList<(string Phase, double Ms)> phases, DateTime utcNow)
+    {
+        if (totalMs < ThresholdMs) return null;
+        if (_last is { } last && utcNow >= last && utcNow - last < Quiet)   // a clock stepped back ends the quiet minute
+        {
+            _held++;
+            return null;
+        }
+        _last = utcNow;
+        var named = phases.Where(p => p.Ms >= MinPhaseMs).OrderByDescending(p => p.Ms).Take(MaxPhases)
+            .Select(p => FormattableString.Invariant($"{p.Phase} {p.Ms:0} ms")).ToList();
+        var outside = Math.Max(0, totalMs - phases.Sum(p => p.Ms));
+        var slowest = named.Count > 0 ? string.Join(", ", named) : "no phase of 1 ms";
+        var line = FormattableString.Invariant($"slow tick: {totalMs:0} ms ({slowest}; outside phases {outside:0} ms)");
+        if (_held > 0) line += $"; {_held} more since the last line";
+        _held = 0;
+        return line;
+    }
+}

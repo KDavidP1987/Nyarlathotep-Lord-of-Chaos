@@ -90,7 +90,7 @@ public class ControlCaseTests
         var ids = PlanControls(PlanText);
         Assert.Equal(
             ["D1", "D2", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12", "D13", "D14", "D16", "D17", "D18", "D19", "D20", "D24",
-             "D27", "D28", "D29", "D31", "D30", "D32", "D33", "D34"],
+             "D27", "D28", "D29", "D31", "D30", "D32", "D33", "D34", "D36"],
             ids);
         Assert.Empty(Problems(ControlCases.Table, ids, TestMethods, RepoRoot()));
     }

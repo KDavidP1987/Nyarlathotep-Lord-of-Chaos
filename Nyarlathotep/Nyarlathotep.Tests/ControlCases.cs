@@ -87,5 +87,6 @@ public static class ControlCases
             ["selftest DependencySuite/bad", "selftest DependencySuite/bad-2"], ["selftest DependencySuite/good"], ["selftest DependencySuite/empty"]),
         C("D34", "TestRuns", "preflight Invoke-ClassTests",
             ["selftest TestRuns/bad", "selftest TestRuns/bad-2", "selftest TestRuns/bad-3"], ["selftest TestRuns/good"], ["selftest TestRuns/empty"]),
+        T("D36", "SlowTick", "EngineTests", ["tick_reaches_250ms", "ticks_repeat_within_a_minute"], ["ticks_under_250ms"], ["no_phase_timings"]),
     ];
 }

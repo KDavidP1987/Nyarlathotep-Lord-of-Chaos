@@ -30,6 +30,9 @@ with no file edits.
   lands on another level than the wave's centre (more than 2 m above or below it, e.g. past a plateau's edge) is moved
   once, about a second after it appears, to within 1 m of the centre. `.nyar spawn` does the same around the admin; a
   Point without a stored height is left as it lands.
+- **Slow-tick warning (A25):** a mod tick of 250 ms or more logs one warning, `[nyar] slow tick: <t> ms (<phase> <ms> ms,
+  …; outside phases <r> ms)`, naming its slowest phases; at most one a minute, with the count it held back. It is on
+  whatever Debug.TimingLog says, so a server stall points at the part of the tick that waited.
 - **Pillar commands:** `.nyar pillar list` and `.nyar pillar <name> on|off`, saved to the cfg.
 - **Readiness column:** `.nyar event list` shows why each event would or would not start: `ready`, `off (purge)`,
   `off (mod)`, `off (pillar)`, `full (cap)`, `invalid: <reason>` or `off (event)`.
@@ -60,6 +63,10 @@ Decisions are recorded as the plan's assumptions S-1 to S-14 and amendments. Ope
 
 - Ground height on uneven terrain: settled. The Session 4 probe showed the game snaps each unit to the ground itself;
   the owner chose to regroup units that land on another level than the centre (A23, D35), confirmed in Session 5.
+- Refused carriers (Session 6): the game refuses undead-nightfall's carrier buff on 5 of 142 undead units at every sweep
+  (TryInstantiateBuffEntityImmediate false); the staged apply skips them safely. Which units, and why, is not known yet.
+- The 8.5 s tick (Session 6): at the time of a Windows shadow copy; the phase is unknown. The slow-tick warning (A25)
+  names it if it recurs.
 - Ambush stealth (owner, Session 3): units that stay hidden until a player passes. Owner decision 2A: new scope for a
   child plan after 0.5.0 (the game's AB_Bandit_Ambush_Buff / RevealBuff and Deadeye Camouflage are the leads);
   bandit-ambush ships unchanged.
