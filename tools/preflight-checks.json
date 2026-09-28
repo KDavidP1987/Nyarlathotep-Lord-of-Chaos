@@ -679,7 +679,7 @@
         "tools/release-verify.ps1",
         "-SelfTest"
       ],
-      "success": "release verify selftest: 4/4",
+      "success": "release verify selftest: 7/7",
       "cases": {
         "bad": "a local asset whose hash differs from the audit's line fails",
         "good": "a local asset whose hash equals the audit's \"zip sha256:\" line passes",

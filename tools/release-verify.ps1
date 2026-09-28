@@ -4,20 +4,22 @@
 
 .DESCRIPTION
     pwsh tools/release-verify.ps1 -Tag v0.4.0 -Asset kdpen-Nyarlathotep-0.4.0.zip [-Audit docs/audits/faction-empowerment.md]
-      Downloads the asset with `gh release download <Tag> -p <Asset>` into %TEMP%\nyar-rel-<guid> (always removed),
+      Without -Audit it reads every docs/audits/*.md and uses the one that records the asset's line (event-library A31):
+      none, or two or more, fail. Downloads the asset with `gh release download <Tag> -p <Asset>` into %TEMP%\nyar-rel-<guid> (always removed),
       hashes it (SHA-256) and compares the hash with the audit's line "zip sha256: <Asset> <hash>", written when the
       zip was built. → "release verify: hashes equal", else "release verify: fail — <why>" and exit 1.
 
     pwsh tools/release-verify.ps1 -SelfTest
-      Four cases with a local folder as the asset source instead of gh (scratch under %TEMP%\nyar-rel-<guid>, removed
+      Seven cases with a local folder as the asset source instead of gh (scratch under %TEMP%\nyar-rel-<guid>, removed
       when done): a matching hash passes; a differing hash fails; a missing asset fails; an audit without the line
-      fails, including one that quotes the line inside another bullet (the line must stand on its own). → "release verify selftest: 4/4".
+      fails, including one that quotes the line inside another bullet (the line must stand on its own); and the audit
+      search: one audit recording the asset is found, no audit and two audits fail. → "release verify selftest: 7/7".
 #>
 [CmdletBinding()]
 param(
     [string]$Tag,
     [string]$Asset,
-    [string]$Audit = 'docs/audits/faction-empowerment.md',
+    [string]$Audit,
     [switch]$SelfTest
 )
 $ErrorActionPreference = 'Stop'
@@ -46,6 +48,16 @@ function Test-ReleaseAsset([string]$Name, [string]$AuditText, [scriptblock]$Fetc
     return $null
 }
 
+# The audit that records the asset (A31): $Texts maps an audit's path to its text. Returns @(path, $null) or
+# @($null, reason). The same own-line match as Test-ReleaseAsset, so a line quoted inside another bullet does not count.
+function Find-ReleaseAudit([string]$Name, [hashtable]$Texts) {
+    $rx = "(?m)^\s*(?:-\s+)?zip sha256: $([regex]::Escape($Name)) [0-9A-Fa-f]{64}\s*$"
+    $hits = @($Texts.Keys | Where-Object { [regex]::IsMatch("$($Texts[$_])", $rx) } | Sort-Object)
+    if ($hits.Count -eq 0) { return @($null, "no audit under docs/audits records ""zip sha256: $Name <hash>""") }
+    if ($hits.Count -gt 1) { return @($null, "$($hits.Count) audits record ""zip sha256: $Name"" ($($hits -join ', ')); pass -Audit") }
+    return @($hits[0], $null)
+}
+
 if ($SelfTest) {
     $src = Join-Path $env:TEMP "nyar-rel-$([guid]::NewGuid().ToString('N'))"
     $ok = 0
@@ -65,13 +77,31 @@ if ($SelfTest) {
             if (($null -eq $why) -eq $c.Pass) { $ok++; if ($why) { Write-Host "  - $($c.Name): fails — $why" } }
             else { Write-Host "  - $($c.Name): expected $(if ($c.Pass) { 'pass' } else { 'fail' }), got $(if ($why) { "fail — $why" } else { 'pass' })" }
         }
+        $line = "- zip sha256: $name $hash"
+        $finds = @(
+            @{ Name = 'one audit records the asset'; Texts = @{ 'a.md' = $line; 'b.md' = "- an old note: zip sha256: $name $hash" }; Pass = $true },
+            @{ Name = 'no audit records the asset'; Texts = @{ 'a.md' = '- tcli build: done'; 'b.md' = '' }; Pass = $false },
+            @{ Name = 'two audits record the asset'; Texts = @{ 'a.md' = $line; 'b.md' = $line }; Pass = $false })
+        foreach ($c in $finds) {
+            $r = Find-ReleaseAudit $name $c.Texts
+            $good = if ($c.Pass) { $r[0] -eq 'a.md' -and -not $r[1] } else { -not $r[0] -and $r[1] }
+            if ($good) { $ok++; if ($r[1]) { Write-Host "  - $($c.Name): fails — $($r[1])" } }
+            else { Write-Host "  - $($c.Name): expected $(if ($c.Pass) { 'a.md' } else { 'fail' }), got $(if ($r[1]) { "fail — $($r[1])" } else { $r[0] })" }
+        }
     } finally { Remove-Item -LiteralPath $src -Recurse -Force -ErrorAction SilentlyContinue }
-    Write-Host "release verify selftest: $ok/4"
-    exit ([int]($ok -ne 4))
+    Write-Host "release verify selftest: $ok/7"
+    exit ([int]($ok -ne 7))
 }
 
 if (-not $Tag -or -not $Asset) { Write-Host 'usage: release-verify.ps1 -Tag <tag> -Asset <zip name> [-Audit <audit.md>] | -SelfTest'; exit 2 }
-$auditPath = if ([IO.Path]::IsPathRooted($Audit)) { $Audit } else { Join-Path $Repo $Audit }
+if ($Audit) { $auditPath = if ([IO.Path]::IsPathRooted($Audit)) { $Audit } else { Join-Path $Repo $Audit } }
+else {
+    $texts = @{}
+    Get-ChildItem -LiteralPath (Join-Path $Repo 'docs/audits') -Filter *.md -File | ForEach-Object { $texts[$_.FullName] = Get-Content -LiteralPath $_.FullName -Raw }
+    $found = Find-ReleaseAudit $Asset $texts
+    if ($found[1]) { Write-Host "release verify: fail — $($found[1])"; exit 1 }
+    $auditPath = $found[0]
+}
 # The closure has its own scope, so gh's exit code is checked here (step 7 code review).
 $gh = { param($d, $n) gh release download $Tag -R KDavidP1987/Nyarlathotep-Lord-of-Chaos -p $n -D $d; if ($LASTEXITCODE) { throw "gh release download exit $LASTEXITCODE" } }.GetNewClosure()
 $why = Test-ReleaseAsset $Asset (Get-Content -LiteralPath $auditPath -Raw) $gh

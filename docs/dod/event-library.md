@@ -14,7 +14,7 @@ closed: none
 commit: 23f2ba4
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
-review: codex
+review: pending
 ---
 
 # DoD: Event library — built-in templates and in-game authoring
@@ -430,6 +430,7 @@ Walking the Build plan:
   - Remote writes: the tag v0.5.0 and the GitHub release v0.5.0, declared as `remote-tag:` and `remote-release:` lines of tools/paths-manifest.txt.
   - Nyarlathotep/Nyarlathotep/dist/** and build/*.zip (ignored); %TEMP%\nyar-rel-*, %TEMP%\nyar-rollback-* and %TEMP%\nyar-drill-* from the release tools.
   - docs/dod/event-library.md, docs/dod/nyarlathotep.md, docs/dod/README.md.
+  - tools/release-verify.ps1 and tools/preflight-checks.json (its release-verify selftest count), by A31.
 - **Build outputs of every step** (`dotnet build`, `dotnet test`, tcli build): Nyarlathotep/**/bin/**, Nyarlathotep/**/obj/**, *.binlog, Nyarlathotep/Nyarlathotep/dist/** and Nyarlathotep/Nyarlathotep/build/**, covered by the existing ignored globs of tools/paths-manifest.txt (`ignored: **/bin/**`, `ignored: **/obj/**`, `ignored: Nyarlathotep/Nyarlathotep/dist/**`, `ignored: Nyarlathotep/Nyarlathotep/build/**`, `ignored: **/*.binlog`); the server logs are its `external: BepInEx/LogOutput*.log` and `server: logs/NyarDev.log` lines; the one glob missing, `temp: nyar-soak-*`, is added in step 3 (D30).
 - **Review process:** docs/dod/event-library.reviews.md and docs/dod/event-library.review.html.
 - **Other plans of the store (by A28):** docs/dod/event-spawns.*, the next child's plan and its reviews, written while steps 5 and 6 ran; this child's rollback leaves them.
@@ -562,6 +563,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - A28 · 2026-09-28 · discovered · ~D30 · layer: 14.4 · package: W5.2 · finding: step 5's post-audit -Paths -DeclaredOf event-library reported docs/dod/event-spawns.md and docs/dod/event-spawns.reviews.md, the next child's plan drafted in the store while this child's soak ran; they fall in the git diff since this child's base, and Paths walked named no other plan of the store; Paths walked gains a line declaring them by the glob docs/dod/event-spawns.* (by Review 21 F1: any file of that plan in the store, a review page or a rename included), which this child's rollback leaves in place; step 6's last -Paths -DeclaredOf run is immediately before `dod close event-library`
 - A29 · 2026-09-28 · discovered · ~D25 · layer: 7.3 · package: W5.2 · finding: step 5's post-audit (Codex F1): D25's "Session 3" is the plan's third in-game session, but the unplanned A22 and A23 probes (feature-doc Sessions 4 and 5) shifted the feature doc's numbering, and the soak ran twice (Sessions 6 and 7, A25); D25 names the soak session as feature-doc Session 6 and its rerun Session 7: the soak-report pass is Session 7's three boots, its first start and end lines per template are copied into Session 7, and the CHAR_Bandit_Hunter observation may come from either run's kick-off (Session 6's)
 - A30 · 2026-09-28 · discovered · ~D26 · layer: 7.3 · package: W5.2 · finding: step 5's post-audit (Codex F2): D26's "Session 3" is feature-doc Session 6, the first soak run, whose restart during legion-weekend-surge is D26's evidence; Session 7's restart ran during undead-nightfall (a recorded deviation) and is supporting evidence only
+- A31 · 2026-09-28 · defect · ~D28 · layer: 12.4 · finding: step 6: `pwsh tools/release-verify.ps1 -Tag v0.5.0 -Asset kdpen-Nyarlathotep-0.5.0.zip`, D28's command as written, failed "the audit has no zip sha256 line" because the tool's -Audit default was faction-empowerment's audit; the plan is right and the tool wrong: without -Audit it now reads every docs/audits/*.md and uses the one audit that records the asset's "zip sha256:" line (none → a failure naming the asset, two or more → a failure naming the audits); release-verify -SelfTest gains the cases one audit, no audit and two audits (7/7 with the four earlier cases), and tools/preflight-checks.json expects "release verify selftest: 7/7"
 ## Log
 - 2026-09-26 · status → draft · plan
 - 2026-09-26 · note · review: codex Review 1 REVISE (F1-F11, 7 blocking, 4 advisory); all accepted and applied in this revision
@@ -654,3 +656,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-28 · D18 · pass · cmd: pwsh tools/preflight.ps1 -SelfTest → "selftest: 33/33 checks, 7/7 external selftests (3 fixtures each, 131 extra bad fixtures; secrets: none …)"; pwsh tools/preflight.ps1 → PREFLIGHT OK with "secrets: none (1021 files scanned, 1008 index blobs)", "pillar defaults: all off (5 switches, 2 templates)", "templates: 2 valid", "cfg writes: only PillarSwitches (6 call sites)" · d989523 · claude
 - 2026-09-28 · D33 · pass · cmd: pwsh tools/preflight.ps1 -DependencySuite event-library → "dependency suite: event-library 9/9 (events-write, events-promote, state-write, cfg-save, catalogue, location-context, phase-source, vcf, release-tools)" · d989523 · claude
 - 2026-09-28 · D34 · pass · cmd: pwsh tools/preflight.ps1 -Tests ReadinessTests,ControlPrecedenceTests → "tests: 2/2 classes, 145 passed"; pwsh tools/preflight.ps1 -ControlSuite event-library → "control suite: event-library tests 13/13 classes, selftest 33/33 checks" · d989523 · claude
+- 2026-09-28 · note · A31 (defect, ~D28, layer 12.4) recorded before the fix: release-verify finds the audit recording the asset when -Audit is not given; layer 12.4 is gating: review: pending until a scoped Codex re-review (scope A31) is READY

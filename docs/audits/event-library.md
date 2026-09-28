@@ -163,6 +163,14 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - Codex verdict: READY (round 2) — round 1 REVISE: F1 D25's first start and end lines and the Hunter observation's session (A29, lines added), F2 D26 named Session 3 while its pass was Session 6 (A30, pass re-verified); round 2 READY, "No findings", EARLIER: all resolved
 - privacy grep (7656119, kdpenland): none in the diff
 - in-game: Session 7 (above); dod status: D25, D26, D36 checked with pass lines
+### Step 6 · 2026-09-28 · 06d6325 (chore(release): v0.5.0)
+- six surfaces: csproj Version and thunderstore.toml versionNumber 0.5.0; both changelogs (0.5.0 entries from the drafts, the root soak line filled from Session 7); both READMEs' Quick start the five commands of D23 (the root README gains a Quick start section), the templates and authoring sections, the water known issue (A27); preflight "release tags: 5/5", PREFLIGHT OK
+- tcli build: Nyarlathotep/Nyarlathotep/build/kdpen-Nyarlathotep-0.5.0.zip, built from 06d6325 (`dotnet build -c Release --no-incremental`, 0 warnings, 0 errors, the DLL deployed to the stopped dev server with an equal hash 18D67BDCD04A2161…) with icon.png, README.md, manifest.json, BepInEx/plugins/Nyarlathotep.dll (391680 bytes), CHANGELOG.md, LICENSE
+- zip sha256: kdpen-Nyarlathotep-0.5.0.zip 4330CE533097B1D539364436172922B7B665D56331D0936ECCD08DD922BCE56E
+- rollback gate before the push: `pwsh tools/rollback-gate.ps1 -From v0.4.0 -To v0.5.0 -Plan event-library` → "rollback gate: 4/4" (repository drill with -BeforePush; N-1 boot drill "events.json: v0.5.0 '6 valid, 0 disabled', v0.4.0 '6 valid, 0 disabled'", v0.4.0 boot log check 0 unhandled, "rollback drill: pass"; snapshot selftest 6/6; "rollback routes: event-library 5/5")
+- privacy grep (7656119, kdpenland) over the 59 pushed commits and the v0.5.0 tree: only lines quoting the pattern (the audits' grep records and the next child's D31); no 17-digit id; commit messages none; the author identity is the owner's git config, as on every earlier push
+- release: v0.5.0 tagged at 06d6325 and pushed with main; GitHub pre-release https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.5.0 with the zip; no tcli publish (the owner publishes)
+
 ## Sessions
 - session 1 log check: 0 unhandled, 60 nyar lines, 0 orphan errors, 0 unity errors
   - one boot (23:10–23:48), unattended; run after the stop and before any restart; BepInEx: the three known warnings (Il2CppInterop, two Beelzebub TUNE); Unity log: 226 PrefabLookupMap lines at save load, the game's RepairVBloodProgressionSystem lookup notice and the hard stop's Crashpad and temp-memory notices; then "snapshot restored; hashes equal (s1, … deleted)"
