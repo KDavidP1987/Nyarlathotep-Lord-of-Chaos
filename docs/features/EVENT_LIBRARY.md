@@ -63,6 +63,9 @@ Decisions are recorded as the plan's assumptions S-1 to S-14 and amendments. Ope
 
 - Ground height on uneven terrain: settled. The Session 4 probe showed the game snaps each unit to the ground itself;
   the owner chose to regroup units that land on another level than the centre (A23, D35), confirmed in Session 5.
+- Units in water (Session 7, A27): a wave unit whose ring point falls in a pond at the centre's level stands stuck,
+  unable to move or attack, until its wave ends and despawns it. Known issue for 0.5.0: set an event's centre on open,
+  dry ground. 0.5.1 adds a walkability check before each spawn, after a probe of the game's tile-collision data.
 - Refused carriers (Session 6): the game refuses undead-nightfall's carrier buff on 5 of 142 undead units at every sweep
   (TryInstantiateBuffEntityImmediate false); the staged apply skips them safely. Which units, and why, is not known yet.
 - The 8.5 s tick (Session 6): at the time of a Windows shadow copy; the phase is unknown. The slow-tick warning (A25)
