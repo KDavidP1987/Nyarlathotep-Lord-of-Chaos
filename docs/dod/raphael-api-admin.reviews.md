@@ -45,3 +45,40 @@ VERDICT: REVISE
 - F7 · accepted · D5 follows PurgeArming's order
 - F8 · accepted · Epic A33 (discovered, 15.2) rewrites the Children entry; Out of scope cites it
 - F9 · accepted · every admitted twin counts (D6)
+
+## Review 2 · 2026-09-28 · subagent · plan commit 55d3337 · plan 57267 B · 16 items · files 0 · e3b0c44298fc · prompt e95ee05de2d5
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, given the prompt file and read access to the repository (design §9 D26); the prompt held no Steam ID.
+
+F1 · blocking · 10.1. Test-CheckGatewayOnly (tools/preflight.ps1 1634-1678) scans only Commands/, Patches/ and Services/ and accepts a [Mutating] call only inside `Gateway.Run(` or in $script:DispatchedServices; the new Services/AdminOps.cs calls EventRuntime, EventStore and PillarSwitches [Mutating] methods outside Gateway.Run, so -AuthSuite fails in step 1, and adding AdminOps to the dispatched list empties the check (its members are not [Mutating], Logic/AdminFlows.cs is not scanned, and the regex does not match `gateway.Run<T>(`). "Every twin reaches IAdminOps only inside ActionGateway.Run<T>" is prose only.
+Fix: state the new rule in D11 (AdminOps dispatched with [Mutating] members; AdminFlows scanned with a `Run<T>(` span as a gate; any AdminOps or IAdminOps member use outside AdminFlows fails), add fixture GatewayOnly/bad-6, and list the check and fixture in step 1's Paths walked.
+
+F2 · blocking · 14.3, 6.2. The capture (`git show v0.5.1:`), the rollback range v0.5.1..v0.5.2 and the version 0.5.2 in D10, D13, D16 and the handoff assume a tag v0.5.1 that does not exist; walkable-spawns has a no-go branch where 0.5.1 is not released.
+Fix: state a precondition (step 1 after v0.5.1 is tagged) and a fallback (base v0.5.0, release 0.5.1) as an assumption.
+
+F3 · advisory. Step 1 adds seven WireError members but contract §4 gains them in step 2; WireFormatTests.Every_error_code_is_one_of_the_contract_codes (lines 70-82) then fails, and contract §7 wants code and contract in one commit.
+Fix: move the members to step 2, or add the §4 rows in step 1.
+
+F4 · advisory. Business rules 6 omits the ready guard. Fix: write the full order.
+
+F5 · advisory. D13's "seven twins pasted within one second" is likely impossible by hand; D6 proves the rate. Fix: drop it or name the tool.
+
+F6 · advisory (overload routing, 7.1/9.2). With the trailing `extra`, VCF's per-argument-count registration could route `pillar list <word>` to the switch overload. Fix: an assertion or unit case listing each twin's overload word counts.
+
+F7 · advisory (9.1). Reads are exempt from the rate gate without a stated reason. Fix: one line in 13.2.
+
+F8 · advisory. OutcomeReturns proves the return type but not that the shims are one call deep. Fix: fail on a body with more than one statement or a branch.
+
+EARLIER: all resolved
+
+14/15 layers · 47/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · D11 states the GatewayOnly rule (AdminOps dispatched, members [Mutating]; Logic/AdminFlows.cs scanned, `.Run<` spans are gates; member uses elsewhere fail) with fixtures GatewayOnly/bad-6 and bad-7; step 1 walks them
+- F2 · accepted · Precondition line and S-9 (reversible: base v0.5.0 and release 0.5.1 by a corrected amendment before step 1 on no-go; the owner may renumber)
+- F3 · accepted · step 1 uses a Logic RefusalCode enum; WireError's seven members and contract §4's rows land together in step 2
+- F4 · accepted · Business rules 6 gives the full order
+- F5 · accepted · the in-game rate step is dropped; D6 alone proves it
+- F6 · accepted · Logic/ApiCommandTable.cs with ApiOverloadTests, matched to ApiAdminCommands by the WireContract check (D11)
+- F7 · accepted · Performance 13.2 row for the unmetered reads
+- F8 · accepted · OutcomeReturns forbids branches in AdminOps bodies, fixture OutcomeReturns/bad-2
