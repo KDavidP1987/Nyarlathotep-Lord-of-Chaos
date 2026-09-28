@@ -3,6 +3,36 @@
 The complete technical history. The concise, player-facing changelog that ships to Thunderstore lives at
 `Nyarlathotep/Nyarlathotep/CHANGELOG.md`. Public beta from 0.2.0; features stay experimental until validated on live servers.
 
+## [0.5.1] - 2026-09-28
+
+The `walkable-spawns` child of the DoD Epic (`docs/dod/walkable-spawns.md`), split from event-spawns (Epic A26): wave
+units spawn on walkable ground. Design and sessions: `docs/features/WALKABLE_SPAWNS.md`; audit:
+`docs/audits/walkable-spawns.md`.
+
+- **Walk check.** `Services/WalkCheck.cs` reads the game's static tile collision (read-only): per wave it builds map
+  data over the live `TileWorldSingleton` (a system entity: `ServerScriptMapper.GetSingletonEntity`, then an
+  `IncludeSystems` query, A11) at the height level `TileLayerUtility.GetHeightLevel(centre y)` (A13), and a point is
+  walkable when `TileMapCollisionMath.CheckStaticCircle` (0.5 m circle, world metres, `CollideNormalMovement`) is free
+  and `GetIsGrounded` holds. Session 1's walk probe chose the world-metres source: dry free and grounded, pond, second
+  water body, cliff and building wall blocked; the tile-grid source read free everywhere (A8, A12). A default or
+  uncreated TileWorld and a negative tile index never reach native code (A10).
+- **Placement.** `Logic/Spawning.cs`: `SpawnPoints.Choose` keeps a free ring point, else tries the ring's 11 other
+  angles, 12 angles at half the radius, then the centre (at most 25 checks); `WavePoints.Plan` keeps one point per
+  unit in ring order under `WalkBudget` (2,500 game calls per tick, reset each tick; a point past it keeps its ring
+  point, unchecked). A Point saved without a height is not checked. The wave line gains
+  `(<m> moved, <u> unchecked)` and `, walk h <level>`.
+- **Fail open.** No tile world, a height outside 0–1000 m, a throw or a failed dispose leaves the rest of that wave on
+  its ring points, logs `walk check unavailable: <reason>` once per streak and adds `spawns: walk check unavailable`
+  to the degraded list (health line, `.nyar status`, admin login notice) until a wave's check returns; the next wave
+  tries again. `Dependency.WalkCheck` has its policy row and fault case.
+- **Session 2.** bandit-ambush at a pond shore, radius 10, five waves: none in water, moved 2–3 of 6 per wave,
+  tick timing avg ≤ 0.93 ms; the wave's height level equalled the admin's.
+- **Removed.** The temporary `.nyar debug walk` probe of step 1. Preflight `DebugCommands` fails while any `debug`
+  command's usage or parameter comparison names a verb other than `here`; `Changelogs` forbids the 0.5.0
+  known-issue note in both READMEs from 0.5.1 on; ControlCases rows are keyed by plan slug and D-id.
+- **Upgrading / rollback.** No new cfg keys, files or keys; events.json, state.json and api 3 unchanged. 0.5.0
+  loads 0.5.1's files unchanged (rollback gate).
+
 ## [0.5.0] - 2026-09-28
 
 The `event-library` child of the DoD Epic (`docs/dod/event-library.md`): built-in templates and in-game authoring.

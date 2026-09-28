@@ -6,7 +6,7 @@ A **server-side** event layer for V Rising. Admins stage NPC events the base gam
 enemies and empowered factions on a schedule, at nightfall or after a V Blood falls, with warnings and banners
 for players, and in later releases castle sieges, defended zones and boss-fight adds.
 
-> **Public beta (0.5.0).** Every pillar and automatic announcement is off by default; no event runs until an
+> **Public beta (0.5.1).** Every pillar and automatic announcement is off by default; no event runs until an
 > admin turns on its pillar and enables it.
 
 ## What it does
@@ -24,14 +24,12 @@ minimum players online, a cooldown, a chance, a time window. After the event end
 `GraceSeconds` (30 s by default), then are removed a few at a time; each also carries a timer, so none is left
 behind, even across a restart. Every event sits under one pillar switch.
 
-Each unit is placed on the ground at the centre's level: one the game drops past a cliff or plateau edge is moved
-back beside the centre.
+Each unit is placed on walkable ground at the centre's level: a spawn point in water, against a cliff or a wall
+moves to the nearest walkable one (0.5.1), and one the game drops past a cliff or plateau edge is moved back beside
+the centre.
 
 *In development:* waves at chosen levels, health and damage, spawn areas by zone or around players, and loot
 only if the event allows it.
-
-*Known issue (0.5.0):* a unit whose spawn point falls in deep water (a pond or river) stands stuck until its
-wave ends and is removed. Put event centres on open, dry ground; a fix is planned for 0.5.1.
 </details>
 
 <details>

@@ -13,7 +13,7 @@ status, event definitions for admins, and pushed updates.
 
 ## Status
 
-**v0.5.0.** See [`CHANGELOG.md`](CHANGELOG.md) for what ships and [`docs/dod/`](docs/dod/) for the
+**v0.5.1.** See [`CHANGELOG.md`](CHANGELOG.md) for what ships and [`docs/dod/`](docs/dod/) for the
 build plan.
 
 ## Quick start
@@ -26,8 +26,8 @@ Install the package on a dedicated server and start it once. Then, in game as an
 4. `.nyar event enable undead-nightfall`
 5. `.nyar status`: at the next nightfall the undead are empowered for 20 minutes, and this shows it running.
 
-`.nyar purge` then `.nyar purge confirm` is the kill switch. Known issue in 0.5.0: a wave unit whose spawn point
-falls in deep water stands stuck until its wave ends; put event centres on dry ground (fix planned for 0.5.1).
+`.nyar purge` then `.nyar purge confirm` is the kill switch. Wave units spawn only on walkable ground: a spawn
+point in water or against a cliff or wall moves to the nearest walkable one (0.5.1).
 
 ## How it works
 
@@ -47,6 +47,7 @@ which everything the event created is reverted or despawned. Four services carry
 | Event spawn modifiers and locations | in development | [`docs/features/EVENT_SPAWNS.md`](docs/features/EVENT_SPAWNS.md) |
 | Faction empowerment: the `Empower` action (five stats ×1.0–3.0 on up to five factions, timed carrier buffs), api 3 empower rows | 0.4.0 | [`docs/features/FACTION_EMPOWERMENT.md`](docs/features/FACTION_EMPOWERMENT.md) |
 | Event library: six built-in templates, chat authoring (`template`, `event new/copy/delete/set`, `pillar`), readiness column | 0.5.0 | [`docs/features/EVENT_LIBRARY.md`](docs/features/EVENT_LIBRARY.md) |
+| Walkable spawn points: wave units moved off water, cliffs and walls by the game's tile collision | 0.5.1 | [`docs/features/WALKABLE_SPAWNS.md`](docs/features/WALKABLE_SPAWNS.md) |
 | Boss reinforcements | in development | [`docs/features/BOSS_REINFORCEMENTS.md`](docs/features/BOSS_REINFORCEMENTS.md) |
 | Defended zones | in development | [`docs/features/DEFENDED_ZONES.md`](docs/features/DEFENDED_ZONES.md) |
 | Sieges | in development | [`docs/features/SIEGES.md`](docs/features/SIEGES.md) |

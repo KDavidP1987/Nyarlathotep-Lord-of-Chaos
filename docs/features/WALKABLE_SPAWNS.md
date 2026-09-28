@@ -1,8 +1,8 @@
 # Walkable spawns — wave units on ground they can walk
 
-**Status:** in build (docs/dod/walkable-spawns.md, audit docs/audits/walkable-spawns.md); step 1 done (Session 1: the
-world-metres source is go), step 2 (walkable placement) built, Session 2 (the owner, at a pond shore) next. Nothing of it
-ships yet; 0.5.0 is the current release.
+**Status:** released in 0.5.1 (docs/dod/walkable-spawns.md, audit docs/audits/walkable-spawns.md). Session 1 chose
+the world-metres source; Session 2 put five waves at a pond shore with none in water. The temporary `debug walk` verb
+is removed.
 
 ## Goal
 

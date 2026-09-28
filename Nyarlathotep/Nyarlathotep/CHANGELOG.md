@@ -2,6 +2,16 @@
 
 Public beta. Event pillars and automatic announcements default off; admins opt in per feature.
 
+## 0.5.1 (2026-09-28)
+
+- **Fix: wave units no longer spawn in water.** Each wave checks its units' spawn points against the game's own
+  walkable ground. A point in a pond, a river, a cliff face or a wall moves to the nearest walkable point on the same
+  ring, then half the ring, then the centre; no unit is added or dropped. This fixes 0.5.0's known issue.
+- The wave log line now shows how many units were moved (`(<m> moved, <u> unchecked)`). If the check cannot run,
+  waves spawn as in 0.5.0, the log says `walk check unavailable` once, and `.nyar status` shows
+  `spawns: walk check unavailable` until it works again.
+- No new cfg keys; `events.json` and `state.json` are unchanged. Rolling back to 0.5.0 keeps everything.
+
 ## 0.5.0 (2026-09-28)
 
 - **Event templates.** Six ready-made events ship inside the mod, all off: `legion-weekend-surge`,
