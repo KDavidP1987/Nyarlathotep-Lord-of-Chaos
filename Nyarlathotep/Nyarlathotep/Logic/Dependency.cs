@@ -18,6 +18,7 @@ public enum Dependency
     ConnectedUsers,
     CommandRegistration,
     PushDelivery,
+    WalkCheck,
 }
 
 /// <summary>What one dependency's failure is allowed to affect, and what the mod does about it.</summary>
@@ -38,5 +39,6 @@ public static class DependencyPolicy
         [Dependency.ConnectedUsers] = new("the one send", "skip that recipient, one log line per failure streak"),
         [Dependency.CommandRegistration] = new("the one command group", "log the group that failed; the rest register"),
         [Dependency.PushDelivery] = new("the one push line, subscriber or entry point", "skip it, one log line per failure streak; the event tick and the other subscribers go on"),
+        [Dependency.WalkCheck] = new("the one wave's placement", "use the ring points unchecked for the rest of the wave, one log line per failure streak, the health entry while it lasts; the next wave checks again"),
     };
 }

@@ -19,6 +19,15 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
   - A8 (discovered, ~D1 ~D10, layer 6.1): the metadata does not say whether the tile calls take world metres or the tile grid, so the probe reads both spaces and the go/no-go is per source.
   - A9 (discovered, ~D10, layer 12.4): the fixture battery knows good, bad* and empty only; good-probe folds into SessionLogs/good and empty-probe becomes bad-probe-4.
 
+### Step 2 · 2026-09-28 · 19bcc3a
+- git: tree clean at 19bcc3a (main)
+- compile check: `dotnet build Nyarlathotep/Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__` → 0 Warning(s), 0 Error(s)
+- preflight: PREFLIGHT OK; -SessionsOf walkable-spawns "1/1 checked; snapshots 1/1 from session 1; probe records 1/1"
+- dod status walkable-spawns: D1, D7, D8 pass (Session 1, cdd03cd); D2-D6 and D9-D12 open; A13 (discovered) recorded before building: the centre's height level from TileLayerUtility.GetHeightLevel(y)
+- feature doc: Status and Open questions read; the coordinate-space question is answered (world metres), the water question too (blocked on the world source)
+- tools: git 2.53.0, gh 2.92.0, .NET SDK 10.0.302 (builds net6.0), PowerShell 7.5.2
+- in-game baseline: Session 1 ran on this build's DLL (37b1ea8) with -LogCheck "0 unhandled, 158 nyar lines, 0 orphan errors, 0 unity errors"; the snapshot is restored
+
 ## Post-audit
 ### Step 1 · 2026-09-28 · 2536488 (in progress: Session 1 pending)
 - compile: 0 errors, 0 warnings; tests: 1351 passed (CommandArgTests WalkRadius 13 cases, ChatBytes)
@@ -34,3 +43,13 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - session 1 log check: 0 unhandled, 158 nyar lines, 0 orphan errors, 0 unity errors
 - session 1 logs read (both, copied to %TEMP%\nyar-s1a-logs and nyar-s1b-logs): BepInEx warnings only the known four (Il2CppInterop Class::Init; Beelzebub's two TUNE lines; ours "event example-empowerment: pillar empowerment takes an Empower action", the leftover dev events.json entry); NyarDev.log: 225 PrefabLookupMap "unknown state"/"converted but does not exist" traces (the game's, as in the baseline) and two Unity "JobTempAlloc has allocations that are more than the maximum lifespan of 4 frames" lines at boot, before the first autosave, present in both runs including the first one where the walk check read nothing, so not from WalkCheck; no [Error] line
 - snapshot restored; hashes equal (ws1); walk verdict: singleton world go, singleton tile no-go (A8: step 2 uses the world source)
+
+### Step 2 · 2026-09-28 · build (in progress: Session 2 pending)
+- built: Logic/Spawning.cs (SpawnPoints, WalkBudget, WaveWalk, WavePoints, WalkHeight, SpawnHealth); Services/WalkCheck.cs OpenWave (world-metres map data once per wave at TileLayerUtility.GetHeightLevel(anchor y), A13) and Settle; SpawnTracker.RequestWave plans each entry's ring slice; WaveAction sums "(<m> moved, <u> unchecked)" and appends ", walk h <level>"; EventScheduler resets the budget before the spawn phase; HealthMonitor.Degraded adds SpawnHealth.Entries; Dependency.WalkCheck with its policy row and fault case
+- compile: Build succeeded, 0 warnings; tests: 1385 passed; --filter WavePoints_ 9 passed, --filter WalkCheck_ 13 passed
+- preflight: PREFLIGHT OK; -AuthSuite "auth suite: pass (tests, commands, admin list, gateway, vcf dependency)"
+- /code-review (fresh subagent, read-only) on the uncommitted diff: F1 a wave that never called the game (budget spent, no point, or OpenWave's failure behind a probe that never ran) closed the failure streak → fixed: WaveWalk.Answered is set only when a game call returned, and OpenWave records its failure on the WaveWalk directly
+- Codex verdict: REVISE (round 1) — F1 a default TileWorld from an existing singleton could reach CreateMapData → fixed: ChunkAllocation and WorldCells must be created and WorldCells non-empty ("singleton: not created"); F2 the budget reserved two calls per check while a blocked point makes one → fixed: one unit per game call; F3 as the code review's F1 → fixed; F4 a throwing Dispose escaped and stopped the wave → fixed: caught and recorded as the wave's failure
+- Codex verdict: READY (round 2) — "Round 1 findings F1–F4 are addressed, and no new correctness or safety issue was identified"
+- deferred within step 2, by dependency: ControlCases re-keying (D9) lands with the DebugCommands check and its fixtures after Session 2, since its D9 row names DebugCommands fixtures that exist only once the verb is removed
+

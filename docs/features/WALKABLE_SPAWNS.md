@@ -1,7 +1,8 @@
 # Walkable spawns — wave units on ground they can walk
 
-**Status:** in build (docs/dod/walkable-spawns.md, audit docs/audits/walkable-spawns.md); step 1 of 2 (the walk probe)
-built, Session 1 (the owner's six readings) next. Nothing of it ships yet; 0.5.0 is the current release.
+**Status:** in build (docs/dod/walkable-spawns.md, audit docs/audits/walkable-spawns.md); step 1 done (Session 1: the
+world-metres source is go), step 2 (walkable placement) built, Session 2 (the owner, at a pond shore) next. Nothing of it
+ships yet; 0.5.0 is the current release.
 
 ## Goal
 
@@ -19,8 +20,15 @@ ring, then half the ring, then the centre, without adding, dropping or reorderin
   grid, x·2 + 6400), since the game's metadata does not say which one it takes (A8); grounded is read once, in tile
   space, for both lines. A missing singleton or a failing read adds `walk check unavailable: <reason>`; XPRising's
   empty TileWorld is never read, since a default struct could fault in native code (A10).
-- **Step 2 (if Session 1 is go):** Logic SpawnPoints and WavePoints, the per-tick WalkBudget, the moved and unchecked
-  counts on the wave line, the health entry "spawns: walk check unavailable", and release 0.5.1.
+- **Step 2:** each wave opens one walk check at the height level of its centre (TileLayerUtility.GetHeightLevel of the
+  admin's or the Point's y, A13), with its map data made once for the wave. Logic SpawnPoints tries the ring point, the
+  11 other angles of the ring, the 12 at half the radius, then the centre; a point is walkable when a 0.5 m circle is
+  free in world metres and its tile is grounded. WavePoints keeps one point per unit in ring order under the per-tick
+  WalkBudget (2,500 game calls). The wave line gains "(<m> moved, <u> unchecked)" and ", walk h <level>". A Point
+  saved without a height is not checked. A failing check (no tile world, a height outside 0–1000 m, a throw) leaves
+  the rest of the wave on its ring points, logs "walk check unavailable: <reason>" once per streak and shows
+  "spawns: walk check unavailable" in health until a wave's check answers; the next wave tries again (D5, D6).
+  Release 0.5.1 follows Session 2.
 
 ## Test plan
 
@@ -37,8 +45,9 @@ ring, then half the ring, then the centre, without adding, dropping or reorderin
 
 ## Open questions
 
-- Which coordinate space the tile calls take (A8): Session 1 answers it.
-- Whether the live tile world covers water as blocked for normal movement: Session 1 answers it (S-3).
+- Whether the wave's height level (from the centre's y) equals the admin's `debug walk` h at the same spot: Session 2
+  compares them (A13).
+- Answered by Session 1: the circle test takes world metres (A8); water reads blocked on the world source (S-3).
 
 ## Test results
 

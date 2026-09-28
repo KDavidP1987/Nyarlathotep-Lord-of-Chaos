@@ -114,18 +114,20 @@ internal static class SpawnTracker
 
     /// <summary>A wave's units for event <paramref name="eventId"/>: <paramref name="count"/> of them at places
     /// <paramref name="first"/>.. of <paramref name="total"/> on a circle of <paramref name="radius"/> around
-    /// <paramref name="center"/>. WaveAction has sized the wave already, so the ledger's own caps only guard.</summary>
+    /// <paramref name="center"/>. WaveAction has sized the wave already, so the ledger's own caps only guard. Each ring
+    /// point is moved onto walkable ground by <see cref="WavePoints.Plan"/> with the wave's <paramref name="walk"/>
+    /// (walkable-spawns D3); the result carries the queued units' moved and unchecked counts.</summary>
     [Mutating]
-    internal static int RequestWave(string prefab, string eventId, int count, UnitLifetime life, float3 center, float radius,
-        int first, int total, double angle, (float X, float Y, float Z)? anchor)
+    internal static (int Queued, int Moved, int Unchecked) RequestWave(string prefab, string eventId, int count, UnitLifetime life,
+        float3 center, float radius, int first, int total, double angle, (float X, float Y, float Z)? anchor, WaveWalk walk)
     {
-        var result = _ledger.Request(prefab, eventId, count, life, UnitTuning.None, i =>
-        {
-            var (x, z) = SpawnLedger.Around(center.x, center.z, radius, first + i, total, angle);
-            return (x, center.y, z);
-        }, anchor);
+        var ring = new List<(float X, float Z)>(Math.Max(0, count));
+        for (var i = 0; i < count; i++) ring.Add(SpawnLedger.Around(center.x, center.z, radius, first + i, total, angle));
+        var points = WavePoints.Plan(ring, (center.x, center.z), radius, walk);
+        var result = _ledger.Request(prefab, eventId, count, life, UnitTuning.None, i => (points[i].X, center.y, points[i].Z), anchor);
         if (result.Skipped is not null) Core.Log.LogWarning($"[nyar] event {eventId} {prefab}: {result.Skipped}");
-        return result.Queued;
+        var (moved, unchecked_) = WavePoints.Counts(points.Take(result.Queued));
+        return (result.Queued, moved, unchecked_);
     }
 
     /// <summary>The despawn queue's worst-case drain time at the current caps, added to every unit's LifeTime (A16, A21).</summary>

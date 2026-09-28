@@ -49,6 +49,7 @@ internal static class EventScheduler
         var watch = Stopwatch.StartNew();
         var now = DateTime.UtcNow;
         _phases.Clear();
+        WalkCheck.Budget.Reset();                                         // walkable-spawns D3, A3
         Phase("spawn queues", SpawnTracker.Tick);
         Phase("triggers", () => TriggerBus.Tick(now));
         Phase("events", () => EventRuntime.Tick(now));

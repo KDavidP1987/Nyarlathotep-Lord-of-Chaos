@@ -38,12 +38,26 @@ internal static class WaveAction
         var angle = _random.NextDouble() * 2 * Math.PI;
         var anchor = WavePlan.Anchor(action.Location, active.Origin);
         var first = 0;
-        foreach (var entry in plan)
+        int moved = 0, unchecked_ = 0;
+        var check = WalkCheck.OpenWave(anchor?.Y);                          // walkable-spawns D3, A13
+        try
         {
-            SpawnTracker.RequestWave(entry.Prefab, active.Id, entry.Count, life, center, action.Radius, first, total, angle, anchor);
-            first += entry.Count;
+            foreach (var entry in plan)
+            {
+                var queued = SpawnTracker.RequestWave(entry.Prefab, active.Id, entry.Count, life, center, action.Radius, first, total, angle, anchor, check.Walk);
+                moved += queued.Moved;
+                unchecked_ += queued.Unchecked;
+                first += entry.Count;
+            }
         }
+        finally
+        {
+            try { check.Resource?.Dispose(); }
+            catch (Exception e) { check.Walk.Fail($"dispose: {e.GetType().Name}"); }    // never stops the wave (D5; Codex F4)
+        }
+        WalkCheck.Settle(check.Walk);
         EventRuntime.Engine.WaveSpawned(active.Id);
-        Core.Log.LogInfo($"[nyar] event {active.Id} wave {due.Wave}/{due.Waves}: {total} units queued, due in {(int)Math.Ceiling((life.DueUtc - now).TotalSeconds)}s, lifetime {life.LifetimeSeconds}s");
+        var level = check.Level is { } h ? $", walk h {h}" : "";
+        Core.Log.LogInfo($"[nyar] event {active.Id} wave {due.Wave}/{due.Waves}: {total} units queued ({moved} moved, {unchecked_} unchecked), due in {(int)Math.Ceiling((life.DueUtc - now).TotalSeconds)}s, lifetime {life.LifetimeSeconds}s{level}");
     }
 }

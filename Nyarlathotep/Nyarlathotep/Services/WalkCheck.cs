@@ -1,3 +1,4 @@
+#nullable enable
 using System.Collections.Generic;
 using Il2CppInterop.Runtime;
 using Nyarlathotep.Logic;
@@ -14,8 +15,9 @@ namespace Nyarlathotep.Services;
 /// grounded at a height level. The metadata does not say whether the circle test takes world metres or the tile grid
 /// (KindredCommands Helper.ConvertPosToTileGrid: floor(x·2) + 6400), so the probe reads both spaces (A8). Only the live
 /// singleton is read, and grounded only in tile space, where the index is never negative: a default TileWorld or a
-/// negative tile index could fault in native code, where no managed catch helps (A10). Step 1 ships it behind the
-/// temporary `.nyar debug walk` verb only; the Session 1 readings decide whether step 2 uses it (S-3).
+/// negative tile index could fault in native code, where no managed catch helps (A10). Session 1 found the world-metres
+/// source go (A8, A12): wave placement (step 2) checks a unit's circle in world metres at the wave centre's height level
+/// through <see cref="OpenWave"/>.
 /// </summary>
 internal static class WalkCheck
 {
@@ -67,6 +69,87 @@ internal static class WalkCheck
             reason = (reason == "" ? "" : reason + "; ") + $"polygons: {e.GetType().Name}";
         }
         return readings;
+    }
+
+    /// <summary>Placement's game calls this tick (walkable-spawns D3, A3), reset by the scheduler's spawn phase.</summary>
+    internal static readonly WalkBudget Budget = new();
+
+    /// <summary>The failure streak behind "spawns: walk check unavailable" (D5, D6).</summary>
+    internal static readonly SpawnHealth Health = new();
+
+    /// <summary>A unit's circle for the walk check, in metres (Business rules 3).</summary>
+    internal const float UnitRadius = 0.5f;
+
+    /// <summary>One wave's walk check (D3, A3, A13): the world-metres source Session 1 found go (A8, A12), its map data
+    /// made once for the wave, at the height level of <paramref name="centreY"/>. A centre without a height checks
+    /// nothing (its units are unchecked, as in 0.5.0); a missing tile world opens the wave's fall-open (D5). Dispose
+    /// the result after planning.</summary>
+    internal static WaveCheck OpenWave(float? centreY)
+    {
+        if (centreY is not { } y) return new WaveCheck(new WaveWalk(null, Budget), null, null);
+        WaveProbe probe;
+        try
+        {
+            if (WalkHeight.Problem(y) is { } problem) throw new ArgumentException(problem);
+            if (LiveTileWorld() is not { } live) throw new InvalidOperationException("singleton: none");
+            if (!Created(live)) throw new InvalidOperationException("singleton: not created");
+            probe = new WaveProbe(live, TileLayerUtility.GetHeightLevel(y));
+        }
+        catch (Exception e)
+        {
+            var failed = new WaveWalk(null, Budget);
+            failed.Fail(e.Message);                                            // recorded even when no check runs (review F1)
+            return new WaveCheck(failed, null, null);
+        }
+        return new WaveCheck(new WaveWalk(probe, Budget), probe, probe.Level);
+    }
+
+    /// <summary>A wave's walk state, the probe's native resources to dispose after planning, and the height level read
+    /// (null when nothing is checked).</summary>
+    internal readonly record struct WaveCheck(WaveWalk Walk, IDisposable? Resource, byte? Level);
+
+    /// <summary>True when the tile world's native containers exist, so a default or not yet built TileWorld never reaches
+    /// native code (A10; Codex cross-inspection step 2 F1).</summary>
+    static bool Created(TileWorld world) => world.ChunkAllocation.IsCreated && world.WorldCells.IsCreated && world.WorldCells.Length > 0;
+
+    /// <summary>Records a planned wave's outcome in the failure streak (D5).</summary>
+    internal static void Settle(WaveWalk walk) => Health.Settle(walk, line => Core.Log.LogWarning($"[nyar] {line}"));
+
+    /// <summary>The live tile world's collision at one height level, for one wave.</summary>
+    sealed class WaveProbe : IWalkProbe, IDisposable
+    {
+        readonly TileWorld _world;
+        readonly byte _level;
+        internal byte Level => _level;
+        TileMapCollisionMath.TilePolygons _polygons;
+        TileMapCollisionMath.MapData _map;
+        bool _disposed;
+
+        internal WaveProbe(TileWorld world, byte level)
+        {
+            _world = world;
+            _level = level;
+            _polygons = TileCollisionHelper.CreateLinePolygon();
+            try { _map = TileCollisionHelper.CreateMapData(_polygons, world); }
+            catch { _polygons.Dispose(); throw; }                              // native arrays (A10)
+        }
+
+        public bool IsFree(float x, float z) =>
+            !TileMapCollisionMath.CheckStaticCircle(ref _map, new float2(x, z), _level, UnitRadius, MapCollisionFlags.CollideNormalMovement);
+
+        public bool IsGrounded(float x, float z)
+        {
+            int tx = TileIndex(x), tz = TileIndex(z);
+            if (tx < 0 || tz < 0) throw new ArgumentOutOfRangeException(nameof(x), "off the tile grid");   // A10
+            return _world.GetIsGrounded(new int2(tx, tz), _level);
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _polygons.Dispose();
+        }
     }
 
     /// <summary>World metres to a tile index (two tiles per metre, offset 6400; KindredCommands' conversion).</summary>

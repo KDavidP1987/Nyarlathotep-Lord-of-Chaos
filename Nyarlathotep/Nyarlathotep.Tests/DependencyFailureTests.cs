@@ -19,6 +19,7 @@ public partial class DependencyFailureTests
         [Dependency.ConnectedUsers] = ConnectedUsers,
         [Dependency.CommandRegistration] = CommandRegistration,
         [Dependency.PushDelivery] = PushDelivery,
+        [Dependency.WalkCheck] = WalkCheckFault,
     };
 
     public static TheoryData<Dependency> All()
