@@ -249,7 +249,7 @@ One release, 0.5.1, a GitHub pre-release; D12 ends there, with release-verify. T
 Walking the Build plan. The walker (-Paths, Epic D33) reads git's tracked, untracked and ignored files, the dev server's paths, %TEMP%\nyar-* and the remote tags and releases.
 - **Step 1:**
   - docs/audits/walkable-spawns.md, docs/features/WALKABLE_SPAWNS.md.
-  - Nyarlathotep/Nyarlathotep/Services/WalkCheck.cs, Nyarlathotep/Nyarlathotep/Commands/SpawnCommands.cs, Nyarlathotep/Nyarlathotep/Logic/CommandArgs.cs, Nyarlathotep/Nyarlathotep.Tests/CommandArgTests.cs.
+  - Nyarlathotep/Nyarlathotep/Services/WalkCheck.cs, Nyarlathotep/Nyarlathotep/Commands/SpawnCommands.cs, Nyarlathotep/Nyarlathotep/Logic/CommandArgs.cs, Nyarlathotep/Nyarlathotep/Logic/AdminLines.cs (the walk reply lines), Nyarlathotep/Nyarlathotep.Tests/CommandArgTests.cs.
   - tools/preflight.ps1 (-SessionsOf probe records), tools/preflight-checks.json (childDocs, snapshotSessions, dataTables, probeRecords), tools/preflight-fixtures/SessionLogs/**, tools/data-inventory.json, tools/paths-manifest.txt.
 - **Step 2:**
   - Nyarlathotep/Nyarlathotep/Logic/Spawning.cs, Nyarlathotep/Nyarlathotep/Services/SpawnTracker.cs, Nyarlathotep/Nyarlathotep/Services/WaveAction.cs, Nyarlathotep/Nyarlathotep/Services/HealthMonitor.cs, Nyarlathotep/Nyarlathotep/Services/WalkCheck.cs, Nyarlathotep/Nyarlathotep/Commands/SpawnCommands.cs (the verb removed).
@@ -340,3 +340,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-28 · status → ready · approve
 - 2026-09-28 · status → in-progress · start
 - 2026-09-28 · note · amendments A1-A7 from Review 2's advisory findings F1-F7 (discovered)
+- 2026-09-28 · note · Rollout › Paths walked step 1 names Logic/AdminLines.cs, where the walk reply and refusal lines live (found by -Paths -DeclaredOf)

@@ -18,3 +18,5 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - found on the way, recorded before the code that depends on it:
   - A8 (discovered, ~D1 ~D10, layer 6.1): the metadata does not say whether the tile calls take world metres or the tile grid, so the probe reads both spaces and the go/no-go is per source.
   - A9 (discovered, ~D10, layer 12.4): the fixture battery knows good, bad* and empty only; good-probe folds into SessionLogs/good and empty-probe becomes bad-probe-4.
+
+## Post-audit
