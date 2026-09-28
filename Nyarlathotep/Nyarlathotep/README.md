@@ -6,7 +6,7 @@ A **server-side** event layer for V Rising. Admins stage NPC events the base gam
 enemies and empowered factions on a schedule, at nightfall or after a V Blood falls, with warnings and banners
 for players, and in later releases castle sieges, defended zones and boss-fight adds.
 
-> **Public beta (0.5.1).** Every pillar and automatic announcement is off by default; no event runs until an
+> **Public beta (0.5.2).** Every pillar and automatic announcement is off by default; no event runs until an
 > admin turns on its pillar and enables it.
 
 ## What it does
@@ -47,7 +47,9 @@ The optional client mod [Raphael](https://thunderstore.io/c/v-rising/p/TheShadow
 events board with wave countdowns, and give admins an events list and a kill-switch button. From 0.3.0 the server
 answers Raphael's reads (active events, event definitions for admins) and pushes updates when an event starts or
 ends, a wave comes or is warned, the kill switch fires or the definitions change. The pushes never tell a player
-more than chat or `.nyar status` does, and no line carries a position. The panels arrive with a Raphael update.
+more than chat or `.nyar status` does, and no line carries a position. From 0.5.2 the admin buttons (start or
+stop an event, use a template, switch a pillar, purge) have machine-readable versions that answer one line each.
+The panels arrive with a Raphael update.
 </details>
 
 <details>
@@ -207,6 +209,8 @@ set running.
 | `.nyar debug here [radius]` | The mod's units near you, with lifetime, level and stats, then up to 10 native NPCs with their empowerment buff |
 | `.nyar announce <text>` | Broadcast a line to everyone (quote text longer than 16 words) |
 | `.nyar api events [page]` | Event definitions as machine-readable lines, for Raphael |
+| `.nyar api event <verb> …`, `api template use`, `api pillar <name> on\|off`, `api purge [confirm]` | The admin commands as machine-readable lines, for Raphael (0.5.2) |
+| `.nyar api templates`, `api template info`, `api pillar list`, `api killswitch` | Templates, pillars and the kill switch as machine-readable lines, for Raphael (0.5.2) |
 </details>
 
 <details>

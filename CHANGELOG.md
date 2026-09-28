@@ -3,6 +3,39 @@
 The complete technical history. The concise, player-facing changelog that ships to Thunderstore lives at
 `Nyarlathotep/Nyarlathotep/CHANGELOG.md`. Public beta from 0.2.0; features stay experimental until validated on live servers.
 
+## [0.5.2] - 2026-09-28
+
+The `raphael-api-admin` child of the DoD Epic (`docs/dod/raphael-api-admin.md`): api 4, the admin actions as
+machine-readable twins for the Raphael client. Design and session: `docs/features/RAPHAEL_API_ADMIN.md`; audit:
+`docs/audits/raphael-api-admin.md`; contract: `docs/RAPHAEL_INTEGRATION_CONTRACT.md` §5a; client handoff:
+`docs/RAPHAEL_HANDOFF_API4.md`.
+
+- **Typed outcomes.** Every admin path (`Logic/AdminFlows.cs`, one flow per verb, shared by the human command and its
+  twin) returns an `Outcome`: ok with keys, or a refusal with a code, an argument and a reason
+  (`Logic/Outcome.cs`, contract §4). The human commands reply `outcome.Human`, pinned to 0.5.1's texts by
+  `HumanReplyTests` (89 captured replies), so no human reply changes.
+- **Twins.** `.nyar api event <verb> …` (start, stop, enable, disable, set, reload, new, copy, delete),
+  `.nyar api template use <template> [as <id>]`, `.nyar api pillar <name> on|off` and `.nyar api purge [confirm]`
+  answer exactly one `[NYAR:ok]` or `[NYAR:err]` line (admin-only). Order: rate gate, verb, argument count, argument
+  checks, the admin log line (prefixed `api `), the action gateway, the operation. A malformed argument answers
+  `code=badarg` before the log line.
+- **Reads.** `.nyar api templates [pillar] [page]` (`tpl` rows), `.nyar api template info <template>`,
+  `.nyar api pillar list` (five `pillar` rows) and `.nyar api killswitch` (`ks`).
+- **Rate limit.** Five twins per admin per second (`Logic/RateGate.cs`, at most 64 admins tracked); the sixth
+  answers `code=ratelimit secs=1`. Reads and human commands are not counted.
+- **Failures.** A twin whose operation throws answers `code=io reason=internal` and logs the exception once per
+  streak. `internal` promises no rollback: the action may be partly or fully applied, and the client re-reads state
+  (A16).
+- **Wire.** New codes `exists`, `state`, `invalid`, `full`, `io`, `confirm`, `limit`; `verb=` and `reason=` keys; a
+  location value is written with one decimal, culture-invariant. `config-changed` is pushed after a pillar switch,
+  as after the human command.
+- **Static checks.** `Logic/ApiCommandTable.cs` copies every `.nyar api` signature; preflight `WireContract` holds
+  it equal to the commands both ways, fails a parameter without a default, and `ApiOverloadTests` proves VCF can
+  route every (word, argument count). The command walks reject attribute syntax they cannot read (qualified,
+  aliased, escaped, listed or targeted `Command` attributes).
+- **Upgrading / rollback.** No new cfg keys or files; `events.json` and `state.json` are unchanged. Raphael clients
+  on api 1–3 keep using the human commands. 0.5.1 loads 0.5.2's files unchanged (rollback gate).
+
 ## [0.5.1] - 2026-09-28
 
 The `walkable-spawns` child of the DoD Epic (`docs/dod/walkable-spawns.md`), split from event-spawns (Epic A26): wave

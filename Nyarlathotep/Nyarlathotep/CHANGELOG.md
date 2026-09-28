@@ -2,6 +2,14 @@
 
 Public beta. Event pillars and automatic announcements default off; admins opt in per feature.
 
+## 0.5.2 (2026-09-28)
+
+- **Raphael admin actions (api 4).** Admins using the Raphael client panel get machine-readable versions of the
+  event, template, pillar and purge commands, plus reads for templates, pillars and the kill switch. Each answers one
+  line, so the panel can show exactly what happened. At most five per admin per second.
+- Chat commands reply exactly as in 0.5.1.
+- No new cfg keys; `events.json` and `state.json` are unchanged. Rolling back to 0.5.1 keeps everything.
+
 ## 0.5.1 (2026-09-28)
 
 - **Fix: wave units no longer spawn in water.** Each wave checks its units' spawn points against the game's own
