@@ -402,3 +402,48 @@ VERDICT: REVISE
 - F8 · accepted · step 2 satisfies D22 and D31 in part; step 4 lists them as well
 - F9 · accepted · with TimingLog on HuntAction logs "hunt targets: <n>" once per timing window; -TimingSpan -MinTargets 1 fails a window without a line of at least 1 (fixture bad-notarget); a span in which the player dies fails and is run again
 - F10 · accepted · the Changelogs check forbids the 0.5.0 known-issue text in both READMEs from 0.5.1 (fixture Changelogs/bad-knownissue), named in D5 and step 2
+
+## Review 8 · 2026-09-28 · subagent · plan commit 26554a8 · plan 103818 B · 34 items · files 0 · e3b0c44298fc · prompt b9a836dda527
+Reviewer: a fresh-context general-purpose subagent (never a fork), read-only, under the owner's round-cap note after Review 7 (through Review 9). It checked the plan's claims against tools/preflight.ps1, tools/preflight-checks.json, the mod's sources and Reference Data/prefab_names.tsv.
+
+F1 `[blocking]` 10.1 (also 12.4): D34's EntityWrites check would fail on today's tree, so its evidence cannot pass: `.Write(` matches file and editor writes (Logic/DataStore.cs `fs.Write`, Logic/Authoring.cs `editor.Write`, test files) outside $DispatchedServices; "a call whose name begins CreateEntity" matches the read-only CreateEntityQuery in Services/TriggerBus.cs; EmpowerAction's nested Ops methods write entities without [Mutating].
+Fix: state the scan policy (files scanned, which `.Write(` receivers count, CreateEntityQuery excluded as a read, nested-class members), and add a real-tree pass case.
+
+F2 `[blocking]` 3.3 (also 12.4): tools/preflight-checks.json `dataTables` lists only raphael-api-core, faction-empowerment and event-library, and `snapshotSessions` only event-library, so D27's data-inventory and snapshot conditions cannot fail for this child; step 3 adds inventory entries for the runtime rows only.
+Fix: step 3 adds docs/dod/event-spawns.md to dataTables with an entry for every Data row and "event-spawns": 1 to snapshotSessions; D27's expected line includes the snapshots part.
+
+F3 `[advisory]` 3.1 / 11.2: `.nyar debug walk` collides with the existing `debug` command (Commands/SpawnCommands.cs:67), and Commands/DebugCommands.cs does not exist.
+Fix: add `walk` as a verb of the existing Debug method and point the check and fixtures at SpawnCommands.cs.
+
+F4 `[advisory]` 6.1: `InCombatBuff_PvP` is not in the prefab dump; the PvP combat buff is Buff_InCombat_PvPVampire (697095869).
+Fix: name it in D16 and use its guid in PlayerPick's fixture.
+
+F5 `[advisory]` 3.3: Design › Data names the inventory fields "storage, owner, retention, deletion, copies"; the check requires location, owner, retention, deletion, singleCopy.
+Fix: use the check's field names.
+
+F6 `[advisory]` 12.4: the checks table is broken by a blank line before the EntityWrites row and a paragraph between the DependencySuite and EndPaths rows.
+Fix: move the paragraph below the table and remove the blank line.
+
+F7 `[advisory]` 4.1 / 6.2: D3 checks every ring point at the centre's height level; on terraced ground a point on another level may read wrong.
+Fix: a Session 1 reading at a height-level change, and state which height level IsFree takes.
+
+F8 `[advisory]` 6.1: D12 assumes the game keeps AggroConsumer.PreCombatPosition as written.
+Fix: a probe branch for the case where the game overwrites it on combat entry.
+
+F9 `[advisory]` 2.1 / 9.2: PlayerPick and HuntPlan do not say whether admins (invisible, spectating) are eligible.
+Fix: state it.
+
+EARLIER: all resolved
+13/15 layers · 47/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · D34 states the scan policy: the .cs files of Nyarlathotep/Nyarlathotep/ outside Logic/; Logic/ and Nyarlathotep.Tests/ are compiled into the test project, which references no game assembly, so they cannot write an entity, and the check fails when a Logic/ file has a `using` of Unity.*, ProjectM* or Stunlock* (fixture bad-logicusing); `EntityManager.` matches CreateEntity exactly, not CreateEntityQuery; a method of a private nested class (EmpowerAction.Ops) counts as private; the real tree at the step 3 commit must pass
+- F2 · accepted · step 3 adds docs/dod/event-spawns.md to `dataTables`, `"event-spawns": 1` to `snapshotSessions`, and an inventory entry for every Data row; D27's -SessionsOf line gains "snapshots <n>/<n> from session 1"
+- F3 · accepted · `walk` becomes a verb of the existing `debug` command in Commands/SpawnCommands.cs; the check's fixtures copy that file; Paths walked updated
+- F4 · accepted · Buff_InCombat_PvPVampire (697095869) in D16 and Interfaces, source prefab_names.tsv
+- F5 · accepted · the check's field names
+- F6 · accepted · the table is one table; the paragraph follows it
+- F7 · accepted · IsFree takes the centre's height level and a tile not grounded at that level (TileWorld.GetIsGrounded) counts as blocked; Session 1 adds a sixth reading, ledge, outside the verdict
+- F8 · accepted · D12 gains the probe branch: if PreCombatPosition is overwritten on combat entry, a discovered amendment before step 5 rewrites it every 5 s or removes Guard, the owner deciding in plan mode
+- F9 · accepted · admins are eligible like any player; an admin who does not want waves stops the event
