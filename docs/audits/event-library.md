@@ -69,6 +69,11 @@ and one under "### A22 probe · Session 4 · 2026-09-27 · 86f6f53
 - feature doc read: EVENT_LIBRARY.md › Test results › Session 5 and the Status block; plan D25, D26, D30 and step 5
 - setup: `pwsh tools/dev-snapshot.ps1 -Save s6` (28 files); `python tools/ingame/session-events.py soak --delay 10` (legion-weekend-surge Sun 18:08 to 22:10, twelve times 22 min apart); Release build deployed with the server stopped, DLL B8C75323E580B5DC in plugins equal to the build output
 - baseline boot 17:55: "events: reloaded: 4 valid, 0 disabled", "templates: 6/6 valid", "triggers: all hooks available", boot marker and carrier sweeps 0 found; warnings only Il2CppInterop Class::Init and Beelzebub TUNE ×2
+### Step 5 · Session 7 · 2026-09-27 · aaaf4d9
+- git tree clean at aaaf4d9 (A25's slow-tick warning, A26's short boot); compile 0 errors, 0 warnings, 1337 tests passed; PREFLIGHT OK; -Paths -DeclaredOf event-library clean before the session's own folders; dod --check event-library 0 problems, verified 8/36, review codex
+- feature doc read: EVENT_LIBRARY.md › Test results › Session 6 (why the soak runs again) and Open questions; plan D25, D26, D36, step 5 as amended by A25 and A26
+- setup: `pwsh tools/dev-snapshot.ps1 -Save s7` (28 files); `python tools/ingame/session-events.py soak --delay 15` (legion-weekend-surge Sun 22:42 to Mon 02:44, twelve times 22 min apart); Release build deployed with the server stopped, DLL 60CFEF7AAFF9D307 in plugins equal to the build output
+- baseline boot 22:24: "events: reloaded: 4 valid, 0 disabled", "templates: 6/6 valid", "triggers: all hooks available", "boot marker sweep: 0 found", "boot carrier sweep: 135 found, 135 queued for removal" (Session 6's last undead-nightfall carriers in the world save, the designed cleanup); warnings only Il2CppInterop Class::Init and Beelzebub TUNE ×2
 ## Post-audit
 ### Step 1 · 2026-09-26 · e84c8a3 + working tree (committed as step 1)
 - compile / preflight: 0 errors, 0 warnings; 1309 tests passed (871 before the step); PREFLIGHT OK; dod --check 0 problems (6 warnings, all old review-round notes)

@@ -464,3 +464,31 @@ Observed (two boots, 17:55–20:34 and 20:34–22:09; the owner connected for th
 - D25 not passed; the stall and the stop rule go to the owner (plan mode).
 Then `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s6,
 C:\Users\<user>\AppData\Local\Temp\nyar-snap-s6 deleted)"; %TEMP%\nyar-session deleted.
+
+### Session 7 · 2026-09-27 · event-library step 5, the four-hour soak run again (owner kick-off, then unattended; 127.0.0.1:9876, build aaaf4d9)
+
+Why again: Session 6's soak-report failed (1 unpaired, 1 slow window); A25 adds the slow-tick warning (D36), A26 the
+short boot after the final stop.
+
+Setup (Claude): `pwsh tools/dev-snapshot.ps1 -Save s7`; `python tools/ingame/session-events.py soak --delay 15` (the four
+empowerment templates enabled, legion-weekend-surge Sun 22:42 to Mon 02:44, twelve times 22 min apart;
+Pillars.FactionEmpowerment, Pillars.EventSpawns and Debug.TimingLog on); the Release DLL of aaaf4d9 deployed; boot at 22:24.
+
+**Kick-off (owner, admin).**
+- K1. Kill one bandit V Blood from bandit-vengeance's list → it starts ("event bandit-vengeance started by VBloodKilled …"
+  in the log; announcements are off, so no chat line).
+- K2. Kill one Militia or Church V Blood from militia-crackdown's list → it starts.
+- K3. `.nyar template use bandit-ambush`, `.nyar event set bandit-ambush location here`, `.nyar event enable bandit-ambush`,
+  `.nyar event start bandit-ambush`.
+- K4. The same four commands for undead-rising, at another spot (if "skipped by MaxConcurrentEvents", again once a slot
+  frees).
+- K5. The owner may leave the game.
+
+**Unattended (Claude).** At about two hours, while legion-weekend-surge is active: copy both logs to %TEMP%\nyar-soak-1
+after an autosave, -LogCheck, restart (D26). Run until the timing lines total at least 240, stop after an autosave, copy the
+logs to %TEMP%\nyar-soak-2, -LogCheck; boot once more (A26), wait for the boot carrier sweep line and an autosave, stop,
+copy to %TEMP%\nyar-soak-3, -LogCheck; `pwsh tools/soak-report.ps1 -Log <the three LogOutput.log copies in order>
+-Templates legion-weekend-surge,bandit-vengeance,undead-nightfall,militia-crackdown,bandit-ambush,undead-rising
+-MinMinutes 240`; delete the %TEMP%\nyar-soak-* folders, `pwsh tools/dev-snapshot.ps1 -Restore`.
+
+Observed: (recorded when the session runs)
