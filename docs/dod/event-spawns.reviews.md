@@ -309,3 +309,47 @@ VERDICT: REVISE
 - F6 · accepted · S-8 joins S-7, S-9 and S-11 as a pre-release conditional decision; after 0.6.0 a change is a forward migration and a release, not a cheap reversal; a stored value outside a narrowed range disables its definition with the rule as its reason, never a crash (D6)
 - F7 · accepted · D11's in-game evidence is the verbose line "drops <unit>: <n> before, <m> after setup" for one unit of a loot true and one of a loot false wave; kills are exploratory only
 - F8 · accepted · the probe-record parser maps each labelled reading (dry, pond, river, cliff, building) to its expected result, recomputes the verdict and fails a go/no-go line that disagrees (fixture SessionLogs/bad-probe-3)
+
+## Review 6 · 2026-09-28 · codex · plan commit 06e38fa · plan 95005 B · 34 items · files 0 · e3b0c44298fc · prompt 803cc7847dd9
+Reviewer: Codex CLI, read-only (`codex exec -s read-only`, Windows sandbox on); the prompt held no Steam ID. The third round under the owner's round-cap note (option A, through Review 6); the owner's next note sets Review 7 to a fresh-context subagent. "EARLIER: unresolved F3" names Review 5 F3, rejected by design §9 D18 (S-13), as F5 here.
+
+F1 `[blocking]` Probe `2.1` is unanswered by its claimed control: `-AuthSuite` checks command metadata and mutation dispatch, but cannot fail when the operator, build agent, owner-only publisher, scheduler, or an inherited command such as `event start` gains unauthorized capability.
+Fix: Extend one named authorization command to enumerate every reachable entry point and actor/action matrix, with a failing fixture for each unauthorized actor—including a non-admin invoking inherited activation paths.
+
+F2 `[blocking]` Probe `3.3` is incomplete: the data inventory omits produced runtime artifacts including the visual queue, unit marker/stat components, seeded `AggroBuffer` entries, and health/failure-streak state, so D27 cannot fail when their ownership, retention, or deletion is undefined.
+Fix: Add every produced runtime artifact to Design › Data and `data-inventory.json`, naming storage, owner, retention, deletion and copies, and make `-Paths -DeclaredOf event-spawns` exercise their deletion through D33.
+
+F3 `[blocking]` Probe `6.2` is unanswered by `-DependencySuite`: its stated fixtures cover game collaborators and two release tools, but not slow, down, rate-limited, garbage or ambiguous-success behavior for git, gh, tcli, Codex, Python, pwsh, .NET and session helpers; for example, `gh release create` may succeed remotely and then time out despite the assertion that failure occurs before creation.
+Fix: Make one dependency-suite command inject and reconcile each applicable failure mode, including querying remote state after an ambiguous gh response before retrying or aborting.
+
+F4 `[blocking]` Probe `12.4` lacks a faithful failing fixture for D31’s sentinel control: `Secrets/bad-envread` writes the environment variable from source, but does not plant the state the real run produces—a sentinel leaked into a zip, `dist/`, `build/`, or the build log.
+Fix: Add registered selftest fixtures containing the sentinel in each scanned artifact form, plus clean and empty fixtures, and require `pwsh tools/preflight.ps1 -SelfTest` to reject them.
+
+F5 `[blocking]` Probe `14.4` remains unanswered because S-13 explicitly excludes paths created and deleted within a step, while the claimed command observes post-build state and statically scans only selected write mechanisms; a transient repository, server, or AppData write can therefore escape `-Paths -DeclaredOf`.
+Fix: Require a write journal/filesystem trace covering every build step, or forbid unobservable transient writes and make the paths command fail on every write API not statically classifiable.
+
+F6 `[blocking]` D32 is unverifiable for probes `11.2` and `11.3`: pasted chat text does not let a stranger verify actual in-game wrapping, truncation, colour dependence, keyboard rendering, or the 480-byte limit.
+Fix: Require session evidence containing byte counts and screenshots or recorded observations of the rendered success, refusal and validation lines at the relevant viewport.
+
+F7 `[advisory]` Probe `7.2` states the steady-state Hunt policy but not the concurrent partial-write case: a unit can despawn, or eligibility can change, between `HuntPlan.Diff` and successive `AggroBuffer` mutations, leaving seed bookkeeping inconsistent after an exception.
+Fix: Define mutation reconciliation after partial application and add a race fixture that removes a unit or target between planning and writing.
+
+F8 `[advisory]` Probe `9.1` calls raised caps of 500 tracked units “best effort” without saying what correctness remains guaranteed when 2,500 Hunt target relationships are processed and ticks exceed budget.
+Fix: State that only latency degrades at raised caps—or define shedding behavior—and record one maximal-cap observation confirming lifecycle cleanup and bounded queues.
+
+F9 `[advisory]` S-7, S-8, S-9 and S-11 are mislabeled `reversible`: each changes persisted-definition validity or released behavior and explicitly requires an amendment and forward release after publication, so reversal is not cheap.
+Fix: Relabel them validated conditional decisions with pre-release probe branches and post-release migration policies.
+
+EARLIER: unresolved F3
+10/15 layers · 44/49 probes
+VERDICT: REVISE
+### Dispositions
+- F1 · accepted · narrowly: -AuthSuite's command inventory enumerates every reachable `.nyar` command from the [Command] attributes, inherited ones included (event start, stop, enable, disable, set, copy, delete, template use, spawn), and fails when a command that can activate or change a spawn event is not adminOnly or reaches a [Mutating] method outside Gateway.Run, SpawnTracker or EventRuntime (fixture AuthSuite/bad-inherited); Design › Permissions names the actors and the actor and action matrix, and states that build agents and the publisher have no chat identity or in-game capability and reach the server only as the operator
+- F2 · accepted · Design › Data adds the runtime rows (seeded AggroBuffer entries, visual queue, marker buff and stat modifiers, player-pick snapshot, health and failure-streak state) with storage, owner, retention and deletion, none persisted or copied; step 3 adds their tools/data-inventory.json entries, so D27's data-inventory check fails when a row lacks one, and D33's EndPaths tests exercise their deletion
+- F3 · accepted · narrowly: after a failed or ambiguous `gh release create` the release step runs `gh release view <tag>` and retries only when the release is absent, never creating twice (-DependencySuite release-tools case gh-ambiguous); failure injection for git, Codex, Python, pwsh and .NET is not planned: they run only at build and review time and fail closed under $ErrorActionPreference Stop, and a failed or capacity-limited Codex run is retried and never counted (Interfaces › External, tooling block)
+- F4 · accepted · Secrets fixtures bad-sentinel-zip, bad-sentinel-dist, bad-sentinel-build and bad-sentinel-log plant the sentinel in each scanned form and must fail, good-sentinel is clean and must pass, empty-sentinel prints "secrets: nothing scanned" as a failure; all registered under -SelfTest (D31, the 12.4 table, step 3)
+- F5 · rejected · owner decision docs/NYARLATHOTEP_DESIGN.md §9 D18 (event-library Review 11 F1, widened 2026-09-27 at Review 15 F2), stated in this plan as S-13: a path created and deleted inside one step is outside the declared-paths check; the observation boundary is what a step leaves, and a write journal or filesystem trace was declined; the third time this finding is raised (Review 5 F3, Review 6 F5)
+- F6 · accepted · narrowly: D32's evidence is the owner's recorded observation per new line (whole, not cut, readable without colour; a screenshot optional) and a unit test, CommandArgTests ChatBytes, that computes each line's byte count from its template at its fields' maximum lengths and fails above 480 bytes
+- F7 · accepted · D13: after a partial write HuntAction rebuilds its seed record, keyed by unit entity and target, from the unit's AggroBuffer on the next tick, and skips a unit or target that no longer Exists; SpawningTests Hunt gains the race fixture (a target removed between Diff and write)
+- F8 · accepted · Performance › Supported envelope: at raised caps only latency degrades (the per-tick budgets stay, queues are bounded by the caps, lifecycle cleanup is unchanged, D33); one maximal-cap observation may be recorded in Session 4 as exploratory evidence
+- F9 · accepted · for S-7 and S-9, which have sources (KindredCommands' CastleTerritoryService.cs; RESEARCH_NOTES spike S1 and TideOfWar), now validated conditional decisions with a pre-release probe branch and a post-release forward migration; S-8 and S-11 stay reversible because no owner decision or measurement is their source, which the grammar requires of validated, and each states its post-release forward-migration policy
