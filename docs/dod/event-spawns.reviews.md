@@ -206,3 +206,47 @@ VERDICT: REVISE
 - F11 · accepted · D33 adds two AroundPlayer Hunt events on one player: stopping one leaves the other's centre, ledger rows and seeds unchanged
 - F12 · accepted · D26: the READMEs say the budget is promised at the default caps and raised caps (151-500 tracked) are best effort, watched by the slow-tick warning
 - F13 · accepted · S-6 is relabelled validated by owner decision 3A as a gated scope branch: a no-go amendment removes D2-D5 and needs a fresh READY review before any build past step 1
+
+## Review 4 · 2026-09-28 · codex · plan commit 24c122f · plan 82497 B · 34 items · files 0 · e3b0c44298fc · prompt ea24c81932f7
+Reviewer: Codex CLI, read-only (`codex exec -s read-only`, Windows sandbox on); the prompt redacted of Steam IDs before sending (none present, the hash is the same). The first round after the owner's round-cap note (option A, through Review 6).
+
+F1 [blocking] Probe 3.3 has two evidence commands, so neither single command fails when either persisted artifacts or runtime state cleanup is absent.
+Fix: make one D-item command invoke both the inventory/path checks and EndPaths tests, failing unless all persistence and deletion rules pass.
+
+F2 [blocking] Probe 4.5 is unanswered for D34’s “every entity write”: the syntactic pattern list does not state valid writes it misses; a `RefRW<T>.ValueRW` mutation can bypass EntityWrites while its command passes.
+Fix: define the enforced write set and enumerate excluded valid forms, or extend the scanner and fixtures to cover every supported mutation API.
+
+F3 [blocking] Probe 6.1 omits supported versions, quotas and costs for operational dependencies including git, gh, tcli, Codex and the session helpers.
+Fix: state the supported version or version policy, quota/rate assumptions and cost for every external build, review and release dependency.
+
+F4 [blocking] Probe 12.1 does not give an admin-visible outcome and next action for every D21 failure; for example, a HidingBuff failure silently degrades Ambush to an ordinary visible spawn except for a log line.
+Fix: map each D21 failure class to its exact admin-visible message and prescribed recovery action.
+
+F5 [blocking] Probe 12.4 is unanswered for the D1 and D14 go/no checks: their failing cases exist, but no silent input or empty input is defined, and `-SelfTest` cannot fail when those manual control cases are absent.
+Fix: specify failing, silent and empty cases for both probes and add a single selftest command that fails when any required case is missing.
+
+F6 [blocking] Probe 14.4 is not enforced for ephemeral paths created outside the PowerShell `%TEMP%` syntax scan; for example, `session-events.py` can use Python’s temporary-directory API, delete the directory, and leave nothing for the post-build walker to detect.
+Fix: instrument filesystem writes or statically cover every language and temporary-path API used by build/session tooling, with an undeclared-create-and-delete fixture that makes D27’s command fail.
+
+F7 [advisory] The 3.2 coverage pointer names wave messages, skips and wire behavior but omits material side effects such as stat buffs, drop-table clearing, aggro writes, hiding buffs, visual queues and file edits.
+Fix: expand the pointer to D9, D11–D15, D18 and D21, or point to the complete Interfaces › Writes section.
+
+F8 [advisory] S-7, S-9 and S-11 are labelled reversible even though changing territory classification, behavior ranges or accepted level semantics alters protection or configuration contracts and requires amendments plus renewed validation.
+Fix: describe them as pre-release conditional decisions rather than cheap reversals, retaining their explicit fallback branches.
+
+F9 [advisory] Concurrent territory ownership changes are intentionally observed only by the next wave, so units from an already-built territory set can enter land claimed while that wave is spawning.
+Fix: record this as the explicit 7.2/2.3 policy and mention it in the admin documentation.
+
+EARLIER: all resolved
+10/15 layers · 43/49 probes
+VERDICT: REVISE
+### Dispositions
+- F1 · accepted · D27's `pwsh tools/preflight.ps1 -Paths -DeclaredOf event-spawns` also runs, through Invoke-ClassTests, the test classes tools/preflight-checks.json `dataTests` lists for the slug (EndPathTests of D33), failing on zero tests, a failure, or a missing or empty entry (fixture Paths/bad-datatests); the 3.3 gating row names that one command and D27 alone; built in step 3
+- F2 · accepted · D34's pattern set adds `.ValueRW`, ComponentLookup, BufferLookup and ComponentDataFromEntity indexer assignments, EntityCommandBuffer and CommandBuffer writes, and SystemAPI.SetComponent, SetBuffer and SetComponentEnabled; excluded forms are none: `unsafe`, GetUnsafePtr, GetUnsafeReadOnlyPtr and UnsafeUtility fail the check outright; fixtures bad-refrw, bad-ecb, bad-lookup and bad-unsafe
+- F3 · accepted · Interfaces › External gains "Build, review and release tooling (6.1)": git, gh, tcli, Codex CLI, Python, pwsh and the .NET SDK with the planned version, a floor, the version policy (recorded at each pre-audit), quota and rate limits, cost (none beyond the owner's subscriptions) and failure behaviour, the release tools' failure cases pointing at `-DependencySuite` category release-tools
+- F4 · accepted · Failure & observability gains a table mapping every D21 failure class to what the admin sees and the next action; D30's degraded list adds "spawns: unit setup failing (<id>)", "spawns: hunt seed failing (<id>)", "spawns: ambush hide failing (<id>)" and "spawns: player query failing (<id>)", and HealthTests Spawns fails when any of the six classes' open streak gives no entry or its text differs from the table
+- F5 · accepted · D1 and D14 state their failing, silent and empty cases (an incomplete record reads "incomplete", never go); D27's -SessionsOf gains the `probeRecords` check (Session 1's five walk lines and go/no-go line, Session 3's ambush probe and ambush diff lines) with fixtures SessionLogs/bad-probe and bad-probe-2, and `-SelfTest` runs them as plants
+- F6 · rejected · the unmarked-temp-root scan already covers Python's temporary-directory APIs: tools/preflight.ps1's pattern (about lines 1068-1075) matches tempfile.gettempdir, mkdtemp, mkstemp, TemporaryDirectory and NamedTemporaryFile, os.environ and os.getenv TEMP, Node's process.env.TEMP and os.tmpdir, GetTempPath, GetTempFileName and New-TemporaryFile, and fixture Paths/bad-tempvar asserts each plant line through unmarked.txt (event-library A18, A24); every tool language used here (pwsh, Python, Node) is covered, and a tool line using any of them without a nyar-<name> literal or a registration fails D27; D27's fails-when now names these APIs
+- F7 · accepted · the 3.2 pointer names D9, D11-D15, D18 and D21 beside D3, D16, D17 and D20
+- F8 · accepted · S-7, S-9 and S-11 are described as pre-release conditional decisions (before 0.6.0 an amendment with its session or tests run again, after it an amendment and a release), their fallbacks kept
+- F9 · accepted · D17 and Design › States › 7.2 state the policy (territory read once per wave; a claim made while a wave spawns is seen by the next wave), with the READMEs and the feature doc stating it at 0.6.0; D17's test fails when a map built for one wave is reused by the next
