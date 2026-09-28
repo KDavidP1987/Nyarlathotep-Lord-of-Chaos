@@ -448,7 +448,7 @@ VERDICT: REVISE
 - F8 · accepted · D12 gains the probe branch: if PreCombatPosition is overwritten on combat entry, a discovered amendment before step 5 rewrites it every 5 s or removes Guard, the owner deciding in plan mode
 - F9 · accepted · admins are eligible like any player; an admin who does not want waves stops the event
 
-## Review 9 · 2026-09-28 · subagent · plan commit 97a9026 · plan 106059 B · 34 items · files 0 · e3b0c44298fc · prompt 678870300484
+## Review 9 · 2026-09-28 · subagent · plan commit 97a9026 · plan 106614 B · 34 items · files 0 · e3b0c44298fc · prompt 678870300484
 Reviewer: a fresh-context general-purpose subagent (never a fork), read-only, the last round under the owner's round-cap note after Review 7. It checked the plan against tools/preflight.ps1, the test project and the mod's sources.
 
 F1 `[blocking]` 6.2 (also 12.4): -DependencySuite requires event-library's fixed nine categories for every slug ($script:DependencyCategories, preflight.ps1:2115, Get-DependencyTableProblems :2127, the run loop :2339, Test-CheckDependencySuite :2156), so an event-spawns entry with Spawns categories fails "category events-write missing", and copying event-library's categories would run no Spawns control.
