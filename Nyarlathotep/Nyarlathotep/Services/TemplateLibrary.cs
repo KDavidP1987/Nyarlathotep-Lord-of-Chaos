@@ -41,6 +41,6 @@ internal static class TemplateLibrary
 
     /// <summary>`.nyar template use &lt;template&gt; [as &lt;id&gt;]` (D5): appends a disabled copy to events.json.</summary>
     [Mutating]
-    internal static string UseTemplate(string template, string asId) =>
+    internal static Outcome UseTemplate(string template, string asId) =>
         EventStore.Author(text => Authoring.TemplateUse(text, Catalog, template, asId));
 }

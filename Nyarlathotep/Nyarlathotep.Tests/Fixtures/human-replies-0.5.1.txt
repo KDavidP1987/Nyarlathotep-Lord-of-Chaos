@@ -1,0 +1,90 @@
+# The human replies of Nyarlathotep 0.5.1 (raphael-api-admin D1). One row per reply literal of the members that
+# tools/preflight-checks.json's HumanReplies entry lists, at v0.5.1: <scenario id> · <template> · <path>:<line>[,<line>].
+# {name} is a value the scenario fills in; \n is a newline. HumanReplyTests renders each scenario and compares; the
+# HumanReplies preflight check reads each cited line with git show v0.5.1:<path> and requires every literal part of the
+# template on one of them. Never edit a row: a later child that changes a reply adds human-replies-<version>.txt (A4).
+blocker-purge · purge cooldown active · Nyarlathotep/Nyarlathotep/Logic/Precedence.cs:20
+start-general-off · General.Enabled is false · Nyarlathotep/Nyarlathotep/Logic/Precedence.cs:26
+start-pillar-off · pillar {pillar} is off · Nyarlathotep/Nyarlathotep/Logic/Precedence.cs:27
+start-max-concurrent · skipped by MaxConcurrentEvents · Nyarlathotep/Nyarlathotep/Logic/Precedence.cs:28
+start-invalid · event {id} is disabled: {reason} · Nyarlathotep/Nyarlathotep/Logic/Precedence.cs:29
+start-disabled · event {id} is disabled · Nyarlathotep/Nyarlathotep/Logic/Precedence.cs:30
+start-faction-clash · faction {faction} already empowered by {other} · Nyarlathotep/Nyarlathotep/Logic/Engine.cs:32
+start-unit-clash · unit {unit} already empowered by {other} · Nyarlathotep/Nyarlathotep/Logic/Engine.cs:34
+start-unknown · unknown event {id} · Nyarlathotep/Nyarlathotep/Logic/Engine.cs:211
+start-already-active · already active · Nyarlathotep/Nyarlathotep/Logic/Engine.cs:212
+engine-admin-no-origin · event {id} spawns at the admin: start it with .nyar event start · Nyarlathotep/Nyarlathotep/Logic/Engine.cs:217
+catalog-start-unknown · unknown event {id} · Nyarlathotep/Nyarlathotep/Logic/EventCatalog.cs:36
+catalog-start-active · already active · Nyarlathotep/Nyarlathotep/Logic/EventCatalog.cs:37
+catalog-end-inactive · not active · Nyarlathotep/Nyarlathotep/Logic/EventCatalog.cs:43
+set-stale · events.json changed on disk, run .nyar event reload first · Nyarlathotep/Nyarlathotep/Logic/Idempotency.cs:72
+author-too-large · events.json would exceed 1 MB; nothing written · Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs:21
+reload · reloaded: {valid} valid, {disabled} disabled · Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs:38
+enable · event {id} enabled · Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs:55
+disable · event {id} disabled · Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs:55
+set-field · event {id} {field} = {value} · Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs:55
+edit-refused-fallback · event {id}: edit refused · Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs:59
+read-fails · events.json could not be read: {error} · Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs:72
+not-found · events.json not found · Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs:73
+plan-threw · edit refused: {error} · Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs:78
+plan-empty · edit refused · Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs:79
+reload-failed-after-write · {done}; {reload} · Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs:88
+enable-now-disabled · {done}; now disabled: {reason} · Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs:89
+uncertain-unreadable · write uncertain: events.json could not be read back: {error} · Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs:102
+uncertain · write uncertain: file now holds {n} definitions · Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs:108
+apply-unparsable · events.json does not parse; fix it and run .nyar event reload · Nyarlathotep/Nyarlathotep/Logic/EventAdmin.cs:31
+apply-no-array · events.json has no events array · Nyarlathotep/Nyarlathotep/Logic/EventAdmin.cs:33
+set-unknown · unknown event {id} · Nyarlathotep/Nyarlathotep/Logic/EventAdmin.cs:35
+edit-unsupported · {path} has an unsupported value · Nyarlathotep/Nyarlathotep/Logic/EventAdmin.cs:38
+set-location-empower · location is a SpawnWaves field · Nyarlathotep/Nyarlathotep/Logic/EventAdmin.cs:49
+set-factions-waves · {path} is not {article} field · Nyarlathotep/Nyarlathotep/Logic/EventAdmin.cs:49
+set-stat-waves · {path} is not a field of a {type} action · Nyarlathotep/Nyarlathotep/Logic/EventAdmin.cs:56
+set-waves-empower · {path} is not a field of an Empower action · Nyarlathotep/Nyarlathotep/Logic/EventAdmin.cs:57
+set-no-action · event {id} has no {part} · Nyarlathotep/Nyarlathotep/Logic/EventAdmin.cs:65
+set-stats-rule · action.stats must raise at least one stat above 1.0 · Nyarlathotep/Nyarlathotep/Logic/EventAdmin.cs:75
+set-trigger-mismatch · {path} needs a {need} trigger · Nyarlathotep/Nyarlathotep/Logic/EventAdmin.cs:122
+new-limit · events.json holds {max} definitions, the limit · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:20
+new-bad-id · id must be 1-32 of a-z 0-9 - · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:21
+template-invalid · template {t} is invalid: {reason} · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:30
+template-use · template {t} added as {id} (disabled); .nyar event enable {id} to arm it · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:37
+template-exists · event {id} already exists; use .nyar template use {t} as new-id · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:38
+new · event {id} created (disabled, {pillar}); set its fields with .nyar event set · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:75
+new-exists · event {id} already exists · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:75
+copy-unknown · unknown event {id} · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:85
+copy · event {id} copied to {newId} (disabled) · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:89
+copy-exists · event {newId} already exists · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:89
+authoring-delete-unknown · unknown event {id} · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:97
+delete-confirm · event {id} deleted (events.json.bak keeps the previous file) · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:102
+authoring-unparsable · events.json does not parse; fix it and run .nyar event reload · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:120
+authoring-no-array · events.json has no events array · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:121
+delete-row-left · {deleted}; cooldown row left, cleared on the next save · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:139,175
+delete-row-kept · {deleted}; state.json is read-only; its cooldown row is kept · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:140,169
+delete-running · event {id} is running; stop it first · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:142
+delete-unarmed · no delete pending for {id} · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:143
+delete-unknown · unknown event {id} · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:148
+delete-ask · delete {id}? run .nyar event delete {id} confirm within 30 s · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:151
+delete-confirm-unknown · unknown event {id} · Nyarlathotep/Nyarlathotep/Logic/Authoring.cs:158
+pillar-unknown · unknown pillar {name}; use {choices} · Nyarlathotep/Nyarlathotep/Logic/Pillars.cs:21
+pillar-bad-state · use on or off · Nyarlathotep/Nyarlathotep/Logic/Pillars.cs:82
+pillar-read-fails · pillar {name} not changed: could not read the cfg: {error} · Nyarlathotep/Nyarlathotep/Logic/Pillars.cs:85
+pillar-already · pillar {name} already {state} · Nyarlathotep/Nyarlathotep/Logic/Pillars.cs:89
+pillar-reread-fails · pillar {name} could not be saved; the cfg could not be read back: {error} · Nyarlathotep/Nyarlathotep/Logic/Pillars.cs:102
+pillar-save-fails · pillar {name} could not be saved; the file says {state} · Nyarlathotep/Nyarlathotep/Logic/Pillars.cs:106
+pillar-on · pillar {name} {state} (saved to cfg) · Nyarlathotep/Nyarlathotep/Logic/Pillars.cs:112
+pillar-off-ended · {switched}\nevent {id} ended (pillar off) · Nyarlathotep/Nyarlathotep/Logic/Pillars.cs:121
+template-unavailable · template catalogue unavailable · Nyarlathotep/Nyarlathotep/Logic/Templates.cs:121
+template-unknown · unknown template {t}; .nyar template list shows them · Nyarlathotep/Nyarlathotep/Logic/Templates.cs:124
+purge-nothing · nothing to purge · Nyarlathotep/Nyarlathotep/Logic/AdminLines.cs:12
+purge-unarmed · run .nyar purge first · Nyarlathotep/Nyarlathotep/Logic/AdminLines.cs:13
+purge-ask · purge ends {events} events and despawns {units} units; run .nyar purge confirm within 30 s · Nyarlathotep/Nyarlathotep/Logic/AdminLines.cs:21
+purge-confirm · purged: {events} events, {units} units queued · Nyarlathotep/Nyarlathotep/Logic/AdminLines.cs:23
+start-purge-cooldown · purge cooldown active ({secs} s left) · Nyarlathotep/Nyarlathotep/Logic/AdminLines.cs:30
+gateway-denied · denied · Nyarlathotep/Nyarlathotep/Logic/ActionGateway.cs:75
+start · event {id} started · Nyarlathotep/Nyarlathotep/Services/EventRuntime.cs:102
+stop · event {id} stopped · Nyarlathotep/Nyarlathotep/Services/EventRuntime.cs:108
+stop-inactive · not active · Nyarlathotep/Nyarlathotep/Services/EventRuntime.cs:108
+event-bad-verb · argument must be list, info, start, stop, enable, disable, set, reload, new, copy or delete · Nyarlathotep/Nyarlathotep/Commands/EventCommands.cs:16
+info-unknown · unknown event {id} · Nyarlathotep/Nyarlathotep/Commands/EventCommands.cs:71
+start-no-position · your position could not be read · Nyarlathotep/Nyarlathotep/Commands/EventCommands.cs:80
+template-bad-verb · argument must be list, info or use · Nyarlathotep/Nyarlathotep/Commands/TemplateCommands.cs:13
+purge-bad-arg · argument must be confirm or nothing · Nyarlathotep/Nyarlathotep/Commands/SpawnCommands.cs:64

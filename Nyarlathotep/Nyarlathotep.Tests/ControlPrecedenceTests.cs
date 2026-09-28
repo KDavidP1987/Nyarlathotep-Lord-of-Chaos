@@ -40,7 +40,7 @@ public class ControlPrecedenceTests
 
         var first = Enumerable.Range(0, 5).FirstOrDefault(On, -1);
         if (first < 0) Assert.Null(blocker);
-        else Assert.Equal(Expected[first], blocker);
+        else Assert.Equal(Expected[first], blocker?.Human);
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public class ControlPrecedenceTests
         var def = Json.One(Json.Event());
         Assert.Equal(TriggerType.Manual, def.Trigger.Type);
         var full = new ControlState(false, true, AllPillars.ToHashSet(), 3, 3);
-        Assert.Equal("skipped by MaxConcurrentEvents", Precedence.StartBlocker(def, full));
+        Assert.Equal("skipped by MaxConcurrentEvents", Precedence.StartBlocker(def, full)?.Human);
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public class ControlPrecedenceTests
     {
         var def = Json.One(Json.Event(extra: "\"bogus\": 1"));
         var open = new ControlState(false, true, AllPillars.ToHashSet(), 0, 3);
-        Assert.Equal("event raid is disabled: unknown field bogus", Precedence.StartBlocker(def, open));
+        Assert.Equal("event raid is disabled: unknown field bogus", Precedence.StartBlocker(def, open)?.Human);
     }
 
     [Fact]
@@ -119,7 +119,7 @@ public class ControlPrecedenceTests
             On(2) ? AllPillars.Where(p => p != Pillar.Spawns).ToHashSet() : AllPillars.ToHashSet(), On(3) ? 3 : 0, 3);
         var blocker = Precedence.StartBlocker(def, state);
         var labels = new[] { Readiness.Purge, Readiness.Mod, Readiness.PillarOff, Readiness.Cap, Readiness.EventOff };
-        var expected = blocker is null ? Readiness.Ready : labels[Array.IndexOf(Expected, blocker)];
+        var expected = blocker is null ? Readiness.Ready : labels[Array.IndexOf(Expected, blocker.Human)];
         Assert.Equal(expected, Readiness.Of(def, state));
     }
 

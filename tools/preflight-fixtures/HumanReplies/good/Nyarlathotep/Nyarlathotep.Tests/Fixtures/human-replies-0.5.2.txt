@@ -1,0 +1,2 @@
+# A fixture capture (raphael-api-admin D1): <scenario id> · <template> · <path>:<line>[,<line>].
+start-disabled · event {id} is disabled · Nyarlathotep/Nyarlathotep/Logic/Precedence.cs:30

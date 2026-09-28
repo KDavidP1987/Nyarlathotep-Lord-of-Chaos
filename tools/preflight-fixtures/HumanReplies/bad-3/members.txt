@@ -1,0 +1,3 @@
+Nyarlathotep/Nyarlathotep/Logic/Precedence.cs Precedence.PurgeCooldown
+Nyarlathotep/Nyarlathotep/Logic/Precedence.cs Precedence.StartBlocker
+Nyarlathotep/Nyarlathotep/Logic/ActionGateway.cs ActionGateway.DeniedReply

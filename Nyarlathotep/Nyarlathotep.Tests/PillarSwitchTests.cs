@@ -78,7 +78,7 @@ public class PillarSwitchTests
 
         /// <summary>A start as EventRuntime makes it: the controls first, then the catalog.</summary>
         public string? Start(string id) =>
-            Precedence.StartBlocker(Lib.Catalog.Current.Find(id)!, Controls()) ?? Lib.Catalog.TryStart(id, Now, out _);
+            (Precedence.StartBlocker(Lib.Catalog.Current.Find(id)!, Controls()) ?? Lib.Catalog.TryStart(id, Now, out _))?.Human;
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public class PillarSwitchTests
     public void PillarCommand_passes_switch_on_and_off()
     {
         var r = new Rig();
-        Assert.Equal(["pillar spawns on (saved to cfg)"], r.Command.Switch("spawns", "on"));
+        Assert.Equal(["pillar spawns on (saved to cfg)"], r.Command.Switch("spawns", "on").Human.Split('\n'));
         Assert.Equal(["reload", "set Spawns True"], r.Store.Ops);                      // reload before the set
         Assert.True(r.Store.Get(Pillar.Spawns));
         Assert.Contains("EventSpawns = true", r.Store.File);
@@ -109,7 +109,7 @@ public class PillarSwitchTests
         Assert.Null(r.Start("raid"));
         Assert.Null(r.Start("raid-2"));
         Assert.Null(r.Start("surge"));
-        Assert.Equal(["pillar spawns off (saved to cfg)", "event raid ended (pillar off)", "event raid-2 ended (pillar off)"], r.Command.Switch("spawns", "off"));
+        Assert.Equal(["pillar spawns off (saved to cfg)", "event raid ended (pillar off)", "event raid-2 ended (pillar off)"], r.Command.Switch("spawns", "off").Human.Split('\n'));
         Assert.Equal(["surge"], r.Lib.Catalog.Running.Select(x => x.Definition.Id));   // another pillar's event runs on
         Assert.Equal(1, r.Log.Count("event raid ended (pillar off)"));
     }
@@ -135,7 +135,7 @@ public class PillarSwitchTests
         var r = new Rig();
         r.Command.Switch("spawns", "on");
         Assert.Null(r.Start("raid"));                                                  // dispatched first: runs
-        Assert.Contains("event raid ended (pillar off)", r.Command.Switch("spawns", "off"));
+        Assert.Contains("event raid ended (pillar off)", r.Command.Switch("spawns", "off").Human.Split('\n'));
         Assert.Empty(r.Lib.Catalog.Running);
     }
 
@@ -159,7 +159,7 @@ public class PillarSwitchTests
     {
         var r = new Rig();
         var file = r.Store.File.ToList();
-        Assert.Equal([reply], r.Command.Switch(name, state));
+        Assert.Equal([reply], r.Command.Switch(name, state).Human.Split('\n'));
         Assert.Equal(0, r.Store.Saves);
         Assert.Equal(file, r.Store.File);
         Assert.DoesNotContain(r.Store.Ops, o => o.StartsWith("set", StringComparison.Ordinal));
@@ -170,7 +170,7 @@ public class PillarSwitchTests
     {
         var r = new Rig();
         r.Store.HandEdit("EventSpawns", "true");
-        Assert.Equal(["pillar spawns already on"], r.Command.Switch("spawns", "on"));
+        Assert.Equal(["pillar spawns already on"], r.Command.Switch("spawns", "on").Human.Split('\n'));
         Assert.Equal(0, r.Store.Saves);
     }
 
@@ -182,7 +182,7 @@ public class PillarSwitchTests
         Assert.Null(r.Start("raid"));
         r.Store.HandEdit("EventSpawns", "false");                                       // the operator turned it off on disk
         var saves = r.Store.Saves;
-        Assert.Equal(["pillar spawns already off", "event raid ended (pillar off)"], r.Command.Switch("spawns", "off"));
+        Assert.Equal(["pillar spawns already off", "event raid ended (pillar off)"], r.Command.Switch("spawns", "off").Human.Split('\n'));
         Assert.Empty(r.Lib.Catalog.Running);
         Assert.Equal(saves, r.Store.Saves);                                              // nothing saved
     }
@@ -193,7 +193,7 @@ public class PillarSwitchTests
         var r = new Rig();
         r.Store.FailReload = true;
         var file = r.Store.File.ToList();
-        Assert.Equal(["pillar spawns not changed: could not read the cfg: cfg locked"], r.Command.Switch("spawns", "on"));
+        Assert.Equal(["pillar spawns not changed: could not read the cfg: cfg locked"], r.Command.Switch("spawns", "on").Human.Split('\n'));
         Assert.Equal(["reload"], r.Store.Ops);
         Assert.Equal(file, r.Store.File);
         Assert.False(r.Store.Get(Pillar.Spawns));
@@ -204,7 +204,7 @@ public class PillarSwitchTests
     {
         var r = new Rig();
         r.Command.Switch("boss", "on");
-        Assert.Equal(["pillar boss off (saved to cfg)"], r.Command.Switch("boss", "off"));
+        Assert.Equal(["pillar boss off (saved to cfg)"], r.Command.Switch("boss", "off").Human.Split('\n'));
     }
 
     // ---- D19 SaveFailure (the cfg-save category of D33)
@@ -214,7 +214,7 @@ public class PillarSwitchTests
     {
         var r = new Rig();
         r.Store.TruncateThenThrow = true;
-        Assert.Equal(["pillar spawns could not be saved; the file says off"], r.Command.Switch("spawns", "on"));
+        Assert.Equal(["pillar spawns could not be saved; the file says off"], r.Command.Switch("spawns", "on").Human.Split('\n'));
         Assert.False(r.Store.Get(Pillar.Spawns));                                      // memory follows the file
         Assert.Equal(1, r.Log.Count("pillar spawns: cfg save failed (disk full mid-save); the file says off"));
     }
@@ -224,7 +224,7 @@ public class PillarSwitchTests
     {
         var r = new Rig();
         r.Store.WriteThenThrow = true;
-        Assert.Equal(["pillar spawns could not be saved; the file says on"], r.Command.Switch("spawns", "on"));
+        Assert.Equal(["pillar spawns could not be saved; the file says on"], r.Command.Switch("spawns", "on").Human.Split('\n'));
         Assert.True(r.Store.Get(Pillar.Spawns));
         Assert.Contains("EventSpawns = true", r.Store.File);
     }
@@ -236,7 +236,7 @@ public class PillarSwitchTests
         r.Command.Switch("spawns", "on");
         Assert.Null(r.Start("raid"));
         r.Store.WriteThenThrow = true;
-        Assert.Equal(["pillar spawns could not be saved; the file says off", "event raid ended (pillar off)"], r.Command.Switch("spawns", "off"));
+        Assert.Equal(["pillar spawns could not be saved; the file says off", "event raid ended (pillar off)"], r.Command.Switch("spawns", "off").Human.Split('\n'));
         Assert.Empty(r.Lib.Catalog.Running);
     }
 
@@ -260,7 +260,7 @@ public class PillarSwitchTests
         var r = new Rig();
         r.Command.Switch("spawns", "on");
         r.Store.TruncateThenThrow = true;
-        Assert.Equal(["pillar empowerment could not be saved; the file says off"], r.Command.Switch("empowerment", "on"));
+        Assert.Equal(["pillar empowerment could not be saved; the file says off"], r.Command.Switch("empowerment", "on").Human.Split('\n'));
         Assert.All(PillarNames.All, p => Assert.False(r.Store.Get(p.Pillar)));         // a missing key reads as its default, off
     }
 }

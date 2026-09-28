@@ -64,14 +64,14 @@ internal static class EventRuntime
     /// automatic one (System) also meets the definition's conditions, and one refused by a switched-off master or
     /// pillar switch logs nothing (Business rules 6). Logs "event &lt;id&gt; started by &lt;trigger&gt;" (D29).</summary>
     [Mutating]
-    internal static string StartEvent(string id, string trigger, Actor actor, (float X, float Y, float Z)? origin)
+    internal static Outcome StartEvent(string id, string trigger, Actor actor, (float X, float Y, float Z)? origin)
     {
         var now = DateTime.UtcNow;
         var controls = Controls();
         var def = EventStore.Catalog.Current.Find(id);
         if (actor == Actor.System && def is not null)
         {
-            if (!controls.GeneralEnabled || !controls.EnabledPillars.Contains(def.Pillar)) return "off";
+            if (!controls.GeneralEnabled || !controls.EnabledPillars.Contains(def.Pillar)) return AdminLines.SystemOff;
             if (Engine.Find(id) is null)
             {
                 var blocked = ConditionCheck.Blocker(def.Conditions, new ConditionContext(ConnectedPlayers(), ServerMode(),
@@ -79,7 +79,7 @@ internal static class EventRuntime
                 if (blocked is not null)
                 {
                     Core.Log.LogInfo($"[nyar] event {id} not started by {trigger}: {blocked}");
-                    return blocked;
+                    return AdminLines.ConditionBlocked(blocked);
                 }
             }
         }
@@ -87,11 +87,9 @@ internal static class EventRuntime
         var refused = Engine.Start(id, trigger, now, controls, origin);
         if (refused is not null)
         {
-            Core.Log.LogInfo($"[nyar] event {id} not started by {trigger}: {refused}");
+            Core.Log.LogInfo($"[nyar] event {id} not started by {trigger}: {refused.Human}");
             // The admin is told how long the purge cooldown still runs (A7, D30).
-            if (actor == Actor.Admin && refused == Precedence.PurgeCooldown)
-                return AdminLines.CooldownLeft(Persistence.State.Document.PurgeUntilUtc, now) ?? refused;
-            return refused;
+            return AdminLines.StartRefused(refused, actor == Actor.Admin, Persistence.State.Document.PurgeUntilUtc, now);
         }
         var active = Engine.Find(id)!;
         Persistence.State.Document.Instances.Add(new StateInstance(id, active.Instance.StartedUtc, active.Instance.EndsUtc, "active"));
@@ -99,18 +97,18 @@ internal static class EventRuntime
         Core.Log.LogInfo($"[nyar] event {id} started by {trigger} (ends {active.Instance.EndsUtc:u})");
         if (EventActions.ActionKindOf(active.Definition) == EventActionKind.Empower) EmpowerAction.StartCarriers(active);
         Announcer.EventStarted(active.Instance);
-        return $"event {id} started";
+        return AdminLines.Started(id);
     }
 
     /// <summary>`.nyar event stop`: ends the event now and queues its units for despawn.</summary>
     [Mutating]
-    internal static string StopEvent(string id) =>
-        End(id, "stopped") ? $"event {id} stopped" : "not active";
+    internal static Outcome StopEvent(string id) =>
+        End(id, "stopped") ? AdminLines.Stopped(id) : AdminLines.NotActive(id);
 
     /// <summary>The kill switch (D20): ends every event, cancels every waiting spawn, queues every tracked unit and starts
     /// the PurgeCooldownSeconds window, during which nothing starts or spawns.</summary>
     [Mutating]
-    internal static string Purge()
+    internal static Outcome Purge()
     {
         var cooldown = Settings.Limit(Limits.PurgeCooldownSeconds);
         var events = Engine.CancelAll(cooldown);
@@ -122,7 +120,7 @@ internal static class EventRuntime
         Persistence.State.MarkDirty();
         Announcer.Purged();
         Core.Log.LogWarning($"[nyar] purge: {events.Count} events ended, {queued} units queued, {cancelled} spawns cancelled, cooldown {cooldown}s");
-        return AdminLines.Purged(events.Count, queued);
+        return AdminLines.PurgeDone(events.Count, queued, cooldown);
     }
 
     /// <summary>One scheduler tick for the events: ends the expired ones, queues the units of those past their grace,

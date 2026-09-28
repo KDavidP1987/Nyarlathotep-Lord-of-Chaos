@@ -23,19 +23,19 @@ public static class EventsEditor
     /// "enabled", "name", "durationSeconds", "conditions.&lt;key&gt;", "action.&lt;key&gt;" or "action.stats.&lt;stat&gt;";
     /// a missing conditions or stats object is created, a missing action is an error. A field of the other action type
     /// is refused, and so is a stat set that would leave no stat above 1.0 (faction-empowerment D12).</summary>
-    public static string? Apply(string text, string id, string path, object value, out string? error)
+    public static string? Apply(string text, string id, string path, object value, out Outcome? error)
     {
         error = null;
         JsonNode? root;
         try { root = JsonNode.Parse(text, documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true }); }
-        catch (JsonException) { error = "events.json does not parse; fix it and run .nyar event reload"; return null; }
+        catch (JsonException) { error = FileErrors.Refusal("events.json does not parse; fix it and run .nyar event reload"); return null; }
 
-        if (root?["events"] is not JsonArray events) { error = "events.json has no events array"; return null; }
+        if (root?["events"] is not JsonArray events) { error = FileErrors.Refusal("events.json has no events array"); return null; }
         var ev = events.OfType<JsonObject>().FirstOrDefault(e => e["id"] is JsonValue v && v.TryGetValue<string>(out var s) && s == id);
-        if (ev is null) { error = $"unknown event {id}"; return null; }
+        if (ev is null) { error = AdminLines.UnknownEvent(id); return null; }
 
         var node = ToNode(value);
-        if (node is null) { error = $"{path} has an unsupported value"; return null; }
+        if (node is null) { error = Invalid($"{path} has an unsupported value", Reasons.Value); return null; }
 
         var actionType = ev["action"] is JsonObject act && act["type"] is JsonValue tv && tv.TryGetValue<string>(out var t) ? t : null;
         if (path.StartsWith("trigger.", StringComparison.Ordinal))
@@ -46,15 +46,15 @@ public static class EventsEditor
             var need = path == "action.factions" ? "Empower" : "SpawnWaves";
             if (actionType != need)
             {
-                error = path == "action.location" ? "location is a SpawnWaves field" : $"{path} is not {Article(actionType)} field";
+                error = Invalid(path == "action.location" ? "location is a SpawnWaves field" : $"{path} is not {Article(actionType)} field", Reasons.Field);
                 return null;
             }
             ((JsonObject)ev["action"]!)[path["action.".Length..]] = node;
             return root.ToJsonString(Write) + Environment.NewLine;
         }
         var isStat = path.StartsWith("action.stats.", StringComparison.Ordinal);
-        if (isStat && actionType != "Empower") { error = $"{path} is not a field of a {actionType ?? "missing"} action"; return null; }
-        if (CommandArgs.WaveFields.Contains(path) && actionType == "Empower") { error = $"{path} is not a field of an Empower action"; return null; }
+        if (isStat && actionType != "Empower") { error = Invalid($"{path} is not a field of a {actionType ?? "missing"} action", Reasons.Field); return null; }
+        if (CommandArgs.WaveFields.Contains(path) && actionType == "Empower") { error = Invalid($"{path} is not a field of an Empower action", Reasons.Field); return null; }
 
         var parts = path.Split('.');
         JsonObject target = ev;
@@ -62,7 +62,7 @@ public static class EventsEditor
         {
             if (target[parts[i]] is not JsonObject child)
             {
-                if (parts[i] is not ("conditions" or "stats")) { error = $"event {id} has no {parts[i]}"; return null; }
+                if (parts[i] is not ("conditions" or "stats")) { error = Outcome.Refused($"event {id} has no {parts[i]}", RefusalCode.NotFound, "field"); return null; }
                 child = new JsonObject();
                 target[parts[i]] = child;
             }
@@ -72,7 +72,7 @@ public static class EventsEditor
 
         if (isStat && !target.Any(p => p.Value is JsonValue v && v.TryGetValue<decimal>(out var m) && m > 1.0m))
         {
-            error = "action.stats must raise at least one stat above 1.0";
+            error = Invalid("action.stats must raise at least one stat above 1.0", Reasons.Stats);
             return null;
         }
         return root.ToJsonString(Write) + Environment.NewLine;
@@ -92,6 +92,9 @@ public static class EventsEditor
         _ => null,
     };
 
+    /// <summary>A value the field refuses (raphael-api-admin Business rules 3: invalid, arg field).</summary>
+    static Outcome Invalid(string human, string reason) => Outcome.Refused(human, RefusalCode.Invalid, "field", reason: reason);
+
     static string Article(string? type) => type switch
     {
         null => "a missing",
@@ -102,7 +105,7 @@ public static class EventsEditor
     /// <summary>trigger.type replaces the whole trigger with that type's default (Schedule Sat 20:00, GameTime night,
     /// VBloodKilled any, Manual), so no key of the old type stays; any other trigger field needs its trigger type
     /// (event-library D9).</summary>
-    static string? SetTrigger(JsonNode root, JsonObject ev, string path, JsonNode node, out string? error)
+    static string? SetTrigger(JsonNode root, JsonObject ev, string path, JsonNode node, out Outcome? error)
     {
         error = null;
         if (path == "trigger.type")
@@ -119,7 +122,7 @@ public static class EventsEditor
         var need = CommandArgs.TriggerTypeOf(path);
         var trigger = ev["trigger"] as JsonObject;
         var type = trigger?["type"] is JsonValue tv && tv.TryGetValue<string>(out var t) ? t : null;
-        if (need is null || trigger is null || type != need) { error = $"{path} needs a {need ?? "known"} trigger"; return null; }
+        if (need is null || trigger is null || type != need) { error = Invalid($"{path} needs a {need ?? "known"} trigger", Reasons.Trigger); return null; }
         trigger[path["trigger.".Length..]] = node;
         return root.ToJsonString(Write) + Environment.NewLine;
     }
@@ -255,7 +258,7 @@ public static class Readiness
     public const string Invalid = "invalid: ";
     public const string EventOff = "off (event)";
 
-    public static string Of(EventDefinition d, ControlState controls) => Label(d, Precedence.StartBlocker(d, controls));
+    public static string Of(EventDefinition d, ControlState controls) => Label(d, Precedence.StartBlocker(d, controls)?.Human);
 
     /// <summary>The label of one StartBlocker reply for <paramref name="d"/>; an unknown reply throws, so a new
     /// blocker cannot go unlabelled.</summary>

@@ -77,13 +77,25 @@ public sealed class ActionGateway(Action<string> log)
     /// <summary>The work's reply, or <see cref="DeniedReply"/> after logging "gateway: denied &lt;kind&gt; for
     /// &lt;actor&gt;". <paramref name="definitionEnabled"/> matters to System only: pass the definition's
     /// Startable flag for StartEvent and EndEvent.</summary>
-    public string Run(ActionKind kind, Actor actor, Func<string> work, bool definitionEnabled = true)
+    public string Run(ActionKind kind, Actor actor, Func<string> work, bool definitionEnabled = true) =>
+        Run(kind, actor, work, () => DeniedReply, definitionEnabled);
+
+    /// <summary>The work's outcome, or <see cref="Denied"/> (raphael-api-admin D1: noaccess).</summary>
+    public Outcome Run(ActionKind kind, Actor actor, Func<Outcome> work, bool definitionEnabled = true) =>
+        Run(kind, actor, work, Denied, definitionEnabled);
+
+    /// <summary>The one door with any result type: <paramref name="denied"/> answers a kind the table refuses
+    /// (raphael-api-admin D1, D11: the admin flows reach IAdminOps only inside this call).</summary>
+    public T Run<T>(ActionKind kind, Actor actor, Func<T> work, Func<T> denied, bool definitionEnabled = true)
     {
         if (!ActionTable.Allows(kind, actor, definitionEnabled))
         {
             log($"gateway: denied {kind} for {actor}");
-            return DeniedReply;
+            return denied();
         }
         return work();
     }
+
+    /// <summary>The denial as an outcome: "denied", code noaccess (Business rules 3).</summary>
+    public static Outcome Denied() => Outcome.Refused(DeniedReply, RefusalCode.NoAccess);
 }

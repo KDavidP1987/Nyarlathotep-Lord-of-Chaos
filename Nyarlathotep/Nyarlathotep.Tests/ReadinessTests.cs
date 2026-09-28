@@ -49,7 +49,7 @@ public class ReadinessTests
         var d = Def(state);
         var s = Controls(purge, general, pillar, capFull);
         var label = Readiness.Of(d, s);
-        Assert.Equal(Readiness.Label(d, Precedence.StartBlocker(d, s)), label);
+        Assert.Equal(Readiness.Label(d, Precedence.StartBlocker(d, s)?.Human), label);
         Assert.Equal(Expected(purge, general, pillar, capFull, state), label);
         var line = EventLines.Line(d, false, s);
         Assert.Equal(label.StartsWith("invalid: ", StringComparison.Ordinal) ? $"raid {label}" : $"raid {label} spawns manual", line);

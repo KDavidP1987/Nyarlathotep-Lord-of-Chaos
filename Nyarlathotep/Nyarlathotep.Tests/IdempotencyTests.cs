@@ -122,7 +122,7 @@ public class IdempotencyTests
         Assert.Same(running, still);
         Assert.Equal(600, still.Definition.DurationSeconds);
         Assert.Equal(t.AddSeconds(600), still.EndsUtc);
-        Assert.Equal("already active", catalog.TryStart("raid", t.AddSeconds(2), out _));
+        Assert.Equal("already active", catalog.TryStart("raid", t.AddSeconds(2), out _)?.Human);
 
         Assert.Null(catalog.TryEnd("raid"));
         Assert.Null(catalog.TryStart("raid", t.AddSeconds(3), out var next));
@@ -136,10 +136,10 @@ public class IdempotencyTests
         var catalog = new EventCatalog();
         catalog.Reload(EventValidator.Parse(text, FakeUnits.Default()), Stamp(text));
         var t = Zones.Utc(2026, 9, 24, 20, 0);
-        Assert.Equal("unknown event nope", catalog.TryStart("nope", t, out _));
-        Assert.Equal("not active", catalog.TryEnd("raid"));
+        Assert.Equal("unknown event nope", catalog.TryStart("nope", t, out _)?.Human);
+        Assert.Equal("not active", catalog.TryEnd("raid")?.Human);
         Assert.Null(catalog.TryStart("raid", t, out _));
-        Assert.Equal("already active", catalog.TryStart("raid", t, out _));
+        Assert.Equal("already active", catalog.TryStart("raid", t, out _)?.Human);
         Assert.Single(catalog.Running);
     }
 

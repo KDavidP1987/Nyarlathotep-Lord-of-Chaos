@@ -15,7 +15,7 @@ public partial class EngineTests
         var e = Engine(Emp("a", "[\"Faction_Legion\", \"Faction_Bandits\"]"), Emp("b", "[\"Faction_Undead\", \"Faction_Bandits\"]"),
             Emp("c", "[\"Faction_Undead\"]"));
         Assert.Null(e.Start("a", "manual", T0, Open()));
-        Assert.Equal("faction Bandits already empowered by a", e.Start("b", "manual", T0, Open(active: 1)));
+        Assert.Equal("faction Bandits already empowered by a", e.Start("b", "manual", T0, Open(active: 1))?.Human);
         Assert.Null(e.Start("c", "manual", T0, Open(active: 1)));             // disjoint: allowed
         Assert.Equal(["a", "c"], e.Active.Select(x => x.Id).OrderBy(x => x));
     }
@@ -26,7 +26,7 @@ public partial class EngineTests
         var e = Engine(Emp("a", "[\"Faction_Legion\"]", "\"includeUnits\": [\"CHAR_Bandit_Thug\"]"),
             Emp("b", "[\"Faction_Undead\"]", "\"includeUnits\": [\"CHAR_Bandit_Deadeye\", \"CHAR_Bandit_Thug\"]"));
         Assert.Null(e.Start("a", "manual", T0, Open()));
-        Assert.Equal("unit CHAR_Bandit_Thug already empowered by a", e.Start("b", "manual", T0, Open(active: 1)));
+        Assert.Equal("unit CHAR_Bandit_Thug already empowered by a", e.Start("b", "manual", T0, Open(active: 1))?.Human);
     }
 
     [Fact]
@@ -34,11 +34,11 @@ public partial class EngineTests
     {
         var e = Engine(Emp("a", "[\"Faction_Bandits\"]"), Emp("b", "[\"Faction_Bandits\"]"), Json.Event("raid"));
         Assert.Null(e.Start("a", "manual", T0, Open()));
-        Assert.Equal("purge cooldown active", e.Start("b", "manual", T0, Open(active: 1, purge: true)));
-        Assert.Equal("General.Enabled is false", e.Start("b", "manual", T0, new ControlState(false, false, new HashSet<Pillar>(Enum.GetValues<Pillar>()), 1, 3)));
-        Assert.Equal("pillar empowerment is off", e.Start("b", "manual", T0, new ControlState(false, true, new HashSet<Pillar> { Pillar.Spawns }, 1, 3)));
-        Assert.Equal("skipped by MaxConcurrentEvents", e.Start("b", "manual", T0, Open(active: 1, max: 1)));
-        Assert.Equal("faction Bandits already empowered by a", e.Start("b", "manual", T0, Open(active: 1)));
+        Assert.Equal("purge cooldown active", e.Start("b", "manual", T0, Open(active: 1, purge: true))?.Human);
+        Assert.Equal("General.Enabled is false", e.Start("b", "manual", T0, new ControlState(false, false, new HashSet<Pillar>(Enum.GetValues<Pillar>()), 1, 3))?.Human);
+        Assert.Equal("pillar empowerment is off", e.Start("b", "manual", T0, new ControlState(false, true, new HashSet<Pillar> { Pillar.Spawns }, 1, 3))?.Human);
+        Assert.Equal("skipped by MaxConcurrentEvents", e.Start("b", "manual", T0, Open(active: 1, max: 1))?.Human);
+        Assert.Equal("faction Bandits already empowered by a", e.Start("b", "manual", T0, Open(active: 1))?.Human);
         Assert.Null(e.Start("raid", "manual", T0, Open(active: 1)));          // a spawn event is not affected
     }
 
@@ -48,7 +48,7 @@ public partial class EngineTests
         var e = Engine(Emp("a", "[\"Faction_Bandits\"]"),
             Emp("b", "[\"Faction_Bandits\"]").Replace("\"enabled\": true", "\"enabled\": false"));
         Assert.Null(e.Start("a", "manual", T0, Open()));
-        Assert.Equal("event b is disabled", e.Start("b", "manual", T0, Open(active: 1)));
+        Assert.Equal("event b is disabled", e.Start("b", "manual", T0, Open(active: 1))?.Human);
     }
 
     [Fact]

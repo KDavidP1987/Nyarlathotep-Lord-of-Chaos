@@ -10,15 +10,13 @@ namespace Nyarlathotep.Commands;
 [CommandGroup("nyar")]
 internal static class TemplateCommands
 {
-    const string Verbs = "argument must be list, info or use";
-
     [Command("template", usage: "list [pillar] [page] | info <template> | use <template> [as <id>]",
         description: "List, inspect or copy the starter event templates into events.json.", adminOnly: true)]
     public static void Template(ChatCommandContext ctx, string verb = "", string a = "", string b = "", string c = "")
     {
         if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }
         var form = CommandForms.Check("template", [verb, a, b, c], out var usage);
-        if (form is null) { ctx.Reply(usage ?? Verbs); return; }
+        if (form is null) { ctx.Reply(usage ?? AdminLines.TemplateVerbs); return; }
         switch (form.Words)
         {
             case "template list":
@@ -33,8 +31,7 @@ internal static class TemplateCommands
             default:
             {
                 var asId = b == "as" ? c : null;
-                EventCommands.LogAdmin(ctx, asId is null ? $"template use {a}" : $"template use {a} as {asId}");
-                ctx.Reply(Gateway.Run(ActionKind.CreateEvent, Actor.Admin, () => TemplateLibrary.UseTemplate(a, asId)));
+                ctx.Reply(Gateway.Flows.TemplateUse(EventCommands.Caller(ctx), a, asId).Human);
                 return;
             }
         }

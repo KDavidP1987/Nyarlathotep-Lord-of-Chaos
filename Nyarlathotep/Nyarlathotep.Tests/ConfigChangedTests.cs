@@ -23,7 +23,7 @@ public partial class ConfigChangedTests
             Fs.Put(DataFile.Events, FileVariant.Main, events);
             File = new EventsFile(new DataStore(Fs, Log.Add), Log.Add);
             Editor = new DefinitionEditor(File, Fs, Catalog, Log.Add, Log.Add);
-            Assert.StartsWith("reloaded", Editor.Reload(FakeUnits.Default()));   // the boot load, before the hub is attached
+            Assert.StartsWith("reloaded", Editor.Reload(FakeUnits.Default()).Human);   // the boot load, before the hub is attached
             Hub = new PushHub(new FakeUsers(), [60], Log.Add);
             Catalog.Push = Hub;
         }
@@ -40,7 +40,7 @@ public partial class ConfigChangedTests
     public void A_reload_pushes_config_changed()
     {
         var s = New();
-        Assert.StartsWith("reloaded", s.Editor.Reload(FakeUnits.Default()));
+        Assert.StartsWith("reloaded", s.Editor.Reload(FakeUnits.Default()).Human);
         Assert.Equal([ConfigChanged], s.Pushed());
     }
 
@@ -49,12 +49,12 @@ public partial class ConfigChangedTests
     {
         var s = New();
         s.Fs.Put(DataFile.Events, FileVariant.Main, "{ broken");
-        Assert.StartsWith("events.json rejected", s.Editor.Reload(FakeUnits.Default()));
+        Assert.StartsWith("events.json rejected", s.Editor.Reload(FakeUnits.Default()).Human);
         s.Fs.FailReads = true;
-        Assert.StartsWith("events.json could not be read", s.Editor.Reload(FakeUnits.Default()));
+        Assert.StartsWith("events.json could not be read", s.Editor.Reload(FakeUnits.Default()).Human);
         s.Fs.FailReads = false;
         s.Fs.Delete(DataFile.Events, FileVariant.Main);
-        Assert.Equal("events.json not found", s.Editor.Reload(FakeUnits.Default()));
+        Assert.Equal("events.json not found", s.Editor.Reload(FakeUnits.Default()).Human);
         Assert.Empty(s.Pushed());
     }
 
@@ -66,7 +66,7 @@ public partial class ConfigChangedTests
     public void An_applied_edit_pushes_config_changed_once(string path, object value)
     {
         var s = new Setup(Json.File(Json.Event("raid").Replace("\"enabled\": true", "\"enabled\": " + (value is true ? "false" : "true"))));
-        Assert.StartsWith("event raid", s.Editor.Edit("raid", path, value, FakeUnits.Default()));
+        Assert.StartsWith("event raid", s.Editor.Edit("raid", path, value, FakeUnits.Default()).Human);
         Assert.Equal([ConfigChanged], s.Pushed());
     }
 
@@ -74,11 +74,11 @@ public partial class ConfigChangedTests
     public void A_refused_edit_pushes_nothing()
     {
         var s = New();
-        Assert.DoesNotContain("reloaded", s.Editor.Edit("nope", "enabled", true, FakeUnits.Default()));       // unknown id
+        Assert.DoesNotContain("reloaded", s.Editor.Edit("nope", "enabled", true, FakeUnits.Default()).Human);       // unknown id
         Assert.Equal("durationSeconds has an unsupported value",
-            s.Editor.Edit("raid", "durationSeconds", new object(), FakeUnits.Default()));                     // a value it cannot write
+            s.Editor.Edit("raid", "durationSeconds", new object(), FakeUnits.Default()).Human);                     // a value it cannot write
         s.Fs.Put(DataFile.Events, FileVariant.Main, "{ broken");                                               // broken since the load
-        Assert.Equal(StaleFile.Refusal, s.Editor.Edit("raid", "enabled", false, FakeUnits.Default()));        // stale before parsed (event-library D12)
+        Assert.Equal(StaleFile.Refusal, s.Editor.Edit("raid", "enabled", false, FakeUnits.Default()).Human);        // stale before parsed (event-library D12)
         Assert.Empty(s.Pushed());
     }
 
@@ -89,7 +89,7 @@ public partial class ConfigChangedTests
         s.Fs.Now = s.Fs.Now.AddMinutes(1);
         s.Fs.Put(DataFile.Events, FileVariant.Main, Json.File(Json.Event("raid"), Json.Event("siege")));   // a hand edit
         var reply = s.Editor.Edit("raid", "enabled", false, FakeUnits.Default());
-        Assert.DoesNotContain("reloaded", reply);
+        Assert.DoesNotContain("reloaded", reply.Human);
         Assert.Empty(s.Pushed());
         Assert.Contains("siege", s.Fs.Text(DataFile.Events, FileVariant.Main));   // the hand edit is kept
     }
@@ -99,13 +99,13 @@ public partial class ConfigChangedTests
     {
         var s = New();
         s.Fs.FailWrites = true;
-        Assert.StartsWith(EventsFile.WriteFailed, s.Editor.Edit("raid", "enabled", false, FakeUnits.Default()));   // event-library D19
+        Assert.StartsWith(EventsFile.WriteFailed, s.Editor.Edit("raid", "enabled", false, FakeUnits.Default()).Human);   // event-library D19
         s.Fs.FailWrites = false;
         s.Fs.FailReads = true;
-        Assert.StartsWith("events.json could not be read", s.Editor.Edit("raid", "enabled", false, FakeUnits.Default()));
+        Assert.StartsWith("events.json could not be read", s.Editor.Edit("raid", "enabled", false, FakeUnits.Default()).Human);
         s.Fs.FailReads = false;
         s.Fs.Delete(DataFile.Events, FileVariant.Main);
-        Assert.Equal("events.json not found", s.Editor.Edit("raid", "enabled", false, FakeUnits.Default()));
+        Assert.Equal("events.json not found", s.Editor.Edit("raid", "enabled", false, FakeUnits.Default()).Human);
         Assert.Empty(s.Pushed());
     }
 
@@ -113,7 +113,7 @@ public partial class ConfigChangedTests
     public void An_edit_of_a_newer_read_only_schema_pushes_nothing()
     {
         var s = new Setup("{ \"SchemaVersion\": 99, \"events\": [ " + Json.Event("raid") + " ] }");
-        Assert.Contains("read-only", s.Editor.Edit("raid", "enabled", false, FakeUnits.Default()));
+        Assert.Contains("read-only", s.Editor.Edit("raid", "enabled", false, FakeUnits.Default()).Human);
         Assert.Empty(s.Pushed());
     }
 }

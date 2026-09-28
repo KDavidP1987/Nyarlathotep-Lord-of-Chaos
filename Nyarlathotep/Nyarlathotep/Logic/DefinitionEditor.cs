@@ -6,9 +6,9 @@ namespace Nyarlathotep.Logic;
 /// <summary>What a chat write does to events.json (event-library D12): the new file text and the reply once it is
 /// applied, or the refusal. <see cref="CheckId"/> is the definition whose disabled reason, if the reload gives it one,
 /// the reply appends ("; now disabled: &lt;reason&gt;").</summary>
-public readonly record struct EditPlan(string? Text, string? Refusal, string Done, string? CheckId)
+public readonly record struct EditPlan(string? Text, Outcome? Refusal, string Done, string? CheckId, params (string Key, string Value)[] Fields)
 {
-    public static EditPlan Refuse(string reply) => new(null, reply, "", null);
+    public static EditPlan Refuse(Outcome refusal) => new(null, refusal, "", null);
 }
 
 /// <summary>The definition load and the admin edits without the game (foundation D6, D23; raphael-api-core A7;
@@ -23,27 +23,30 @@ public sealed class DefinitionEditor(EventsFile file, IFileStore files, EventCat
     /// <summary>Loads events.json and applies it. Returns the `.nyar event reload` reply: "reloaded: &lt;v&gt; valid,
     /// &lt;x&gt; disabled" or the file error (the last valid set stays, D23). An applied load ends an uncertain write's
     /// degraded entry (event-library D32).</summary>
-    public string Reload(IUnitCatalog units)
+    public Outcome Reload(IUnitCatalog units)
     {
         var (result, stamp) = file.Load(units);
         var error = result.FileError ?? catalog.Reload(result, stamp!);   // a file error always comes with no applied set
         if (error is not null)
         {
             warn($"{error}; the last valid set stays ({catalog.Current.All.Count} events)");
-            return error;
+            return FileErrors.Refusal(error);
         }
         file.WriteUncertain = false;
         foreach (var line in result.Log) warn(line);
         var disabled = result.Log.Count;
         var reply = $"reloaded: {catalog.Current.All.Count - disabled} valid, {disabled} disabled";
         info($"events: {reply}");                                          // at boot and on every `.nyar event reload`
-        return reply;
+        return Outcome.Done(reply, ("count", catalog.Current.All.Count.ToString()));
     }
 
     /// <summary>`.nyar event set`, `enable` and `disable`: changes one field of event <paramref name="id"/> in events.json
     /// (Logic/EventsEditor), written only when the file is the one last loaded, keeping one .bak (Business rules 9, D6),
     /// then reloads. A running instance keeps its definition; the change applies to the next start.</summary>
-    public string Edit(string id, string path, object value, IUnitCatalog units)
+    /// <summary>An edit EventsEditor.Apply refused without saying why (a fallback: Apply always says).</summary>
+    public static Outcome EditRefused(string id) => Outcome.Refused($"event {id}: edit refused", RefusalCode.Invalid, "field", reason: Reasons.Field);
+
+    public Outcome Edit(string id, string path, object value, IUnitCatalog units)
     {
         if (value is PointArg) path = "action.location";
         var shown = value switch
@@ -53,10 +56,13 @@ public sealed class DefinitionEditor(EventsFile file, IFileStore files, EventCat
             _ => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture),
         };
         var done = path == "enabled" ? $"event {id} {((bool)value ? "enabled" : "disabled")}" : $"event {id} {path} = {shown}";
+        (string, string)[] fields = path == "enabled" ? [] : [("field", path), ("value", shown ?? "")];
         return Write(text =>
         {
             var edited = EventsEditor.Apply(text, id, path, value, out var refusal);
-            return edited is null ? EditPlan.Refuse(refusal ?? $"event {id}: edit refused") : new EditPlan(edited, null, done, id);
+            return edited is null
+                ? EditPlan.Refuse(refusal ?? EditRefused(id))
+                : new EditPlan(edited, null, done, id, fields);
         }, units);
     }
 
@@ -65,46 +71,48 @@ public sealed class DefinitionEditor(EventsFile file, IFileStore files, EventCat
     /// (the stale and newer-schema refusals, one .bak), then reloads, so exactly one config-changed follows an applied
     /// write. A refused plan writes nothing. A write whose Promote threw is uncertain: the file is read back and memory
     /// follows it (D19).</summary>
-    public string Write(Func<string, EditPlan> plan, IUnitCatalog units)
+    public Outcome Write(Func<string, EditPlan> plan, IUnitCatalog units)
     {
         byte[]? bytes;
         try { bytes = files.Read(DataFile.Events, FileVariant.Main); }
-        catch (Exception ex) { return $"events.json could not be read: {ex.Message}"; }
-        if (bytes is null) return "events.json not found";
-        if (file.Writable(catalog.LoadedStamp) is { } refusal) return refusal;     // stale or read-only: never planned
+        catch (Exception ex) { return FileErrors.Refusal($"events.json could not be read: {ex.Message}"); }
+        if (bytes is null) return FileErrors.Refusal("events.json not found");
+        if (file.Writable(catalog.LoadedStamp) is { } refusal) return FileErrors.Refusal(refusal);     // stale or read-only: never planned
         var text = Encoding.UTF8.GetString(bytes).TrimStart('\uFEFF');
         EditPlan p;
         try { p = plan(text); }
-        catch (Exception ex) { return $"edit refused: {ex.Message}"; }
-        if (p.Text is null) return p.Refusal ?? "edit refused";
+        catch (Exception ex) { return Outcome.Refused($"edit refused: {ex.Message}", RefusalCode.Io, reason: Reasons.Internal); }
+        if (p.Text is null) return p.Refusal ?? Outcome.Refused("edit refused", RefusalCode.Io, reason: Reasons.Internal);
         var content = Encoding.UTF8.GetBytes(p.Text);
-        if (content.Length > EventValidator.MaxFileBytes) return TooLarge;
+        if (content.Length > EventValidator.MaxFileBytes) return Outcome.Refused(TooLarge, RefusalCode.Full, reason: Reasons.Size);
         var error = file.WriteEdit(content, catalog.LoadedStamp, out _, out var uncertain);
         if (uncertain) return Uncertain(error ?? "unknown", units);
-        if (error is not null) return error;
+        if (error is not null) return FileErrors.Refusal(error);
 
         var reload = Reload(units);
-        info($"{p.Done}; {reload}");
-        if (!reload.StartsWith("reloaded", StringComparison.Ordinal)) return $"{p.Done}; {reload}";
-        return p.CheckId is { } id && catalog.Current.Find(id)?.DisabledReason is { } reason ? $"{p.Done}; now disabled: {reason}" : p.Done;
+        info($"{p.Done}; {reload.Human}");
+        if (!reload.Ok) return reload.WithHuman($"{p.Done}; {reload.Human}");
+        return p.CheckId is { } id && catalog.Current.Find(id)?.DisabledReason is { } reason
+            ? Outcome.Done($"{p.Done}; now disabled: {reason}", p.Fields)
+            : Outcome.Done(p.Done, p.Fields);
     }
 
     /// <summary>A Promote threw, so the main file may be the old or the new version (event-library D19): the file is read
     /// back and memory follows it, applied (one config-changed) only when it differs from what was loaded. The reply
     /// names the count the file now holds.</summary>
-    string Uncertain(string reason, IUnitCatalog units)
+    Outcome Uncertain(string reason, IUnitCatalog units)
     {
         var (result, stamp) = file.Load(units);
         if (result.FileError is not null || stamp is null)
         {
             file.WriteUncertain = true;
             warn($"events.json write uncertain ({reason}): could not read it back: {result.FileError}");
-            return $"write uncertain: events.json could not be read back: {result.FileError}";
+            return Outcome.Refused($"write uncertain: events.json could not be read back: {result.FileError}", RefusalCode.Io, reason: Reasons.WriteUncertain);
         }
         if (stamp != catalog.LoadedStamp) catalog.Reload(result, stamp);
         file.WriteUncertain = true;
         var n = result.Set.All.Count;
         warn($"events.json write uncertain ({reason}): reloaded {n} definitions from disk");
-        return $"write uncertain: file now holds {n} definitions";
+        return Outcome.Refused($"write uncertain: file now holds {n} definitions", RefusalCode.Io, reason: Reasons.WriteUncertain);
     }
 }

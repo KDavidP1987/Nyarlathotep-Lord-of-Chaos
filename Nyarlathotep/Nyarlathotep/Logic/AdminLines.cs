@@ -12,6 +12,66 @@ public static partial class AdminLines
     public const string NothingToPurge = "nothing to purge";
     public const string NotArmed = "run .nyar purge first";
 
+    /// <summary>"unknown event &lt;id&gt;" (raphael-api-admin D1, D2: notfound, arg id).</summary>
+    public static Outcome UnknownEvent(string id) => Outcome.Refused($"unknown event {id}", RefusalCode.NotFound, "id");
+
+    /// <summary>"already active": the engine's one-instance rule (D5: state, already_active).</summary>
+    public static Outcome AlreadyActive(string id) => Outcome.Refused("already active", RefusalCode.State, "id", reason: Reasons.AlreadyActive);
+
+    /// <summary>"not active" (D5: state, not_active).</summary>
+    public static Outcome NotActive(string id) => Outcome.Refused("not active", RefusalCode.State, "id", reason: Reasons.NotActive);
+
+    /// <summary>`.nyar event`'s reply to a verb it does not know.</summary>
+    public const string EventVerbs = "argument must be list, info, start, stop, enable, disable, set, reload, new, copy or delete";
+
+    /// <summary>`.nyar template`'s reply to a verb it does not know.</summary>
+    public const string TemplateVerbs = "argument must be list, info or use";
+
+    /// <summary>`.nyar purge`'s reply to an argument other than confirm.</summary>
+    public const string PurgeArgs = "argument must be confirm or nothing";
+
+    /// <summary>A start or spawn that needs the admin's position when it cannot be read (Business rules 3: badarg
+    /// location no_position).</summary>
+    public const string NoPosition = "your position could not be read";
+
+    public static readonly Outcome PositionUnread = Outcome.Refused(NoPosition, RefusalCode.BadArg, "location", reason: Reasons.NoPosition);
+
+    /// <summary>"event &lt;id&gt; started" (D29).</summary>
+    public static Outcome Started(string id) => Outcome.Done($"event {id} started");
+
+    /// <summary>"event &lt;id&gt; stopped".</summary>
+    public static Outcome Stopped(string id) => Outcome.Done($"event {id} stopped");
+
+    /// <summary>An automatic start while the master or the event's pillar switch is off: "off", logged by no one
+    /// (foundation Business rules 6; raphael-api-admin Business rules 3: disabled general).</summary>
+    public static readonly Outcome SystemOff = Outcome.Refused("off", RefusalCode.Disabled, reason: Reasons.General);
+
+    /// <summary>An automatic start a condition blocks (players, mode, window, cooldown, chance): state condition.</summary>
+    public static Outcome ConditionBlocked(string blocker) => Outcome.Refused(blocker, RefusalCode.State, reason: Reasons.Condition);
+
+    /// <summary>The engine's refusal of a start as its caller sees it: an admin refused by the purge cooldown is told
+    /// the seconds left (A7, D30), in the text and in secs; any other refusal is the engine's own.</summary>
+    public static Outcome StartRefused(Outcome refused, bool admin, DateTime? purgeUntilUtc, DateTime nowUtc)
+    {
+        if (!admin || refused.Code != RefusalCode.Cooldown || CooldownLeft(purgeUntilUtc, nowUtc) is not { } text) return refused;
+        return Outcome.Refused(text, RefusalCode.Cooldown, secs: SecondsLeft(purgeUntilUtc!.Value, nowUtc));
+    }
+
+    public static readonly Outcome NothingToPurgeOutcome = Outcome.Refused(NothingToPurge, RefusalCode.State, reason: Reasons.NothingToPurge);
+    public static readonly Outcome NotArmedOutcome = Outcome.Refused(NotArmed, RefusalCode.Confirm);
+
+    /// <summary>The purge ask's prompt; the confirm window is 30 s.</summary>
+    public static Outcome PurgeAsked(int events, int units) =>
+        Outcome.Done(PurgePrompt(events, units), ("confirm", ((int)PurgeArming.Window.TotalSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+
+    /// <summary>The purge's reply, with the counts and the cooldown it started.</summary>
+    public static Outcome PurgeDone(int events, int units, int cooldownSeconds) =>
+        Outcome.Done(Purged(events, units), ("events", Invariant(events)), ("units", Invariant(units)), ("secs", Invariant(cooldownSeconds)));
+
+    static string Invariant(int n) => n.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    static int SecondsLeft(DateTime untilUtc, DateTime nowUtc) => (int)Math.Ceiling((untilUtc - nowUtc).TotalSeconds);
+
     public static string Spawned(int queued, string prefab, string? skipped) =>
         queued == 0 ? skipped ?? $"spawned 0 {prefab}"
         : skipped is null ? $"spawned {queued} {prefab}"
@@ -27,7 +87,7 @@ public static partial class AdminLines
     /// label stays "purge cooldown active".</summary>
     public static string? CooldownLeft(DateTime? untilUtc, DateTime nowUtc) =>
         untilUtc is { } until && until > nowUtc
-            ? $"purge cooldown active ({(int)Math.Ceiling((until - nowUtc).TotalSeconds)} s left)"
+            ? $"purge cooldown active ({SecondsLeft(until, nowUtc)} s left)"
             : null;
 
     /// <summary>The private line an admin gets on connecting while something is degraded (D31).</summary>

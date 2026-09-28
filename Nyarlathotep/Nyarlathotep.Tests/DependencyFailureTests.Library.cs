@@ -100,7 +100,7 @@ public class LibraryDependencyFailureTests
         lib.Fs.FailWritesOf.Add(DataFile.State);
         deleter.Request(1, "raid", Now);
         Assert.Equal("event raid deleted (events.json.bak keeps the previous file); cooldown row left, cleared on the next save",
-            deleter.Confirm(1, "raid", Now.AddSeconds(1), lib.Units));
+            deleter.Confirm(1, "raid", Now.AddSeconds(1), lib.Units).Human);
         Assert.Null(lib.Catalog.Current.Find("raid"));                                     // the definition stays deleted
         Assert.Equal(1, lib.Log.Count("delete raid: cooldown row left, cleared on the next save (disk full)"));
         Assert.True(lib.State.Dirty);
@@ -121,7 +121,7 @@ public class LibraryDependencyFailureTests
         Assert.True(lib.State.ReadOnly);
         deleter.Request(1, "raid", Now);
         Assert.Equal("event raid deleted (events.json.bak keeps the previous file); state.json is read-only; its cooldown row is kept",
-            deleter.Confirm(1, "raid", Now.AddSeconds(1), lib.Units));
+            deleter.Confirm(1, "raid", Now.AddSeconds(1), lib.Units).Human);
         Assert.Null(lib.Catalog.Current.Find("raid"));
         Assert.True(lib.State.Document.LastStart.ContainsKey("raid"));                     // memory matches the file it never writes
         Assert.Equal(1, lib.Log.Count("delete raid: state.json is read-only; its cooldown row is kept"));
@@ -133,7 +133,7 @@ public class LibraryDependencyFailureTests
     {
         var (lib, deleter) = Deletion();
         deleter.Request(1, "raid", Now);
-        Assert.Equal("event raid deleted (events.json.bak keeps the previous file)", deleter.Confirm(1, "raid", Now.AddSeconds(1), lib.Units));
+        Assert.Equal("event raid deleted (events.json.bak keeps the previous file)", deleter.Confirm(1, "raid", Now.AddSeconds(1), lib.Units).Human);
         Assert.DoesNotContain("\"raid\"", lib.Fs.Text(DataFile.State, FileVariant.Main));
         Assert.Equal(0, lib.Log.Count("cooldown row left"));
     }
@@ -146,7 +146,7 @@ public class LibraryDependencyFailureTests
         lib.State.Load();
         Assert.NotNull(lib.State.Document.LastStart);
         deleter.Request(1, "raid", Now);
-        Assert.Equal("event raid deleted (events.json.bak keeps the previous file)", deleter.Confirm(1, "raid", Now.AddSeconds(1), lib.Units));
+        Assert.Equal("event raid deleted (events.json.bak keeps the previous file)", deleter.Confirm(1, "raid", Now.AddSeconds(1), lib.Units).Human);
         Assert.Null(lib.Catalog.Current.Find("raid"));
     }
 
@@ -157,7 +157,7 @@ public class LibraryDependencyFailureTests
         lib.Fs.FailWritesOf.Add(DataFile.State);
         var deleter = new EventDeleter(new DeleteArming(), lib.Editor, lib.Catalog, _ => false, lib.State, lib.Log.Add);
         deleter.Request(1, "raid", Now);
-        Assert.Equal("event raid deleted (events.json.bak keeps the previous file)", deleter.Confirm(1, "raid", Now.AddSeconds(1), lib.Units));
+        Assert.Equal("event raid deleted (events.json.bak keeps the previous file)", deleter.Confirm(1, "raid", Now.AddSeconds(1), lib.Units).Human);
         Assert.Null(lib.Fs.Text(DataFile.State, FileVariant.Main));                        // no row, no second write
     }
 
@@ -317,7 +317,7 @@ public class LibraryDependencyFailureTests
         lib.Fs.ThrowAfterPromote = true;
         lib.Write(t => Authoring.New(t, "c", "spawns"));
         Assert.True(lib.Events.WriteUncertain);
-        Assert.StartsWith("reloaded", lib.Editor.Reload(lib.Units));
+        Assert.StartsWith("reloaded", lib.Editor.Reload(lib.Units).Human);
         Assert.Empty(LibraryHealth.Entries(null, lib.Events.WriteUncertain));
     }
 

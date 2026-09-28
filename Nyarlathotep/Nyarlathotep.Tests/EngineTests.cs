@@ -127,11 +127,11 @@ public partial class EngineTests
     public void Start_replies_in_order_unknown_already_active_then_controls()
     {
         var e = Engine(Json.Event("raid"), Json.Event("other"));
-        Assert.Equal("unknown event nope", e.Start("nope", "manual", T0, Open()));
+        Assert.Equal("unknown event nope", e.Start("nope", "manual", T0, Open())?.Human);
         Assert.Null(e.Start("raid", "manual", T0, Open()));
-        Assert.Equal("already active", e.Start("raid", "manual", T0, Open(active: 3, max: 1, purge: true)));
-        Assert.Equal("skipped by MaxConcurrentEvents", e.Start("other", "manual", T0, Open(active: 1, max: 1)));
-        Assert.Equal("purge cooldown active", e.Start("other", "manual", T0, Open(purge: true)));
+        Assert.Equal("already active", e.Start("raid", "manual", T0, Open(active: 3, max: 1, purge: true))?.Human);
+        Assert.Equal("skipped by MaxConcurrentEvents", e.Start("other", "manual", T0, Open(active: 1, max: 1))?.Human);
+        Assert.Equal("purge cooldown active", e.Start("other", "manual", T0, Open(purge: true))?.Human);
         Assert.Single(e.Active);
         Assert.Single(e.Catalog.Running);
     }
@@ -396,9 +396,9 @@ public partial class EngineTests
     public void Editor_refuses_an_unknown_event_or_a_broken_file()
     {
         Assert.Null(EventsEditor.Apply(Json.File(Json.Event("raid")), "nope", "enabled", true, out var error));
-        Assert.Equal("unknown event nope", error);
+        Assert.Equal("unknown event nope", error?.Human);
         Assert.Null(EventsEditor.Apply("{ \"events\": [ ", "raid", "enabled", true, out error));
-        Assert.StartsWith("events.json does not parse", error);
+        Assert.StartsWith("events.json does not parse", error?.Human);
     }
 
     // ---- admin lines

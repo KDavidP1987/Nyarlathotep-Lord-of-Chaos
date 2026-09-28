@@ -205,16 +205,17 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
     /// <summary>Starts the current definition <paramref name="id"/>. The reply on refusal, highest first: "unknown event",
     /// "already active", the controls of <see cref="Precedence.StartBlocker"/>, then one empowerment per faction
     /// (<see cref="EventActions.EmpowerClash"/>).</summary>
-    public string? Start(string id, string trigger, DateTime utcNow, ControlState controls, (float X, float Y, float Z)? origin = null)
+    public Outcome? Start(string id, string trigger, DateTime utcNow, ControlState controls, (float X, float Y, float Z)? origin = null)
     {
         var def = catalog.Current.Find(id);
-        if (def is null) return $"unknown event {id}";
-        if (_active.ContainsKey(id)) return "already active";
+        if (def is null) return AdminLines.UnknownEvent(id);
+        if (_active.ContainsKey(id)) return AdminLines.AlreadyActive(id);
         var blocker = Precedence.StartBlocker(def, controls);
         if (blocker is not null) return blocker;
         var clash = EventActions.EmpowerClash(def, _active.Values);
-        if (clash is not null) return clash;
-        if (def.Action?.Location.Type == LocationType.Admin && origin is null) return $"event {id} spawns at the admin: start it with .nyar event start";
+        if (clash is not null) return Outcome.Refused(clash, RefusalCode.State, "id", reason: Reasons.EmpowerClash);
+        if (def.Action?.Location.Type == LocationType.Admin && origin is null)
+            return Outcome.Refused($"event {id} spawns at the admin: start it with .nyar event start", RefusalCode.BadArg, "location", reason: Reasons.AdminLocation);
         var error = catalog.TryStart(id, utcNow, out var instance);
         if (error is not null) return error;
         _active[id] = new ActiveEvent(instance!, trigger, origin);

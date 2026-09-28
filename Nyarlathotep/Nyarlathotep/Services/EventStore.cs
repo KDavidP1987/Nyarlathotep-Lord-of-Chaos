@@ -40,24 +40,24 @@ internal static class EventStore
     /// <summary>Loads events.json and applies it. Returns the `.nyar event reload` reply: "reloaded: &lt;v&gt; valid,
     /// &lt;x&gt; disabled" or the file error (the last valid set stays, D23).</summary>
     [Mutating]
-    internal static string Reload() => Editor.Reload(new PrefabUnitCatalog());
+    internal static Outcome Reload() => Editor.Reload(new PrefabUnitCatalog());
 
     /// <summary>`.nyar event set`, `enable` and `disable`: changes one field of event <paramref name="id"/> in events.json,
     /// written only when the file is the one last loaded, keeping one .bak (Business rules 9, D6), then reloads.</summary>
     [Mutating]
-    internal static string Edit(string id, string path, object value) => Editor.Edit(id, path, value, new PrefabUnitCatalog());
+    internal static Outcome Edit(string id, string path, object value) => Editor.Edit(id, path, value, new PrefabUnitCatalog());
 
     /// <summary>`.nyar event new`, `copy` and `template use` (event-library D5-D7, D12): one write of events.json that
     /// <paramref name="plan"/> edits, with the stale, newer-schema and 1 MB refusals, one .bak, then a reload.</summary>
     [Mutating]
-    internal static string Author(Func<string, EditPlan> plan) => Editor.Write(plan, new PrefabUnitCatalog());
+    internal static Outcome Author(Func<string, EditPlan> plan) => Editor.Write(plan, new PrefabUnitCatalog());
 
     static readonly DeleteArming _deleteArming = new();
 
     /// <summary>`.nyar event delete &lt;id&gt; [confirm]` (event-library D8): the first call arms, the same admin's confirm
     /// within 30 s writes events.json without the definition, then drops its cooldown row and writes state.json.</summary>
     [Mutating]
-    internal static string DeleteDefinition(ulong adminId, string id, bool confirm)
+    internal static Outcome DeleteDefinition(ulong adminId, string id, bool confirm)
     {
         var deleter = new EventDeleter(_deleteArming, Editor, Catalog, x => EventRuntime.Engine.Find(x) is not null, Persistence.State,
             line => Core.Log.LogWarning($"[nyar] {line}"));

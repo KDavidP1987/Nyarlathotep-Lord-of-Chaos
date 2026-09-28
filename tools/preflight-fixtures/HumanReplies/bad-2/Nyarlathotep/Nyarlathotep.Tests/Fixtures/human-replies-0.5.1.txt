@@ -1,0 +1,7 @@
+# A fixture capture (raphael-api-admin D1): <scenario id> · <template> · <path>:<line>[,<line>].
+blocker-purge · purge cooldown active · Nyarlathotep/Nyarlathotep/Logic/Precedence.cs:20
+start-general-off · General.Enabled is false · Nyarlathotep/Nyarlathotep/Logic/Precedence.cs:26
+start-pillar-off · pillar {pillar} is off · Nyarlathotep/Nyarlathotep/Logic/Precedence.cs:27
+start-invalid · event {id} is disabled: {reason} · Nyarlathotep/Nyarlathotep/Logic/Precedence.cs:29
+start-disabled · event {id} is disabled · Nyarlathotep/Nyarlathotep/Logic/Precedence.cs:30
+gateway-denied · denied · Nyarlathotep/Nyarlathotep/Logic/ActionGateway.cs:75

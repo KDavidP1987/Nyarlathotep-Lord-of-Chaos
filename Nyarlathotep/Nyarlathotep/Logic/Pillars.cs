@@ -76,19 +76,24 @@ public sealed class PillarCommand(IPillarStore store, Func<Pillar, IReadOnlyList
         return lines;
     }
 
-    public IReadOnlyList<string> Switch(string name, string state)
+    /// <summary>The switch's reply lines joined with "\n" (raphael-api-admin D1, D4): a success carries on, changed and,
+    /// when `off` ended events, ended; a refusal its code (Business rules 3).</summary>
+    public Outcome Switch(string name, string state)
     {
-        if (!PillarNames.TryParse(name, out var pillar)) return [PillarNames.Unknown(name)];
-        if (state is not ("on" or "off")) return ["use on or off"];
+        if (!PillarNames.TryParse(name, out var pillar)) return Outcome.Refused(PillarNames.Unknown(name), RefusalCode.NotFound, "pillar");
+        if (state is not ("on" or "off")) return Outcome.Refused("use on or off", RefusalCode.BadArg, "state");
         var want = state == "on";
         try { store.Reload(); }
-        catch (Exception ex) { return [$"pillar {name} not changed: could not read the cfg: {ex.Message}"]; }
+        catch (Exception ex)
+        {
+            return Outcome.Refused($"pillar {name} not changed: could not read the cfg: {ex.Message}", RefusalCode.Io, reason: Reasons.Read);
+        }
         if (store.Get(pillar) == want)
         {
             // An operator's cfg edit may have turned the pillar off with its events still running: off always ends them.
             var already = new List<string> { $"pillar {name} already {state}" };
             if (!want) already.AddRange(End(pillar));
-            return already;
+            return Switched(already, want, changed: false);
         }
 
         try { store.Set(pillar, want); }
@@ -99,29 +104,41 @@ public sealed class PillarCommand(IPillarStore store, Func<Pillar, IReadOnlyList
             catch (Exception reread)
             {
                 log($"pillar {name}: cfg save failed ({ex.Message}) and the cfg could not be read back ({reread.Message})");
-                return [$"pillar {name} could not be saved; the cfg could not be read back: {reread.Message}"];
+                return Outcome.Refused($"pillar {name} could not be saved; the cfg could not be read back: {reread.Message}", RefusalCode.Io, reason: Reasons.Save);
             }
             var now = store.Get(pillar);
             log($"pillar {name}: cfg save failed ({ex.Message}); the file says {OnOff(now)}");
             var failed = new List<string> { $"pillar {name} could not be saved; the file says {OnOff(now)}" };
             if (!want && !now) failed.AddRange(End(pillar));
-            return failed;
+            return Outcome.Refused(string.Join("\n", failed), RefusalCode.Io, reason: Reasons.Save);
         }
 
         log($"pillar {name} {state} (saved to cfg)");
         var lines = new List<string> { $"pillar {name} {state} (saved to cfg)" };
         if (!want) lines.AddRange(End(pillar));
-        return lines;
+        return Switched(lines, want, changed: true);
     }
 
-    IEnumerable<string> End(Pillar pillar)
+    /// <summary>A switch that stands: the lines, on, changed, and ended when `off` ended events (D4).</summary>
+    static Outcome Switched(List<string> lines, bool on, bool changed)
     {
+        var ended = lines.Count - 1;
+        (string, string)[] fields = ended > 0
+            ? [("on", on ? "1" : "0"), ("changed", changed ? "1" : "0"), ("ended", ended.ToString(System.Globalization.CultureInfo.InvariantCulture))]
+            : [("on", on ? "1" : "0"), ("changed", changed ? "1" : "0")];
+        return Outcome.Done(string.Join("\n", lines), fields);
+    }
+
+    List<string> End(Pillar pillar)
+    {
+        var lines = new List<string>();
         foreach (var id in endEvents(pillar))
         {
             var line = $"event {id} ended (pillar off)";
             log(line);
-            yield return line;
+            lines.Add(line);
         }
+        return lines;
     }
 
     static string OnOff(bool on) => on ? "on" : "off";

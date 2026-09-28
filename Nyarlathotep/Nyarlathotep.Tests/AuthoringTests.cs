@@ -30,7 +30,7 @@ public class AuthoringTests
             if (!p.Ok) return p.Error!;
             v = p.Value;
         }
-        return lib.Editor.Edit(id, field, v, lib.Units);
+        return lib.Editor.Edit(id, field, v, lib.Units).Human;
     }
 
     static JsonObject Entry(string text, string id) =>
@@ -154,7 +154,7 @@ public class AuthoringTests
             Deleter = new EventDeleter(Arming, Lib.Editor, Lib.Catalog, id => Lib.Catalog.Running.Any(r => r.Definition.Id == id), Lib.State, Lib.Log.Add);
         }
 
-        public string Confirm(ulong admin, string id, DateTime at) => Deleter.Confirm(admin, id, at, Lib.Units);
+        public string Confirm(ulong admin, string id, DateTime at) => Deleter.Confirm(admin, id, at, Lib.Units).Human;
         public string? StateText => Lib.Fs.Text(DataFile.State, FileVariant.Main);
     }
 
@@ -163,7 +163,7 @@ public class AuthoringTests
     {
         var x = new Deletion(Json.Event("raid"), Json.Event("other"));
         var hash = x.Lib.Hash;
-        Assert.Equal("delete raid? run .nyar event delete raid confirm within 30 s", x.Deleter.Request(1, "raid", Now));
+        Assert.Equal("delete raid? run .nyar event delete raid confirm within 30 s", x.Deleter.Request(1, "raid", Now).Human);
         Assert.Equal(hash, x.Lib.Hash);                                               // the first call writes nothing
         Assert.Equal("event raid deleted (events.json.bak keeps the previous file)", x.Confirm(1, "raid", Now.AddSeconds(30)));
         Assert.Null(x.Lib.Catalog.Current.Find("raid"));
@@ -192,7 +192,7 @@ public class AuthoringTests
     {
         var x = new Deletion(Json.Event("raid"));
         Assert.Null(x.Lib.Catalog.TryStart("raid", Now, out _));
-        Assert.Equal("event raid is running; stop it first", x.Deleter.Request(1, "raid", Now));
+        Assert.Equal("event raid is running; stop it first", x.Deleter.Request(1, "raid", Now).Human);
         Assert.Equal(0, x.Arming.Count);                                              // arms nothing
         x.Lib.Catalog.TryEnd("raid");
 
@@ -220,7 +220,7 @@ public class AuthoringTests
     {
         var x = new Deletion(Json.Event("raid"));
         Unchanged(x.Lib, () => Assert.Equal("no delete pending for raid", x.Confirm(1, "raid", Now)));
-        Assert.Equal("unknown event nope", x.Deleter.Request(1, "nope", Now));
+        Assert.Equal("unknown event nope", x.Deleter.Request(1, "nope", Now).Human);
         Assert.Equal(0, x.Arming.Count);
     }
 
@@ -552,7 +552,7 @@ public class AuthoringTests
     public void Equivalence_empty_refused_plan()
     {
         var lib = Lib(Json.Event("raid"));
-        Unchanged(lib, () => Assert.Equal("no", lib.Write(_ => EditPlan.Refuse("no"))));
+        Unchanged(lib, () => Assert.Equal("no", lib.Write(_ => EditPlan.Refuse(Outcome.Refused("no", RefusalCode.Invalid)))));
         Assert.Null(lib.Bak);
     }
 }

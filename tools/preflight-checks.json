@@ -397,14 +397,105 @@
       "mode": "default",
       "fixtures": "tools/preflight-fixtures/GatewayOnly",
       "inputs": [
-        "every .cs file under Nyarlathotep/Nyarlathotep/Commands/, Patches/ and Services/ (the [Mutating] declarations and every use of their names)"
+        "every .cs file under Nyarlathotep/Nyarlathotep/Commands/, Patches/ and Services/ (the [Mutating] declarations and every use of their names)",
+        "every .cs file under Nyarlathotep/Nyarlathotep/Logic/ (each .Op<Name> access of AdminOps or IAdminOps and the work argument of <g>.Run<…>( around it, <g> declared an ActionGateway)"
       ],
       "plant": {
         "bad": "Commands/StatusCommands.cs calls EventStore.Reload() directly, outside Gateway.Run",
         "bad-2": "Patches/GameDataInitializedPatch.cs captures EventStore.Reload as a delegate outside Gateway.Run and passes it in later",
         "bad-3": "Commands/StatusCommands.cs calls EventStore.Reload() inside an interpolated string's hole",
         "bad-4": "Commands/StatusCommands.cs declares a dummy [Mutating] method to exempt itself, then calls EventStore.Reload() directly",
-        "bad-5": "Commands/StatusCommands.cs has a \"(\" in an interpolated string inside Gateway.Run, then calls EventStore.Reload() directly after it"
+        "bad-5": "Commands/StatusCommands.cs has a \"(\" in an interpolated string inside Gateway.Run, then calls EventStore.Reload() directly after it",
+        "bad-6": "Commands/ApiAdminCommands.cs calls AdminOps.Instance.OpStartEvent directly, outside AdminFlows and Gateway.Run (raphael-api-admin D11)",
+        "bad-7": "Logic/AdminFlows.cs calls ops.OpStopEvent outside ActionGateway.Run<T>",
+        "bad-8": "Logic/OtherFlows.cs, another Logic file holding an IAdminOps, calls ops.OpReload outside Run<T> (A2)",
+        "bad-9": "Logic/AdminFlows.cs calls ops.OpStopEvent in the denied argument of ActionGateway.Run<T>, not its work",
+        "bad-10": "Logic/AdminFlows.cs calls ops.OpStopEvent inside Task.Run<T>, another type's Run<T>",
+        "bad-11": "Logic/AdminFlows.cs takes ops.OpStopEvent as a method group outside Run<T> and calls it later"
+      }
+    },
+    {
+      "name": "HumanReplies",
+      "function": "Test-CheckHumanReplies",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/HumanReplies",
+      "emptyLine": "human replies: no rows",
+      "tag": "v0.5.1",
+      "inputs": [
+        "Nyarlathotep/Nyarlathotep.Tests/Fixtures/human-replies-<version>.txt (each row's template and cited lines)",
+        "the cited files and the members below at tag v<version> (git show; a fixture holds them under <tag>/ and may list its members in members.txt)"
+      ],
+      "members": [
+        "Nyarlathotep/Nyarlathotep/Logic/Precedence.cs Precedence.PurgeCooldown",
+        "Nyarlathotep/Nyarlathotep/Logic/Precedence.cs Precedence.StartBlocker",
+        "Nyarlathotep/Nyarlathotep/Logic/Engine.cs EventActions.EmpowerClash",
+        "Nyarlathotep/Nyarlathotep/Logic/Engine.cs EventEngine.Start",
+        "Nyarlathotep/Nyarlathotep/Logic/EventCatalog.cs EventCatalog.TryStart",
+        "Nyarlathotep/Nyarlathotep/Logic/EventCatalog.cs EventCatalog.TryEnd",
+        "Nyarlathotep/Nyarlathotep/Logic/Idempotency.cs StaleFile.Refusal",
+        "Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs DefinitionEditor.TooLarge",
+        "Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs DefinitionEditor.Reload",
+        "Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs DefinitionEditor.Edit",
+        "Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs DefinitionEditor.Write",
+        "Nyarlathotep/Nyarlathotep/Logic/DefinitionEditor.cs DefinitionEditor.Uncertain",
+        "Nyarlathotep/Nyarlathotep/Logic/EventAdmin.cs EventsEditor.Apply",
+        "Nyarlathotep/Nyarlathotep/Logic/EventAdmin.cs EventsEditor.SetTrigger",
+        "Nyarlathotep/Nyarlathotep/Logic/Authoring.cs Authoring.Limit",
+        "Nyarlathotep/Nyarlathotep/Logic/Authoring.cs Authoring.IdRule",
+        "Nyarlathotep/Nyarlathotep/Logic/Authoring.cs Authoring.TemplateUse",
+        "Nyarlathotep/Nyarlathotep/Logic/Authoring.cs Authoring.New",
+        "Nyarlathotep/Nyarlathotep/Logic/Authoring.cs Authoring.Copy",
+        "Nyarlathotep/Nyarlathotep/Logic/Authoring.cs Authoring.Delete",
+        "Nyarlathotep/Nyarlathotep/Logic/Authoring.cs Authoring.Deleted",
+        "Nyarlathotep/Nyarlathotep/Logic/Authoring.cs Authoring.Append",
+        "Nyarlathotep/Nyarlathotep/Logic/Authoring.cs Authoring.TryParse",
+        "Nyarlathotep/Nyarlathotep/Logic/Authoring.cs EventDeleter.RowLeft",
+        "Nyarlathotep/Nyarlathotep/Logic/Authoring.cs EventDeleter.RowKept",
+        "Nyarlathotep/Nyarlathotep/Logic/Authoring.cs EventDeleter.Running",
+        "Nyarlathotep/Nyarlathotep/Logic/Authoring.cs EventDeleter.NotPending",
+        "Nyarlathotep/Nyarlathotep/Logic/Authoring.cs EventDeleter.Request",
+        "Nyarlathotep/Nyarlathotep/Logic/Authoring.cs EventDeleter.Confirm",
+        "Nyarlathotep/Nyarlathotep/Logic/Pillars.cs PillarNames.Unknown",
+        "Nyarlathotep/Nyarlathotep/Logic/Pillars.cs PillarCommand.Switch",
+        "Nyarlathotep/Nyarlathotep/Logic/Pillars.cs PillarCommand.End",
+        "Nyarlathotep/Nyarlathotep/Logic/Templates.cs TemplateLines.CatalogueUnavailable",
+        "Nyarlathotep/Nyarlathotep/Logic/Templates.cs TemplateLines.UnknownTemplate",
+        "Nyarlathotep/Nyarlathotep/Logic/AdminLines.cs AdminLines.NothingToPurge",
+        "Nyarlathotep/Nyarlathotep/Logic/AdminLines.cs AdminLines.NotArmed",
+        "Nyarlathotep/Nyarlathotep/Logic/AdminLines.cs AdminLines.PurgePrompt",
+        "Nyarlathotep/Nyarlathotep/Logic/AdminLines.cs AdminLines.Purged",
+        "Nyarlathotep/Nyarlathotep/Logic/AdminLines.cs AdminLines.CooldownLeft",
+        "Nyarlathotep/Nyarlathotep/Logic/ActionGateway.cs ActionGateway.DeniedReply",
+        "Nyarlathotep/Nyarlathotep/Services/EventRuntime.cs EventRuntime.StartEvent",
+        "Nyarlathotep/Nyarlathotep/Services/EventRuntime.cs EventRuntime.StopEvent",
+        "Nyarlathotep/Nyarlathotep/Services/EventRuntime.cs EventRuntime.Purge",
+        "Nyarlathotep/Nyarlathotep/Commands/EventCommands.cs EventCommands.Verbs",
+        "Nyarlathotep/Nyarlathotep/Commands/EventCommands.cs EventCommands.Event",
+        "Nyarlathotep/Nyarlathotep/Commands/TemplateCommands.cs TemplateCommands.Verbs",
+        "Nyarlathotep/Nyarlathotep/Commands/SpawnCommands.cs SpawnCommands.PurgeCommand"
+      ],
+      "plant": {
+        "bad": "row start-disabled's template reads \"event {id} is off\", which its cited v0.5.1 line does not hold",
+        "bad-2": "the row citing Logic/Precedence.cs:28 (\"skipped by MaxConcurrentEvents\") is dropped, so a counted reply literal of Precedence.StartBlocker is cited by no row",
+        "bad-3": "the start-invalid row lists its literal parts in another order than its cited v0.5.1 line",
+        "bad-4": "the 0.5.1 capture differs from added/<path>, the text of the commit that added it (an in-place edit, A4)",
+        "bad-5": "the 0.5.2 capture is listed as committed (tracked.txt) with no added/<path>: a renamed capture has no adding commit and fails closed (A4)"
+      }
+    },
+    {
+      "name": "OutcomeReturns",
+      "function": "Test-CheckOutcomeReturns",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/OutcomeReturns",
+      "emptyLine": "outcome returns: no AdminOps",
+      "inputs": [
+        "Nyarlathotep/Nyarlathotep/Services/AdminOps.cs (each member's return type, [Mutating] mark and body)",
+        "Nyarlathotep/Nyarlathotep/Logic/AdminFlows.cs (IAdminOps' declaration of each [Mutating] AdminOps member)"
+      ],
+      "plant": {
+        "bad": "Services/AdminOps.cs: OpReload returns string",
+        "bad-2": "Services/AdminOps.cs: OpStopEvent branches with a ?: on its argument",
+        "bad-3": "Logic/AdminFlows.cs: IAdminOps declares OpPurge returning string"
       }
     },
     {

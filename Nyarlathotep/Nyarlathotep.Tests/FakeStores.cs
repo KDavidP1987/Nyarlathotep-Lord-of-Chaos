@@ -149,6 +149,8 @@ sealed class FakePillarStore : IPillarStore
 
     public bool GeneralEnabled { get; set; } = true;
     public bool FailReload { get; set; }
+    /// <summary>Every reload after the first Set throws: a failed save whose read-back fails too.</summary>
+    public bool FailReloadAfterSet { get; set; }
     public bool TruncateThenThrow { get; set; }
     public bool WriteThenThrow { get; set; }
     public int Saves { get; private set; }
@@ -160,7 +162,7 @@ sealed class FakePillarStore : IPillarStore
     public void Reload()
     {
         Ops.Add("reload");
-        if (FailReload) throw new IOException("cfg locked");
+        if (FailReload || (FailReloadAfterSet && Ops.Any(o => o.StartsWith("set ", StringComparison.Ordinal)))) throw new IOException("cfg locked");
         Reloads++;
         foreach (var (_, pillar, key) in PillarNames.All)
         {
@@ -213,7 +215,7 @@ sealed class Library
         Events = new EventsFile(new DataStore(Fs, Log.Add), Log.Add);
         Editor = new DefinitionEditor(Events, Fs, Catalog, Log.Add, Log.Add);
         State = new StateStore(new DataStore(Fs, Log.Add), () => Fs.Now, Log.Add);
-        Assert.StartsWith("reloaded", Editor.Reload(Units));
+        Assert.StartsWith("reloaded", Editor.Reload(Units).Human);
         Hub = new PushHub(new FakeUsers(), [60], Log.Add);
         Catalog.Push = new CountingSink(this);
     }
@@ -239,12 +241,111 @@ sealed class Library
         }
     }
 
-    public string Write(Func<string, EditPlan> plan) => Editor.Write(plan, Units);
+    public string Write(Func<string, EditPlan> plan) => Editor.Write(plan, Units).Human;
 
     /// <summary>The set a hand edit of <paramref name="text"/> plus `.nyar event reload` gives.</summary>
     public DefinitionSet HandEdit(string text)
     {
         var other = new Library(text, Units);
         return other.Catalog.Current;
+    }
+}
+
+/// <summary>The game side of the admin flows over the in-memory stores (raphael-api-admin D1, D3): each member drives the
+/// real Logic path Services/AdminOps reaches (EventEngine, DefinitionEditor, Authoring, EventDeleter, PillarCommand),
+/// mapped as EventRuntime maps an admin's start, stop and purge. Calls lists every member called, Definitions aside.</summary>
+sealed class FakeAdminOps : IAdminOps
+{
+    public Library Lib { get; }
+    public EventEngine Engine { get; }
+    public FakePillarStore Pillars { get; } = new();
+    public PillarCommand PillarCommand { get; }
+    public TemplateCatalog Templates { get; set; } = TemplateCatalog.NotLoaded;
+    public DeleteArming DeleteArming { get; } = new();
+    public DateTime? PurgeUntilUtc { get; set; }
+    public int MaxConcurrent { get; set; } = 5;
+    public int PurgeableUnits { get; set; }
+    public int CooldownSeconds { get; set; } = 300;
+    public List<string> Calls { get; } = [];
+
+    public FakeAdminOps(Library lib)
+    {
+        Lib = lib;
+        Engine = new EventEngine(lib.Catalog);
+        PillarCommand = new PillarCommand(Pillars, p => Engine.Active.Where(a => a.Definition.Pillar == p).Select(a => a.Id)
+            .OrderBy(x => x, StringComparer.Ordinal).ToList().Where(id => Engine.Cancel(id) is not null).ToList(), lib.Log.Add);
+    }
+
+    public DateTime Now => Lib.Fs.Now;
+
+    public ControlState Controls() => new(PurgeUntilUtc is { } until && until > Now, Pillars.GeneralEnabled,
+        PillarNames.All.Where(p => Pillars.Get(p.Pillar)).Select(p => p.Pillar).ToHashSet(), Engine.Active.Count, MaxConcurrent);
+
+    public DefinitionSet Definitions => Lib.Catalog.Current;
+
+    public Outcome OpStartEvent(string id, (float X, float Y, float Z)? origin)
+    {
+        Calls.Add($"start {id}");
+        var refused = Engine.Start(id, "manual", Now, Controls(), origin);
+        return refused is null ? AdminLines.Started(id) : AdminLines.StartRefused(refused, true, PurgeUntilUtc, Now);
+    }
+
+    public Outcome OpStopEvent(string id)
+    {
+        Calls.Add($"stop {id}");
+        return Engine.Cancel(id) is null ? AdminLines.NotActive(id) : AdminLines.Stopped(id);
+    }
+
+    public Outcome OpPurge()
+    {
+        Calls.Add("purge");
+        var ended = Engine.CancelAll(CooldownSeconds);
+        var units = PurgeableUnits;
+        PurgeableUnits = 0;
+        PurgeUntilUtc = Now.AddSeconds(CooldownSeconds);
+        return AdminLines.PurgeDone(ended.Count, units, CooldownSeconds);
+    }
+
+    public (int Events, int Units) OpPurgeCounts()
+    {
+        Calls.Add("purge counts");
+        return (Engine.Active.Count, PurgeableUnits);
+    }
+
+    public Outcome OpEdit(string id, string path, object value)
+    {
+        Calls.Add($"edit {id} {path}");
+        return Lib.Editor.Edit(id, path, value, Lib.Units);
+    }
+
+    public Outcome OpReload()
+    {
+        Calls.Add("reload");
+        return Lib.Editor.Reload(Lib.Units);
+    }
+
+    public Outcome OpAuthor(Func<string, EditPlan> plan)
+    {
+        Calls.Add("author");
+        return Lib.Editor.Write(plan, Lib.Units);
+    }
+
+    public Outcome OpDelete(ulong adminId, string id, bool confirm)
+    {
+        Calls.Add(confirm ? $"delete {id} confirm" : $"delete {id}");
+        var deleter = new EventDeleter(DeleteArming, Lib.Editor, Lib.Catalog, x => Engine.Find(x) is not null, Lib.State, Lib.Log.Add);
+        return confirm ? deleter.Confirm(adminId, id, Now, Lib.Units) : deleter.Request(adminId, id, Now);
+    }
+
+    public Outcome OpUseTemplate(string template, string? asId)
+    {
+        Calls.Add($"template {template}");
+        return Lib.Editor.Write(text => Authoring.TemplateUse(text, Templates, template, asId), Lib.Units);
+    }
+
+    public Outcome OpSetPillar(string name, string state)
+    {
+        Calls.Add($"pillar {name} {state}");
+        return PillarCommand.Switch(name, state);
     }
 }

@@ -1639,13 +1639,64 @@ function Get-ParenEnd([string]$Text, [int]$Open) {
 # Announcer runs ActionKind.Announce (`.nyar announce`, foundation step 6).
 # Pusher runs ActionKind.Subscribe (`.nyar api sub`, raphael-api-core step 3).
 # EmpowerAction is the empowerment service EventRuntime and SpawnTracker call directly (faction-empowerment D21).
-$script:DispatchedServices = @('EventRuntime', 'SpawnTracker', 'UnitSetup', 'WaveAction', 'Persistence', 'EventStore', 'Announcer', 'Pusher', 'EmpowerAction', 'TemplateLibrary', 'PillarSwitches') |
+# AdminOps is the game side of Logic/AdminFlows (raphael-api-admin D11): its Op members are one-call shims.
+$script:DispatchedServices = @('EventRuntime', 'SpawnTracker', 'UnitSetup', 'WaveAction', 'Persistence', 'EventStore', 'Announcer', 'Pusher', 'EmpowerAction', 'TemplateLibrary', 'PillarSwitches', 'AdminOps') |
     ForEach-Object { "$PkgRel/Services/$_.cs" }
+
+# A member access of an AdminOps or IAdminOps member: ".Op<Name>", called or taken as a method group (raphael-api-admin
+# D11). A declaration has no ".".
+$script:OpAccessRx = '\.\s*(Op[A-Z]\w*)\b'
+
+# The spans of the gate calls in $Text: each "(" … ")" of a match of $Rx, whose last character is the "(".
+function Get-GateSpans([string]$Text, [string]$Rx) {
+    return , @(foreach ($g in [regex]::Matches($Text, $Rx)) {
+        $open = $g.Index + $g.Length - 1
+        , @($open, (Get-ParenEnd $Text $open))
+    })
+}
+
+# The span of argument $Arg (0-based) of each gate call in $Text: the text between the top-level commas of the call's
+# parentheses, brackets, braces and type argument lists ($script:GenericArgsRx) balanced.
+function Get-GateArgSpans([string]$Text, [string]$Rx, [int]$Arg) {
+    return , @(foreach ($g in [regex]::Matches($Text, $Rx)) {
+        $open = $g.Index + $g.Length - 1
+        $close = Get-ParenEnd $Text $open
+        if ($close -lt 0) { continue }
+        $depth = 0; $n = 0; $from = $open
+        for ($i = $open + 1; $i -le $close; $i++) {
+            $c = $Text[$i]
+            if ($i -eq $close -or ($c -eq ',' -and $depth -eq 0)) {
+                if ($n -eq $Arg) { , @($from, $i); break }
+                $n++; $from = $i
+            }
+            elseif ($c -eq '<' -and $i -gt 0 -and ([char]::IsLetterOrDigit($Text[$i - 1]) -or $Text[$i - 1] -eq '_')) {
+                $gen = $script:GenericArgsRx.Match($Text, $i)
+                if ($gen.Success) { $i += $gen.Length - 1 }                                 # a type argument list: skip it whole
+            }
+            elseif ($c -eq '(' -or $c -eq '[' -or $c -eq '{') { $depth++ }
+            elseif ($c -eq ')' -or $c -eq ']' -or $c -eq '}') { $depth-- }
+        }
+    })
+}
+
+# A C# type argument list at a "<" right after a name: "<A, B<C, D>[]?>", nested to two levels, and followed, as C#'s
+# own disambiguation requires, by one of ( ) ] } : ; , . ? = ! >; so a pair of comparisons in two arguments,
+# "a < b, c > d", is not one ("d" follows its ">").
+$script:GenericArgsRx = [regex]'\G<[\w\s,.?\[\]]*(?:<[\w\s,.?\[\]]*(?:<[\w\s,.?\[\]]*>[\w\s,.?\[\]]*)*>[\w\s,.?\[\]]*)*>(?=\s*[()\]}:;,.?=!>])'
+
+function Test-InSpan([int]$Index, $Spans) {
+    foreach ($s in $Spans) { if ($s[1] -ge 0 -and $Index -gt $s[0] -and $Index -lt $s[1]) { return $true } }
+    return $false
+}
 
 # Every method marked [Mutating] in a dispatched service is a mutating method. Any other file under Commands/,
 # Patches/ or Services/ may name a mutating method only inside the parentheses of a Gateway.Run(...) call; every named use inside such a call, in any of the
 # walked files, is a call site. A use is the identifier anywhere except its own declaration, so a method group
 # captured outside Gateway.Run and passed in later fails too (foundation D11, Epic D36).
+# raphael-api-admin D11 (A1, A2): an access ".Op<Name>" of AdminOps or IAdminOps also fails outside the work argument
+# (the third) of a Gateway.Run in every scanned file but the dispatched services; every Logic/*.cs file is scanned for
+# it too, where the gate is the work argument of "<g>.Run<…>(" and <g> a name the file declares as an ActionGateway
+# (AdminFlows reaches IAdminOps only there: not in the denied argument, not in another type's Run<T>).
 function Test-CheckGatewayOnly([string]$Root) {
     $dirs = @("$PkgRel/Commands/", "$PkgRel/Patches/", "$PkgRel/Services/")
     $files = @(Get-CsFiles $Root | Where-Object { $f = $_; @($dirs | Where-Object { $f.StartsWith($_) }).Count -gt 0 })
@@ -1669,21 +1720,285 @@ function Test-CheckGatewayOnly([string]$Root) {
     $sites = 0; $bad = @()
     foreach ($f in $files) {
         $t = $texts[$f]
-        $spans = @(foreach ($g in [regex]::Matches($t, '\bGateway\s*\.\s*Run\s*\(')) {
-            $open = $g.Index + $g.Length - 1
-            , @($open, (Get-ParenEnd $t $open))
-        })
+        $spans = Get-GateSpans $t '\bGateway\s*\.\s*Run\s*\('
+        $work = Get-GateArgSpans $t '\bGateway\s*\.\s*Run\s*\(' 2
         foreach ($name in $mutating.Keys) {
             foreach ($u in [regex]::Matches($t, "\b$name\b")) {
                 if ($declAt.ContainsKey("$f|$($u.Index)")) { continue }
-                $inside = @($spans | Where-Object { $_[1] -ge 0 -and $u.Index -gt $_[0] -and $u.Index -lt $_[1] }).Count -gt 0
-                if ($inside) { $sites++ }
+                if (Test-InSpan $u.Index $spans) { $sites++ }
                 elseif ($dispatched -notcontains $f) { $bad += "$name used outside Gateway.Run in $f" }
             }
         }
+        if ($dispatched -notcontains $f) {
+            foreach ($u in [regex]::Matches($t, $script:OpAccessRx)) {
+                if (-not (Test-InSpan $u.Index $work)) { $bad += "$($u.Groups[1].Value) used outside Gateway.Run's work in $f" }
+            }
+        }
+    }
+    $opSites = 0
+    foreach ($f in @(Get-CsFiles $Root | Where-Object { $_ -like "$PkgRel/Logic/*.cs" })) {
+        $t = Remove-CsLiterals (Read-Text $Root $f)
+        $gates = @([regex]::Matches($t, '\bActionGateway\s+(\w+)') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+        $work = if ($gates) { Get-GateArgSpans $t "\b(?:$($gates -join '|'))\s*\.\s*Run\s*<[^()]*?>\s*\(" 2 } else { @() }
+        foreach ($u in [regex]::Matches($t, $script:OpAccessRx)) {
+            if (Test-InSpan $u.Index $work) { $opSites++ } else { $bad += "$($u.Groups[1].Value) used outside ActionGateway.Run<T>'s work in $f" }
+        }
     }
     if ($bad) { return New-Result $false "gateway: $(@($bad | Select-Object -Unique) -join '; ')" }
-    return New-Result $true "gateway: only ActionGateway mutates ($sites call sites)"
+    return New-Result $true "gateway: only ActionGateway mutates ($sites call sites, $opSites admin ops inside Run<T>)"
+}
+
+# ---------------------------------------------------------------- human replies and thin shims (raphael-api-admin D1)
+
+# $Text with every comment blanked to spaces and, with -Literals, every string and char literal blanked to "_", newlines
+# kept, so offsets and line numbers still match the source.
+function Hide-CsSpans([string]$Text, [switch]$Literals) {
+    $hideLiterals = [bool]$Literals
+    return $script:CsLexRx.Replace($Text, {
+        param($m)
+        $comment = $m.Groups['lc'].Success -or $m.Groups['bc'].Success
+        if (-not $comment -and -not $hideLiterals) { return $m.Value }
+        return [regex]::Replace($m.Value, '[^\r\n]', $(if ($comment) { ' ' } else { '_' }))
+    }.GetNewClosure())
+}
+
+# Index of the $Close matching the $Open at $At, or -1.
+function Get-CloseIndex([string]$Text, [int]$At, [char]$Open, [char]$Close) {
+    $depth = 0
+    for ($i = $At; $i -lt $Text.Length; $i++) {
+        if ($Text[$i] -eq $Open) { $depth++ }
+        elseif ($Text[$i] -eq $Close) { $depth--; if ($depth -eq 0) { return $i } }
+    }
+    return -1
+}
+
+# Index of the ";" that ends the statement starting at $From (brackets balanced), or -1.
+function Get-StatementEnd([string]$Text, [int]$From) {
+    $depth = 0
+    for ($i = $From; $i -lt $Text.Length; $i++) {
+        $c = $Text[$i]
+        if ($c -eq '(' -or $c -eq '{' -or $c -eq '[') { $depth++ }
+        elseif ($c -eq ')' -or $c -eq '}' -or $c -eq ']') { $depth-- }
+        elseif ($c -eq ';' -and $depth -eq 0) { return $i }
+    }
+    return -1
+}
+
+# The (start, end) spans of member $Member of type $Class in $B, a text whose comments and literals are hidden: each
+# declaration at depth 1 of the type's body (every part of a partial type, after a primary constructor), to the end of
+# its block or expression.
+function Get-MemberSpans([string]$B, [string]$Class, [string]$Member) {
+    $spans = @()
+    foreach ($c in [regex]::Matches($B, "\b(?:class|record|struct|interface)\s+$Class\b")) {
+        $k = $c.Index + $c.Length
+        while ($k -lt $B.Length -and [char]::IsWhiteSpace($B[$k])) { $k++ }
+        if ($k -lt $B.Length -and $B[$k] -eq '(') { $k = (Get-CloseIndex $B $k '(' ')') + 1; if ($k -le 0) { continue } }
+        $open = $B.IndexOf('{', $k)
+        if ($open -lt 0) { continue }
+        $end = Get-CloseIndex $B $open '{' '}'
+        if ($end -lt 0) { continue }
+        $body = $B.Substring($open, $end - $open)
+        foreach ($m in [regex]::Matches($body, "[\w>\]\)?]\s+$Member\s*(?:<[^<>()]*>)?\s*(\(|=>|=(?!=)|\{|;)")) {
+            $pre = $body.Substring(0, $m.Index)
+            if (($pre.Length - $pre.Replace('{', '').Length) - ($pre.Length - $pre.Replace('}', '').Length) -ne 1) { continue }
+            $p = $open + $m.Groups[1].Index
+            $e = switch ($m.Groups[1].Value) {
+                '(' {
+                    $q = (Get-CloseIndex $B $p '(' ')') + 1
+                    while ($q -gt 0 -and $q -lt $B.Length -and [char]::IsWhiteSpace($B[$q])) { $q++ }
+                    if ($q -le 0) { -1 }
+                    elseif ($B[$q] -eq '{') { Get-CloseIndex $B $q '{' '}' }
+                    elseif ($q + 1 -lt $B.Length -and $B[$q] -eq '=' -and $B[$q + 1] -eq '>') { Get-StatementEnd $B $q }
+                    else { $q }
+                }
+                '{' { Get-CloseIndex $B $p '{' '}' }
+                ';' { $p }
+                default { Get-StatementEnd $B $p }
+            }
+            $spans += , @(($open + $m.Index), $e)
+        }
+    }
+    return , $spans
+}
+
+# The reply literals of member $Spec ("<path> <Class>.<Member>") in $Text (A3): every plain, verbatim, interpolated or
+# raw string literal inside the member that holds a space or is the word denied, outside the arguments of log(, info(,
+# warn( and Log…( calls (LogAdmin( included). Each is @{ Line; Literal }; $null when the member is not found.
+function Get-ReplyLiterals([string]$Text, [string]$Class, [string]$Member) {
+    $kept = Hide-CsSpans $Text
+    $b = Hide-CsSpans $Text -Literals
+    $spans = Get-MemberSpans $b $Class $Member
+    if ($spans.Count -eq 0) { return $null }
+    $logs = Get-GateSpans $b '\b(?:log|info|warn|Log\w*)\s*\('
+    $found = @()
+    foreach ($lt in $script:CsLexRx.Matches($kept)) {
+        if (-not ($lt.Groups['raw'].Success -or $lt.Groups['vs'].Success -or $lt.Groups['s'].Success)) { continue }
+        $i = $lt.Index
+        $inMember = $false
+        foreach ($s in $spans) { if ($s[1] -ge 0 -and $i -ge $s[0] -and $i -le $s[1]) { $inMember = $true; break } }
+        if (-not $inMember -or (Test-InSpan $i $logs)) { continue }
+        $content = $lt.Value -replace '^[$@]*"+', '' -replace '"+$', ''
+        if ($content.Contains(' ') -or $content -ceq 'denied') {
+            $line = $Text.Substring(0, $i).Split("`n").Count
+            $found += [pscustomobject]@{ Line = $line; Literal = $lt.Value }
+        }
+    }
+    return , $found
+}
+
+# The text of $Rel at git tag $Tag, or $null. A fixture holds the tag's files under <tag>/.
+function Read-TagText([string]$Root, [string]$Tag, [string]$Rel) {
+    if (Test-IsFixture $Root) { return Read-Text $Root "$Tag/$Rel" }
+    $prev = [Console]::OutputEncoding
+    try {
+        [Console]::OutputEncoding = [Text.Encoding]::UTF8
+        $out = git -C $Root show "${Tag}:$Rel" 2>$null
+        if ($LASTEXITCODE -ne 0) { return $null }
+        return (@($out) -join "`n")
+    } finally { [Console]::OutputEncoding = $prev }
+}
+
+# raphael-api-admin D1 (A3, A4): each row of Nyarlathotep.Tests/Fixtures/human-replies-<version>.txt, "<scenario id> ·
+# <template> · <path>:<line>[,<line>]", has every literal part of its template (split on its {holes} and \n, each part
+# as written or trimmed of " ;:,") on its cited lines at tag v<version>, in the template's order (the cited lines read
+# in the order cited); the base file, the one of the entry's tag, cites the line of every reply literal
+# (Get-ReplyLiterals) of the members the entry lists, at that tag; and a capture file is never edited once committed:
+# one that is at HEAD equals the text of the commit that added it, followed through renames (git log --follow
+# --diff-filter=A), and fails when no such commit is found; so a later reply change is a new file (A4). A fixture
+# lists its committed captures in tracked.txt and gives each one's added text as added/<path>, and may list its
+# members in members.txt.
+function Test-CheckHumanReplies([string]$Root) {
+    $entry = @((Get-Manifest).checks | Where-Object name -eq 'HumanReplies')[0]
+    $tag = [string]$entry.tag
+    $dir = 'Nyarlathotep/Nyarlathotep.Tests/Fixtures/'
+    $files = @(Get-TreeFiles $Root | Where-Object { $_.StartsWith($dir) -and $_.Substring($dir.Length) -match '^human-replies-\d+\.\d+\.\d+\.txt$' })
+    $rows = @(); $problems = @()
+    foreach ($f in $files) {
+        $ver = [regex]::Match($f, 'human-replies-(\d+\.\d+\.\d+)\.txt$').Groups[1].Value
+        foreach ($l in ((Read-Text $Root $f) -split "`r?`n")) {
+            if ($l -notmatch '\S' -or $l.StartsWith('#')) { continue }
+            $parts = $l.Split([string[]]@(' · '), [StringSplitOptions]::None)
+            $cite = if ($parts.Count -eq 3) { [regex]::Match($parts[2], '^(.+):(\d+(?:,\d+)*)$') } else { $null }
+            if (-not $cite -or -not $cite.Success) { $problems += "$f row '$l' is not <id> · <template> · <path>:<line>"; continue }
+            $rows += [pscustomobject]@{ File = $f; Tag = "v$ver"; Id = $parts[0]; Template = $parts[1]; Path = $cite.Groups[1].Value
+                Lines = @($cite.Groups[2].Value.Split(',') | ForEach-Object { [int]$_ }) }
+        }
+    }
+    if ($rows.Count -eq 0 -and $problems.Count -eq 0) { return New-Result $false 'human replies: no rows' }
+    $tracked = if (Test-IsFixture $Root) { @((Read-Text $Root 'tracked.txt') -split "`r?`n" | Where-Object { $_ -match '\S' } | ForEach-Object { $_.Trim() }) } else { $null }
+    foreach ($f in $files) {
+        if (Test-IsFixture $Root) {
+            if ($tracked -notcontains $f) { continue }                                     # new in this change
+            $added = Read-Text $Root "added/$f"
+        }
+        else {
+            git -C $Root cat-file -e "HEAD:$f" 2>$null
+            if ($LASTEXITCODE -ne 0) { continue }                                          # not committed yet
+            $log = @(git -C $Root log --follow --diff-filter=A --format=%H --name-only -- $f 2>$null | Where-Object { $_ -match '\S' })
+            $added = if ($log.Count -ge 2) { Read-TagText $Root $log[-2] $log[-1] } else { $null }
+        }
+        if ($null -eq $added) { $problems += "$f is committed but no commit adding it was found: a capture is never renamed (A4)" }
+        elseif (($added -replace "`r`n", "`n").TrimEnd("`n") -cne ((Read-Text $Root $f) -replace "`r`n", "`n").TrimEnd("`n")) {
+            $problems += "$f changed since the commit that added it: add a new capture file instead (A4)"
+        }
+    }
+
+    $cache = @{}
+    $source = { param($t, $p) $k = "$t|$p"; if (-not $cache.ContainsKey($k)) { $cache[$k] = Read-TagText $Root $t $p }; $cache[$k] }
+    foreach ($r in $rows) {
+        $text = & $source $r.Tag $r.Path
+        if ($null -eq $text) { $problems += "row $($r.Id): $($r.Path) is not at $($r.Tag)"; continue }
+        $src = $text -split "`n"
+        $cited = @(foreach ($n in $r.Lines) { if ($n -ge 1 -and $n -le $src.Count) { $src[$n - 1] } else { $problems += "row $($r.Id): $($r.Path):$n is past the end at $($r.Tag)" } })
+        $joined = $cited -join "`n"; $at = 0
+        foreach ($part in ($r.Template -split '\{[^}]*\}|\\n')) {
+            $trim = $part.Trim(' ', ';', ':', ',')
+            if (-not $trim) { continue }
+            $i = $joined.IndexOf($part, $at, [StringComparison]::Ordinal)
+            if ($i -lt 0) { $i = $joined.IndexOf($trim, $at, [StringComparison]::Ordinal); $len = $trim.Length } else { $len = $part.Length }
+            if ($i -lt 0) {
+                $where = if (@($cited | Where-Object { $_.Contains($trim) }).Count) { 'out of order on' } else { 'not on' }
+                $problems += "row $($r.Id): '$part' is $where $($r.Path):$($r.Lines -join ',') at $($r.Tag)"
+            }
+            else { $at = $i + $len }
+        }
+    }
+
+    $baseFile = "${dir}human-replies-$($tag.TrimStart('v')).txt"
+    $base = @($rows | Where-Object File -eq $baseFile)
+    if ($base.Count -eq 0) { $problems += "no rows in $baseFile" }
+    $membersFile = if (Test-IsFixture $Root) { Read-Text $Root 'members.txt' } else { $null }
+    $members = if ($membersFile) { @($membersFile -split "`r?`n" | Where-Object { $_ -match '\S' }) } else { @($entry.members) }
+    $citedAt = @{}
+    foreach ($r in $base) { foreach ($n in $r.Lines) { $citedAt["$($r.Path):$n"] = $true } }
+    $total = 0; $covered = 0
+    foreach ($spec in $members) {
+        $sp = $spec.Trim() -split '\s+'
+        $text = & $source $tag $sp[0]
+        $cm = $sp[1] -split '\.'
+        $lits = if ($null -ne $text) { Get-ReplyLiterals $text $cm[0] $cm[1] } else { $null }
+        if ($null -eq $lits) { $problems += "member $($sp[1]) not found in $($sp[0]) at $tag"; continue }
+        foreach ($lit in $lits) {
+            $total++
+            if ($citedAt.ContainsKey("$($sp[0]):$($lit.Line)")) { $covered++ }
+            else { $problems += "$($sp[0]):$($lit.Line) $($lit.Literal) is cited by no row" }
+        }
+    }
+    if ($problems) { return New-Result $false "human replies: $(@($problems | Select-Object -First 6) -join '; ')$(if ($problems.Count -gt 6) { " (+$($problems.Count - 6) more)" })" }
+    return New-Result $true "human replies: $covered/$total at $tag"
+}
+
+# raphael-api-admin D1: Services/AdminOps.cs is thin. Every AdminOps member marked [Mutating] returns Outcome, and so does
+# its declaration in IAdminOps (Logic/AdminFlows.cs); every method or property body of AdminOps is one expression (=>)
+# or a block of one return statement, with no if, switch, ?, ?? or loop, so every decision lives in Logic.
+function Test-CheckOutcomeReturns([string]$Root) {
+    $ops = Read-Text $Root "$PkgRel/Services/AdminOps.cs"
+    if (-not $ops) { return New-Result $false 'outcome returns: no AdminOps' }
+    $flows = Read-Text $Root "$PkgRel/Logic/AdminFlows.cs"
+    $t = Hide-CsSpans $ops -Literals
+    $decl = '(?<attrs>(?:\[[^\]]*\]\s*)*)(?:(?:public|internal|private|protected|static|override|virtual|async|sealed|readonly|new|extern|unsafe)\s+)+(?<type>[\w<>\[\],.?() ]+?)\s+(?<name>\w+)\s*(?<kind>\(|=>|\{|=|;)'
+    $cls = [regex]::Match($t, '\bclass\s+AdminOps\b[^{]*\{')
+    if (-not $cls.Success) { return New-Result $false 'outcome returns: no AdminOps' }
+    $open = $cls.Index + $cls.Length - 1
+    $body = $t.Substring($open, (Get-CloseIndex $t $open '{' '}') - $open)
+    $branch = '\bif\b|\bswitch\b|\?|\bfor\b|\bforeach\b|\bwhile\b|\bdo\b|\bgoto\b'
+    $checked = 0; $problems = @(); $mutating = @()
+    foreach ($m in [regex]::Matches($body, $decl)) {
+        $pre = $body.Substring(0, $m.Index)
+        if (($pre.Length - $pre.Replace('{', '').Length) - ($pre.Length - $pre.Replace('}', '').Length) -ne 1) { continue }
+        $name = $m.Groups['name'].Value; $type = $m.Groups['type'].Value.Trim(); $kind = $m.Groups['kind'].Value
+        if ($kind -eq '=' -or $kind -eq ';') { continue }                                  # a field: no body
+        $p = $m.Groups['kind'].Index
+        if ($kind -eq '(') {
+            $q = (Get-CloseIndex $body $p '(' ')') + 1
+            while ($q -lt $body.Length -and [char]::IsWhiteSpace($body[$q])) { $q++ }
+            $kind = if ($body[$q] -eq '{') { '{' } else { '=>' }
+            $p = $q
+        }
+        $code = if ($kind -eq '{') { $body.Substring($p + 1, (Get-CloseIndex $body $p '{' '}') - $p - 1).Trim() }
+                else { $body.Substring($p + 2, (Get-StatementEnd $body $p) - $p - 2).Trim() }
+        $checked++
+        if ($kind -eq '{' -and $code -notmatch '^(?:return\b[^;]*;|get\s*=>[^;]*;)$') { $problems += "$name is not one expression or one return" }
+        elseif ($code -match $branch) { $problems += "$name branches ($($Matches[0]))" }
+        if ($m.Groups['attrs'].Value -match '\[Mutating\]') {
+            $mutating += $name
+            if ($type -cne 'Outcome') { $problems += "$name returns $type, not Outcome" }
+        }
+    }
+    if ($checked -eq 0) { return New-Result $false 'outcome returns: AdminOps has no member' }
+    $f = if ($flows) { Hide-CsSpans $flows -Literals } else { '' }
+    $if = [regex]::Match($f, '\binterface\s+IAdminOps\b[^{]*\{')
+    if (-not $if.Success) { $problems += 'no IAdminOps in Logic/AdminFlows.cs' }
+    else {
+        $ib = $f.Substring($if.Index, (Get-CloseIndex $f ($if.Index + $if.Length - 1) '{' '}') - $if.Index)
+        foreach ($name in $mutating) {
+            $d = [regex]::Match($ib, "(?<type>[\w<>\[\],.?()]+(?: [\w<>\[\],.?()]+)*?)\s+$name\s*\(")
+            if (-not $d.Success) { $problems += "IAdminOps does not declare $name" }
+            elseif (($d.Groups['type'].Value -split '\s+')[-1] -cne 'Outcome') { $problems += "IAdminOps.$name returns $($d.Groups['type'].Value), not Outcome" }
+        }
+    }
+    if ($problems) { return New-Result $false "outcome returns: $($problems -join '; ')" }
+    return New-Result $true "outcome returns: $checked/$checked"
 }
 
 # Every "FaultInjection" in a .cs file (comments and literals aside) lies inside an "#if DEBUG" branch, so a

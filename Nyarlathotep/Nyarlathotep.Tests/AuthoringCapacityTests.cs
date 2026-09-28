@@ -30,7 +30,7 @@ public class AuthoringCapacityTests
         var arming = new DeleteArming();
         var deleter = new EventDeleter(arming, lib.Editor, lib.Catalog, _ => false, lib.State, lib.Log.Add);
         deleter.Request(1, id, Now);
-        return deleter.Confirm(1, id, Now.AddSeconds(1), lib.Units);
+        return deleter.Confirm(1, id, Now.AddSeconds(1), lib.Units).Human;
     }
 
     /// <summary>The median of five timed runs, each on a fresh fixture built outside the timing.</summary>

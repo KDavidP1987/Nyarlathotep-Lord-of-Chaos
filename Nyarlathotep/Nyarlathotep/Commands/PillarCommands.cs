@@ -17,7 +17,6 @@ internal static class PillarCommands
         var form = CommandForms.Check("pillar", [name, state], out var usage);
         if (form is null) { ctx.Reply(usage ?? CommandForms.Library[^1].ChatUsage); return; }
         if (form.Words == "pillar list") { EventCommands.Reply(ctx, PillarSwitches.List()); return; }
-        EventCommands.LogAdmin(ctx, $"pillar {name} {state}");
-        EventCommands.Reply(ctx, Gateway.Run(ActionKind.SetPillar, Actor.Admin, () => PillarSwitches.SetPillar(name, state)).Split('\n'));
+        EventCommands.Reply(ctx, Gateway.Flows.Pillar(EventCommands.Caller(ctx), name, state).Human.Split('\n'));
     }
 }

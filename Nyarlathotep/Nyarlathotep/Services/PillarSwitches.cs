@@ -20,7 +20,7 @@ internal sealed class PillarSwitches : IPillarStore
 
     /// <summary>`.nyar pillar &lt;name&gt; on|off`: one reply line per "\n".</summary>
     [Mutating]
-    internal static string SetPillar(string name, string state) => string.Join("\n", Command.Switch(name, state));
+    internal static Outcome SetPillar(string name, string state) => Command.Switch(name, state);
 
     public bool GeneralEnabled => Settings.Enabled.Value;
 

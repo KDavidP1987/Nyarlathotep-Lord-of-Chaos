@@ -29,18 +29,18 @@ public sealed class EventCatalog
     }
 
     /// <summary>Starts the current definition <paramref name="id"/>: "unknown event", "already active" or null.</summary>
-    public string? TryStart(string id, DateTime utcNow, out RunningInstance? instance)
+    public Outcome? TryStart(string id, DateTime utcNow, out RunningInstance? instance)
     {
         instance = null;
         var def = Current.Find(id);
-        if (def is null) return $"unknown event {id}";
-        if (_running.ContainsKey(id)) return "already active";
+        if (def is null) return AdminLines.UnknownEvent(id);
+        if (_running.ContainsKey(id)) return AdminLines.AlreadyActive(id);
         instance = new RunningInstance(def, utcNow, utcNow.AddSeconds(def.DurationSeconds));
         _running.Add(id, instance);
         return null;
     }
 
-    public string? TryEnd(string id) => _running.Remove(id) ? null : "not active";
+    public Outcome? TryEnd(string id) => _running.Remove(id) ? null : AdminLines.NotActive(id);
 
     public void EndAll() => _running.Clear();
 }

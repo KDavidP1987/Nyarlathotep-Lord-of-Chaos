@@ -12,7 +12,7 @@ public partial class ConfigChangedTests
     public void A_stat_set_changes_the_file_and_pushes_config_changed()
     {
         var s = Mixed();
-        Assert.Equal("event surge action.stats.maxHealth = 1.5", s.Editor.Edit("surge", "action.stats.maxHealth", 1.5m, FakeUnits.Default()));
+        Assert.Equal("event surge action.stats.maxHealth = 1.5", s.Editor.Edit("surge", "action.stats.maxHealth", 1.5m, FakeUnits.Default()).Human);
         Assert.Equal(new EmpowerStats(PhysicalPower: 1.3, MaxHealth: 1.5), s.Catalog.Current.Find("surge")!.Empower!.Stats);
         Assert.Contains("\"maxHealth\": 1.5", System.Text.Encoding.UTF8.GetString(s.Fs.Read(DataFile.Events, FileVariant.Main)!));
         Assert.Equal([ConfigChanged], s.Pushed());
@@ -29,7 +29,7 @@ public partial class ConfigChangedTests
         var s = Mixed();
         var before = s.Fs.Read(DataFile.Events, FileVariant.Main);
         if (value is double d) value = (decimal)d;
-        Assert.Equal(reason, s.Editor.Edit(id, path, value, FakeUnits.Default()));
+        Assert.Equal(reason, s.Editor.Edit(id, path, value, FakeUnits.Default()).Human);
         Assert.Equal(before, s.Fs.Read(DataFile.Events, FileVariant.Main));
         Assert.Empty(s.Pushed());
     }
