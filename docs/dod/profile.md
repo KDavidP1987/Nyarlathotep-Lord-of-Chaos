@@ -12,6 +12,8 @@
 - Probe 14.3 (raphael-api-core report): a tool that changes a live install (the dev server's DLL or config) has its own rollback: an atomic snapshot manifest, a refusal on a leftover snapshot, a restore verified by hash, and a crash test.
 - Probe 14.3 (faction-empowerment report): a release plan copies every earlier child's release-step amendments (raphael-api-core A9, A10: the drill's own inputs, the unpushed-tag preflight failure) into its Build plan before approval.
 - Probe 7.3 (faction-empowerment report): for a timed effect on native entities, name every end path (natural end, stop, purge, restart, uninstall, partial creation) and the item proving each leaves nothing behind.
+- Probe 14.4 (event-library report, 6 of 28 discovered): the Paths walked lists every tools/ script, fixture folder, %TEMP% folder and remote tag or release its steps touch, and `pwsh tools/preflight.ps1 -Paths -DeclaredOf <slug>` is run against a dry walk before approval.
+- Probe 3.1 (event-library report, 4 of 28): state how VCF binds each command's arity (missing and surplus arguments, dangling keywords) and write chat usage without < >; a position captured from a player keeps its height, not only x and z.
 
 ## Audience
 - who · project owner

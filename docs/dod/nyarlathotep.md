@@ -251,8 +251,8 @@ Constraints each child inherits (a child's review checks they appear verbatim or
 - spikes · done
 - foundation · done
 - raphael-api-core · done
-- faction-empowerment · in-progress
-- event-library · planned
+- faction-empowerment · done
+- event-library · done
 - event-spawns · planned
 - stats · planned
 - boss-reinforcements · planned
@@ -467,3 +467,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-26 · note · child faction-empowerment closed (docs/dod/faction-empowerment.md › Report: 30/30, prediction 69 %, released 0.4.0, GitHub pre-release v0.4.0); next child: event-library
 - 2026-09-27 · D11 · pass · manual: event-library Session 2 part E (docs/features/EVENT_LIBRARY.md › Test results › Session 2): a 30-unit spawn event (two waves of 15) and the empowerment event undead-nightfall, 8 units killed first; `.nyar purge` → "purge ends 2 events and despawns 22 units …", `.nyar purge confirm` → "purged: 2 events, 22 units queued", log "cooldown 60s", "empower undead-nightfall stopped: 106 removed", despawn batches 5/5/5/5/2 at MaxDespawnsPerTick 5 to "0 left"; `.nyar status` in the same minute → "No active events." / "tracked units: 0"; a second confirm → "nothing to purge" · 31e73ea · claude
 - 2026-09-28 · D47 · pass · manual: docs/features/EVENT_LIBRARY.md › Test results — Session 2 (owner, fresh install, default cfg): `.nyar template list`, `.nyar template use undead-nightfall`, `.nyar pillar empowerment on`, `.nyar event enable undead-nightfall`, the event fired by GameTime night and `.nyar status` → "Undead nightfall: 20 min left", no file edit (event-library D23); Session 7 (owner kick-off, then unattended, build aaaf4d9): three boots over about nine and a half hours with scheduled (legion-weekend-surge), night-time (undead-nightfall), V Blood (bandit-vengeance, militia-crackdown) and the two spawn templates, soak-report "565 timing minutes, 27 starts, 25 ends, 2 cancelled by restart, 0 unpaired, 0 unhandled, tick avg max 3.528 ms" → pass, no slow-tick line, a mid-event restart recovered (also Session 6's legion-weekend-surge restart, event-library D26); each session with its -LogCheck line in docs/audits/event-library.md; released as v0.5.0 · 6514509 · owner, claude
+- 2026-09-28 · note · children: faction-empowerment and event-library done (manifest synced); event-library closed 36/36, prediction 55 %, released 0.5.0

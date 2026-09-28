@@ -4,13 +4,13 @@ rubric: 2
 id: dod-20260926-evl1
 slug: event-library
 title: Event library — built-in templates and in-game authoring
-status: in-progress
+status: done
 size: L
 parent: nyarlathotep
 kind: feature
 created: 2026-09-26
 baselined: 2026-09-26
-closed: none
+closed: 2026-09-28
 commit: 23f2ba4
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
@@ -662,3 +662,17 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-28 · D28 · pass · cmd: pwsh tools/preflight.ps1 → PREFLIGHT OK and "release tags: 5/5"; pwsh tools/release-verify.ps1 -Tag v0.5.0 -Asset kdpen-Nyarlathotep-0.5.0.zip → "release verify: hashes equal" (after A31); csproj and thunderstore.toml 0.5.0, both changelogs and READMEs describe the templates, authoring and pillar commands, both Quick starts are D23's five commands (chore(release) 06d6325); v0.5.0 pushed, GitHub pre-release with the zip; no tcli publish · 6514509 · claude
 - 2026-09-28 · D29 · pass · cmd: pwsh tools/rollback-gate.ps1 -From v0.4.0 -To v0.5.0 -Plan event-library → "rollback gate: 4/4" (run on the local tag before the push, the server stopped: repository drill with -BeforePush, the N-1 boot drill "v0.5.0 '6 valid, 0 disabled', v0.4.0 '6 valid, 0 disabled'", snapshot selftest 6/6, "rollback routes: event-library 5/5") · 06d6325 · claude
 - 2026-09-28 · D30 · pass · cmd: pwsh tools/preflight.ps1 -AuditOf event-library → "audit steps: event-library 6/6 pre, 6/6 post, 6/6 Codex verdicts"; -SessionsOf event-library → "session logs: event-library 7/7 checked; snapshots 7/7 from session 1"; -Paths -DeclaredOf event-library → "paths: 1024 walked, all in manifest; declared: 302/302 in event-library; plants: 13/13 fail, tempvar 15/15 lines" · 6514509 · claude
+- 2026-09-28 · note · close: the owner confirmed the excluded amendments in plan mode (2026-09-28): A4 requested (new scope, not a reversal), A17 and A31 defects
+- 2026-09-28 · status → done · close
+
+## Report · 2026-09-28
+Baseline items            34 (current 36: D35 added by A22, D36 by A25)
+Discovered (planning gaps) 28 amendments · 28 design changes (wrong 25 · missed 3) · probes: 14.4 (A8, A12, A13, A19, A24, A28), 3.1 (A2, A7, A11, A20), 7.3 (A1, A26, A29, A30), 6.1 (A22, A23, A27), 4.5 (A14, A18), 6.2 (A5, A10), 3.3 (A16), 4.4 (A6), 7.2 (A9), 9.2 (A3), 12.2 (A25), 12.4 (A15), 13.2 (A21)
+Corrected (reversals)      0            (counts in the rate)
+Requested scope changes    1 (A4; owner-confirmed new scope)    (excluded)
+Emergent / defect / external 0 · 2 (A17, A31; owner-confirmed) · 0  (excluded)
+Prediction rate            34 / (34 + 28) = 55 %   target ≥ 90 %
+Completion                 vs baseline 34/34 · vs current 36/36
+Review                     codex · Review 9 READY after Reviews 1–8 · author 15/15 layers · 49/49 probes · reviewer 15/15 layers · 49/49 probes; Reviews 10–24 re-reviewed gating amendments (Review 16 a fresh-context subagent READY with Codex REVISE beside it); every step's Codex cross-inspection READY
+Timeline                   draft 09-26 · ready 09-26 · start 09-26 · done 09-28 · released 0.5.0
+Missed probes              14.4 paths walked (6: new tools, temp folders, remote tags and the next plan's files each found undeclared by -DeclaredOf); 3.1 inputs (4); 7.3 lifecycle (4, incl. the soak's session numbering); 6.1 dependency behaviour (3) — add to docs/dod/profile.md: "a plan's Paths walked lists every tools/ script, fixture folder, %TEMP% folder and remote ref its steps touch, checked with -Paths -DeclaredOf before approval"
