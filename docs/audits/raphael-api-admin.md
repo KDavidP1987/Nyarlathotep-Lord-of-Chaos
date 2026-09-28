@@ -30,6 +30,17 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - in-game baseline: not needed (step 2 has no in-game part; Session 1 is step 3)
 - carried from step 1: Codex round 1 F4 — D3 requires that no badarg twin or human command reaches the log callback, so the argument checks of new, copy, delete, template use and pillar move ahead of the admin log line in this step, with the same reply texts (HumanReplyTests pins them)
 
+### Step 3 · 2026-09-28 · 1d6a189
+- git status: clean at 1d6a189 (step 2 at f23d39a, its post-audit at 1d6a189)
+- compile: `dotnet build Nyarlathotep/Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__` → 0 Warning(s), 0 Error(s); tests: 1702 passed
+- preflight: PREFLIGHT OK; -AuditOf raphael-api-admin 2/3 pre, 2/3 post, 2/3 Codex verdicts (step 3 open)
+- dod status: raphael-api-admin 13/16 verified; D13 (twins in game), D14 (sessions, records, paths) and D16 (release 0.5.2) are this step's
+- tooling versions: git 2.53.0, gh 2.92.0, pwsh 7.5.2, .NET SDK 10.0.302 (builds net6.0), codex-cli 0.151.0
+- feature doc read: docs/features/RAPHAEL_API_ADMIN.md (Status: steps 1 and 2 built; no open questions); plan D13, D14, D16, Build plan step 3, Rollout
+- in-game baseline: the deployed 0.5.1 DLL (0.5.1+437dbb4) booted on save-data-nyardev: "Nyarlathotep initialized via GameDataInitializedPatch (attempt #1)", events 10 valid / 1 disabled, templates 6/6, both boot sweeps 0; stopped after AutoSave_1658; -LogCheck "0 unhandled, 11 nyar lines, 0 orphan errors, 0 unity errors"; BepInEx warnings only the known four (Il2CppInterop Class::Init, Beelzebub's two TUNE lines, ours for example-empowerment's pillar); Unity log 226 PrefabLookupMap "unknown state" lines at save load, the known set; log copies deleted
+- snapshot: `pwsh tools/dev-snapshot.ps1 -Save raa1` → "snapshot saved: raa1 (28 files)"
+- order within the step: D13 expects `plugin=0.5.2` in the handshake, so the six-surface `chore(release): v0.5.2` commit comes before Session 1 and is deployed for it; the tag, push and GitHub pre-release follow a passing session
+
 ## Post-audit
 ### Step 1 · 2026-09-28 · a6b2059
 - built: Logic/Outcome.cs (Outcome, RefusalCode, Reasons, FileErrors); Logic/AdminFlows.cs (IAdminOps, one flow per admin verb, Kinds); Services/AdminOps.cs (11 one-expression members); every D1 Logic path returns Outcome; the human commands reply outcome.Human; tests HumanReplyTests (85 rows of Fixtures/human-replies-0.5.1.txt), OutcomeCodeTests (a case per Business rules 3 row, checked against the plan's code, arg and reason cells); preflight checks HumanReplies and OutcomeReturns, GatewayOnly extended (A1, A2)
