@@ -250,3 +250,62 @@ VERDICT: REVISE
 - F7 · accepted · the 3.2 pointer names D9, D11-D15, D18 and D21 beside D3, D16, D17 and D20
 - F8 · accepted · S-7, S-9 and S-11 are described as pre-release conditional decisions (before 0.6.0 an amendment with its session or tests run again, after it an amendment and a release), their fallbacks kept
 - F9 · accepted · D17 and Design › States › 7.2 state the policy (territory read once per wave; a claim made while a wave spawns is seen by the next wave), with the READMEs and the feature doc stating it at 0.6.0; D17's test fails when a map built for one wave is reused by the next
+
+## Review 5 · 2026-09-28 · codex · plan commit d989523 · plan 90285 B · 34 items · files 0 · e3b0c44298fc · prompt 70ab4f94e0b8
+Reviewer: Codex CLI, read-only (`codex exec -s read-only`, Windows sandbox on); the prompt held no Steam ID, so the redacted copy equals the source. The second round under the owner's round-cap note (option A, through Review 6).
+
+Blind rescore:
+
+1. Considered — `Purpose & typical use`.
+2. Considered — `Design › Permissions`, D22/D23/D31.
+3. Considered — `Design › Data`, D6/D27/D33.
+4. Gap — probe 4.5.
+5. Considered — `Interfaces › Internal`, D6/D20.
+6. Considered — `Interfaces › External`, D1/D21/D27.
+7. Gap — probe 7.3.
+8. Considered — `Use cases › Minimal stretch`, D6/D23.
+9. Considered — `Use cases › Maximal stretch`, D2/D24.
+10. Considered — `Security`, D16/D22/D31, although D31’s evidence defect is separately blocking.
+11. Considered — `Design › UX`, D18/D19/D32.
+12. Gap — probe 12.4.
+13. Considered — `Performance`, D2/D6/D24.
+14. Gap — probe 14.4.
+15. Considered — `Out of scope`.
+No N/A claims were made. Every Build-plan step cites D-items, and every otherwise-Considered layer 2–14 maps to at least one D-item.
+
+F1 `[blocking]` Hunt adds aggro entries but never decides what happens to a previously seeded target who dies, disconnects, leaves range, or enters PvP combat; probe 7.3 remains unanswered because stale target state during a live wave has no invalidation policy.  
+Fix: State whether HuntAction removes its own stale AggroBuffer entries on the next seed tick or deliberately leaves them to the game, and make D13/D33 test that decision.
+
+F2 `[blocking]` The 12.4 inventory does not give failing, silent, and empty fixtures for every introduced aggregate check—especially the enhanced `-Paths -DeclaredOf` and `-AuthSuite`; probe 12.4 remains unanswered because `-SelfTest` cannot demonstrate those aggregates reject empty input and stay silent on a valid input.  
+Fix: Enumerate each introduced or extended check separately with three executable fixtures, register them under `-SelfTest`, and state the exact non-pass output for empty input.
+
+F3 `[blocking]` D27’s path command observes surviving Git/generated/server paths and statically scans only temporary-root write sites, so a helper can create and delete an undeclared repository, AppData, or other non-TEMP path before the final walk without detection; probe 14.4 remains unanswered because its evidence command would still pass with that control absent.  
+Fix: Make `pwsh tools/preflight.ps1 -Paths -DeclaredOf event-spawns` trace writes or statically enumerate all filesystem-write sites regardless of root, and add a fixture that writes then deletes an undeclared non-TEMP path.
+
+F4 `[blocking]` D31 is unverifiable as written: its evidence scans credential patterns and SteamIDs but cannot establish that no log, record, artifact, or zip contains a player position, so a stranger cannot verify its personal-data claim by the stated `cmd`; probe 10.4 needs an evidence-backed definition of which outputs are checked for positions.  
+Fix: Move the position claim to a typed-output/privacy test that fails when any relevant message, log, API, session, or artifact receives coordinates, or narrow D31 to the token and identifier claims its commands actually verify.
+
+F5 `[blocking]` The 4.5 list omits universal claims such as D27’s “every path this child writes” and D31’s “no log line, message, record or artifact” and never defines a computation that can see cleaned non-TEMP writes or arbitrary position-bearing output; probe 4.5 remains unanswered because those “every/no X” sets are not computable by the stated tools.  
+Fix: Add each universal set to Business rules 9 with its membership algorithm, known exclusions, review owner, and proof that the enumerator can see newly created, untracked, generated, and subsequently deleted members.
+
+F6 `[advisory]` S-7, S-8, S-9, and S-11 are operationally amendable but not cheap reversals after 0.6.0: they require changed validation or game integration, repeated sessions, another review, and a forward release; S-8 can also disable stored definitions.  
+Fix: Relabel them “pre-release conditional” or explicitly state that post-release fallback is a compatibility-affecting forward migration rather than a cheap reversal.
+
+F7 `[advisory]` D11’s five-kill manual check is probabilistic: a correctly preserved low-probability drop table can yield no drops and fail the item, while its deterministic recipe test already establishes the control.  
+Fix: Use a guaranteed-drop fixture/prefab or record the actual DropTableBuffer before and after setup; retain ordinary kills only as exploratory evidence.
+
+F8 `[advisory]` D1’s record check validates line counts and the presence of `go|no-go`, but not that `go` agrees with dry=`free` and pond/river/cliff/building=`blocked`; an inconsistent manual record can pass `-SessionsOf`.  
+Fix: Have the probe-record parser associate each labelled location with its expected result and recompute the only valid verdict.
+
+EARLIER: all resolved
+11/15 layers · 45/49 probes
+VERDICT: REVISE
+### Dispositions
+- F1 · accepted · D13: on each 5 s tick HuntAction re-reads the eligible targets and removes the AggroBuffer entries it seeded for a player no longer a target (dead, disconnected, out of range, or ineligible by D16's territory and PvP-combat rule), never an entry the game added; with no eligible player it removes all its seeds and adds none (Logic HuntPlan.Diff); SpawningTests Hunt fails when a stale seeded entry is kept, a game-added entry is removed or an empty target list keeps a seed; the 7.3 pointer names D13
+- F2 · accepted · the 12.4 table lists each introduced or extended check separately with its failing, silent and empty fixture and the exact non-pass output: the probe records (bad-probe, bad-probe-2, bad-probe-3, good-probe, empty-probe), the -DeclaredOf data tests (bad-datatests, Paths/good, empty-datatests), -AuthSuite's entity-writes part, its admin list and gateway parts (existing fixtures named, GatewayOnly/bad-new) and the dependency-suite category; every fixture is registered under -SelfTest in the step that adds its check
+- F3 · rejected · owner decision docs/NYARLATHOTEP_DESIGN.md §9 D18 (event-library Review 11 F1, widened 2026-09-27 at Review 15 F2): a path created and deleted inside one step is outside the declared-paths check, the observation boundary is what a step leaves, and a write journal was declined; the plan now states it as validated assumption S-13 (14.4's pointer names it), and Business rules 9 names the exclusion and its owner (each step's /code-review and Codex cross-inspection)
+- F4 · accepted · D31 is narrowed to what its commands verify: tokens and the sentinel over the Secrets check's set, SteamID digit runs and the owner's mail name over the tracked tree; the player-position claim stays with D16, whose PrivacyTests fail when a message builder, log line or api row takes a player's name or position; Security › 10.3 and 10.4 say so
+- F5 · accepted · Business rules 9 adds "every path this child writes" (its membership algorithm, the S-13 exclusion and its owner) and the D31 and D16 sets (the Secrets check's set, the tracked-tree grep, and the call sites PrivacyTests enumerate); the 4.5 pointer names D27, D31 and D16
+- F6 · accepted · S-8 joins S-7, S-9 and S-11 as a pre-release conditional decision; after 0.6.0 a change is a forward migration and a release, not a cheap reversal; a stored value outside a narrowed range disables its definition with the rule as its reason, never a crash (D6)
+- F7 · accepted · D11's in-game evidence is the verbose line "drops <unit>: <n> before, <m> after setup" for one unit of a loot true and one of a loot false wave; kills are exploratory only
+- F8 · accepted · the probe-record parser maps each labelled reading (dry, pond, river, cliff, building) to its expected result, recomputes the verdict and fails a go/no-go line that disagrees (fixture SessionLogs/bad-probe-3)
