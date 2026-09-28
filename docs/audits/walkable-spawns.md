@@ -29,7 +29,7 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - in-game baseline: Session 1 ran on this build's DLL (37b1ea8) with -LogCheck "0 unhandled, 158 nyar lines, 0 orphan errors, 0 unity errors"; the snapshot is restored
 
 ## Post-audit
-### Step 1 · 2026-09-28 · 2536488 (in progress: Session 1 pending)
+### Step 1 · 2026-09-28 · 2536488
 - compile: 0 errors, 0 warnings; tests: 1351 passed (CommandArgTests WalkRadius 13 cases, ChatBytes)
 - preflight: PREFLIGHT OK; -SelfTest "33/33 checks, 7/7 external selftests (… 136 extra bad fixtures …)", SessionLogs good passes with its probe record, bad-probe to bad-probe-5 fail for their planted reasons; -Paths -DeclaredOf walkable-spawns OK before the session (during it only "leftover temp nyar-snap-ws1", the open snapshot)
 - /code-review (fresh subagent, read-only) on e34dadb..4dade0f: F1 a default TileWorld handed to native code and F2 GetIsGrounded with negative world indices could fault natively → fixed, A10 (live singleton only; grounded read once in tile space, off-grid refused); F3 the floored tile-space circle centre sits on a four-tile corner → fixed (x·2 + 6400 unfloored for the circle, floored index for grounded); F4 `debug here 30 junk` now ran silently → refused "arguments must be 1-2"; F5 the unavailable line beside readings → kept only as a per-space failure note; F6 unknown or case-folded sources → sources checked case-sensitively against the two known names; F7 no bug
@@ -44,7 +44,7 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - session 1 logs read (both, copied to %TEMP%\nyar-s1a-logs and nyar-s1b-logs): BepInEx warnings only the known four (Il2CppInterop Class::Init; Beelzebub's two TUNE lines; ours "event example-empowerment: pillar empowerment takes an Empower action", the leftover dev events.json entry); NyarDev.log: 225 PrefabLookupMap "unknown state"/"converted but does not exist" traces (the game's, as in the baseline) and two Unity "JobTempAlloc has allocations that are more than the maximum lifespan of 4 frames" lines at boot, before the first autosave, present in both runs including the first one where the walk check read nothing, so not from WalkCheck; no [Error] line
 - snapshot restored; hashes equal (ws1); walk verdict: singleton world go, singleton tile no-go (A8: step 2 uses the world source)
 
-### Step 2 · 2026-09-28 · build (in progress: Session 2 pending)
+### Step 2 · 2026-09-28 · 7f02abb, e1783ba
 - built: Logic/Spawning.cs (SpawnPoints, WalkBudget, WaveWalk, WavePoints, WalkHeight, SpawnHealth); Services/WalkCheck.cs OpenWave (world-metres map data once per wave at TileLayerUtility.GetHeightLevel(anchor y), A13) and Settle; SpawnTracker.RequestWave plans each entry's ring slice; WaveAction sums "(<m> moved, <u> unchecked)" and appends ", walk h <level>"; EventScheduler resets the budget before the spawn phase; HealthMonitor.Degraded adds SpawnHealth.Entries; Dependency.WalkCheck with its policy row and fault case
 - compile: Build succeeded, 0 warnings; tests: 1385 passed; --filter WavePoints_ 9 passed, --filter WalkCheck_ 13 passed
 - preflight: PREFLIGHT OK; -AuthSuite "auth suite: pass (tests, commands, admin list, gateway, vcf dependency)"
@@ -66,3 +66,11 @@ yar-s2-logs before the stop, deleted after): BepInEx warnings only the known fou
 - Codex verdict: REVISE (round 2) — F1 `"walk".Equals(where)` missed → fixed (bad-8)
 - Codex verdict: READY (round 3) — "F1 is fixed … No new blocker or major findings"
 
+### Step 2 release · 2026-09-28 · 437dbb4 (chore(release): v0.5.1)
+- six surfaces: csproj Version and thunderstore.toml versionNumber 0.5.1; both changelogs carry a 0.5.1 entry (the fix, the wave line's moved/unchecked counts, fail-open, no new keys); the root README drops the 0.5.0 known issue for a walkable-ground sentence and gains the walkable-spawns row; the package README banner 0.5.1, wave text updated, known-issue paragraph removed; preflight "version: 0.5.1", "changelogs: 0.5.1 in both", "release tags: 5/5", PREFLIGHT OK
+- tcli build: Nyarlathotep/Nyarlathotep/build/kdpen-Nyarlathotep-0.5.1.zip (311072 bytes), built from 437dbb4 (`dotnet build -c Release --no-incremental`, 0 warnings, 0 errors, the DLL deployed to the stopped dev server with an equal hash B30DCB06EB7C3828…)
+- zip sha256: kdpen-Nyarlathotep-0.5.1.zip 3B692CC372570CEE3274703AF97DD081BB029C05BC6B148A862F994076B7A570
+- rollback gate before the push: `pwsh tools/rollback-gate.ps1 -From v0.5.0 -To v0.5.1 -Plan walkable-spawns` → "rollback gate: 4/4" (repository drill with -BeforePush; N-1 boot drill "events.json: v0.5.1 '6 valid, 0 disabled', v0.5.0 '6 valid, 0 disabled' (0 newer action types)", v0.5.0 boot log check 0 unhandled, 0 unity errors, "rollback drill: pass"; snapshot selftest 6/6; "rollback routes: walkable-spawns 5/5")
+- privacy grep (7656119, kdpenland) over the pushed commits and the v0.5.1 tree: only lines quoting the pattern (the plans' Secrets items and the audits' grep records); no 17-digit id in the tree or the range; commit messages none
+- release: v0.5.1 tagged at 437dbb4 and pushed with main; GitHub pre-release https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.5.1 with the zip; `pwsh tools/release-verify.ps1 -Tag v0.5.1 -Asset kdpen-Nyarlathotep-0.5.1.zip` → "release verify: hashes equal"; no tcli publish (the owner publishes)
+- Paths: the v0.5.1 remote tag and release added to tools/paths-manifest.txt (`remote-tag:`, `remote-release:`), as Paths walked step 2 declares
