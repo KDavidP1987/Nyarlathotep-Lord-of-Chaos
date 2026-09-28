@@ -585,3 +585,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 ## Log
 - 2026-09-28 · status → draft · plan
 - 2026-09-28 · note · owner decisions 1A, 2A, 3A and 4A in plan mode (S-1 to S-4); recon at c67d5df (SpawnWaves code map and reference-mod research recorded in docs/features/EVENT_SPAWNS.md at step 1)
+- 2026-09-28 · note · round cap · after Review 3 · owner: approved option A in plan mode — Reviews 4–6 (codex, full); a scope finding goes back to the owner · through Review 6
