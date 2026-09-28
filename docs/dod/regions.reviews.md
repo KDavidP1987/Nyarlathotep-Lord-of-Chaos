@@ -29,6 +29,7 @@ Hunted: trigger type changed while a scope is set (F5); definitions applied befo
 VERDICT: REVISE
 
 ### Dispositions
+- F1 · accepted · owner decision in plan mode (option A): every trigger type takes a scope; VBloodKilled by the kill's region, Schedule, GameTime and Manual by "a player is in a named region" (D4, S-5 validated, design §9 D21)
 - F2 · accepted · PrivacyTests Region fails on zero lines; RegionTests Cost fails on a missing or zero fixture and moves to step 3 with the fixture (D14, D15, W3.1)
 - F3 · accepted · D6 names the Reasons entry, its OutcomeCodeTests row and contract §5a; step 2 walks Outcome, AdminFlows and AdminLines and OutcomeCodeTests
 - F4 · accepted · Compatibility: every 0.5.2 human reply keeps its text; this child only adds lines, so the capture stays unchanged
