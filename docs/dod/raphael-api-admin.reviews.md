@@ -117,3 +117,51 @@ VERDICT: REVISE
 - F6 · accepted · fixture copies under `v0.5.1/<path>`; scenario ids per capture row (D1, Failure & observability)
 - F7 · accepted · D8 covers the echoed verb
 - F8 · accepted · step 3 lists tools/paths-manifest.txt
+
+## Review 4 · 2026-09-28 · subagent · plan commit 116b461 · plan 63764 B · 16 items · files 0 · e3b0c44298fc · prompt 7fe4e4908318
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, given the prompt file and read access to the repository (design §9 D26); the prompt held no Steam ID. Run after the owner's round-cap decision (option A, plan mode 2026-09-28).
+
+Blocking: none.
+
+F1 · advisory · D11's GatewayOnly rule scans Logic/AdminFlows.cs, where IAdminOps is declared; the check counts every occurrence of a mutating name except a [Mutating] declaration, and a [Mutating] on the interface trips "declared outside the dispatched services", so the interface's `Outcome OpStartEvent(...)` lines fail the real tree at step 1 (tools/preflight.ps1 ~1641).
+Fix: move IAdminOps to its own unscanned Logic/IAdminOps.cs, or skip interface member declarations; record it as an amendment in D11 and Interfaces › Writes.
+
+F2 · advisory · 10.1. Only AdminFlows.cs among Logic/ is scanned; another Logic/ file given an IAdminOps could call Op* ungated.
+Fix: scan every Logic/*.cs for Op* uses (`.Run<` spans still gates) and add fixture GatewayOnly/bad-8.
+
+F3 · advisory · 4.5. HumanReplies' count of "the reply literals of the D1 paths at v0.5.1" is not defined (file list, literal forms, log-only exclusion).
+Fix: state the computation (literals in the D1 files returned, yielded or passed to Reply or AdminLines, excluding log(, Log*( and LogAdmin( arguments) and plant a fixture that drops one row.
+
+F4 · advisory · 7.3, 14.2. The capture will fail any later child that deliberately changes a human reply.
+Fix: a later child adds a dated row set with its own tag and amends the capture's scope; rows are never edited in place.
+
+F5 · advisory · 9.3. `event set` to the value the event already holds is unstated (write, push, changed=0?).
+Fix: state 0.5.1's behaviour and pin it in ApiTwinTests Idempotency.
+
+F6 · advisory · 9.1. At the rate cap each applied twin queues a config-changed to every subscriber; PushQueue does not coalesce.
+Fix: a 13.2 row stating the queue bound as sufficient, or coalesce config-changed within a tick.
+
+F7 · advisory · 12.2. D12's failure streak has no stated end. Fix: it ends at the command's next non-throwing run; test it.
+
+F8 · advisory · 4.4. Which code path runs the rate gate for an unknown verb is unstated. Fix: the AdminFlows dispatcher calls the gate before resolving the verb; RateOrder covers an unknown verb as the sixth twin.
+
+F9 · advisory · 12.4. The failing-case table has no ControlCaseTests row. Fix: add it (fails on a control without its row; empty: "the plan lists no control id").
+
+Scenarios hunted: two admins confirming their own purge asks in one second (the second gets state nothing_to_purge; fold into Idempotency); `.nyar api templates` when the templates resource failed at boot (count=0 or io, unstated); an admin losing rights between ask and confirm (VCF blocks, the arming lapses; one sentence under Permissions).
+
+EARLIER: all resolved
+
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · applied at `start` as an amendment (the reviewed revision stays frozen until approve)
+- F2 · accepted · applied at `start` as an amendment (the reviewed revision stays frozen until approve)
+- F3 · accepted · applied at `start` as an amendment (the reviewed revision stays frozen until approve)
+- F4 · accepted · applied at `start` as an amendment (the reviewed revision stays frozen until approve)
+- F5 · accepted · applied at `start` as an amendment (the reviewed revision stays frozen until approve)
+- F6 · accepted · applied at `start` as an amendment (the reviewed revision stays frozen until approve)
+- F7 · accepted · applied at `start` as an amendment (the reviewed revision stays frozen until approve)
+- F8 · accepted · applied at `start` as an amendment (the reviewed revision stays frozen until approve)
+- F9 · accepted · applied at `start` as an amendment (the reviewed revision stays frozen until approve)
+- Hunted scenarios · accepted · at `start`: the purge race into ApiTwinTests Idempotency, a failed template catalogue answering code=io reason=read on `templates`, the lost-rights sentence under Permissions
