@@ -353,3 +353,52 @@ VERDICT: REVISE
 - F7 · accepted · D13: after a partial write HuntAction rebuilds its seed record, keyed by unit entity and target, from the unit's AggroBuffer on the next tick, and skips a unit or target that no longer Exists; SpawningTests Hunt gains the race fixture (a target removed between Diff and write)
 - F8 · accepted · Performance › Supported envelope: at raised caps only latency degrades (the per-tick budgets stay, queues are bounded by the caps, lifecycle cleanup is unchanged, D33); one maximal-cap observation may be recorded in Session 4 as exploratory evidence
 - F9 · accepted · for S-7 and S-9, which have sources (KindredCommands' CastleTerritoryService.cs; RESEARCH_NOTES spike S1 and TideOfWar), now validated conditional decisions with a pre-release probe branch and a post-release forward migration; S-8 and S-11 stay reversible because no owner decision or measurement is their source, which the grammar requires of validated, and each states its post-release forward-migration policy
+
+## Review 7 · 2026-09-28 · subagent · plan commit 6514509 · plan 100703 B · 34 items · files 0 · e3b0c44298fc · prompt 263d02a1197b
+Reviewer: a fresh-context general-purpose subagent (never a fork), read-only, given the score-redacted plan and no prior review, under the owner's option A after Review 6 (Codex's REVISE of Review 6 stays on record beside this one). It read tools/rollback-gate.ps1, tools/preflight.ps1 and tools/preflight-checks.json and the prefab dump to test the plan's claims.
+
+F1 `[blocking]` The rollback evidence for probes 14.3 and 12.4 cannot pass as written: `rollback-gate.ps1 -Plan` runs four parts and prints "rollback gate: 4/4", but D5 and D25 expect 3/3; the routes check (Test-CheckRollbackRoutes) accepts exactly one `-Plan event-spawns` range while the plan names three, and reads bullets named "On a server", "Published release" and "Commit range", which the plan spells "On a server, 0.6.0 → 0.5.1", "Published releases" and "Commit ranges", with no "install the 0.5.0 DLL" route.
+Fix: declare one range (v0.5.0..v0.6.0) with the five bullets spelled as the check reads them; run 0.5.1's gate without -Plan (3/3) and expect 4/4 for the child's range; or extend the check to several ranges.
+
+F2 `[advisory]` D21 and the 6.2 row run `-DependencySuite` with no slug, and dependencySuites has no event-spawns entry.
+Fix: `-DependencySuite event-spawns` and a dependencySuites.event-spawns entry (DependencyFailureTests Spawns plus release-tools) in step 3 or 4.
+
+F3 `[advisory]` Paths walked is incomplete: step 3 lists no tools/ path though it adds checks, fixtures and inventory rows; step 2 lists the EntityWrites fixtures a step early; HidingIndexTests, EndPath and WavePrecedence test files and Services/HealthMonitor.cs are missing; "steps 2 and 6 add inventory rows" contradicts step 3.
+Fix: correct the per-step lists.
+
+F4 `[advisory]` D14's "36: 32 Bandit, 4 Blackfang" is wrong: 30 Bandit and 6 Blackfang (DartFlinger, Lurker, Striker, each with a _Servant variant).
+Fix: correct the breakdown.
+
+F5 `[advisory]` D13 rebuilds the seed record from the AggroBuffer, which cannot tell a seed from a game entry for the same unit and player, contradicting "never an entry the game added".
+Fix: keep the seed record authoritative; drop only record entries missing from the buffer; never adopt buffer entries.
+
+F6 `[advisory]` An AroundPlayer Hunt wave can have maxDist up to 80 m while Hunt range is at most 60 m, so the picked player may be out of range.
+Fix: validate maxDist ≤ range for Hunt, or state it is intended.
+
+F7 `[advisory]` Ambush with spawnVisual true is neither refused nor tested; the visual buff may reveal the hidden unit.
+Fix: refuse the combination in D6, or probe it in D14.
+
+F8 `[advisory]` Step 2 claims D22 and D31 though their evidence is built in steps 3-4.
+Fix: cite them at a later step as well and mark step 2 partial.
+
+F9 `[advisory]` D24 requires a player within Hunt range throughout, but -TimingSpan reads only timing and health lines; an unattended player facing about 140 hunters will likely die.
+Fix: carry a hunt-target count the span check requires, or state how the player survives.
+
+F10 `[advisory]` D5's "a README still carries the pond note" is tied to no check.
+Fix: name the check or move the condition to a manual line.
+
+EARLIER: all resolved
+15/15 layers · 49/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · the first option: Rollout › Rollback declares one range, v0.5.0..v0.6.0, with the five bullets spelled as Test-CheckRollbackRoutes reads them ("On a server" now names the 0.5.0 DLL route, with 0.5.1 as the same case); D5 and step 2 run `rollback-gate.ps1 -From v0.5.0 -To v0.5.1` without -Plan (3/3); D25 and step 6 run v0.5.1..v0.6.0 without -Plan (3/3), then `-From v0.5.0 -To v0.6.0 -Plan event-spawns` (4/4). Checked against the real check: `pwsh tools/preflight.ps1 -RollbackOf event-spawns -From v0.5.0 -To v0.6.0` → "rollback routes: event-spawns 5/5"
+- F2 · accepted · D21, the 6.2 row and Interfaces name `-DependencySuite event-spawns`; step 3 adds the dependencySuites.event-spawns entry (DependencyFailureTests Spawns categories and release-tools with gh-ambiguous)
+- F3 · accepted · step 2 lists its own tools/ paths (DebugCommands and Changelogs/bad-knownissue fixtures); step 3 lists preflight.ps1, preflight-checks.json, data-inventory.json, the fixtures folders, HidingIndexTests, EndPathTests, WavePrecedenceTests and Services/HealthMonitor.cs; the inventory sentence names step 3
+- F4 · accepted · 30 Bandit, 6 Blackfang, with the three Blackfang names
+- F5 · accepted · the seed record stays authoritative; after a partial write HuntAction drops only record entries missing from the buffer and never adopts one (this replaces Review 6 F7's rebuild)
+- F6 · accepted · D6 and Business rules 2: with behaviour Hunt an AroundPlayer maxDist must be at most the Hunt range; D6's fails-when case "an AroundPlayer Hunt with maxDist 70 and range 60"
+- F7 · accepted · D6 and Business rules 2 refuse spawnVisual true with Ambush; D6's fails-when case "an Ambush with spawnVisual true"
+- F8 · accepted · step 2 satisfies D22 and D31 in part; step 4 lists them as well
+- F9 · accepted · with TimingLog on HuntAction logs "hunt targets: <n>" once per timing window; -TimingSpan -MinTargets 1 fails a window without a line of at least 1 (fixture bad-notarget); a span in which the player dies fails and is run again
+- F10 · accepted · the Changelogs check forbids the 0.5.0 known-issue text in both READMEs from 0.5.1 (fixture Changelogs/bad-knownissue), named in D5 and step 2
