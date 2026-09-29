@@ -115,3 +115,25 @@ VERDICT: READY
 - F6 · accepted · A14: an unreadable version fails; fixtures bad-regions-noversion and good-regions (D2)
 - F7 · accepted · A15: D7's message wins over A3's (D7)
 - F8 · accepted · a confirmation of A8; no change
+
+## Review 4 · 2026-09-28 · subagent · plan commit f921636 · plan 75476 B · 16 items · files 0 · e3b0c44298fc · prompt 39eafbe2c07d · scope A9,A10,A11,A12,A13,A14,A15
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A9-A15 (design §9 D26); the prompt held no Steam ID. It found A9, A11, A13, A14 and A15 consistent with the code.
+
+F1 · blocking · 4.4 · A10 keys the player gate on `def.Trigger.Type`, but `EventEngine.Start` (Engine.cs:208) accepts an admin start (`AdminOps.OpStartEvent` → `StartEvent(id, "manual", Actor.Admin, …)`) of any definition type. An admin's `.nyar event start` of a VBloodKilled definition with a trigger scope therefore meets neither the player gate nor a kill position and starts unconditionally, against Business rules 5 ("no actor can bypass the scope") and D4's Manual rule. Fix: key the gate on how the start arrives, or state an explicit exception and amend Business rules 5; add a test case.
+
+F2 · advisory · A12 / D4's fails-when "a skipped occurrence logs the generic refused-start line": the generic line lives in Services/EventRuntime.cs:90, not in the scheduler, and Services is not compiled into Nyarlathotep.Tests, so the clause cannot fail. Fix: name EventRuntime.StartEvent and move the choice into Logic (an AdminLines/Outcome helper).
+
+F3 · advisory · A11: "null reads nothing" does not say how the gate decides for a scoped definition with no reader. Fix: a null reader gives zero positions, so a scoped Schedule, GameTime or Manual start is refused (fails closed, as in 6.2).
+
+F4 · advisory · A10/A4: where the player gate runs relative to EmpowerClash and the Admin-location check inside `EventEngine.Start` is unstated. Fix: name the order, e.g. after the Admin-location check and before `catalog.TryStart`.
+
+Hunted: an admin starts a trigger-scoped VBloodKilled definition (F1); a scheduled start refused by the gate, its log line in Services (F2); a Manual start with the default null reader (F3).
+
+15/15 layers · 49/49 probes, as written; F1 disputes 4.4 (14/15 layers · 48/49 probes if it holds)
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · A18: the gate is keyed on the start; only the VBloodKilled route's start carries the kill position and skips it (D4)
+- F2 · accepted · A19: a Logic/AdminLines.cs helper chooses the log line; EventRuntime calls it (D4)
+- F3 · accepted · A20: a null reader gives zero positions and the start is refused (D4)
+- F4 · accepted · A18: the gate runs after the Admin-location checks and before catalog.TryStart (D4)
