@@ -2900,8 +2900,14 @@ function Test-CheckDebugCommands([string]$Root) {
 # A plan listed in tools/preflight-checks.json snapshotSessions (slug: first session) also needs, in each of those
 # sessions' blocks, the save "dev-snapshot.ps1 -Save <label>" and the restore "snapshot restored; hashes equal (<label>"
 # with the same label (event-library D30, A19); the listed first session must exist.
+# A session tools/preflight-checks.json sessionsUncounted lists for the slug (its log copies gone before a count line
+# was written) carries instead exactly one line "- session <n> log check: uncounted (<reason>)" and is left out of the
+# count; a listed session with a count line, without its one uncounted line, without its "### Session <n>" block, or
+# beyond $script:UncountedAllowed (the only sessions whose copies are known gone; foundation 9 exists only in the
+# SessionLogs fixtures, foundation being closed at 8 sessions) fails (event-spawns A72, Review 37 F3).
 # A fixture names the slug in sessionsof.txt.
 $script:SessionsBeforeA10 = @{ 'foundation' = 7 }
+$script:UncountedAllowed = @{ 'event-spawns' = @(1); 'foundation' = @(9) }
 
 function Test-CheckSessionLogs([string]$Root) {
     $slug = if (Test-IsFixture $Root) { "$(Read-Text $Root 'sessionsof.txt')".Trim() } else { $SessionsOf }
@@ -2947,6 +2953,23 @@ function Test-CheckSessionLogs([string]$Root) {
         $before = if ($m.Groups[6].Success) { [int]$m.Groups[6].Value } else { 0 }
         $checks[$n] = @([int]$m.Groups[2].Value, [int]$m.Groups[3].Value, $orphans, $before)
     }
+    $uncFrom = if ($mj -and $mj.sessionsUncounted) { $mj.sessionsUncounted.PSObject.Properties[$slug] } else { $null }
+    $uncounted = if ($uncFrom) { @($uncFrom.Value | ForEach-Object { [int]$_ }) } else { @() }
+    $uncBad = @()
+    $allowed = if ($script:UncountedAllowed.ContainsKey($slug)) { $script:UncountedAllowed[$slug] } else { @() }
+    $uncDupes = @($uncounted | Group-Object | Where-Object { $_.Count -gt 1 } | ForEach-Object { $_.Name })
+    if ($uncDupes) { return New-Result $false "session logs: $slug lists session $($uncDupes -join ', ') uncounted more than once" }
+    foreach ($n in $uncounted) {
+        $lines = @([regex]::Matches($audit, "(?m)^- session $n log check: uncounted \((.+)\)[ \t]*\r?$"))
+        if ($allowed -notcontains $n) { $uncBad += "session $n may not be listed uncounted (not in UncountedAllowed)" }
+        elseif ($sessions -notcontains $n) { $uncBad += "session $n is listed uncounted but has no session block" }
+        elseif ($checks.ContainsKey($n)) { $uncBad += "session $n is listed uncounted but has a count line" }
+        elseif ($lines.Count -ne 1) { $uncBad += "session $n is listed uncounted but has $($lines.Count) uncounted lines, not 1" }
+    }
+    if ($uncBad) { return New-Result $false "session logs: $slug $($uncBad -join '; ')" }
+    $allSessions = $sessions                                         # the snapshot rule still reads every session
+    $sessions = @($sessions | Where-Object { $uncounted -notcontains $_ })
+    $uncNote = if ($uncounted.Count) { "; $($uncounted.Count) uncounted (session $($uncounted -join ', '))" } else { '' }
     $cutoff = if ($script:SessionsBeforeA10.ContainsKey($slug)) { $script:SessionsBeforeA10[$slug] } else { 0 }
     $pre = @($sessions | Where-Object { $_ -le $cutoff })
     $post = @($sessions | Where-Object { $_ -gt $cutoff })
@@ -2961,8 +2984,8 @@ function Test-CheckSessionLogs([string]$Root) {
     $snapFrom = if ($mj -and $mj.snapshotSessions) { $mj.snapshotSessions.PSObject.Properties[$slug] } else { $null }
     $unwrapped = @()
     if ($snapFrom) {
-        if ($sessions -notcontains [int]$snapFrom.Value) { $unwrapped += [int]$snapFrom.Value }
-        foreach ($n in @($sessions | Where-Object { $_ -ge [int]$snapFrom.Value })) {
+        if ($allSessions -notcontains [int]$snapFrom.Value) { $unwrapped += [int]$snapFrom.Value }
+        foreach ($n in @($allSessions | Where-Object { $_ -ge [int]$snapFrom.Value })) {
             $save = [regex]::Match("$($blocks[$n])", 'dev-snapshot\.ps1 -Save ([\w-]+)')
             if (-not $save.Success -or $blocks[$n] -notmatch ('snapshot restored; hashes equal \(' + [regex]::Escape($save.Groups[1].Value) + '[,)]')) { $unwrapped += $n }
         }
@@ -2990,9 +3013,9 @@ function Test-CheckSessionLogs([string]$Root) {
         return New-Result $false "session logs: $slug $ok/$($post.Count) checked$after$preNote ($($why -join '; '))"
     }
     # The snapshot count shows an entry dropped from snapshotSessions (Review 16 F2): the line then has no "snapshots".
-    $snapNote = if ($snapFrom) { $w = @($sessions | Where-Object { $_ -ge [int]$snapFrom.Value }).Count; "; snapshots $w/$w from session $($snapFrom.Value)" } else { '' }
+    $snapNote = if ($snapFrom) { $w = @($allSessions | Where-Object { $_ -ge [int]$snapFrom.Value }).Count; "; snapshots $w/$w from session $($snapFrom.Value)" } else { '' }
     $probeNote = if ($probeFrom) { '; probe records 1/1' } else { '' }
-    return New-Result $true "session logs: $slug $ok/$($post.Count) checked$after$preNote$snapNote$probeNote"
+    return New-Result $true "session logs: $slug $ok/$($post.Count) checked$after$preNote$uncNote$snapNote$probeNote"
 }
 
 # The probe record of one session (walkable-spawns D1, D10, A4, A8): readings "- <label>: walk <x> <z> h <n> r <r>:

@@ -3,6 +3,100 @@
 The complete technical history. The concise, player-facing changelog that ships to Thunderstore lives at
 `Nyarlathotep/Nyarlathotep/CHANGELOG.md`. Public beta from 0.2.0; features stay experimental until validated on live servers.
 
+## [0.7.0] - 2026-09-29
+
+The `event-spawns` child of the DoD Epic (`docs/dod/event-spawns.md`): spawn waves gain strength, a behaviour, a
+player-relative location and a castle-territory rule. Design and sessions: `docs/features/EVENT_SPAWNS.md`; audit:
+`docs/audits/event-spawns.md`.
+
+<details open>
+<summary><b>Definition keys</b></summary>
+
+All optional on a `SpawnWaves` action; each failure disables the event with one reason naming the field. SchemaVersion
+stays 1.
+
+| Key | Values | Effect |
+|---|---|---|
+| `units[].chance` | number 0.05–1.0 (absent 1.0) | Each copy of the entry is rolled on its own (`WaveRoll.Expand`); the caps clamp the rolled count |
+| `modifiers.level` / `levelDelta` | integer 1–120 / −5..5, never both | Absolute level, or the prefab level plus the delta clamped 1–120 |
+| `modifiers.maxHealth` · `power` · `moveSpeed` · `attackSpeed` | 0.5–3.0, two decimals | `MultiplyBaseAdd` modifiers of value − 1 on the unit's marker buff; `power` covers physical and spell power, `attackSpeed` primary and ability attack speed |
+| `loot` | boolean (absent false) | `DropTableBuffer` is cleared unless true |
+| `behaviour` | `{ "type": "Hunt", "range": 10–60 }` | Guard and Ambush are refused as unknown until `spawn-extras` |
+| `location` | `{ "type": "AroundPlayer", "minDist": 10–60, "maxDist": 15–80 }` | minDist < maxDist; with Hunt, maxDist ≤ range |
+| `allowTerritory` | boolean (absent false) | Lifts the claimed-territory skip and ring-point block, nothing else |
+</details>
+
+<details open>
+<summary><b>Runtime</b></summary>
+
+- **Wave precedence.** `Logic/Spawning.cs` `WaveGate.Decide` gives each wave one outcome, in order: a start blocker or
+  an ended event; "territory unknown" when the wave needs a territory map and it could not be built (AroundPlayer and
+  Hunt always need it, other waves unless `allowTerritory`); no eligible player; a centre in claimed territory; the
+  chance roll ("0 units rolled"); then the `MaxUnitsPerWave` and `MaxTrackedUnits` clamps. A skipped wave uses its
+  slot, sends no push, and is logged `wave <n> of <id> skipped: <reason>`.
+- **Territory.** `Services/TerritoryMap.cs` reads, once per wave, the blocks of every `CastleTerritory` a `CastleHeart`
+  names (decaying hearts included); `Logic.Territory.IsClaimed` decides with KindredCommands' block conversion. A
+  claimed ring point counts as blocked in the walkable-point search. A castle claimed during a wave counts from the
+  next wave.
+- **Player pick.** `Logic.PlayerPick.Choose` picks uniformly among online, alive characters (admins included) not in
+  claimed territory and not carrying `Buff_InCombat_PvPVampire`. With a regional `action.scope` the player must stand
+  in it and the centre is retried at the 11 other ring angles until it is in scope. No log line, message or api row
+  names or locates the player ("around a player").
+- **Hunt.** `Services/HuntAction.cs` every 5 s adds one `AggroBuffer` entry per unit for each of `HuntPlan.Targets`
+  (eligible players within range of the wave centre, nearest first, at most 5). It never seeds a player the buffer
+  already holds, removes only its own seeds, and removes all of them when no player is eligible or the event's latest
+  territory build failed. Its seed record, keyed by unit entity and target, stays authoritative after a partial write
+  (A67: kept seeds are recognised by Entity).
+- **End paths.** `Logic.WaveLifecycle` empties the spawn ledger, the seed set and the kept territory map together on
+  natural end, `event stop`, fault cancel, `purge confirm` and restart.
+- **Failures.** A throwing modifier, loot or level write discards the unit (`SpawnTracker.Prepare`, `Abandon`); a
+  throwing hunt query or aggro write logs `hunt <id>: seed failed` once per streak and the wave continues unhunted; a
+  throwing player query skips the wave. The health line, admin `.nyar status` and the login notice gain
+  `spawns: territory unknown`, `unit setup failing (<id>)`, `hunt seed failing (<id>)` and
+  `player query failing (<id>)` while each streak is open.
+- **Chat.** `.nyar event set <id>` takes `action.modifiers.<key> <value|none>`, `action.loot`, `action.allowTerritory`,
+  `action.behaviour none` or `action.behaviour "hunt <range>"`, `action.units.<n>.chance` and
+  `location "aroundplayer <min> <max>"` (a quoted value is one argument); every reply
+  is under 480 bytes (`CommandArgTests.ChatBytes`). `event info` prints the new keys; `.nyar debug here` adds position,
+  spell power, move speed and primary attack speed.
+- **Templates.** `undead-rising` gains `"modifiers": { "levelDelta": 2, "maxHealth": 1.2 }`; all six stay disabled.
+- **Timing.** A slow tick names its top three phases (A70); the first wave after a boot costs one long tick (up to
+  ~200 ms, spawn queues and the first Hunt tick), under the 250 ms slow-tick warning.
+- **Wire.** Unchanged: api 5, no new field, push kind or command.
+</details>
+
+<details>
+<summary><b>Static checks and tools</b></summary>
+
+- **EntityWrites.** A preflight check finds every entity write call (component, buffer, destroy, instantiate and
+  `EntityManager` mutators, and locals taken from `GetBuffer<`/`ReadBuffer`) outside `Services/` and `Patches/`.
+- **Gateway.** HuntAction joins `$DispatchedServices`; the tick and boot entry points that write are `[Mutating]` and
+  accepted from `EventScheduler.cs`, `Core.cs` and `Patches/` as the System actor, by name only.
+- **`-TimingSpan`.** Checks a log copy for N consecutive one-minute windows under 5 ms with a tracked and a Hunt-target
+  floor, after a skipped warm-up, and fails on a slow tick after the last window.
+- **`-SessionsOf`.** A session whose log copies were lost before a count line was written can be listed in
+  `sessionsUncounted`, bounded by the script's allow list, with exactly one "uncounted (<reason>)" audit line (A72).
+- **Rollback drill.** Accepts 0.6.0 disabling a definition for a 0.7.0 key ("unknown field action.<key>",
+  "unknown field action.units.chance", an AroundPlayer location) and prints "(<t> newer action types, <k> newer keys)";
+  selftest 13/13.
+</details>
+
+<details>
+<summary><b>Sessions</b></summary>
+
+- **Session 1** (parts A–C): each modifier read back in `.nyar debug here` against a plain wave; loot true kept the
+  drop table and loot false cleared it; the claimed-territory skip and `allowTerritory`; AroundPlayer placement; Hunt
+  seeding and re-seeding; every new chat reply rendered whole. Logs read by hand, no `[Error]`.
+- **Session 2:** a modified Hunt event of 30 units left 0 tracked units and no seeds after stop, natural end, purge,
+  restart (boot sweep 30 found, then 0) and uninstall (0 found, 30 listed: the game's LifeTime removed them). At 150
+  tracked Hunt units with a player in range, ten consecutive windows averaged 0.28–0.35 ms (max 2.7 ms), 0 slow ticks.
+</details>
+
+- **Scale.** The tick budget is measured and promised at the default caps (150 tracked). `MaxTrackedUnits` 151–500 is
+  best effort, watched by the 250 ms slow-tick warning.
+- **Upgrading / rollback.** No new cfg keys or files. 0.6.0 loads 0.7.0's files but disables a definition that uses a
+  new key until it is removed (rollback gate).
+
 ## [0.6.0] - 2026-09-28
 
 The `regions` child of the DoD Epic (`docs/dod/regions.md`): an event's trigger and action can be limited to named

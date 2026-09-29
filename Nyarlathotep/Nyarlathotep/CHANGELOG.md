@@ -2,6 +2,27 @@
 
 Public beta. Event pillars and automatic announcements default off; admins opt in per feature.
 
+## 0.7.0 (2026-09-29)
+
+- **Stronger waves.** A spawn event can set its units' level (`level` 1–120, or `levelDelta` −5 to +5 around their
+  own) and multiply their max health, power, move speed and attack speed (×0.5–3.0). Only the event's own units
+  change, and they are removed after the event as before.
+- **Hunting waves.** `"behaviour": { "type": "Hunt", "range": 10–60 }` sets every unit on the nearest players (up to 5)
+  within range of the wave, rechecked every 5 seconds.
+- **Waves around players.** The `AroundPlayer` location centres each wave 10–80 m from a random online player, so a
+  scheduled or triggered wave finds players wherever they are. With a regional scope, only players in those regions
+  are picked.
+- **Castles are off limits.** No wave spawns in claimed castle territory, and no player there or in PvP combat is
+  picked or hunted (territory is read at each wave). A wave centred on a castle is skipped; `"allowTerritory": true`
+  lifts this for one event.
+- **Chance and loot.** Each unit can have a `chance` (0.05–1.0) of joining its wave. Event units still drop nothing
+  unless the event sets `"loot": true`. All the new keys can be set in chat with `.nyar event set`, and
+  `undead-rising` now ships at level +2 with ×1.2 health.
+- No new cfg keys. Rolling back to 0.6.0 disables the events that use the new keys until you remove them.
+
+<details>
+<summary><b>Earlier releases</b> (0.1.0–0.6.0)</summary>
+
 ## 0.6.0 (2026-09-28)
 
 - **Regional events.** An event's trigger and action can be limited to named map regions (Farbane Woods, Dunley
@@ -105,3 +126,5 @@ First public beta: the event engine.
 ## 0.1.0 (2026-09-23)
 
 - **Project scaffold.** The plugin loads on a dedicated server and answers `.nyar`. No events yet.
+
+</details>

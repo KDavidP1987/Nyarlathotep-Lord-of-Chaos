@@ -2,19 +2,18 @@
 
 <p align="center"><img src="docs/img/nyarlathotep-cover.jpg" alt="Nyarlathotep, Lord of Chaos" width="512"></p>
 
-A server-side BepInEx IL2CPP plugin for V Rising that adds admin-configured, event-driven NPC behaviour.
-0.6.x ships the event engine with spawn-wave events, timed faction empowerment, six built-in event templates
-with in-game authoring, regional scope for triggers and actions, wave warnings and banners, and a kill switch; castle sieges, defended zones, boss-fight reinforcements, spawn modifiers and leaderboards
-are planned, one release each. The companion client Raphael reads a machine-readable API (api 5): live event
-status, event definitions for admins, pushed updates, and admin actions that answer one line each.
+A server-side BepInEx IL2CPP plugin for V Rising that adds admin-configured, event-driven NPC behaviour. Events
+start on a schedule, at nightfall or daybreak, after a V Blood kill, or by command, and either empower whole factions
+or send waves of units that can be levelled, strengthened, set to hunt nearby players, and placed around a random
+player, outside claimed castle territory unless the event allows it. Six built-in templates, in-game authoring, regional scope, warnings and banners, and a
+kill switch come with it. The companion client Raphael reads a machine-readable API (api 5).
 
-0.6.x is a public beta. Every pillar and automatic announcement starts disabled; admins opt in. The 0.1.0 key
-`General.AnnounceEvents` is retired and ignored; the `[Announcements]` switches replace it.
+0.7.x is a public beta. Every pillar and automatic announcement starts disabled; admins opt in.
 
 ## Status
 
-**v0.6.0.** See [`CHANGELOG.md`](CHANGELOG.md) for what ships and [`docs/dod/`](docs/dod/) for the
-build plan.
+**v0.7.0.** See [`CHANGELOG.md`](CHANGELOG.md) for what ships and [`docs/dod/`](docs/dod/) for the
+build plan. Next in the Epic order: boss reinforcements, defended zones and sieges, then stats.
 
 ## Quick start
 
@@ -26,8 +25,7 @@ Install the package on a dedicated server and start it once. Then, in game as an
 4. `.nyar event enable undead-nightfall`
 5. `.nyar status`: at the next nightfall the undead are empowered for 20 minutes, and this shows it running.
 
-`.nyar purge` then `.nyar purge confirm` is the kill switch. Wave units spawn only on walkable ground: a spawn
-point in water or against a cliff or wall moves to the nearest walkable one (0.5.1).
+`.nyar purge` then `.nyar purge confirm` is the kill switch.
 
 ## How it works
 
@@ -35,6 +33,13 @@ Every feature is an **event**: a *trigger* (schedule, V Blood kill, boss health 
 admin command) fires an *action* (empower a faction, spawn waves with a behaviour) for a *duration*, after
 which everything the event created is reverted or despawned. Four services carry the load: `TriggerBus`,
 `EventScheduler`, `SpawnTracker`, and the per-pillar action services.
+
+Waves spawn only on walkable ground and never in claimed castle territory unless the event sets `allowTerritory`.
+Territory is read once per wave, so a castle claimed during a wave counts from the next one.
+
+**Scale.** The tick budget (under 5 ms average per one-minute window) is measured and promised at the default caps:
+150 tracked units, Hunt included. Raising `MaxTrackedUnits` to 151–500 is best effort; the 250 ms slow-tick warning
+names the slowest phase if a tick runs long.
 
 ## Features
 
@@ -44,12 +49,12 @@ which everything the event created is reverted or despawned. Four services carry
 | Announcements (warnings, banners, daily banner) | 0.2.0 | [`docs/features/FOUNDATION.md`](docs/features/FOUNDATION.md) |
 | Raphael handshake (`.nyar api version`) | 0.2.0 | [`docs/RAPHAEL_INTEGRATION_CONTRACT.md`](docs/RAPHAEL_INTEGRATION_CONTRACT.md) |
 | Raphael api 2: `api status`, `api events`, `api sub` pushes | 0.3.0 | [`docs/features/RAPHAEL_API.md`](docs/features/RAPHAEL_API.md) |
-| Event spawn modifiers and locations | in development | [`docs/features/EVENT_SPAWNS.md`](docs/features/EVENT_SPAWNS.md) |
 | Faction empowerment: the `Empower` action (five stats ×1.0–3.0 on up to five factions, timed carrier buffs), api 3 empower rows | 0.4.0 | [`docs/features/FACTION_EMPOWERMENT.md`](docs/features/FACTION_EMPOWERMENT.md) |
 | Event library: six built-in templates, chat authoring (`template`, `event new/copy/delete/set`, `pillar`), readiness column | 0.5.0 | [`docs/features/EVENT_LIBRARY.md`](docs/features/EVENT_LIBRARY.md) |
 | Walkable spawn points: wave units moved off water, cliffs and walls by the game's tile collision | 0.5.1 | [`docs/features/WALKABLE_SPAWNS.md`](docs/features/WALKABLE_SPAWNS.md) |
 | Raphael api 4: admin action twins (`api event`, `api template use`, `api pillar`, `api purge`) that answer one line each, at most 5 per admin per second, and reads (`api templates`, `api template info`, `api pillar list`, `api killswitch`) that answer rows and an end line | 0.5.2 | [`docs/features/RAPHAEL_API_ADMIN.md`](docs/features/RAPHAEL_API_ADMIN.md) |
 | Regions: `scope` on triggers and actions (the game's world regions), `.nyar region list\|here`, `{region}`, api 5 (`api regions`, `region=` keys); 0.5.x disables, after a rollback, a definition carrying `scope` (unknown key) or an announcement using `{region}` (unknown placeholder) | 0.6.0 | [`docs/features/REGIONS.md`](docs/features/REGIONS.md) |
+| Event spawns: per-unit `chance`, `modifiers` (level or levelDelta, four stat multipliers), `loot`, the `Hunt` behaviour, the `AroundPlayer` location, the claimed-territory rule and `allowTerritory`, their chat fields | 0.7.0 | [`docs/features/EVENT_SPAWNS.md`](docs/features/EVENT_SPAWNS.md) |
 | Boss reinforcements | in development | [`docs/features/BOSS_REINFORCEMENTS.md`](docs/features/BOSS_REINFORCEMENTS.md) |
 | Defended zones | in development | [`docs/features/DEFENDED_ZONES.md`](docs/features/DEFENDED_ZONES.md) |
 | Sieges | in development | [`docs/features/SIEGES.md`](docs/features/SIEGES.md) |
@@ -60,10 +65,11 @@ which everything the event created is reverted or despawned. Four services carry
 `Logic/` holds the rules with no game dependency (validation, precedence, schedules, the spawn ledger, the
 announcer, wire format) and is unit-tested. `Services/` drive it from the game: `EventStore` and `Persistence`
 (JSON files under `BepInEx/config/Nyarlathotep/`), `TriggerBus` (hooks), `EventScheduler` (one main-thread
-tick in phases), `EventRuntime`, `SpawnTracker` (budgeted spawns and despawns, the boot sweep), `EmpowerAction`
-(carrier buffs applied and removed through a budgeted ledger; switched on by `[Pillars] FactionEmpowerment`) and
-`Announcer`.
-Every mutating operation goes through `Logic/ActionGateway`; `tools/preflight.ps1` checks that statically.
+tick in phases), `EventRuntime`, `SpawnTracker` (budgeted spawns and despawns, the boot sweep), `WaveAction`,
+`TerritoryMap` (claimed castle blocks) and `HuntAction` (aggro seeds every 5 s), `EmpowerAction`
+(carrier buffs applied and removed through a budgeted ledger) and `Announcer`.
+Every mutating operation goes through `Logic/ActionGateway`, and every entity write stays in `Services/` or
+`Patches/`; `tools/preflight.ps1` checks both statically.
 
 ## Layout
 

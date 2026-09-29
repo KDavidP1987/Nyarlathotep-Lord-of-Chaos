@@ -1152,3 +1152,43 @@ VERDICT: READY
 - F5 · accepted · deferred: a D24 text change would need a fourth round of this run; the Log carries it to step 4's close, and the extra fixtures only add failing cases to D24's list
 - F6 · accepted · deferred: pre-existing (walkable-spawns' key) and health-only; the Log carries it to child spawn-extras
 - F7 · accepted · no change
+
+## Review 37 · 2026-09-29 · subagent · plan uncommitted · plan 190741 B · 24 items · files 0 · e3b0c44298fc · prompt 4dd6ec3502f1 · scope A72
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendment A72 and the D27 text it changes, checked against the uncommitted tree (tools/preflight.ps1 › Test-CheckSessionLogs, tools/preflight-checks.json, the SessionLogs fixtures, the audit and the Session 1 record).
+
+F1 · advisory · 14.4 · Paths walked does not declare A72's SessionLogs fixtures; -Paths -DeclaredOf would fail at step 4. Fix: name them under Step 4, citing A72.
+F2 · advisory · 12.4 · the D27 ControlCases row does not list SessionLogs/bad-uncounted and bad-uncounted-2. Fix: add both.
+F3 · advisory · 4.5 / 9.2 · sessionsUncounted is an open list and a listed session needs no block, so a later dirty session could be listed. Fix: a script-side allow list, and fail a listed session without its block, each with a fixture.
+F4 · advisory · 12.4 · D27's stated -SessionsOf output lacks "; 1 uncounted (session 1)". Fix: update the stated output.
+F5 · advisory · 12.4 · the reason pattern rejects a reason holding ")". Fix: anchor to the line end, or forbid parentheses.
+F6 · advisory · layer tag · A72 changes a check's failing cases and fixtures, which is 12.4, not 12.3. Fix: retag.
+
+15/15 layers · 49/49 probes
+
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · Paths walked › Step 4 names tools/preflight-fixtures/SessionLogs/**, tools/preflight.ps1, tools/preflight-checks.json and ControlCases.cs by A72, and the three drill pairs
+- F2 · accepted · the D27 row lists SessionLogs/bad-uncounted, bad-uncounted-2, bad-uncounted-3 and bad-uncounted-4
+- F3 · accepted · $script:UncountedAllowed (event-spawns 1; foundation 9, fixtures only) bounds the list; a listed session without its block fails; fixtures bad-uncounted-3 (session 10 beyond the list) and bad-uncounted-4 (no block)
+- F4 · accepted · D27 now states "<n>/<n> checked; 1 uncounted (session 1); snapshots <m>/<m> from session 1"
+- F5 · accepted · the pattern is anchored to the line end and D27 says the reason may hold parentheses
+- F6 · accepted · A72 retagged layer 12.4
+
+## Review 38 · 2026-09-29 · subagent · plan uncommitted · plan 193061 B · 24 items · files 0 · e3b0c44298fc · prompt 548afcc84096 · scope A73
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendment A73 (D25's drill summary and location match, D27's duplicate uncounted entries), checked against the uncommitted tree (rollback-drill.ps1 -SelfTest 13/13, preflight -SelfTest, -SessionsOf, ControlCases.cs, the manifest).
+
+F1 · advisory · 12.4 · D25's first clause still reads "action.location must be …" for AroundPlayer; only a later clause narrows it. Fix: state the exact text first.
+F2 · advisory · 12.4 · D25's selftest sentence omits pair-aroundplayer and pair-otherlocation. Fix: name both and add the other-location case to fails-when.
+F3 · advisory · 12.4 · 0.6.0 gives the same text for a malformed Point or missing type; the reason it is never an extra lives only in the script. Fix: one clause in D25.
+F4 · advisory · 12.4 · D27 does not quote the duplicate failure text, and lists bad-uncounted-4 before -3. Fix: quote it and order the fixtures.
+
+15/15 layers · 49/49 probes
+
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · D25 names 0.6.0's exact refusal text of an unknown location type in its first clause
+- F2 · accepted · D25 names pair-aroundplayer (pass) and pair-otherlocation (fail); fails-when includes another location refusal
+- F3 · accepted · D25 says 0.6.0 gives the same text for a malformed Point or a missing type and 0.7.0 disables those too
+- F4 · accepted · D27 quotes "session logs: <slug> lists session <n> uncounted more than once" and lists bad-uncounted-1..5 in order

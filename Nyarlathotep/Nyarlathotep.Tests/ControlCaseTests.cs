@@ -141,7 +141,9 @@ public class ControlCaseTests
     /// <summary>A step-3 pending control as the check sees one (D19 was pending until step 3 built its row).</summary>
     static readonly PendingControl D19 = new(ControlCases.EventSpawns, "D19", 3, "0.7.0");
     static readonly List<ControlRow> WithoutD19 = ControlCases.Table.Where(r => r.Key != D19.Key).ToList();
-    static readonly PendingControl D25 = ControlCases.Pending.Single(c => c.Key == "event-spawns D25");
+    /// <summary>A step-4 pending control as the check sees one (D25 was pending until step 4 built its row).</summary>
+    static readonly PendingControl D25 = new(ControlCases.EventSpawns, "D25", 4, "0.7.0");
+    static readonly List<ControlRow> WithoutD25 = ControlCases.Table.Where(r => r.Key != D25.Key).ToList();
     const string CleanAudit = "# Audit\n\n## Pre-audit\n\n### Step 1 · x\n\n## Post-audit\n\n### Step 1 · x\n";
 
     [Fact]
@@ -171,8 +173,8 @@ public class ControlCaseTests
     [Fact]
     public void ControlCases_fails_when_pending_at_release()
     {
-        Assert.Contains("pending event-spawns D25 is still pending at release 0.7.0", PendingProblems([D25], ControlCases.Table, AllPlanKeys(), _ => CleanAudit, "0.7.0"));
-        Assert.Empty(PendingProblems([D25], ControlCases.Table, AllPlanKeys(), _ => CleanAudit, "0.6.0"));
+        Assert.Contains("pending event-spawns D25 is still pending at release 0.7.0", PendingProblems([D25], WithoutD25, AllPlanKeys(), _ => CleanAudit, "0.7.0"));
+        Assert.Empty(PendingProblems([D25], WithoutD25, AllPlanKeys(), _ => CleanAudit, "0.6.0"));
     }
 
     [Theory]

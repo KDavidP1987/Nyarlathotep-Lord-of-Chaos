@@ -33,10 +33,7 @@ public static class ControlCases
     public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns];
 
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
-    public static readonly IReadOnlyList<PendingControl> Pending =
-    [
-        new(EventSpawns, "D25", 4, "0.7.0"),
-    ];
+    public static readonly IReadOnlyList<PendingControl> Pending = [];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
         new(control, name, "test", cls, bad.Select(x => $"{name}_fails_when_{x}").ToArray(), good.Select(x => $"{name}_passes_{x}").ToArray(),
@@ -317,6 +314,12 @@ public static class ControlCases
              "tools/preflight-fixtures/MutatingFloor/bad-parens"],
             ["tools/preflight-fixtures/AuthSuite/good", "tools/preflight-fixtures/GatewayOnly/good", "tools/preflight-fixtures/MutatingFloor/good"],
             ["tools/preflight-fixtures/AuthSuite/empty", "tools/preflight-fixtures/GatewayOnly/empty", "tools/preflight-fixtures/MutatingFloor/empty"]) with { Plan = EventSpawns },
+        C("D25", "RollbackDrill", "rollback-drill.ps1 -SelfTest (pairs and fixtures under tools/rollback-drill-fixtures)",
+            ["tools/rollback-drill-fixtures/bad", "tools/rollback-drill-fixtures/pair-other", "tools/rollback-drill-fixtures/pair-otherkey",
+             "tools/rollback-drill-fixtures/pair-otherlocation"],
+            ["tools/rollback-drill-fixtures/good", "tools/rollback-drill-fixtures/pair-empower", "tools/rollback-drill-fixtures/pair-modifiers",
+             "tools/rollback-drill-fixtures/pair-chance", "tools/rollback-drill-fixtures/pair-aroundplayer"],
+            ["tools/rollback-drill-fixtures/empty"]) with { Plan = EventSpawns },
         C("D26", "Release", "preflight › Test-CheckReleaseTags and Test-CheckVersion, then release-verify.ps1 -SelfTest",
             ["tools/preflight-fixtures/ReleaseTags/bad", "tools/preflight-fixtures/ReleaseTags/bad-2", "tools/preflight-fixtures/Version/bad",
              "selftest missing asset", "selftest differing hash"],
@@ -324,6 +327,9 @@ public static class ControlCases
             ["tools/preflight-fixtures/ReleaseTags/empty", "tools/preflight-fixtures/Version/empty", "selftest no release"]) with { Plan = EventSpawns },
         C("D27", "Records", "preflight -AuditOf, -SessionsOf and -Paths -DeclaredOf › AuditSteps, SessionLogs, Paths and DataInventory",
             ["tools/preflight-fixtures/AuditSteps/bad", "tools/preflight-fixtures/AuditSteps/bad-2", "tools/preflight-fixtures/SessionLogs/bad", "tools/preflight-fixtures/SessionLogs/bad-2",
+             "tools/preflight-fixtures/SessionLogs/bad-uncounted", "tools/preflight-fixtures/SessionLogs/bad-uncounted-2",
+             "tools/preflight-fixtures/SessionLogs/bad-uncounted-3", "tools/preflight-fixtures/SessionLogs/bad-uncounted-4",
+             "tools/preflight-fixtures/SessionLogs/bad-uncounted-5",
              "tools/preflight-fixtures/Paths/bad-undeclared", "tools/preflight-fixtures/Paths/bad-temp", "tools/preflight-fixtures/Paths/bad-tempvar",
              "tools/preflight-fixtures/Paths/bad-datatests", "tools/preflight-fixtures/Paths/bad-datatests-floor", "tools/preflight-fixtures/DataInventory/bad", "tools/preflight-fixtures/DataInventory/bad-2"],
             ["tools/preflight-fixtures/AuditSteps/good", "tools/preflight-fixtures/SessionLogs/good", "tools/preflight-fixtures/Paths/good",

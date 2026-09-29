@@ -108,6 +108,10 @@ Setup: `pwsh tools/dev-snapshot.ps1 -Save s9`.
 The log copies were deleted before a -LogCheck line was written; both logs were read by hand, no [Error].
 `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s9, 12 files)".
 
+### Session 10 · 2026-09-27
+Setup: `pwsh tools/dev-snapshot.ps1 -Save s10`.
+`pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s10, 12 files)".
+
 ## Open questions
 
 - D28's "still loading" reply cannot be seen in game (players connect only after startup); step 5, where the

@@ -10,6 +10,9 @@
     "docs/dod/regions.md",
     "docs/dod/event-spawns.md"
   ],
+  "sessionsUncounted": {
+    "event-spawns": [1]
+  },
   "snapshotSessions": {
     "event-library": 1,
     "walkable-spawns": 1,
@@ -697,6 +700,11 @@
         "bad-17": "snapshotSessions lists foundation from session 8; session 8 records the -Save s8 but no snapshot restored line (event-library A19)",
         "bad-18": "snapshotSessions lists foundation from session 8; session 8 restores a different label (s7) than it saved (event-library A19)",
         "bad-19": "snapshotSessions lists foundation from session 9, which the feature doc does not have (event-library A19)",
+        "bad-uncounted": "sessionsUncounted lists session 9, which also has a count line (event-spawns A72)",
+        "bad-uncounted-2": "sessionsUncounted lists session 9, whose uncounted line is missing (event-spawns A72)",
+        "bad-uncounted-3": "sessionsUncounted also lists session 10, beyond UncountedAllowed (event-spawns A72, Review 37 F3)",
+        "bad-uncounted-4": "sessionsUncounted lists session 9, which has no session block (event-spawns A72, Review 37 F3)",
+        "bad-uncounted-5": "sessionsUncounted lists session 9 twice (event-spawns A72, Codex step 4 F3)",
         "bad-probe": "probeRecords lists foundation session 8; its go/no-go line for singleton world reads no-go while the readings give go (walkable-spawns D10)",
         "bad-probe-2": "probeRecords lists foundation session 8; the water reading is missing and the go/no-go line still reads go (walkable-spawns D10)",
         "bad-probe-3": "probeRecords lists foundation session 8; the pond reading is missing and the go/no-go line reads incomplete, which is neither go nor a pass (walkable-spawns D1, D10)",
@@ -906,10 +914,10 @@
         "tools/rollback-drill.ps1",
         "-SelfTest"
       ],
-      "success": "drill selftest: 8/8",
+      "success": "drill selftest: 13/13",
       "cases": {
-        "bad": "fixtures bad (no \"marker sweep\"), pair-other (v0.3.0 disabled a definition for another reason) and the complete leftover snapshot must fail",
-        "good": "fixture good (a real N-1 boot log) and pair-empower (v0.3.0 disabled the Empower definition) must pass; a leftover without saved\\ or its manifest is not refused",
+        "bad": "fixtures bad (no \"marker sweep\"), pair-other (v0.3.0 disabled a definition for another reason), pair-otherkey (disabled for a key no release has, event-spawns D25), pair-otherlocation (disabled for another location reason) and the complete leftover snapshot must fail",
+        "good": "fixture good (a real N-1 boot log), pair-empower (v0.3.0 disabled the Empower definition), pair-modifiers, pair-chance and pair-aroundplayer (disabled for a 0.7.0 SpawnWaves key or location, event-spawns D25) must pass; a leftover without saved\\ or its manifest is not refused",
         "empty": "fixture empty (no log) must fail"
       }
     },

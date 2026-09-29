@@ -32,6 +32,14 @@ one under "## Post-audit"; every post-audit entry carries a "Codex verdict:" lin
 - feature doc read: docs/features/EVENT_SPAWNS.md (Session 1 parts A-C); plan D19, D23, D24, D32, D33, Build plan step 3; A68-A71 recorded before the code (Reviews 34 REVISE, 35 and 36 READY)
 - in-game baseline: Session 1 part C's boot of 0309313 plus A67 (logs checked, no [Error])
 
+### Step 4 · 2026-09-29 · 76638a3
+- git status: clean at 76638a3 (Session 2's evidence)
+- compile: 0 Warning(s), 0 Error(s); tests: 2173 passed
+- preflight: PREFLIGHT OK; `dod-index.mjs --check event-spawns` → 0 problems
+- dod status: D19, D23 and D24 pass (Session 2); open for step 4: D25, D26, D27, D31 and the evidence lines of D16, D20-D22, D33, D34
+- feature doc read: docs/features/EVENT_SPAWNS.md (Sessions 1 and 2); plan D25-D27, D31, Build plan step 4, Rollout › Rollback; -SessionsOf event-spawns → "1/2 checked (no log check line for session 1)" → A72
+- in-game baseline: Session 2's reinstall boot of 332b54f ("log check: 0 unhandled, 15 nyar lines, 0 orphan errors, 0 unity errors")
+
 ## Post-audit
 ### Step 1 · 2026-09-29 · c5e8f33
 - built: the SpawnWaves schema and validation (per-unit chance, modifiers level/levelDelta/maxHealth/power/moveSpeed/attackSpeed, loot, behaviour Hunt, AroundPlayer location, allowTerritory; D6), the `.nyar event set` keys and their refusals (D18, AdminFlows, DefinitionEditor, CommandArgs), the pure planners in Logic/Spawning.cs (unit chance rolls, WaveGate, WaveLifecycle, TerritoryMaps and HuntSeeds end paths, PlayerPick with the action scope, D8, D9, D16, D17, D29, D33), SpawnLedger and SpawnHealth entries (D11, D30), EventLines' new info lines (D32), and the preflight checks and fixtures: EntityWrites (D34), the gateway check's type-qualified System actor, alias and shadow rules, MutatingFloor (A55), -AuthSuite's command inventory, the Secrets sentinel, TCLI and index rules, the per-slug -DependencySuite with its floor (A52), -Paths dataTests; tools/data-inventory.json runtime rows; ControlCases rows
@@ -97,6 +105,18 @@ one under "## Post-audit"; every post-audit entry carries a "Codex verdict:" lin
 - Codex verdict: READY (round 2) — F1 advisory, D24's ControlCases row lacked bad-slowlast → fixed; F2 advisory, the usage markup scan reads source literals, not runtime strings (an escaped `<` would pass) → accepted as is: no usage string in Commands/*.cs uses an escape, a constant or a concatenation, so the literals are the runtime strings
 - privacy grep (7656119, kdpenland): 0 hits in the diff beyond the plan's D31 line that quotes the pattern
 - in-game: Session 2 (owner kick-off, then the load, the restart and the uninstall) follows this commit; its steps are in docs/features/EVENT_SPAWNS.md › Owner steps for Session 2
+- session 1 log check: uncounted (parts A-C: both logs of each part read by hand, no [Error], every warning kind listed in docs/features/EVENT_SPAWNS.md › Session 1; the copies were deleted before a -LogCheck line was written, A72)
 - session 2 log check: 0 unhandled, 327 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons
   - five boots: the owner's (to 13:26, the line above, run on the log copy before boot 1), restart boot 1 ("21 nyar lines"), boot 2 and es2-uninstall ("39 nyar lines"), without Nyarlathotep (13:38–13:47, 0 nyar lines, not checked), the reinstall boot ("15 nyar lines"); each 0 unhandled, 0 orphan errors, 0 unity errors; BepInEx warnings only the three known kinds plus the stop and purge summaries
-  - Session 1 (parts A-C) has no count line: its log copies were deleted after the checks recorded in its Test results, so its -LogCheck counts are not on record (Log note; D27 at step 4)
+
+### Step 4 · 2026-09-29 · (the release commit)
+- built: A72 (sessionsUncounted, bounded by $script:UncountedAllowed, duplicates refused; fixtures SessionLogs/bad-uncounted-1..5) and A73 (the drill's two-counter summary and 0.6.0's exact location text; pairs pair-modifiers, pair-chance, pair-otherkey, pair-aroundplayer, pair-otherlocation); D25 moved from Pending to a ControlCases row; the six surfaces at 0.7.0
+- reviews of the amendments: Review 37 (A72) READY, F1-F6 accepted; Review 38 (A73) READY, F1-F4 accepted
+- compile: 0 Warning(s), 0 Error(s); tests: 2173 passed (the README's night-hunt example also parsed by EventValidator in a throwaway test, deleted)
+- preflight: PREFLIGHT OK; -SelfTest → "selftest: 40/40 checks, 7/7 external selftests (3 fixtures each, 233 extra bad fixtures; …)"; rollback-drill -SelfTest → "drill selftest: 13/13"; -SessionsOf event-spawns → "session logs: event-spawns 1/1 checked; 1 uncounted (session 1); snapshots 2/2 from session 1"
+- /code-review (fresh subagent, read-only): no bugs; 9 low (drill help count, a lost comma, the quoted chat values and "unknown field action.units.chance" in the root changelog, Hunt's territory timing, maxDist ≤ range in the README table, three say-it-once repeats, AroundPlayer named as a location) → all applied
+- Codex verdict: REVISE (round 1) — F1 root README "never inside a castle" against allowTerritory → reworded; F2 the drill accepted any location refusal → 0.6.0's exact text, pairs pair-aroundplayer and pair-otherlocation; F3 duplicate sessionsUncounted entries → refused (bad-uncounted-5); F4 "slow tick" for a tick under 250 ms → "long tick"
+- Codex verdict: REVISE (round 2) — D25's stated summary and D27's missing duplicate clause → A73, Review 38
+- Codex verdict: REVISE (round 3) — two findings on the frozen ## Baseline copy of D25 and D27 → rejected (the Baseline is never edited; the live items carry A72 and A73)
+- Codex verdict: REVISE (round 4) — D32's screen-reader statement "missing": it existed but wrapped across two lines → reworded on one line
+- Codex verdict: READY (round 5) — no findings

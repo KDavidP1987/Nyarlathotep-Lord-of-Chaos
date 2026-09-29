@@ -18,8 +18,11 @@
       5. Installs N-1, boots again and checks its log: "Nyarlathotep initialized"; for each file N wrote its load
          line with no "SchemaVersion … is newer … read-only" warning (events.json: "events: reloaded: <v> valid, <x>
          disabled" over as many definitions as N read, where every definition N-1 disabled beyond N's logs "unknown
-         action type <T>", an action type added after N-1 (faction-empowerment D23), printed as "events.json: <N> '<a>
-         valid, <b> disabled', <N-1> '<c> valid, <d> disabled' (<d-b> newer action types)"; state.json: "(<n> listed in state.json)" with n ≥ 1; stats.json:
+         action type <T>", an action type added after N-1 (faction-empowerment D23), or a SpawnWaves key added after
+         N-1: "unknown field action.<key>" for modifiers, loot, behaviour or allowTerritory, "unknown field
+         action.units.chance", or "action.location must be …" for an AroundPlayer location (event-spawns D25), printed
+         as "events.json: <N> '<a> valid, <b> disabled', <N-1> '<c> valid, <d> disabled' (<t> newer action types, <k>
+         newer keys)"; state.json: "(<n> listed in state.json)" with n ≥ 1; stats.json:
          reported absent while no release writes it); and "marker sweep".
       After each boot it runs `preflight.ps1 -LogCheck` on that boot's logs and prints the "log check:" line.
       6. Always (finally): stops the server if the drill started one (a refusal never stops a running server), puts
@@ -36,7 +39,10 @@
     may be refused, a complete snapshot must be, with its restore steps (A11, A15); then the events.json readback over
     two log pairs from a real v0.4.0 → v0.3.0 drill (-LogsTo), tools/rollback-drill-fixtures/pair-empower (v0.3.0
     disabled the Empower definition: pass) and pair-other (the same pair with that definition disabled for another
-    reason: fail) → "drill selftest: 8/8".
+    reason: fail), and five built from pair-empower (event-spawns D25): pair-modifiers (disabled for "unknown field
+    action.modifiers": pass), pair-chance ("unknown field action.units.chance": pass) and pair-otherkey ("unknown field
+    action.spawnVisual", a key no release has: fail), pair-aroundplayer (0.6.0's refusal of an AroundPlayer location:
+    pass) and pair-otherlocation ("action.location Admin needs a Manual trigger": fail) → "drill selftest: 13/13".
 
     -LogsTo <dir> keeps the logs of N's drill-mark boot and N-1's boot there as N.txt and N-1.txt.
 #>
@@ -85,9 +91,14 @@ function Get-DisabledLines([string]$Text) {
         ForEach-Object { "$($_.Groups[1].Value)`t$($_.Groups[2].Value)" })
 }
 
-# N-1 must read the definitions N read (faction-empowerment D23). The only loss allowed is a definition whose action
-# type N-1 does not know: each definition N-1 disabled that N did not must say "unknown action type <T>". Returns
+# N-1 must read the definitions N read (faction-empowerment D23). The only loss allowed is a definition N-1 cannot read
+# because it is newer: each definition N-1 disabled that N did not must say "unknown action type <T>" or name a
+# SpawnWaves key of event-spawns (D25; $script:NewerKeyReasons). Returns
 # @{ Why = $null, or the failing stage; Line = the "events.json: ..." summary }.
+# The location alternative is 0.6.0's exact refusal of a location type it does not know (AroundPlayer); a malformed
+# Point gets the same text from 0.6.0 but is disabled by N too, so it is never an extra (Codex step 4 F2).
+$script:NewerKeyReasons = '^(unknown field action\.(modifiers|loot|behaviour|allowTerritory|units\.chance)|action\.location must be \{ "type": "Point", "x": number, "z": number, optional "y": number \} or \{ "type": "Admin" \})$'
+
 function Test-EventsReadback([string]$LogN, [string]$LogN1, [string]$TagN, [string]$TagN1) {
     $rx = 'events: reloaded: (\d+) valid, (\d+) disabled'
     $readN = [regex]::Matches("$LogN", $rx) | Select-Object -Last 1
@@ -95,14 +106,17 @@ function Test-EventsReadback([string]$LogN, [string]$LogN1, [string]$TagN, [stri
     if (-not $readN -or -not $readN1) { return @{ Why = 'no events.json load line in both logs'; Line = $null } }
     $a = [int]$readN.Groups[1].Value; $b = [int]$readN.Groups[2].Value
     $c = [int]$readN1.Groups[1].Value; $d = [int]$readN1.Groups[2].Value
-    $line = "events.json: $TagN '$a valid, $b disabled', $TagN1 '$c valid, $d disabled' ($($d - $b) newer action types)"
+    $line = "events.json: $TagN '$a valid, $b disabled', $TagN1 '$c valid, $d disabled'"
     if ($a + $b -ne $c + $d) { return @{ Why = "$TagN1 read $($c + $d) definitions, $TagN $($a + $b)"; Line = $line } }
     if ($d -lt $b) { return @{ Why = "$TagN1 disabled fewer definitions than $TagN"; Line = $line } }
     # Newly disabled means by definition id: one both releases disable, for whatever reasons, is not new (Codex F2).
     $idsN = @(Get-DisabledLines "$LogN" | ForEach-Object { ($_ -split "`t", 2)[0] })
     $extra = @(Get-DisabledLines "$LogN1" | Where-Object { $idsN -notcontains ($_ -split "`t", 2)[0] })
     if ($extra.Count -ne $d - $b) { return @{ Why = "$TagN1 logged $($extra.Count) newly disabled definitions for a difference of $($d - $b)"; Line = $line } }
-    $other = @($extra | Where-Object { ($_ -split "`t", 2)[1] -notmatch '^unknown action type \S+$' })
+    $types = @($extra | Where-Object { ($_ -split "`t", 2)[1] -match '^unknown action type \S+$' })
+    $keys = @($extra | Where-Object { ($_ -split "`t", 2)[1] -match $script:NewerKeyReasons })
+    $line += " ($($types.Count) newer action types, $($keys.Count) newer keys)"
+    $other = @($extra | Where-Object { $types -notcontains $_ -and $keys -notcontains $_ })
     if ($other) { return @{ Why = "$TagN1 disabled for another reason: $(($other | ForEach-Object { $_ -replace "`t", ': ' }) -join '; ')"; Line = $line } }
     return @{ Why = $null; Line = $line }
 }
@@ -143,7 +157,10 @@ if ($SelfTest) {
         if ($why -match 'SHA-256 AB' -and $why -match 'there was none' -and $why -notmatch 'partial') { $ok++ } else { Write-Host "  - complete snapshot: expected a refusal with its restore, got: $why" }
     } finally { Remove-Item -LiteralPath $scratch -Recurse -Force -ErrorAction SilentlyContinue }
     # Two real log pairs (D23): N-1 disabling one Empower definition passes; disabling one for another reason fails.
-    foreach ($pair in @(@{ Name = 'pair-empower'; Pass = $true }, @{ Name = 'pair-other'; Pass = $false })) {
+    $pairs = @(@{ Name = 'pair-empower'; Pass = $true }, @{ Name = 'pair-other'; Pass = $false },
+        @{ Name = 'pair-modifiers'; Pass = $true }, @{ Name = 'pair-chance'; Pass = $true }, @{ Name = 'pair-otherkey'; Pass = $false },
+        @{ Name = 'pair-aroundplayer'; Pass = $true }, @{ Name = 'pair-otherlocation'; Pass = $false })
+    foreach ($pair in $pairs) {
         $pn = Join-Path $fx "$($pair.Name)\N.txt"; $pn1 = Join-Path $fx "$($pair.Name)\N-1.txt"
         $r = if ((Test-Path -LiteralPath $pn) -and (Test-Path -LiteralPath $pn1)) {
             Test-EventsReadback (Get-Content -LiteralPath $pn -Raw) (Get-Content -LiteralPath $pn1 -Raw) 'N' 'N-1'
@@ -151,7 +168,7 @@ if ($SelfTest) {
         if ($r.Line -and ($null -eq $r.Why) -eq $pair.Pass) { $ok++ }
         else { Write-Host "  - $($pair.Name): expected $(if ($pair.Pass) { 'pass' } else { 'fail' }), got $(if ($r.Why) { "fail — $($r.Why)" } else { 'pass' })" }
     }
-    $total = $want.Count + 3 + 2
+    $total = $want.Count + 3 + $pairs.Count
     Write-Host "drill selftest: $ok/$total"
     exit ([int]($ok -ne $total))
 }

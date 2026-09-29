@@ -2,11 +2,11 @@
 
 ![Nyarlathotep, Lord of Chaos](https://raw.githubusercontent.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/main/docs/img/nyarlathotep-cover.jpg)
 
-A **server-side** event layer for V Rising. Admins stage NPC events the base game doesn't have: waves of
-enemies and empowered factions on a schedule, at nightfall or after a V Blood falls, with warnings and banners
-for players, and in later releases castle sieges, defended zones and boss-fight adds.
+A **server-side** event layer for V Rising. Admins stage NPC events the base game doesn't have: hunting waves
+and empowered factions on a schedule, at nightfall or after a V Blood falls, with warnings and banners for
+players, and in later releases castle sieges, defended zones and boss-fight adds.
 
-> **Public beta (0.6.0).** Every pillar and automatic announcement is off by default; no event runs until an
+> **Public beta (0.7.0).** Every pillar and automatic announcement is off by default; no event runs until an
 > admin turns on its pillar and enables it.
 
 ## What it does
@@ -15,21 +15,42 @@ Every feature is an *event*: a trigger starts an action for a set time, and ever
 removed after it ends. Features not yet released are marked *in development*.
 
 <details>
-<summary><b>Event spawns</b> · <i>0.2.0; modifiers in development</i></summary>
+<summary><b>Event spawns</b> · <i>0.2.0; strength, Hunt and AroundPlayer 0.7.0</i></summary>
 
-Waves of chosen units appear at a map point or around the admin who started them: up to 10 unit types, up to
-10 waves, a set interval between waves. An event starts on a schedule (days and times, server-local), when
-night falls or day breaks, when a V Blood dies (any, or named ones), or by command. Conditions can hold it back:
-minimum players online, a cooldown, a chance, a time window. After the event ends, its units stay for
-`GraceSeconds` (30 s by default), then are removed a few at a time; each also carries a timer, so none is left
-behind, even across a restart. Every event sits under one pillar switch.
+Waves of chosen units appear at a map point, around the admin, or around a random player: up to 10 unit types, up
+to 10 waves, a set interval between waves. An event starts on a schedule (days and times, server-local), when night
+falls or day breaks, when a V Blood dies (any, or named ones), or by command. Conditions can hold it back: minimum
+players online, a cooldown, a chance, a time window. After the event ends, its units stay for `GraceSeconds` (30 s
+by default), then are removed a few at a time; each also carries a timer, so none is left behind, even across a
+restart.
 
-Each unit is placed on walkable ground at the centre's level: a spawn point in water, against a cliff or a wall
-moves to the nearest walkable one (0.5.1), and one the game drops past a cliff or plateau edge is moved back beside
-the centre.
+Units land on walkable ground at the centre's level: a spawn point in water, against a cliff or a wall moves to the
+nearest walkable one. **No wave spawns in claimed castle territory**: a wave centred there is skipped, and a single
+spawn point there moves like one in water. Territory is read once per wave, so a castle placed during a wave counts
+from the next wave (Hunt, too, uses the territory read at the latest wave).
 
-*In development:* waves at chosen levels, health and damage, spawn areas by zone or around players, and loot
-only if the event allows it.
+| Action key | Values | Effect |
+|---|---|---|
+| `units[].chance` | 0.05–1.0 (default 1.0) | Each copy of the unit joins its wave with this chance |
+| `modifiers.level` / `levelDelta` | 1–120 / −5 to +5, not both | A fixed level, or the unit's own level shifted |
+| `modifiers.maxHealth` · `power` · `moveSpeed` · `attackSpeed` | ×0.5–3.0 | Multiplies the stat; `power` is physical and spell power |
+| `loot` | `true` / `false` (default) | Units drop loot only when `true` |
+| `behaviour` | `{ "type": "Hunt", "range": 10–60 }` | Every 5 s, each unit is set on the nearest players (up to 5) within range of the wave |
+| `location` | `{ "type": "AroundPlayer", "minDist": 10–60, "maxDist": 15–80 }` | Each wave centres this far from a random online player; with Hunt, maxDist ≤ range |
+| `allowTerritory` | `true` / `false` (default) | Lets waves spawn in castle territory |
+
+A player standing in castle territory or in PvP combat is never picked by `AroundPlayer` and never hunted. With a
+regional `action.scope`, only players inside it are picked. A warned wave can still be skipped (no eligible
+player, a castle centre, or every chance rolled no unit): the warning promises the time, not the units.
+
+```json
+{ "id": "night-hunt", "name": "Wolves on the prowl", "enabled": false, "pillar": "spawns",
+  "trigger": { "type": "GameTime", "phase": "night" }, "conditions": { "minPlayers": 1 }, "durationSeconds": 600,
+  "action": { "type": "SpawnWaves", "waves": 2, "intervalSeconds": 120, "radius": 8,
+    "location": { "type": "AroundPlayer", "minDist": 25, "maxDist": 40 },
+    "units": [ { "prefab": "CHAR_Forest_Wolf", "count": 4 }, { "prefab": "CHAR_Forest_AngryMoose", "count": 1, "chance": 0.3 } ],
+    "modifiers": { "levelDelta": 2, "maxHealth": 1.3 }, "behaviour": { "type": "Hunt", "range": 45 } } }
+```
 </details>
 
 <details>
@@ -91,7 +112,7 @@ disabled, ready to adjust and enable.
 | `undead-nightfall` | Undead ×1.25 physical and spell power, 20 min | Nightfall |
 | `militia-crackdown` | Militia and Church ×1.3 max health, 15 min | A Militia or Church V Blood dies (30 min cooldown) |
 | `bandit-ambush` | 3 waves of 4 thugs and 2 hunters | By command |
-| `undead-rising` | 2 waves of 5 armoured skeletons and 2 crossbowmen | By command |
+| `undead-rising` | 2 waves of 5 armoured skeletons and 2 crossbowmen, level +2, ×1.2 health | By command |
 
 You can build and change events without touching the file. Use `.nyar event new <id> <pillar>`,
 `.nyar event copy <id> <newId>` and `.nyar event delete <id>` (then `confirm`). `.nyar event set` also changes
@@ -191,15 +212,17 @@ Install and start the server once. Then, in game as an admin, no file edits need
 If anything goes wrong, `.nyar purge` then `.nyar purge confirm` ends everything. Announcements stay off until
 you turn on `[Announcements] WaveWarnings` and `EventBanners` in `BepInEx/config/kdpen.Nyarlathotep.cfg`.
 
-Scheduled and triggered events spawn at a `Point` location (world `x` and `z` in `events.json`); an `Admin`
-location spawns around the admin and works for manual starts only; `.nyar event set <id> location here` stores
-your position as a `Point`. Edit the file, then `.nyar event reload`. A
+Scheduled and triggered events spawn at a `Point` location (world `x` and `z` in `events.json`) or `AroundPlayer`;
+an `Admin` location spawns around the admin and works for manual starts only; `.nyar event set <id> location here`
+stores your position as a `Point`. Edit the file, then `.nyar event reload`. A
 bad entry is disabled with a log line naming the event and the reason; a file that doesn't parse leaves the last good
 set running.
 
 ## Commands
 
-`.nyar` lists the commands you are allowed to run. Commands marked *(admin)* need server admin rights.
+`.nyar` lists the commands you are allowed to run. Commands marked *(admin)* need server admin rights. Replies
+are plain text and never rely on colour. Chat is typed and read with the keyboard;
+V Rising offers no screen reader for it, a limitation of the game.
 
 <details>
 <summary><b>For everyone</b></summary>
@@ -222,6 +245,7 @@ set running.
 | `.nyar event start <id>` / `stop <id>` | Start now / end early |
 | `.nyar event enable <id>` / `disable <id>` | Switch an event on or off (saved to `events.json`) |
 | `.nyar event set <id> <field> <value>` | Change `name`, `durationSeconds`, `conditions.minPlayers`, `conditions.cooldownMinutes`, `conditions.chancePercent`, `trigger.type`, `trigger.days`, `trigger.times`, `trigger.phase`, `trigger.bosses`, `action.factions`, `action.units` (`CHAR_<name>[:<count>]`), `action.waves`, `action.intervalSeconds`, `action.radius`, `trigger.scope`, `action.scope` (`Global` or `Name,Name`) or `location here`; on an empowerment, `action.stats.<stat>` (1.0-3.0) |
+| `.nyar event set <id> <field> <value>` (0.7.0) | On a wave event: `action.modifiers.<level\|levelDelta\|maxHealth\|power\|moveSpeed\|attackSpeed>` (a value or `none`), `action.loot`, `action.allowTerritory` (`true\|false`), `action.behaviour` (`none` or `"hunt <range>"`), `action.units.<n>.chance`, `location "aroundplayer <min> <max>"` |
 | `.nyar event reload` | Re-read `events.json` |
 | `.nyar region list` / `region here` | The map's regions with their event counts / the region you stand in (0.6.0) |
 | `.nyar spawn <unit> [count] [level\|+n\|-n] [hp] [power]` | One-off test spawn beside you, removed after `ManualSpawnLifetimeSeconds` |
@@ -258,11 +282,15 @@ empowerment buff, and holds off new events for `PurgeCooldownSeconds` (60 s). To
 `BepInEx/config/kdpen.Nyarlathotep.cfg`. Event definitions live in `BepInEx/config/Nyarlathotep/events.json`.
 Out-of-range values are clamped at load, with a log line.
 
+**Scale:** at the default caps, 150 hunting units cost the server under 5 ms per tick on average (measured on the
+dev server). Raised caps (151–500 tracked) are best effort: a tick of 250 ms or more logs a warning naming the
+slowest part, at most once a minute.
+
 | Section | Key | Default | Effect |
 |---|---|---|---|
 | General | Enabled | `true` | Master switch |
 | Pillars | FactionEmpowerment · SiegeWaves · DefendedZones · BossReinforcements · EventSpawns | `false` | One switch per pillar; an event runs only while its pillar is on |
-| Limits | MaxTrackedUnits | `150` | Most mod units alive at once (1-500) |
+| Limits | MaxTrackedUnits | `150` | Most mod units alive at once (1-500; see Scale above) |
 | Limits | MaxUnitsPerWave | `20` | Most units in one wave (1-50) |
 | Limits | MaxConcurrentEvents | `3` | Most events running at once (1-10) |
 | Limits | MaxSpawnsPerTick · MaxDespawnsPerTick | `10` · `5` | Spawns and removals per server tick (1-20 each), so big waves never land in one frame |
@@ -286,8 +314,9 @@ Faction empowerment above.
 
 Stop the server and delete `Nyarlathotep.dll`. The mod's units carry a timer and expire on their own, and so
 do empowerment buffs. To downgrade to 0.3.0, run `.nyar purge confirm` first: 0.3.0 does not remove the buffs,
-which otherwise stay until their event's time runs out. 0.5.x disables a definition carrying `scope` (unknown
-key) or an announcement using `{region}` (unknown placeholder) until you remove them. To
+which otherwise stay until their event's time runs out. An older release disables an event using a key it does not
+know until you remove the key: 0.6.0 the 0.7.0 wave keys (`chance`, `modifiers`, `loot`, `behaviour`,
+`allowTerritory`) and the `AroundPlayer` location, 0.5.x `scope` and `{region}`. To
 remove its data too, delete `BepInEx/config/kdpen.Nyarlathotep.cfg` and the `BepInEx/config/Nyarlathotep/`
 folder.
 
