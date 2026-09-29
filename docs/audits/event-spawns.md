@@ -1,7 +1,15 @@
 # Audit — event-spawns
 
 Build plan steps 1–4 of docs/dod/event-spawns.md. Each step has one "### Step <n>" entry under "## Pre-audit" and
-one under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line. Session log checks are lines
+one under "### Step 2 · 2026-09-29 · 9580152
+- git status: clean at 9580152 (step 1 code c5e8f33 and its post-audit)
+- compile: 0 Warning(s), 0 Error(s); tests: 2133 passed
+- preflight: PREFLIGHT OK
+- dod status: event-spawns 8/24 verified (D6, D8, D9, D11, D18, D29, D30, D32); review subagent after Review 28; amendments A1-A57
+- feature doc read: docs/features/EVENT_SPAWNS.md (Status: designed, not started; Spike S2 go); plan D10, D11, D13, D16, D17, D21, D22, D31, D32, Build plan step 2
+- in-game baseline: boot of the deployed 0.6.0 DLL, no player; -LogCheck → "log check: 0 unhandled, 9 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; its warnings are Il2CppInterop's substitute signature, Beelzebub's two TUNE lines, and the owner's example-empowerment event ("pillar empowerment takes an Empower action"), all seen in earlier boots
+
+## Post-audit"; every post-audit entry carries a "Codex verdict:" line. Session log checks are lines
 "- session <n> log check: …". Rollback base: v0.6.0.
 
 ## Pre-audit
