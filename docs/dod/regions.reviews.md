@@ -137,3 +137,30 @@ VERDICT: REVISE
 - F2 · accepted · A19: a Logic/AdminLines.cs helper chooses the log line; EventRuntime calls it (D4)
 - F3 · accepted · A20: a null reader gives zero positions and the start is refused (D4)
 - F4 · accepted · A18: the gate runs after the Admin-location checks and before catalog.TryStart (D4)
+
+## Review 5 · 2026-09-28 · subagent · plan commit 68a158e · plan 79039 B · 16 items · files 0 · e3b0c44298fc · prompt 619618781210 · scope A16,A17,A18,A19,A20
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A16-A20 (design §9 D26); the prompt held no Steam ID. It confirmed A16 against the 1.1.12 reference assembly (None, Other and ten map regions) and A17-A20 against Dependency.cs, EventEngine.Start, AdminOps and TriggerBus.
+
+F1 · advisory · 4.4: the gating-evidence row for 4.4 filters only EmpowerEligibilityTests and SpawningTests (D5, D6); A18 moves the trigger-scope part of "no actor bypasses the scope" into EngineTests ScopeGate and TriggerActivationTests Region (D4), so removing A18's gate would not fail the 4.4 command. Fix: add both to the filter and D4 to the Item column.
+
+F2 · advisory · 12.4: the Failing-cases row for TriggerActivationTests Region (D4) lists only the kill-position cases, not A18's admin start, A20's null reader or A19's helper mapping. Fix: extend the row.
+
+F3 · advisory · 12.2: A19's helper keyed on the no_player_in_region reason alone would log an admin's Manual refusal as "event <id>: skipped, no player in <regions>". Fix: the helper takes the actor and uses the skip line for System starts only.
+
+F4 · advisory · 3.1: A16 makes "Other" an unknown name, but D3's fails-when names only "None". Fix: add "Other" to D3's refused names and test case.
+
+F5 · advisory · 12.2: A16 adds "<k> untagged" to the boot line, but D2's format does not say where, nor whether p counts every polygon read or only the indexed ones. Fix: state the exact shape, p the indexed count, and spell it in the good-regions fixture.
+
+F6 · advisory · 4.4: a start carrying a kill position skips the gate and relies on TriggerRouter having checked the region. Fix (optional, defence in depth): in Start, check RegionOf(kill) against the trigger scope instead of skipping.
+
+EARLIER: all resolved
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · A21: the 4.4 command runs EngineTests and TriggerActivationTests, with D4
+- F2 · accepted · A22: the D4 Failing-cases row lists the A18, A20, A21 and A23 cases
+- F3 · accepted · A23: the helper takes the actor; the skip line is for System starts only (D4)
+- F4 · accepted · A25: "Other" is named among D3's refused names and in its test
+- F5 · accepted · A24: the boot line's exact shape, p the indexed count (D2)
+- F6 · accepted · A21: Start checks RegionOf(kill) against the trigger scope (D4)
