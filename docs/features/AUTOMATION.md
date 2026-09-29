@@ -1,8 +1,8 @@
 # Automation — interval, player-action triggers and fan-out
 
 **Status:** in progress (docs/dod/automation.md, audit docs/audits/automation.md). Step 1 (schema, validation, the pure
-planners, chat fields, api 6) is built; step 2 wires them into the services and Session 1 tests them in game; step 3
-adds the templates and Session 2 (fan-out, tick budget, end paths); step 4 is the 0.8.0 release.
+planners, chat fields, api 6) is built. Step 2 wires them into the services; Session 1 tests them in game. Step 3 adds
+the templates and Session 2 (fan-out, tick budget, end paths). Step 4 is the 0.8.0 release.
 
 ## Goal
 
@@ -22,8 +22,15 @@ where events come without anyone typing a command:
   draws and keeps the next starts; Logic/PlayerTriggers.cs holds the region entries, the kill rule and windows, the
   refusal throttle and the Debug-only phantom players; Logic/Spawning.cs `PlayerPick.ChooseMany` and
   `WaveGate.DecideGroups` pick and size the groups.
-- **Services (step 2):** TriggerBus polls the interval clock, scans players every 5 s and reads each death;
-  WaveAction spawns the groups.
+- **Services (step 2):**
+  - TriggerBus polls the interval clock every tick. The tick phase "player triggers" scans the players every 5 s.
+  - Patches/DeathEventPatch reads whether the victim is ours, calls SpawnTracker.Died, then TriggerBus.Died in its own
+    try/catch.
+  - Logic/PlayerTriggers.cs `PlayerTriggerFeed` guards the scan and the kill read. A failure logs once per streak and
+    holds a health entry ("triggers: player scan failing", "triggers: kill read failing") until a read succeeds.
+  - A player-action start is focused on its player. Its refusal line is throttled to one per definition per minute.
+  - WaveAction picks with `ChooseMany` (the focus first), sizes with `DecideGroups`, gives each group its own Hunt tag,
+    and reports each wave once through `EventEngine.WaveDecided`. Phantom players exist only in a Debug build.
 - **Privacy:** no line names or locates a player. The per-player rows (regions, cooldowns, kill counters, the start's
   focus) live in memory only; state.json gains only `NextInterval`.
 - **Wire:** api 6 adds the trigger values `interval`, `regionentered` and `factionkills`; a fanned-out wave sends one

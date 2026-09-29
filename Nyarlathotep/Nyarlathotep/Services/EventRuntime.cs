@@ -91,11 +91,14 @@ internal static class EventRuntime
 
     /// <summary>Starts event <paramref name="id"/>. An admin's start (`.nyar event start`) meets the controls; an
     /// automatic one (System) also meets the definition's conditions, and one refused by a switched-off master or
-    /// pillar switch logs nothing (Business rules 6). Logs "event &lt;id&gt; started by &lt;trigger&gt;" (D29).</summary>
+    /// pillar switch logs nothing (Business rules 6). Logs "event &lt;id&gt; started by &lt;trigger&gt;" (D29). A
+    /// player-action start (automation D13, D14) passes its <paramref name="focus"/> player and <paramref name="quiet"/>,
+    /// which takes each refusal line in place of the log, so PlayerTriggerGate throttles it.</summary>
     [Mutating]
     internal static Outcome StartEvent(string id, string trigger, Actor actor, (float X, float Y, float Z)? origin,
-        (float X, float Z)? kill = null)
+        (float X, float Z)? kill = null, string focus = null, Action<string> quiet = null)
     {
+        Action<string> refusal = quiet ?? (line => Core.Log.LogInfo($"[nyar] {line}"));
         var now = DateTime.UtcNow;
         var controls = Controls();
         var def = EventStore.Catalog.Current.Find(id);
@@ -108,16 +111,16 @@ internal static class EventRuntime
                     TimeOnly.FromDateTime(DateTime.Now), now, Engine.LastStartUtc(id), _random.Next(1, 101)));
                 if (blocked is not null)
                 {
-                    Core.Log.LogInfo($"[nyar] event {id} not started by {trigger}: {blocked}");
+                    refusal($"event {id} not started by {trigger}: {blocked}");
                     return AdminLines.ConditionBlocked(blocked);
                 }
             }
         }
 
-        var refused = Engine.Start(id, trigger, now, controls, origin, kill);
+        var refused = Engine.Start(id, trigger, now, controls, origin, kill, focus);
         if (refused is not null)
         {
-            Core.Log.LogInfo($"[nyar] {AdminLines.StartRefusedLog(id, trigger, refused, actor == Actor.System, def?.Trigger.Scope ?? Scope.Global)}");
+            refusal(AdminLines.StartRefusedLog(id, trigger, refused, actor == Actor.System, def?.Trigger.Scope ?? Scope.Global));
             // The admin is told how long the purge cooldown still runs (A7, D30).
             return AdminLines.StartRefused(refused, actor == Actor.Admin, Persistence.State.Document.PurgeUntilUtc, now);
         }

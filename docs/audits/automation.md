@@ -15,6 +15,15 @@ under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line. S
 - feature doc read: docs/features/AUTOMATION.md is created by this step (the plan's Build plan step 1); docs/features/EVENT_SPAWNS.md read for the AroundPlayer pick and the wave gate the fan-out extends
 - in-game baseline: not needed (step 1 has no in-game part; Session 1 is step 2)
 
+### Step 2 · 2026-09-29 · def4d20
+- git status: clean at def4d20 (step 1 built, reviewed and post-audited)
+- compile: `dotnet build Nyarlathotep/Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__` → 0 Warning(s), 0 Error(s)
+- tests: 2388 passed
+- preflight: PREFLIGHT OK
+- dod status: automation 16/31 checked; `dod-index.mjs --check automation` → problems 0, warnings 0
+- feature doc read: docs/features/AUTOMATION.md Status (step 1 built) and Open questions; step 2 carries round 2 F6 (WaveAction reports each decided wave once through EventEngine.WaveDecided)
+- in-game baseline: the deployed 0.7.0 DLL (0.7.0+3aa2215) booted on the dev server: "triggers: all hooks available", "Nyarlathotep initialized … (attempt #1)"; 4 [Warning] lines, none new: ours is the shipped example-empowerment reason line, the others Il2CppInterop's substitute notice and two Beelzebub TUNE lines; 0 [Error]; -LogCheck PREFLIGHT OK; server stopped
+
 ## Post-audit
 ### Step 1 · 2026-09-29 · 3b8613a
 - built: the schema and validation of the Interval, RegionEntered and FactionKills triggers and action.fanOut (D1, D4, D8, D10), IntervalClock (D2), Logic/PlayerTriggers.cs (RegionEntries, KillRule, KillWindows, PlayerTriggerGate, Phantoms; D9, D11, D14, D29), PlayerPick.ChooseMany and WaveGate.DecideGroups (D5, D6, D13), state.json NextInterval (D31), the chat fields and `event info` lines (D16, D27), api 6 with the contract and design §6 (D17), ControlCases rows and pending controls (D30), the registries, this record and docs/features/AUTOMATION.md

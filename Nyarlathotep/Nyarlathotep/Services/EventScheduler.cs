@@ -9,7 +9,8 @@ namespace Nyarlathotep.Services;
 
 /// <summary>
 /// The one-second tick (foundation D24, D25; Design › Startup: last in Core.TryInitialize, replacing step 4's temporary
-/// tick). Each tick runs its phases in order: the spawn and despawn queues, the triggers, the events, the Hunt seeds, the
+/// tick). Each tick runs its phases in order: the spawn and despawn queues, the triggers, the player triggers (every
+/// 5 s, automation D9), the events, the Hunt seeds, the
 /// announcement queue, the push lines, the health line, then the state.json flush. Every phase has its own try/catch, logged once per failure streak, so a fault in one never stops the others,
 /// and an event's own fault is counted inside EventRuntime (D25). Nothing ticks before Core.IsReady (D28). With
 /// Debug.TimingLog the tick's average and maximum are logged once a minute (D24); a tick of 250 ms or more logs one
@@ -52,6 +53,7 @@ internal static class EventScheduler
         WalkCheck.Budget.Reset();                                         // walkable-spawns D3, A3
         Phase("spawn queues", SpawnTracker.Tick);
         Phase("triggers", () => TriggerBus.Poll(now));
+        Phase("player triggers", () => TriggerBus.ScanPlayers(now));        // automation D9
         Phase("events", () => EventRuntime.Tick(now));
         Phase("hunt", () => HuntAction.Tick(now));                         // event-spawns D13, every 5 s; its own phase (A70)
         Phase("announcements", () => Announcer.Tick(now));

@@ -1140,6 +1140,42 @@
           ]
         }
       ]
+    },
+    "automation": {
+      "categories": [
+        "player-scan",
+        "kill-read",
+        "state-write",
+        "release-tools"
+      ],
+      "rows": [
+        {
+          "name": "player-scan",
+          "kind": "tests",
+          "class": "AutomationDependencyFailureTests",
+          "control": "PlayerScan"
+        },
+        {
+          "name": "kill-read",
+          "kind": "tests",
+          "class": "AutomationDependencyFailureTests",
+          "control": "KillRead"
+        },
+        {
+          "name": "state-write",
+          "kind": "tests",
+          "class": "AutomationDependencyFailureTests",
+          "control": "StateWrite"
+        },
+        {
+          "name": "release-tools",
+          "kind": "selftests",
+          "selftests": [
+            "release-verify",
+            "repo-rollback-drill"
+          ]
+        }
+      ]
     }
   },
   "controlSuites": {

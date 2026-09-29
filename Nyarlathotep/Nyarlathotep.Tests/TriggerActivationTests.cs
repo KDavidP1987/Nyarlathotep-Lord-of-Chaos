@@ -22,7 +22,7 @@ public partial class TriggerActivationTests
             set =>
             {
                 var nexts = set.All.ToDictionary(d => d.Id, _ => Now.AddSeconds(-1));
-                return IntervalClock.Tick(set, nexts, _ => false, Now, new ScriptedRandom()).Due.Select(d => d.Id);
+                return IntervalClock.PollAll(set, nexts, _ => false, Now, new ScriptedRandom()).Due.Select(d => d.Id);
             }),
         // a player walks from FarbaneWoods (x < 0) into CursedForest (x >= 0)
         [TriggerType.RegionEntered] = ("{ \"type\": \"RegionEntered\", \"scope\": [\"CursedForest\"] }",

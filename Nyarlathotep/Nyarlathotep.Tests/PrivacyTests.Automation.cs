@@ -43,6 +43,21 @@ public partial class PrivacyTests
             lines.AddRange(ApiLines.Definitions(new DefinitionSet([d]), new HashSet<string> { d.Id }));
             lines.Add(new PlayerTriggerGate().Refused(d.Id, $"event {d.Id} not started by {d.Trigger.Type}: cooldown 30 min", Now)!);
         }
+        // the feed's own lines (step 2): the verbose scan and counter lines, and each failure streak's first line
+        var set = new DefinitionSet(AutomationPlanted().ToList());
+        Func<float, float, string> regionOf = (x, _) => x < 0 ? "Elsewhere" : "FarbaneWoods";
+        var feed = new PlayerTriggerFeed();
+        var fired = 0;
+        feed.Scan(() => [new ScanRow(Focus, -EnteredAt.X, EnteredAt.Z, true)], regionOf, set, _ => false, Now, lines.Add, _ => fired++, lines.Add);
+        feed.Scan(() => [new ScanRow(Focus, EnteredAt.X, EnteredAt.Z, true)], regionOf, set, _ => false, Now.AddSeconds(5), lines.Add, _ => fired++, lines.Add);
+        feed.Scan(() => throw new InvalidOperationException("user query gone"), regionOf, set, _ => false, Now.AddSeconds(10), lines.Add, _ => fired++, lines.Add);
+        for (var i = 0; i < 20; i++)
+            feed.Died(_ => new KillFacts(Focus, null, false, false, false, "Faction_Bandits", EnteredAt.X, EnteredAt.Z), set, regionOf, _ => true,
+                _ => false, Now.AddSeconds(i), lines.Add, _ => fired++, lines.Add);
+        feed.Died(_ => throw new InvalidOperationException("owner unreadable"), set, regionOf, _ => true, _ => false, Now, lines.Add, _ => fired++, lines.Add);
+        Assert.Equal(2, fired);                                                // the entry and the twentieth kill
+        Assert.Contains("player triggers: scan failed: user query gone", lines);
+        Assert.Contains("faction kills: kills reached 20", lines);
         lines.Add(WaveLines.AroundPlayers(3));
         lines.Add(WaveLines.NoFreeSlot(1, "tick"));
         lines.Add(Phantoms.PlacedLine(4, 4));

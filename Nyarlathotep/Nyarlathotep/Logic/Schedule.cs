@@ -120,7 +120,7 @@ public static class IntervalClock
     /// <summary>One scheduler tick over every Interval definition: ids that left the startable Interval set are pruned,
     /// each definition is polled, and <paramref name="nexts"/> is updated in place. Returns the definitions to start and
     /// whether the nexts changed (state.json is then dirty).</summary>
-    public static (IReadOnlyList<EventDefinition> Due, bool Changed) Tick(DefinitionSet set, IDictionary<string, DateTime> nexts,
+    public static (IReadOnlyList<EventDefinition> Due, bool Changed) PollAll(DefinitionSet set, IDictionary<string, DateTime> nexts,
         Func<string, bool> isActive, DateTime utcNow, IRandom rng)
     {
         var due = new List<EventDefinition>();

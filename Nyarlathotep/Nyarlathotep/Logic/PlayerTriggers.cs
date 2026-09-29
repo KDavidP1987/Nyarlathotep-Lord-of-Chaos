@@ -289,3 +289,123 @@ public static class Phantoms
     public static string GroupLine(string eventId, int wave, int group, double metres) =>
         FormattableString.Invariant($"fanout {eventId} wave {wave}: phantom group {group} {metres:0} m from its phantom");
 }
+
+/// <summary>A player-action start to attempt (automation D13, D14): the definition, the trigger's name for the log, the
+/// triggering player's platform id (the focus, memory only) and the entry or kill position the start's scope check reads
+/// (null for a Global kill, whose position is not read).</summary>
+public sealed record PlayerFire(EventDefinition Definition, string Trigger, string PlayerId, (float X, float Z)? At);
+
+/// <summary>The player-action triggers as Services/TriggerBus drives them (automation D9, D11, D14, D15). The scan and the
+/// kill read each run inside their own guard: a throw skips that scan or that death, logs once per failure streak and
+/// holds a health entry until a read succeeds. Garbage is refused where read: a position PlayerPosition.Usable refuses
+/// gives no region, and a faction that is no Faction_ name counts for no definition. Every attempt goes to
+/// <c>start</c> at once, so a second trigger in the same scan finds the event active and is dropped (Design › States 7.2).</summary>
+public sealed class PlayerTriggerFeed
+{
+    public const string ScanFailing = "triggers: player scan failing";
+    public const string KillFailing = "triggers: kill read failing";
+
+    readonly FailureStreak _scanFaults = new();
+    readonly FailureStreak _killFaults = new();
+
+    public RegionEntries Entries { get; } = new();
+    public KillWindows Kills { get; } = new();
+    public PlayerTriggerGate Gate { get; } = new();
+
+    /// <summary>The health entries (D15), shown in the health line, `.nyar status` and the admin login notice.</summary>
+    public IReadOnlyList<string> Health =>
+        (_scanFaults.Count > 0 ? [ScanFailing] : Array.Empty<string>()).Concat(_killFaults.Count > 0 ? [KillFailing] : []).ToList();
+
+    /// <summary>One 5 s scan. Prunes the kill counters against the startable FactionKills set; then, with a startable
+    /// RegionEntered definition and the regions available, reads the players once and turns each entry that passes the
+    /// cooldown and the gate into a start attempt, whose cooldown starts then. With none, no player is read.</summary>
+    public void Scan(Func<IReadOnlyList<ScanRow>> read, Func<float, float, string>? regionOf, DefinitionSet set,
+        Func<string, bool> isActive, DateTime utcNow, Action<string> log, Action<PlayerFire> start, Action<string>? verbose = null)
+    {
+        Kills.Prune(TriggerRouter.Candidates(set, TriggerType.FactionKills), utcNow);
+        var definitions = TriggerRouter.Candidates(set, TriggerType.RegionEntered).ToList();
+        if (definitions.Count == 0 || regionOf is null)
+        {
+            _scanFaults.Ok();                                                   // nothing is scanned, so nothing is failing
+            return;
+        }
+        IReadOnlyList<RegionEntry> entries;
+        int players;
+        try
+        {
+            var rows = read();
+            players = rows.Count;
+            entries = Entries.Scan(rows, regionOf, definitions, utcNow);
+        }
+        catch (Exception ex)
+        {
+            if (_scanFaults.Fail()) log($"player triggers: scan failed: {ex.Message}");
+            return;
+        }
+        _scanFaults.Ok();
+        verbose?.Invoke($"player triggers: {players} players, {entries.Count} entries");
+        foreach (var e in entries)
+        {
+            if (Gate.Admit(e.Definition.Id, e.PlayerId, isActive(e.Definition.Id), utcNow) != GateStep.Attempt) continue;
+            Entries.Attempted(e.Definition, e.PlayerId, utcNow);
+            start(new PlayerFire(e.Definition, nameof(TriggerType.RegionEntered), e.PlayerId, (e.X, e.Z)));
+        }
+    }
+
+    /// <summary>True when a death is worth reading: the DeathEvent hook is available and a FactionKills definition is
+    /// startable. Otherwise the kill rule returns at once (D11, Performance).</summary>
+    public static bool WantsKills(DefinitionSet set, Func<TriggerType, bool> allows) =>
+        allows(TriggerType.FactionKills) && TriggerRouter.Candidates(set, TriggerType.FactionKills).Any();
+
+    /// <summary>One death. <paramref name="read"/> gets whether the position is needed (a scoped FactionKills definition is
+    /// startable) and returns the kill; a throwing read or region lookup skips this death. Each definition the kill counts
+    /// for adds it to its counter; a counter that reaches its kills is emptied and, past the gate, becomes a start attempt
+    /// focused on the killing player.</summary>
+    public void Died(Func<bool, KillFacts> read, DefinitionSet set, Func<float, float, string>? regionOf, Func<TriggerType, bool> allows,
+        Func<string, bool> isActive, DateTime utcNow, Action<string> log, Action<PlayerFire> start, Action<string>? verbose = null)
+    {
+        if (!WantsKills(set, allows)) return;
+        var definitions = TriggerRouter.Candidates(set, TriggerType.FactionKills).ToList();
+        KillFacts kill;
+        List<EventDefinition> counted;
+        try
+        {
+            kill = Clean(read(definitions.Any(d => !d.Trigger.Scope.IsGlobal)));
+            counted = definitions.Where(d => KillRule.Counts(kill, d, regionOf)).ToList();
+        }
+        catch (Exception ex)
+        {
+            if (_killFaults.Fail()) log($"faction kills: read failed: {ex.Message}");
+            return;
+        }
+        _killFaults.Ok();
+        if (kill.Player is not { } player) return;
+        foreach (var d in counted)
+        {
+            if (!Kills.Add(d, KillRule.CounterKey(d, player), utcNow)) continue;
+            verbose?.Invoke($"faction kills: {d.Id} reached {d.Trigger.Kills}");
+            if (Gate.Admit(d.Id, player, isActive(d.Id), utcNow) != GateStep.Attempt) continue;
+            start(new PlayerFire(d, nameof(TriggerType.FactionKills), player,
+                kill.X is { } x && kill.Z is { } z ? (x, z) : null));
+        }
+    }
+
+    /// <summary>Garbage refused where read (D15): an unusable position becomes unknown, a faction that is no Faction_ name
+    /// (an unnamed guid reads as "PrefabGuid(n)") becomes none.</summary>
+    static KillFacts Clean(KillFacts kill)
+    {
+        if (kill.X is not { } x || kill.Z is not { } z || !PlayerPosition.Usable(x, z)) kill = kill with { X = null, Z = null };
+        if (kill.VictimFaction is { } f && !f.StartsWith("Faction_", StringComparison.Ordinal)) kill = kill with { VictimFaction = null };
+        return kill;
+    }
+
+    /// <summary>A restart: nothing is kept.</summary>
+    public void Clear()
+    {
+        Entries.Clear();
+        Kills.Clear();
+        Gate.Clear();
+        _scanFaults.Ok();
+        _killFaults.Ok();
+    }
+}

@@ -46,6 +46,20 @@ internal static class SpawnTracker
 
     static long KeyOf(Entity e) => ((long)e.Index << 32) | (uint)e.Version;
 
+    /// <summary>True for one of our units, read before <see cref="Died"/> forgets it (automation D11): in the ledger, or
+    /// carrying our unit marker (never a carrier, Markers.IsOurs). Read-only; throws on a failed read, which the kill
+    /// feed counts as a kill read failure.</summary>
+    internal static bool IsOurs(Entity unit)
+    {
+        if (IsTracked(KeyOf(unit))) return true;
+        if (!unit.Exists() || !Core.EntityManager.HasBuffer<BuffBuffer>(unit)) return false;
+        var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(unit);
+        for (var i = 0; i < buffs.Length; i++)
+            if (buffs[i].PrefabGuid == MarkerBuff && buffs[i].Entity.TryGetComponent<SpellLevel>(out var level) && Markers.IsOurs(level.Level))
+                return true;
+        return false;
+    }
+
     /// <summary>Third in Core.TryInitialize, after EventStore: the ledger with the loaded limits.</summary>
     internal static void Initialize()
     {

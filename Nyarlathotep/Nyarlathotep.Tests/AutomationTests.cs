@@ -88,11 +88,11 @@ public class AutomationTests
     {
         var set = Set(Json.Event("due", Interval), Json.Event("wait", Interval), Json.Event("running", Interval));
         var nexts = new Dictionary<string, DateTime> { ["due"] = T0.AddSeconds(-1), ["wait"] = T0.AddMinutes(2), ["running"] = T0.AddMinutes(2), ["removed"] = T0 };
-        var (due, changed) = IntervalClock.Tick(set, nexts, id => id == "running", T0, new ScriptedRandom());
+        var (due, changed) = IntervalClock.PollAll(set, nexts, id => id == "running", T0, new ScriptedRandom());
         Assert.Equal(["due"], due.Select(d => d.Id));
         Assert.True(changed);
         Assert.Equal(["wait"], nexts.Keys);                              // fired, active and removed ids hold no next
-        var (again, unchanged) = IntervalClock.Tick(set, nexts, id => id is "running" or "due", T0, new ScriptedRandom());
+        var (again, unchanged) = IntervalClock.PollAll(set, nexts, id => id is "running" or "due", T0, new ScriptedRandom());
         Assert.Empty(again);
         Assert.False(unchanged);
     }
@@ -101,7 +101,7 @@ public class AutomationTests
     public void IntervalClock_empty_no_definition()
     {
         var nexts = new Dictionary<string, DateTime>();
-        var (due, changed) = IntervalClock.Tick(Set(Json.Event("manual")), nexts, _ => false, T0, new ScriptedRandom());
+        var (due, changed) = IntervalClock.PollAll(Set(Json.Event("manual")), nexts, _ => false, T0, new ScriptedRandom());
         Assert.Empty(due);
         Assert.False(changed);
         Assert.Empty(nexts);
@@ -576,7 +576,7 @@ public class AutomationTests
         var set = Set(Disabled(Json.Event("off", Border)), Json.Event("bad", Border, extra: "\"bogus\": 1"), Disabled(Json.Event("koff", Reprisal)));
         Assert.Empty(TriggerRouter.Candidates(set, TriggerType.RegionEntered));
         Assert.Empty(TriggerRouter.FactionKills(set, Kill(), null));
-        Assert.Empty(IntervalClock.Tick(Set(Disabled(Json.Event("ioff", Interval))), new Dictionary<string, DateTime> { ["ioff"] = T0 }, _ => false, T0, new ScriptedRandom()).Due);
+        Assert.Empty(IntervalClock.PollAll(Set(Disabled(Json.Event("ioff", Interval))), new Dictionary<string, DateTime> { ["ioff"] = T0 }, _ => false, T0, new ScriptedRandom()).Due);
     }
 
     [Fact]

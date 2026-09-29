@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Il2CppInterop.Runtime;
 using Nyarlathotep.Config;
@@ -199,8 +200,9 @@ internal static class HuntAction
 }
 
 /// <summary>An online player's character as the wave planners see it (event-spawns D13, D16); held in memory for one
-/// tick and never logged (Security › Personal data).</summary>
-internal readonly record struct PlayerRow(Entity Character, long Key, float X, float Y, float Z, bool Alive, bool InPvpCombat);
+/// tick and never logged (Security › Personal data). <see cref="PlatformId"/> matches a player across a relog for the
+/// trigger rows and the focus (automation D5, D9, D13).</summary>
+internal readonly record struct PlayerRow(Entity Character, long Key, float X, float Y, float Z, bool Alive, bool InPvpCombat, string PlatformId);
 
 /// <summary>The online players, read for an AroundPlayer pick or a Hunt tick. Read-only.</summary>
 internal static class PlayerQuery
@@ -226,7 +228,8 @@ internal static class PlayerQuery
                     if (!character.Exists() || !character.TryGetComponent<Translation>(out var t)) continue;
                     if (!PlayerPosition.Usable(t.Value.x, t.Value.y, t.Value.z) || !character.TryGetComponent<Health>(out var h)) continue;
                     var alive = !character.Has<Dead>() && float.IsFinite(h.Value) && h.Value > 0f;
-                    rows.Add(new PlayerRow(character, HuntAction.KeyOf(character), t.Value.x, t.Value.y, t.Value.z, alive, InPvpCombat(character)));
+                    rows.Add(new PlayerRow(character, HuntAction.KeyOf(character), t.Value.x, t.Value.y, t.Value.z, alive, InPvpCombat(character),
+                        user.PlatformId.ToString(CultureInfo.InvariantCulture)));
                 }
             }
             finally { users.Dispose(); }

@@ -65,7 +65,7 @@ internal static class EventCommands
                 var active = EventRuntime.Engine.Find(id);
                 var def = set.Find(id) ?? active?.Definition;
                 if (def is null) { ctx.Reply(AdminLines.UnknownEvent(id).Human); return; }
-                Reply(ctx, EventLines.Info(def, active, now));
+                Reply(ctx, EventLines.Info(def, active, now, TriggerBus.NextInterval(def.Id)));
                 return;
             }
             default:

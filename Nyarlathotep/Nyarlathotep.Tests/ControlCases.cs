@@ -36,7 +36,6 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        new(Automation, "D15", 2, "0.8.0"), new(Automation, "D28", 2, "0.8.0"),
         new(Automation, "D18", 3, "0.8.0"), new(Automation, "D21", 3, "0.8.0"),
         new(Automation, "D23", 4, "0.8.0"), new(Automation, "D24", 4, "0.8.0"), new(Automation, "D25", 4, "0.8.0"), new(Automation, "D26", 4, "0.8.0"),
     ];
@@ -55,7 +54,7 @@ public static class ControlCases
         "TemplateLibraryTests", "TemplateCommandTests", "AuthoringTests", "AuthoringCapacityTests", "PillarSwitchTests",
         "ReadinessTests", "LibraryDependencyFailureTests", "SpawningTests", "HealthTests",
         "HumanReplyTests", "OutcomeCodeTests", "ApiTwinTests", "RateGateTests", "ApiOverloadTests", "EventAdminTests",
-        "EndPathTests", "WavePrecedenceTests", "SpawnsDependencyFailureTests", "AutomationTests",
+        "EndPathTests", "WavePrecedenceTests", "SpawnsDependencyFailureTests", "AutomationTests", "AutomationDependencyFailureTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -387,6 +386,12 @@ public static class ControlCases
             ["disabled_definition_fires", "active_event_reaches_conditions", "two_refusals_in_60s_log_twice", "held_count_lost",
              "cooldown_drop_sets_dedupe_key", "dedupe_lets_twice_in_5s"],
             ["one_line_and_held_count"], ["no_trigger"]) with { Plan = Automation },
+        T("D15", "PlayerScan", "AutomationDependencyFailureTests", ["throwing_scan_escapes_or_logs_twice", "garbage_position_reaches_a_definition"],
+            ["good_scan_clears_entry_and_next_streak_logs"], ["reads_no_player_without_a_definition"]) with { Plan = Automation },
+        T("D15", "KillRead", "AutomationDependencyFailureTests", ["throwing_read_escapes_or_logs_twice", "unavailable_hook_leaves_factionkills_on",
+            "garbage_faction_or_position_counts"], ["good_read_clears_entry"], ["no_death_no_read_no_streak"]) with { Plan = Automation },
+        T("D15", "StateWrite", "AutomationDependencyFailureTests", ["failed_flush_drops_the_next"], ["recovered_flush_writes_the_next"],
+            ["no_interval_no_key"]) with { Plan = Automation },
         T("D16", "Automation", "CommandArgTests", ["value_out_of_range"], ["values_in_range", "field_maps_to_its_type"], ["value"]) with { Plan = Automation },
         T("D16", "Automation", "AuthoringTests", ["value_refused", "other_trigger_type", "fanout_on_point_or_empower"],
             ["valid_set_changes_file", "info_shows_next_start"], ["value"]) with { Plan = Automation },
@@ -406,6 +411,9 @@ public static class ControlCases
              "tools/preflight-fixtures/FaultInjection/empty"]) with { Plan = Automation },
         T("D27", "ChatBytes", "CommandArgTests", ["automation_line_exceeds_480", "automation_line_holds_markup"], ["automation_lines_at_maximum_lengths"],
             ["automation_fields"]) with { Plan = Automation },
+        C("D28", "DependencySuite", "preflight -DependencySuite automation",
+            ["selftest DependencySuite/bad", "selftest DependencySuite/bad-2", "selftest DependencySuite/bad-floor-spawns"], ["selftest DependencySuite/good"],
+            ["selftest DependencySuite/empty"]) with { Plan = Automation },
         T("D29", "Phantoms", "AutomationTests", ["value_outside_1_9", "no_eligible_real_player", "unusable_kept", "phantom_reaches_scan_or_hunt"],
             ["four_at_200m_steps"], ["value"]) with { Plan = Automation },
         T("D30", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit", "pending_at_release"],

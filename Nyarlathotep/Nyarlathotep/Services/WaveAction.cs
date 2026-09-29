@@ -16,7 +16,11 @@ namespace Nyarlathotep.Services;
 /// <list type="bullet">
 /// <item>A Point spawns at its stored height (event-library A20; 0 for a Point saved without one); an Admin location
 /// around the admin who started the event; an AroundPlayer location around a player Logic/PlayerPick chose once for the
-/// wave, at the player's height (D16), never named or located in any line.</item>
+/// wave, at the player's height (D16), never named or located in any line. A player-action start's focus player is
+/// tried first (automation D13); with action.fanOut the wave picks up to maxInstances spaced players and spawns one group
+/// around each, each with its own Hunt tag, the whole wave clamped once (automation D5, D6).</item>
+/// <item>Every decided wave is reported once through EventEngine.WaveDecided, however many groups it spawned (automation
+/// D17).</item>
 /// <item>The territory map is built once per wave when the wave needs it (D17): a claimed ring point is blocked like an
 /// out-of-scope one unless allowTerritory.</item>
 /// <item>Each wave's anchor (WavePlan.Anchor) lets SpawnTracker regroup a unit the game snaps onto another terrain level
@@ -49,79 +53,95 @@ internal static class WaveAction
         Func<float, float, bool> claimed = map is null ? (_, _) => false : (x, z) => Territory.IsClaimed(map, x, z);
 
         PickOutcome? pick = null;
-        var (cx, cy, cz) = WavePlan.Center(location, active.Origin);
+        IReadOnlyList<GroupCentre> centres;
         if (location.Type == LocationType.AroundPlayer && !mapFailed)
         {
-            var result = Pick(id, location, claimed, inScope);
+            var result = Pick(id, location, action.FanOut, active.Focus, claimed, inScope);
             pick = result.Outcome;
-            (cx, cy, cz) = result.Centre;
+            centres = result.Centres.Select(c => new GroupCentre(c.X, c.Y, c.Z, map is not null && claimed(c.X, c.Z))).ToList();
         }
-        var facts = probe with
+        else
         {
-            MapFailed = mapFailed,
-            Pick = pick,
-            CentreClaimed = map is not null && (pick is null or PickOutcome.Picked) && claimed(cx, cz),
-        };
-        var decision = WaveGate.Decide(facts, () => WaveRoll.Expand(action.Units, _rng), ledger.Limits.MaxPerWave, ledger.Occupied, ledger.Limits.MaxTracked);
+            var (cx, cy, cz) = WavePlan.Center(location, active.Origin);
+            centres = [new GroupCentre(cx, cy, cz, map is not null && claimed(cx, cz))];
+        }
+        var facts = probe with { MapFailed = mapFailed, Pick = pick };
+        var decision = WaveGate.DecideGroups(facts, centres, () => WaveRoll.Expand(action.Units, _rng), ledger.Limits.MaxPerWave,
+            ledger.Occupied, ledger.Limits.MaxTracked);
         foreach (var line in decision.CapLines) Core.Log.LogWarning($"[nyar] event {id} wave {due.Wave}: {line}");
-        if (decision.Outcome == WaveOutcome.NoWave) return;
         if (decision.Outcome != WaveOutcome.Spawn)
         {
-            Core.Log.LogInfo($"[nyar] {decision.Line}");
-            EventRuntime.Engine.WaveSkipped(id);
+            if (decision.Line is { } skipped) Core.Log.LogInfo($"[nyar] {skipped}");
+            EventRuntime.Engine.WaveDecided(id, decision.Outcome);         // NoWave is neither counted nor pushed
             return;
         }
 
-        var center = new float3(cx, cy, cz);
         var life = SpawnLedger.Lifetime(now, active.Instance.EndsUtc, action.UnitLifetimeSeconds,
             Settings.Limit(Limits.GraceSeconds), Settings.Limit(Limits.ManualSpawnLifetimeSeconds), SpawnTracker.DrainMargin());
-        var total = decision.Units.Sum(u => u.Count);
-        var angle = _random.NextDouble() * 2 * Math.PI;
-        var anchor = location.Type == LocationType.AroundPlayer ? (cx, cy, cz) : WavePlan.Anchor(location, active.Origin);
         var tuning = SpawnTuning.TuningFrom(action.Modifiers);
-        HuntTag? hunt = action.Behaviour is { Type: BehaviourType.Hunt } b ? new HuntTag(cx, cz, b.Range) : null;
         // A claimed ring point counts as blocked, like an out-of-scope one, unless allowTerritory (D17).
         Func<float, float, bool> allowed = map is null || action.AllowTerritory ? inScope
             : (x, z) => (inScope is null || inScope(x, z)) && !claimed(x, z);
-        var first = 0;
-        int moved = 0, unchecked_ = 0;
-        var check = WalkCheck.OpenWave(anchor?.Y);                          // walkable-spawns D3, A13
-        try
+        int total = 0, moved = 0, unchecked_ = 0;
+        byte? level = null;
+        foreach (var group in decision.Groups)
         {
-            foreach (var entry in decision.Units)
+            var (gx, gy, gz) = group.Centre;
+            var groupTotal = group.Units.Sum(u => u.Count);
+            var angle = _random.NextDouble() * 2 * Math.PI;
+            var anchor = location.Type == LocationType.AroundPlayer ? (gx, gy, gz) : WavePlan.Anchor(location, active.Origin);
+            HuntTag? hunt = action.Behaviour is { Type: BehaviourType.Hunt } b ? new HuntTag(gx, gz, b.Range) : null;   // one per group
+            var first = 0;
+            var check = WalkCheck.OpenWave(anchor?.Y);                      // walkable-spawns D3, A13
+            try
             {
-                var queued = SpawnTracker.RequestWave(entry.Prefab, id, entry.Count, life, center, action.Radius, first, total, angle, anchor,
-                    check.Walk, allowed, tuning, action.Loot, hunt);
-                moved += queued.Moved;
-                unchecked_ += queued.Unchecked;
-                first += entry.Count;
+                foreach (var entry in group.Units)
+                {
+                    var queued = SpawnTracker.RequestWave(entry.Prefab, id, entry.Count, life, new float3(gx, gy, gz), action.Radius, first,
+                        groupTotal, angle, anchor, check.Walk, allowed, tuning, action.Loot, hunt);
+                    moved += queued.Moved;
+                    unchecked_ += queued.Unchecked;
+                    first += entry.Count;
+                }
             }
+            finally
+            {
+                try { check.Resource?.Dispose(); }
+                catch (Exception e) { check.Walk.Fail($"dispose: {e.GetType().Name}"); }    // never stops the wave (D5; Codex F4)
+            }
+            WalkCheck.Settle(check.Walk);
+            level ??= check.Level;
+            total += groupTotal;
+#if DEBUG
+            PhantomGroupLine(id, due.Wave, group);
+#endif
         }
-        finally
-        {
-            try { check.Resource?.Dispose(); }
-            catch (Exception e) { check.Walk.Fail($"dispose: {e.GetType().Name}"); }    // never stops the wave (D5; Codex F4)
-        }
-        WalkCheck.Settle(check.Walk);
-        EventRuntime.Engine.WaveSpawned(id);
-        var level = check.Level is { } h ? $", walk h {h}" : "";
-        var where = location.Type == LocationType.AroundPlayer ? $" {WaveLines.AroundAPlayer}" : "";
-        Core.Log.LogInfo($"[nyar] event {id} wave {due.Wave}/{due.Waves}{where}: {total} units queued ({moved} moved, {unchecked_} unchecked), due in {(int)Math.Ceiling((life.DueUtc - now).TotalSeconds)}s, lifetime {life.LifetimeSeconds}s{level}");
+        EventRuntime.Engine.WaveDecided(id, decision.Outcome);
+        var levelText = level is { } h ? $", walk h {h}" : "";
+        var where = location.Type == LocationType.AroundPlayer ? $" {WaveLines.AroundPlayers(decision.Groups.Count)}" : "";
+        Core.Log.LogInfo($"[nyar] event {id} wave {due.Wave}/{due.Waves}{where}: {total} units queued ({moved} moved, {unchecked_} unchecked), due in {(int)Math.Ceiling((life.DueUtc - now).TotalSeconds)}s, lifetime {life.LifetimeSeconds}s{levelText}");
     }
 
-    /// <summary>The wave's AroundPlayer centre (D16). A throwing player read is a failed query, which skips the wave and
-    /// opens the "player query failing" entry for the event, logged once per streak (D21, D30).</summary>
-    static PickResult Pick(string id, Location location, Func<float, float, bool> claimed, Func<float, float, bool> inScope)
+    /// <summary>The wave's AroundPlayer centres (D16; automation D5, D13): up to fanOut.maxInstances spaced players, one
+    /// without fanOut, the focus player first when eligible. A throwing player read is a failed query, which skips the
+    /// wave and opens the "player query failing" entry for the event, logged once per streak (D21, D30). In a Debug build,
+    /// Debug.FaultInjection = phantoms:&lt;n&gt; adds phantom candidates (automation D29).</summary>
+    static FanOutPick Pick(string id, Location location, FanOut fanOut, string focus, Func<float, float, bool> claimed,
+        Func<float, float, bool> inScope)
     {
-        PickResult result;
+        FanOutPick result;
         try
         {
-            var players = PlayerQuery.Read().Select(p => new PickCandidate(p.X, p.Y, p.Z, true, p.Alive, p.InPvpCombat)).ToList();
-            result = PlayerPick.Choose(players, _rng, location.MinDist, location.MaxDist, claimed, inScope);
+            var players = PlayerQuery.Read().Select(p => new PickCandidate(p.X, p.Y, p.Z, true, p.Alive, p.InPvpCombat, p.PlatformId)).ToList();
+#if DEBUG
+            players.AddRange(PlacePhantoms(players, claimed, inScope));
+#endif
+            result = PlayerPick.ChooseMany(players, _rng, location.MinDist, location.MaxDist, claimed, inScope,
+                fanOut?.MaxInstances ?? 1, fanOut?.MinSpacing ?? 0, focus);
         }
         catch (Exception ex)
         {
-            result = new PickResult(PickOutcome.QueryFailed, default, ex.Message);
+            result = new FanOutPick(PickOutcome.QueryFailed, [], ex.Message);
         }
         if (result.Outcome == PickOutcome.QueryFailed)
         {
@@ -130,4 +150,31 @@ internal static class WaveAction
         else WalkCheck.Health.Recovered(SpawnFailure.PlayerQuery, id);
         return result;
     }
+
+#if DEBUG
+    static readonly List<PickCandidate> _phantoms = new();
+
+    /// <summary>automation D29: the phantom candidates of this pick, placed from the first eligible real player that passes
+    /// the pick's own territory and scope test; "phantoms: &lt;placed&gt; of &lt;n&gt; placed" once per pick.</summary>
+    static List<PickCandidate> PlacePhantoms(IReadOnlyList<PickCandidate> real, Func<float, float, bool> claimed,
+        Func<float, float, bool> inScope)
+    {
+        _phantoms.Clear();
+        if (Phantoms.Parse(Settings.FaultInjection?.Value) is not { } n) return new List<PickCandidate>();
+        _phantoms.AddRange(Phantoms.Place(real, n, (x, z) => !claimed(x, z) && (inScope is null || inScope(x, z))));
+        Core.Log.LogInfo($"[nyar] {Phantoms.PlacedLine(_phantoms.Count, n)}");
+        return new List<PickCandidate>(_phantoms);
+    }
+
+    /// <summary>automation D7: a group whose centre lies within half a phantom step of a phantom logs its distance from
+    /// that phantom, never a coordinate (D19).</summary>
+    static void PhantomGroupLine(string id, int wave, WaveGroup group)
+    {
+        if (_phantoms.Count == 0) return;
+        var (x, _, z) = group.Centre;
+        var nearest = _phantoms.MinBy(p => (p.X - x) * (p.X - x) + (p.Z - z) * (p.Z - z));
+        var metres = Math.Sqrt((nearest.X - x) * (nearest.X - x) + (nearest.Z - z) * (nearest.Z - z));
+        if (metres <= Phantoms.Step / 2) Core.Log.LogInfo($"[nyar] {Phantoms.GroupLine(id, wave, group.Index + 1, metres)}");
+    }
+#endif
 }
