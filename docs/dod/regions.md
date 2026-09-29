@@ -14,7 +14,7 @@ closed: none
 commit: 7dbd9df
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
-review: subagent
+review: pending
 ---
 
 # DoD: Regions — global or regional scope for triggers and actions, and release 0.6.0
