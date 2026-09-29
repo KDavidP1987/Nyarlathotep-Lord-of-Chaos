@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review — Raphael api 4 — admin action twins, admin reads and release 0.5.2</title>
+<style>
+:root { color-scheme: light dark; --bg:#fbfbfa; --fg:#1b1b1a; --dim:#55534e; --line:#d9d7d1; --card:#ffffff;
+  --ok:#1b5e3a; --warn:#7a4a00; --accent:#1f4f82; }
+@media (prefers-color-scheme: dark) { :root { --bg:#16181a; --fg:#eceae5; --dim:#a8a49c; --line:#33363a;
+  --card:#1e2124; --ok:#7fd8a4; --warn:#e8b765; --accent:#8fbde8; } }
+* { box-sizing: border-box; }
+/* plan text carries long unbroken tokens — a review-page URL in a Log note, a path, a hostile string with no
+   space in it — and at 375 px one of those is what pushes the document wider than the window (D20) */
+body, p, td, th, li, caption { overflow-wrap: anywhere; }
+body { margin:0; padding:1.5rem 1rem 4rem; background:var(--bg); color:var(--fg); max-width:60rem;
+  font:16px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+h1 { font-size:1.5rem; line-height:1.25; margin:0 0 .25rem; }
+h2 { font-size:1.15rem; margin:2.25rem 0 .5rem; padding-bottom:.25rem; border-bottom:1px solid var(--line); }
+h3 { font-size:1rem; margin:1.25rem 0 .35rem; color:var(--dim); }
+p { margin:.4rem 0; }
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.9em; }
+.sub { color:var(--dim); margin:0 0 1rem; }
+.absent { color:var(--dim); font-style:italic; }
+.legend { color:var(--dim); }
+.scroll { overflow-x:auto; }
+table { border-collapse:collapse; width:100%; min-width:32rem; }
+caption { text-align:left; color:var(--dim); padding:.25rem 0; }
+th, td { text-align:left; vertical-align:top; padding:.35rem .5rem; border-bottom:1px solid var(--line); }
+th { color:var(--dim); font-weight:600; white-space:nowrap; }
+td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+tr:target td { background:var(--card); outline:2px solid var(--accent); }
+ul.tree { list-style:none; margin:0; padding:0; }
+ul.tree li { padding:.2rem 0; border-bottom:1px solid var(--line); display:flex; gap:.5rem; flex-wrap:wrap; }
+ul.tree li span.pkg { font-weight:600; }
+ul.tree li.lvl2 { padding-left:1.25rem; }
+ul.tree li .pct { margin-left:auto; font-variant-numeric:tabular-nums; color:var(--dim); }
+a { color:var(--accent); }
+a:focus-visible { outline:3px solid var(--accent); outline-offset:2px; border-radius:2px; }
+.k { display:inline-block; min-width:5.5rem; color:var(--dim); }
+.done { color:var(--ok); } .open { color:var(--warn); }
+ol.said { margin:.25rem 0 .75rem; padding-left:1.25rem; }
+ol.said li { padding:.15rem 0; }
+.declared { border-left:3px solid var(--warn); padding:.35rem .6rem; margin:.5rem 0; color:var(--fg); }
+</style>
+</head>
+<body>
+<h1>Review — Raphael api 4 — admin action twins, admin reads and release 0.5.2</h1>
+
+<p class="sub"><span class="mono">raphael-api-admin</span> · in-progress · size L · parent nyarlathotep · 16 item(s)</p>
+
+<p class="legend mono">legend: D item · A amendment · S assumption · F review finding · P proposal · W work package · n.m layer.probe</p>
+
+<p class="legend">Every probe of this plan's rubric is below with the plan's own answer. The author's own marking is not on this page — form your own before you look at theirs.</p>
+
+<h2 id="L1">1. Purpose &amp; typical use</h2>
+<p class="absent">the plan writes no numbered sentences under Purpose &amp; typical use for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 1</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">1.1</td><td>Who uses it (role, frequency) and the one sentence they would say when they want it.</td><td><span class="open">no answer</span></td></tr><tr><td class="mono">1.2</td><td>The job it does for them — the outcome, not the mechanism.</td><td><span class="open">no answer</span></td></tr><tr><td class="mono">1.3</td><td>What exists today that it replaces, extends, or must coexist with.</td><td><span class="open">no answer</span></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L2">2. Actors &amp; permissions</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 2</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">2.1 ⛔</td><td>Every actor that can reach it (including unauthenticated, service accounts, admins) and what each may do.</td><td><a href="#D11">D11</a> <a href="#D13">D13</a></td></tr><tr><td class="mono">2.2</td><td>What happens on the unauthorized path — silent deny, error, redirect, audit entry.</td><td><a href="#D11">D11</a></td></tr><tr><td class="mono">2.3</td><td>Ownership: who may see, change, or delete what someone else created, and what happens when ownership changes hands — a holder replaced mid-flight, a closed thing legitimately reopened.</td><td><a href="#D5">D5</a> <a href="#D6">D6</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L3">3. Inputs, outputs &amp; data</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 3</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">3.1</td><td>Every input: shape, limits, validation, and the response to invalid input.</td><td><a href="#D3">D3</a> <a href="#D4">D4</a></td></tr><tr><td class="mono">3.2</td><td>Every output and side effect, including what other systems receive.</td><td><a href="#D3">D3</a> <a href="#D7">D7</a> <a href="#D9">D9</a></td></tr><tr><td class="mono">3.3 ⛔</td><td>Persistence: what is stored, where, who owns it, how long it is kept, how it is deleted — for every artifact the feature produces, including by-products (logs, working directories, intermediates), and which of them exist only once.</td><td><a href="#D14">D14</a> <a href="#D16">D16</a></td></tr><tr><td class="mono">3.4</td><td>Migration of existing data, if the shape changes.</td><td><a href="#D16">D16</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L4">4. Business rules &amp; invariants</h2>
+<h3>What the plan says under “Business rules”</h3>
+<ol class="said"><li>**Twins are the human command (4.1, D3, D4):** same arguments, same validation, same Gateway.Run row, same service call, same push; only the reply differs. There is no path a twin has that the human command lacks.</li><li>**One line per twin (4.2, D3, D12):** every twin answers exactly one `[NYAR:ok]` or `[NYAR:err]` line, success or failure, thrown or not; a refusal changes nothing on the server except what a file now holds after a failed save (event-library D19) and the events a pillar `off` ends (D5); `code=io reason=internal` is not such a refusal: the op threw, possibly after it changed state, so the action may be partly or fully applied and the client re-reads state (A16, D12); two or more surplus words are VCF&#39;s (D3).</li><li>**Codes (4.1, D2):**</li><li>**Idempotency (4.2, D5):** enable, disable, pillar: changed=0 on the held state, no write, no push. start/stop: the engine&#39;s one-instance rule.</li><li>**Time (4.3, D5, D6):** confirms within 30 s of the same admin&#39;s ask (the existing armings); the rate window is 1 s, sliding; both in memory, both cleared on restart; `secs` is whole seconds rounded up.</li><li>**Precedence (4.4):** the full order is VCF adminOnly &gt; the ready guard (&quot;still loading&quot;) &gt; the rate gate (D6) &gt; the argument checks &gt; the admin log line &gt; ActionGateway &gt; Precedence.StartBlocker&#39;s controls (purge cooldown &gt; General.Enabled &gt; pillar &gt; MaxConcurrentEvents &gt; the definition, unchanged) (D3). There is no exception path: the twins run as Actor.Admin, as the human commands do.</li><li>**&quot;Every&quot; sets (4.5):** - &quot;Every admin action&quot; is the §5 admin rows that mutate: event start, stop, enable, disable, set, reload, new, copy, delete; template use; pillar; purge. `spawn`, `announce`, `zone` and `stats reset` get no twin in this child: spawn and announce are test and chat tools with no panel state, and zone and stats belong to later children (Out of scope). - &quot;Every path an admin mutation takes&quot; (D1) is AdminFlows&#39; flows, the IAdminOps members and the Logic paths D1 lists; the HumanReplies check counts the reply literals of those paths at v0.5.1 and fails a capture with fewer rows; the OutcomeReturns check covers Services/AdminOps.cs and IAdminOps. - &quot;Every control&quot; is every D-item of this plan whose evidence carries a `(fails when:` clause; ControlCaseTests reads this plan from the test Resources and fails when one lacks its ControlCases row (D11). - &quot;Every path this child writes&quot; is computed by `-Paths -DeclaredOf raphael-api-admin` (D14; known exclusion: a path created and deleted inside one step, S-7).</li></ol>
+<div class="scroll">
+<table><caption>probes of layer 4</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">4.1</td><td>Calculations, thresholds, and policies stated precisely enough to write a test from, and which document is authoritative for a threshold stated in two places.</td><td><a href="#D2">D2</a> <a href="#D3">D3</a> <a href="#D4">D4</a></td></tr><tr><td class="mono">4.2</td><td>Invariants that must never be violated (uniqueness, ordering, balance, totals).</td><td><a href="#D3">D3</a> <a href="#D5">D5</a> <a href="#D12">D12</a></td></tr><tr><td class="mono">4.3</td><td>Temporal rules — time zones, cut-offs, expiry, retroactive changes.</td><td><a href="#D5">D5</a> <a href="#D6">D6</a></td></tr><tr><td class="mono">4.4 ⛔</td><td>Precedence when rules conflict, and who decides an exception.</td><td><a href="#D2">D2</a> <a href="#D3">D3</a> <a href="#D6">D6</a></td></tr><tr><td class="mono">4.5</td><td>(rubric 2) “Every X” sets: for every rule of the form “every X”, how X is computed, what valid content the computation misses, who checks the computation — and, when a tool derives X (a grep, a diff, a directory walk), whether that tool can see every member at the moment it runs: a file not yet tracked, a file this build creates, a path the tool excludes.</td><td><a href="#D1">D1</a> <a href="#D11">D11</a> <a href="#D14">D14</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L5">5. Internal interfaces</h2>
+<p class="absent">the plan writes no numbered sentences under Interfaces for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 5</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">5.1</td><td>What it reads from other features/modules, with paths or symbols.</td><td><a href="#D1">D1</a> <a href="#D3">D3</a></td></tr><tr><td class="mono">5.2</td><td>What it writes to or changes about other features, and what breaks there if this is wrong.</td><td><a href="#D1">D1</a> <a href="#D9">D9</a></td></tr><tr><td class="mono">5.3</td><td>Shared types, events, schemas or contracts it introduces or alters — each field enumerated against what the code emits or reads, not against the prose that describes it.</td><td><a href="#D1">D1</a> <a href="#D10">D10</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L6">6. External dependencies &amp; contracts</h2>
+<p class="absent">the plan writes no numbered sentences under Interfaces for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 6</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">6.1</td><td>Every external API, service, package, or vendor it depends on — version, quota, cost — and every input contract sampled across all its record types, not only the ones the feature expects.</td><td><a href="#D10">D10</a> <a href="#D13">D13</a></td></tr><tr><td class="mono">6.2 ⛔</td><td>Behaviour when each dependency is slow, down, rate-limited, or returns garbage, including internal collaborators — sibling agents and your own tools.</td><td><a href="#D12">D12</a> <a href="#D16">D16</a></td></tr><tr><td class="mono">6.3</td><td>Sandbox / test-mode behaviour and how it is kept out of production.</td><td><a href="#D14">D14</a> <a href="#D13">D13</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L7">7. States &amp; lifecycle</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 7</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">7.1</td><td>Empty, first-run, loading, partial, and error states.</td><td><a href="#D7">D7</a> <a href="#D12">D12</a></td></tr><tr><td class="mono">7.2</td><td>Concurrent use — two users, two tabs, a retry racing the original — and which of these actors is you: the planner, the orchestrator, the build tooling.</td><td><a href="#D5">D5</a> <a href="#D6">D6</a> <a href="#D12">D12</a></td></tr><tr><td class="mono">7.3</td><td>Stale data, cancel, undo, and re-entry after interruption, and what a correction invalidates.</td><td><a href="#D9">D9</a> <a href="#D5">D5</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L8">8. Minimal stretch</h2>
+<p class="absent">the plan writes no numbered sentences under Use cases for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 8</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">8.1</td><td>The least a user can do: empty input, one item, defaults only, skipping optional steps.</td><td><a href="#D1">D1</a> <a href="#D7">D7</a></td></tr><tr><td class="mono">8.2</td><td>The feature used once and never again — does anything leak, linger, or nag.</td><td><a href="#D5">D5</a> <a href="#D6">D6</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L9">9. Maximal stretch</h2>
+<p class="absent">the plan writes no numbered sentences under Use cases for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 9</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">9.1</td><td>Volume: 100× the expected count, size, or rate — what degrades and how.</td><td><a href="#D6">D6</a></td></tr><tr><td class="mono">9.2</td><td>Abuse and misuse: hostile input, automation, the clever workaround a power user will try.</td><td><a href="#D11">D11</a> <a href="#D3">D3</a> <a href="#D12">D12</a></td></tr><tr><td class="mono">9.3</td><td>Repeated or parallel use of the same action — idempotency, duplicates, double-submit.</td><td><a href="#D5">D5</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L10">10. Security &amp; privacy</h2>
+<p class="absent">the plan writes no numbered sentences under Security for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 10</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">10.1 ⛔</td><td>Authorization checked on every path, including indirect ones (jobs, webhooks, exports) — and an allowed program&#39;s options that change what runs (`git --upload-pack`, `npm --script-shell`, `node --require`) are the same boundary as the program itself.</td><td><a href="#D11">D11</a></td></tr><tr><td class="mono">10.2</td><td>Injection and unsafe content on every input that reaches a query, shell, template, or URL.</td><td><a href="#D3">D3</a> <a href="#D8">D8</a></td></tr><tr><td class="mono">10.3 ⛔</td><td>Secrets and credentials: where they live, how they rotate, what must never be logged.</td><td><a href="#D15">D15</a></td></tr><tr><td class="mono">10.4</td><td>Personal data: what is collected, minimised, exposed in logs or exports, and the audit trail.</td><td><a href="#D15">D15</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L11">11. Design &amp; UX</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 11</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">11.1</td><td>Where it lives in the product and how a user discovers it.</td><td><a href="#D16">D16</a></td></tr><tr><td class="mono">11.2</td><td>Feedback: progress, success, failure, and empty-result messaging in the product&#39;s voice.</td><td><a href="#D3">D3</a> <a href="#D13">D13</a></td></tr><tr><td class="mono">11.3</td><td>Accessibility (keyboard, screen reader, contrast) and small-screen behaviour.</td><td><a href="#D1">D1</a></td></tr><tr><td class="mono">11.4</td><td>(rubric 2) Activation: how the feature is invoked or activated when nobody asks for it — a trigger, a pointer line, a hook, a schedule — and what shows it was; the should-not-activate cases are unrelated to the feature&#39;s purpose, never adjacent to it — an agent that has just finished an adjacent task invokes it for a good reason.</td><td><a href="#D10">D10</a> <a href="#D13">D13</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L12">12. Failure handling &amp; observability</h2>
+<p class="absent">the plan writes no numbered sentences under Failure &amp; observability for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 12</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">12.1</td><td>What the user sees for each failure class, and what they can do next.</td><td><a href="#D2">D2</a> <a href="#D12">D12</a> <a href="#D6">D6</a></td></tr><tr><td class="mono">12.2</td><td>What is logged or measured, with enough context to debug without reproducing.</td><td><a href="#D3">D3</a> <a href="#D12">D12</a></td></tr><tr><td class="mono">12.3</td><td>How you would know in production that it is broken — the alert or the dashboard.</td><td><a href="#D12">D12</a> <a href="#D14">D14</a></td></tr><tr><td class="mono">12.4 ⛔</td><td>(rubric 2) Failing case: for every check the plan introduces, the input that makes it report a failure, the input it must stay silent on, and what it prints on an empty input — which must not read as a pass; one evidence command per gating probe, able to fail for its stated `fails when`; and a selftest fixture spells what the real input spells and plants the state the real run produces, never a corrected copy of either.</td><td><a href="#D11">D11</a> <a href="#D1">D1</a> <a href="#D2">D2</a> <a href="#D3">D3</a> <a href="#D6">D6</a> <a href="#D12">D12</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L13">13. Performance &amp; scale</h2>
+<p class="absent">the plan writes no numbered sentences under Performance for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 13</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">13.1</td><td>The latency or throughput budget, and the hot path that decides it.</td><td><a href="#D6">D6</a></td></tr><tr><td class="mono">13.2</td><td>Limits and pagination — what is bounded and what happens at the bound, the case a limit came from, and the valid case it excludes.</td><td><a href="#D6">D6</a> <a href="#D8">D8</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L14">14. Rollout &amp; compatibility</h2>
+<p class="absent">the plan writes no numbered sentences under Rollout for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 14</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">14.1</td><td>How it ships: flag, staged, all at once; who can turn it off.</td><td><a href="#D16">D16</a></td></tr><tr><td class="mono">14.2</td><td>Backward compatibility with existing clients, data, and integrations.</td><td><a href="#D1">D1</a> <a href="#D10">D10</a> <a href="#D16">D16</a></td></tr><tr><td class="mono">14.3 ⛔</td><td>Rollback: the exact steps to undo it, whether they are still possible after data has been written, and the commit range they cover when the change is committed more than once.</td><td><a href="#D16">D16</a></td></tr><tr><td class="mono">14.4 ⛔</td><td>(rubric 2) Paths walked: every path the change ships, writes or regenerates, found by walking the Build plan step by step — generated indexes, tooling, fixtures, notes, ignored and generated files, the shipped files a release has to touch, the paths the review process itself writes (review pages, re-review records) and the plan store itself.</td><td><a href="#D14">D14</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L15">15. Out of scope</h2>
+<p class="absent">the plan writes no numbered sentences under Out of scope for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 15</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">15.1</td><td>What was explicitly considered and excluded, so a builder does not fill the gap by guessing.</td><td><span class="open">no answer</span></td></tr><tr><td class="mono">15.2</td><td>What is deferred to a later item, and the slug or issue it lives in.</td><td><span class="open">no answer</span></td></tr></tbody>
+</table>
+</div>
+
+<h2>Items in full</h2>
+
+<h3 id="D1"><span class="mono">D1</span> Typed outcomes, human text unchanged</h3>
+<p>Logic/Outcome.cs defines `Outcome` (Ok, Human, Code, Arg, Secs, Reason, Fields) with two factories, `Outcome.Done(human, fields…)` and `Outcome.Refused(human, RefusalCode code, arg, secs, reason)`, the only constructors, so no refusal exists without a code; every admin mutation runs through Logic/AdminFlows.cs (D3), whose flows reach the game only through the interface IAdminOps (Logic), implemented by Services/AdminOps.cs as thin one-call shims; every Logic path of the flows returns Outcome (Precedence.StartBlocker as a typed blocker, EventEngine.Start, EventCatalog, DefinitionEditor.Reload, Edit and Write, EventsEditor.Apply&#39;s error, Authoring.New, Copy and TemplateUse, EventDeleter.Request and Confirm, PillarCommand.Switch, PurgeArming&#39;s replies, ActionGateway.Run&lt;T&gt;&#39;s denial), and every reply text a flow or a shim builds lives in Logic (AdminLines, including &quot;event &lt;id&gt; started&quot;, &quot;not active&quot;, the purge lines, the verb lists and &quot;your position could not be read&quot;); each human command replies `outcome.Human`, equal to 0.5.1&#39;s reply for the same input; the reply literals are counted at v0.5.1 in the members that tools/preflight-checks.json&#39;s HumanReplies entry lists (the methods of the D1 paths): every string literal, plain or interpolated, that holds a space or is the one word `denied`, outside the arguments of log(, info(, warn(, Log*( and LogAdmin( calls; CommandArgs and CommandForms texts pass through the flows unchanged and stay pinned by CommandArgTests (A3); a later child that changes a human reply adds Nyarlathotep.Tests/Fixtures/human-replies-&lt;version&gt;.txt with the changed rows under their scenario ids, checked against its own tag, never editing a row in place, and HumanReplyTests uses the newest file&#39;s row per scenario id (A4)</p>
+<p class="mono">test: Nyarlathotep.Tests HumanReplyTests renders every row of Nyarlathotep.Tests/Fixtures/human-replies-0.5.1.txt (a scenario id naming the input that produces it, the reply template, and its `&lt;path&gt;:&lt;line&gt;` at v0.5.1) through the flow over FakeStores and compares; cmd: pwsh tools/preflight.ps1 → &quot;human replies: &lt;n&gt;/&lt;n&gt; at v0.5.1; outcome returns: &lt;k&gt;/&lt;k&gt;&quot;, where the HumanReplies check reads each cited line with `git show v0.5.1:&lt;path&gt;` and requires the template&#39;s literal parts on it, and the OutcomeReturns check requires every mutating member of Services/AdminOps.cs and IAdminOps (those marked [Mutating], D11) to return Outcome and every AdminOps member body to be one expression or one return statement with no `if`, `switch`, `?`, `??` or loop (fails when: a Human text differs from its row, a row&#39;s literal is not on its cited v0.5.1 line (fixture HumanReplies/bad), a shim returns string (fixture OutcomeReturns/bad) or branches (fixture OutcomeReturns/bad-2), an Outcome is built other than through the two factories, or a counted reply literal&#39;s line is cited by no row (fixture HumanReplies/bad-2 drops one row))</p>
+<ul><li class="mono">2026-09-28 · pass · test: dotnet test Nyarlathotep/Nyarlathotep.Tests → 1545 passed (HumanReplyTests: 85 rows of Fixtures/human-replies-0.5.1.txt through the flows; OutcomeCodeTests The_factories_are_the_only_constructors); cmd: pwsh tools/preflight.ps1 → &quot;human replies: 89/89 at v0.5.1&quot;, &quot;outcome returns: 11/11&quot;, PREFLIGHT OK; -SelfTest fails HumanReplies/bad to bad-5 and OutcomeReturns/bad to bad-3</li></ul>
+<h3 id="D2"><span class="mono">D2</span> Refusal codes per source</h3>
+<p>each refusal carries the code, arg and reason of Business rules 3&#39;s table (with A13&#39;s rows: the template catalogue unavailable, an invalid template, an id outside the id rule, a throwing edit plan, a failed events.json save and an applied write whose reload failed), the reason a wire-safe snake_case word from a closed list in Logic/Outcome.cs (`Reasons`); RefusalCode (Logic/Outcome.cs, step 1) holds the §4 codes plus Exists, State, Invalid, Full, Io, Confirm and Limit, and WireError gains the same seven in step 2 with contract §4&#39;s rows (a one-to-one map, tested), the last for &quot;skipped by MaxConcurrentEvents&quot; (S-3)</p>
+<p class="mono">test: Nyarlathotep.Tests OutcomeCodeTests, one case per row of Business rules 3, driving the real Logic path with fakes (fails when: a row&#39;s code, arg or reason differs, a reason outside `Reasons` is produced, a refusal of a listed path is missing from the test table, a RefusalCode member has no WireError twin, or a new WireError member has no contract row)</p>
+<ul><li class="mono">2026-09-28 · pass · test: dotnet test Nyarlathotep/Nyarlathotep.Tests --filter FullyQualifiedName~OutcomeCodeTests → Passed! 72/72 (a case per Business rules 3 row, the WireError twins included)</li></ul>
+<h3 id="D3"><span class="mono">D3</span> Event twins</h3>
+<p>Logic/AdminFlows.cs holds one flow per admin verb, called by both `.nyar event &lt;verb&gt;` and `.nyar api event &lt;verb&gt; …` (Commands/ApiAdminCommands.cs, a shim that passes the context&#39;s admin id, name, position reader and IAdminOps); each flow runs, in order: the rate gate (twins only, D6), the argument checks, the admin log callback (the twin&#39;s line prefixed &quot;api &quot;; the purge ask logs nothing, as `.nyar purge` does in 0.5.1, and the confirm logs as today), ActionGateway.Run&lt;T&gt; with the verb&#39;s ActionKind from the single table AdminFlows.Kinds (so a twin and its human command cannot differ), the IAdminOps call, then the Outcome; the twin maps it to exactly one line: `[NYAR:ok] cmd=event verb=&lt;verb&gt; id=&lt;id&gt;` plus the verb&#39;s keys of contract §5a (moved from §10.1 by D10; changed, field, value, count, pillar, from, confirm, done), or `[NYAR:err] cmd=event verb=&lt;verb&gt; code=&lt;code&gt; [secs=] [arg=] [reason=]`; verbs are start, stop, enable, disable, set (with `location here`), reload, new, copy and delete [confirm]; any other verb, list and info included, answers `code=badarg arg=verb`; a missing or malformed argument answers `code=badarg arg=&lt;id|field|value|pillar|newId|confirm&gt;`; each twin declares one trailing optional parameter `extra`, and a surplus word answers `code=badarg arg=extra` (two or more surplus words reach VCF&#39;s own arity line, which contract §5a states)</p>
+<p class="mono">test: Nyarlathotep.Tests ApiTwinTests Event over a fake IAdminOps and a recording ActionGateway (fails when: a verb answers other than one line, the fake op is called without the gateway having run the verb&#39;s kind, AdminFlows.Kinds gives a twin another kind than its human command, an ok line lacks a key of §5a or adds one, an err line&#39;s keys are out of order, a surplus word is accepted, a badarg twin or human command reaches the log callback, the purge ask logs, or a refusal answers ok)</p>
+<ul><li class="mono">2026-09-28 · pass · test: dotnet test Nyarlathotep/Nyarlathotep.Tests --filter FullyQualifiedName~ApiTwinTests.Event_ → Passed! 40/40 (badarg rows assert zero log and op calls; copy and delete answer arg=id and arity before semantics)</li></ul>
+<h3 id="D4"><span class="mono">D4</span> Template, pillar and purge twins</h3>
+<p>`.nyar api template use &lt;template&gt; [as &lt;id&gt;]`, `.nyar api pillar &lt;name&gt; on|off` and `.nyar api purge [confirm]` answer per contract §5a (moved from §10.1 by D10) through the same gateway rows as their human commands: `cmd=template verb=use id=&lt;id&gt; tpl=&lt;template&gt;`; `cmd=pillar verb=set id=&lt;name&gt; on=&lt;0|1&gt; changed=&lt;0|1&gt;` plus `ended=&lt;n&gt;` when `off` ended events; `cmd=purge verb=ask id=- confirm=30`, then `cmd=purge verb=confirm id=- events=&lt;n&gt; units=&lt;n&gt; secs=&lt;cooldown&gt;`</p>
+<p class="mono">test: Nyarlathotep.Tests ApiTwinTests TemplatePillarPurge (fails when: a success line differs from §5a, a pillar already in the asked state answers other than changed=0, a pillar save failure answers ok, or a purge confirm answers without the cooldown)</p>
+<ul><li class="mono">2026-09-28 · pass · test: dotnet test Nyarlathotep/Nyarlathotep.Tests --filter FullyQualifiedName~ApiTwinTests.TemplatePillarPurge_ → Passed! 19/19 (badarg rows assert zero log and op calls; `purge maybe x` answers arg=extra)</li></ul>
+<h3 id="D5"><span class="mono">D5</span> Idempotency and two-step confirm</h3>
+<p>enable and disable on the state they hold answer ok with changed=0 and write nothing; pillar on the state it holds answers ok changed=0 and writes nothing, and `off` still ends that pillar&#39;s running events (an operator may have switched it off by hand), answering `ended=&lt;n&gt;` with their event-end pushes; start on an active event and stop on one that is not active answer code=state with reason already_active and not_active; a delete confirm answers code=confirm unless the same admin asked in the last 30 s; a purge confirm answers code=state reason=nothing_to_purge when nothing is left to purge (armed or not, PurgeArming&#39;s order), else code=confirm unless the same admin asked in the last 30 s; a second confirm answers code=notfound arg=id (delete: the first confirm removed the event, A15) or state nothing_to_purge (purge); an ask with nothing to purge answers code=state reason=nothing_to_purge; a human ask and a twin confirm by the same admin pair, since both use the one arming; `event set` to the value a field already holds writes and pushes as in 0.5.1 (the file is re-indented) and answers its ok line (A5); when two admins confirm their own asks in the same second, the first purges and the second answers code=state reason=nothing_to_purge (A10)</p>
+<p class="mono">test: Nyarlathotep.Tests ApiTwinTests Idempotency (fails when: a set to the held value answers other than 0.5.1&#39;s write and ok line, the second of two purge confirms answers other than nothing_to_purge, a repeated enable writes events.json, a repeated pillar writes the cfg, `pillar off` on an off pillar leaves a running event, a confirm by another admin or after 30 s fires, a double confirm fires twice, or a human ask followed by a twin confirm does not fire)</p>
+<ul><li class="mono">2026-09-28 · pass · test: dotnet test Nyarlathotep/Nyarlathotep.Tests --filter FullyQualifiedName~ApiTwinTests.Idempotency → Passed! 9/9</li></ul>
+<h3 id="D6"><span class="mono">D6</span> Rate limit per admin</h3>
+<p>Logic/RateGate.cs admits at most 5 twins per admin SteamID in any 1-second window (S-4); every admitted twin counts, whatever its answer; the dispatcher calls the gate before it resolves the verb, so an unknown verb counts too (A8); the sixth answers `[NYAR:err] cmd=&lt;cmd&gt; verb=&lt;verb&gt; code=ratelimit secs=1` before the argument checks, the admin log line and the work; reads (templates, template info, pillar list, killswitch) and the human commands are not counted; the gate holds at most 64 admin entries, pruning entries idle for 1 s or more when full, and a full gate of active admins refuses the newcomer with the same line</p>
+<p class="mono">test: Nyarlathotep.Tests RateGateTests and ApiTwinTests RateOrder (fails when: a sixth twin within 1 s runs, a refused, badarg or unknown-verb twin is not counted, a twin 1 s after the first is refused, a read or a human command is counted, one admin&#39;s twins limit another&#39;s, the gate grows past 64, or a rate-refused twin reaches the log callback or the fake op)</p>
+<ul><li class="mono">2026-09-28 · pass · test: dotnet test Nyarlathotep/Nyarlathotep.Tests --filter FullyQualifiedName~RateGateTests|FullyQualifiedName~ApiTwinTests.RateOrder → Passed! 12/12 (RateGate_passes_clock_stepped_back, idle prune at 1 s or more, A18)</li></ul>
+<h3 id="D7"><span class="mono">D7</span> Admin reads</h3>
+<p>`.nyar api templates [pillar] [page]` answers `[NYAR:tpl] id= pillar= trigger= duration= summary=` rows paged per contract §4, filtered by pillar name when given (unknown pillar: code=notfound arg=pillar); `.nyar api template info &lt;template&gt;` the one row then `[NYAR:end] cmd=template count=1`, or code=notfound arg=template; `.nyar api pillar list` five `[NYAR:pillar] id= on=` rows in PillarNames order (empowerment, spawns, boss, zones, sieges) then `[NYAR:end] cmd=pillar count=5`; `.nyar api killswitch` one `[NYAR:ks] on= secs= events= units=` row (on=1 while the purge cooldown runs, secs its time left, else 0) then `[NYAR:end] cmd=killswitch count=1`; while the template catalogue is unavailable (TemplateLibrary failed at boot), `templates` and `template info` answer `code=io reason=read` (A11); all four are adminOnly and change nothing</p>
+<p class="mono">test: Nyarlathotep.Tests ApiLinesTests AdminReads (fails when: a read of an unavailable catalogue answers rows, a row&#39;s keys differ from contract §3 (moved from §10.2 by D10), the pillar rows are out of order or not five, a templates page past the last sends rows, an unknown pillar filter answers rows, or killswitch reports on=1 after the cooldown)</p>
+<ul><li class="mono">2026-09-28 · pass · test: dotnet test Nyarlathotep/Nyarlathotep.Tests --filter FullyQualifiedName~ApiLinesTests.AdminReads → Passed! 9/9</li></ul>
+<h3 id="D8"><span class="mono">D8</span> Wire shape from the contract</h3>
+<p>WireFormatTests reads the contract&#39;s example lines and, for tags ok, err, tpl, pillar and ks, asserts each builder&#39;s keys equal the example&#39;s in order; every twin and read line passes the grammar check (at most 480 bytes; no &#39;&lt;&#39;, &#39;&gt;&#39; or newline; values free of space, &#39;=&#39;, &#39;;&#39; and &#39;:&#39;), with the raw verb echoed on a rate-limited or unknown-verb line mapped by TextSink.WireValue, `-` when empty, and value, verb, reason and summary cut to 120 UTF-8 bytes on a character boundary after mapping, measured on a 32-character id, a 200-character field value of 4-byte characters and the longest template summary</p>
+<p class="mono">test: Nyarlathotep.Tests WireFormatTests AdminTwins (fails when: a key set or order differs from the contract, a line exceeds 480 bytes, a cut splits a character, or a forbidden character survives)</p>
+<ul><li class="mono">2026-09-28 · pass · test: dotnet test Nyarlathotep/Nyarlathotep.Tests --filter FullyQualifiedName~WireFormatTests.AdminTwins → Passed! 9/9</li></ul>
+<h3 id="D9"><span class="mono">D9</span> Same pushes, one per change</h3>
+<p>a twin queues exactly the pushes its human command queues: config-changed after an applied events.json write (set, enable, disable, reload, new, copy, template use, delete confirm), event-start and event-end on start and stop, killswitch on purge confirm; a pillar switch that changes the cfg now queues one config-changed as well, for the human command and the twin alike (S-5); the events a pillar `off` ends queue their event-end, changed or not (D5); any other refusal or changed=0 queues nothing</p>
+<p class="mono">test: Nyarlathotep.Tests ConfigChangedTests Twins and PushTests Twins over the flows (fails when: a twin and its human command queue different pushes, a refusal or a changed=0 without ended events queues a push, or a changed pillar queues other than one config-changed)</p>
+<ul><li class="mono">2026-09-28 · pass · test: dotnet test Nyarlathotep/Nyarlathotep.Tests --filter FullyQualifiedName~ConfigChangedTests.Twin|FullyQualifiedName~PushTests.Twin → Passed! 15/15</li></ul>
+<h3 id="D10"><span class="mono">D10</span> Contract at api 4</h3>
+<p>Wire.Api is 4; docs/RAPHAEL_INTEGRATION_CONTRACT.md says &quot;**Current api:** 4&quot;, its Tags and commands table marks tpl, pillar and ks (tags) and event, template, templates, pillar, purge and killswitch (commands) IMPLEMENTED with api 4; §10.1–10.3 move into §3 (reads), §4 (codes, with limit) and a new §5a &quot;Admin action twins — IMPLEMENTED (api 4)&quot;, with S-4&#39;s rate and the reason list, the refusal rule worded as Business rules 2 (a refusal changes nothing except what a file holds after a failed save and the events a pillar `off` ends; a `reason=internal` answer may leave the action applied, A16) in §5a and in §4&#39;s io row, and the handoff states the same `internal` rule; §10 keeps only the later children&#39;s rows; §9 gains the api 4 entry; docs/NYARLATHOTEP_DESIGN.md §6 lists the new commands; docs/RAPHAEL_HANDOFF_API4.md&#39;s &quot;When api 4 lands&quot; part says &quot;api 4 ships in Nyarlathotep 0.5.2&quot; and names the §5a twins</p>
+<p class="mono">test: Nyarlathotep.Tests ContractDocTests (fails when: Wire.Api differs from the contract&#39;s current api, a new tag or command is not IMPLEMENTED (api 4), a WireError member has no row in §4, §10 still lists a raphael-api-admin row, the handoff lacks the 0.5.2 line, §5a or §4&#39;s io row still says a refusal or io &quot;changes nothing&quot; without Business rules 2&#39;s exceptions, or either, or the handoff, lacks the `reason=internal` rule of A16); cmd: pwsh tools/preflight.ps1 → &quot;wire contract: &lt;n&gt; tags, &lt;m&gt; api commands, all documented (api 4)&quot;</p>
+<ul><li class="mono">2026-09-28 · pass · test: dotnet test Nyarlathotep/Nyarlathotep.Tests --filter FullyQualifiedName~ContractDocTests → Passed! 61/61 (Api4Problems: §5, §5a, §4 io row and the handoff carry the A16 internal rule)</li></ul>
+<h3 id="D11"><span class="mono">D11</span> Authorization and static checks</h3>
+<p>every twin and read is `adminOnly: true` in a `[CommandGroup(&quot;nyar api&quot;)]` class (Commands/ApiAdminCommands.cs) and starts with the ready guard; every twin reaches IAdminOps only inside ActionGateway.Run&lt;T&gt; in AdminFlows (D3) and every [Mutating] Services method only inside Gateway.Run, enforced by Test-CheckGatewayOnly&#39;s new rule: Services/AdminOps.cs joins $script:DispatchedServices with every member marked [Mutating], every Logic/*.cs file joins the scanned files, a `.Run&lt;` span counting as a gate there (A2), and any member access `.Op&lt;Name&gt;(` of AdminOps or IAdminOps outside such a span fails in every scanned file except the dispatched services; a member declaration, such as IAdminOps&#39; own, is not an access (A1) (the existing exemption, AdminOps.cs among them), the distinct `Op` prefix keeping the names apart from EventRuntime&#39;s, EventStore&#39;s and PillarSwitches&#39; own; ActionTable gains no new kind; -AuthSuite&#39;s admin list shows each new command admin-only; Nyarlathotep.Tests ApiOverloadTests lists each `nyar api` command&#39;s word counts per VCF overload (from the method signatures, read by reflection over a copy of the command table kept in Logic/ApiCommandTable.cs that ApiAdminCommands must match, checked by the WireContract check) and fails when two overloads of one group accept the same first word and count; ControlCases gains a row per control of this plan, the set being every D-item whose evidence carries a `(fails when:` clause (D1-D12, D14-D16; D13 is manual), a cmd item&#39;s row naming the fixture that fails it; Nyarlathotep.Tests.csproj copies docs/dod/raphael-api-admin.md into the test Resources and ControlCaseTests compares this plan&#39;s controls with its rows, on the per-slug ControlCases that walkable-spawns step 2 builds (its D9)</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 -AuthSuite → &quot;auth suite: pass (…)&quot;; pwsh tools/preflight.ps1 → PREFLIGHT OK with &quot;commands: &lt;n&gt; admin-only, &lt;m&gt; public (allow-listed)&quot; and &quot;ready guard: &lt;k&gt;/&lt;k&gt;&quot;; pwsh tools/preflight.ps1 -SelfTest → &quot;selftest: &lt;n&gt;/&lt;n&gt; checks, &lt;k&gt;/&lt;k&gt; external selftests&quot;; dotnet test Nyarlathotep/Nyarlathotep.Tests --filter ControlCaseTests → &quot;Passed!&quot; (fails when: a new command loses adminOnly or its ready guard, a twin calls a [Mutating] method outside Gateway.Run, fixture Commands/bad-2 (a twin in Commands/ApiAdminCommands.cs without adminOnly), GatewayOnly/bad-6 (Commands/ApiAdminCommands.cs calling AdminOps.StartEvent outside AdminFlows), GatewayOnly/bad-7 (Logic/AdminFlows.cs calling an IAdminOps member outside Run&lt;T&gt;), GatewayOnly/bad-8 (another Logic file calling an IAdminOps member outside Run&lt;T&gt;, A2) or WireContract/bad-10 (an `api event` command the table leaves PLANNED) passes, a twin&#39;s VCF overloads accept the same word count as another command of the `nyar api` group (the CommandOverloads unit case, F6), a control lacks its row, or a plan text without control ids does not fail with &quot;the plan lists no control id&quot; (A9))</p>
+<ul><li class="mono">2026-09-28 · pass · cmd: pwsh tools/preflight.ps1 -AuthSuite → &quot;auth suite: pass (tests, commands, admin list, gateway, vcf dependency)&quot;; pwsh tools/preflight.ps1 → PREFLIGHT OK, &quot;commands: 14 admin-only, 5 public (allow-listed)&quot;, &quot;ready guard: 19/19 commands start with the IsReady guard&quot;, &quot;wire contract: 10 tags, 10 api commands, all documented (api 4); command table equal&quot;; -SelfTest → &quot;selftest: 36/36 checks, 7/7 external selftests&quot; (176 extra bad fixtures fail, Commands/bad-2 to bad-12, GatewayOnly/bad-6 to bad-8, WireContract/bad-10 to bad-16 among them); dotnet test Nyarlathotep/Nyarlathotep.Tests --filter FullyQualifiedName~ControlCaseTests → Passed! 15/15</li></ul>
+<h3 id="D12"><span class="mono">D12</span> Twin failures are answered</h3>
+<p>a flow whose IAdminOps call throws answers `[NYAR:err] cmd=&lt;cmd&gt; verb=&lt;verb&gt; code=io reason=internal` and logs &quot;api &lt;cmd&gt; &lt;verb&gt; failed: &lt;exception type&gt;&quot; once per failure streak per command, a streak ending at that command&#39;s next run that does not throw (A7) (the catch lives in AdminFlows, D3); the throw may come after the op changed state, so `reason=internal` promises no rollback: the action may be partly or fully applied and the client re-reads state (A16); an events.json or cfg that cannot be read, parsed or saved answers code=io with reason read, parse, save, stale, read_only or write_uncertain, and memory changes only to follow what the file now holds (event-library D19); the admin who sent it gets exactly one line in every case</p>
+<p class="mono">test: Nyarlathotep.Tests DependencyFailureTests Twins, also run as dotnet test Nyarlathotep/Nyarlathotep.Tests --filter Twin_ → &quot;Passed!&quot; with at least 6 tests (fails when: a throwing op answers nothing or two lines, an op that throws after it changed state answers other than io reason=internal, the log line repeats within a streak, a throw after a run that did not throw is not logged, a failed save answers ok, memory differs from the file after a refused write, or the filter runs fewer than 6 tests)</p>
+<ul><li class="mono">2026-09-28 · pass · test: dotnet test Nyarlathotep/Nyarlathotep.Tests --filter Twin_ → Passed! 14 tests (≥ 6; Twin_passes_throw_after_change_is_internal among them)</li></ul>
+<h3 id="D13"><span class="mono">D13</span> Twins in game</h3>
+<p>on the local server (127.0.0.1:9876) with the owner as admin and `.nyar api sub on`: `.nyar api version` shows api=4 plugin=0.5.2; each twin of D3 and D4 on the example event bandit-ambush answers its ok line and its human effect shows in `.nyar event info` or `.nyar pillar list`; start twice shows code=state; a purge ask then confirm shows the two ok lines and the killswitch push; the four reads answer their rows; the rate limit is proved by D6 alone, since chat cannot send six lines in a second by hand; every line shows whole in chat</p>
+<p class="mono">manual: Sessions 1 and 2 (A19) in docs/features/RAPHAEL_API_ADMIN.md › Test results records each observed line (SteamIDs redacted)</p>
+<ul><li class="mono">2026-09-28 · pass · manual: Sessions 1 and 2 in docs/features/RAPHAEL_API_ADMIN.md › Test results (A19): api=4 plugin=0.5.2; every twin of D3 and D4 answered its ok line and its effect showed in `.nyar event info` or `.nyar pillar list` (Session 2 steps 2-17); start twice code=state reason=already_active; purge ask then confirm with killswitch=1; the four reads&#39; rows and end lines whole (Session 1 steps 3, 4, 19, 25)</li></ul>
+<h3 id="D14"><span class="mono">D14</span> Sessions, records, paths and data</h3>
+<p>every server session is &quot;### Session &lt;n&gt; · &lt;date&gt;&quot; under docs/features/RAPHAEL_API_ADMIN.md › Test results, with its -LogCheck line in docs/audits/raphael-api-admin.md before the next restart and &quot;snapshot restored; hashes equal&quot; from tools/dev-snapshot.ps1; the audit has a pre-audit, a post-audit and a &quot;Codex verdict:&quot; line per Build plan step; tools/preflight-checks.json gains `childDocs`, `snapshotSessions` (1) and `dataTables` entries for raphael-api-admin; tools/data-inventory.json has a &quot;raphael-api-admin › &lt;artifact&gt;&quot; entry per Design › Data row</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 -AuditOf raphael-api-admin → &quot;audit steps: raphael-api-admin 3/3 pre, 3/3 post, 3/3 Codex verdicts&quot;; pwsh tools/preflight.ps1 -SessionsOf raphael-api-admin → &quot;session logs: raphael-api-admin 2/2 checked; snapshots 2/2 from session 1&quot;; pwsh tools/preflight.ps1 -Paths -DeclaredOf raphael-api-admin → &quot;paths: &lt;n&gt; walked, all in manifest; declared: &lt;d&gt;/&lt;d&gt; in raphael-api-admin&quot; (fails when: a step lacks an entry or verdict, a session lacks its log-check or snapshot line, a walked path matches no manifest glob or is undeclared, a %TEMP%\nyar-* folder outlives its session, or a Data row lacks an inventory entry or field)</p>
+<ul><li class="mono">2026-09-28 · pass · cmd: pwsh tools/preflight.ps1 -AuditOf raphael-api-admin → &quot;audit steps: raphael-api-admin 3/3 pre, 3/3 post, 3/3 Codex verdicts&quot;; -SessionsOf raphael-api-admin → &quot;session logs: raphael-api-admin 2/2 checked; snapshots 2/2 from session 1&quot;; -Paths -DeclaredOf raphael-api-admin → &quot;paths: 1267 walked, all in manifest; declared: 260/260 in raphael-api-admin&quot;</li></ul>
+<h3 id="D15"><span class="mono">D15</span> Secrets and privacy</h3>
+<p>this child adds no credential; no tracked file, built zip, dist/ or build/ file holds a token; no wire line carries a SteamID, a player name or a coordinate other than the `location here` value the admin set; the admin log line keeps its existing form, and no audit or feature-doc line copies an &quot;admin … (&lt;id&gt;)&quot; log line</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 → &quot;secrets: none (&lt;n&gt; files scanned…)&quot;; then, before each push, git grep -n -E &quot;7656119|kdpenland&quot; → only lines that quote the pattern; test: Nyarlathotep.Tests PrivacyTests Twins (fails when: a token shape is in the scanned set, which the existing Secrets fixtures plant under -SelfTest, a twin or read line carries a SteamID or player name, or the grep finds a SteamID digit run or the owner&#39;s address on any other line)</p>
+<ul><li class="mono">2026-09-28 · pass · cmd: pwsh tools/preflight.ps1 → &quot;secrets: none (1272 files scanned, 1251 index blobs)&quot;; git grep -n -E &quot;7656119|kdpenland&quot; → only lines that quote the pattern (no digit run after it, no address); test: dotnet test Nyarlathotep/Nyarlathotep.Tests --filter FullyQualifiedName~PrivacyTests.Twin → Passed! 4/4</li></ul>
+<h3 id="D16"><span class="mono">D16</span> Release 0.5.2</h3>
+<p>csproj Version and thunderstore.toml versionNumber are 0.5.2; both changelogs describe the api 4 twins and reads; both READMEs say Raphael can manage Nyarlathotep with api 4; the annotated tag v0.5.2 is pushed and the GitHub pre-release carries the tcli zip; after a failed or ambiguous `gh release create` the step runs `gh release view v0.5.2` and retries only when the release is absent; no tcli publish</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 → PREFLIGHT OK and &quot;release tags: &lt;n&gt;/&lt;n&gt;&quot;; then pwsh tools/rollback-gate.ps1 -From v0.5.1 -To v0.5.2 -Plan raphael-api-admin → &quot;rollback gate: 4/4&quot;; then pwsh tools/release-verify.ps1 -Tag v0.5.2 -Asset kdpen-Nyarlathotep-0.5.2.zip → &quot;release verify: hashes equal&quot; (fails when: a surface differs, 0.5.1 does not initialize on 0.5.2&#39;s files, the repository revert of v0.5.1..v0.5.2 is not clean, a Rollback route is missing or names another range, the tag is missing or unpushed, the release has no zip, or the hashes differ)</p>
+<ul><li class="mono">2026-09-28 · pass · cmd: pwsh tools/preflight.ps1 → PREFLIGHT OK and &quot;release tags: 7/7&quot;; pwsh tools/rollback-gate.ps1 -From v0.5.1 -To v0.5.2 -Plan raphael-api-admin → &quot;rollback gate: 4/4&quot; (before the push); pwsh tools/release-verify.ps1 -Tag v0.5.2 -Asset kdpen-Nyarlathotep-0.5.2.zip → &quot;release verify: hashes equal&quot;; csproj and toml 0.5.2, both changelogs and READMEs carry api 4; gh release create succeeded at the first call; no tcli publish</li></ul>
+</body>
+</html>

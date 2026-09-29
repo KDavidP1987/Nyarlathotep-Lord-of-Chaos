@@ -165,3 +165,27 @@ VERDICT: READY
 - F8 · accepted · applied at `start` as an amendment (the reviewed revision stays frozen until approve)
 - F9 · accepted · applied at `start` as an amendment (the reviewed revision stays frozen until approve)
 - Hunted scenarios · accepted · at `start`: the purge race into ApiTwinTests Idempotency, a failed template catalogue answering code=io reason=read on `templates`, the lost-rights sentence under Permissions
+
+## Review 5 · 2026-09-28 · subagent · plan commit ade7a09 · plan 102935 B · 16 items · files 0 · e3b0c44298fc · prompt d39f519d5c2f · scope A16,A19
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, given the prompt built by `dod-index.mjs --review-prompt raphael-api-admin --scope A16,A19` (redacted; it held no Steam ID) and read access to the repository (design §9 D26).
+
+F1 · advisory · A19 says Session 2 is part of Build plan step 3, but step 3, Rollout › Paths walked and the Design › Data row still name only Session 1.
+Fix: say "Sessions 1 and 2 (A19; snapshots raa1, raa2)" there; wording only.
+
+F2 · advisory · 7.3, 8.2. After Session 2's restore the dev server holds 0.5.1's DLL, because raa2 was saved before 0.5.2 was redeployed; nothing in the plan says to deploy after the snapshot.
+Fix: a procedure line in step 3: a later session deploys after its -Save and before its boot.
+
+F3 · advisory · 5.3. D9's "a refusal … queues a push" does not say whether an `internal` answer counts, while A16 and contract §5a promise no push after internal.
+Fix: D9 adds "an `internal` answer promises no push either way (A16)".
+
+F4 · advisory · 12.3. Session 2 skipped the reads after steps 2 and 16 and did not paste step 11; the record covers each (step 3's read, step 17's first read, step 10's whole delete twin), and D13 is met per twin.
+Fix: none needed.
+
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · Build plan step 3, the Data row and Paths walked name Sessions 1 and 2 (log note)
+- F2 · accepted · step 3 says a later session deploys after its -Save and before its boot
+- F3 · accepted · A20 (discovered, ~D9, layer 5.3)
+- F4 · accepted · no change; the record explains each gap
