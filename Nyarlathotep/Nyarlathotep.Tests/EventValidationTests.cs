@@ -219,4 +219,129 @@ public partial class EventValidationTests
     {
         Assert.Equal(bad, EventValidator.UnknownPlaceholder(template));
     }
+
+    // regions D3 (Scope), A3, A15, A25: `scope` on every trigger type and on both actions.
+
+    static EventDefinition Scoped(string eventJson, IRegionCatalog? regions = null)
+    {
+        var r = EventValidator.Parse(Json.File(eventJson), FakeUnits.Default(), regions: regions ?? FakeRegions.All());
+        Assert.Null(r.FileError);
+        return Assert.Single(r.Set.All);
+    }
+
+    static string WavesWithScope(string scope) => Json.ValidAction[..^2] + ", \"scope\": " + scope + " }";
+
+    [Fact]
+    public void Scope_absent_is_global_and_a_0_5_definition_parses_unchanged()
+    {
+        foreach (var ev in new[] { Json.Event(), Json.Empower(), Json.Event("b", "{ \"type\": \"VBloodKilled\", \"bosses\": [\"any\"] }") })
+        {
+            var before = Json.One(ev);                                        // no region catalog at all, as in 0.5.x
+            var after = Scoped(ev);
+            Assert.Null(after.DisabledReason);
+            Assert.True(after.Trigger.Scope.IsGlobal);
+            Assert.True((after.Action?.Scope ?? after.Empower!.Scope).IsGlobal);
+            Assert.Equal(before.DisabledReason, after.DisabledReason);
+            Assert.Equal(before.Trigger.Type, after.Trigger.Type);
+            Assert.Equal(before.Trigger.Bosses, after.Trigger.Bosses);
+            Assert.Equal(before.Action?.Location, after.Action?.Location);
+            Assert.Equal(before.Empower?.Stats, after.Empower?.Stats);
+        }
+    }
+
+    [Theory]
+    [InlineData("{ \"type\": \"Manual\", \"scope\": [\"CursedForest\"] }")]
+    [InlineData("{ \"type\": \"Schedule\", \"days\": [\"Sat\"], \"times\": [\"20:00\"], \"scope\": [\"CursedForest\"] }")]
+    [InlineData("{ \"type\": \"GameTime\", \"phase\": \"night\", \"scope\": [\"CursedForest\"] }")]
+    [InlineData("{ \"type\": \"VBloodKilled\", \"bosses\": [\"any\"], \"scope\": [\"CursedForest\"] }")]
+    public void Scope_every_trigger_type_takes_one(string trigger)
+    {
+        var d = Scoped(Json.Event(trigger: trigger));
+        Assert.Null(d.DisabledReason);
+        Assert.Equal(new Scope(["CursedForest"]), d.Trigger.Scope);
+    }
+
+    [Fact]
+    public void Scope_trigger_and_action_are_independent()
+    {
+        var d = Scoped(Json.Event(trigger: "{ \"type\": \"Manual\", \"scope\": [\"CursedForest\"] }", action: WavesWithScope("[\"FarbaneWoods\"]")));
+        Assert.Null(d.DisabledReason);
+        Assert.Equal(new Scope(["CursedForest"]), d.Trigger.Scope);
+        Assert.Equal(new Scope(["FarbaneWoods"]), d.Action!.Scope);
+    }
+
+    [Fact]
+    public void Scope_names_match_case_insensitively_and_keep_the_games_spelling()
+    {
+        var d = Scoped(Json.Empower(action: Json.EmpowerAction(extra: "\"scope\": [\"cursedforest\", \"GLOOMROT_SOUTH\"]")));
+        Assert.Null(d.DisabledReason);
+        Assert.Equal(["CursedForest", "Gloomrot_South"], d.Empower!.Scope.Regions);
+    }
+
+    [Theory]
+    [InlineData("\"Global\"")]
+    [InlineData("\"global\"")]
+    public void Scope_global_string_is_global(string scope)
+    {
+        var d = Scoped(Json.Event(trigger: "{ \"type\": \"Manual\", \"scope\": " + scope + " }", action: WavesWithScope(scope)));
+        Assert.Null(d.DisabledReason);
+        Assert.True(d.Trigger.Scope.IsGlobal);
+        Assert.True(d.Action!.Scope.IsGlobal);
+    }
+
+    public static IEnumerable<object[]> BadScopes()
+    {
+        var rule = $"must be Global or 1-{RegionNames.Count} region names";
+        var tooMany = "[" + string.Join(", ", RegionNames.All.Append("CursedForest").Select(n => $"\"{n}\"")) + "]";
+        return
+        [
+            ["[\"Narnia\"]", "unknown region Narnia"],
+            ["[\"None\"]", "unknown region None"],
+            ["[\"Other\"]", "unknown region Other"],
+            ["[\"Farbane Woods\"]", "unknown region Farbane Woods"],
+            ["[]", rule],
+            [tooMany, rule],
+            ["[\"CursedForest\", \"cursedforest\"]", rule],
+            ["[1]", rule],
+            ["5", rule],
+            ["\"CursedForest\"", rule],
+            ["{ }", rule],
+        ];
+    }
+
+    [Theory]
+    [MemberData(nameof(BadScopes))]
+    public void Scope_invalid_disables_the_event(string scope, string reason)
+    {
+        var onTrigger = Scoped(Json.Event(trigger: "{ \"type\": \"Manual\", \"scope\": " + scope + " }"));
+        Assert.False(onTrigger.Startable);
+        Assert.Equal(reason.StartsWith("must", StringComparison.Ordinal) ? "trigger.scope " + reason : reason, onTrigger.DisabledReason);
+        var onAction = Scoped(Json.Event(action: WavesWithScope(scope)));
+        Assert.Equal(reason.StartsWith("must", StringComparison.Ordinal) ? "action.scope " + reason : reason, onAction.DisabledReason);
+    }
+
+    [Fact]
+    public void Scope_bound_follows_region_names_count()
+    {
+        var all = "[" + string.Join(", ", RegionNames.All.Select(n => $"\"{n}\"")) + "]";
+        Assert.Null(Scoped(Json.Event(trigger: "{ \"type\": \"Manual\", \"scope\": " + all + " }")).DisabledReason);
+        Assert.Equal($"trigger.scope must be Global or 1-{RegionNames.Count} region names",
+            Scoped(Json.Event(trigger: "{ \"type\": \"Manual\", \"scope\": [] }")).DisabledReason);
+    }
+
+    [Fact]
+    public void Scope_a_name_the_index_lacks_is_not_on_the_map()
+    {
+        var d = Scoped(Json.Event(action: WavesWithScope("[\"CursedForest\", \"StartCave\"]")), new FakeRegions("CursedForest"));
+        Assert.Equal("region StartCave is not on the map", d.DisabledReason);
+    }
+
+    [Fact]
+    public void Scope_templates_accept_the_key()
+    {
+        var text = Json.File(Json.Event("tpl", "{ \"type\": \"Manual\", \"scope\": \"Global\" }", action: WavesWithScope("\"Global\"")));
+        var catalog = TemplateCatalog.Load(TemplateLibraryTests.Bytes(text), FakeUnits.Default(), FakeUnits.Default());
+        Assert.Null(catalog.Error);
+        Assert.Null(Assert.Single(catalog.Templates).Invalid);
+    }
 }

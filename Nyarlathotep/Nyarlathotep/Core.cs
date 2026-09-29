@@ -62,9 +62,10 @@ internal static class Core
             ServerGameSettingsSystem = server.GetExistingSystemManaged<ServerGameSettingsSystem>();
 
             // Services in dependency order (docs/dod/foundation.md › Design › States › Startup and shutdown):
-            // Persistence → EventStore → SpawnTracker → EmpowerAction → TriggerBus → EventRuntime → Announcer → Pusher → HealthMonitor
+            // Persistence → RegionMap → EventStore → SpawnTracker → EmpowerAction → TriggerBus → EventRuntime → Announcer → Pusher → HealthMonitor
             // → EventScheduler.
             Services.Persistence.Initialize();
+            Services.RegionMap.Initialize();                              // before the definitions are applied (regions D7)
             Services.EventStore.Initialize();
             Services.TemplateLibrary.Initialize();
             Services.SpawnTracker.Initialize();

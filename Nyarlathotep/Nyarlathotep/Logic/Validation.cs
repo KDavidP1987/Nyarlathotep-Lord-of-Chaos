@@ -102,10 +102,12 @@ public static class EventValidator
     public static IReadOnlySet<string> EventKeyNames => EventKeys;
 
     /// <summary>Parses events.json. <paramref name="factions"/> checks Empower factions; when null, a unit catalog that
-    /// is also an <see cref="IFactionCatalog"/> serves, otherwise no faction is known.</summary>
-    public static LoadResult Parse(string text, IUnitCatalog units, IFactionCatalog? factions = null)
+    /// is also an <see cref="IFactionCatalog"/> serves, otherwise no faction is known. <paramref name="regions"/> checks
+    /// scopes the same way (regions D3, D7): when none is known, a regional scope disables its definition.</summary>
+    public static LoadResult Parse(string text, IUnitCatalog units, IFactionCatalog? factions = null, IRegionCatalog? regions = null)
     {
         factions ??= units as IFactionCatalog ?? NoFactions.Instance;
+        regions ??= units as IRegionCatalog ?? NoRegions.Instance;
         var bytes = System.Text.Encoding.UTF8.GetByteCount(text);
         if (bytes > MaxFileBytes)
             return new LoadResult { FileError = $"events.json is {bytes} bytes, over the {MaxFileBytes} byte limit" };
@@ -144,7 +146,7 @@ public static class EventValidator
             foreach (var e in events.EnumerateArray())
             {
                 index++;
-                var def = ParseEvent(e, index, units, factions);
+                var def = ParseEvent(e, index, units, factions, regions);
                 if (def.DisabledReason is null && !seen.Add(def.Id))
                     def = def with { DisabledReason = "duplicate id" };
                 else if (def.DisabledReason is not null && IdRx.IsMatch(def.Id))
@@ -158,7 +160,7 @@ public static class EventValidator
 
     sealed class Fail(string reason) : Exception(reason);
 
-    static EventDefinition ParseEvent(JsonElement e, int index, IUnitCatalog units, IFactionCatalog factions)
+    static EventDefinition ParseEvent(JsonElement e, int index, IUnitCatalog units, IFactionCatalog factions, IRegionCatalog regions)
     {
         var fallbackId = $"#{index}";
         if (e.ValueKind != JsonValueKind.Object)
@@ -178,10 +180,10 @@ public static class EventValidator
             var enabledEl = Required(e, "enabled", "enabled must be true or false");
             if (enabledEl.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) throw new Fail("enabled must be true or false");
             var pillar = ParsePillar(Required(e, "pillar", "pillar is required"));
-            var trigger = ParseTrigger(Required(e, "trigger", "trigger is required"), units);
+            var trigger = ParseTrigger(Required(e, "trigger", "trigger is required"), units, regions);
             var conditions = e.TryGetProperty("conditions", out var c) ? ParseConditions(c) : new Conditions();
             var duration = Int(Required(e, "durationSeconds", "durationSeconds must be 30-7200"), 30, 7200, "durationSeconds must be 30-7200");
-            var (action, empower) = ParseAction(Required(e, "action", "action is required"), pillar, trigger, units, factions);
+            var (action, empower) = ParseAction(Required(e, "action", "action is required"), pillar, trigger, units, factions, regions);
             var announce = e.TryGetProperty("announce", out var a) ? ParseAnnounce(a) : Announce.None;
             return new EventDefinition(id, name.GetString()!, enabledEl.GetBoolean(), pillar, trigger, conditions, duration, action, announce,
                 Empower: empower);
@@ -242,18 +244,48 @@ public static class EventValidator
         };
     }
 
-    static Trigger ParseTrigger(JsonElement t, IUnitCatalog units)
+    /// <summary>The trigger by its type, then its optional scope (regions D3): every trigger type takes one.</summary>
+    static Trigger ParseTrigger(JsonElement t, IUnitCatalog units, IRegionCatalog regions)
+    {
+        var trigger = ParseTriggerType(t, units);
+        return t.TryGetProperty("scope", out var s) ? trigger with { Scope = ParseScope(s, "trigger.scope", regions) } : trigger;
+    }
+
+    /// <summary>`scope` (regions D3, A3, A15): "Global" or 1 to <see cref="RegionNames.Count"/> distinct region names,
+    /// matched case-insensitively and kept in the game's spelling. A regional scope needs the region index (D7's
+    /// "regions unavailable" first), then a polygon for every name.</summary>
+    static Scope ParseScope(JsonElement v, string field, IRegionCatalog regions)
+    {
+        var rule = $"{field} must be Global or 1-{RegionNames.Count} region names";
+        if (v.ValueKind == JsonValueKind.String)
+            return string.Equals(v.GetString(), "Global", StringComparison.OrdinalIgnoreCase) ? Scope.Global : throw new Fail(rule);
+        if (v.ValueKind != JsonValueKind.Array || v.GetArrayLength() < 1 || v.GetArrayLength() > RegionNames.Count) throw new Fail(rule);
+        var names = new List<string>();
+        foreach (var x in v.EnumerateArray())
+        {
+            var name = Str(x, rule);
+            if (!RegionNames.TryCanonical(name, out var canonical)) throw new Fail($"unknown region {name}");
+            if (names.Contains(canonical)) throw new Fail(rule);
+            names.Add(canonical);
+        }
+        if (!regions.Available) throw new Fail("regions unavailable");
+        foreach (var n in names)
+            if (!regions.OnMap(n)) throw new Fail($"region {n} is not on the map");
+        return new Scope(names);
+    }
+
+    static Trigger ParseTriggerType(JsonElement t, IUnitCatalog units)
     {
         if (t.ValueKind != JsonValueKind.Object) throw new Fail("trigger must be an object with a type");
         var type = t.TryGetProperty("type", out var ty) && ty.ValueKind == JsonValueKind.String ? ty.GetString()! : "";
         switch (type)
         {
             case "Manual":
-                OnlyKeys(t, "trigger", "type");
+                OnlyKeys(t, "trigger", "type", "scope");
                 return Trigger.Manual();
             case "Schedule":
             {
-                OnlyKeys(t, "trigger", "type", "days", "times");
+                OnlyKeys(t, "trigger", "type", "days", "times", "scope");
                 const string daysRule = "trigger.days must be 1-7 of Mon Tue Wed Thu Fri Sat Sun";
                 const string timesRule = "trigger.times must be 1-12 of HH:mm";
                 var days = new List<DayOfWeek>();
@@ -278,14 +310,14 @@ public static class EventValidator
             }
             case "GameTime":
             {
-                OnlyKeys(t, "trigger", "type", "phase");
+                OnlyKeys(t, "trigger", "type", "phase", "scope");
                 var p = Str(Required(t, "phase", "trigger.phase must be day or night"), "trigger.phase must be day or night");
                 var phase = p switch { "day" => DayPhase.Day, "night" => DayPhase.Night, _ => throw new Fail("trigger.phase must be day or night") };
                 return new Trigger(TriggerType.GameTime, [], [], phase, []);
             }
             case "VBloodKilled":
             {
-                OnlyKeys(t, "trigger", "type", "bosses");
+                OnlyKeys(t, "trigger", "type", "bosses", "scope");
                 const string rule = "trigger.bosses must be [\"any\"] or 1-20 CHAR_ names";
                 var b = Required(t, "bosses", rule);
                 if (b.ValueKind != JsonValueKind.Array || b.GetArrayLength() is < 1 or > 20) throw new Fail(rule);
@@ -338,7 +370,7 @@ public static class EventValidator
     /// on the type, before the action's own fields: pillar empowerment takes an Empower action and an Empower action
     /// needs pillar empowerment.</summary>
     static (SpawnWavesAction? Waves, EmpowerAction? Empower) ParseAction(JsonElement a, Pillar pillar, Trigger trigger,
-        IUnitCatalog units, IFactionCatalog factions)
+        IUnitCatalog units, IFactionCatalog factions, IRegionCatalog regions)
     {
         if (a.ValueKind != JsonValueKind.Object) throw new Fail("action must be an object with a type");
         var type = a.TryGetProperty("type", out var ty) && ty.ValueKind == JsonValueKind.String ? ty.GetString()! : "";
@@ -346,10 +378,10 @@ public static class EventValidator
         {
             case "SpawnWaves":
                 if (pillar == Pillar.Empowerment) throw new Fail("pillar empowerment takes an Empower action");
-                return (ParseSpawnWaves(a, trigger, units), null);
+                return (ParseSpawnWaves(a, trigger, units, regions), null);
             case "Empower":
                 if (pillar != Pillar.Empowerment) throw new Fail("action Empower needs pillar empowerment");
-                return (null, ParseEmpower(a, units, factions));
+                return (null, ParseEmpower(a, units, factions, regions));
             default:
                 throw new Fail($"unknown action type {type}");
         }
@@ -363,9 +395,9 @@ public static class EventValidator
     /// <summary>The stat keys of an Empower action, in the order they are listed and applied.</summary>
     public static readonly IReadOnlyList<string> StatKeys = ["physicalPower", "spellPower", "maxHealth", "attackSpeed", "moveSpeed"];
 
-    static EmpowerAction ParseEmpower(JsonElement a, IUnitCatalog units, IFactionCatalog factions)
+    static EmpowerAction ParseEmpower(JsonElement a, IUnitCatalog units, IFactionCatalog factions, IRegionCatalog regions)
     {
-        OnlyKeys(a, "action", "type", "factions", "includeUnits", "excludeUnits", "includeVBloods", "stats");
+        OnlyKeys(a, "action", "type", "factions", "includeUnits", "excludeUnits", "includeVBloods", "stats", "scope");
 
         const string factionsRule = "action.factions must be 1-5 distinct Faction_ names";
         var f = Required(a, "factions", factionsRule);
@@ -404,7 +436,8 @@ public static class EventValidator
         if (!values.Values.Any(v => v > MinStat)) throw new Fail("action.stats must raise at least one stat above 1.0");
         double Get(string key) => values.TryGetValue(key, out var v) ? v : MinStat;
         var stats = new EmpowerStats(Get("physicalPower"), Get("spellPower"), Get("maxHealth"), Get("attackSpeed"), Get("moveSpeed"));
-        return new EmpowerAction(factionList, include, exclude, vbloods, stats);
+        var scope = a.TryGetProperty("scope", out var sc) ? ParseScope(sc, "action.scope", regions) : Scope.Global;
+        return new EmpowerAction(factionList, include, exclude, vbloods, stats, scope);
     }
 
     /// <summary>includeUnits or excludeUnits: 0-20 distinct known CHAR_ names, default []; includeUnits also refuses
@@ -426,9 +459,9 @@ public static class EventValidator
         return list;
     }
 
-    static SpawnWavesAction ParseSpawnWaves(JsonElement a, Trigger trigger, IUnitCatalog units)
+    static SpawnWavesAction ParseSpawnWaves(JsonElement a, Trigger trigger, IUnitCatalog units, IRegionCatalog regions)
     {
-        OnlyKeys(a, "action", "type", "units", "waves", "intervalSeconds", "radius", "location", "unitLifetimeSeconds");
+        OnlyKeys(a, "action", "type", "units", "waves", "intervalSeconds", "radius", "location", "unitLifetimeSeconds", "scope");
 
         const string unitsRule = "action.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-50 }";
         var u = Required(a, "units", unitsRule);
@@ -448,7 +481,8 @@ public static class EventValidator
         var radius = Int(Required(a, "radius", "action.radius must be 2-30"), 2, 30, "action.radius must be 2-30");
         var location = ParseLocation(Required(a, "location", "action.location is required"), trigger);
         int? lifetime = a.TryGetProperty("unitLifetimeSeconds", out var lt) ? Int(lt, 30, 7200, "action.unitLifetimeSeconds must be 30-7200") : null;
-        return new SpawnWavesAction(list, waves, interval, radius, location, lifetime);
+        var scope = a.TryGetProperty("scope", out var sc) ? ParseScope(sc, "action.scope", regions) : Scope.Global;
+        return new SpawnWavesAction(list, waves, interval, radius, location, lifetime, scope);
     }
 
     static Location ParseLocation(JsonElement l, Trigger trigger)

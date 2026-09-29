@@ -21,7 +21,8 @@ public sealed record Trigger(
     IReadOnlyList<DayOfWeek> Days,
     IReadOnlyList<TimeOnly> Times,
     DayPhase Phase,
-    IReadOnlyList<string> Bosses)
+    IReadOnlyList<string> Bosses,
+    Scope Scope = default)
 {
     public static Trigger Manual() => new(TriggerType.Manual, [], [], DayPhase.Night, []);
 }
@@ -47,7 +48,8 @@ public sealed record SpawnWavesAction(
     int IntervalSeconds,
     int Radius,
     Location Location,
-    int? UnitLifetimeSeconds);
+    int? UnitLifetimeSeconds,
+    Scope Scope = default);
 
 /// <summary>The Empower action's multipliers (faction-empowerment S-1): each 1.0–3.0 of the base value, 1.0 meaning
 /// unchanged, at least one above 1.0.</summary>
@@ -60,13 +62,15 @@ public sealed partial record EmpowerStats(
 
 /// <summary>An Empower action (faction-empowerment D1): every NPC of <see cref="Factions"/>, plus the units named in
 /// <see cref="IncludeUnits"/>, minus <see cref="ExcludeUnits"/>, gets a carrier buff with <see cref="Stats"/> while the
-/// event runs. V Bloods only with <see cref="IncludeVBloods"/>.</summary>
+/// event runs. V Bloods only with <see cref="IncludeVBloods"/>. <see cref="Scope"/> limits it to the NPCs in the named
+/// regions (regions D5).</summary>
 public sealed record EmpowerAction(
     IReadOnlyList<string> Factions,
     IReadOnlyList<string> IncludeUnits,
     IReadOnlyList<string> ExcludeUnits,
     bool IncludeVBloods,
-    EmpowerStats Stats);
+    EmpowerStats Stats,
+    Scope Scope = default);
 
 public sealed record Announce(IReadOnlyList<string> Start, IReadOnlyList<string> End, bool Warnings)
 {

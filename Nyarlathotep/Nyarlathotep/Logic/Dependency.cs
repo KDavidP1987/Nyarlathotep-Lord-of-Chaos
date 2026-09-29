@@ -19,6 +19,7 @@ public enum Dependency
     CommandRegistration,
     PushDelivery,
     WalkCheck,
+    Regions,
 }
 
 /// <summary>What one dependency's failure is allowed to affect, and what the mod does about it.</summary>
@@ -40,5 +41,6 @@ public static class DependencyPolicy
         [Dependency.CommandRegistration] = new("the one command group", "log the group that failed; the rest register"),
         [Dependency.PushDelivery] = new("the one push line, subscriber or entry point", "skip it, one log line per failure streak; the event tick and the other subscribers go on"),
         [Dependency.WalkCheck] = new("the one wave's placement", "use the ring points unchecked for the rest of the wave, one log line per failure streak, the health entry while it lasts; the next wave checks again"),
+        [Dependency.Regions] = new("definitions with a regional scope", "disable them with \"regions unavailable\", the health entry while it lasts; `.nyar event reload` retries the build; Global definitions run"),
     };
 }

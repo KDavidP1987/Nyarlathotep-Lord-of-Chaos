@@ -122,6 +122,18 @@ sealed class FakeUsers : IUserSource
     }
 }
 
+/// <summary>A region index for validation (regions D3, D7): <see cref="OnMap"/> holds the regions with a polygon; with
+/// none, the index is unavailable.</summary>
+sealed class FakeRegions(params string[] onMap) : IRegionCatalog
+{
+    readonly HashSet<string> _onMap = new(onMap, StringComparer.Ordinal);
+    public bool Available => _onMap.Count > 0;
+    public bool OnMap(string region) => _onMap.Contains(region);
+
+    /// <summary>Every region of RegionNames on the map.</summary>
+    public static FakeRegions All() => new([.. RegionNames.All]);
+}
+
 /// <summary>A log sink that records every line.</summary>
 sealed class LogLines
 {

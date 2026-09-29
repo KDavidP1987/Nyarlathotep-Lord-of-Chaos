@@ -20,6 +20,7 @@ public partial class DependencyFailureTests
         [Dependency.CommandRegistration] = CommandRegistration,
         [Dependency.PushDelivery] = PushDelivery,
         [Dependency.WalkCheck] = WalkCheckFault,
+        [Dependency.Regions] = RegionsFault,
     };
 
     public static TheoryData<Dependency> All()
@@ -283,5 +284,126 @@ public partial class DependencyFailureTests
             throw new System.Reflection.ReflectionTypeLoadException([], []);
         }
         Assert.Single(log.Lines);
+    }
+
+    // regions D7, A15, A17: the region polygons. A build that finds none, or throws, disables only regional definitions,
+    // keeps the health entry while it lasts, never throws, and `.nyar event reload` rebuilds it.
+
+    static readonly RegionPolygon Square = new("CursedForest", 0, 0, 10, 10, [(0, 0), (10, 0), (10, 10), (0, 10)]);
+
+    static readonly string[] GameNames = ["None", "Other", .. RegionNames.All];
+
+    static string RegionalAndGlobal() => Json.File(
+        Json.Event("regional", "{ \"type\": \"Manual\", \"scope\": [\"CursedForest\"] }"),
+        Json.Event("global"));
+
+    static void RegionsFault()
+    {
+        var (state, log) = (new RegionState(), new LogLines());
+        state.Build(() => throw new InvalidOperationException("query failed"), () => GameNames, log.Add, log.Add);
+        Assert.False(state.Available);
+        Assert.Equal([RegionState.HealthEntry], state.Entries);
+        Assert.Equal(["regions unavailable: InvalidOperationException: query failed"], log.Lines);
+        var r = EventValidator.Parse(RegionalAndGlobal(), FakeUnits.Default(), regions: state);
+        Assert.Equal("regions unavailable", r.Set.Find("regional")!.DisabledReason);
+        Assert.Null(r.Set.Find("global")!.DisabledReason);
+    }
+
+    [Fact]
+    public void Regions_no_polygons_disables_regional_definitions_and_global_ones_run()
+    {
+        var (state, log) = (new RegionState(), new LogLines());
+        state.Build(() => [], () => GameNames, log.Add, log.Add);
+        Assert.False(state.Available);
+        Assert.Equal([RegionState.HealthEntry], state.Entries);
+        Assert.Equal(["regions unavailable: no region polygons (0 dropped, 0 untagged)"], log.Lines);
+        var r = EventValidator.Parse(RegionalAndGlobal(), FakeUnits.Default(), regions: state);
+        Assert.Equal("regions unavailable", r.Set.Find("regional")!.DisabledReason);
+        Assert.True(r.Set.Find("global")!.Startable);
+    }
+
+    [Fact]
+    public void Regions_a_throwing_build_never_throws() => RegionsFault();
+
+    [Fact]
+    public void Regions_a_throwing_log_sink_never_throws_and_keeps_the_index()
+    {
+        void Throw(string _) => throw new InvalidOperationException("log down");
+        var state = new RegionState();
+        state.Build(() => [Square], () => GameNames.Append("Oakveil"), Throw, Throw);     // info fails after a good build
+        Assert.True(state.Available);
+        Assert.Empty(state.Entries);
+        var failed = new RegionState();
+        failed.Build(() => throw new InvalidOperationException("query failed"), () => throw new InvalidOperationException(), Throw, Throw);
+        Assert.False(failed.Available);
+        Assert.Equal([RegionState.HealthEntry], failed.Entries);
+        failed.Retry(() => [Square], () => GameNames, Throw, Throw);
+        Assert.True(failed.Available);
+    }
+
+    [Fact]
+    public void Regions_unavailable_wins_over_not_on_the_map()
+    {
+        var r = EventValidator.Parse(Json.File(Json.Event("x", "{ \"type\": \"Manual\", \"scope\": [\"StartCave\"] }")), FakeUnits.Default(),
+            regions: NoRegions.Instance);
+        Assert.Equal("regions unavailable", Assert.Single(r.Set.All).DisabledReason);
+    }
+
+    [Fact]
+    public void Regions_reload_rebuilds_only_while_unavailable_and_clears_the_health_entry()
+    {
+        var (state, log) = (new RegionState(), new LogLines());
+        var reads = 0;
+        state.Build(() => { reads++; return []; }, () => GameNames, log.Add, log.Add);
+        state.Retry(() => { reads++; return [Square]; }, () => GameNames, log.Add, log.Add);
+        Assert.True(state.Available);
+        Assert.Empty(state.Entries);
+        Assert.Contains("regions: 1 polygons, 1 regions (CursedForest); 0 untagged, 0 dropped", log.Lines);
+        state.Retry(() => { reads++; return []; }, () => GameNames, log.Add, log.Add);
+        Assert.Equal(2, reads);                                        // a built index is not read again
+        Assert.True(state.Available);
+        var r = EventValidator.Parse(RegionalAndGlobal(), FakeUnits.Default(), regions: state);
+        Assert.Null(r.Set.Find("regional")!.DisabledReason);
+    }
+
+    [Fact]
+    public void Regions_names_differing_from_the_game_warn_once_per_build()
+    {
+        var (state, log) = (new RegionState(), new LogLines());
+        state.Build(() => [Square], () => GameNames.Where(n => n != "Strongblade").Append("Oakveil"), log.Add, log.Add);
+        Assert.True(state.Available);
+        Assert.Equal(1, log.Count("regions: names differ from the game: +Oakveil, -Strongblade"));
+        state.Build(() => [Square], () => throw new InvalidOperationException(), log.Add, log.Add);
+        Assert.Equal(1, log.Count("regions: names differ from the game: unreadable (InvalidOperationException)"));
+    }
+
+    [Fact]
+    public void Regions_are_built_before_the_definitions_are_applied()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "tools", "preflight.ps1"))) dir = dir.Parent;
+        var core = File.ReadAllText(Path.Combine(dir!.FullName, "Nyarlathotep", "Nyarlathotep", "Core.cs"));
+        var regions = core.IndexOf("Services.RegionMap.Initialize();", StringComparison.Ordinal);
+        var events = core.IndexOf("Services.EventStore.Initialize();", StringComparison.Ordinal);
+        Assert.True(regions >= 0 && events > regions, "RegionMap.Initialize must precede EventStore.Initialize in Core.TryInitialize");
+        var store = File.ReadAllText(Path.Combine(dir.FullName, "Nyarlathotep", "Nyarlathotep", "Services", "EventStore.cs"));
+        var reload = store.IndexOf("internal static Outcome Reload()", StringComparison.Ordinal);
+        Assert.True(reload >= 0 && store.IndexOf("RegionMap.Retry();", reload, StringComparison.Ordinal) > reload, "Reload must retry the region build");
+        var init = store[store.IndexOf("internal static void Initialize()", StringComparison.Ordinal)..reload];
+        Assert.DoesNotContain(", Reload)", init);                     // the boot load must not retry the build it just made
+        Assert.DoesNotContain("RegionMap.Retry", init);
+    }
+
+    [Fact]
+    public void Regions_the_map_is_read_only_and_disposes_its_query()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "tools", "preflight.ps1"))) dir = dir.Parent;
+        var map = File.ReadAllText(Path.Combine(dir!.FullName, "Nyarlathotep", "Nyarlathotep", "Services", "RegionMap.cs"));
+        Assert.Contains("GetBuffer<WorldRegionPolygonVertex>(entity, true)", map);
+        Assert.Contains("entities.Dispose()", map);
+        Assert.Contains("query.Dispose()", map);
+        foreach (var write in new[] { "SetComponentData", "AddComponent", "RemoveComponent", ".Write<", "SetBuffer", "AddBuffer", "DestroyEntity" })
+            Assert.DoesNotContain(write, map);
     }
 }

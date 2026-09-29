@@ -23,8 +23,9 @@ internal static class EventStore
         try
         {
             if (!Persistence.Events.Exists()) Seed();
-            // The boot load is the operator's file, so it runs as Operator (D10).
-            Gateway.Run(ActionKind.LoadDefinitions, Actor.Operator, Reload);            // Reload logs its outcome
+            // The boot load is the operator's file, so it runs as Operator (D10). It skips Reload's region retry:
+            // RegionMap has just been built (regions D7), and only `.nyar event reload` retries it.
+            Gateway.Run(ActionKind.LoadDefinitions, Actor.Operator, () => Editor.Reload(new PrefabUnitCatalog()));   // logs its outcome
         }
         catch (Exception ex)
         {
@@ -40,7 +41,11 @@ internal static class EventStore
     /// <summary>Loads events.json and applies it. Returns the `.nyar event reload` reply: "reloaded: &lt;v&gt; valid,
     /// &lt;x&gt; disabled" or the file error (the last valid set stays, D23).</summary>
     [Mutating]
-    internal static Outcome Reload() => Editor.Reload(new PrefabUnitCatalog());
+    internal static Outcome Reload()
+    {
+        RegionMap.Retry();                                                // rebuilds only while unavailable (regions D7)
+        return Editor.Reload(new PrefabUnitCatalog());
+    }
 
     /// <summary>`.nyar event set`, `enable` and `disable`: changes one field of event <paramref name="id"/> in events.json,
     /// written only when the file is the one last loaded, keeping one .bak (Business rules 9, D6), then reloads.</summary>
@@ -89,9 +94,12 @@ internal static class EventStore
 
     /// <summary>Unit names from PrefabCollectionSystem; denied are the name-based do-not-spawn list plus prefabs
     /// carrying DropInInventoryOnSpawn (docs/GAME_ASSETS.md › Do-not-spawn list). Faction names are the Faction_* prefab
-    /// names of the prefab map, read once (faction-empowerment D1).</summary>
-    internal sealed class PrefabUnitCatalog : IUnitCatalog, IFactionCatalog
+    /// names of the prefab map, read once (faction-empowerment D1). Regions are RegionMap's index (regions D3, D7).</summary>
+    internal sealed class PrefabUnitCatalog : IUnitCatalog, IFactionCatalog, IRegionCatalog
     {
+        public bool Available => RegionMap.State.Available;
+        public bool OnMap(string region) => RegionMap.State.OnMap(region);
+
         static HashSet<string> _factions;
 
         bool IFactionCatalog.IsKnown(string factionName) =>

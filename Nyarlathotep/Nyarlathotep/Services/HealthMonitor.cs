@@ -18,7 +18,7 @@ internal static class HealthMonitor
 
     /// <summary>Every degraded part, "hook &lt;name&gt;" first.</summary>
     internal static IReadOnlyList<string> Degraded() =>
-        TriggerBus.Hooks.Unavailable.Select(h => $"hook {h}").Concat(EventRuntime.Degraded).Concat(WalkCheck.Health.Entries)
+        TriggerBus.Hooks.Unavailable.Select(h => $"hook {h}").Concat(EventRuntime.Degraded).Concat(WalkCheck.Health.Entries).Concat(RegionMap.State.Entries)
             .Concat(LibraryHealth.Entries(TemplateLibrary.Catalog.Error, Persistence.Events?.WriteUncertain ?? false)).ToList();
 
     /// <summary>The scheduler's health phase.</summary>
