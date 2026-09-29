@@ -316,8 +316,8 @@ One release, 0.5.2, a GitHub pre-release; D16 ends there, with release-verify. T
 ### Rollback
 - **In the repository:** `git revert --no-edit v0.5.1..v0.5.2`, drilled by the rollback gate with -Plan (D16). Commits in the range that are not this child's (records of other plans) are re-applied after a revert with `git cherry-pick`, listed from `git log v0.5.1..v0.5.2` minus those touching this child's exclusive paths.
 - **On the dev server during the build:** Session 1 is wrapped by tools/dev-snapshot.ps1 (D14).
-- **On a server:** install the 0.5.1 DLL; nothing was persisted by this child, so 0.5.1 runs on 0.5.2's files, and the rollback gate proves it.
-- **Published release:** tags and releases are never deleted; a bad release is retitled and versions move forward only (Epic S-19).
+- **On a server:** install the 0.5.1 DLL; nothing was persisted by this child, so 0.5.1 runs on 0.5.2's files, and the rollback gate proves it. This remains possible after data is written, because 0.5.2 writes no new file and no new key.
+- **Published release:** tags and releases are never deleted; a bad release is withdrawn by retitling it, and versions move forward only (Epic S-19).
 - **Commit range:** v0.5.1..v0.5.2
 
 ### Paths walked
@@ -463,3 +463,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-28 · note · review: subagent A19 round 1 REVISE (F1 blocking: purge had no event info read → Session 2 steps 16-17), round 2 READY (advisory F1-F5 applied: printed texts, the asks' reads, D13's evidence clause)
 - 2026-09-28 · D13 · pass · manual: Sessions 1 and 2 in docs/features/RAPHAEL_API_ADMIN.md › Test results (A19): api=4 plugin=0.5.2; every twin of D3 and D4 answered its ok line and its effect showed in `.nyar event info` or `.nyar pillar list` (Session 2 steps 2-17); start twice code=state reason=already_active; purge ask then confirm with killswitch=1; the four reads' rows and end lines whole (Session 1 steps 3, 4, 19, 25) · 2b28597 · owner
 - 2026-09-28 · D14 · pass · cmd: pwsh tools/preflight.ps1 -AuditOf raphael-api-admin → "audit steps: raphael-api-admin 3/3 pre, 3/3 post, 3/3 Codex verdicts"; -SessionsOf raphael-api-admin → "session logs: raphael-api-admin 2/2 checked; snapshots 2/2 from session 1"; -Paths -DeclaredOf raphael-api-admin → "paths: 1267 walked, all in manifest; declared: 260/260 in raphael-api-admin" · 2b28597 · claude
+- 2026-09-28 · note · Rollout › Rollback reworded to the route phrases the rollback gate checks ("after data is written", "withdrawn by retitling"); no route changes
