@@ -569,3 +569,280 @@ VERDICT: READY
 - F5 · accepted · applied as an amendment when the build starts
 - F6 · accepted · applied as an amendment when the build starts
 - F7 · accepted · applied as an amendment when the build starts
+
+## Review 12 · 2026-09-29 · subagent · plan commit 0bb3a57 · plan 131451 B · 24 items · files 0 · e3b0c44298fc · prompt 7a26c311ae6b · scope A1,A2,A3,A4,A5,A6,A7,A8,A9
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A1-A9 (design §9 D26); the prompt held no Steam ID. It checked A1 (no tools/ script runs `gh release create`; release-tools is kind: selftests), A5 (SpawnTracker.Prepare clears DropTableBuffer), A7 (DataStore.cs is in Logic/), A8 (SpawnPoints.Angles is 12; design §9 D27) and A9 (Wire.Api is 5) against the repository.
+
+F1 · advisory · 10.1, 12.4 · A2: Test-CheckGatewayOnly matches callers by bare method name; widened to every non-Logic .cs file it sees EntityExtensions.cs's `Write<T>` (colliding with [Mutating] Persistence.Write), and D22's [Mutating] SpawnTracker.Tick and EventRuntime.Tick collide with HealthMonitor.Tick and TriggerBus.Tick, so the real tree fails. Fix: match a [Mutating] name only through its declaring class, or exempt EntityExtensions.cs; record the choice as an amendment.
+
+F2 · advisory · 6.2, 12.1 · A8: D16 does not say what a regional AroundPlayer does when the region index is unavailable or `regionOf` throws; ScopeCheck's fail-closed rule would report the misleading "no eligible player". Fix: state the fail-closed rule, the reason shown, a throwing `regionOf` as D21's player-query failure, and a fixture.
+
+F3 · advisory · 4.2 · A6: "fields differ from what HuntAction wrote" does not name the fields (Entity, DamageValue, Weight, RESEARCH_NOTES S1) nor whether the game rewrites an untouched entry each update; if it does, every seed stops being HuntAction's after one tick and ineligible targets keep their seeds. Fix: name the fields and add a Session 1 observation that an unengaged seed keeps them over two 5 s ticks; a no-go is a discovered amendment.
+
+F4 · advisory · 4.1 · A8: an out-of-scope centre is retried at other angles but a claimed centre is skipped without retry; defined and testable, but asymmetric. Fix: state the asymmetry as intended or let the retry skip claimed centres too.
+
+F5 · advisory · 12.4 · A3: the 12.4 table's silent fixture Paths/good has no `dataTests` entry today, and "tests: <class> ran 0 tests" is not Get-TestRunVerdict's current wording. Fix: step 1 adds the entry to Paths/good and pins the printed text.
+
+EARLIER: Review 11 F1-F7 all resolved by A1-A7 (F2's fix carries F1 here, F6's fix carries F3 here)
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · A10: a call matches only through the declaring class (qualified, or unqualified in the class's own file); fixture GatewayOnly/good-samename must pass
+- F2 · accepted · A11: a regional definition is disabled while regions are unavailable (regions D-items), so no pick runs without an index; a throwing region read is D21's player-query failure
+- F3 · accepted · A12: the fields are Entity, DamageValue and Weight; a verbose "left to the game" count and a Session 1 observation over two ticks
+- F4 · accepted · A13: the asymmetry is intended and stated in D16 (the territory rule is D17's per-wave skip for every location type)
+- F5 · accepted · A14: step 1 gives Paths/good a `dataTests` entry; D27 already pins the printed text
+
+## Review 13 · 2026-09-29 · subagent · plan uncommitted · plan 134472 B · 24 items · files 0 · e3b0c44298fc · prompt 55afed0c52f2 · scope A10,A11,A12,A13,A14
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A10-A14 (design §9 D26); the prompt held no Steam ID. It confirmed HealthMonitor.Tick, TriggerBus.Tick and EntityExtensions.Write exist and collide under bare-name matching, that Logic/Validation.cs:271 disables a regional definition with "regions unavailable", and that Paths/good has no preflight-checks.json today.
+
+F1 · blocking · 10.1 · A10: matching only `<Class>.<Method>` or unqualified in the class's file leaves no gateway control on the existing instance-method [Mutating] members reached through Persistence.Disk and AdminOps.Instance; a `Persistence.Disk.Delete(...)` in Commands/, caught today by the bare-name match (tools/preflight.ps1:1764), would pass, and no GatewayOnly fixture plants it. Fix: match through a receiver of the declaring type too, and add fixture GatewayOnly/bad-instance.
+
+F2 · advisory · 4.2 · A12: if the game changes an unengaged seed's DamageValue or Weight each update, every seed reads as the game's after one tick and Hunt stops removing seeds for ineligible players; the plan names no fallback. Fix: name it now (e.g. Entity only plus a HuntAction Weight sentinel).
+
+F3 · advisory · 4.1 · A13: the scope retry takes the first in-scope angle even when it is claimed; intended, but no test pins it. Fix: a PlayerPick or WaveGate test.
+
+F4 · advisory · 6.2 · A11: D21's player-query category does not name the region read as a source. Fix: name it and add "a throwing region read spawns" to D21's fails-when.
+
+F5 · advisory · 10.1 · A10: the rule is silent on `using static`, nested-class callers, nameof and method-group references in other files, which the bare-name match covers today. Fix: say how each is treated.
+
+F6 · advisory · 12.4 · A14: step 1's -Paths bullet does not name Paths/good's new `dataTests` entry. Fix: name it.
+
+EARLIER: Review 12 F2-F5 resolved by A11-A14; F1's fix (A10) carries F1 and F5 here
+14/15 layers · 48/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · A16: A10 withdrawn; the bare-name match stays (it covers instance receivers), a non-accepted file may not declare a [Mutating] name, the colliding HealthMonitor.Tick, TriggerBus.Tick and Persistence.Write are renamed in step 1; fixtures bad-instance and bad-samename
+- F2 · accepted · A17: the fallback is an Entity-only comparison
+- F3 · accepted · A18: D16's fails-when pins it
+- F4 · accepted · A19
+- F5 · accepted · A16: bare names cover `using static`, nameof and method groups
+- F6 · accepted · A20
+
+## Review 14 · 2026-09-29 · subagent · plan uncommitted · plan 137865 B · 24 items · files 0 · e3b0c44298fc · prompt 724ce2403c65 · scope A15,A16,A17,A18,A19,A20
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A15-A20 (design §9 D26); the prompt held no Steam ID. It confirmed the committed Test-CheckGatewayOnly matches bare names (bad-instance is caught), that outside Logic/ the only collisions in non-accepted files are EntityExtensions.Write, HealthMonitor.Tick and TriggerBus.Tick, and that ControlCaseTests has no Pending support today.
+
+F1 · advisory · 12.4 · A15: the Pending list and D22's row list miss controls ControlCaseTests pulls (D20, D22, D26, D27, D31, D34); D11's ClearDrops arrives with step 2. Fix: list every control as a step-1 row or Pending with its step.
+
+F2 · advisory · 12.4 · A15: a pending entry fails only at close, after the tag, and a pending key that is no control is never reported. Fix: fail once its step's post-audit is recorded, and fail a non-control key.
+
+F3 · advisory · 14.4 · A16: the renames touch undeclared paths (Services/HealthMonitor, TriggerBus, Persistence, EventScheduler; Logic/IFileStore, DataStore). Fix: declare them in Paths walked › Step 1.
+
+F4 · advisory · 10.1 · A16: whether the dispatched services count as accepted callers is unsaid (Announcer and Pusher declare Tick). Fix: say they stay exempt.
+
+F5 · advisory · 12.4 · A16: bad-samename fails with or without the new declaration rule, so it cannot show the rule. Fix: assert its message or drop the rule.
+
+F6 · advisory · 10.1 · D22 via A16: EventScheduler.cs, Core.cs and Patches/ are accepted for every [Mutating] name. Fix: accept them only for the tick and boot entry-point names.
+
+F7 · advisory · 4.1 · A18: PlayerPick takes no territory set. Fix: state the seam (PlayerPick with Territory.IsClaimed and WaveGate).
+
+F8 · advisory · 4.2 · A17: the no-go wording is unclear and the fallback flips the replace fixture. Fix: "<d> above 0 on an unengaged wave", and the fallback rewrites the fixture.
+
+EARLIER: all resolved
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · A22: every control a step-1 row except D21 (step 2), D19 and D24 (step 3), D25 (step 4); D11's order flag is built in step 1 (Logic/SpawnLedger.cs, A21)
+- F2 · accepted · A22
+- F3 · accepted · A21 (recorded before this review returned)
+- F4 · accepted · A23
+- F5 · accepted · A23: the rule is dropped; bad-samename stays as a regression fixture
+- F6 · accepted · A23: fixture GatewayOnly/bad-systemcaller
+- F7 · accepted · A24
+- F8 · accepted · A25
+
+## Review 15 · 2026-09-29 · subagent · plan uncommitted · plan 141672 B · 24 items · files 0 · e3b0c44298fc · prompt d5ee1c8a48b5 · scope A21,A22,A23,A24,A25,A26
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A21-A26 (design §9 D26); the prompt held no Steam ID.
+
+F1 · blocking · 4.4 · A26: a Hunt wave at a Point or the admin with allowTerritory and a failed map build passes WaveGate while HuntAction reads "the TerritoryMap built for the wave"; whether it spawns without hunting is unsaid. Fix: a Hunt wave always needs the map, or no map seeds nobody; add the case to the fails-when.
+
+F2 · advisory · 4.4 · A26: WaveGate.Decide's signature has no map state, location type or behaviour input, and the fails-when has no "territory unknown lifted by allowTerritory on AroundPlayer" case. Fix: add the input and the case.
+
+F3 · advisory · 12.4 · A22: D22's row list still holds D21 (pending) and misses D20, D22, D26, D27, D31, D32, D34; A22 also misses D32. Fix: replace the list by the rule and name D32.
+
+F4 · advisory · 12.4 · A22: the pending check reads docs/audits/event-spawns.md, which the test csproj never copies, a missing file is unspecified, and D25's step-4 entry fails only after the tag. Fix: copy the audit, fail a missing one, fail a step-4 entry once the Version is 0.7.0.
+
+F5 · advisory · 12.4 · A22: step-1 rows for D11, D13, D22 and D32 name seams partly built in step 2, and ControlCaseTests fails a row naming a missing method. Fix: say what step 1 builds and that later methods join their rows in their step, or pend D11.
+
+F6 · advisory · 14.4 · A21: its list is complete, but no renamed symbol is in Core.cs, Plugin.cs or Patches/; Logic Engine, Precedence and Messages appear in no step's walk. Fix: correct the reason and declare those three where edited.
+
+F7 · advisory · 10.1 · D22: "called only from SpawnTracker, EventRuntime or Gateway.Run" is not what the gateway check enforces once every dispatched service stays accepted. Fix: reword to Gateway.Run or a $DispatchedServices class.
+
+F8 · advisory · 10.1 · A23 verified in HEAD: Announcer and Pusher Tick pass as dispatched services, EventScheduler.cs uses only Tick, Core.cs only BootSweep, Patches/, Plugin.cs and Config/ call no [Mutating] name; the only collisions are the three A16 renames. Fix: none; record as evidence.
+
+EARLIER: all resolved
+14/15 layers · 48/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · A27: a Hunt wave always needs the map; "territory unknown" skips it whatever allowTerritory says
+- F2 · accepted · A27
+- F3 · accepted · A28
+- F4 · accepted · A29
+- F5 · accepted · A28: step 1 builds SpawnOrder.ClearDrops and the HuntSeeds race and replace cases; later methods join their rows
+- F6 · accepted · A30
+- F7 · accepted · A31
+- F8 · accepted · evidence for the A16 rename list; no change
+
+## Review 16 · 2026-09-29 · subagent · plan uncommitted · plan 144725 B · 24 items · files 0 · e3b0c44298fc · prompt 5259d0da3beb · scope A27,A28,A29,A30,A31
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A27-A31 (design §9 D26); the prompt held no Steam ID. It verified WaveFacts and WaveGate against A27, SpawnOrder.ClearDrops and HuntSeeds against A28, the csproj copies and Version against A29, and the three Logic files of A30.
+
+F1 · advisory · 4.1 · A27: the new D29 case "a Point wave with allowTerritory and a failed map is skipped" contradicts D17's fails-when "a failed map build spawns" and Business rules 3, neither qualified by need. Fix: qualify both with "a wave that needs the map" and name D29 the authority in Business rules 8.
+
+F2 · advisory · 12.4 · A28: D32's evidence starts "manual:", so ControlCaseTests does not see it as a control and a D32 row fails; the 12.4 table's Logic-controls row lists fewer than A28's rule. Fix: put D32's test evidence first and widen the row.
+
+F3 · advisory · 14.4 · A30: Logic/AdminFlows.cs is modified in the working tree but not in Paths walked › Step 1. Fix: declare it.
+
+F4 · advisory · 10.1 · A31: the -AuthSuite clause and Security › Authorization keep the old caller list. Fix: the same wording in both.
+
+F5 · advisory · 12.4 · A29: the new ControlCases_* methods would be named by no row. Fix: add them to the existing ControlCases test row (event-library D31).
+
+Scenarios: (1) 4.4 a Point Hunt wave with allowTerritory inside a castle hunts nobody there; the README should say so. (2) 12.4 a D32 row fails as a non-control (F2). (3) 7.3/4.4 which map a live Hunt tick reads when a later wave's build fails is unstated.
+
+EARLIER: all resolved
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · A32
+- F2 · accepted · A33
+- F3 · rejected · the AdminFlows.cs edit was reverted before this review returned; step 1 writes no undeclared file (location aroundplayer is mapped inside EventsEditor)
+- F4 · accepted · A34
+- F5 · accepted · A35
+- Scenario 1 · accepted · A32 (Business rules 8 and both READMEs)
+- Scenario 3 · accepted · A36
+
+## Review 17 · 2026-09-29 · subagent · plan uncommitted · plan 146876 B · 24 items · files 0 · e3b0c44298fc · prompt 1ec03db8ead2 · scope A32,A33,A34,A35,A36
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A32-A36 (design §9 D26); the prompt held no Steam ID. It checked A34's wording against $DispatchedServices (tools/preflight.ps1:1681) and A35 against ControlCaseTests.Problems.
+
+F1 · advisory · 3.3 · A36: the per-event kept map outlives Design › Data's "one wave … at the wave's spawn" and 8.2's "rebuilt per wave", and D33 does not empty it. Fix: Data row per event, dropped at every end path; add it to D33.
+
+F2 · advisory · 4.4 · A36 vs D17: D17's "a map built for one wave is reused by the next" contradicts the kept map; no D13 case pins which map a tick reads. Fix: narrow D17; add a D13 fails-when.
+
+F3 · advisory · 4.4 · A36: live Hunt waves seed from a stale map with no limit while "territory unknown" shows, against Business rules 3. Fix: state the exception, bound it, or drop Hunt seeds while territory is unknown.
+
+F4 · advisory · 12.4 · A33: D32 is now a step-1 control but step 1 names no ChatBytes_* form methods, and the empty-input table has no D32 row. Fix: name them in step 1 and add the row, or pend D32.
+
+F5 · advisory · 12.4 · A33: step 2's AdminLines 480-byte test cannot join D32's CommandArgTests row. Fix: put it in CommandArgTests ChatBytes_* or add a second row.
+
+F6 · advisory · 4.1 · A32: Interfaces › Failure behaviour and the Failure & observability row still say any failed map skips the wave. Fix: "a wave that needs the map (D29)".
+
+F7 · advisory · 12.4 · A35 verified; Paths walked › Step 1 should name both copied files.
+
+Scenarios: (1) 7.2/4.4 a castle placed after the last good build is not seen by live Hunt units (F3). (2) 8.2/3.3 a single-wave Hunt event's kept map lingers to restart (F1). (3) 12.4 step 1 without ChatBytes_* fails its own ControlCaseTests (F4).
+
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · A39
+- F2 · accepted · A37 (D13 fails-when) and A38 (D17)
+- F3 · accepted · A37: fail closed, Hunt seeding stops while the event's latest build failed
+- F4 · accepted · A41
+- F5 · accepted · A41: the DebugUnit byte check joins CommandArgTests ChatBytes_*
+- F6 · accepted · A40
+- F7 · accepted · A41 (Paths walked wording)
+
+## Review 18 · 2026-09-29 · subagent · plan uncommitted · plan 149478 B · 24 items · files 0 · e3b0c44298fc · prompt 945cc61f0e0e · scope A37,A38,A39,A40,A41
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A37-A41 (design §9 D26); the prompt held no Steam ID.
+
+F1 · blocking · 3.3 · A39: D33's fails-when does not cover the kept territory map, so EndPaths (D27's 3.3 data test) stays green if an end path leaves it. Fix: add "the event's kept territory map survives an end path (TerritoryMaps.Holds(id) after EventEnded, Purged or Restart)".
+
+F2 · advisory · 4.1/4.4 · A37: after a successful build a live Hunt unit reads a map as old as the event's last wave and may seed a player in a castle claimed since, against Business rules 8's "never". Fix: soften Business rules 8 to the last built map and say so in the READMEs, or rebuild on a cadence.
+
+F3 · advisory · 6.2/12.3 · A37, A40: after a failed build on the last wave Hunt stays off with no retry, and D30's "territory unknown" may outlive the event. Fix: state no retry is intended, or retry; clear the entry at the event's end paths.
+
+F4 · advisory · 12.4 · A41: D32's empty-input result reads as a pass over no lines. Fix: assert the line list is not empty.
+
+F5 · advisory · 14.4 · A41: step 2 writes CommandArgTests.cs, and the DebugUnit assertions live in SpawnLedgerTests.cs, but step 2's walk names only AdminLinesTests.cs (covered by step 1's Tests/** glob). Fix: name both.
+
+F6 · advisory · 12.4 · A37: D13's new fails-when names no seam. Fix: name TerritoryMaps.ForHunt.
+
+Scenarios: (1) 4.1/7.3 a castle placed after a one-wave Hunt event's only build (F2). (2) 6.2/12.3 a failed build on the last wave leaves "territory unknown" after the event ends (F3). (3) 3.3/7.3 stop then restart the same event id with the old map still held (F1).
+
+14/15 layers · 48/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · A42
+- F2 · accepted · A43: Business rules 8 softened to the event's last built map; no rebuild cadence
+- F3 · accepted · A44: no retry intended; the entry follows TerritoryMaps.AnyFailed and clears at end paths
+- F4 · accepted · A45
+- F5 · accepted · A46
+- F6 · accepted · A44
+
+## Review 19 · 2026-09-29 · subagent · plan uncommitted · plan 151570 B · 24 items · files 0 · e3b0c44298fc · prompt cd62a7f6fd67 · scope A42,A43,A44,A45,A46
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A42-A46 (design §9 D26); the prompt held no Steam ID. It checked TerritoryMaps, AnyFailed, ForHunt and WaveLifecycle's end paths in Logic/Spawning.cs against A42 and A44.
+
+F1 · advisory · 12.1/6.2 · A44: D30's fails-when does not pin that "territory unknown" clears after the end path of the only failed event; SpawnHealth keeps its own flag. Fix: add the case, driven through WaveLifecycle.EventEnded then Territory(Maps.AnyFailed).
+
+F2 · advisory · 7.2/3.3 · A42: D33's two-event case does not cover the other event's kept map. Fix: B's ForHunt and Holds unchanged.
+
+F3 · advisory · 12.4 · A45: the non-empty line list is only in the empty-input table, not D32's fails-when. Fix: append it.
+
+F4 · advisory · 4.1 · A43: no check that the READMEs carry the once-per-wave Hunt rule. Fix: a step-4 checklist line, or accept as prose.
+
+F5 · advisory · 12.4 · A42: the WaveLifecycle empty-input row does not say "no kept map". Fix: add Holds(id) false.
+
+F6 · advisory · 14.4 · A46: step 2's walk names exact test files while classes are split into partials. Fix: a glob.
+
+Scenarios: (1) 7.2/3.3 two Hunt events share a player, A failed and B built; stopping A must keep B's map (F2). (2) 12.1/6.2 a Point event's last build fails and it ends; the health entry lingers (F1). (3) 7.3/3.3 restart during a failed-build window is handled (no finding).
+
+EARLIER: all resolved
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · built as a HealthTests Spawns case (EventEnded, then Territory(Maps.AnyFailed) clears the entry)
+- F2 · accepted · built in EndPathTests' two-event case (the other event's ForHunt and Holds unchanged)
+- F3 · accepted · built: ChatBytes_empty_ asserts the line list is not empty (A45)
+- F4 · accepted · step 4 checks both READMEs for the Hunt territory sentence as a checklist line of the six-surface bullet
+- F5 · accepted · built in EndPathTests' empty case (Holds(id) false)
+- F6 · accepted · no change: step 1's Nyarlathotep.Tests/** glob (A21) declares any partial file
+
+## Review 20 · 2026-09-29 · subagent · plan uncommitted · plan 152246 B · 24 items · files 0 · e3b0c44298fc · prompt 6e08faba292a · scope A10,A11,A14,A21,A22,A23,A26,A37,A38,A39,A40,A41
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to the gating amendments last seen in REVISE rounds (design §9 D26); the prompt held no Steam ID. It verified A11 (Logic/Regions.cs), A21's symbols and renames, A23's $DispatchedServices and A14's Paths/good fixture in the tree.
+
+F1 · advisory · 14.4: step 1 edits docs/NYARLATHOTEP_DESIGN.md (§6 Settable fields) but Paths walked › Step 1 does not list it. Fix: declare it.
+
+F2 · advisory · 12.4: D22's fails-when omits fixture GatewayOnly/bad-systemcaller, though its body and the 12.4 table name it; -SelfTest still catches it. Fix: add it to the fails-when.
+
+F3 · advisory · 10.1: A23's entry-point name list has no stated home, and bare-name matching accepts any [Mutating] Tick from the three System-actor files. Fix: name the list in tools/preflight.ps1 ($SystemEntryPoints) and say names added there are accepted in all three places.
+
+F4 · advisory · 3.3: D33's Holds(id) examples omit event stop and fault cancel. Fix: add them to the EndPaths cases.
+
+F5 · advisory · 4.4: whether a control-blocked wave builds the map is unsaid; a blocked event with a failing build would show "territory unknown". Fix: build the map only for a wave past the blocker, with a WavePrecedence case.
+
+F6 · advisory · 14.4: Paths walked names CommandArgTests.cs while step 1 edits CommandArgTests.Library.cs (covered by Nyarlathotep.Tests/**). Fix: name the partial or a glob.
+
+Scenarios: (1) 7.2/4.4 a pillar-off Hunt event with a failing build shows "territory unknown" (F5). (2) 8.2/3.3 event stop regression on the kept map passes the filter (F4). (3) 10.1 a future HuntAction.Tick called from Patches/ passes as the System actor (F3).
+
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · A47
+- F2 · accepted · no plan change: D22's body names the fixture and -SelfTest fails any bad fixture that passes; the D22 cmd row lists it
+- F3 · accepted · built: tools/preflight.ps1 holds the names as $script:SystemEntryPoints with a comment that each is accepted from EventScheduler.cs, Core.cs and Patches/
+- F4 · accepted · built: EndPathTests assert Holds(id) false after event stop and fault cancel (EventEnded's two other callers) as well
+- F5 · accepted · built: D29 already gives a blocked wave "no wave", so WaveAction (step 2) builds the map only after Precedence.StartBlocker passes; a WavePrecedence case shows a blocked wave with MapFailed yields NoWave and no territory line
+- F6 · accepted · no change: covered by Nyarlathotep.Tests/** (A21)
+
+## Review 21 · 2026-09-29 · subagent · plan uncommitted · plan 152941 B · 24 items · files 0 · e3b0c44298fc · prompt a4afb479feab · scope A47
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to A47 (design §9 D26); the prompt held no Steam ID. It compared `git status --short --ignored` and `git diff --stat` with Paths walked and found every path step 1 has written declared.
+
+F1 · advisory · 14.4: the plan store docs/dod/event-spawns.md, which step 1 amends, is declared under Step 4 and the header sentence, not the Steps 1-4 line. Fix: add it to the Steps 1-4 line.
+
+F2 · advisory · 14.4: CommandArgTests.Library.cs, EventValidationTests.EventSpawns.cs and SpawningTests.EventSpawns.cs are covered only by A21's Tests/** glob. Fix: name them, or note the glob.
+
+Scenarios: (1) a new partial test file is covered by the glob. (2) a later §9 edit is covered at path level. (3) a per-step -DeclaredOf run that does not treat the plan store as declared would flag it (F1).
+
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · no change: Paths walked's header declares the plan store for every step, as in the closed children, whose steps passed -Paths -DeclaredOf with their plan stores amended
+- F2 · accepted · no change: A21's Nyarlathotep/Nyarlathotep.Tests/** is the declaration; the named list is a guide
