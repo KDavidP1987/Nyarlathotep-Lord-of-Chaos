@@ -388,7 +388,8 @@ public static class ControlCases
             ["one_line_and_held_count"], ["no_trigger"]) with { Plan = Automation },
         T("D15", "PlayerScan", "AutomationDependencyFailureTests", ["throwing_scan_escapes_or_logs_twice", "garbage_position_reaches_a_definition",
             "login_during_a_gap_is_an_entry"],
-            ["good_scan_clears_entry_and_next_streak_logs"], ["reads_no_player_without_a_definition"]) with { Plan = Automation },
+            ["good_scan_clears_entry_and_next_streak_logs", "refusal_rows_follow_the_definitions"], ["reads_no_player_without_a_definition"])
+            with { Plan = Automation },
         T("D15", "KillRead", "AutomationDependencyFailureTests", ["throwing_read_escapes_or_logs_twice", "unavailable_hook_leaves_factionkills_on",
             "garbage_faction_or_position_counts"], ["good_read_clears_entry", "entry_clears_when_no_definition_reads_kills"],
             ["no_death_no_read_no_streak"]) with { Plan = Automation },
@@ -399,7 +400,7 @@ public static class ControlCases
             ["valid_set_changes_file", "info_shows_next_start"], ["value"]) with { Plan = Automation },
         T("D17", "Automation", "ContractDocTests", ["contract_lacks_value", "trigger_renders_as_manual"], ["api_6_and_values"], ["contract"])
             with { Plan = Automation },
-        T("D17", "Automation", "PushTests", ["fanned_out_wave_pushes_more_than_once"], ["one_push_whatever_the_groups"], ["no_group_spawned"])
+        T("D17", "Automation", "PushTests", ["fanned_out_wave_pushes_more_than_once", "wave_action_reports_per_group"], ["one_push_whatever_the_groups"], ["no_group_spawned"])
             with { Plan = Automation },
         T("D19", "Automation", "PrivacyTests", ["a_line_names_the_player", "state_gains_a_per_player_field"], ["no_line_names_or_locates_a_player"],
             ["no_focus"]) with { Plan = Automation },

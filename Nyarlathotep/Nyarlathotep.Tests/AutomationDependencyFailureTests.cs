@@ -121,6 +121,20 @@ public class AutomationDependencyFailureTests
         Assert.Empty(log.Lines);
     }
 
+    [Fact]
+    public void PlayerScan_passes_refusal_rows_follow_the_definitions()
+    {
+        // step 2 Codex F2: the gate's rows of a definition that left the startable set go on the next scan
+        var feed = new PlayerTriggerFeed();
+        var log = new LogLines();
+        Assert.NotNull(feed.Gate.Refused("border", "event border not started by RegionEntered: x", T0));
+        Assert.NotNull(feed.Gate.Refused("gone", "event gone not started by RegionEntered: x", T0));
+        Scan(feed, () => [], Entered, T0.AddSeconds(5), log);
+        Assert.Equal(1, feed.Gate.RefusalRows);
+        Scan(feed, () => [], Set(Json.Event("manual")), T0.AddSeconds(10), log);
+        Assert.Equal(0, feed.Gate.RefusalRows);
+    }
+
     // ---- kill-read
 
     [Fact]

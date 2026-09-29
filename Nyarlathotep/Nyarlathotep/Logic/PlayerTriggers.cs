@@ -240,6 +240,17 @@ public sealed class PlayerTriggerGate
         return held > 0 ? $"{line}; {held} more since the last line" : line;
     }
 
+    public int RefusalRows => _refusals.Count;
+
+    /// <summary>Drops the dedupe keys and refusal rows of definitions no longer startable, so their count stays bounded by
+    /// the current definitions (step 2 Codex F2); PlayerTriggerFeed calls it on each scan.</summary>
+    public void Keep(IEnumerable<string> definitionIds)
+    {
+        var keep = new HashSet<string>(definitionIds, StringComparer.Ordinal);
+        foreach (var key in _dedupe.Keys.Where(k => !keep.Contains(k.Definition)).ToList()) _dedupe.Remove(key);
+        foreach (var id in _refusals.Keys.Where(id => !keep.Contains(id)).ToList()) _refusals.Remove(id);
+    }
+
     public void Clear()
     {
         _dedupe.Clear();
@@ -331,6 +342,7 @@ public sealed class PlayerTriggerFeed
         Kills.Prune(killDefinitions, utcNow);
         if (killDefinitions.Count == 0) _killFaults.Ok();                      // no kill is read, so none is failing (review F2)
         var definitions = TriggerRouter.Candidates(set, TriggerType.RegionEntered).ToList();
+        Gate.Keep(definitions.Concat(killDefinitions).Select(d => d.Id));
         if (definitions.Count == 0 || regionOf is null)
         {
             _scanFaults.Ok();                                                   // nothing is scanned, so nothing is failing
