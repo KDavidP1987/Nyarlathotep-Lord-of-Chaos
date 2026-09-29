@@ -23,7 +23,8 @@ namespace Nyarlathotep.Services;
 /// D17).</item>
 /// <item>The territory map is built once per wave when the wave needs it (D17): a claimed ring point is blocked like an
 /// out-of-scope one unless allowTerritory.</item>
-/// <item>Each wave's anchor (WavePlan.Anchor) lets SpawnTracker regroup a unit the game snaps onto another terrain level
+/// <item>An AroundPlayer group has no anchor: its units stay where the game grounds them (design §9 D30, automation
+/// A4). Any other wave's anchor (WavePlan.Anchor) lets SpawnTracker regroup a unit the game snaps onto another terrain level
 /// (A23). Units are due for despawn at the event's end + GraceSeconds, or at their own unitLifetimeSeconds when shorter;
 /// an event-decided LifeTime runs the despawn queue's drain time past that, as a backstop (Business rules 2, A16).</item>
 /// </list>
@@ -83,10 +84,10 @@ internal static class WaveAction
             var (gx, gy, gz) = group.Centre;
             var groupTotal = group.Units.Sum(u => u.Count);
             var angle = _random.NextDouble() * 2 * Math.PI;
-            var anchor = location.Type == LocationType.AroundPlayer ? (gx, gy, gz) : WavePlan.Anchor(location, active.Origin);
+            var anchor = WavePlan.GroupAnchor(location, active.Origin);            // none for AroundPlayer (A4)
             HuntTag? hunt = action.Behaviour is { Type: BehaviourType.Hunt } b ? new HuntTag(gx, gz, b.Range) : null;   // one per group
             var first = 0;
-            var check = WalkCheck.OpenWave(anchor?.Y);                      // walkable-spawns D3, A13
+            var check = WalkCheck.OpenWave(WavePlan.WalkY(location, group.Centre, active.Origin));   // walkable-spawns D3, A13
             try
             {
                 foreach (var entry in group.Units)

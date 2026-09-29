@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using Il2CppInterop.Runtime;
+using Nyarlathotep.Config;
 using Nyarlathotep.Logic;
 using ProjectM;
 using Unity.Entities;
@@ -103,9 +105,30 @@ internal static class TriggerBus
         if (utcNow < _nextScan) return;
         _nextScan = utcNow.AddSeconds(TriggerLimits.ScanSeconds);
         var regionOf = RegionMap.State.Available ? RegionMap.State.Index.RegionOf : (Func<float, float, string>)null;
-        _feed.Scan(ReadPlayers, regionOf, EventStore.Catalog.Current, IsActive, utcNow,
-            line => Core.Log.LogWarning($"[nyar] {line}"), FirePlayer, Verbose);
+        if (!Settings.TimingLog.Value)
+        {
+            _feed.Scan(ReadPlayers, regionOf, EventStore.Catalog.Current, IsActive, utcNow,
+                line => Core.Log.LogWarning($"[nyar] {line}"), FirePlayer, Verbose);
+            return;
+        }
+        // automation A6: with Debug.TimingLog, a scan of 5 ms or more names its parts
+        long read = 0, regions = 0;
+        var start = Stopwatch.GetTimestamp();
+        _feed.Scan(() => Timed(ReadPlayers, ref read), regionOf is null ? null : (x, z) => Timed(() => regionOf(x, z), ref regions),
+            EventStore.Catalog.Current, IsActive, utcNow, line => Core.Log.LogWarning($"[nyar] {line}"), FirePlayer, Verbose);
+        var total = Stopwatch.GetTimestamp() - start;
+        if (Ms(total) >= 5)
+            Core.Log.LogInfo($"[nyar] player triggers: {Ms(total):0.0} ms (read {Ms(read):0.0} ms, regions {Ms(regions):0.0} ms, rest {Ms(total - read - regions):0.0} ms)");
     }
+
+    static T Timed<T>(Func<T> f, ref long ticks)
+    {
+        var start = Stopwatch.GetTimestamp();
+        try { return f(); }
+        finally { ticks += Stopwatch.GetTimestamp() - start; }
+    }
+
+    static double Ms(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
 
     static IReadOnlyList<ScanRow> ReadPlayers() =>
         PlayerQuery.Read().Select(p => new ScanRow(p.PlatformId, p.X, p.Z, p.Alive)).ToList();

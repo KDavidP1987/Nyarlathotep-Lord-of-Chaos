@@ -107,12 +107,15 @@ public partial class DependencyFailureTests
     [Theory]
     [InlineData(float.NaN, "height is not a number")]
     [InlineData(float.PositiveInfinity, "height is not a number")]
-    [InlineData(-0.5f, "height out of range")]
+    [InlineData(-100.5f, "height out of range")]
     [InlineData(WalkHeight.MaxY, "height out of range")]
     public void WalkCheck_fails_when_height_out_of_range(float y, string problem) => Assert.Equal(problem, WalkHeight.Problem(y));
 
     [Theory]
     [InlineData(0f)]
+    [InlineData(-0.01f)]                                                        // a player just below 0 (automation A5)
+    [InlineData(-5.9f)]
+    [InlineData(WalkHeight.MinY)]
     [InlineData(52.3f)]
     [InlineData(999.9f)]
     public void WalkCheck_passes_height_in_range(float y) => Assert.Null(WalkHeight.Problem(y));

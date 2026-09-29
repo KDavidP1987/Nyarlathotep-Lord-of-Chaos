@@ -43,6 +43,19 @@ public partial class EngineTests
         Assert.Null(WavePlan.Anchor(new Location(LocationType.Admin, 0, 0), null));
     }
 
+    [Fact]
+    public void Wave_anchor_none_for_around_player()
+    {
+        // automation A4 (design §9 D30): an AroundPlayer group has no anchor, and its walk check reads at the player's height
+        var around = new Location(LocationType.AroundPlayer, 0, 0, 42.5f, 20, 40);
+        Assert.Null(WavePlan.GroupAnchor(around, (7, 8, 9)));
+        Assert.Equal(-4.5f, WavePlan.WalkY(around, (100, -4.5f, 200), (7, 8, 9)));
+        Assert.Equal((1f, 42.5f, 2f), WavePlan.GroupAnchor(new Location(LocationType.Point, 1, 2, 42.5f), (9, 9, 9)));
+        Assert.Equal(42.5f, WavePlan.WalkY(new Location(LocationType.Point, 1, 2, 42.5f), (0, 0, 0), null));
+        Assert.Equal((7f, 8f, 9f), WavePlan.GroupAnchor(new Location(LocationType.Admin, 0, 0), (7, 8, 9)));
+        Assert.Null(WavePlan.WalkY(new Location(LocationType.Point, 1, 2), (0, 5, 0), null));
+    }
+
     /// <summary>A23, from Session 4: a unit the game snapped from the plateau (5.0) to the ground below (0.0) regroups; one
     /// within 2 m of its anchor's height does not.</summary>
     [Theory]

@@ -152,6 +152,17 @@ public static class WavePlan
         : location.Y is { } y ? (location.X, y, location.Z)
         : null;
 
+    /// <summary>A group's regroup anchor (design §9 D30, automation A4): none for an AroundPlayer group, whose ring point
+    /// takes the player's height and not its own ground's level, so its units stay where the game grounds them;
+    /// <see cref="Anchor"/> otherwise.</summary>
+    public static (float X, float Y, float Z)? GroupAnchor(Location location, (float X, float Y, float Z)? origin) =>
+        location.Type == LocationType.AroundPlayer ? null : Anchor(location, origin);
+
+    /// <summary>The height a group's walk check reads at (walkable-spawns D3): the player's height, which the group's
+    /// centre carries, for an AroundPlayer group; the anchor's otherwise (none: nothing is checked).</summary>
+    public static float? WalkY(Location location, (float X, float Y, float Z) centre, (float X, float Y, float Z)? origin) =>
+        location.Type == LocationType.AroundPlayer ? centre.Y : Anchor(location, origin)?.Y;
+
     /// <summary>True when a unit the game snapped to height <paramref name="unitY"/> stands on another terrain level than
     /// its anchor at <paramref name="anchorY"/>, so it is moved to the anchor (A23).</summary>
     public static bool Regroup(float unitY, float anchorY) => MathF.Abs(unitY - anchorY) > RegroupTolerance;

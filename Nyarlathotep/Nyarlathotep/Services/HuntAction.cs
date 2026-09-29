@@ -208,6 +208,20 @@ internal readonly record struct PlayerRow(Entity Character, long Key, float X, f
 internal static class PlayerQuery
 {
     static readonly PrefabGUID PvpCombat = new(PlayerPick.PvpCombatBuff);
+    static EntityQuery _users;
+    static bool _made;
+
+    /// <summary>The query over User, built once and kept for the server's life like TriggerBus's DayNightCycle query:
+    /// the 5 s player scan reads it, and a new query per read cost up to 295 ms a tick (automation A6).</summary>
+    static EntityQuery Users()
+    {
+        if (!_made)
+        {
+            _users = Core.EntityManager.CreateEntityQuery(ComponentType.ReadOnly(Il2CppType.Of<User>()));
+            _made = true;
+        }
+        return _users;
+    }
 
     /// <summary>Each connected user's character with its position and state; a character that cannot be read (no
     /// Translation, a position that is not a number within the map, no Health) is left out (A60). Throws when the user
@@ -215,10 +229,7 @@ internal static class PlayerQuery
     internal static List<PlayerRow> Read()
     {
         var rows = new List<PlayerRow>();
-        var query = Core.EntityManager.CreateEntityQuery(ComponentType.ReadOnly(Il2CppType.Of<User>()));
-        try
-        {
-            var users = query.ToComponentDataArray<User>(Allocator.Temp);
+        var users = Users().ToComponentDataArray<User>(Allocator.Temp);
             try
             {
                 foreach (var user in users)
@@ -233,8 +244,6 @@ internal static class PlayerQuery
                 }
             }
             finally { users.Dispose(); }
-        }
-        finally { query.Dispose(); }
         return rows;
     }
 

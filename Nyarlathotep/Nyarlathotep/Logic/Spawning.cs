@@ -44,16 +44,18 @@ public static class SpawnPoints
     }
 }
 
-/// <summary>The centre heights a wave's walk check reads at (walkable-spawns D5, A13): a height that is not a number, below
-/// the ground or at <see cref="MaxY"/> and above is outside the map's range, and the wave falls open.</summary>
+/// <summary>The centre heights a wave's walk check reads at (walkable-spawns D5, A13): a height that is not a number,
+/// below <see cref="MinY"/> or at <see cref="MaxY"/> and above is outside the map's range, and the wave falls open. The
+/// terrain has levels below 0 (automation A5: -4.5 and -5.9 in Session 1).</summary>
 public static class WalkHeight
 {
+    public const float MinY = -100f;
     public const float MaxY = 1000f;
 
     /// <summary>Why <paramref name="y"/> is not checked, or null when it is.</summary>
     public static string? Problem(float y) =>
         float.IsNaN(y) || float.IsInfinity(y) ? "height is not a number"
-        : y < 0 || y >= MaxY ? "height out of range"
+        : y < MinY || y >= MaxY ? "height out of range"
         : null;
 }
 
