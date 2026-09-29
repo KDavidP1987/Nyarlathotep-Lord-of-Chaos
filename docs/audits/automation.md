@@ -61,3 +61,5 @@ under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line. S
 - Codex round 1 (a74b7c1..235d5ee): REVISE, one advisory: the A4 test covered only the helpers → fixed in 6b5fd4b (EngineTests AnchorWiringProblems over WaveAction's source, with two planted-fault cases in the test)
 - Codex verdict: READY (round 2, on a74b7c1..6b5fd4b) — no findings; its log's 3 "blocked by policy" hits are quoted text of docs/audits/faction-empowerment.md, no command blocked
 - in-game: Session 1b (D12, D27 and the A4-A6 checks) follows
+- session 1b log check: boot 0 (6b5fd4b, before the owner) "log check: 0 unhandled, 76 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; boots 1-2 (e1ba90a, the session): 0 [Error] lines in both logs, every [Warning] kind listed in docs/features/AUTOMATION.md › Session 1b
+- session 1b: D12 and D27 pass (e1ba90a); amendments A7-A9 recorded before their build; the snapshot au1b is restored after Session 1d

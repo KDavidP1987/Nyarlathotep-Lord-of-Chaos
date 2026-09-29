@@ -98,3 +98,31 @@ boots were copied to the session scratchpad before each stop; the snapshot was r
   Il2CppInterop's substitute notice and two Beelzebub TUNE lines. Boot 2: the reasons and the same three others.
   NyarDev.log in each boot: 226 PrefabLookupMap "is in an unknown state" warnings, one per GUID, logged while the save
   loads, before our plugin initializes; 0 exceptions. No [Error] line in either log
+
+### Session 1b · 2026-09-29 · A4-A6 fixes (e1ba90a, dev world nyardev, with the owner; 1c the same day, same boot)
+
+Setup: the e1ba90a Release build deployed with the server stopped; `pwsh tools/dev-snapshot.ps1 -Save au1b`;
+Debug.VerboseLogging and Debug.TimingLog on; three enabled definitions written to the dev events.json before the boot,
+each 3 Bandit Thugs and 2 Bandit Hunters, one wave, 180 s, AroundPlayer 20-40 m, no Hunt: au-border (RegionEntered
+DunleyFarmlands, cooldown 2 min), au-reprisal (FactionKills Faction_Bandits, 5 in 300 s) and au-here (Manual). Both
+logs of each boot were copied to the session scratchpad before each stop.
+
+- [x] A6, before the owner joined (0 players): the timing split showed read 0.0 ms, rest 0.0-1.3 ms, gc 0 and log
+  8.7-190.6 ms per scan; the cost was the verbose "player triggers: <n> players, <m> entries" console write. With the
+  line written only on change (e1ba90a), the slowest tick of each window after the first was 0.1-0.2 ms, and "player
+  triggers" never reached 5 ms again in the session (the first scan after boot: 23.5 ms, 12.2 of it the read's JIT)
+- [x] A4, au-border: two crossings into Dunley at different points, "started by RegionEntered" each time; the owner saw
+  all five units both times (the second time behind them: the 5 s scan centres the ring where the player was, and the
+  owner had walked on); `debug here 60` listed each wave's five units
+- [x] A5: every wave logged "walk h 9" or "walk h 10"; no "walk check unavailable", no degraded notice
+- [x] D12, FactionKills: "au-reprisal reached 5", then "started by FactionKills", in 1b and again in 1c; `debug here 60`
+  listed its five units
+- [ ] reachability (A7): 1b, au-here at a pond: the units stood on the far side and never noticed the owner. 1c,
+  au-reprisal: its units stood across a bridge, idle until the owner walked past them. 1b and 1c, au-here at a rock
+  face near the world edge: the owner found no unit although `debug here 60` listed all five (two had lost health,
+  fighting wolves out of sight). The walk check tests the spot, not a path from it to the player; the owner notes that
+  V Rising NPCs neither see nor reach a player across cliffs and scenery. Fixed by the line test of A7, re-checked in
+  Session 1d (D33)
+- warnings, all boots: ours are "event au-here stopped: 5 units queued, 0 spawns cancelled" and the example definition's
+  reason; the others are Il2CppInterop's substitute notice and two Beelzebub TUNE lines. NyarDev.log: the 226
+  PrefabLookupMap save-load warnings only. No [Error] line and no exception in either log
