@@ -127,6 +127,8 @@ public static class CommandArgs
         foreach (var f in StatFields.Append("action.factions")) d[f] = ("empower action", "admin");
         foreach (var f in WaveFields.Append("action.units")) d[f] = ("spawn action", "admin");
         d["location"] = ("location", "admin");
+        d["trigger.scope"] = ("trigger", "admin");                  // regions D9, A28: every trigger type
+        d["action.scope"] = ("action", "admin");                    // either action type
         return d;
     }
 
@@ -251,6 +253,27 @@ public static class CommandArgs
         return Arg<object>.Of(entries.ToArray());
     }
 
+    /// <summary>A scope value (regions D9, A28): "Global" (any case) or 1 to <see cref="RegionNames.Count"/> distinct names
+    /// of <see cref="RegionNames"/> joined by commas, stored in the game's spelling; whether the map holds them is the
+    /// validator's, on reload.</summary>
+    static Arg<object> ScopeValue(string field, string? value)
+    {
+        var rule = $"{field} must be Global or 1-{RegionNames.Count} region names";
+        if (string.IsNullOrEmpty(value)) return Arg<object>.Bad(rule);
+        if (string.Equals(value, "Global", StringComparison.OrdinalIgnoreCase)) return Arg<object>.Of("Global");
+        var parts = value.Split(',');
+        if (parts.Length > RegionNames.Count) return Arg<object>.Bad(rule);
+        var names = new List<string>();
+        foreach (var part in parts)
+        {
+            if (part.Length == 0) return Arg<object>.Bad(rule);
+            if (!RegionNames.TryCanonical(part, out var name)) return Arg<object>.Bad($"unknown region {part}");
+            names.Add(name);
+        }
+        if (Repeated(names) is { } twice) return Arg<object>.Bad(Twice(field, twice));
+        return Arg<object>.Of(names.ToArray());
+    }
+
     /// <summary>`event set` whitelist (foundation S-10, event-library D9, D10, D11): field → validator of the new value.
     /// Only the character set and shape are checked here, before any write; name knowledge is the validator's, on
     /// reload. Whether the field fits the event's trigger or action type is checked on the file by EventsEditor.</summary>
@@ -261,6 +284,7 @@ public static class CommandArgs
         if (TriggerFields.Contains(field)) return TriggerValue(field, value);
         if (field == "action.factions") return Factions(field, value);
         if (field == "action.units") return Units(field, value);
+        if (field is "trigger.scope" or "action.scope") return ScopeValue(field, value);
         if (field == "location") return value == "here" ? Arg<object>.Of(LocationHere.Instance) : Arg<object>.Bad("location takes here: .nyar event set id location here");
         static Arg<object> IntIn(string f, string? v, int min, int max) =>
             int.TryParse(v, NumberStyles.None, CultureInfo.InvariantCulture, out var i) && i >= min && i <= max

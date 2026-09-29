@@ -84,11 +84,39 @@ public static class TriggerRouter
     public static IReadOnlyList<EventDefinition> PhaseEntered(DefinitionSet set, DayPhase phase) =>
         Candidates(set, TriggerType.GameTime).Where(d => d.Trigger.Phase == phase).ToList();
 
-    /// <summary>VBloodKilled definitions naming <paramref name="prefab"/> or "any".</summary>
-    public static IReadOnlyList<EventDefinition> VBloodKilled(DefinitionSet set, string prefab) =>
+    /// <summary>VBloodKilled definitions naming <paramref name="prefab"/> or "any" whose trigger scope holds the kill
+    /// (regions D4): a Global one always, a scoped one only when <paramref name="kill"/> lies in a named region. A kill
+    /// whose position is unknown reaches Global definitions only, and a Global definition reads no position.</summary>
+    public static IReadOnlyList<EventDefinition> VBloodKilled(DefinitionSet set, string prefab, (float X, float Z)? kill = null,
+        Func<float, float, string>? regionOf = null) =>
         Candidates(set, TriggerType.VBloodKilled)
             .Where(d => d.Trigger.Bosses.Any(b => b == "any" || string.Equals(b, prefab, StringComparison.Ordinal)))
+            .Where(d => d.Trigger.Scope.IsGlobal || (kill is { } k && regionOf is not null && d.Trigger.Scope.Names(regionOf(k.X, k.Z))))
             .ToList();
+
+    /// <summary>True when a VBloodKilled definition that <paramref name="prefab"/> reaches has a trigger scope, so the
+    /// kill's position matters (regions D4).</summary>
+    public static bool NeedsKillPosition(DefinitionSet set, string prefab) =>
+        Candidates(set, TriggerType.VBloodKilled).Any(d => !d.Trigger.Scope.IsGlobal
+            && d.Trigger.Bosses.Any(b => b == "any" || string.Equals(b, prefab, StringComparison.Ordinal)));
+
+    /// <summary>The kill position for routing (regions D4, A38): <paramref name="read"/> runs only when a scoped
+    /// definition matches the kill, so a Global-only kill reads no position; a throwing read is an unreadable position.</summary>
+    public static (float X, float Z)? KillFor(DefinitionSet set, string prefab, Func<(float X, float Z)?> read)
+    {
+        if (!NeedsKillPosition(set, prefab)) return null;
+        try { return read(); }
+        catch (Exception) { return null; }
+    }
+
+    /// <summary>True when "vblood kill: position unreadable" is to be logged: the kill reached a scoped definition, its
+    /// position is unknown, and this is the first such kill of the streak; a readable one ends the streak (regions D4).</summary>
+    public static bool UnreadableKillLogs(DefinitionSet set, string prefab, (float X, float Z)? kill, FailureStreak streak)
+    {
+        if (!NeedsKillPosition(set, prefab)) return false;
+        if (kill is not null) { streak.Ok(); return false; }
+        return streak.Fail();
+    }
 }
 
 /// <summary>How one wave is sized (Business rules 1, D22): the whole wave is clamped by MaxUnitsPerWave, then by the free
@@ -203,9 +231,12 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
     public DateTime? LastStartUtc(string id) => Starts.TryGetValue(id, out var t) ? t : null;
 
     /// <summary>Starts the current definition <paramref name="id"/>. The reply on refusal, highest first: "unknown event",
-    /// "already active", the controls of <see cref="Precedence.StartBlocker"/>, then one empowerment per faction
-    /// (<see cref="EventActions.EmpowerClash"/>).</summary>
-    public Outcome? Start(string id, string trigger, DateTime utcNow, ControlState controls, (float X, float Y, float Z)? origin = null)
+    /// "already active", the controls of <see cref="Precedence.StartBlocker"/>, one empowerment per faction
+    /// (<see cref="EventActions.EmpowerClash"/>), the Admin-location checks, then the trigger scope (regions D4, A18):
+    /// a start carrying <paramref name="kill"/> (only the VBloodKilled route passes one) needs the kill in a named
+    /// region, every other start needs an online player in one.</summary>
+    public Outcome? Start(string id, string trigger, DateTime utcNow, ControlState controls, (float X, float Y, float Z)? origin = null,
+        (float X, float Z)? kill = null)
     {
         var def = catalog.Current.Find(id);
         if (def is null) return AdminLines.UnknownEvent(id);
@@ -216,6 +247,10 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
         if (clash is not null) return Outcome.Refused(clash, RefusalCode.State, "id", reason: Reasons.EmpowerClash);
         if (def.Action?.Location.Type == LocationType.Admin && origin is null)
             return Outcome.Refused($"event {id} spawns at the admin: start it with .nyar event start", RefusalCode.BadArg, "location", reason: Reasons.AdminLocation);
+        var outside = ScopeGate.AdminOutside(def, origin, controls);
+        if (outside is not null) return outside;
+        var gate = ScopeGate.TriggerBlocker(def, controls, kill);
+        if (gate is not null) return gate;
         var error = catalog.TryStart(id, utcNow, out var instance);
         if (error is not null) return error;
         _active[id] = new ActiveEvent(instance!, trigger, origin);
@@ -267,7 +302,7 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
             Remove(a.Id);
             if (EventActions.ActionKindOf(a.Definition) == EventActionKind.Waves)
                 _cleanups.Add(new Cleanup(a.Id, DateTime.MaxValue, a.Instance.EndsUtc.AddSeconds(graceSeconds)));
-            Push?.EventEnded(a.Id);
+            Push?.EventEnded(a.Id, ApiLines.Region(a.Definition));
         }
         return ended;
     }
@@ -286,7 +321,7 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
     {
         if (!_active.TryGetValue(id, out var a)) return null;
         Remove(id);
-        Push?.EventEnded(id);
+        Push?.EventEnded(id, ApiLines.Region(a.Definition));
         return a;
     }
 

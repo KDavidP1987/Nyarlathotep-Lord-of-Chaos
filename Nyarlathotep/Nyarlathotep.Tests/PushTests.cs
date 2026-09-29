@@ -41,9 +41,9 @@ public partial class PushTests
         hub.ConfigChanged();
         Assert.Equal(
         [
-            "[NYAR:ev] type=event-start id=raid secs=600",
+            "[NYAR:ev] type=event-start id=raid secs=600 region=-",
             "[NYAR:ev] type=wave id=raid secs=0 wave=2",
-            "[NYAR:ev] type=event-end id=raid secs=0",
+            "[NYAR:ev] type=event-end id=raid secs=0 region=-",
             "[NYAR:ev] type=killswitch id=- secs=300",
             "[NYAR:ev] type=config-changed id=- secs=0",
         ], Texts(hub));
@@ -150,9 +150,9 @@ public partial class PushTests
         hub.Queue.Enqueue(PushLines.WaveWarn("raid", 2, 60));
         hub.Queue.Enqueue(PushLines.WaveWarn("siege", 2, 60));
         hub.EventEnded("raid");
-        Assert.Equal(["[NYAR:ev] type=wave-warn id=siege secs=60 wave=2", "[NYAR:ev] type=event-end id=raid secs=0"], Texts(hub));
+        Assert.Equal(["[NYAR:ev] type=wave-warn id=siege secs=60 wave=2", "[NYAR:ev] type=event-end id=raid secs=0 region=-"], Texts(hub));
         hub.Purged(300);
-        Assert.Equal(["[NYAR:ev] type=event-end id=raid secs=0", "[NYAR:ev] type=killswitch id=- secs=300"], Texts(hub));
+        Assert.Equal(["[NYAR:ev] type=event-end id=raid secs=0 region=-", "[NYAR:ev] type=killswitch id=- secs=300"], Texts(hub));
     }
 
     // ---- the transitions report themselves (A6): the real engine and catalog, the hub as their sink ----
@@ -181,12 +181,12 @@ public partial class PushTests
         Assert.Single(e.Expire(T0.AddSeconds(600), 30));
         Assert.Equal(
         [
-            "[NYAR:ev] type=event-start id=raid secs=600",
-            "[NYAR:ev] type=event-start id=siege secs=600",
+            "[NYAR:ev] type=event-start id=raid secs=600 region=-",
+            "[NYAR:ev] type=event-start id=siege secs=600 region=-",
             "[NYAR:ev] type=wave id=raid secs=0 wave=1",
             "[NYAR:ev] type=wave id=raid secs=0 wave=2",
-            "[NYAR:ev] type=event-end id=siege secs=0",
-            "[NYAR:ev] type=event-end id=raid secs=0",
+            "[NYAR:ev] type=event-end id=siege secs=0 region=-",
+            "[NYAR:ev] type=event-end id=raid secs=0 region=-",
         ], Texts(hub));
     }
 
@@ -201,7 +201,7 @@ public partial class PushTests
         e.WaveSpawned("nope");
         Assert.Null(e.Cancel("nope"));
         Assert.Empty(e.Expire(T0.AddSeconds(10), 30));
-        Assert.Equal(["[NYAR:ev] type=event-start id=raid secs=600"], Texts(hub));
+        Assert.Equal(["[NYAR:ev] type=event-start id=raid secs=600 region=-"], Texts(hub));
     }
 
     [Fact]
@@ -278,7 +278,8 @@ public partial class PushTests
             Assert.StartsWith("[NYAR:ev] ", line);
             var keys = line.Split(' ').Skip(1).Select(t => t[..t.IndexOf('=')]).ToList();
             Assert.Equal(["type", "id", "secs"], keys.Take(3));
-            Assert.All(keys.Skip(3), k => Assert.Equal("wave", k));
+            Assert.True(keys.Count <= 4, line);                       // a fourth key: wave, or region (api 5, regions D10)
+            Assert.All(keys.Skip(3), k => Assert.Equal(line.Contains("type=event-", StringComparison.Ordinal) ? "region" : "wave", k));
             Assert.DoesNotMatch(new Regex("1520|460"), line);
         }
     }

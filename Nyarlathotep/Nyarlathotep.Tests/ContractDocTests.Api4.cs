@@ -72,11 +72,11 @@ public partial class ContractDocTests
     public void ContractApi4_passes_contract_handoff_and_design() => Assert.Empty(Api4Problems(Contract, Handoff, Design));
 
     [Theory]
-    [InlineData("**Current api:** 4", "**Current api:** 3", "the current api is not the code's")]
+    [InlineData("**Current api:** 5", "**Current api:** 4", "the current api is not the code's")]
     [InlineData("| `ks` | tag | IMPLEMENTED | 4 |", "| `ks` | tag | PLANNED (raphael-api-admin) | — |", "tag ks is not IMPLEMENTED (api 4)")]
     [InlineData("| `event` | command | IMPLEMENTED | 4 |", "| `event` | command | PLANNED (raphael-api-admin) | — |", "command event is not IMPLEMENTED (api 4)")]
     [InlineData("| `limit` |", "| `lim` |", "§4 has no row for Limit")]
-    [InlineData("| regions | 0.6.0 |", "| raphael-api-admin | 0.5.2 | twins |\n| regions | 0.6.0 |", "§10 still lists a raphael-api-admin row")]
+    [InlineData("| event-spawns | 0.7.0 |", "| raphael-api-admin | 0.5.2 | twins |\n| event-spawns | 0.7.0 |", "§10 still lists a raphael-api-admin row")]
     [InlineData("and the events a pillar `off` ends.", "and nothing else.", "§5a's refusal rule lacks Business rules 2's exceptions")]
     [InlineData("after a failed save and the events a pillar `off` ends (§5a). `internal`", "(§5a). Nothing changed. `internal`", "§4's io row lacks Business rules 2's exceptions")]
     [InlineData("`nothing_to_purge`,", "", "§5a's reason list lacks nothing_to_purge")]

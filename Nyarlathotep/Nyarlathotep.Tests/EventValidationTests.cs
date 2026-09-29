@@ -232,7 +232,7 @@ public partial class EventValidationTests
     static string WavesWithScope(string scope) => Json.ValidAction[..^2] + ", \"scope\": " + scope + " }";
 
     [Fact]
-    public void Scope_absent_is_global_and_a_0_5_definition_parses_unchanged()
+    public void Scope_empty_absent_is_global()
     {
         foreach (var ev in new[] { Json.Event(), Json.Empower(), Json.Event("b", "{ \"type\": \"VBloodKilled\", \"bosses\": [\"any\"] }") })
         {
@@ -254,7 +254,7 @@ public partial class EventValidationTests
     [InlineData("{ \"type\": \"Schedule\", \"days\": [\"Sat\"], \"times\": [\"20:00\"], \"scope\": [\"CursedForest\"] }")]
     [InlineData("{ \"type\": \"GameTime\", \"phase\": \"night\", \"scope\": [\"CursedForest\"] }")]
     [InlineData("{ \"type\": \"VBloodKilled\", \"bosses\": [\"any\"], \"scope\": [\"CursedForest\"] }")]
-    public void Scope_every_trigger_type_takes_one(string trigger)
+    public void Scope_passes_every_trigger_type(string trigger)
     {
         var d = Scoped(Json.Event(trigger: trigger));
         Assert.Null(d.DisabledReason);
@@ -262,7 +262,7 @@ public partial class EventValidationTests
     }
 
     [Fact]
-    public void Scope_trigger_and_action_are_independent()
+    public void Scope_passes_trigger_and_action_independent()
     {
         var d = Scoped(Json.Event(trigger: "{ \"type\": \"Manual\", \"scope\": [\"CursedForest\"] }", action: WavesWithScope("[\"FarbaneWoods\"]")));
         Assert.Null(d.DisabledReason);
@@ -271,7 +271,7 @@ public partial class EventValidationTests
     }
 
     [Fact]
-    public void Scope_names_match_case_insensitively_and_keep_the_games_spelling()
+    public void Scope_passes_case_insensitive_names_in_games_spelling()
     {
         var d = Scoped(Json.Empower(action: Json.EmpowerAction(extra: "\"scope\": [\"cursedforest\", \"GLOOMROT_SOUTH\"]")));
         Assert.Null(d.DisabledReason);
@@ -311,7 +311,7 @@ public partial class EventValidationTests
 
     [Theory]
     [MemberData(nameof(BadScopes))]
-    public void Scope_invalid_disables_the_event(string scope, string reason)
+    public void Scope_fails_when_invalid(string scope, string reason)
     {
         var onTrigger = Scoped(Json.Event(trigger: "{ \"type\": \"Manual\", \"scope\": " + scope + " }"));
         Assert.False(onTrigger.Startable);
@@ -330,7 +330,7 @@ public partial class EventValidationTests
     }
 
     [Fact]
-    public void Scope_a_name_the_index_lacks_is_not_on_the_map()
+    public void Scope_fails_when_name_not_on_map()
     {
         var d = Scoped(Json.Event(action: WavesWithScope("[\"CursedForest\", \"StartCave\"]")), new FakeRegions("CursedForest"));
         Assert.Equal("region StartCave is not on the map", d.DisabledReason);
@@ -343,5 +343,17 @@ public partial class EventValidationTests
         var catalog = TemplateCatalog.Load(TemplateLibraryTests.Bytes(text), FakeUnits.Default(), FakeUnits.Default());
         Assert.Null(catalog.Error);
         Assert.Null(Assert.Single(catalog.Templates).Invalid);
+    }
+
+    [Fact]
+    public void Scope_a_point_location_outside_the_action_scope_disables()
+    {
+        // FakeRegions: x < 0 is FarbaneWoods; Json.ValidAction's Point is at x -1200.5.
+        Assert.Equal("action.location is outside action.scope", Scoped(Json.Event(action: WavesWithScope("[\"CursedForest\"]"))).DisabledReason);
+        Assert.Null(Scoped(Json.Event(action: WavesWithScope("[\"FarbaneWoods\"]"))).DisabledReason);
+        Assert.Null(Scoped(Json.Event(action: WavesWithScope("\"Global\""))).DisabledReason);
+        var admin = Json.ValidAction.Replace("{ \"type\": \"Point\", \"x\": -1200.5, \"z\": -800 }", "{ \"type\": \"Admin\" }")[..^2]
+            + ", \"scope\": [\"CursedForest\"] }";
+        Assert.Null(Scoped(Json.Event(action: admin)).DisabledReason);        // an Admin origin is checked at the start
     }
 }

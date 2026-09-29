@@ -63,4 +63,81 @@ public partial class TriggerActivationTests
         Assert.Equal(["anyboss", "boss"], TriggerRouter.VBloodKilled(set, "CHAR_Bandit_Tourok_VBlood").Select(d => d.Id));
         Assert.Equal(["anyboss"], TriggerRouter.VBloodKilled(set, "CHAR_Other_VBlood").Select(d => d.Id));
     }
+
+    // regions D4: the kill filter. x < 0 is CursedForest, x >= 0 FarbaneWoods.
+    static string RegionOfX(float x, float z) => x < 0 ? "CursedForest" : "FarbaneWoods";
+
+    static DefinitionSet Regional(params string[] events) =>
+        EventValidator.Parse(Json.File(events), FakeUnits.Default(), regions: FakeRegions.All()).Set;
+
+    const string Tourok = "CHAR_Bandit_Tourok_VBlood";
+    const string ScopedKill = "{ \"type\": \"VBloodKilled\", \"bosses\": [\"CHAR_Bandit_Tourok_VBlood\"], \"scope\": [\"CursedForest\"] }";
+
+    [Fact]
+    public void Region_passes_kill_inside_regions()
+    {
+        var set = Regional(Json.Event("scoped", ScopedKill), Json.Event("global", Cases[TriggerType.VBloodKilled].Trigger));
+        Assert.Equal(["global", "scoped"], TriggerRouter.VBloodKilled(set, Tourok, (-5f, 0f), RegionOfX).Select(d => d.Id).OrderBy(x => x));
+        Assert.Equal(["global"], TriggerRouter.VBloodKilled(set, Tourok, (5f, 0f), RegionOfX).Select(d => d.Id));
+        Assert.Equal(["global"], TriggerRouter.VBloodKilled(set, Tourok, null, RegionOfX).Select(d => d.Id));     // unreadable
+        Assert.Equal(["global"], TriggerRouter.VBloodKilled(set, Tourok, (-5f, 0f), null).Select(d => d.Id));    // no lookup
+    }
+
+    [Fact]
+    public void Region_empty_global_trigger()
+    {
+        var set = Regional(Json.Event("global", Cases[TriggerType.VBloodKilled].Trigger));
+        var reads = 0;
+        Assert.Equal(["global"], TriggerRouter.VBloodKilled(set, Tourok, (5f, 0f), (x, z) => { reads++; return "FarbaneWoods"; }).Select(d => d.Id));
+        Assert.Equal(0, reads);
+        Assert.False(TriggerRouter.NeedsKillPosition(set, Tourok));
+    }
+
+    [Fact]
+    public void Region_fails_when_kill_position_unreadable()
+    {
+        var set = Regional(Json.Event("scoped", ScopedKill));
+        var streak = new FailureStreak();
+        Assert.True(TriggerRouter.UnreadableKillLogs(set, Tourok, null, streak));
+        Assert.False(TriggerRouter.UnreadableKillLogs(set, Tourok, null, streak));             // same streak
+        Assert.False(TriggerRouter.UnreadableKillLogs(set, Tourok, (1f, 1f), streak));         // readable: the streak ends
+        Assert.True(TriggerRouter.UnreadableKillLogs(set, Tourok, null, streak));
+        Assert.False(TriggerRouter.UnreadableKillLogs(set, "CHAR_Other_VBlood", null, new FailureStreak()));   // reaches no scoped one
+        var global = Regional(Json.Event("global", Cases[TriggerType.VBloodKilled].Trigger));
+        Assert.False(TriggerRouter.UnreadableKillLogs(global, Tourok, null, new FailureStreak()));
+    }
+
+    [Fact]
+    public void Region_passes_schedule_due_once()
+    {
+        // The scope is checked at the start (EngineTests ScopeGate); the slot is recorded before it, so a skipped
+        // occurrence is not due again in the same minute.
+        var set = Regional(Json.Event("sched", Cases[TriggerType.Schedule].Trigger.Replace(" }", ", \"scope\": [\"CursedForest\"] }")));
+        var due = TriggerRouter.ScheduleDue(set, Now, TimeZoneInfo.Utc, _ => null).ToList();
+        var occurrence = Assert.Single(due).Occurrence;
+        Assert.Empty(TriggerRouter.ScheduleDue(set, Now, TimeZoneInfo.Utc, _ => occurrence));
+    }
+
+    // ---- A38: a Global-only kill reads no position; the patch passes a reader, not a value
+
+    [Fact]
+    public void Region_empty_global_kill_reads_no_position()
+    {
+        var global = EventValidator.Parse(Json.File(Json.Event("g", "{ \"type\": \"VBloodKilled\", \"bosses\": [\"any\"] }")),
+            FakeUnits.Default(), regions: FakeRegions.All()).Set;
+        var reads = 0;
+        Assert.Null(TriggerRouter.KillFor(global, "CHAR_Bandit_Stalker_VBlood", () => { reads++; return (1f, 1f); }));
+        Assert.Equal(0, reads);
+        var scoped = EventValidator.Parse(Json.File(Json.Event("s", "{ \"type\": \"VBloodKilled\", \"bosses\": [\"any\"], \"scope\": [\"CursedForest\"] }")),
+            FakeUnits.Default(), regions: FakeRegions.All()).Set;
+        Assert.Equal((1f, 1f), TriggerRouter.KillFor(scoped, "CHAR_Bandit_Stalker_VBlood", () => { reads++; return (1f, 1f); }));
+        Assert.Equal(1, reads);
+        Assert.Null(TriggerRouter.KillFor(scoped, "CHAR_Bandit_Stalker_VBlood", () => throw new InvalidOperationException("gone")));
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "tools", "preflight.ps1"))) dir = dir.Parent;
+        var patch = File.ReadAllText(Path.Combine(dir!.FullName, "Nyarlathotep", "Nyarlathotep", "Patches", "DeathEventPatch.cs"));
+        Assert.Contains("TriggerBus.VBloodKilled(died.GetPrefabGuid().GetPrefabName(), () => KillPosition(died));", patch);
+        var bus = File.ReadAllText(Path.Combine(dir.FullName, "Nyarlathotep", "Nyarlathotep", "Services", "TriggerBus.cs"));
+        Assert.Contains("var kill = TriggerRouter.KillFor(set, prefab, readKill);", bus);
+    }
 }

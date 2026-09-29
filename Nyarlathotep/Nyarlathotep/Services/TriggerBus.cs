@@ -57,18 +57,27 @@ internal static class TriggerBus
     static PhaseSampler NewSampler() => new(() => _dayNight.GetSingleton<DayNightCycle>().TimeOfDay == TimeOfDay.Day,
         line => Core.Log.LogError($"[nyar] {line}"));
 
-    /// <summary>A V Blood died (Patches/DeathEventPatch). <paramref name="prefab"/> is its prefab name.</summary>
-    internal static void VBloodKilled(string prefab)
+    static readonly FailureStreak _killPositionFaults = new();
+
+    /// <summary>A V Blood died (Patches/DeathEventPatch). <paramref name="prefab"/> is its prefab name and
+    /// <paramref name="kill"/> its x/z, null when unreadable: then only Global definitions start, and "vblood kill:
+    /// position unreadable" is logged once per streak when a scoped one was reached (regions D4).</summary>
+    internal static void VBloodKilled(string prefab, Func<(float X, float Z)?> readKill)
     {
         Core.Log.LogInfo($"[nyar] trigger: VBloodKilled {prefab}");
         if (!_hooks.AllowsTrigger(TriggerType.VBloodKilled)) return;
         var now = DateTime.UtcNow;
-        foreach (var def in TriggerRouter.VBloodKilled(EventStore.Catalog.Current, prefab))
-            if (_dedupe.ShouldFire($"{def.Id}|VBloodKilled {prefab}", now)) Fire(def, $"VBloodKilled {prefab}");
+        var set = EventStore.Catalog.Current;
+        var kill = TriggerRouter.KillFor(set, prefab, readKill);                  // read only for a scoped definition (A38)
+        if (TriggerRouter.UnreadableKillLogs(set, prefab, kill, _killPositionFaults)) Core.Log.LogWarning("[nyar] vblood kill: position unreadable");
+        var regionOf = RegionMap.State.Available ? RegionMap.State.Index.RegionOf : (Func<float, float, string>)null;
+        foreach (var def in TriggerRouter.VBloodKilled(set, prefab, kill, regionOf))
+            if (_dedupe.ShouldFire($"{def.Id}|VBloodKilled {prefab}", now))
+                Fire(def, $"VBloodKilled {prefab}", def.Trigger.Scope.IsGlobal ? null : kill);
     }
 
-    static void Fire(EventDefinition def, string trigger) =>
-        Gateway.Run(ActionKind.StartEvent, Actor.System, () => EventRuntime.StartEvent(def.Id, trigger, Actor.System, null), def.Startable);
+    static void Fire(EventDefinition def, string trigger, (float X, float Z)? kill = null) =>
+        Gateway.Run(ActionKind.StartEvent, Actor.System, () => EventRuntime.StartEvent(def.Id, trigger, Actor.System, null, kill), def.Startable);
 
     /// <summary>A hook is available when what it attaches to exists: the DeathEvent patch applied, the DayNightCycle
     /// singleton present, the ServerBootstrapSystem connect and disconnect patches (Patches/UserConnectPatch, UserDisconnectPatch) applied. In a Debug build,

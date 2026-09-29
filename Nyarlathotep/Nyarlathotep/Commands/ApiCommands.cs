@@ -59,6 +59,15 @@ internal static class ApiCommands
         foreach (var line in Paging.Reply("events", rows, page)) ctx.Reply(line);
     }
 
+    /// <summary>`.nyar api regions [page]` (regions D10, api 5): the `[NYAR:region]` rows of one page, then
+    /// `[NYAR:end] cmd=regions page= count=`; anyone may run it, and it names no player or position (D14).</summary>
+    [Command("regions", usage: "[page]", description: "The map's regions and their active events as machine-readable lines (for the Raphael client).")]
+    public static void Regions(ChatCommandContext ctx, string page = "")
+    {
+        if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }
+        foreach (var line in Paging.Reply("regions", ApiLines.Regions(EventRuntime.Engine.Active), page)) ctx.Reply(line);
+    }
+
     /// <summary>`.nyar api sub on|off` (raphael-api-core D5, D7): the caller's own push subscription, keyed by the
     /// caller's SteamID; no argument names another player. Replies `[NYAR:ok] cmd=sub on=1|0`, or
     /// `[NYAR:err] cmd=sub code=badarg arg=state` for any other argument.</summary>

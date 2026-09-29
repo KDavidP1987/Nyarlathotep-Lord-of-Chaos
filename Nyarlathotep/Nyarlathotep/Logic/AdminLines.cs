@@ -57,6 +57,13 @@ public static partial class AdminLines
         return Outcome.Refused(text, RefusalCode.Cooldown, secs: SecondsLeft(purgeUntilUtc!.Value, nowUtc));
     }
 
+    /// <summary>The log line of a refused start (regions D4, A19, A23): a System start refused because no player is in the
+    /// event's regions is a skipped occurrence; every other refusal, an admin's included, keeps the generic line.</summary>
+    public static string StartRefusedLog(string id, string trigger, Outcome refused, bool system, Scope scope) =>
+        system && refused.Reason == Reasons.NoPlayerInRegion
+            ? $"event {id}: skipped, no player in {string.Join(", ", scope.Regions)}"
+            : $"event {id} not started by {trigger}: {refused.Human}";
+
     public static readonly Outcome NothingToPurgeOutcome = Outcome.Refused(NothingToPurge, RefusalCode.State, reason: Reasons.NothingToPurge);
     public static readonly Outcome NotArmedOutcome = Outcome.Refused(NotArmed, RefusalCode.Confirm);
 

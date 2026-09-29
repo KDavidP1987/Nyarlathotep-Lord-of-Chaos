@@ -3,13 +3,17 @@ using System.Collections.Generic;
 
 namespace Nyarlathotep.Logic;
 
-/// <summary>The controls in force when an event is asked to start.</summary>
+/// <summary>The controls in force when an event is asked to start. <see cref="PlayerPositions"/> reads the online
+/// players' x/z and <see cref="RegionOf"/> names a point's region (regions D4, A11, A20, A26); both are read only for a
+/// definition with a scope, and a null one refuses a scoped start (fails closed).</summary>
 public sealed record ControlState(
     bool PurgeCooldownActive,
     bool GeneralEnabled,
     IReadOnlySet<Pillar> EnabledPillars,
     int ActiveEvents,
-    int MaxConcurrentEvents);
+    int MaxConcurrentEvents,
+    Func<IReadOnlyList<(float X, float Z)>>? PlayerPositions = null,
+    Func<float, float, string>? RegionOf = null);
 
 /// <summary>Control precedence (foundation Business rules 1–2, D3): purge &gt; General.Enabled &gt; pillar switch
 /// &gt; Limits caps &gt; the definition. There is no exception path: nothing here takes an actor, so an admin's

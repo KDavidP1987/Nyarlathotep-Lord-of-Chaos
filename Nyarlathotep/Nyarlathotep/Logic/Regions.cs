@@ -100,6 +100,9 @@ public interface IRegionCatalog
 {
     bool Available { get; }
     bool OnMap(string region);
+
+    /// <summary>The region of a point, "None" outside every one (D6's load check of a Point location).</summary>
+    string RegionOf(float x, float z);
 }
 
 /// <summary>No index: every definition with a regional scope is disabled with "regions unavailable" (D7).</summary>
@@ -108,6 +111,7 @@ public sealed class NoRegions : IRegionCatalog
     public static readonly NoRegions Instance = new();
     public bool Available => false;
     public bool OnMap(string region) => false;
+    public string RegionOf(float x, float z) => RegionNames.None;
 }
 
 /// <summary>One polygon as read from the game: its region name, its axis-aligned box on x/z and its vertices.</summary>
@@ -207,6 +211,7 @@ public sealed class RegionState : IRegionCatalog
 
     public bool Available => Index.Available;
     public bool OnMap(string region) => Index.OnMap(region);
+    public string RegionOf(float x, float z) => Index.RegionOf(x, z);
 
     /// <summary>The health entry while the index is unavailable (D7).</summary>
     public IReadOnlyList<string> Entries => Available ? [] : [HealthEntry];
@@ -261,4 +266,111 @@ public sealed class RegionState : IRegionCatalog
     /// <summary>"regions: &lt;p&gt; polygons, &lt;r&gt; regions (&lt;names&gt;); &lt;k&gt; untagged, &lt;d&gt; dropped" (D2, A16).</summary>
     public static string BootLine(RegionIndex index) =>
         $"regions: {index.PolygonCount} polygons, {index.Regions.Count} regions ({string.Join(", ", index.Regions)}); {index.Untagged} untagged, {index.Dropped} dropped";
+}
+
+/// <summary>The scope checks of a start (regions D4, D6, A18, A20, A21, A26). A Global scope reads no position.</summary>
+public static class ScopeGate
+{
+    public const string NoPlayer = "no player is in the event's regions";
+    public const string KillOutside = "the kill is outside the event's regions";
+    public const string AdminOutsideText = "your position is outside the event's regions";
+
+    /// <summary>True when one of <paramref name="positions"/> lies in a region <paramref name="scope"/> names.</summary>
+    public static bool AnyPlayerIn(Scope scope, IEnumerable<(float X, float Z)> positions, Func<float, float, string> regionOf) =>
+        !scope.IsGlobal && positions.Any(p => scope.Names(regionOf(p.X, p.Z)));
+
+    /// <summary>The trigger-scope refusal of a start, or null. A start with <paramref name="kill"/> is checked against the
+    /// kill's region (A21: kept on purpose beside TriggerRouter's check, A27), every other one against the online
+    /// players; a missing reader or lookup refuses (A20, A26).</summary>
+    public static Outcome? TriggerBlocker(EventDefinition def, ControlState controls, (float X, float Z)? kill)
+    {
+        var scope = def.Trigger.Scope;
+        if (scope.IsGlobal) return null;
+        if (kill is { } k)
+            return controls.RegionOf is { } lookup && scope.Names(lookup(k.X, k.Z))
+                ? null
+                : Outcome.Refused(KillOutside, RefusalCode.State, "scope", reason: Reasons.OutOfRegion);
+        var positions = controls.PlayerPositions?.Invoke() ?? [];
+        return controls.RegionOf is { } regionOf && AnyPlayerIn(scope, positions, regionOf)
+            ? null
+            : Outcome.Refused(NoPlayer, RefusalCode.State, "scope", reason: Reasons.NoPlayerInRegion);
+    }
+
+    /// <summary>The refusal of an Admin-location start whose origin lies outside the action scope (D6), or null.</summary>
+    public static Outcome? AdminOutside(EventDefinition def, (float X, float Y, float Z)? origin, ControlState controls)
+    {
+        if (def.Action is not { Location.Type: LocationType.Admin } action || action.Scope.IsGlobal || origin is not { } o) return null;
+        return controls.RegionOf is { } lookup && action.Scope.Names(lookup(o.X, o.Z))
+            ? null
+            : Outcome.Refused(AdminOutsideText, RefusalCode.BadArg, "location", reason: Reasons.OutOfRegion);
+    }
+}
+
+/// <summary>The online players' positions for a scoped start (regions D4, A34): the source and each read are guarded
+/// apart, so a throwing source yields no position and a throwing or unreadable player is left out while the others
+/// count. Never throws.</summary>
+public static class PositionReader
+{
+    public static IReadOnlyList<(float X, float Z)> Collect<T>(Func<IReadOnlyList<T>> source, Func<T, (float X, float Z)?> read)
+    {
+        var positions = new List<(float X, float Z)>();
+        IReadOnlyList<T> players;
+        try { players = source(); }
+        catch (Exception) { return positions; }
+        foreach (var player in players)
+        {
+            try { if (read(player) is { } p && float.IsFinite(p.X) && float.IsFinite(p.Z)) positions.Add(p); }
+            catch (Exception) { }
+        }
+        return positions;
+    }
+}
+
+/// <summary>The replies of `.nyar region list|here` (regions D8, Design › UX); pure reads.</summary>
+public static class RegionLines
+{
+    public const string Outside = "you are outside every region";
+    public const string Unavailable = "regions unavailable";
+    public const string BadVerb = "argument must be list or here";
+    public const string Unreadable = "your position cannot be read";
+
+    /// <summary>`region here` (A34): "regions unavailable" before the position is read; an unreadable or throwing read
+    /// answers <see cref="Unreadable"/>. Never throws.</summary>
+    public static string HereReply(bool available, Func<(float X, float Z)?> position, Func<float, float, string> regionOf)
+    {
+        if (!available) return Unavailable;
+        (float X, float Z)? p;
+        try { p = position(); }
+        catch (Exception) { return Unreadable; }
+        if (p is not { } at) return Unreadable;
+        try { return Here(true, regionOf, at.X, at.Z); }
+        catch (Exception) { return Unavailable; }
+    }
+
+    /// <summary>One line per region in <see cref="RegionNames.All"/> order, counting the enabled definitions whose trigger
+    /// or action scope names it, then the enabled definitions with neither scope regional.</summary>
+    public static IReadOnlyList<string> List(DefinitionSet set)
+    {
+        var enabled = set.All.Where(d => d.Startable).ToList();
+        var lines = RegionNames.All
+            .Select(r => $"{r} ({RegionNames.Display(r)}): {enabled.Count(d => ScopeOf(d).Any(s => s.Names(r)))} events")
+            .ToList();
+        lines.Add($"global: {enabled.Count(d => ScopeOf(d).All(s => s.IsGlobal))} events");
+        return lines;
+    }
+
+    /// <summary>The admin's region, from the admin's own x/z; "regions unavailable" without an index (D7).</summary>
+    public static string Here(bool available, Func<float, float, string> regionOf, float x, float z)
+    {
+        if (!available) return Unavailable;
+        var region = regionOf(x, z);
+        return RegionNames.TryCanonical(region, out var name) ? $"you are in {name} ({RegionNames.Display(name)})" : Outside;
+    }
+
+    /// <summary>The trigger scope and the action scope of a definition, whichever action it carries.</summary>
+    public static IEnumerable<Scope> ScopeOf(EventDefinition d)
+    {
+        yield return d.Trigger.Scope;
+        yield return d.Action?.Scope ?? d.Empower?.Scope ?? Scope.Global;
+    }
 }

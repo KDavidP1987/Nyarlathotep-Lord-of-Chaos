@@ -1,8 +1,9 @@
 # Regions — global or regional scope for triggers and actions
 
-**Status:** in build (docs/dod/regions.md, audit docs/audits/regions.md); step 1 (region index, scope model,
-regions unavailable) built at e512382: `scope` validates against the map's regions but is not enforced until step 2
-(triggers, empowerment, waves, commands, wire). 0.5.2 is the current published release.
+**Status:** in build (docs/dod/regions.md, audit docs/audits/regions.md). Step 1 (region index, scope model,
+regions unavailable) built at e512382; step 2 (scope enforced in triggers, empowerment and waves; `.nyar region`;
+scope in `event info|list|set`; `{region}`; api 5) built, awaiting its post-audit. Its baseline boot read the dev
+world's index: 10 polygons, one per region. 0.5.2 is the current published release.
 
 ## Goal
 
@@ -25,8 +26,9 @@ there; waves spawn only there. Without a `scope` key everything stays global, ex
 ## Test plan
 
 - **Unit tests:** RegionTests, EventValidationTests Scope, DependencyFailureTests Regions (step 1); trigger,
-  eligibility, spawning, admin, announcer, wire, privacy and control-case tests (step 2); RegionTests Cost (step 3).
-- **Preflight:** LogCheck's regions line (A2), Commands/bad-3, the `api regions` allow-list entry.
+  eligibility, spawning, admin, announcer, wire, privacy and control-case tests, and RegionTests Cost over the
+  boot's polygon count (step 2, A31).
+- **Preflight:** LogCheck's regions line (A2, A14), Commands/bad-13 (A30), the `api regions` allow-list entry.
 - **Session 1 (owner, step 3):** `.nyar region here` in three regions, a regional empowerment, a regional wave start
   refused and accepted, a regional V Blood trigger, and the tick timing (D12).
 

@@ -61,8 +61,8 @@ public partial class WireFormatTests
     {
         Assert.Contains(" ready=0 ", Wire.Version(Sample with { Ready = false }));
         Assert.Contains(" ready=1 ", Wire.Version(Sample with { Ready = true }));
-        Assert.Contains(" api=4 ", Wire.Version(Sample with { Api = Wire.Api }));
-        Assert.Equal(4, Wire.Api);   // raphael-api-core D4, faction-empowerment D11, raphael-api-admin D10
+        Assert.Contains(" api=5 ", Wire.Version(Sample with { Api = Wire.Api }));
+        Assert.Equal(5, Wire.Api);   // raphael-api-core D4, faction-empowerment D11, raphael-api-admin D10, regions D10
         Assert.Contains(" plugin=0.2.0 ", Wire.Version(Sample));
     }
 
@@ -123,7 +123,7 @@ public partial class WireFormatTests
     /// and nowhere else.</summary>
     static readonly Dictionary<string, string> DocumentedIn = new()
     {
-        ["event"] = "### `status`", ["def"] = "### `events`", ["ev"] = "### Push events",
+        ["event"] = "### `status`", ["def"] = "### `events`", ["ev"] = "### Push events", ["region"] = "### `regions`",
         ["end"] = "## 4.", ["err"] = "## 4.", ["ok"] = "## 4.",
     };
 
@@ -152,10 +152,10 @@ public partial class WireFormatTests
         switch (tag)
         {
             case "event":
-                return Wire.Event(t["id"], t["kind"], t["name"], t["state"], t["faction"], int.Parse(t["left"]), t["wave"], Opt("units"));
+                return Wire.Event(t["id"], t["kind"], t["name"], t["state"], t["faction"], int.Parse(t["left"]), t["wave"], Opt("units"), t["region"]);
             case "def":
                 return Wire.Def(t["id"], t["name"], t["enabled"] == "1", t["trigger"], t["action"], int.Parse(t["duration"]), t["state"],
-                    t["reason"] == "-" ? null : t["reason"]);
+                    t["reason"] == "-" ? null : t["reason"], t["region"]);
             case "end":
                 if (!t.TryGetValue("page", out var page)) return Wire.End(t["cmd"], int.Parse(t["count"]));
                 var parts = page.Split('/');
@@ -167,7 +167,9 @@ public partial class WireFormatTests
                 // The only ok line of api 2 is the subscription's.
                 return Wire.Ok(t["cmd"], ("on", t["on"]));
             case "ev":
-                return Wire.Ev(t["type"], t["id"], int.Parse(t["secs"]), Opt("wave"));
+                return Wire.Ev(t["type"], t["id"], int.Parse(t["secs"]), Opt("wave"), t.GetValueOrDefault("region"));
+            case "region":
+                return Wire.Region(t["id"], int.Parse(t["events"]));
             default:
                 throw new ArgumentException(tag);
         }
@@ -175,6 +177,7 @@ public partial class WireFormatTests
 
     [Theory]
     [InlineData("event")]
+    [InlineData("region")]
     [InlineData("def")]
     [InlineData("end")]
     [InlineData("err")]
@@ -220,12 +223,12 @@ public partial class WireFormatTests
 
         var ev = Wire.Event(id, "waves", name, "active", "-", int.MaxValue, "999/999", int.MaxValue);
         AssertWellFormed(ev);
-        Assert.Equal(["id", "kind", "name", "state", "faction", "left", "wave", "units"], Tokens(ev).Keys);
+        Assert.Equal(["id", "kind", "name", "state", "faction", "left", "wave", "units", "region"], Tokens(ev).Keys);
         Assert.Equal(Wire.NameBytes, Encoding.UTF8.GetByteCount(Tokens(ev)["name"]));
 
         var def = Wire.Def(id, name, true, "vbloodkilled", "waves", int.MaxValue, "disabled", reason);
         AssertWellFormed(def);
-        Assert.Equal(["id", "name", "enabled", "trigger", "action", "duration", "state", "reason"], Tokens(def).Keys);
+        Assert.Equal(["id", "name", "enabled", "trigger", "action", "duration", "state", "reason", "region"], Tokens(def).Keys);
         Assert.Equal(Wire.ReasonBytes, Encoding.UTF8.GetByteCount(Tokens(def)["reason"]));
         Assert.DoesNotContain('�', def);   // never cut inside a character
     }

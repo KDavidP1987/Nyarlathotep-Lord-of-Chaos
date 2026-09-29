@@ -41,12 +41,14 @@ public static class Reasons
     public const string NothingToPurge = "nothing_to_purge";
     public const string Internal = "internal";
     public const string Template = "template";
+    public const string NoPlayerInRegion = "no_player_in_region";
+    public const string OutOfRegion = "out_of_region";
 
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal)
     {
         General, PillarOff, MaxConcurrent, Disabled, AlreadyActive, EmpowerClash, AdminLocation, NoPosition, Condition,
         NotActive, Field, Value, Trigger, Stats, Read, Parse, Stale, ReadOnly, Size, WriteUncertain, Count, Running, Save,
-        NothingToPurge, Internal, Template,
+        NothingToPurge, Internal, Template, NoPlayerInRegion, OutOfRegion,
     };
 }
 

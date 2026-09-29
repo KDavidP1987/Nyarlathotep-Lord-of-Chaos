@@ -111,15 +111,21 @@ public static class WavePoints
     /// <summary>Plans one point per ring point with <see cref="SpawnPoints.Choose"/>, a point being walkable when free and
     /// grounded at the wave's height level; each game call takes one unit of the budget, and a blocked point skips its
     /// grounded call. A failed check opens <paramref name="walk"/>'s fall-open (the point and the
-    /// rest of the wave keep their ring points, unchecked); a spent budget leaves the point unchecked at its ring point.</summary>
-    public static List<PlacedPoint> Plan(IReadOnlyList<(float X, float Z)> ring, (float X, float Z) centre, float radius, WaveWalk walk)
+    /// rest of the wave keep their ring points, unchecked); a spent budget leaves the point unchecked at its ring point.
+    /// With <paramref name="inScope"/> (regions D6, A1, A9) a point outside the action scope counts as blocked before any
+    /// budget is spent, and an unchecked ring point outside it uses the centre instead, which the Point and Admin checks
+    /// keep in scope.</summary>
+    public static List<PlacedPoint> Plan(IReadOnlyList<(float X, float Z)> ring, (float X, float Z) centre, float radius, WaveWalk walk,
+        Func<float, float, bool>? inScope = null)
     {
         var points = new List<PlacedPoint>(ring.Count);
+        PlacedPoint Unchecked((float X, float Z) p) =>
+            inScope is null || inScope(p.X, p.Z) ? new PlacedPoint(p.X, p.Z, PointKind.Unchecked) : new PlacedPoint(centre.X, centre.Z, PointKind.Unchecked);
         foreach (var p in ring)
         {
             if (walk.Probe is not { } probe || walk.Failure is not null)
             {
-                points.Add(new PlacedPoint(p.X, p.Z, PointKind.Unchecked));
+                points.Add(Unchecked(p));
                 continue;
             }
             var spent = false;
@@ -130,6 +136,7 @@ public static class WavePoints
                     if (spent) return false;
                     if (float.IsNaN(x) || float.IsNaN(z) || float.IsInfinity(x) || float.IsInfinity(z))
                         throw new ArgumentException("point is not a number");
+                    if (inScope is not null && !inScope(x, z)) return false;           // before the budget (A1)
                     if (!walk.Budget.TryTake(1)) { spent = true; return false; }
                     var free = probe.IsFree(x, z);
                     walk.Returned();
@@ -137,16 +144,23 @@ public static class WavePoints
                     if (!walk.Budget.TryTake(1)) { spent = true; return false; }
                     return probe.IsGrounded(x, z);
                 });
-                points.Add(spent ? new PlacedPoint(p.X, p.Z, PointKind.Unchecked) : chosen);
+                points.Add(spent ? Unchecked(p) : chosen);
             }
             catch (Exception e)
             {
                 walk.Fail(e.Message);
-                points.Add(new PlacedPoint(p.X, p.Z, PointKind.Unchecked));
+                points.Add(Unchecked(p));
             }
         }
         return points;
     }
+
+    /// <summary>The scope check of a wave's points (regions D6): null for a Global scope, which then checks nothing; a
+    /// regional scope without a region lookup holds no point (fails closed, so every point falls to the centre).</summary>
+    public static Func<float, float, bool>? ScopeCheck(Scope scope, Func<float, float, string>? regionOf) =>
+        scope.IsGlobal ? null
+        : regionOf is null ? (_, _) => false
+        : (x, z) => scope.Names(regionOf(x, z));
 
     /// <summary>The moved and unchecked counts of a plan, for the wave line (A2).</summary>
     public static (int Moved, int Unchecked) Counts(IEnumerable<PlacedPoint> points)

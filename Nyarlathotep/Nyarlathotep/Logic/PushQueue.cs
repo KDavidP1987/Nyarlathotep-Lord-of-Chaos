@@ -13,7 +13,7 @@ namespace Nyarlathotep.Logic;
 public interface IPushSink
 {
     void EventStarted(RunningInstance instance);
-    void EventEnded(string id);
+    void EventEnded(string id, string region = "-");
     void Wave(string id, int wave);
     void Purged(int cooldownSeconds);
     void ConfigChanged();
@@ -36,10 +36,10 @@ public static class PushLines
     public static PushLine EventStart(RunningInstance instance)
     {
         var secs = Math.Max(0, (int)Math.Ceiling((instance.EndsUtc - instance.StartedUtc).TotalSeconds));
-        return new(Wire.Ev(EventStartType, instance.Definition.Id, secs), EventStartType, instance.Definition.Id);
+        return new(Wire.Ev(EventStartType, instance.Definition.Id, secs, region: ApiLines.Region(instance.Definition)), EventStartType, instance.Definition.Id);
     }
 
-    public static PushLine EventEnd(string id) => new(Wire.Ev(EventEndType, id, 0), EventEndType, id);
+    public static PushLine EventEnd(string id, string region = "-") => new(Wire.Ev(EventEndType, id, 0, region: region), EventEndType, id);
 
     public static PushLine Wave(string id, int wave) => new(Wire.Ev(WaveType, id, 0, wave), WaveType, id);
 
@@ -136,10 +136,10 @@ public sealed class PushHub(IUserSource users, IReadOnlyList<int> warningOffsets
 
     public void EventStarted(RunningInstance instance) => Guard(PushLines.EventStartType, () => Queue.Enqueue(PushLines.EventStart(instance)));
 
-    public void EventEnded(string id) => Guard(PushLines.EventEndType, () =>
+    public void EventEnded(string id, string region = "-") => Guard(PushLines.EventEndType, () =>
     {
         Queue.DropWarnings(id);
-        Queue.Enqueue(PushLines.EventEnd(id));
+        Queue.Enqueue(PushLines.EventEnd(id, region));
     });
 
     public void Wave(string id, int wave) => Guard(PushLines.WaveType, () => Queue.Enqueue(PushLines.Wave(id, wave)));

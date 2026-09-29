@@ -40,11 +40,12 @@ internal static class WaveAction
         var first = 0;
         int moved = 0, unchecked_ = 0;
         var check = WalkCheck.OpenWave(anchor?.Y);                          // walkable-spawns D3, A13
+        var inScope = WavePoints.ScopeCheck(action.Scope, RegionMap.State.Available ? RegionMap.State.Index.RegionOf : null);   // regions D6
         try
         {
             foreach (var entry in plan)
             {
-                var queued = SpawnTracker.RequestWave(entry.Prefab, active.Id, entry.Count, life, center, action.Radius, first, total, angle, anchor, check.Walk);
+                var queued = SpawnTracker.RequestWave(entry.Prefab, active.Id, entry.Count, life, center, action.Radius, first, total, angle, anchor, check.Walk, inScope);
                 moved += queued.Moved;
                 unchecked_ += queued.Unchecked;
                 first += entry.Count;

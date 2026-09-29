@@ -10,7 +10,7 @@
 > **IMPLEMENTED (api N)**. Build against IMPLEMENTED only. A PLANNED shape can still change before it ships;
 > once it is IMPLEMENTED it only grows (§7).
 >
-> **Current api:** 4
+> **Current api:** 5
 >
 > api 1 shipped with the `foundation` release (0.2.0): the handshake. api 2 ships with the `raphael-api-core`
 > release (0.3.0): `status`, `events` and the push subscription. `me`, `top` and `zones` stay PLANNED until the
@@ -19,8 +19,11 @@
 > key; the change log (§9) lists every api.
 >
 > api 4 ships with the `raphael-api-admin` release (0.5.2): a wire twin for every admin action (§5a), the
-> `templates`, `template info`, `pillar list` and `killswitch` reads (§3) and seven error codes (§4). api 5 and later
-> are PLANNED in §10, the rows each later child adds. Nothing in §10 is sent yet.
+> `templates`, `template info`, `pillar list` and `killswitch` reads (§3) and seven error codes (§4).
+>
+> api 5 ships with the `regions` release (0.6.0): the `regions` read and a `region=` key on `[NYAR:def]` and
+> `[NYAR:event]` rows and on `event-start` and `event-end` pushes (§3). api 6 and later are PLANNED in §10, the rows
+> each later child adds. Nothing in §10 is sent yet.
 
 ### Tags and commands
 
@@ -42,7 +45,7 @@ is listed here as IMPLEMENTED with the api that added it.
 | `tpl` | tag | IMPLEMENTED | 4 |
 | `pillar` | tag | IMPLEMENTED | 4 |
 | `ks` | tag | IMPLEMENTED | 4 |
-| `region` | tag | PLANNED (regions) | — |
+| `region` | tag | IMPLEMENTED | 5 |
 | `version` | command | IMPLEMENTED | 1 |
 | `status` | command | IMPLEMENTED | 2 |
 | `events` | command | IMPLEMENTED | 2 |
@@ -56,7 +59,7 @@ is listed here as IMPLEMENTED with the api that added it.
 | `pillar` | command | IMPLEMENTED | 4 |
 | `purge` | command | IMPLEMENTED | 4 |
 | `killswitch` | command | IMPLEMENTED | 4 |
-| `regions` | command | PLANNED (regions) | — |
+| `regions` | command | IMPLEMENTED | 5 |
 
 `zone` and `zones` keep their defended-zones label: the anti-farming child absorbs defended-zones (Epic, 2026-09-28)
 and relabels both rows when it is planned (§10.4).
@@ -127,7 +130,7 @@ All live under `.nyar api …`. Paged commands take an optional 1-based `[page]`
 ### `status` — active events (anyone) — IMPLEMENTED (api 3)
 `.nyar api status` sends one row per active event, then `[NYAR:end] cmd=status count=<n>` (unpaged):
 ```
-[NYAR:event] id=ashfall kind=waves name=Ashfall_Raid state=active faction=Undead left=412 wave=2/3 units=18
+[NYAR:event] id=ashfall kind=waves name=Ashfall_Raid state=active faction=Undead left=412 wave=2/3 units=18 region=-
 ```
 - `kind` ∈ `empower | waves | boss | zone | siege`.
 - `state` ∈ `scheduled | active | ending`. api 2 sends `active`, and `ending` for an event that has ended while its
@@ -137,10 +140,13 @@ All live under `.nyar api …`. Paged commands take an optional 1-based `[page]`
   prefix, e.g. `faction=Legion,Bandits`; its `wave` is `-`, and its admin `units` is the number of NPCs holding the
   event's empowerment. An empower event has no `ending` row.
 ```
-[NYAR:event] id=legion-surge kind=empower name=Legion_Surge state=active faction=Legion,Bandits left=1500 wave=- units=42
+[NYAR:event] id=legion-surge kind=empower name=Legion_Surge state=active faction=Legion,Bandits left=1500 wave=- units=42 region=CursedForest,FarbaneWoods
 ```
 - `left` is the number of seconds left.
 - `units` is sent to admins only; players get `units=-`.
+- `region` (api 5) is the event's action scope, the region names joined by `,` as `api regions` prints them, or `-`
+  for a global event or an ending row whose definition is gone. It names the event's configured regions, never where
+  a player is.
 - A siege row goes only to members of the target clan and to admins.
 - No row ever carries a position.
 
@@ -169,7 +175,7 @@ All live under `.nyar api …`. Paged commands take an optional 1-based `[page]`
 ### `events` — definitions (admin) — IMPLEMENTED (api 2)
 `.nyar api events [page]` sends up to 10 rows, then `[NYAR:end] cmd=events page= count=`:
 ```
-[NYAR:def] id=ashfall name=Ashfall_Raid enabled=1 trigger=schedule action=waves duration=900 state=idle reason=-
+[NYAR:def] id=ashfall name=Ashfall_Raid enabled=1 trigger=schedule action=waves duration=900 state=idle reason=- region=-
 ```
 - `trigger` ∈ `schedule | ingame | vbloodkilled | bossengaged | bosshealth | zoneactivity | manual`.
 - `action` ∈ `empower | waves | boss | siege`: the definition's pillar action, sent even when validation disabled a
@@ -178,6 +184,18 @@ All live under `.nyar api …`. Paged commands take an optional 1-based `[page]`
 - `reason` is the wire-safe validation error, or `disabled` for a definition switched off, when `state=disabled`;
   `-` otherwise.
 - `name` is cut to 64 UTF-8 bytes and `reason` to 120, on a character boundary, so every key fits the line.
+- `region` (api 5) is the definition's action scope, as on `status` rows; a new last key, so an api 4 parser skips it (§7).
+
+### `regions` — the map's regions (anyone) — IMPLEMENTED (api 5)
+`.nyar api regions [page]` sends one row per region, in the game's order, then `[NYAR:end] cmd=regions page= count=`:
+```
+[NYAR:region] id=CursedForest events=1
+```
+- `id` is the game's region name, as `.nyar region list` prints it: `StartCave`, `FarbaneWoods`, `DunleyFarmlands`,
+  `CursedForest`, `HallowedMountains`, `SilverlightHills`, `Gloomrot_South`, `Gloomrot_North`, `RuinsOfMortium`,
+  `Strongblade` at game 1.1.12.
+- `events` counts the active events whose action scope names the region. The row names no player and no position.
+- It changes nothing and is not rate-limited.
 
 ### `zones` — defended zones (admin) — PLANNED (defended-zones)
 `.nyar api zones [page]` sends up to 10 rows, then `[NYAR:end] cmd=zones page= count=`:
@@ -228,6 +246,11 @@ After `sub on`, the server pushes lines to that player until `sub off`, a discon
 - `id` names the event; it is `-` for `killswitch` and `config-changed`.
 - `secs` is the event's length for `event-start`, the time until the wave for `wave-warn`, the purge cooldown for
   `killswitch`, and 0 for `event-end`, `wave` and `config-changed`. `wave=<n>` follows it on `wave` and `wave-warn`.
+- From api 5, `region=<id,…>` follows `secs` on `event-start` and `event-end`: the event's action scope as on
+  `status` rows, or `-` for a global event.
+```
+[NYAR:ev] type=event-start id=undead-nightfall secs=1800 region=CursedForest
+```
 - `config-changed` asks Raphael to re-read `version` and `events`; it has no other payload. It follows every applied
   events.json write and, from api 4, every pillar switch that changed the cfg, from a human command or a twin alike.
 - Siege events go only to subscribers who are members of the target clan, and to admins.
@@ -371,7 +394,9 @@ Rules:
 - **Reasons** (the `reason` word): `general`, `pillar_off`, `max_concurrent`, `disabled`, `already_active`,
   `empower_clash`, `admin_location`, `no_position`, `condition`, `not_active`, `field`, `value`, `trigger`, `stats`,
   `read`, `parse`, `stale`, `read_only`, `size`, `write_uncertain`, `count`, `running`, `save`, `nothing_to_purge`,
-  `internal`, `template`.
+  `internal`, `template`; from api 5, `no_player_in_region` (`code=state arg=scope`: no online player is in the event's
+  trigger regions) and `out_of_region` (`code=state arg=scope`: the kill is outside the trigger regions; `code=badarg
+  arg=location`: the admin stands outside the action regions).
 - **Line length:** every line fits 480 bytes. `value`, `verb` and `reason` are cut to 120 bytes on a character
   boundary; an empty echoed word is `-`.
 
@@ -413,8 +438,9 @@ The panels:
 - **Admin › Zones:** the `api zones` list and map pins, add-here and remove.
 - **Admin › Announcements:** free-text and digest broadcast, and the five switches read-only.
 - **Admin › Kill switch:** purge with confirmation, and the `killswitch` countdown.
-- **From api 4 (§3, §5a):** Admin › Templates and Admin › Pillars; later (§10) a region picker and a live horde and
-  anti-farming readout.
+- **From api 4 (§3, §5a):** Admin › Templates and Admin › Pillars.
+- **From api 5 (§3):** a region picker fed by `api regions`, and the region of each event on the status board and in
+  Admin › Events (`region=`); later (§10) a live horde and anti-farming readout.
 
 Gate the panels on the handshake:
 - A pillar tab shows only when its switch is 1.
@@ -448,20 +474,21 @@ Gate the panels on the handshake:
 | 2 | 0.3.0 (raphael-api-core) | `status`, `events` and `sub`; tags `event`, `def`, `end`, `err`, `ok`, `ev`; paging and errors (§4). |
 | 3 | 0.4.0 (faction-empowerment) | `status` rows of `kind=empower`: `faction=<names joined by ','>`, `wave=-`, admin `units` = NPCs holding the event's empowerment. No new tag or key. |
 | 4 | 0.5.2 (raphael-api-admin) | Admin action twins `event`, `template`, `pillar`, `purge` (§5a); reads `templates`, `template info`, `pillar list`, `killswitch`; tags `tpl`, `pillar`, `ks`; `verb=` on twin `ok` and `err` lines; `reason=` on `err` lines; error codes `exists`, `state`, `invalid`, `full`, `io`, `confirm`, `limit` (§4); `config-changed` after a pillar switch. |
+| 5 | 0.6.0 (regions) | The `regions` read and tag `region` (§3); `region=` last on `[NYAR:def]` and `[NYAR:event]` rows and after `secs` on `event-start` and `event-end` pushes; reasons `no_player_in_region` and `out_of_region` (§5a). |
 
 ---
 
-## 10. api 5 and later — PLANNED
+## 10. api 6 and later — PLANNED
 
 Nothing in this section is sent yet. Every shape is PLANNED under the child named with it, and can change until that
 child ships. The Tags and commands table carries one row per new tag and command. A child that grows the wire bumps
 `api` by one when it ships, so the number is assigned then. This section names the child and its release, in the
-Epic's order, not the api. §10.1 and §10.3 moved into §5a and §4 when api 4 shipped (raphael-api-admin, 0.5.2); the
-numbers of §10.2 and §10.4 are kept so references to them stay valid.
+Epic's order, not the api. §10.1 and §10.3 moved into §5a and §4 when api 4 shipped (raphael-api-admin, 0.5.2), and
+the regions rows into §3 when api 5 shipped (regions, 0.6.0); the numbers of §10.2 and §10.4 are kept so references to
+them stay valid.
 
 | Child | Release | Adds |
 |---|---|---|
-| regions | 0.6.0 | the `regions` read; `region=` on `[NYAR:def]` and `[NYAR:event]` rows and on `event-start` and `event-end` pushes (§10.4) |
 | event-spawns | 0.7.0 | new settable fields (hunt, modifiers, AroundPlayer, loot), set through the `event set` twin (§5a); no new tag |
 | boss-reinforcements | 0.8.0 | the push `boss-adds` |
 | anti-farming | 0.9.0 | the push `farm-tier`; `zones` and `zone`, relabelled from defended-zones, which it absorbs |
@@ -474,16 +501,8 @@ members of the target clan and to admins.
 
 | Read | Child | Rows | Who |
 |---|---|---|---|
-| `.nyar api regions [page]` | regions | `[NYAR:region] id=<region> events=<active events scoped to it>`, then `[NYAR:end] cmd=regions page= count=` | anyone |
 | `.nyar api zones [page]` | anti-farming | §3's shape; the row is relabelled when anti-farming is planned | admin |
 
-- The region ids are the game's region names, as `.nyar region list` prints them (the regions child).
-- A `[NYAR:def]` row gains `region=<id,…>`, or `-` for a global event, from the regions release. A new key is
-  additive (§7), so an older parser skips it.
-
-```
-[NYAR:region] id=CursedForest events=1
-```
 
 ### 10.4 Push events — PLANNED
 
@@ -492,7 +511,6 @@ New `[NYAR:ev]` types and keys. §3's fairness rule holds for all of them: a pus
 
 | Type or key | Child | Payload |
 |---|---|---|
-| `region=<id,…>` on `event-start` and `event-end` | regions (0.6.0) | the event's regions, or `-` for a global event |
 | `boss-adds` | boss-reinforcements (0.8.0) | `id=<event> boss=<V Blood name> phase=<n> count=<adds that joined>` |
 | `farm-tier` | anti-farming (0.9.0) | `id=<event> tier=<n> region=<id>` |
 | `horde-wave` | outbreak (0.10.0) | `id=<event> wave=<n> count=<units> region=<id>` |
@@ -506,7 +524,6 @@ Privacy:
 - No push names a player.
 
 ```
-[NYAR:ev] type=event-start id=undead-nightfall secs=1800 region=CursedForest
 [NYAR:ev] type=horde-wave id=undead-nightfall secs=0 wave=3 count=60 region=-
 [NYAR:ev] type=farm-tier id=anti-farm secs=0 tier=2 region=FarbaneWoods
 ```

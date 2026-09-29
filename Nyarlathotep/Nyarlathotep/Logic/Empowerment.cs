@@ -10,7 +10,8 @@ namespace Nyarlathotep.Logic;
 
 /// <summary>What the service reads from one unit at its turn in a sweep (D3). <see cref="IsOurs"/> is a unit marker
 /// (our own spawn); <see cref="OwnedByPlayer"/> comes from <see cref="Ownership.Decide"/>; <see cref="CarrierOf"/> is the
-/// event whose carrier the unit already holds, or null.</summary>
+/// event whose carrier the unit already holds, or null. <see cref="Region"/> reads the unit's region at its turn, null
+/// when its position cannot be read; it is called only under a regional action scope (regions D5).</summary>
 public sealed record UnitFacts(
     string Prefab,
     string Faction,
@@ -19,7 +20,8 @@ public sealed record UnitFacts(
     bool HasVBloodUnit,
     bool IsOurs,
     bool OwnedByPlayer,
-    string? CarrierOf = null);
+    string? CarrierOf = null,
+    Func<string?>? Region = null);
 
 /// <summary>Apply, or skip with one of <see cref="Eligibility.SkipReasons"/>.</summary>
 public readonly record struct Eligible(bool Apply, string? Skip)
@@ -32,10 +34,12 @@ public readonly record struct Eligible(bool Apply, string? Skip)
 public static class Eligibility
 {
     public static readonly IReadOnlyList<string> SkipReasons =
-        ["prefab", "dead", "ours", "owned", "denied", "other", "excluded", "vblood", "carried"];
+        ["prefab", "dead", "ours", "owned", "denied", "other", "region", "excluded", "vblood", "carried"];
 
     /// <summary>The checks run in the order of <see cref="SkipReasons"/>, so the deny list wins over includeUnits and a
-    /// player-owned unit is never reached by a faction or a name.</summary>
+    /// player-owned unit is never reached by a faction or a name. A unit outside a regional scope, or whose position cannot
+    /// be read under one, skips with "region"; a Global scope never reads the position (regions D5). A carrier already
+    /// given stays until it expires, wherever the unit walks (S-4): a skip removes nothing.</summary>
     public static Eligible Decide(UnitFacts u, EmpowerAction a)
     {
         if (u.IsPrefab) return Eligible.No("prefab");
@@ -44,6 +48,7 @@ public static class Eligibility
         if (u.OwnedByPlayer) return Eligible.No("owned");
         if (FactionDenyList.IsDenied(u.Faction)) return Eligible.No("denied");
         if (!a.Factions.Contains(u.Faction) && !a.IncludeUnits.Contains(u.Prefab)) return Eligible.No("other");
+        if (!a.Scope.IsGlobal && (u.Region?.Invoke() is not { } region || !a.Scope.Names(region))) return Eligible.No("region");
         if (a.ExcludeUnits.Contains(u.Prefab)) return Eligible.No("excluded");
         if (u.HasVBloodUnit && !a.IncludeVBloods) return Eligible.No("vblood");
         if (u.CarrierOf is not null) return Eligible.No("carried");

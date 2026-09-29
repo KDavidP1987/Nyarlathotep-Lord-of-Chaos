@@ -237,4 +237,78 @@ public class SpawningTests
         Assert.Equal(WalkBudget.PerTick, budget.Left);
         Assert.Empty(WavePoints.Plan([], (0, 0), 10, new WaveWalk(new FakeProbe(), budget)));
     }
+
+    // ---- regions D6: the action scope in the point search. In scope: x > -1 (the ring point at 180 degrees is outside).
+
+    static bool InScope(float x, float z) => x > -1;
+
+    [Fact]
+    public void RegionWaves_fails_when_out_of_scope_point_used()
+    {
+        var ring = Ring(4, 10, (0, 0));
+        var probe = new FakeProbe();
+        var points = WavePoints.Plan(ring, (0, 0), 10, new WaveWalk(probe, new WalkBudget()), InScope);
+        Assert.Equal(4, points.Count);
+        Assert.All(points, p => Assert.True(InScope(p.X, p.Z)));
+        Assert.Equal(PointKind.Moved, points[2].Kind);                         // (-10, 0) moved inward to a free in-scope point
+        Assert.All(probe.Checked, c => Assert.True(InScope(c.X, c.Z)));      // the game is never asked about an outside point
+        foreach (var i in new[] { 0, 1, 3 }) Assert.Equal(PointKind.Ring, points[i].Kind);
+    }
+
+    [Fact]
+    public void RegionWaves_fails_when_scope_spends_budget()
+    {
+        // A1: the scope check runs before WalkBudget. Everything but the centre outside: 24 search points cost nothing.
+        var budget = new WalkBudget(2);
+        var probe = new FakeProbe();
+        var points = WavePoints.Plan([(10, 0)], (0, 0), 10, new WaveWalk(probe, budget), (x, z) => MathF.Abs(x) < 0.5f && MathF.Abs(z) < 0.5f);
+        Assert.Equal(new PlacedPoint(0, 0, PointKind.Centre), Assert.Single(points));
+        Assert.Equal(2, probe.Calls);                                          // the centre's free and grounded calls only
+        Assert.Equal(0, budget.Left);
+    }
+
+    [Fact]
+    public void RegionWaves_fails_when_budget_spent_keeps_outside_ring_point()
+    {
+        var ring = Ring(4, 10, (0, 0));
+        var points = WavePoints.Plan(ring, (0, 0), 10, new WaveWalk(new FakeProbe(), new WalkBudget(0)), InScope);
+        Assert.Equal(new PlacedPoint(0, 0, PointKind.Unchecked), points[2]);  // A9: the centre, not the outside ring point
+        foreach (var i in new[] { 0, 1, 3 }) Assert.Equal(new PlacedPoint(ring[i].X, ring[i].Z, PointKind.Unchecked), points[i]);
+    }
+
+    [Fact]
+    public void RegionWaves_fails_when_fall_open_places_outside_ring_point()
+    {
+        var ring = Ring(4, 10, (0, 0));
+        var noProbe = WavePoints.Plan(ring, (0, 0), 10, new WaveWalk(null, new WalkBudget()), InScope);
+        Assert.Equal(new PlacedPoint(0, 0, PointKind.Unchecked), noProbe[2]);
+        var walk = new WaveWalk(new FakeProbe { ThrowFrom = 1 }, new WalkBudget());
+        var failed = WavePoints.Plan(ring, (0, 0), 10, walk, InScope);
+        Assert.NotNull(walk.Failure);
+        Assert.Equal(new PlacedPoint(0, 0, PointKind.Unchecked), failed[2]);
+        Assert.All(failed, p => Assert.True(InScope(p.X, p.Z)));
+    }
+
+    [Fact]
+    public void RegionWaves_passes_in_scope_placement()
+    {
+        var ring = Ring(4, 10, (0, 0));
+        var scoped = WavePoints.Plan(ring, (0, 0), 10, new WaveWalk(new FakeProbe(), new WalkBudget()), (_, _) => true);
+        var plain = WavePoints.Plan(ring, (0, 0), 10, new WaveWalk(new FakeProbe(), new WalkBudget()));
+        Assert.Equal(plain, scoped);
+        Assert.All(scoped, p => Assert.Equal(PointKind.Ring, p.Kind));
+    }
+
+    [Fact]
+    public void RegionWaves_empty_global_no_scope_call()
+    {
+        var reads = 0;
+        Assert.Null(WavePoints.ScopeCheck(Scope.Global, (x, z) => { reads++; return "CursedForest"; }));
+        Assert.Equal(0, reads);
+        var cursed = new Scope(["CursedForest"]);
+        var check = WavePoints.ScopeCheck(cursed, (x, z) => x < 0 ? "CursedForest" : "FarbaneWoods")!;
+        Assert.True(check(-5, 0));
+        Assert.False(check(5, 0));
+        Assert.False(WavePoints.ScopeCheck(cursed, null)!(-5, 0));            // no lookup: no point is in scope
+    }
 }

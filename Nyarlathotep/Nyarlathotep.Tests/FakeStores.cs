@@ -130,6 +130,9 @@ sealed class FakeRegions(params string[] onMap) : IRegionCatalog
     public bool Available => _onMap.Count > 0;
     public bool OnMap(string region) => _onMap.Contains(region);
 
+    /// <summary>x &lt; 0 is FarbaneWoods (Json.ValidAction's Point at x -1200.5), x &gt;= 0 CursedForest.</summary>
+    public string RegionOf(float x, float z) => x < 0 ? "FarbaneWoods" : "CursedForest";
+
     /// <summary>Every region of RegionNames on the map.</summary>
     public static FakeRegions All() => new([.. RegionNames.All]);
 }
@@ -243,7 +246,7 @@ sealed class Library
     sealed class CountingSink(Library lib) : IPushSink
     {
         public void EventStarted(RunningInstance instance) => lib.Hub.EventStarted(instance);
-        public void EventEnded(string id) => lib.Hub.EventEnded(id);
+        public void EventEnded(string id, string region = "-") => lib.Hub.EventEnded(id, region);
         public void Wave(string id, int wave) => lib.Hub.Wave(id, wave);
         public void Purged(int cooldownSeconds) => lib.Hub.Purged(cooldownSeconds);
         public void ConfigChanged()

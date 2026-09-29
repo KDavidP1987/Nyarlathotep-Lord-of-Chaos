@@ -21,6 +21,7 @@ public static class ApiCommandTable
         new("pillar", true, ["name", "state", "extra"]),
         new("purge", true, ["confirm", "extra"]),
         new("killswitch", true, ["extra"]),
+        new("regions", false, ["page"]),
     ];
 
     /// <summary>The (word, argument count) pairs VCF registers: one per count from 0 to the parameter count, since every

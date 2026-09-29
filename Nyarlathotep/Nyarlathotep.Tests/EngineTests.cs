@@ -427,6 +427,137 @@ public partial class EngineTests
         Assert.Equal("raid \"Bandit raid\" enabled pillar spawns trigger schedule Mon,Fri 20:00 duration 600s", lines[0]);
         Assert.Contains("minPlayers 0", lines[1]);
         Assert.Equal("action: 3 waves every 60s, radius 10, at -1200.5 -800, units 5 CHAR_Bandit_Thug", lines[2]);
-        Assert.Equal("not running", lines[3]);
+        Assert.Equal("trigger scope: Global", lines[3]);
+        Assert.Equal("action scope: Global", lines[4]);
+        Assert.Equal("not running", lines[5]);
+    }
+
+    // regions D4 and D6: the scope gate of a start. x < 0 is CursedForest, x >= 0 FarbaneWoods.
+    static string RegionOfX(float x, float z) => x < 0 ? "CursedForest" : "FarbaneWoods";
+
+    static ControlState Scoped(params (float X, float Z)[] players) =>
+        Open() with { PlayerPositions = () => players, RegionOf = RegionOfX };
+
+    static EventEngine RegionalEngine(params string[] events)
+    {
+        var catalog = new EventCatalog();
+        var r = EventValidator.Parse(Json.File(events), FakeUnits.Default(), regions: FakeRegions.All());
+        Assert.Null(catalog.Reload(r, FileStamp.Of(T0, [1])));
+        Assert.All(r.Set.All, d => Assert.Null(d.DisabledReason));
+        return new EventEngine(catalog);
+    }
+
+    const string CursedTrigger = "{ \"type\": \"Manual\", \"scope\": [\"CursedForest\"] }";
+    const string CursedKill = "{ \"type\": \"VBloodKilled\", \"bosses\": [\"CHAR_Bandit_Tourok_VBlood\"], \"scope\": [\"CursedForest\"] }";
+
+    [Fact]
+    public void ScopeGate_passes_player_in_regions()
+    {
+        var e = RegionalEngine(Json.Event("raid", CursedTrigger));
+        var refused = e.Start("raid", "manual", T0, Scoped((5f, 0f)));
+        Assert.NotNull(refused);
+        Assert.Equal(RefusalCode.State, refused!.Code);
+        Assert.Equal("scope", refused.Arg);
+        Assert.Equal(Reasons.NoPlayerInRegion, refused.Reason);
+        Assert.Equal(ScopeGate.NoPlayer, refused.Human);
+        Assert.Empty(e.Active);
+        Assert.Null(e.Start("raid", "manual", T0, Scoped((5f, 0f), (-5f, 0f))));
+    }
+
+    [Fact]
+    public void ScopeGate_fails_when_no_reader_or_lookup()
+    {
+        var e = RegionalEngine(Json.Event("raid", CursedTrigger));
+        Assert.Equal(Reasons.NoPlayerInRegion, e.Start("raid", "manual", T0, Open())!.Reason);
+        Assert.Equal(Reasons.NoPlayerInRegion, e.Start("raid", "manual", T0, Open() with { RegionOf = RegionOfX })!.Reason);
+        Assert.Equal(Reasons.NoPlayerInRegion, e.Start("raid", "manual", T0, Open() with { PlayerPositions = () => [(-5f, 0f)] })!.Reason);
+    }
+
+    [Fact]
+    public void ScopeGate_passes_in_region_kill_without_player()
+    {
+        var e = RegionalEngine(Json.Event("raid", CursedKill));
+        Assert.Null(e.Start("raid", "VBloodKilled x", T0, Scoped(), kill: (-5f, 0f)));
+    }
+
+    [Fact]
+    public void ScopeGate_fails_when_kill_outside_scope()
+    {
+        var e = RegionalEngine(Json.Event("raid", CursedKill));
+        var refused = e.Start("raid", "VBloodKilled x", T0, Scoped((-5f, 0f)), kill: (5f, 0f));
+        Assert.Equal(RefusalCode.State, refused!.Code);
+        Assert.Equal("scope", refused.Arg);
+        Assert.Equal(Reasons.OutOfRegion, refused.Reason);
+        Assert.Equal(ScopeGate.KillOutside, refused.Human);
+        Assert.Equal(Reasons.OutOfRegion, e.Start("raid", "VBloodKilled x", T0, Open(), kill: (-5f, 0f))!.Reason);   // no lookup
+    }
+
+    [Fact]
+    public void ScopeGate_fails_when_admin_start_without_player_inside()
+    {
+        var e = RegionalEngine(Json.Event("raid", CursedKill));
+        Assert.Equal(Reasons.NoPlayerInRegion, e.Start("raid", "manual", T0, Scoped((5f, 0f)))!.Reason);
+        Assert.Null(e.Start("raid", "manual", T0, Scoped((-5f, 0f))));
+    }
+
+    [Fact]
+    public void ScopeGate_empty_global_trigger()
+    {
+        var e = RegionalEngine(Json.Event("raid"));
+        var reads = 0;
+        var controls = Open() with
+        {
+            PlayerPositions = () => { reads++; return []; },
+            RegionOf = (x, z) => { reads++; return "None"; },
+        };
+        Assert.Null(e.Start("raid", "manual", T0, controls));
+        Assert.Equal(0, reads);
+    }
+
+    [Fact]
+    public void ScopeGate_passes_skip_line_only_for_system_starts()
+    {
+        var scope = new Scope(["CursedForest", "FarbaneWoods"]);
+        var none = Outcome.Refused(ScopeGate.NoPlayer, RefusalCode.State, "scope", reason: Reasons.NoPlayerInRegion);
+        var outside = Outcome.Refused(ScopeGate.KillOutside, RefusalCode.State, "scope", reason: Reasons.OutOfRegion);
+        Assert.Equal("event raid: skipped, no player in CursedForest, FarbaneWoods",
+            AdminLines.StartRefusedLog("raid", "Schedule 20:00", none, true, scope));
+        Assert.Equal("event raid not started by manual: no player is in the event's regions",
+            AdminLines.StartRefusedLog("raid", "manual", none, false, scope));
+        Assert.Equal("event raid not started by VBloodKilled x: the kill is outside the event's regions",
+            AdminLines.StartRefusedLog("raid", "VBloodKilled x", outside, true, scope));
+    }
+
+    [Fact]
+    public void Region_an_admin_origin_outside_the_action_scope_is_refused()
+    {
+        var e = RegionalEngine(Json.Event("raid", action:
+            "\"action\": { \"type\": \"SpawnWaves\", \"units\": [ { \"prefab\": \"CHAR_Bandit_Thug\", \"count\": 1 } ], " +
+            "\"waves\": 1, \"intervalSeconds\": 60, \"radius\": 10, \"location\": { \"type\": \"Admin\" }, \"scope\": [\"CursedForest\"] }"));
+        var refused = e.Start("raid", "manual", T0, Scoped(), (5f, 0f, 0f));
+        Assert.Equal(RefusalCode.BadArg, refused!.Code);
+        Assert.Equal("location", refused.Arg);
+        Assert.Equal(Reasons.OutOfRegion, refused.Reason);
+        Assert.Equal(ScopeGate.AdminOutsideText, refused.Human);
+        Assert.Null(e.Start("raid", "manual", T0, Scoped(), (-5f, 0f, 0f)));
+    }
+
+    // ---- A34: the players' positions of a scoped start never throw, and one unreadable player hides no other
+
+    [Fact]
+    public void ScopeGate_fails_when_position_source_throws()
+    {
+        Assert.Empty(PositionReader.Collect<int>(() => throw new InvalidOperationException("query failed"), _ => (1f, 1f)));
+        var read = PositionReader.Collect(() => new[] { 1, 2, 3, 4 },
+            i => i switch { 1 => throw new InvalidOperationException("bad"), 2 => null, 3 => (float.NaN, 0f), _ => (-5f, 0f) });
+        Assert.Equal([(-5f, 0f)], read);
+        var parsed = EventValidator.Parse(Json.File(Json.Event("manual", "{ \"type\": \"Manual\", \"scope\": [\"CursedForest\"] }")),
+            FakeUnits.Default(), regions: FakeRegions.All());
+        var catalog = new EventCatalog();
+        Assert.Null(catalog.Reload(parsed, FileStamp.Of(T0, [1])));
+        var controls = new ControlState(false, true, new HashSet<Pillar>(Enum.GetValues<Pillar>()), 0, 3,
+            () => PositionReader.Collect(() => new[] { 1, 2 }, i => i == 1 ? throw new InvalidOperationException("bad") : (-5f, 0f)),
+            (x, _) => x < 0 ? "CursedForest" : "FarbaneWoods");
+        Assert.Null(new EventEngine(catalog).Start("manual", "manual", T0, controls));   // the readable player inside counts
     }
 }

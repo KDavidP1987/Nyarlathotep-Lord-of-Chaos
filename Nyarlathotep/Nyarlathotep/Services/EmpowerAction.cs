@@ -452,7 +452,21 @@ internal static class EmpowerAction
                 unit.Has<VBloodUnit>(),
                 ours,
                 Ownership.Decide(new OwnershipFacts(FollowerLink(unit), EntityOwnerLink(unit), TeamLink(unit))),
-                carrier);
+                carrier,
+                () => RegionOf(unit));
+        }
+
+        /// <summary>The unit's region (regions D5), or null when its position or the index cannot be read; asked only
+        /// under a regional scope.</summary>
+        static string RegionOf(Entity unit)
+        {
+            try
+            {
+                return RegionMap.State.Available && unit.TryGetComponent<Translation>(out var t)
+                    ? RegionMap.State.Index.RegionOf(t.Value.x, t.Value.z)
+                    : null;
+            }
+            catch { return null; }
         }
 
         // Each link: absent, leading to no player, leading to a player (character, user, or one hop of EntityOwner to a

@@ -344,4 +344,19 @@ public partial class AnnouncerTests
         Assert.Equal("Wave 2 of 3 of the Bandit raid arrives in 5 min.", Messages.WaveWarning(Raid(), 2, 300, 0));
         Assert.Equal("Wave 2 of 3 of the Bandit raid is almost here.", Messages.WaveWarning(Raid(), 2, 10, 0));
     }
+
+    // ---- regions D9: {region}
+
+    [Fact]
+    public void Region_placeholder_names_the_action_scope_or_the_world()
+    {
+        var scoped = Assert.Single(EventValidator.Parse(Json.File(Json.Event("r", action: Json.ValidAction[..^2] + ", \"scope\": [\"FarbaneWoods\", \"Gloomrot_South\"] }",
+            extra: "\"announce\": { \"start\": [\"Raiders in {region}: {event}.\"] }")), FakeUnits.Default(), regions: FakeRegions.All()).Set.All);
+        Assert.Null(scoped.DisabledReason);
+        Assert.Equal("Raiders in Farbane Woods, Gloomrot South: Bandit raid.", Messages.StartBanner(scoped, 10, 0));
+        var global = Json.One(Json.Event("g", extra: "\"announce\": { \"start\": [\"Raiders in {region}.\"] }"));
+        Assert.Equal("Raiders in the world.", Messages.StartBanner(global, 10, 0));
+        Assert.Contains("region", EventValidator.AllowedPlaceholders);
+        Assert.Equal("the world", MessageContext.RegionOf(Scope.Global));
+    }
 }

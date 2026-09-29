@@ -23,7 +23,7 @@ public sealed record VersionInfo(
 /// through <see cref="TextSink.WireValue"/>, so it holds no space, '=', ';' or ':'.</summary>
 public static class Wire
 {
-    public const int Api = 4;
+    public const int Api = 5;
     public const int MaxBytes = 480;
 
     static readonly Regex NameRx = new("^[a-z][a-z0-9-]*$", RegexOptions.CultureInvariant);
@@ -78,15 +78,20 @@ public static class Wire
     /// <summary><paramref name="raw"/> mapped by <see cref="TextSink.WireValue"/> and cut on a character boundary.</summary>
     public static string Cut(string? raw, int maxBytes) => TextSink.CutToBytes(TextSink.WireValue(raw), maxBytes);
 
-    /// <summary>`[NYAR:event]`, one `api status` row (contract §3 status).</summary>
-    public static string Event(string id, string kind, string name, string state, string faction, int left, string wave, int? units) =>
+    /// <summary>`[NYAR:event]`, one `api status` row (contract §3 status); `region` (api 5, regions D10) last.</summary>
+    public static string Event(string id, string kind, string name, string state, string faction, int left, string wave, int? units, string region = "-") =>
         Record("event", ("id", id), ("kind", kind), ("name", Cut(name, NameBytes)), ("state", state), ("faction", faction),
-            ("left", left.ToString()), ("wave", wave), ("units", units?.ToString() ?? "-"));
+            ("left", left.ToString()), ("wave", wave), ("units", units?.ToString() ?? "-"), ("region", region));
 
-    /// <summary>`[NYAR:def]`, one `api events` row (contract §3 events).</summary>
-    public static string Def(string id, string name, bool enabled, string trigger, string action, int duration, string state, string? reason) =>
+    /// <summary>`[NYAR:def]`, one `api events` row (contract §3 events); `region` (api 5, regions D10) last.</summary>
+    public static string Def(string id, string name, bool enabled, string trigger, string action, int duration, string state, string? reason,
+        string region = "-") =>
         Record("def", ("id", id), ("name", Cut(name, NameBytes)), ("enabled", Bool(enabled)), ("trigger", trigger),
-            ("action", action), ("duration", duration.ToString()), ("state", state), ("reason", reason is null ? "-" : Cut(reason, ReasonBytes)));
+            ("action", action), ("duration", duration.ToString()), ("state", state), ("reason", reason is null ? "-" : Cut(reason, ReasonBytes)),
+            ("region", region));
+
+    /// <summary>`[NYAR:region] id= events=`, one `api regions` row (contract §3 regions, api 5).</summary>
+    public static string Region(string id, int events) => Record("region", ("id", id), ("events", events.ToString()));
 
     /// <summary>`[NYAR:end] cmd= count=` after an unpaged read (contract §4).</summary>
     public static string End(string cmd, int count) => Record("end", ("cmd", cmd), ("count", count.ToString()));
@@ -99,11 +104,13 @@ public static class Wire
     public static string Ok(string cmd, params (string Key, string Value)[] tokens) =>
         Record("ok", new[] { ("cmd", cmd) }.Concat(tokens).ToArray());
 
-    /// <summary>`[NYAR:ev] type= id= secs= [wave=]`, one push line (contract §3 push events).</summary>
-    public static string Ev(string type, string id, int secs, int? wave = null)
+    /// <summary>`[NYAR:ev] type= id= secs= [wave=] [region=]`, one push line (contract §3 push events; region on
+    /// event-start and event-end from api 5, regions D10).</summary>
+    public static string Ev(string type, string id, int secs, int? wave = null, string? region = null)
     {
         var tokens = new List<(string, string)> { ("type", type), ("id", id), ("secs", secs.ToString()) };
         if (wave is { } w) tokens.Add(("wave", w.ToString()));
+        if (region is not null) tokens.Add(("region", region));
         return Record("ev", tokens.ToArray());
     }
 

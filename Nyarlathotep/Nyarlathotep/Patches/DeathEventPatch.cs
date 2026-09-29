@@ -31,7 +31,10 @@ internal static class DeathEventPatch
                     // faction-empowerment D13: a V Blood kill carries VBloodConsumeSource; a gate boss with VBloodUnit alone
                     // raises nothing (DEV_REMINDERS #26).
                     if (Logic.DeathRule.IsVBloodKill(death.Died.Has<VBloodConsumeSource>(), death.Died.Has<VBloodUnit>()))
-                        TriggerBus.VBloodKilled(death.Died.GetPrefabGuid().GetPrefabName());
+                    {
+                        var died = death.Died;
+                        TriggerBus.VBloodKilled(died.GetPrefabGuid().GetPrefabName(), () => KillPosition(died));   // read on demand (A38)
+                    }
                 }
             }
             finally
@@ -44,6 +47,20 @@ internal static class DeathEventPatch
         {
             // Once per failure streak: in a large fight this runs every frame.
             if (Faults.Fail()) Core.Log.LogError($"[nyar] death event read failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>The victim's x/z (regions D4), or null when it cannot be read; TriggerRouter.KillFor calls it only for a
+    /// kill that reaches a scoped definition (A38).</summary>
+    static (float X, float Z)? KillPosition(Unity.Entities.Entity died)
+    {
+        try
+        {
+            return died.TryGetComponent<Unity.Transforms.Translation>(out var t) ? (t.Value.x, t.Value.z) : null;
+        }
+        catch (Exception)
+        {
+            return null;
         }
     }
 }

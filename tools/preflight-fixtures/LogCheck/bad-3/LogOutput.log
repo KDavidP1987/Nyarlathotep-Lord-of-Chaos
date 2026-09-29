@@ -1,4 +1,5 @@
 [Info   :Nyarlathotep] Plugin kdpen.Nyarlathotep v0.1.0 loaded. Awaiting game data init.
+[Info   :   BepInEx] Loading [Nyarlathotep 0.1.0]
 [Info   :Nyarlathotep] [nyar] events: reloaded: 0 valid, 0 disabled
 [Error  :Nyarlathotep] [nyar] something failed: System.InvalidOperationException: boom
 	at Nyarlathotep.Services.EventStore.Reload()

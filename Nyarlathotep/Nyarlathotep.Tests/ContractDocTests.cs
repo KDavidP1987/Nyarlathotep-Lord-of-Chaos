@@ -31,7 +31,7 @@ public partial class ContractDocTests
         var m = Regex.Match(Contract, @"\*\*Current api:\*\* (\d+)");
         Assert.True(m.Success);
         Assert.Equal(Wire.Api, int.Parse(m.Groups[1].Value));
-        Assert.Equal(4, Wire.Api);   // faction-empowerment D11, raphael-api-admin D10
+        Assert.Equal(5, Wire.Api);   // faction-empowerment D11, raphael-api-admin D10, regions D10
     }
 
     [Theory]
@@ -46,6 +46,8 @@ public partial class ContractDocTests
     [InlineData("command status", "2")]
     [InlineData("command events", "2")]
     [InlineData("command sub", "2")]
+    [InlineData("tag region", "5")]
+    [InlineData("command regions", "5")]
     public void Every_built_tag_and_command_is_implemented_with_its_api(string row, string api)
     {
         Assert.True(Table().TryGetValue(row, out var cell), $"{row} missing from the Tags and commands table");
@@ -70,6 +72,7 @@ public partial class ContractDocTests
     [InlineData("`events`", "IMPLEMENTED (api 2)")]
     [InlineData("Push events", "IMPLEMENTED (api 2)")]
     [InlineData("4. Paging", "IMPLEMENTED (api 2)")]
+    [InlineData("`regions`", "IMPLEMENTED (api 5)")]
     [InlineData("`me`", "PLANNED (stats)")]
     [InlineData("`top`", "PLANNED (stats)")]
     [InlineData("`zones`", "PLANNED (defended-zones)")]

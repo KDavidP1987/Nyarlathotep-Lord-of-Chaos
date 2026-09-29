@@ -178,3 +178,75 @@ VERDICT: READY
 ### Dispositions
 - F1 · accepted · A26: the lookup is in the start controls (null refuses); the refusal is state arg=scope reason=out_of_region, logged with the generic line (D4)
 - F2 · accepted · A27: D4 states that both checks are kept on purpose
+
+## Review 7 · 2026-09-28 · subagent · plan commit 5763d30 (working tree) · plan 86426 B · 16 items · files 0 · e3b0c44298fc · prompt r7-scoped · scope A28,A29,A30,A31
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A28-A31 and the plan text they changed (design §9 D26); the plan copy was redacted and the prompt held no Steam ID. It confirmed A28-A30 against the code and the ControlCases rows against D1-D16.
+
+F1 · blocking · Paths walked leaves out five files step 2 already changed (Logic/ApiCommandTable.cs, ContractDocTests.Api4.cs, PrivacyTests.Regions.cs, LogCheck/bad-3, SessionLogs/good's foundation.md), so -Paths -DeclaredOf regions fails. Fix: list them under step 2 with an amendment.
+
+F2 · blocking · D15 still says the count is read and the test added in step 3, against A31 and Build plan step 2; Paths walked step 3 still lists the fixture and RegionTests (Cost). Fix: D15 says step 2; move the paths.
+
+F3 · blocking · A31 does not say how the step 2 boot counts under D13 (session headings, -SessionsOf). Fix: make it Session 1 and renumber, or state that a boot with no in-game steps is an audit-only baseline boot outside -SessionsOf, with its record format.
+
+F4 · advisory · step 2's boot gives no command. Fix: give it once in the Build plan preamble.
+
+F5 · advisory · step 3's count check says nothing about a mismatch. Fix: update the fixture, rerun Cost, record an amendment.
+
+F6 · advisory · the server-paths line is labelled "Session 1" though step 2's boot writes them too. Fix: relabel.
+
+F7 · advisory · the Commands failing-cases row names "the real tree" as the good case while ControlCases names Commands/good. Fix: agree.
+
+15/15 layers · 47/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · A32: the five files (and RegionTests, EventValidationTests, DependencyFailureTests, renamed to the control forms) are in Paths walked step 2; -Paths -DeclaredOf regions → "declared: 103/103 in regions"
+- F2 · accepted · A32: D15 says step 2's baseline boot and step 2; the step 3 paths line is removed and the fixture is under step 2
+- F3 · accepted · A32: a baseline boot is no session; D13 gives its record "- baseline boot <label> log check:" with its snapshot line, outside -SessionsOf; Session 1 stays the owner's
+- F4 · accepted · A32: the boot command is in the Build plan preamble
+- F5 · accepted · A32: a mismatch updates the fixture, reruns Cost and records an amendment
+- F6 · accepted · A32: "Server boots (step 2's baseline boot and step 3's Session 1)"
+- F7 · accepted · A32: the row names fixture Commands/good and the real tree
+
+## Review 8 · 2026-09-28 · subagent · plan commit 5763d30 (working tree) · plan 88500 B · 16 items · files 0 · e3b0c44298fc · prompt r8-scoped · scope A28,A29,A30,A31,A32
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to A28-A32 and the plan text they changed (design §9 D26); redacted plan copy, no Steam ID in the prompt. It confirmed A29-A32 against the code, the Cost tests against every D15 fails-when clause, and `-Paths -DeclaredOf regions` → 104/104.
+
+F1 · blocking · step 3 deploys Session 1 before it moves the version to 0.6.0, and -LogCheck asserts the regions line only for 0.6.0 or later, so D2's evidence passes without checking (as it did for rg0). Fix: set the csproj and thunderstore.toml version to 0.6.0 before the rg1 deploy; require Session 1's log-check line to end with ", regions <p> polygons"; record an amendment.
+
+F2 · advisory · no check fails when the baseline-boot record or its restore line is missing. Fix: say step 2's post-audit confirms it by hand, or add a check.
+
+F3 · advisory · the step 3 mismatch rule edits the fixture, listed only under step 2. Fix: list it under step 3, on a mismatch only.
+
+F4 · advisory · Services/EventStore.cs changed in step 2 but is listed only under step 1. Fix: add it to step 2.
+
+F5 · advisory · the plan does not say to redeploy after step 2's restore. Fix: say so.
+
+14/15 layers · 46/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · A33: the version pair goes to 0.6.0 before the rg1 deploy; Session 1's log-check line must end with ", regions <p> polygons"; the release bullet moves the remaining four surfaces
+- F2 · accepted · A33: step 2's post-audit confirms the baseline-boot record and its restore line by hand (D13)
+- F3 · accepted · A33: the fixture is listed under step 3, on a mismatch only
+- F4 · accepted · A33: Services/EventStore.cs is in step 2's Services list
+- F5 · accepted · A33: step 2's boot bullet redeploys after the restore
+
+## Review 9 · 2026-09-28 · subagent · plan commit 5763d30 (working tree) · plan 90000 B · 16 items · files 0 · e3b0c44298fc · prompt r9-scoped · scope A28,A29,A30,A31,A32,A33
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to A28-A33 and the plan text they changed (design §9 D26); redacted plan copy, no Steam ID in the prompt. It confirmed A28-A33 against the code and `-Paths -DeclaredOf regions` → 104/104, and judged steps 2 and 3 executable from the plan alone.
+
+F1 · advisory · step 3 does not say the early version pair stays uncommitted until the release commit, so the six surfaces could split and plain preflight fails on the changelogs meanwhile. Fix: say so.
+
+F2 · advisory · "must end with ', regions <p> polygons'" is wrong when Unity kinds follow. Fix: "carry … before any [kinds] list".
+
+F3 · advisory · D13's fails-when does not name the baseline-boot record. Fix: add it and a ControlCases fixture.
+
+F4 · advisory · the fixture's count was read by hand from a 0.5.2-stamped boot; step 3's check against a 0.6.0 log is the authoritative one. Fix: none required.
+
+15/15 layers · 47/49 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · A35
+- F2 · accepted · A36
+- F3 · rejected · the record is one hand-checked audit entry that exists (docs/audits/regions.md, step 2 post-audit); a script check and fixture for a single baseline boot would add a control no later step reads; D13 states the hand confirmation
+- F4 · rejected · no change needed (the reviewer asked for none); step 3 compares the 0.6.0 boot line with the fixture

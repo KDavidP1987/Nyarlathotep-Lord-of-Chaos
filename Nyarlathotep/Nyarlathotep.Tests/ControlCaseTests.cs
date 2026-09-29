@@ -97,6 +97,8 @@ public class ControlCaseTests
         Assert.Equal(["D2", "D3", "D5", "D6", "D7", "D9", "D10", "D11", "D12"], PlanControls(PlanText(ControlCases.WalkableSpawns)));
         Assert.Equal(["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12", "D14", "D15", "D16"],
             PlanControls(PlanText(ControlCases.RaphaelApiAdmin)));
+        Assert.Equal(["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D13", "D14", "D15", "D16"],
+            PlanControls(PlanText(ControlCases.Regions)));
         Assert.Empty(Problems(ControlCases.Table, AllPlanKeys(), TestMethods, RepoRoot()));
     }
 

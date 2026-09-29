@@ -11,11 +11,11 @@ namespace Nyarlathotep.Tests;
 public class ApiAccessTests
 {
     static readonly DateTime Now = new(2026, 9, 25, 12, 0, 0, DateTimeKind.Utc);
-    // The contract's key sets (§3 status, §3 events, §4), in order.
+    // The contract's key sets (§3 status, §3 events, §4), in order; region last on event and def (api 5, regions D10).
     static readonly Dictionary<string, string[]> Allowed = new()
     {
-        ["event"] = ["id", "kind", "name", "state", "faction", "left", "wave", "units"],
-        ["def"] = ["id", "name", "enabled", "trigger", "action", "duration", "state", "reason"],
+        ["event"] = ["id", "kind", "name", "state", "faction", "left", "wave", "units", "region"],
+        ["def"] = ["id", "name", "enabled", "trigger", "action", "duration", "state", "reason", "region"],
         ["end"] = ["cmd", "count"],
     };
 
@@ -66,7 +66,8 @@ public class ApiAccessTests
     }
 
     /// <summary>D7 (push cases): a push line is the same for a player and an admin, so none may carry units, a
-    /// coordinate, a radius or a player; each is exactly type, id, secs and, for the wave types, wave. The sub replies
+    /// coordinate, a radius or a player; each is exactly type, id, secs and, for the wave types, wave, or for event-start and
+    /// event-end, region (api 5, regions D10). The sub replies
     /// carry cmd and on, or the err keys.</summary>
     [Fact]
     public void Every_push_line_and_sub_reply_carries_exactly_its_contract_keys()
@@ -84,7 +85,9 @@ public class ApiAccessTests
         foreach (var line in hub.Queue.Lines.Select(l => l.Text))
         {
             var withWave = line.Contains("type=wave", StringComparison.Ordinal);
-            Assert.Equal(withWave ? ["type", "id", "secs", "wave"] : ["type", "id", "secs"], Keys(line));
+            var withRegion = line.Contains("type=event-", StringComparison.Ordinal);
+            Assert.Equal(withWave ? ["type", "id", "secs", "wave"] : withRegion ? ["type", "id", "secs", "region"] : ["type", "id", "secs"],
+                Keys(line));
             Assert.DoesNotContain("1520", line);
         }
         Assert.Equal(["cmd", "on"], Keys(hub.Subscribe(7)));

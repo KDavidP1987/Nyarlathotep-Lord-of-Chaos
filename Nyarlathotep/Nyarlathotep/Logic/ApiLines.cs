@@ -50,9 +50,9 @@ public static class ApiLines
             activeIds.Add(a.Id);
             var def = a.Definition;
             rows.Add(def.Empower is { } emp
-                ? Wire.Event(a.Id, "empower", def.Name, "active", Factions(emp), SecondsLeft(a.Instance.EndsUtc, utcNow), "-", Units(a.Id))
+                ? Wire.Event(a.Id, "empower", def.Name, "active", Factions(emp), SecondsLeft(a.Instance.EndsUtc, utcNow), "-", Units(a.Id), Region(def))
                 : Wire.Event(a.Id, Kind(def.Pillar), def.Name, "active", "-", SecondsLeft(a.Instance.EndsUtc, utcNow),
-                    $"{a.WavesSpawned}/{def.Action?.Waves ?? 0}", Units(a.Id)));
+                    $"{a.WavesSpawned}/{def.Action?.Waves ?? 0}", Units(a.Id), Region(def)));
         }
         // One ending row per event id, for its latest cleanup still in the future; an id that is active again shows
         // only its active row, and a cleanup already due (removed on this tick) shows none.
@@ -61,7 +61,7 @@ public static class ApiLines
         {
             var def = current.Find(c.EventId);
             rows.Add(Wire.Event(c.EventId, def is null ? "waves" : Kind(def.Pillar), def?.Name ?? c.EventId, "ending", "-",
-                SecondsLeft(c.DueUtc, utcNow), "-", Units(c.EventId)));
+                SecondsLeft(c.DueUtc, utcNow), "-", Units(c.EventId), Region(def)));
         }
         rows.Add(Wire.End("status", rows.Count));
         return rows;
@@ -81,8 +81,21 @@ public static class ApiLines
         {
             var state = State(set, d, activeIds);
             return Wire.Def(d.Id, d.Name, d.Enabled, Trigger(d.Trigger.Type), ActionName(d.Pillar), d.DurationSeconds, state,
-                state == "disabled" ? d.DisabledReason ?? "disabled" : null);
+                state == "disabled" ? d.DisabledReason ?? "disabled" : null, Region(d));
         }).ToList();
+
+    /// <summary>The `region=` value (api 5, regions D10): the action scope's names joined by ',', or "-" for a Global
+    /// scope or no definition. It names only the event's configured scope, never where a player is (D14).</summary>
+    public static string Region(EventDefinition? d) =>
+        (d?.Action?.Scope ?? d?.Empower?.Scope ?? Scope.Global) is { IsGlobal: false } s ? string.Join(",", s.Regions) : "-";
+
+    /// <summary>`api regions`: one `[NYAR:region]` row per region in <see cref="RegionNames.All"/> order, counting the
+    /// active events whose action scope names it (regions D10).</summary>
+    public static IReadOnlyList<string> Regions(IEnumerable<ActiveEvent> active)
+    {
+        var scopes = active.Select(a => a.Definition.Action?.Scope ?? a.Definition.Empower?.Scope ?? Scope.Global).ToList();
+        return RegionNames.All.Select(r => Wire.Region(r, scopes.Count(s => s.Names(r)))).ToList();
+    }
 
     /// <summary>active while the event runs, else disabled when it is not startable, else scheduled when its trigger is
     /// automatic, else idle. Only the definition <see cref="DefinitionSet.Find"/> returns can be the running one: a

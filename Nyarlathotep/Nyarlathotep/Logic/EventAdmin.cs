@@ -116,8 +116,8 @@ public static class EventsEditor
     };
 
     /// <summary>trigger.type replaces the whole trigger with that type's default (Schedule Sat 20:00, GameTime night,
-    /// VBloodKilled any, Manual), so no key of the old type stays; any other trigger field needs its trigger type
-    /// (event-library D9).</summary>
+    /// VBloodKilled any, Manual), so no key of the old type stays, the scope included (regions D9); trigger.scope fits
+    /// every type; any other trigger field needs its trigger type (event-library D9).</summary>
     static string? SetTrigger(JsonNode root, JsonObject ev, string path, JsonNode node, out Outcome? error)
     {
         error = null;
@@ -132,8 +132,14 @@ public static class EventsEditor
             };
             return root.ToJsonString(Write) + Environment.NewLine;
         }
-        var need = CommandArgs.TriggerTypeOf(path);
         var trigger = ev["trigger"] as JsonObject;
+        if (path == "trigger.scope")                                   // regions D9: every trigger type takes a scope
+        {
+            if (trigger is null) { error = Invalid($"{path} needs a trigger", Reasons.Trigger); return null; }
+            trigger["scope"] = node;
+            return root.ToJsonString(Write) + Environment.NewLine;
+        }
+        var need = CommandArgs.TriggerTypeOf(path);
         var type = trigger?["type"] is JsonValue tv && tv.TryGetValue<string>(out var t) ? t : null;
         if (need is null || trigger is null || type != need) { error = Invalid($"{path} needs a {need ?? "known"} trigger", Reasons.Trigger); return null; }
         trigger[path["trigger.".Length..]] = node;
@@ -172,7 +178,15 @@ public static class EventLines
         var readiness = Readiness.Of(d, controls);
         return readiness.StartsWith(Readiness.Invalid, StringComparison.Ordinal)
             ? $"{d.Id} {readiness}"
-            : Fit(tr => $"{d.Id} {readiness} {Lower(d.Pillar)} {tr}{(running ? " RUNNING" : "")}", d.Trigger, out _);
+            : Fit(tr => $"{d.Id} {readiness} {Lower(d.Pillar)} {tr}{RegionSuffix(d)}{(running ? " RUNNING" : "")}", d.Trigger, out _);
+    }
+
+    /// <summary>" [names]" for an event with a regional trigger or action scope, the names of both in order, once each;
+    /// empty for a Global one (regions D9).</summary>
+    public static string RegionSuffix(EventDefinition d)
+    {
+        var names = RegionLines.ScopeOf(d).SelectMany(s => s.Regions).Distinct(StringComparer.Ordinal).ToList();
+        return names.Count == 0 ? "" : $" [{string.Join(",", names)}]";
     }
 
     public static IReadOnlyList<string> Info(EventDefinition d, ActiveEvent? active, DateTime utcNow)
@@ -212,6 +226,8 @@ public static class EventLines
                 string.Join(", ", a.Units.Select(u => $"{u.Count} {u.Prefab}")) +
                 (a.UnitLifetimeSeconds is { } l ? $", unit lifetime {l}s" : ""));
         }
+        lines.Add($"trigger scope: {d.Trigger.Scope}");                 // regions D9
+        lines.Add($"action scope: {d.Action?.Scope ?? d.Empower?.Scope ?? Scope.Global}");
         lines.Add(active is null
             ? "not running"
             : $"running: started by {active.Trigger}, {Math.Max(0, (int)Math.Ceiling((active.Instance.EndsUtc - utcNow).TotalSeconds))}s left" +

@@ -13,7 +13,7 @@ public class ApiOverloadTests
         Assert.Empty(ApiCommandTable.Overlaps(ApiCommandTable.Commands));
         var counts = ApiCommandTable.Overloads(ApiCommandTable.Commands).Where(o => o.Word == "event").Select(o => o.Count);
         Assert.Equal([0, 1, 2, 3, 4, 5], counts);
-        Assert.All(ApiCommandTable.Commands.Where(c => c.Name is not ("version" or "status" or "sub")), c => Assert.True(c.AdminOnly, c.Name));
+        Assert.All(ApiCommandTable.Commands.Where(c => c.Name is not ("version" or "status" or "sub" or "regions")), c => Assert.True(c.AdminOnly, c.Name));
         Assert.All(ApiCommandTable.Commands.Where(c => c.Name is "event" or "template" or "templates" or "pillar" or "purge" or "killswitch"),
             c => Assert.Equal("extra", c.Parameters[^1]));
     }

@@ -32,7 +32,7 @@ public class EmpowerEligibilityTests
 
     [Fact]
     public void Every_skip_reason_has_a_case() =>
-        Assert.Equal(Eligibility.SkipReasons.OrderBy(x => x), Flipped().Select(r => (string)r[0]).Append("excluded").OrderBy(x => x));
+        Assert.Equal(Eligibility.SkipReasons.OrderBy(x => x), Flipped().Select(r => (string)r[0]).Append("excluded").Append("region").OrderBy(x => x));
 
     [Fact]
     public void Include_and_exclude_lists()
@@ -91,5 +91,51 @@ public class EmpowerEligibilityTests
             Assert.True(Ownership.Decide(none with { EntityOwner = link }));
             Assert.True(Ownership.Decide(none with { Team = link }));
         }
+    }
+
+    // regions D5: the action scope.
+    static readonly EmpowerAction CursedBandits = Bandits with { Scope = new Scope(["CursedForest"]) };
+
+    [Fact]
+    public void Region_passes_in_region_applied_out_of_region_skipped()
+    {
+        Assert.Equal(Eligible.Yes, Eligibility.Decide(Thug with { Region = () => "CursedForest" }, CursedBandits));
+        Assert.Equal(Eligible.No("region"), Eligibility.Decide(Thug with { Region = () => "FarbaneWoods" }, CursedBandits));
+        Assert.Equal(Eligible.No("region"), Eligibility.Decide(Thug with { Region = () => RegionNames.None }, CursedBandits));
+    }
+
+    [Fact]
+    public void Region_fails_when_position_unreadable()
+    {
+        Assert.Equal(Eligible.No("region"), Eligibility.Decide(Thug with { Region = () => null }, CursedBandits));
+        Assert.Equal(Eligible.No("region"), Eligibility.Decide(Thug, CursedBandits));                 // no reader
+    }
+
+    [Fact]
+    public void Region_empty_global_scope()
+    {
+        var reads = 0;
+        Assert.Equal(Eligible.Yes, Eligibility.Decide(Thug with { Region = () => { reads++; return "FarbaneWoods"; } }, Bandits));
+        Assert.Equal(0, reads);
+    }
+
+    [Fact]
+    public void Region_passes_skip_order()
+    {
+        var outside = () => "FarbaneWoods";
+        Assert.Equal(Eligible.No("denied"), Eligibility.Decide(Thug with { Faction = "Faction_Players", Region = outside }, CursedBandits));
+        Assert.Equal(Eligible.No("other"), Eligibility.Decide(Thug with { Faction = "Faction_Legion", Region = outside }, CursedBandits));
+        Assert.Equal(Eligible.No("region"), Eligibility.Decide(Thug with { Region = outside }, CursedBandits with { ExcludeUnits = ["CHAR_Bandit_Thug"] }));
+        var order = Eligibility.SkipReasons.ToList();
+        Assert.Equal(order.IndexOf("other") + 1, order.IndexOf("region"));
+        Assert.True(order.IndexOf("denied") < order.IndexOf("region"));
+    }
+
+    [Fact]
+    public void Region_passes_carried_unit_keeps_carrier()
+    {
+        // A skip removes nothing (S-4): the unit is skipped, whichever reason, and its carrier runs out on its own.
+        var decision = Eligibility.Decide(Thug with { CarrierOf = "surge", Region = () => "FarbaneWoods" }, CursedBandits);
+        Assert.False(decision.Apply);
     }
 }

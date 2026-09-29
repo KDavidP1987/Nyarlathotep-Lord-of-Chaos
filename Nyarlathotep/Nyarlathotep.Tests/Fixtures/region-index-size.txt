@@ -1,0 +1,2 @@
+# regions D15: the polygon count of the boot "regions:" line (game 1.1.15, dev world, 2026-09-28, regions A31)
+10

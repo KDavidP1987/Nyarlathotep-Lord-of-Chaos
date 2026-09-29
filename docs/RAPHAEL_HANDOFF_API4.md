@@ -65,11 +65,24 @@ Handling the answers:
   `api killswitch`) before showing the result. No push is promised after `internal`; re-read, then re-send only if the state shows the action did not apply (a repeated start answers `code=state`, a repeated purge confirm `code=confirm` or `state reason=nothing_to_purge`).
 - `changed=0` on `enable`, `disable` or `pillar` means that state was already set. Nothing is wrong.
 
+## When api 5 lands (regions, 0.6.0)
+
+api 5 ships in Nyarlathotep 0.6.0 (contract §3, §9). Gate on `api>=5` from the handshake.
+- **Region picker:** `.nyar api regions` lists the ten region ids with the active events scoped to each
+  (`[NYAR:region] id=CursedForest events=1`). Show them by their display name: the id split at capitals, `_` as a
+  space (`Gloomrot_South` is "Gloomrot South").
+- **Scope in Admin › Events:** `[NYAR:def]` rows end with `region=<id,…>`, or `-` for a global event. The field editor
+  sets `trigger.scope` or `action.scope` with the `event set` twin, the value `Global` or ids joined by `,`.
+- **Events board:** `[NYAR:event]` rows and the `event-start` and `event-end` pushes carry the same `region=`; show
+  "global" for `-`. The key names the event's configured regions, never where a player is.
+- Two new refusal reasons: `no_player_in_region` (a regional start with no player in the regions) and `out_of_region`
+  (a kill or the admin outside them). Show the human text; re-read `api status` as for any refusal.
+
 ## When the later children land
 
 | Child (release) | Raphael adds |
 |---|---|
-| regions (0.6.0) | **Region picker:** `api regions` for the list, and the `region=` key on `[NYAR:def]` rows. The event manager sets an event's regions with the `event set` twin. The Events board shows `region=` from `event-start`, or "global" for `-`. |
+| regions (0.6.0) | shipped as api 5: see "When api 5 lands" above |
 | event-spawns (0.7.0) | new fields in the field editor (hunt, modifiers, AroundPlayer, loot), set through the `event set` twin. No new tag. |
 | boss-reinforcements (0.8.0) | a `boss-adds` line on the Events board: the boss, the phase, and how many adds joined |
 | anti-farming (0.9.0) | `farm-tier` on the live readout: the event, the tier, and the region only. Never show or guess a player or a position. Admin › Zones comes back with `api zones`. |

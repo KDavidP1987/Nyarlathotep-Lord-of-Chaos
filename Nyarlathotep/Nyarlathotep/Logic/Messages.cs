@@ -4,10 +4,17 @@ using System.Text.RegularExpressions;
 namespace Nyarlathotep.Logic;
 
 /// <summary>What a player-facing template may say (Security › Injection): the event's name, its faction, minutes
-/// left, the wave and the wave count, and a zone's name. It has no position or radius field, so nothing rendered from
-/// it can carry one (foundation D15, Epic D16).</summary>
-public sealed record MessageContext(string Event, string Faction, int Minutes, int Wave, int Waves, string Zone)
+/// left, the wave and the wave count, a zone's name, and the action scope's region names (regions D9). It has no position
+/// or radius field, so nothing rendered from it can carry one (foundation D15, Epic D16).</summary>
+public sealed record MessageContext(string Event, string Faction, int Minutes, int Wave, int Waves, string Zone, string Region = MessageContext.World)
 {
+    /// <summary>{region} of a Global action scope.</summary>
+    public const string World = "the world";
+
+    /// <summary>{region}: the display names of a regional action scope joined by ", ", or "the world".</summary>
+    public static string RegionOf(Scope scope) =>
+        scope.IsGlobal ? World : string.Join(", ", scope.Regions.Select(RegionNames.Display));
+
     /// <summary>The context of <paramref name="def"/>. Its faction: for an Empower action the short names of its factions
     /// joined by ", " (Faction_Legion, Faction_Bandits → "Legion, Bandits", faction-empowerment D10); otherwise the
     /// second part of the first unit's prefab name (CHAR_Bandit_Thug → Bandit), or "-".</summary>
@@ -19,7 +26,8 @@ public sealed record MessageContext(string Event, string Faction, int Minutes, i
         minutes,
         wave,
         def.Action?.Waves ?? 0,
-        "-");
+        "-",
+        RegionOf(def.Action?.Scope ?? def.Empower?.Scope ?? Scope.Global));
 
     static string FactionOf(string? prefab)
     {
@@ -131,6 +139,7 @@ public static class Messages
             "wave" => ctx.Wave.ToString(),
             "waves" => ctx.Waves.ToString(),
             "zone" => ctx.Zone,
+            "region" => ctx.Region,
             _ => m.Value,
         });
 

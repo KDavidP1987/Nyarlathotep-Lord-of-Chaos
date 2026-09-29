@@ -99,6 +99,7 @@ internal static class EventStore
     {
         public bool Available => RegionMap.State.Available;
         public bool OnMap(string region) => RegionMap.State.OnMap(region);
+        public string RegionOf(float x, float z) => RegionMap.State.RegionOf(x, z);
 
         static HashSet<string> _factions;
 

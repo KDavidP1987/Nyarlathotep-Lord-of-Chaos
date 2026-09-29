@@ -7,6 +7,7 @@ using ProjectM;
 using ProjectM.Network;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Transforms;
 
 namespace Nyarlathotep.Services;
 
@@ -47,7 +48,35 @@ internal static class EventRuntime
         Settings.Enabled.Value,
         EnabledPillars(),
         Engine.Active.Count,
-        Settings.Limit(Limits.MaxConcurrentEvents));
+        Settings.Limit(Limits.MaxConcurrentEvents),
+        OnlinePositions,
+        RegionMap.State.Available ? RegionMap.State.Index.RegionOf : null);
+
+    /// <summary>The online players' x/z (regions D4), read only when a scoped start asks; through
+    /// PositionReader.Collect (A34), so a failing query yields none and a player whose character cannot be read is left
+    /// out while the others count. Never throws; never logged or sent anywhere.</summary>
+    static IReadOnlyList<(float X, float Z)> OnlinePositions() => PositionReader.Collect(ConnectedCharacters, CharacterPosition);
+
+    static IReadOnlyList<Entity> ConnectedCharacters()
+    {
+        var characters = new List<Entity>();
+        var query = Core.EntityManager.CreateEntityQuery(ComponentType.ReadOnly(Il2CppType.Of<User>()));
+        try
+        {
+            var users = query.ToComponentDataArray<User>(Allocator.Temp);
+            try
+            {
+                foreach (var user in users)
+                    if (user.IsConnected) characters.Add(user.LocalCharacter._Entity);
+            }
+            finally { users.Dispose(); }
+        }
+        finally { query.Dispose(); }
+        return characters;
+    }
+
+    static (float X, float Z)? CharacterPosition(Entity character) =>
+        character.Exists() && character.TryGetComponent<Translation>(out var t) ? (t.Value.x, t.Value.z) : null;
 
     static HashSet<Pillar> EnabledPillars()
     {
@@ -64,7 +93,8 @@ internal static class EventRuntime
     /// automatic one (System) also meets the definition's conditions, and one refused by a switched-off master or
     /// pillar switch logs nothing (Business rules 6). Logs "event &lt;id&gt; started by &lt;trigger&gt;" (D29).</summary>
     [Mutating]
-    internal static Outcome StartEvent(string id, string trigger, Actor actor, (float X, float Y, float Z)? origin)
+    internal static Outcome StartEvent(string id, string trigger, Actor actor, (float X, float Y, float Z)? origin,
+        (float X, float Z)? kill = null)
     {
         var now = DateTime.UtcNow;
         var controls = Controls();
@@ -84,10 +114,10 @@ internal static class EventRuntime
             }
         }
 
-        var refused = Engine.Start(id, trigger, now, controls, origin);
+        var refused = Engine.Start(id, trigger, now, controls, origin, kill);
         if (refused is not null)
         {
-            Core.Log.LogInfo($"[nyar] event {id} not started by {trigger}: {refused.Human}");
+            Core.Log.LogInfo($"[nyar] {AdminLines.StartRefusedLog(id, trigger, refused, actor == Actor.System, def?.Trigger.Scope ?? Scope.Global)}");
             // The admin is told how long the purge cooldown still runs (A7, D30).
             return AdminLines.StartRefused(refused, actor == Actor.Admin, Persistence.State.Document.PurgeUntilUtc, now);
         }

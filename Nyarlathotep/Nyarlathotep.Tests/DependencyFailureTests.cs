@@ -310,7 +310,7 @@ public partial class DependencyFailureTests
     }
 
     [Fact]
-    public void Regions_no_polygons_disables_regional_definitions_and_global_ones_run()
+    public void Regions_fails_when_no_polygons()
     {
         var (state, log) = (new RegionState(), new LogLines());
         state.Build(() => [], () => GameNames, log.Add, log.Add);
@@ -323,10 +323,22 @@ public partial class DependencyFailureTests
     }
 
     [Fact]
-    public void Regions_a_throwing_build_never_throws() => RegionsFault();
+    public void Regions_fails_when_build_throws() => RegionsFault();
 
     [Fact]
-    public void Regions_a_throwing_log_sink_never_throws_and_keeps_the_index()
+    public void Regions_empty_healthy_build_leaves_no_health_entry()
+    {
+        var (state, log) = (new RegionState(), new LogLines());
+        state.Build(() => [Square], () => GameNames, log.Add, log.Add);
+        Assert.True(state.Available);
+        Assert.Empty(state.Entries);
+        var r = EventValidator.Parse(RegionalAndGlobal(), FakeUnits.Default(), regions: state);
+        Assert.True(r.Set.Find("regional")!.Startable);
+        Assert.True(r.Set.Find("global")!.Startable);
+    }
+
+    [Fact]
+    public void Regions_fails_when_log_sink_throws()
     {
         void Throw(string _) => throw new InvalidOperationException("log down");
         var state = new RegionState();
@@ -342,7 +354,7 @@ public partial class DependencyFailureTests
     }
 
     [Fact]
-    public void Regions_unavailable_wins_over_not_on_the_map()
+    public void Regions_passes_unavailable_wins_over_not_on_map()
     {
         var r = EventValidator.Parse(Json.File(Json.Event("x", "{ \"type\": \"Manual\", \"scope\": [\"StartCave\"] }")), FakeUnits.Default(),
             regions: NoRegions.Instance);
@@ -350,7 +362,7 @@ public partial class DependencyFailureTests
     }
 
     [Fact]
-    public void Regions_reload_rebuilds_only_while_unavailable_and_clears_the_health_entry()
+    public void Regions_passes_reload_rebuilds_and_clears_health()
     {
         var (state, log) = (new RegionState(), new LogLines());
         var reads = 0;
@@ -367,7 +379,7 @@ public partial class DependencyFailureTests
     }
 
     [Fact]
-    public void Regions_names_differing_from_the_game_warn_once_per_build()
+    public void Regions_fails_when_names_differ()
     {
         var (state, log) = (new RegionState(), new LogLines());
         state.Build(() => [Square], () => GameNames.Where(n => n != "Strongblade").Append("Oakveil"), log.Add, log.Add);
@@ -378,7 +390,7 @@ public partial class DependencyFailureTests
     }
 
     [Fact]
-    public void Regions_are_built_before_the_definitions_are_applied()
+    public void Regions_passes_built_before_definitions()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "tools", "preflight.ps1"))) dir = dir.Parent;
@@ -395,7 +407,7 @@ public partial class DependencyFailureTests
     }
 
     [Fact]
-    public void Regions_the_map_is_read_only_and_disposes_its_query()
+    public void Regions_passes_read_only_map()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "tools", "preflight.ps1"))) dir = dir.Parent;

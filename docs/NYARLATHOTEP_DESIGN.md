@@ -129,6 +129,7 @@ it. **Who:** *anyone*, or *admin* (VCF `adminOnly`, Epic D5). **Child:** the chi
 | `.nyar spawn <unit> [count] [level] [hp×] [power×]` | admin | One-off test spawn through the full pipeline | foundation |
 | `.nyar purge [confirm]` | admin | Kill switch: end everything, despawn all tracked units (two-step) | foundation |
 | `.nyar debug here` | admin | Faction, territory, zone and nearest boss at your position | foundation |
+| `.nyar region list\|here` | admin | The map's regions with their event counts; the region you stand in | regions |
 | `.nyar announce <text\|digest>` | admin | Broadcast now: free text, or the stats digest | foundation (digest: stats) |
 | `.nyar zone add\|remove\|list` | admin | Defended zones at your position | defended-zones |
 | `.nyar me` | anyone | Your own stats: today, week, all-time | stats |
@@ -138,6 +139,7 @@ it. **Who:** *anyone*, or *admin* (VCF `adminOnly`, Epic D5). **Child:** the chi
 | `.nyar api version` | anyone | Raphael handshake `[NYAR:version]` | foundation |
 | `.nyar api status\|me\|top …` | anyone | Machine-readable twins of the player reads | raphael-api-core (status); stats (me, top) |
 | `.nyar api events\|zones [page]` | admin | Machine-readable definitions and zones | raphael-api-core (events); defended-zones (zones) |
+| `.nyar api regions [page]` | anyone | Machine-readable regions and their active events (contract §3) | regions |
 | `.nyar api sub on\|off` | anyone | Push events `[NYAR:ev]` to this player | raphael-api-core |
 | `.nyar api event <verb> …` / `.nyar api template use <template> [as <id>]` / `.nyar api pillar <name> on\|off` / `.nyar api purge [confirm]` | admin | Wire twins of the admin actions: the human command's flow, answered by one `[NYAR:ok]` or `[NYAR:err]` line; 5 a second per admin (contract §5a) | raphael-api-admin |
 | `.nyar api templates [pillar] [page]` / `.nyar api template info <template>` / `.nyar api pillar list` / `.nyar api killswitch` | admin | Machine-readable template catalogue, pillar switches and kill switch (contract §3) | raphael-api-admin |
@@ -149,7 +151,7 @@ Business rules 11.
 ### Settable fields
 
 Every field `.nyar event set` takes (event-library D20). A trigger field needs its trigger type, and an action field needs its
-action type; `trigger.type` replaces the trigger with that type's default. Values are checked before any write, and names on reload.
+action type, except `trigger.scope` and `action.scope` (regions D9), which fit every type; `trigger.type` replaces the trigger with that type's default. Values are checked before any write, and names on reload.
 
 | Field | Family | Who |
 |---|---|---|
@@ -163,6 +165,7 @@ action type; `trigger.type` replaces the trigger with that type's default. Value
 | `trigger.times` | trigger | admin |
 | `trigger.phase` | trigger | admin |
 | `trigger.bosses` | trigger | admin |
+| `trigger.scope` | trigger | admin |
 | `action.stats.physicalPower` | empower action | admin |
 | `action.stats.spellPower` | empower action | admin |
 | `action.stats.maxHealth` | empower action | admin |
@@ -174,6 +177,7 @@ action type; `trigger.type` replaces the trigger with that type's default. Value
 | `action.radius` | spawn action | admin |
 | `action.units` | spawn action | admin |
 | `location` | location | admin |
+| `action.scope` | action | admin |
 
 ## 7. Build order
 

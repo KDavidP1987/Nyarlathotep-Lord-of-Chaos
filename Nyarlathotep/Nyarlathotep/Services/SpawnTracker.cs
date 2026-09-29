@@ -119,11 +119,12 @@ internal static class SpawnTracker
     /// (walkable-spawns D3); the result carries the queued units' moved and unchecked counts.</summary>
     [Mutating]
     internal static (int Queued, int Moved, int Unchecked) RequestWave(string prefab, string eventId, int count, UnitLifetime life,
-        float3 center, float radius, int first, int total, double angle, (float X, float Y, float Z)? anchor, WaveWalk walk)
+        float3 center, float radius, int first, int total, double angle, (float X, float Y, float Z)? anchor, WaveWalk walk,
+        Func<float, float, bool> inScope = null)
     {
         var ring = new List<(float X, float Z)>(Math.Max(0, count));
         for (var i = 0; i < count; i++) ring.Add(SpawnLedger.Around(center.x, center.z, radius, first + i, total, angle));
-        var points = WavePoints.Plan(ring, (center.x, center.z), radius, walk);
+        var points = WavePoints.Plan(ring, (center.x, center.z), radius, walk, inScope);
         var result = _ledger.Request(prefab, eventId, count, life, UnitTuning.None, i => (points[i].X, center.y, points[i].Z), anchor);
         if (result.Skipped is not null) Core.Log.LogWarning($"[nyar] event {eventId} {prefab}: {result.Skipped}");
         var (moved, unchecked_) = WavePoints.Counts(points.Take(result.Queued));

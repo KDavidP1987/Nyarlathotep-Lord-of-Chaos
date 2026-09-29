@@ -19,8 +19,8 @@ public partial class ApiLinesTests
     static ActiveEvent Running(EventDefinition d, int waves, int secondsLeft) =>
         new(new RunningInstance(d, Now.AddSeconds(-30), Now.AddSeconds(secondsLeft)), "manual", null) { WavesSpawned = waves };
 
-    static readonly string[] EventKeys = ["id", "kind", "name", "state", "faction", "left", "wave", "units"];
-    static readonly string[] DefKeys = ["id", "name", "enabled", "trigger", "action", "duration", "state", "reason"];
+    static readonly string[] EventKeys = ["id", "kind", "name", "state", "faction", "left", "wave", "units", "region"];
+    static readonly string[] DefKeys = ["id", "name", "enabled", "trigger", "action", "duration", "state", "reason", "region"];
 
     static List<string> Keys(string line) => line.Split(' ').Skip(1).Select(t => t[..t.IndexOf('=')]).ToList();
 
@@ -42,7 +42,7 @@ public partial class ApiLinesTests
     {
         var d = Def("ashfall", name: "Ashfall Raid");
         var reply = Status([Running(d, 2, 412)], [], new DefinitionSet([d]), isAdmin: true, new() { ["ashfall"] = 18 });
-        Assert.Equal("[NYAR:event] id=ashfall kind=waves name=Ashfall_Raid state=active faction=- left=412 wave=2/3 units=18", reply[0]);
+        Assert.Equal("[NYAR:event] id=ashfall kind=waves name=Ashfall_Raid state=active faction=- left=412 wave=2/3 units=18 region=-", reply[0]);
         Assert.Equal(EventKeys, Keys(reply[0]));
         Assert.Equal("[NYAR:end] cmd=status count=1", reply[^1]);
     }
@@ -60,7 +60,7 @@ public partial class ApiLinesTests
     {
         var d = EmpowerDef("legion-surge", "Faction_Legion", "Faction_Bandits");
         var reply = Status([Running(d, 0, 1500)], [], new DefinitionSet([d]), isAdmin: true, new() { ["legion-surge"] = 42 });
-        Assert.Equal("[NYAR:event] id=legion-surge kind=empower name=Legion_Surge state=active faction=Legion,Bandits left=1500 wave=- units=42", reply[0]);
+        Assert.Equal("[NYAR:event] id=legion-surge kind=empower name=Legion_Surge state=active faction=Legion,Bandits left=1500 wave=- units=42 region=-", reply[0]);
         Assert.Equal(EventKeys, Keys(reply[0]));
     }
 
@@ -91,7 +91,7 @@ public partial class ApiLinesTests
         Assert.Equal(EventKeys, Keys(reply[0]));
         Assert.Equal("ChurchOfLum_SpotShapeshiftVampire,ChurchOfLum_Slaves_Rioters,CorruptedBloodBuffSpawns,Spiders_Shapeshifted,ChurchOfLum_Slaves",
             Value(reply[0], "faction"));
-        Assert.EndsWith(" wave=- units=99999", reply[0]);
+        Assert.EndsWith(" wave=- units=99999 region=-", reply[0]);
     }
 
     [Theory]
@@ -131,7 +131,7 @@ public partial class ApiLinesTests
         var cleanups = new[] { new Cleanup("ashfall", Now.AddSeconds(-5), Now.AddSeconds(40)), new Cleanup("ashfall", Now.AddSeconds(-2), Now.AddSeconds(55)) };
         var reply = Status([], cleanups, new DefinitionSet([d]), isAdmin: true, new() { ["ashfall"] = 7 });
         Assert.Equal(2, reply.Count);
-        Assert.Equal("[NYAR:event] id=ashfall kind=waves name=Ashfall_Raid state=ending faction=- left=55 wave=- units=7", reply[0]);
+        Assert.Equal("[NYAR:event] id=ashfall kind=waves name=Ashfall_Raid state=ending faction=- left=55 wave=- units=7 region=-", reply[0]);
         Assert.Equal("[NYAR:end] cmd=status count=1", reply[1]);
     }
 
@@ -149,7 +149,7 @@ public partial class ApiLinesTests
     public void An_ending_row_whose_definition_was_removed_uses_its_id()
     {
         var reply = Status([], [new Cleanup("gone", Now, Now.AddSeconds(10))], DefinitionSet.Empty, isAdmin: false);
-        Assert.Equal("[NYAR:event] id=gone kind=waves name=gone state=ending faction=- left=10 wave=- units=-", reply[0]);
+        Assert.Equal("[NYAR:event] id=gone kind=waves name=gone state=ending faction=- left=10 wave=- units=- region=-", reply[0]);
     }
 
     [Fact]
@@ -208,8 +208,8 @@ public partial class ApiLinesTests
         Assert.Equal(5, rows.Count);
         foreach (var r in rows) Assert.Equal(DefKeys, Keys(r));
         Assert.Equal(["active", "disabled", "disabled", "scheduled", "idle"], rows.Select(r => Value(r, "state")));
-        Assert.Equal("[NYAR:def] id=b-disabled name=Bandit_raid enabled=1 trigger=schedule action=waves duration=600 state=disabled reason=units_CHAR_X_is_not_a_known_unit", rows[1]);
-        Assert.Equal("[NYAR:def] id=c-off name=Bandit_raid enabled=0 trigger=manual action=waves duration=600 state=disabled reason=disabled", rows[2]);
+        Assert.Equal("[NYAR:def] id=b-disabled name=Bandit_raid enabled=1 trigger=schedule action=waves duration=600 state=disabled reason=units_CHAR_X_is_not_a_known_unit region=-", rows[1]);
+        Assert.Equal("[NYAR:def] id=c-off name=Bandit_raid enabled=0 trigger=manual action=waves duration=600 state=disabled reason=disabled region=-", rows[2]);
         Assert.Equal("-", Value(rows[0], "reason"));
         Assert.Equal("-", Value(rows[4], "reason"));
     }
@@ -253,7 +253,7 @@ public partial class ApiLinesTests
     {
         var d = Def("broken", pillar: pillar, reason: "action: missing", noAction: true);
         var row = Assert.Single(ApiLines.Definitions(new DefinitionSet([d]), new HashSet<string>()));
-        Assert.Equal($"[NYAR:def] id=broken name=Bandit_raid enabled=1 trigger=manual action={action} duration=600 state=disabled reason=action_missing", row);
+        Assert.Equal($"[NYAR:def] id=broken name=Bandit_raid enabled=1 trigger=manual action={action} duration=600 state=disabled reason=action_missing region=-", row);
     }
 
     [Fact]
@@ -266,5 +266,79 @@ public partial class ApiLinesTests
             set, isAdmin: false);
         Assert.Equal(2, mixed.Count);
         Assert.Equal("30", Value(mixed[0], "left"));
+    }
+
+    // ---- regions D10: region= and the regions read
+
+    static EventDefinition Scoped(string id, params string[] regions) =>
+        Def(id) with { Action = Action with { Scope = new Scope(regions) } };
+
+    [Fact]
+    public void Region_passes_rows_carry_action_scope()
+    {
+        var cursed = Scoped("raid", "CursedForest", "FarbaneWoods");
+        var set = DefinitionSet.Empty;
+        Assert.Equal("CursedForest,FarbaneWoods", Value(Status([Running(cursed, 1, 60)], [], set, false)[0], "region"));
+        Assert.Equal("-", Value(Status([Running(Def("g"), 1, 60)], [], set, false)[0], "region"));
+        var defs = ApiLines.Definitions(new DefinitionSet([cursed, Def("g")]), new HashSet<string>());
+        Assert.Equal(["-", "CursedForest,FarbaneWoods"], defs.Select(l => Value(l, "region")));   // id order: g, raid
+        Assert.All(defs, l => Assert.Equal(DefKeys, Keys(l)));
+        var empower = Def("e", pillar: Pillar.Empowerment, noAction: true) with
+        {
+            Empower = new EmpowerAction(["Faction_Undead"], [], [], false, new EmpowerStats(PhysicalPower: 1.5), new Scope(["DunleyFarmlands"])),
+        };
+        Assert.Equal("DunleyFarmlands", ApiLines.Region(empower));
+        Assert.Equal("-", ApiLines.Region(null));
+    }
+
+    [Fact]
+    public void Region_passes_pushes_on_start_and_end_only()
+    {
+        var cursed = Scoped("raid", "CursedForest");
+        Assert.EndsWith(" region=CursedForest", PushLines.EventStart(Running(cursed, 0, 600).Instance).Text);
+        Assert.EndsWith(" region=-", PushLines.EventStart(Running(Def("g"), 0, 600).Instance).Text);
+        Assert.Equal("[NYAR:ev] type=event-end id=raid secs=0 region=CursedForest", PushLines.EventEnd("raid", ApiLines.Region(cursed)).Text);
+        Assert.DoesNotContain("region=", PushLines.Wave("raid", 2).Text);
+        Assert.DoesNotContain("region=", PushLines.WaveWarn("raid", 2, 60).Text);
+    }
+
+    [Fact]
+    public void Region_passes_read_counts_in_game_order()
+    {
+        var rows = ApiLines.Regions([Running(Scoped("a", "CursedForest", "FarbaneWoods"), 1, 60), Running(Scoped("b", "CursedForest"), 1, 60),
+            Running(Def("g"), 1, 60)]);
+        Assert.Equal(RegionNames.Count, rows.Count);
+        Assert.Equal(RegionNames.All, rows.Select(r => Value(r, "id")));
+        Assert.Contains("[NYAR:region] id=CursedForest events=2", rows);
+        Assert.Contains("[NYAR:region] id=FarbaneWoods events=1", rows);
+        Assert.Contains("[NYAR:region] id=Strongblade events=0", rows);
+        Assert.All(rows, r => Assert.Equal(["id", "events"], Keys(r)));
+        Assert.Equal("[NYAR:end] cmd=regions page=1/1 count=10", Paging.Reply("regions", rows, "")[^1]);
+    }
+
+    [Fact]
+    public void Region_empty_no_active_events()
+    {
+        var rows = ApiLines.Regions([]);
+        Assert.Equal(RegionNames.Count, rows.Count);
+        Assert.All(rows, r => Assert.EndsWith(" events=0", r));
+        Assert.Equal("-", ApiLines.Region(null));
+    }
+
+    [Fact]
+    public void Region_fails_when_longest_values_with_ten_regions()
+    {
+        var name = new string('\u00e9', 200);                       // cut to 64 bytes
+        var reason = new string('\u00e9', 400);                     // cut to 120 bytes
+        var all = Def("an-event-id-of-thirty-two-chars-", name: name, enabled: false, reason: reason) with
+        {
+            Action = Action with { Scope = new Scope(RegionNames.All) },
+        };
+        var def = ApiLines.Definitions(new DefinitionSet([all]), new HashSet<string>())[0];
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(def) <= Wire.MaxBytes, $"{System.Text.Encoding.UTF8.GetByteCount(def)} bytes");
+        Assert.Equal(string.Join(",", RegionNames.All), Value(def, "region"));
+        var row = Status([Running(all with { DisabledReason = null }, 10, 99999)], [], DefinitionSet.Empty, true, new() { ["an-event-id-of-thirty-two-chars-"] = 99999 })[0];
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(row) <= Wire.MaxBytes);
+        Assert.Equal(EventKeys, Keys(row));
     }
 }

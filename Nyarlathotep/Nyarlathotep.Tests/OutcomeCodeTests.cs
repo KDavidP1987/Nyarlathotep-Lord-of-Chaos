@@ -390,4 +390,52 @@ public class OutcomeCodeTests
         Assert.Equal(("e", "1", (RefusalCode?)null), (done.WithHuman("e").Human, done.WithHuman("e").Field("changed"), done.WithHuman("e").Code));
         Assert.Null(done.Field("missing"));
     }
+
+    // ---- regions D4 and D6: the scope refusals, outside raphael-api-admin's table (which Cases is bound to), driven
+    // through EventEngine.Start. x < 0 is CursedForest.
+
+    static (EventEngine Engine, Func<IReadOnlyList<(float X, float Z)>, ControlState> Controls) RegionRig()
+    {
+        var parsed = EventValidator.Parse(Json.File(
+            Json.Event("manual", "{ \"type\": \"Manual\", \"scope\": [\"CursedForest\"] }"),
+            Json.Event("admin", action: "\"action\": { \"type\": \"SpawnWaves\", \"units\": [ { \"prefab\": \"CHAR_Bandit_Thug\", \"count\": 1 } ], " +
+                "\"waves\": 1, \"intervalSeconds\": 60, \"radius\": 10, \"location\": { \"type\": \"Admin\" }, \"scope\": [\"CursedForest\"] }")),
+            FakeUnits.Default(), regions: FakeRegions.All());
+        var catalog = new EventCatalog();
+        Assert.Null(catalog.Reload(parsed, FileStamp.Of(Now, [1])));
+        return (new EventEngine(catalog), players => new ControlState(false, true, new HashSet<Pillar>(Enum.GetValues<Pillar>()), 0, 3,
+            () => players, (x, z) => x < 0 ? "CursedForest" : "FarbaneWoods"));
+    }
+
+    [Fact]
+    public void RegionRefusal_fails_when_outside_or_no_player()
+    {
+        var (engine, controls) = RegionRig();
+        var outside = controls([(5f, 0f)]);
+        var none = engine.Start("manual", "manual", Now, outside)!;
+        var kill = engine.Start("manual", "VBloodKilled x", Now, outside, kill: (5f, 0f))!;
+        var admin = engine.Start("admin", "manual", Now, outside, (5f, 0f, 0f))!;
+        Assert.Equal((RefusalCode.State, "scope", Reasons.NoPlayerInRegion), (none.Code!.Value, none.Arg, none.Reason));
+        Assert.Equal((RefusalCode.State, "scope", Reasons.OutOfRegion), (kill.Code!.Value, kill.Arg, kill.Reason));
+        Assert.Equal((RefusalCode.BadArg, "location", Reasons.OutOfRegion), (admin.Code!.Value, admin.Arg, admin.Reason));
+        Assert.Contains(Reasons.NoPlayerInRegion, Reasons.All);
+        Assert.Contains(Reasons.OutOfRegion, Reasons.All);
+    }
+
+    [Fact]
+    public void RegionRefusal_passes_player_inside()
+    {
+        var (engine, controls) = RegionRig();
+        var inside = controls([(-5f, 0f)]);
+        Assert.Null(engine.Start("manual", "manual", Now, inside));
+        Assert.Null(engine.Start("admin", "manual", Now, inside, (-5f, 0f, 0f)));
+    }
+
+    [Fact]
+    public void RegionRefusal_empty_no_players()
+    {
+        var (engine, controls) = RegionRig();
+        var none = engine.Start("manual", "manual", Now, controls([]))!;
+        Assert.Equal((RefusalCode.State, "scope", Reasons.NoPlayerInRegion), (none.Code!.Value, none.Arg, none.Reason));
+    }
 }

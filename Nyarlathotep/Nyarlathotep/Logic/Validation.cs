@@ -88,7 +88,7 @@ public static class EventValidator
     public const int CurrentSchemaVersion = 1;
 
     public static readonly IReadOnlySet<string> AllowedPlaceholders =
-        new HashSet<string>(StringComparer.Ordinal) { "faction", "minutes", "event", "zone", "wave", "waves" };
+        new HashSet<string>(StringComparer.Ordinal) { "faction", "minutes", "event", "zone", "wave", "waves", "region" };
 
     static readonly Regex IdRx = new("^[a-z0-9-]{1,32}$", RegexOptions.CultureInvariant);
     static readonly Regex PlaceholderRx = new(@"\{([^{}]*)\}", RegexOptions.CultureInvariant);
@@ -482,6 +482,9 @@ public static class EventValidator
         var location = ParseLocation(Required(a, "location", "action.location is required"), trigger);
         int? lifetime = a.TryGetProperty("unitLifetimeSeconds", out var lt) ? Int(lt, 30, 7200, "action.unitLifetimeSeconds must be 30-7200") : null;
         var scope = a.TryGetProperty("scope", out var sc) ? ParseScope(sc, "action.scope", regions) : Scope.Global;
+        // regions D6: a Point outside the scope is refused here; an Admin origin is checked at the start (ScopeGate).
+        if (!scope.IsGlobal && location.Type == LocationType.Point && !scope.Names(regions.RegionOf(location.X, location.Z)))
+            throw new Fail("action.location is outside action.scope");
         return new SpawnWavesAction(list, waves, interval, radius, location, lifetime, scope);
     }
 

@@ -78,6 +78,7 @@ public partial class CommandArgTests
         "action.factions" => "Faction_Legion",
         "action.units" => "CHAR_Bandit_Thug:2",
         "location" => "here",
+        "trigger.scope" or "action.scope" => "Global",
         _ when field.StartsWith("action.stats.", StringComparison.Ordinal) => "1.5",
         "conditions.chancePercent" => "50",
         "action.waves" or "action.radius" => "3",
@@ -87,11 +88,11 @@ public partial class CommandArgTests
     [Fact]
     public void SettableFields_passes_every_table_name()
     {
-        Assert.Equal(21, CommandArgs.SettableFields.Count);
+        Assert.Equal(23, CommandArgs.SettableFields.Count);
         foreach (var (field, (family, who)) in CommandArgs.SettableFields)
         {
             Assert.True(CommandArgs.SettableValue(field, ValidValue(field)).Ok, field);
-            Assert.Contains(family, new[] { "definition", "trigger", "empower action", "spawn action", "location" });
+            Assert.Contains(family, new[] { "definition", "trigger", "empower action", "spawn action", "location", "action" });
             Assert.Equal("admin", who);
         }
     }

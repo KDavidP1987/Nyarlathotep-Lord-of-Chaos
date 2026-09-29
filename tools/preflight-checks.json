@@ -163,7 +163,8 @@
         "bad-9": "a second events command in Commands/ApiAdminCommands.cs declared qualified with an escaped name [VampireCommandFramework.@CommandAttribute(…)] (Codex step 2 round 8 F1)",
         "bad-10": "Commands/ApiAdminCommands.cs declares its group [Comm\\u0061ndGroup(\"nyar api\")], an escaped identifier the walks would read as no group (Codex step 2 round 10 F1)",
         "bad-11": "a second events command in Commands/ApiAdminCommands.cs declared with an attribute target [method: Command(…, adminOnly: true)] (Codex step 2 round 11 F1)",
-        "bad-12": "Commands/ApiAdminCommands.cs declares its group with an attribute target [type: CommandGroup(\"nyar api\")] (Codex step 2 round 11 F1)"
+        "bad-12": "Commands/ApiAdminCommands.cs declares its group with an attribute target [type: CommandGroup(\"nyar api\")] (Codex step 2 round 11 F1)",
+        "bad-13": "Commands/RegionCommands.cs declares the `region` command without adminOnly (regions D11)"
       }
     },
     {
@@ -666,7 +667,13 @@
         "bad-4": "a clean BepInEx log, and a server log with two orphan errors (\"is trying to attach to Entity.Null\", \"points at buff.Target 0:0\")",
         "bad-5": "a clean BepInEx log and no server log",
         "bad-6": "a clean BepInEx log and an empty server log",
-        "bad-7": "a clean server log and no BepInEx log"
+        "bad-7": "a clean server log and no BepInEx log",
+        "bad-regions-missing": "a clean 0.6.0 log with no \"[nyar] regions:\" boot line (regions D2, A2)",
+        "bad-regions-zero": "a clean 0.6.0 log whose \"regions:\" line names 0 polygons (regions D2, A2)",
+        "bad-regions-differ": "a clean 0.6.0 log with the regions line and a \"regions: names differ from the game\" warning (regions D2, A2)",
+        "bad-regions-noversion": "a clean log with nyar lines and the regions line but no \"Loading [Nyarlathotep x.y.z]\" line, so the version is unreadable (regions D2, A14)",
+        "good-regions": "a clean 0.6.0 log with \"regions: 212 polygons\" passes (regions D2, A14)",
+        "good-regions-restart": "a log appended across a restart: the first boot warns names differ, the last boot is clean and passes (regions A37)"
       }
     },
     {

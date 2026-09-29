@@ -363,7 +363,7 @@ function Test-CheckAnnouncementDefaults([string]$Root) {
     return New-Result $true "announcement defaults: all off ($($binds.Count) switches)"
 }
 
-$script:PublicCommands = @('nyar', 'status', 'help', 'me', 'top', 'hide', 'show', 'version', 'sub')   # Epic D5 (A4)
+$script:PublicCommands = @('nyar', 'status', 'help', 'me', 'top', 'hide', 'show', 'version', 'sub', 'regions')   # Epic D5 (A4); regions D11
 
 # The command walks read `[Command(` and `[CommandGroup(` written bare, each alone in its brackets. A qualified attribute
 # ([VampireCommandFramework.Command(…)], [global::…CommandAttribute(…)]), a using alias of either type, a space after
@@ -1539,9 +1539,29 @@ function Test-CheckLogCheck([string]$Root) {
         if (-not $kinds.Contains($kind)) { $kinds.Add($kind) }
     }
     $line = "log check: $n unhandled, $s nyar lines, $o orphan errors, $u unity errors"
+    # regions D2 (A2, A14): a log that loads Nyarlathotep 0.6.0 or later carries the boot's "regions: <p> polygons"
+    # line with p > 0 and no names-differ warning; a log with nyar lines whose version cannot be read fails rather
+    # than skip the check. The last load wins (a log may hold one boot only, but a restart could append).
+    $regionsWhy = $null
+    if ($s -gt 0) {
+        $loads = [regex]::Matches($log, 'Loading \[Nyarlathotep (\d+)\.(\d+)\.(\d+)[^\]]*\]')
+        if ($loads.Count -eq 0) { $regionsWhy = 'the Nyarlathotep version is unreadable' }
+        else {
+            $v = $loads[$loads.Count - 1]
+            $boot = $log.Substring($v.Index)                          # the last boot's lines only (regions A37)
+            if ([version]"$($v.Groups[1].Value).$($v.Groups[2].Value).$($v.Groups[3].Value)" -ge [version]'0.6.0') {
+                $rl = [regex]::Matches($boot, '\[nyar\] regions: (\d+) polygons')
+                if ($rl.Count -eq 0) { $regionsWhy = 'no "regions:" boot line' }
+                elseif ([int]$rl[$rl.Count - 1].Groups[1].Value -eq 0) { $regionsWhy = 'the "regions:" line names 0 polygons' }
+                elseif ($boot -match '\[nyar\] regions: names differ from the game') { $regionsWhy = 'regions: names differ from the game' }
+                else { $line += ", regions $([int]$rl[$rl.Count - 1].Groups[1].Value) polygons" }
+            }
+        }
+    }
     # Every kind is listed: -SessionsOf needs each one attributed in the session's audit line (A13).
     if ($kinds.Count) { $line += " [$($kinds -join ' | ')]" }
     if ($s -eq 0) { return New-Result $false "$line (the wrong log, or the plugin did not initialise)" }
+    if ($regionsWhy) { return New-Result $false "$line ($regionsWhy)" }
     return New-Result ($n -eq 0 -and $o -eq 0) $line
 }
 
@@ -2370,7 +2390,7 @@ function Test-CheckSessionLogs([string]$Root) {
     foreach ($m in [regex]::Matches($audit, $pattern)) {
         $n = [int]$m.Groups[1].Value
         if ($m.Groups[5].Success -and [int]$m.Groups[5].Value -gt 0) {
-            $list = [regex]::Match($m.Groups['rest'].Value, '^ \[(.+)\]\s*$')
+            $list = [regex]::Match($m.Groups['rest'].Value, '^(?:, regions \d+ polygons)? \[(.+)\]\s*$')
             $kinds = if ($list.Success) { @($list.Groups[1].Value -split ' \| ' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) } else { @() }
             $subs = [regex]::Match($audit.Substring($m.Index), '^[^\r\n]*((?:\r?\n  - [^\r\n]*)*)').Groups[1].Value
             $bare = @($kinds | Where-Object { $subs -notmatch ('(?m)^  - unity "' + [regex]::Escape($_) + '": (game \S|ours [^\r\n]*\bA\d+\b)') })
@@ -2688,8 +2708,8 @@ function Copy-Fixture([string]$From, [string]$To) {
 
 $script:CheckModes = @('default', 'paths', 'serverwrites', 'auditof', 'logcheck', 'sessionsof', 'authsuite', 'fixture', 'rollbackof')
 
-# One check against its fixtures in scratch directories under $Tmp: good must pass, every bad/ and bad-<n>/ and empty
-# must fail, each printing a line. Returns Ok, Problems and Extra (the bad fixtures beyond bad/).
+# One check against its fixtures in scratch directories under $Tmp: good/ and every good-<name>/ must pass (regions A37),
+# every bad/ and bad-<n>/ and empty must fail, each printing a line. Returns Ok, Problems and Extra (the bad fixtures beyond bad/).
 function Invoke-FixtureBattery($Check, [string]$Tmp) {
     $ok = $true; $problems = @()
     $fx = Join-Path $repoRoot $Check.fixtures
@@ -2697,7 +2717,8 @@ function Invoke-FixtureBattery($Check, [string]$Tmp) {
     $bads = @(Get-ChildItem $fx -Directory -Filter 'bad*' -ErrorAction SilentlyContinue | ForEach-Object Name | Sort-Object)
     if ($bads -notcontains 'bad') { $bads = @('bad') + $bads }
     foreach ($b in $bads) { if (-not $Check.plant.$b) { $ok = $false; $problems += "$($Check.name): no plant description for $b" } }
-    foreach ($kind in @(@('good') + $bads + @('empty'))) {
+    $goods = @(Get-ChildItem $fx -Directory -Filter 'good-*' -ErrorAction SilentlyContinue | ForEach-Object Name | Sort-Object)
+    foreach ($kind in @(@('good') + $goods + $bads + @('empty'))) {
         if (-not (Test-Path (Join-Path $fx $kind))) { $ok = $false; $problems += "$($Check.name): $kind fixture missing ($($Check.fixtures)/$kind)"; continue }
         $dir = Join-Path $Tmp "$($Check.name)-$kind"
         if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
@@ -2707,7 +2728,7 @@ function Invoke-FixtureBattery($Check, [string]$Tmp) {
         $r = Invoke-Check $Check.function $dir
         $script:FixtureRoot = $null
         Write-Verbose "$($Check.name) $kind -> $($r.Line)"
-        $want = $kind -eq 'good'
+        $want = $kind -eq 'good' -or $kind -like 'good-*'
         if ($r.Pass -ne $want) { $ok = $false; $problems += "$($Check.name) $kind fixture: expected $(if ($want) {'pass'} else {'fail'}), got '$($r.Line)'" }
         if ($r.Line -notmatch '\S') { $ok = $false; $problems += "$($Check.name) $kind fixture printed nothing" }
         # A check whose manifest entry names emptyLine must print exactly that line on its empty fixture (walkable-spawns D9).
