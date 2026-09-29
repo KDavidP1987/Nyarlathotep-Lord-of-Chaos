@@ -51,3 +51,13 @@ under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line. S
 - dod status: D15, D17, D20, D28 pass at 75d92a7 and are checked; D3, D12, D27 wait for Session 1
 - session 1 log check: boot 1 "log check: 0 unhandled, 833 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; boot 2 "log check: 0 unhandled, 34 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; every [Warning] kind listed in docs/features/AUTOMATION.md › Session 1; no [Error]
 - session 1 snapshot: "snapshot restored; hashes equal (au1, …)"
+
+### A4-A6 fixes · 2026-09-29 · 6b5fd4b
+- recorded first: amendments A4 (AroundPlayer regroup), A5 (walk height below 0), A6 (player scan cost), all defect, and design §9 D30 (owner, plan mode option A) in a74b7c1, before the code
+- built (235d5ee): WavePlan.GroupAnchor gives an AroundPlayer group no anchor and WavePlan.WalkY reads its walk check at the player's height (A4); WalkHeight.MinY -100 (A5); PlayerQuery's User query built once, and with Debug.TimingLog a "player triggers" scan of 5 ms or more split into read, regions and rest (A6)
+- compile: Release and Debug 0 Warning(s), 0 Error(s); tests: 2408 passed; the A4 and A5 controls checked by planting the fault (4 tests failed, then passed on the restored code)
+- preflight: PREFLIGHT OK; -AuthSuite pass
+- /code-review (fresh subagent, read-only, on a74b7c1..235d5ee): VERDICT READY, advisories fixed in 6b5fd4b: WALKABLE_SPAWNS.md still said 0-1000 m; EVENT_LIBRARY.md and AUTOMATION.md did not say AroundPlayer groups are not regrouped; PlayerQuery.Read's try/finally left over-indented; the query is never disposed → accepted, as TriggerBus's DayNightCycle query (built once for the server's life); negative heights through TileLayerUtility.GetHeightLevel → checked in Session 1b
+- Codex round 1 (a74b7c1..235d5ee): REVISE, one advisory: the A4 test covered only the helpers → fixed in 6b5fd4b (EngineTests AnchorWiringProblems over WaveAction's source, with two planted-fault cases in the test)
+- Codex verdict: READY (round 2, on a74b7c1..6b5fd4b) — no findings; its log's 3 "blocked by policy" hits are quoted text of docs/audits/faction-empowerment.md, no command blocked
+- in-game: Session 1b (D12, D27 and the A4-A6 checks) follows
