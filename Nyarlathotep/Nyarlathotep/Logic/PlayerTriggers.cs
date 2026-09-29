@@ -323,6 +323,7 @@ public sealed class PlayerTriggerFeed
 
     readonly FailureStreak _scanFaults = new();
     readonly FailureStreak _killFaults = new();
+    (int Players, int Entries)? _lastCounts;
 
     public RegionEntries Entries { get; } = new();
     public KillWindows Kills { get; } = new();
@@ -347,6 +348,7 @@ public sealed class PlayerTriggerFeed
         {
             _scanFaults.Ok();                                                   // nothing is scanned, so nothing is failing
             Entries.ForgetRegions();
+            _lastCounts = null;
             return;
         }
         IReadOnlyList<RegionEntry> entries;
@@ -363,7 +365,11 @@ public sealed class PlayerTriggerFeed
             return;
         }
         _scanFaults.Ok();
-        verbose?.Invoke($"player triggers: {players} players, {entries.Count} entries");
+        // automation A6: the line only when its counts change or an entry is found; a console write every 5 s scan cost
+        // up to 190 ms a tick with VerboseLogging on
+        if (entries.Count > 0 || _lastCounts != (players, entries.Count))
+            verbose?.Invoke($"player triggers: {players} players, {entries.Count} entries");
+        _lastCounts = (players, entries.Count);
         foreach (var e in entries)
         {
             if (Gate.Admit(e.Definition.Id, e.PlayerId, isActive(e.Definition.Id), utcNow) != GateStep.Attempt) continue;

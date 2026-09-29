@@ -8,22 +8,22 @@ namespace Nyarlathotep.Tests;
 /// throws; garbage is refused where read.</summary>
 public class AutomationDependencyFailureTests
 {
-    static readonly DateTime T0 = Zones.Utc(2026, 9, 29, 20, 0);
+    internal static readonly DateTime T0 = Zones.Utc(2026, 9, 29, 20, 0);
 
     static DefinitionSet Set(params string[] events) =>
         EventValidator.Parse(Json.File(events), FakeUnits.Default(), regions: FakeRegions.All()).Set;
 
     // FakeRegions: x < 0 FarbaneWoods, x >= 0 CursedForest
-    static readonly Func<float, float, string> RegionOf = new FakeRegions().RegionOf;
+    internal static readonly Func<float, float, string> RegionOf = new FakeRegions().RegionOf;
 
     const string Border = "{ \"type\": \"RegionEntered\", \"scope\": [\"CursedForest\"], \"playerCooldownMinutes\": 5 }";
     const string Reprisal = "{ \"type\": \"FactionKills\", \"factions\": [\"Faction_Bandits\"], \"kills\": 3, \"windowSeconds\": 60 }";
     const string ScopedReprisal = "{ \"type\": \"FactionKills\", \"factions\": [\"Faction_Bandits\"], \"kills\": 3, \"windowSeconds\": 60, \"scope\": [\"CursedForest\"] }";
 
-    static readonly DefinitionSet Entered = Set(Json.Event("border", Border));
+    internal static readonly DefinitionSet Entered = Set(Json.Event("border", Border));
     static readonly DefinitionSet Kills = Set(Json.Event("reprisal", Reprisal));
 
-    static ScanRow At(float x, string id = "p1") => new(id, x, 0, true);
+    internal static ScanRow At(float x, string id = "p1") => new(id, x, 0, true);
 
     static KillFacts Kill(string faction = "Faction_Bandits", float? x = null, float? z = null) =>
         new("p1", null, false, false, false, faction, x, z);

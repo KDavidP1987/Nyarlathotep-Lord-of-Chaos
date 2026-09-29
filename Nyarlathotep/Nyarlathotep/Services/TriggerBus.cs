@@ -111,14 +111,19 @@ internal static class TriggerBus
                 line => Core.Log.LogWarning($"[nyar] {line}"), FirePlayer, Verbose);
             return;
         }
-        // automation A6: with Debug.TimingLog, a scan of 5 ms or more names its parts
-        long read = 0, regions = 0;
+        // automation A6: with Debug.TimingLog, a scan of 5 ms or more names its parts, its log writes and the CoreCLR
+        // collections that ran inside it
+        long read = 0, regions = 0, logged = 0;
+        var set = EventStore.Catalog.Current;
+        var collections = GC.CollectionCount(0);
         var start = Stopwatch.GetTimestamp();
         _feed.Scan(() => Timed(ReadPlayers, ref read), regionOf is null ? null : (x, z) => Timed(() => regionOf(x, z), ref regions),
-            EventStore.Catalog.Current, IsActive, utcNow, line => Core.Log.LogWarning($"[nyar] {line}"), FirePlayer, Verbose);
+            set, IsActive, utcNow, line => Timed(() => { Core.Log.LogWarning($"[nyar] {line}"); return 0; }, ref logged), FirePlayer,
+            line => Timed(() => { Verbose(line); return 0; }, ref logged));
         var total = Stopwatch.GetTimestamp() - start;
         if (Ms(total) >= 5)
-            Core.Log.LogInfo($"[nyar] player triggers: {Ms(total):0.0} ms (read {Ms(read):0.0} ms, regions {Ms(regions):0.0} ms, rest {Ms(total - read - regions):0.0} ms)");
+            Core.Log.LogInfo($"[nyar] player triggers: {Ms(total):0.0} ms (read {Ms(read):0.0} ms, regions {Ms(regions):0.0} ms, " +
+                $"log {Ms(logged):0.0} ms, rest {Ms(total - read - regions - logged):0.0} ms; gc {GC.CollectionCount(0) - collections})");
     }
 
     static T Timed<T>(Func<T> f, ref long ticks)
