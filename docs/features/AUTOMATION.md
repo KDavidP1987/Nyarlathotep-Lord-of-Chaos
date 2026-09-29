@@ -23,14 +23,15 @@ where events come without anyone typing a command:
   refusal throttle and the Debug-only phantom players; Logic/Spawning.cs `PlayerPick.ChooseMany` and
   `WaveGate.DecideGroups` pick and size the groups.
 - **Services (step 2):**
-  - TriggerBus polls the interval clock every tick. The tick phase "player triggers" scans the players every 5 s.
-  - Patches/DeathEventPatch reads whether the victim is ours, calls SpawnTracker.Died, then TriggerBus.Died in its own
-    try/catch.
+  - The tick phase "interval" polls the clock every tick through `IntervalClock.PollState`, which marks state.json
+    dirty when a next start changes. The tick phase "player triggers" scans the players every 5 s.
+  - Patches/DeathEventPatch reads whether the victim is ours and calls SpawnTracker.Died. The V Blood path and
+    TriggerBus.Died then run each in its own try/catch, so neither can skip another death.
   - Logic/PlayerTriggers.cs `PlayerTriggerFeed` guards the scan and the kill read. A failure logs once per streak and
     holds a health entry ("triggers: player scan failing", "triggers: kill read failing") until a read succeeds.
   - A player-action start is focused on its player. Its refusal line is throttled to one per definition per minute.
   - WaveAction picks with `ChooseMany` (the focus first), sizes with `DecideGroups`, gives each group its own Hunt tag,
-    and reports each wave once through `EventEngine.WaveDecided`. Phantom players exist only in a Debug build.
+    and reports each wave once: `WaveRun.Run` queues the groups, then calls `EventEngine.WaveDecided`. Phantom players exist only in a Debug build.
 - **Privacy:** no line names or locates a player. The per-player rows (regions, cooldowns, kill counters, the start's
   focus) live in memory only; state.json gains only `NextInterval`.
 - **Wire:** api 6 adds the trigger values `interval`, `regionentered` and `factionkills`; a fanned-out wave sends one
