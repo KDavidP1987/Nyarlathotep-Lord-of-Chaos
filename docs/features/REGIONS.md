@@ -1,7 +1,8 @@
 # Regions — global or regional scope for triggers and actions
 
 **Status:** in build (docs/dod/regions.md, audit docs/audits/regions.md); step 1 (region index, scope model,
-regions unavailable) in progress. 0.5.2 is the current published release.
+regions unavailable) built at e512382: `scope` validates against the map's regions but is not enforced until step 2
+(triggers, empowerment, waves, commands, wire). 0.5.2 is the current published release.
 
 ## Goal
 
