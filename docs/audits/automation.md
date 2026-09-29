@@ -63,3 +63,14 @@ under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line. S
 - in-game: Session 1b (D12, D27 and the A4-A6 checks) follows
 - session 1b log check: boot 0 (6b5fd4b, before the owner) "log check: 0 unhandled, 76 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; boots 1-2 (e1ba90a, the session): 0 [Error] lines in both logs, every [Warning] kind listed in docs/features/AUTOMATION.md › Session 1b
 - session 1b: D12 and D27 pass (e1ba90a); amendments A7-A9 recorded before their build; the snapshot au1b is restored after Session 1d
+
+### A6-A10 build · 2026-09-29 · 3207666
+- recorded first: A7-A9 and design §9 D31 (owner, plan mode option A) in 148ae80; A10 recorded with round 1's fixes in fa164f4 (the fallback under minDist and the half-radius ring skip were not in the approved plan; the owner confirms A10 at Session 1d)
+- built: A6 verbose scan line only on change, the TimingLog split with log and gc (e1ba90a); A7 Logic/Spawning.cs WalkLine, WalkReach, WavePoints.Plan's line test, FanOutPick.Origins, WavePlan.Reach, the wave line's shortened count; A8 TickTimer.Scanned and ", <n> player scans" (05ec2c4)
+- compile: Release and Debug 0 Warning(s), 0 Error(s); tests: 2420 passed; controls checked by planting each fault (the line test off: 5 failed; the spent guard, free-answer reuse, the zero-length line, the in-scope keep: each its own test failed)
+- preflight: PREFLIGHT OK; -AuthSuite pass
+- /code-review round 1 (fresh subagent, read-only, on 2133e8a..05ec2c4): REVISE — F1 blocking: D32 and D31 said the line starts at the wave centre and did not name the fallback → reworded under A10; F2 the zero-length line (as Codex F1) → fixed; F3 the tile cache (as Codex F3) → fixed; F4 the scan counter grew with TimingLog off → fed only with TimingLog on; F5 weak budget test → strengthened; F6 FanOutPick ToString privacy → tested
+- Codex round 1 (2133e8a..05ec2c4): REVISE — F1 blocking: a line of length 0 checked nothing → fixed; F2 blocking: the fallback under minDist → kept as A10, D32 and D31 reworded, owner to confirm; F3 blocking: a free answer reused within a half-metre tile → fixed (grounded per tile and blocked reused, free never). Log: 0 "blocked by policy"
+- /code-review round 2 (fresh subagent, on 2133e8a..fa164f4): READY, 5 advisories fixed in 3207666 (the in-scope fallback sample, a stale comment, a budget case past minDist, the scan-drain source check, a reordered TickTimer test)
+- Codex round 2 (2133e8a..fa164f4): READY, no findings; round 3 (fa164f4..3207666): READY, no findings; logs: 0 "blocked by policy"
+- in-game: Session 1d (D33, A10) follows
