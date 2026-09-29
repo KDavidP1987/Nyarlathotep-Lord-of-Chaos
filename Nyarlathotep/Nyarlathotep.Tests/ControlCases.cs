@@ -28,12 +28,18 @@ public static class ControlCases
     public const string RaphaelApiAdmin = "raphael-api-admin";
     public const string Regions = "regions";
     public const string EventSpawns = "event-spawns";
+    public const string Automation = "automation";
 
     /// <summary>The plans whose controls the table lists; each is copied to the test output under Resources/.</summary>
-    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns];
+    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation];
 
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
-    public static readonly IReadOnlyList<PendingControl> Pending = [];
+    public static readonly IReadOnlyList<PendingControl> Pending =
+    [
+        new(Automation, "D15", 2, "0.8.0"), new(Automation, "D28", 2, "0.8.0"),
+        new(Automation, "D18", 3, "0.8.0"), new(Automation, "D21", 3, "0.8.0"),
+        new(Automation, "D23", 4, "0.8.0"), new(Automation, "D24", 4, "0.8.0"), new(Automation, "D25", 4, "0.8.0"), new(Automation, "D26", 4, "0.8.0"),
+    ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
         new(control, name, "test", cls, bad.Select(x => $"{name}_fails_when_{x}").ToArray(), good.Select(x => $"{name}_passes_{x}").ToArray(),
@@ -49,7 +55,7 @@ public static class ControlCases
         "TemplateLibraryTests", "TemplateCommandTests", "AuthoringTests", "AuthoringCapacityTests", "PillarSwitchTests",
         "ReadinessTests", "LibraryDependencyFailureTests", "SpawningTests", "HealthTests",
         "HumanReplyTests", "OutcomeCodeTests", "ApiTwinTests", "RateGateTests", "ApiOverloadTests", "EventAdminTests",
-        "EndPathTests", "WavePrecedenceTests", "SpawnsDependencyFailureTests",
+        "EndPathTests", "WavePrecedenceTests", "SpawnsDependencyFailureTests", "AutomationTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -349,5 +355,61 @@ public static class ControlCases
              "tools/preflight-fixtures/EntityWrites/bad-logicusing", "tools/preflight-fixtures/EntityWrites/bad-privatehelper",
              "tools/preflight-fixtures/EntityWrites/bad-destroyutility"],
             ["tools/preflight-fixtures/EntityWrites/good"], ["tools/preflight-fixtures/EntityWrites/empty"]) with { Plan = EventSpawns },
+
+        // ---- automation
+        T("D1", "IntervalTrigger", "EventValidationTests", ["value_missing_or_out_of_range", "min_above_max", "unknown_key"], ["bounds_and_scope"],
+            ["trigger_without_values"]) with { Plan = Automation },
+        T("D2", "IntervalClock", "AutomationTests",
+            ["active_keeps_next", "absent_next_fires", "due_fires_twice", "next_beyond_max_kept", "load_keeps_removed_or_non_interval",
+             "load_keeps_next_at_or_before_boot"],
+            ["draw_within_range", "tick_prunes_and_fires"], ["no_definition"]) with { Plan = Automation },
+        T("D4", "FanOutKey", "EventValidationTests", ["location_not_aroundplayer", "value_bad"], ["valid_fanout"], ["fanout_object"]) with { Plan = Automation },
+        T("D5", "FanOutPick", "AutomationTests", ["picks_closer_than_spacing", "ineligible_or_twice", "more_than_max", "focus_not_first"],
+            ["one_centre_equals_choose", "spaced_players_in_scope_only"], ["no_players"]) with { Plan = Automation },
+        T("D6", "FanOutCaps", "AutomationTests",
+            ["groups_exceed_caps", "deal_not_round_robin", "claimed_skips_another", "no_group_spawns", "skip_reason_not_first_group"],
+            ["one_centre_equals_decide", "line_counts_groups_only"], ["no_eligible_player"]) with { Plan = Automation },
+        T("D8", "RegionEnteredTrigger", "EventValidationTests", ["scope_missing_or_global", "cooldown_out_of_range", "unknown_key"],
+            ["one_region_and_default_cooldown"], ["scope_array"]) with { Plan = Automation },
+        T("D9", "RegionEntries", "AutomationTests",
+            ["first_sighting_counts", "move_within_or_out_of_scope_counts", "dead_player_enters", "inside_cooldown", "refused_entry_skips_cooldown",
+             "relog_resets_cooldown", "rows_exceed_bound", "absent_keeps_row"],
+            ["gap_to_scope_is_entry", "respawn_into_scope_is_entry"], ["no_players"]) with { Plan = Automation },
+        T("D10", "FactionKillsTrigger", "EventValidationTests", ["factions_bad", "kills_or_window_out_of_range", "shared_or_key_bad"],
+            ["bandits_and_bounds"], ["factions_array"]) with { Plan = Automation },
+        T("D11", "KillWindows", "AutomationTests",
+            ["non_player_or_servant_kill_counts", "our_unit_or_minion_counts", "other_faction_or_out_of_scope", "old_kills_count", "fires_twice",
+             "dropped_fire_keeps_counter", "shared_counts_per_player", "bounds_exceeded"],
+            ["owner_kill_counts", "router_reaches_startable_only"], ["no_deaths"]) with { Plan = Automation },
+        T("D13", "Focus", "AutomationTests", ["eligible_focus_not_first", "ineligible_focus_skips_wave", "other_trigger_carries_focus", "focus_reaches_state_or_line"],
+            ["focus_first"], ["no_focus"]) with { Plan = Automation },
+        T("D14", "TriggerRules", "AutomationTests",
+            ["disabled_definition_fires", "active_event_reaches_conditions", "two_refusals_in_60s_log_twice", "held_count_lost",
+             "cooldown_drop_sets_dedupe_key", "dedupe_lets_twice_in_5s"],
+            ["one_line_and_held_count"], ["no_trigger"]) with { Plan = Automation },
+        T("D16", "Automation", "CommandArgTests", ["value_out_of_range"], ["values_in_range", "field_maps_to_its_type"], ["value"]) with { Plan = Automation },
+        T("D16", "Automation", "AuthoringTests", ["value_refused", "other_trigger_type", "fanout_on_point_or_empower"],
+            ["valid_set_changes_file", "info_shows_next_start"], ["value"]) with { Plan = Automation },
+        T("D17", "Automation", "ContractDocTests", ["contract_lacks_value", "trigger_renders_as_manual"], ["api_6_and_values"], ["contract"])
+            with { Plan = Automation },
+        T("D17", "Automation", "PushTests", ["fanned_out_wave_pushes_more_than_once"], ["one_push_whatever_the_groups"], ["no_group_spawned"])
+            with { Plan = Automation },
+        T("D19", "Automation", "PrivacyTests", ["a_line_names_the_player", "state_gains_a_per_player_field"], ["no_line_names_or_locates_a_player"],
+            ["no_focus"]) with { Plan = Automation },
+        C("D20", "Authorization", "preflight -AuthSuite and -SelfTest › Test-CheckGatewayOnly, Test-CheckEntityWrites, Test-CheckMutatingFloor and Test-CheckFaultInjection",
+            ["tools/preflight-fixtures/GatewayOnly/bad-tickcaller", "tools/preflight-fixtures/GatewayOnly/bad-new", "tools/preflight-fixtures/EntityWrites/bad",
+             "tools/preflight-fixtures/EntityWrites/bad-new", "tools/preflight-fixtures/MutatingFloor/bad", "tools/preflight-fixtures/FaultInjection/bad",
+             "tools/preflight-fixtures/FaultInjection/bad-2"],
+            ["tools/preflight-fixtures/GatewayOnly/good", "tools/preflight-fixtures/EntityWrites/good", "tools/preflight-fixtures/MutatingFloor/good",
+             "tools/preflight-fixtures/FaultInjection/good"],
+            ["tools/preflight-fixtures/GatewayOnly/empty", "tools/preflight-fixtures/EntityWrites/empty", "tools/preflight-fixtures/MutatingFloor/empty",
+             "tools/preflight-fixtures/FaultInjection/empty"]) with { Plan = Automation },
+        T("D27", "ChatBytes", "CommandArgTests", ["automation_line_exceeds_480", "automation_line_holds_markup"], ["automation_lines_at_maximum_lengths"],
+            ["automation_fields"]) with { Plan = Automation },
+        T("D29", "Phantoms", "AutomationTests", ["value_outside_1_9", "no_eligible_real_player", "unusable_kept", "phantom_reaches_scan_or_hunt"],
+            ["four_at_200m_steps"], ["value"]) with { Plan = Automation },
+        T("D30", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit", "pending_at_release"],
+            ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = Automation },
+        T("D31", "StateNextInterval", "AutomationTests", ["bad_entry_drops_others", "empty_gains_key"], ["fixture_round_trip"], ["no_key"]) with { Plan = Automation },
     ];
 }

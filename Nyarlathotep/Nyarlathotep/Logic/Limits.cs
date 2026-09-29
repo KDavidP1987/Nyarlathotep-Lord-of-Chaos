@@ -81,3 +81,19 @@ public static class TimeFormat
         return true;
     }
 }
+
+/// <summary>The bounds of the player-action triggers (automation D9, D11, D14).</summary>
+public static class TriggerLimits
+{
+    /// <summary>The player scan runs every 5 s, in the tick phase "player triggers" (D9).</summary>
+    public const int ScanSeconds = 5;
+    /// <summary>A refused player-action start logs at most once per definition per 60 s (D14).</summary>
+    public const int RefusalQuietSeconds = 60;
+    /// <summary>One player's second trigger of one definition within 5 s starts nothing (Epic Business rules 8, D14).</summary>
+    public const int DedupeSeconds = 5;
+    /// <summary>Kill counters per definition, and over all definitions; the least recently updated goes first (D11).</summary>
+    public const int CountersPerDefinition = 200;
+    public const int CountersInAll = 2000;
+    /// <summary>RegionEntered cooldown rows over all definitions; the stalest goes first (D9).</summary>
+    public const int CooldownRows = 2000;
+}

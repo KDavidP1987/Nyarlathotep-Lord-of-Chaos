@@ -151,7 +151,7 @@ Business rules 11.
 ### Settable fields
 
 Every field `.nyar event set` takes (event-library D20). A trigger field needs its trigger type, and an action field needs its
-action type, except `trigger.scope` and `action.scope` (regions D9), which fit every type; `trigger.type` replaces the trigger with that type's default. The event-spawns fields (event-spawns D18) take `none` to remove a modifier or the behaviour; `action.units.N.chance` names unit entry N (1-10); `location` also takes `aroundplayer <minDist> <maxDist>`. Values are checked before any write, and names on reload.
+action type, except `trigger.scope` and `action.scope` (regions D9), which fit every type; `trigger.type` replaces the trigger with that type's default. The event-spawns fields (event-spawns D18) take `none` to remove a modifier or the behaviour; `action.units.N.chance` names unit entry N (1-10); `location` also takes `aroundplayer <minDist> <maxDist>`. The automation fields (automation D16) belong to the Interval (`trigger.minMinutes`, `trigger.maxMinutes`), RegionEntered (`trigger.playerCooldownMinutes`) and FactionKills (`trigger.factions`, `trigger.kills`, `trigger.windowSeconds`, `trigger.shared`) triggers; `action.fanOut` takes `none` or `<maxInstances> <minSpacing>` and needs an AroundPlayer location. Values are checked before any write, and names on reload.
 
 | Field | Family | Who |
 |---|---|---|
@@ -165,6 +165,13 @@ action type, except `trigger.scope` and `action.scope` (regions D9), which fit e
 | `trigger.times` | trigger | admin |
 | `trigger.phase` | trigger | admin |
 | `trigger.bosses` | trigger | admin |
+| `trigger.minMinutes` | trigger | admin |
+| `trigger.maxMinutes` | trigger | admin |
+| `trigger.playerCooldownMinutes` | trigger | admin |
+| `trigger.factions` | trigger | admin |
+| `trigger.kills` | trigger | admin |
+| `trigger.windowSeconds` | trigger | admin |
+| `trigger.shared` | trigger | admin |
 | `trigger.scope` | trigger | admin |
 | `action.stats.physicalPower` | empower action | admin |
 | `action.stats.spellPower` | empower action | admin |
@@ -186,6 +193,7 @@ action type, except `trigger.scope` and `action.scope` (regions D9), which fit e
 | `action.allowTerritory` | spawn action | admin |
 | `action.behaviour` | spawn action | admin |
 | `action.units.N.chance` | spawn action | admin |
+| `action.fanOut` | spawn action | admin |
 | `location` | location | admin |
 | `action.scope` | action | admin |
 

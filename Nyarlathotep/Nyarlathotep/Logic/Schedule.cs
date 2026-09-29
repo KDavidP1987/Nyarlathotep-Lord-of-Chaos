@@ -79,6 +79,72 @@ public sealed class PhaseSampler(Func<bool> isDay, Action<string> logError)
     }
 }
 
+/// <summary>The Interval trigger's clock (automation D2, Business rules 1). An Interval definition waits a random whole number
+/// of seconds between minMinutes and maxMinutes after the moment it was last seen inactive, then fires once. The next start
+/// is kept in state.json's NextInterval and outlives a restart while it is in the future; downtime is never replayed.</summary>
+public static class IntervalClock
+{
+    public readonly record struct Step(bool Fire, DateTime? Next);
+
+    /// <summary>One poll of one definition: while <paramref name="active"/> there is no next; with none, one is drawn and
+    /// nothing fires; a next beyond utcNow + maxMinutes (a shortened definition) is redrawn; a next at or before utcNow
+    /// fires once and is removed, so the poll after a refused start or any end draws from that moment.</summary>
+    public static Step Poll(int minMinutes, int maxMinutes, DateTime? next, bool active, DateTime utcNow, IRandom rng)
+    {
+        if (active) return new(false, null);
+        if (next is not { } n || n > utcNow.AddMinutes(maxMinutes)) return new(false, Draw(minMinutes, maxMinutes, utcNow, rng));
+        return n <= utcNow ? new(true, null) : new(false, n);
+    }
+
+    /// <summary>utcNow plus a uniform whole number of seconds in minMinutes×60..maxMinutes×60.</summary>
+    public static DateTime Draw(int minMinutes, int maxMinutes, DateTime utcNow, IRandom rng)
+    {
+        var min = minMinutes * 60;
+        var span = (maxMinutes - minMinutes) * 60;
+        var seconds = min + Math.Min(span, (int)(rng.NextDouble() * (span + 1)));
+        return utcNow.AddSeconds(seconds);
+    }
+
+    /// <summary>The stored nexts kept at boot: only ids of startable Interval definitions, and a next at or before
+    /// <paramref name="bootUtc"/> redrawn from the boot, so downtime is never replayed (Epic Business rules 6).</summary>
+    public static Dictionary<string, DateTime> Load(IReadOnlyDictionary<string, DateTime>? stored, DefinitionSet set, DateTime bootUtc, IRandom rng)
+    {
+        var result = new Dictionary<string, DateTime>(StringComparer.Ordinal);
+        if (stored is null) return result;
+        foreach (var d in TriggerRouter.Candidates(set, TriggerType.Interval))
+            if (stored.TryGetValue(d.Id, out var next))
+                result[d.Id] = next > bootUtc ? next : Draw(d.Trigger.MinMinutes, d.Trigger.MaxMinutes, bootUtc, rng);
+        return result;
+    }
+
+    /// <summary>One scheduler tick over every Interval definition: ids that left the startable Interval set are pruned,
+    /// each definition is polled, and <paramref name="nexts"/> is updated in place. Returns the definitions to start and
+    /// whether the nexts changed (state.json is then dirty).</summary>
+    public static (IReadOnlyList<EventDefinition> Due, bool Changed) Tick(DefinitionSet set, IDictionary<string, DateTime> nexts,
+        Func<string, bool> isActive, DateTime utcNow, IRandom rng)
+    {
+        var due = new List<EventDefinition>();
+        var changed = false;
+        var candidates = TriggerRouter.Candidates(set, TriggerType.Interval).ToList();
+        foreach (var id in nexts.Keys.Where(id => candidates.All(d => d.Id != id)).ToList())
+        {
+            nexts.Remove(id);
+            changed = true;
+        }
+        foreach (var d in candidates)
+        {
+            DateTime? now = nexts.TryGetValue(d.Id, out var n) ? n : null;
+            var step = Poll(d.Trigger.MinMinutes, d.Trigger.MaxMinutes, now, isActive(d.Id), utcNow, rng);
+            if (step.Fire) due.Add(d);
+            if (step.Next == now) continue;
+            if (step.Next is { } next) nexts[d.Id] = next;
+            else nexts.Remove(d.Id);
+            changed = true;
+        }
+        return (due, changed);
+    }
+}
+
 /// <summary>One scheduler tick's trigger starts (Services/TriggerBus, event-library A5): the Schedule definitions due
 /// this server-local minute, then, when <paramref name="phases"/> is given (the day and night hook is available), the
 /// GameTime definitions of the phase just entered. A failed phase read leaves the Schedule starts of the same tick.</summary>

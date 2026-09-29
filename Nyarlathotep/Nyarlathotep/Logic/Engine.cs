@@ -117,6 +117,15 @@ public static class TriggerRouter
         if (kill is not null) { streak.Ok(); return false; }
         return streak.Fail();
     }
+
+    /// <summary>The FactionKills definitions a death counts for (automation D11): startable ones only, so with none the
+    /// kill rule returns at once.</summary>
+    public static IReadOnlyList<EventDefinition> FactionKills(DefinitionSet set, KillFacts kill, Func<float, float, string>? regionOf) =>
+        Candidates(set, TriggerType.FactionKills).Where(d => KillRule.Counts(kill, d, regionOf)).ToList();
+
+    /// <summary>True for the triggers a player's action fires (automation D13, D14): only their starts carry a focus and
+    /// pass PlayerTriggerGate.</summary>
+    public static bool IsPlayerAction(TriggerType type) => type is TriggerType.RegionEntered or TriggerType.FactionKills;
 }
 
 /// <summary>How one wave is sized (Business rules 1, D22): the whole wave is clamped by MaxUnitsPerWave, then by the free
@@ -186,13 +195,17 @@ public static class WavePlan
 
 /// <summary>A running instance and its progress. <see cref="Origin"/> is the starting admin's position for an Admin
 /// location, otherwise null.</summary>
-public sealed class ActiveEvent(RunningInstance instance, string trigger, (float X, float Y, float Z)? origin)
+public sealed class ActiveEvent(RunningInstance instance, string trigger, (float X, float Y, float Z)? origin, string? focus = null)
 {
     public RunningInstance Instance { get; } = instance;
     public EventDefinition Definition => Instance.Definition;
     public string Id => Instance.Definition.Id;
     public string Trigger { get; } = trigger;
     public (float X, float Y, float Z)? Origin { get; } = origin;
+    /// <summary>The platform id of the player whose action started the instance (automation D13): its AroundPlayer waves
+    /// pick that player first when eligible. Memory only, never in state.json, a line, a reply, a push or the wire; null
+    /// for every start that is not a player's action.</summary>
+    public string? Focus { get; } = focus;
     /// <summary>Waves that spawned: the `wave=&lt;spawned&gt;/&lt;total&gt;` of the status row and `event info` (D20).</summary>
     public int WavesSpawned { get; internal set; }
     /// <summary>Waves skipped or rolled with no unit (event-spawns D29, A62).</summary>
@@ -241,7 +254,7 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
     /// a start carrying <paramref name="kill"/> (only the VBloodKilled route passes one) needs the kill in a named
     /// region, every other start needs an online player in one.</summary>
     public Outcome? Start(string id, string trigger, DateTime utcNow, ControlState controls, (float X, float Y, float Z)? origin = null,
-        (float X, float Z)? kill = null)
+        (float X, float Z)? kill = null, string? focus = null)
     {
         var def = catalog.Current.Find(id);
         if (def is null) return AdminLines.UnknownEvent(id);
@@ -258,7 +271,7 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
         if (gate is not null) return gate;
         var error = catalog.TryStart(id, utcNow, out var instance);
         if (error is not null) return error;
-        _active[id] = new ActiveEvent(instance!, trigger, origin);
+        _active[id] = new ActiveEvent(instance!, trigger, origin, focus);
         Starts[id] = utcNow;
         Push?.EventStarted(instance!);
         for (var i = 0; i < _cleanups.Count; i++)                   // the ended instance's units are all older (A17)

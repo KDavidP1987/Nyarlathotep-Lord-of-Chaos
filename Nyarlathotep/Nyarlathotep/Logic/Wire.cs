@@ -23,7 +23,7 @@ public sealed record VersionInfo(
 /// through <see cref="TextSink.WireValue"/>, so it holds no space, '=', ';' or ':'.</summary>
 public static class Wire
 {
-    public const int Api = 5;
+    public const int Api = 6;
     public const int MaxBytes = 480;
 
     static readonly Regex NameRx = new("^[a-z][a-z0-9-]*$", RegexOptions.CultureInvariant);

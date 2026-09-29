@@ -101,7 +101,7 @@ public partial class PushTests
     [Fact]
     public void Spawns_passes_api_5_and_rows_unchanged()
     {
-        Assert.Equal(5, Wire.Api);
+        Assert.True(Wire.Api >= 5);        // event-spawns added no wire change; automation D17 moved the api to 6
         var (hub, _, _) = New();
         var d = WaveGate.Decide(new WaveFacts(2, "raid", false, Location: LocationType.AroundPlayer, Pick: PickOutcome.Picked), () => ["CHAR_Bandit_Thug"], 20, 0, 150);
         Report(hub, d, "raid", 2);

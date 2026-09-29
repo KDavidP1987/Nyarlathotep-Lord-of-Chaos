@@ -112,6 +112,12 @@ public sealed class StateDocument
     public DateTime? PurgeUntilUtc { get; set; }
     /// <summary>The daily banner's last occurrence key, "yyyy-MM-dd HH:mm" server-local (A18).</summary>
     public string? DailyBanner { get; set; }
+    /// <summary>Each waiting Interval definition's next start, UTC (automation D2, D31). Written `NextInterval` like
+    /// SchemaVersion, left out of the file while empty, and read entry by entry, so one bad entry drops only itself.</summary>
+    [JsonPropertyName("NextInterval")]
+    [JsonConverter(typeof(NextIntervalConverter))]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, DateTime>? NextInterval { get; set; }
 
     static readonly JsonSerializerOptions Options = new()
     {
@@ -119,7 +125,11 @@ public sealed class StateDocument
         WriteIndented = true,
     };
 
-    public byte[] Serialize() => JsonSerializer.SerializeToUtf8Bytes(this, Options);
+    public byte[] Serialize()
+    {
+        if (NextInterval is { Count: 0 }) NextInterval = null;            // "{}" is never written (D31)
+        return JsonSerializer.SerializeToUtf8Bytes(this, Options);
+    }
 
     /// <summary>Null when the bytes are not a state.json object with a SchemaVersion of 1 or higher.</summary>
     public static StateDocument? TryParse(byte[] bytes)
@@ -136,6 +146,39 @@ public sealed class StateDocument
         }
         catch (JsonException) { return null; }
         catch (NotSupportedException) { return null; }
+    }
+}
+
+/// <summary>state.json's NextInterval (automation D31): an object of event id → UTC date. An entry whose value is not a
+/// string holding a UTC date ("…Z") is dropped alone; a value that is not an object reads as no entries. System.Text.Json's
+/// own dictionary reader would reject the whole file on one bad value.</summary>
+public sealed class NextIntervalConverter : JsonConverter<Dictionary<string, DateTime>?>
+{
+    public override Dictionary<string, DateTime>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType != JsonTokenType.StartObject)
+        {
+            reader.Skip();
+            return null;
+        }
+        var result = new Dictionary<string, DateTime>(StringComparer.Ordinal);
+        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+        {
+            var id = reader.GetString()!;
+            reader.Read();
+            if (reader.TokenType == JsonTokenType.String && reader.TryGetDateTime(out var at) && at.Kind == DateTimeKind.Utc)
+                result[id] = at;
+            else reader.Skip();
+        }
+        return result;
+    }
+
+    public override void Write(Utf8JsonWriter writer, Dictionary<string, DateTime>? value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        foreach (var (id, at) in value!.OrderBy(e => e.Key, StringComparer.Ordinal))
+            writer.WriteString(id, DateTime.SpecifyKind(at.ToUniversalTime(), DateTimeKind.Utc));
+        writer.WriteEndObject();
     }
 }
 

@@ -72,7 +72,7 @@ public partial class ContractDocTests
     public void ContractApi4_passes_contract_handoff_and_design() => Assert.Empty(Api4Problems(Contract, Handoff, Design));
 
     [Theory]
-    [InlineData("**Current api:** 5", "**Current api:** 4", "the current api is not the code's")]
+    [InlineData("**Current api:** 6", "**Current api:** 4", "the current api is not the code's")]
     [InlineData("| `ks` | tag | IMPLEMENTED | 4 |", "| `ks` | tag | PLANNED (raphael-api-admin) | — |", "tag ks is not IMPLEMENTED (api 4)")]
     [InlineData("| `event` | command | IMPLEMENTED | 4 |", "| `event` | command | PLANNED (raphael-api-admin) | — |", "command event is not IMPLEMENTED (api 4)")]
     [InlineData("| `limit` |", "| `lim` |", "§4 has no row for Limit")]

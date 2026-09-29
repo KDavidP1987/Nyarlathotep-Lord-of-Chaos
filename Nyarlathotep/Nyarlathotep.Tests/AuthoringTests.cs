@@ -257,7 +257,7 @@ public partial class AuthoringTests
     [InlineData("trigger.times", "00:00,01:00,02:00,03:00,04:00,05:00,06:00,07:00,08:00,09:00,10:00,11:00,12:00", "trigger.times must be 1-12 of HH:mm, comma separated")]
     [InlineData("trigger.times", "24:00", "trigger.times must be 1-12 of HH:mm, comma separated")]
     [InlineData("trigger.phase", "dusk", "trigger.phase must be day or night")]
-    [InlineData("trigger.type", "Hourly", "trigger.type must be Manual, Schedule, GameTime or VBloodKilled")]
+    [InlineData("trigger.type", "Hourly", CommandArgs.TriggerTypeRule)]
     [InlineData("trigger.bosses", "CHAR_A1,CHAR_A2,CHAR_A3,CHAR_A4,CHAR_A5,CHAR_A6,CHAR_A7,CHAR_A8,CHAR_A9,CHAR_A10,CHAR_A11,CHAR_A12,CHAR_A13,CHAR_A14,CHAR_A15,CHAR_A16,CHAR_A17,CHAR_A18,CHAR_A19,CHAR_A20,CHAR_A21", "trigger.bosses must be any or 1-20 CHAR_ names, comma separated")]
     [InlineData("trigger.bosses", "CHAR_Bandit-Tourok", "trigger.bosses names must be CHAR_ or Faction_ then A-Za-z0-9_, at most 96 characters")]
     public void TriggerFields_fails_when_value_is_bad(string field, string value, string reply)

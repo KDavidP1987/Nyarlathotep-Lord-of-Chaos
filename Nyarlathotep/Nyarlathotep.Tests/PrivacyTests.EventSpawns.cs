@@ -54,11 +54,12 @@ public partial class PrivacyTests
         foreach (var line in lines)
             foreach (var mark in PlayerMarks) Assert.DoesNotContain(mark, line, StringComparison.OrdinalIgnoreCase);
 
-        // the pick takes no identity and returns none; the line builders take no position
-        Assert.Equal(["Alive", "InPvpCombat", "Online", "X", "Y", "Z"], typeof(PickCandidate).GetProperties().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal));
+        // the pick takes only the platform id, to find the focus (automation D13), and returns no identity; the line
+        // builders take no position
+        Assert.Equal(["Alive", "InPvpCombat", "Online", "PlatformId", "X", "Y", "Z"], typeof(PickCandidate).GetProperties().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal));
         Assert.Equal(["Centre", "Error", "Outcome"], typeof(PickResult).GetProperties().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal));
-        foreach (var m in typeof(WaveLines).GetMethods(BindingFlags.Public | BindingFlags.Static))
-            Assert.Equal([typeof(int), typeof(string)], m.GetParameters().Select(p => p.ParameterType));
+        foreach (var m in typeof(WaveLines).GetMethods(BindingFlags.Public | BindingFlags.Static))       // counts and ids only
+            Assert.All(m.GetParameters(), p => Assert.Contains(p.ParameterType, new[] { typeof(int), typeof(string) }));
         // the Hunt line's tally holds counts only (A66, Review 32 F5)
         Assert.All(typeof(HuntTally).GetProperties(), p => Assert.Equal(typeof(int), p.PropertyType));
     }

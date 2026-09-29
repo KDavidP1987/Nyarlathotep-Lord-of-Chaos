@@ -17,13 +17,32 @@ public partial class TriggerActivationTests
             set => TriggerRouter.PhaseEntered(set, DayPhase.Night).Select(d => d.Id)),
         [TriggerType.VBloodKilled] = ("{ \"type\": \"VBloodKilled\", \"bosses\": [\"CHAR_Bandit_Tourok_VBlood\"] }",
             set => TriggerRouter.VBloodKilled(set, "CHAR_Bandit_Tourok_VBlood").Select(d => d.Id)),
+        // automation D14: every stored next is due, so each Interval candidate fires
+        [TriggerType.Interval] = ("{ \"type\": \"Interval\", \"minMinutes\": 5, \"maxMinutes\": 6 }",
+            set =>
+            {
+                var nexts = set.All.ToDictionary(d => d.Id, _ => Now.AddSeconds(-1));
+                return IntervalClock.Tick(set, nexts, _ => false, Now, new ScriptedRandom()).Due.Select(d => d.Id);
+            }),
+        // a player walks from FarbaneWoods (x < 0) into CursedForest (x >= 0)
+        [TriggerType.RegionEntered] = ("{ \"type\": \"RegionEntered\", \"scope\": [\"CursedForest\"] }",
+            set =>
+            {
+                var entries = new RegionEntries();
+                var defs = TriggerRouter.Candidates(set, TriggerType.RegionEntered).ToList();
+                var regions = new FakeRegions();
+                entries.Scan([new ScanRow("p1", -10f, 0f, true)], regions.RegionOf, defs, Now);
+                return entries.Scan([new ScanRow("p1", 10f, 0f, true)], regions.RegionOf, defs, Now).Select(e => e.Definition.Id);
+            }),
+        [TriggerType.FactionKills] = ("{ \"type\": \"FactionKills\", \"factions\": [\"Faction_Bandits\"], \"kills\": 3, \"windowSeconds\": 60 }",
+            set => TriggerRouter.FactionKills(set, new KillFacts("p1", null, false, false, false, "Faction_Bandits"), null).Select(d => d.Id)),
     };
 
     static DefinitionSet Twins(string trigger) =>
         EventValidator.Parse(Json.File(
             Json.Event("on", trigger),
             Json.Event("off", trigger).Replace("\"enabled\": true", "\"enabled\": false"),
-            Json.Event("broken", trigger, extra: "\"bogus\": 1")), FakeUnits.Default()).Set;
+            Json.Event("broken", trigger, extra: "\"bogus\": 1")), FakeUnits.Default(), regions: FakeRegions.All()).Set;
 
     [Fact]
     public void Every_automatic_trigger_kind_has_a_case()
@@ -37,6 +56,9 @@ public partial class TriggerActivationTests
     [InlineData(TriggerType.Schedule)]
     [InlineData(TriggerType.GameTime)]
     [InlineData(TriggerType.VBloodKilled)]
+    [InlineData(TriggerType.Interval)]
+    [InlineData(TriggerType.RegionEntered)]
+    [InlineData(TriggerType.FactionKills)]
     public void Enabled_fires_and_disabled_or_invalid_twins_do_not(TriggerType type)
     {
         var (trigger, fire) = Cases[type];

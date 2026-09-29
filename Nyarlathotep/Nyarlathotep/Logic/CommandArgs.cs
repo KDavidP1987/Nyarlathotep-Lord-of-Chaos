@@ -156,11 +156,21 @@ public static class CommandArgs
         d["location"] = ("location", "admin");
         d["trigger.scope"] = ("trigger", "admin");                  // regions D9, A28: every trigger type
         d["action.scope"] = ("action", "admin");                    // either action type
+        d[FanOutField] = ("spawn action", "admin");                 // automation D16
         return d;
     }
 
     /// <summary>The trigger fields (event-library D9); each but trigger.type needs its trigger type.</summary>
-    public static readonly IReadOnlyList<string> TriggerFields = ["trigger.type", "trigger.days", "trigger.times", "trigger.phase", "trigger.bosses"];
+    public static readonly IReadOnlyList<string> TriggerFields =
+    [
+        "trigger.type", "trigger.days", "trigger.times", "trigger.phase", "trigger.bosses",
+        "trigger.minMinutes", "trigger.maxMinutes", "trigger.playerCooldownMinutes",                     // automation D16
+        "trigger.factions", "trigger.kills", "trigger.windowSeconds", "trigger.shared",
+    ];
+
+    /// <summary>action.fanOut (automation D16): none, or MAX SPACING.</summary>
+    public const string FanOutField = "action.fanOut";
+    public const string FanOutRule = "action.fanOut takes none or MAX SPACING";
 
     /// <summary>The trigger type a trigger field belongs to; trigger.type belongs to every type.</summary>
     public static string? TriggerTypeOf(string field) => field switch
@@ -168,6 +178,9 @@ public static class CommandArgs
         "trigger.days" or "trigger.times" => "Schedule",
         "trigger.phase" => "GameTime",
         "trigger.bosses" => "VBloodKilled",
+        "trigger.minMinutes" or "trigger.maxMinutes" => "Interval",
+        "trigger.playerCooldownMinutes" => "RegionEntered",
+        "trigger.factions" or "trigger.kills" or "trigger.windowSeconds" or "trigger.shared" => "FactionKills",
         _ => null,
     };
 
@@ -209,14 +222,38 @@ public static class CommandArgs
         return null;
     }
 
+    public const string TriggerTypeRule = "trigger.type must be Manual, Schedule, GameTime, VBloodKilled, Interval, RegionEntered or FactionKills";
+
     static Arg<object> TriggerValue(string field, string? value)
     {
+        static Arg<object> IntIn(string? v, int min, int max, string rule) =>
+            int.TryParse(v, NumberStyles.None, CultureInfo.InvariantCulture, out var i) && i >= min && i <= max ? Arg<object>.Of(i) : Arg<object>.Bad(rule);
+
         switch (field)
         {
             case "trigger.type":
-                return value is "Manual" or "Schedule" or "GameTime" or "VBloodKilled"
+                return value is "Manual" or "Schedule" or "GameTime" or "VBloodKilled" or "Interval" or "RegionEntered" or "FactionKills"
                     ? Arg<object>.Of(value)
-                    : Arg<object>.Bad("trigger.type must be Manual, Schedule, GameTime or VBloodKilled");
+                    : Arg<object>.Bad(TriggerTypeRule);
+            case "trigger.minMinutes":
+                return IntIn(value, EventValidator.MinIntervalMinutes, EventValidator.MaxIntervalMinutes, EventValidator.MinMinutesRule);
+            case "trigger.maxMinutes":
+                return IntIn(value, EventValidator.MinIntervalMinutes, EventValidator.MaxIntervalMinutes, EventValidator.MaxMinutesRule);
+            case "trigger.playerCooldownMinutes":
+                return IntIn(value, 0, EventValidator.MaxPlayerCooldownMinutes, EventValidator.PlayerCooldownRule);
+            case "trigger.kills":
+                return IntIn(value, EventValidator.MinKills, EventValidator.MaxKills, EventValidator.KillsRule);
+            case "trigger.windowSeconds":
+                return IntIn(value, EventValidator.MinKillWindowSeconds, EventValidator.MaxKillWindowSeconds, EventValidator.KillWindowRule);
+            case "trigger.shared":
+                return value switch
+                {
+                    "true" => Arg<object>.Of(true),
+                    "false" => Arg<object>.Of(false),
+                    _ => Arg<object>.Bad(EventValidator.SharedRule),
+                };
+            case "trigger.factions":
+                return Factions(field, value);
             case "trigger.phase":
                 return value is "day" or "night" ? Arg<object>.Of(value) : Arg<object>.Bad("trigger.phase must be day or night");
             case "trigger.days":
@@ -235,7 +272,7 @@ public static class CommandArgs
                 if (Repeated(parts) is { } twice) return Arg<object>.Bad(Twice(field, twice));
                 return Arg<object>.Of(parts);
             }
-            default:    // trigger.bosses
+            case "trigger.bosses":
             {
                 const string rule = "trigger.bosses must be any or 1-20 CHAR_ names, comma separated";
                 if (value == "any") return Arg<object>.Of(new[] { "any" });
@@ -245,7 +282,24 @@ public static class CommandArgs
                 if (Repeated(parts) is { } twice) return Arg<object>.Bad(Twice(field, twice));
                 return Arg<object>.Of(parts);
             }
+            default:
+                return Arg<object>.Bad($"field {field} is not settable; edit events.json and reload");
         }
+    }
+
+    /// <summary>action.fanOut (automation D16): "none" removes it, else MAX SPACING in D4's ranges.</summary>
+    static Arg<object> FanOutValue(string? value)
+    {
+        if (value == "none") return Arg<object>.Of(FieldRemoval.Instance);
+        var parts = (value ?? "").Split(' ');
+        if (parts.Length != 2) return Arg<object>.Bad(FanOutRule);
+        if (!(int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out var max)
+              && max >= EventValidator.MinFanOutInstances && max <= EventValidator.MaxFanOutInstances))
+            return Arg<object>.Bad(EventValidator.FanOutInstancesRule);
+        if (!(int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var spacing)
+              && spacing >= EventValidator.MinFanOutSpacing && spacing <= EventValidator.MaxFanOutSpacing))
+            return Arg<object>.Bad(EventValidator.FanOutSpacingRule);
+        return Arg<object>.Of(new FanOutArg(max, spacing));
     }
 
     /// <summary>action.factions: 1-5 distinct Faction_ names (event-library D10).</summary>
@@ -379,8 +433,9 @@ public static class CommandArgs
     public static Arg<object> SettableValue(string field, string? value)
     {
         if (!IsSettable(field)) return Arg<object>.Bad($"field {field} is not settable; edit events.json and reload");
-        if ((SpawnKeyFields.Contains(TableName(field)) || field == "location") && string.IsNullOrWhiteSpace(value))
+        if ((SpawnKeyFields.Contains(TableName(field)) || field is "location" or FanOutField) && string.IsNullOrWhiteSpace(value))
             return Arg<object>.Bad(ValueRequired);                   // event-spawns D18's empty input
+        if (field == FanOutField) return FanOutValue(value);
         if (SpawnKeyFields.Contains(TableName(field))) return SpawnKeyValue(field, value);
         if (StatFields.Contains(field)) return Stat(field, value);
         if (TriggerFields.Contains(field)) return TriggerValue(field, value);
@@ -423,6 +478,13 @@ public sealed class FieldRemoval
 public readonly record struct BehaviourArg(int Range)
 {
     public override string ToString() => FormattableString.Invariant($"hunt {Range}");
+}
+
+/// <summary>`action.fanOut &lt;maxInstances&gt; &lt;minSpacing&gt;` (automation D16): written as action.fanOut
+/// { "maxInstances", "minSpacing" }.</summary>
+public readonly record struct FanOutArg(int MaxInstances, int MinSpacing)
+{
+    public override string ToString() => FormattableString.Invariant($"{MaxInstances} {MinSpacing}");
 }
 
 /// <summary>`location aroundplayer &lt;minDist&gt; &lt;maxDist&gt;` (event-spawns D18): written as action.location

@@ -50,7 +50,7 @@ public static class EventsEditor
 
         var actionType = ev["action"] is JsonObject act && act["type"] is JsonValue tv && tv.TryGetValue<string>(out var t) ? t : null;
         if (path == "location" && value is AroundPlayerArg) path = "action.location";     // event-spawns D18
-        if (CommandArgs.SpawnKeyFields.Contains(CommandArgs.TableName(path)))
+        if (CommandArgs.SpawnKeyFields.Contains(CommandArgs.TableName(path)) || path == CommandArgs.FanOutField)
             return SetSpawnKey(root, ev, actionType, path, value, out error);
 
         var node = ToNode(value);
@@ -110,6 +110,7 @@ public static class EventsEditor
         PointArg p => new JsonObject { ["type"] = "Point", ["x"] = p.X, ["y"] = p.Y, ["z"] = p.Z },
         AroundPlayerArg a => new JsonObject { ["type"] = "AroundPlayer", ["minDist"] = a.MinDist, ["maxDist"] = a.MaxDist },
         BehaviourArg b => new JsonObject { ["type"] = "Hunt", ["range"] = b.Range },
+        FanOutArg f => new JsonObject { ["maxInstances"] = f.MaxInstances, ["minSpacing"] = f.MinSpacing },
         _ => null,
     };
 
@@ -135,6 +136,12 @@ public static class EventsEditor
             return root.ToJsonString(Write) + Environment.NewLine;
         }
         var key = path["action.".Length..];
+        if (path == CommandArgs.FanOutField && value is not FieldRemoval
+            && !(action["location"] is JsonObject loc && loc["type"] is JsonValue lt && lt.TryGetValue<string>(out var locType) && locType == "AroundPlayer"))
+        {
+            error = Invalid(EventValidator.FanOutLocation, Reasons.Field);          // automation D16
+            return null;
+        }
         if (key.StartsWith("modifiers.", StringComparison.Ordinal))
         {
             var name = key["modifiers.".Length..];
@@ -184,7 +191,8 @@ public static class EventsEditor
     };
 
     /// <summary>trigger.type replaces the whole trigger with that type's default (Schedule Sat 20:00, GameTime night,
-    /// VBloodKilled any, Manual), so no key of the old type stays, the scope included (regions D9); trigger.scope fits
+    /// VBloodKilled any, Interval 60-90 min, RegionEntered with a 30 min cooldown and no scope yet, FactionKills
+    /// Faction_Bandits 20 in 300 s, Manual), so no key of the old type stays, the scope included (regions D9); trigger.scope fits
     /// every type; any other trigger field needs its trigger type (event-library D9).</summary>
     static string? SetTrigger(JsonNode root, JsonObject ev, string path, JsonNode node, out Outcome? error)
     {
@@ -196,6 +204,12 @@ public static class EventsEditor
                 "Schedule" => new JsonObject { ["type"] = "Schedule", ["days"] = new JsonArray("Sat"), ["times"] = new JsonArray("20:00") },
                 "GameTime" => new JsonObject { ["type"] = "GameTime", ["phase"] = "night" },
                 "VBloodKilled" => new JsonObject { ["type"] = "VBloodKilled", ["bosses"] = new JsonArray("any") },
+                "Interval" => new JsonObject { ["type"] = "Interval", ["minMinutes"] = 60, ["maxMinutes"] = 90 },     // automation D16
+                "RegionEntered" => new JsonObject { ["type"] = "RegionEntered", ["playerCooldownMinutes"] = EventValidator.DefaultPlayerCooldownMinutes },
+                "FactionKills" => new JsonObject
+                {
+                    ["type"] = "FactionKills", ["factions"] = new JsonArray("Faction_Bandits"), ["kills"] = 20, ["windowSeconds"] = 300,
+                },
                 _ => new JsonObject { ["type"] = "Manual" },
             };
             return root.ToJsonString(Write) + Environment.NewLine;
@@ -209,7 +223,7 @@ public static class EventsEditor
         }
         var need = CommandArgs.TriggerTypeOf(path);
         var type = trigger?["type"] is JsonValue tv && tv.TryGetValue<string>(out var t) ? t : null;
-        if (need is null || trigger is null || type != need) { error = Invalid($"{path} needs a {need ?? "known"} trigger", Reasons.Trigger); return null; }
+        if (need is null || trigger is null || type != need) { error = Invalid($"{path} needs {(need is "Interval" ? "an" : "a")} {need ?? "known"} trigger", Reasons.Trigger); return null; }
         trigger[path["trigger.".Length..]] = node;
         return root.ToJsonString(Write) + Environment.NewLine;
     }
@@ -257,7 +271,9 @@ public static class EventLines
         return names.Count == 0 ? "" : $" [{string.Join(",", names)}]";
     }
 
-    public static IReadOnlyList<string> Info(EventDefinition d, ActiveEvent? active, DateTime utcNow)
+    /// <summary>`event info`. <paramref name="nextInterval"/> is an Interval definition's stored next start (automation D16):
+    /// "next start in &lt;m&gt; min" while it waits, "next start: after the running instance ends" while it runs.</summary>
+    public static IReadOnlyList<string> Info(EventDefinition d, ActiveEvent? active, DateTime utcNow, DateTime? nextInterval = null)
     {
         if (d.DisabledReason is { } reason) return [$"{d.Id} disabled: {reason}"];
         var c = d.Conditions;
@@ -266,7 +282,7 @@ public static class EventLines
             Fit(tr => $"{d.Id} \"{d.Name}\" {(d.Enabled ? "enabled" : "disabled")} pillar {Lower(d.Pillar)} trigger {tr} duration {d.DurationSeconds}s",
                 d.Trigger, out var shortened),
         };
-        if (shortened) lines.AddRange(BossLines(d.Trigger.Bosses));
+        if (shortened) lines.AddRange(d.Trigger.Type == TriggerType.FactionKills ? FactionLines(d.Trigger.Factions ?? []) : BossLines(d.Trigger.Bosses));
         lines.Add($"conditions: minPlayers {c.MinPlayers}, cooldown {c.CooldownMinutes} min, chance {c.ChancePercent}%, " +
             $"window {(c.Window is { } w ? $"{w.From:HH\\:mm}-{w.To:HH\\:mm}" : "none")}, mode {Lower(c.Mode)}");
         if (d.Empower is { } emp)
@@ -313,8 +329,16 @@ public static class EventLines
             ? "not running"
             : $"running: started by {active.Trigger}, {Math.Max(0, (int)Math.Ceiling((active.Instance.EndsUtc - utcNow).TotalSeconds))}s left" +
               (d.Empower is null ? $", wave {active.WavesSpawned}/{d.Action?.Waves ?? 0}" : ""));
+        if (d.Trigger.Type == TriggerType.Interval && NextStartLine(active is not null, nextInterval, utcNow) is { } next) lines.Add(next);
         return lines;
     }
+
+    /// <summary>The Interval line of `event info` (automation D16): null while no next is drawn yet (the first poll after an
+    /// enable or a reload draws it).</summary>
+    public static string? NextStartLine(bool running, DateTime? next, DateTime utcNow) =>
+        running ? "next start: after the running instance ends"
+        : next is { } n ? $"next start in {Math.Max(0, (int)Math.Ceiling((n - utcNow).TotalMinutes))} min"
+        : null;
 
     /// <summary><paramref name="prefix"/> and the items joined by ", ", on as few lines of at most Wire.MaxBytes UTF-8 bytes
     /// as fit, never splitting an item (each item is at most a 96-character prefab name and its count).</summary>
@@ -357,6 +381,7 @@ public static class EventLines
         if (a.Loot) parts.Add("loot on");
         if (a.Behaviour is { Type: BehaviourType.Hunt } hunt) parts.Add($"hunt {hunt.Range} m");
         if (a.AllowTerritory) parts.Add("claimed territory allowed");
+        if (a.FanOut is { } fan) parts.Add($"fanOut {fan.MaxInstances} players {fan.MinSpacing} m apart");      // automation D16
         return parts.Count == 0 ? null : "spawn: " + string.Join("; ", parts);
     }
 
@@ -365,32 +390,45 @@ public static class EventLines
         TriggerType.Schedule => $"schedule {string.Join(",", t.Days.Select(d => d.ToString()[..3]))} {string.Join(",", t.Times.Select(x => x.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture)))}",
         TriggerType.GameTime => $"gametime {Lower(t.Phase)}",
         TriggerType.VBloodKilled => $"vbloodkilled {string.Join(",", t.Bosses)}",
+        TriggerType.Interval => $"interval {t.MinMinutes}-{t.MaxMinutes} min",
+        TriggerType.RegionEntered => $"regionentered cooldown {t.PlayerCooldownMinutes} min",
+        TriggerType.FactionKills => $"factionkills {string.Join(",", (t.Factions ?? []).Select(FactionDenyList.ShortName))} " +
+                                    $"{t.Kills} in {t.WindowSeconds}s{(t.Shared ? " shared" : "")}",
         _ => "manual",
     };
 
     /// <summary>A line built around <paramref name="trigger"/>: the whole trigger when the line fits one chat message
-    /// (Wire.MaxBytes), else a vbloodkilled trigger as "vbloodkilled &lt;n&gt; bosses", since AdminLines.Pack would cut
-    /// the line (event-library A21). <paramref name="shortened"/> says the names were left out.</summary>
+    /// (Wire.MaxBytes), else a vbloodkilled trigger as "vbloodkilled &lt;n&gt; bosses" (event-library A21) and a
+    /// factionkills trigger as "factionkills &lt;n&gt; factions &lt;k&gt; in &lt;w&gt;s" (automation D27), since
+    /// AdminLines.Pack would cut the line. <paramref name="shortened"/> says the names were left out.</summary>
     public static string Fit(Func<string, string> build, Trigger trigger, out bool shortened)
     {
         var full = build(Trigger(trigger));
-        shortened = trigger.Type == TriggerType.VBloodKilled && !Fits(full);
-        return shortened ? build($"vbloodkilled {trigger.Bosses.Count} bosses") : full;
+        shortened = trigger.Type is TriggerType.VBloodKilled or TriggerType.FactionKills && !Fits(full);
+        if (!shortened) return full;
+        return build(trigger.Type == TriggerType.VBloodKilled
+            ? $"vbloodkilled {trigger.Bosses.Count} bosses"
+            : $"factionkills {(trigger.Factions ?? []).Count} factions {trigger.Kills} in {trigger.WindowSeconds}s{(trigger.Shared ? " shared" : "")}");
     }
 
     /// <summary>"bosses: a,b,…" lines, each within one chat message, together naming every boss once, in order.</summary>
-    public static IReadOnlyList<string> BossLines(IReadOnlyList<string> bosses)
+    public static IReadOnlyList<string> BossLines(IReadOnlyList<string> bosses) => NameLines("bosses: ", bosses);
+
+    /// <summary>"factions: a,b,…" lines of short faction names, as BossLines (automation D27).</summary>
+    public static IReadOnlyList<string> FactionLines(IReadOnlyList<string> factions) =>
+        NameLines("factions: ", factions.Select(FactionDenyList.ShortName).ToList());
+
+    static IReadOnlyList<string> NameLines(string head, IReadOnlyList<string> names)
     {
-        const string Head = "bosses: ";
         var lines = new List<string>();
-        var current = Head;
-        foreach (var boss in bosses)
+        var current = head;
+        foreach (var name in names)
         {
-            var next = current.Length == Head.Length ? current + boss : current + "," + boss;
-            if (!Fits(next) && current.Length > Head.Length) { lines.Add(current); next = Head + boss; }
+            var next = current.Length == head.Length ? current + name : current + "," + name;
+            if (!Fits(next) && current.Length > head.Length) { lines.Add(current); next = head + name; }
             current = next;
         }
-        if (current.Length > Head.Length) lines.Add(current);
+        if (current.Length > head.Length) lines.Add(current);
         return lines;
     }
 

@@ -284,6 +284,10 @@ public static class WaveLines
     public static string TerritoryUnknown(int wave, string id) => $"wave {wave} of {id} skipped: territory unknown";
     public static string PlayerQueryFailed(int wave, string id) => $"wave {wave} of {id} skipped: player query failed";
     public const string AroundAPlayer = "around a player";
+    /// <summary>A fanned-out wave's place in its spawn line (automation D6): the count of groups, never who.</summary>
+    public static string AroundPlayers(int groups) => groups == 1 ? AroundAPlayer : $"around {groups} players";
+    /// <summary>A fanned-out wave whose groups all fit no free unit slot (automation D6).</summary>
+    public static string NoFreeSlot(int wave, string id) => $"wave {wave} of {id} skipped: no free unit slot";
 }
 
 /// <summary>The per-copy chance roll of a wave (event-spawns D8).</summary>
@@ -381,8 +385,9 @@ public static class Territory
 }
 
 /// <summary>A player as the AroundPlayer pick sees it (event-spawns D16): a position, whether online and alive, and
-/// whether in PvP combat (Buff_InCombat_PvPVampire). The pick never returns who it chose.</summary>
-public readonly record struct PickCandidate(float X, float Y, float Z, bool Online, bool Alive, bool InPvpCombat);
+/// whether in PvP combat (Buff_InCombat_PvPVampire). The pick never returns who it chose. <see cref="PlatformId"/> matches a
+/// trigger's focus player across a relog (automation D5, D13); it stays in memory and never reaches a line.</summary>
+public readonly record struct PickCandidate(float X, float Y, float Z, bool Online, bool Alive, bool InPvpCombat, string PlatformId = "");
 
 public enum PickOutcome { Picked, NoEligible, QueryFailed }
 
@@ -414,16 +419,7 @@ public static class PlayerPick
             while (pool.Count > 0)
             {
                 var i = Math.Min(pool.Count - 1, (int)(rng.NextDouble() * pool.Count));
-                var p = pool[i];
-                var start = rng.NextDouble() * 2 * Math.PI;
-                var dist = minDist + rng.NextDouble() * (maxDist - minDist);
-                for (var k = 0; k < SpawnPoints.Angles; k++)
-                {
-                    var a = start + k * 2 * Math.PI / SpawnPoints.Angles;
-                    var x = p.X + (float)(dist * Math.Cos(a));
-                    var z = p.Z + (float)(dist * Math.Sin(a));
-                    if (inScope is null || inScope(x, z)) return new PickResult(PickOutcome.Picked, (x, p.Y, z));
-                }
+                if (Centre(pool[i], rng, minDist, maxDist, inScope) is { } c) return new PickResult(PickOutcome.Picked, c);
                 pool.RemoveAt(i);                                              // no in-scope centre: not usable
             }
             return PickResult.NoEligible;
@@ -433,7 +429,64 @@ public static class PlayerPick
             return new PickResult(PickOutcome.QueryFailed, default, e.Message);
         }
     }
+
+    /// <summary>A fanned-out wave's centres (automation D5): up to <paramref name="maxInstances"/>, each for a different
+    /// player eligible by <see cref="Choose"/>'s rule, picked uniformly among the eligible players at least
+    /// <paramref name="minSpacing"/> metres (x and z) from every player already picked. An eligible <paramref name="focus"/>
+    /// (a platform id, D13) is tried first. Each pick draws as Choose does, so one centre without a focus consumes the random
+    /// source exactly as Choose. Centres only, never a player.</summary>
+    public static FanOutPick ChooseMany(IReadOnlyList<PickCandidate> players, IRandom rng, int minDist, int maxDist,
+        Func<float, float, bool> isClaimed, Func<float, float, bool>? inScope, int maxInstances, int minSpacing, string? focus)
+    {
+        try
+        {
+            var pool = players.Where(p => p.Online && p.Alive && !p.InPvpCombat && PlayerPosition.Usable(p.X, p.Y, p.Z)
+                && !isClaimed(p.X, p.Z) && (inScope is null || inScope(p.X, p.Z))).ToList();
+            var picked = new List<PickCandidate>();
+            var centres = new List<(float X, float Y, float Z)>();
+            if (!string.IsNullOrEmpty(focus) && pool.FindIndex(p => p.PlatformId == focus) is var f and >= 0)
+            {
+                var p = pool[f];
+                pool.RemoveAt(f);
+                if (Centre(p, rng, minDist, maxDist, inScope) is { } c) { picked.Add(p); centres.Add(c); }
+            }
+            while (centres.Count < maxInstances)
+            {
+                var spaced = pool.Where(p => picked.All(q => Spacing(p, q) >= minSpacing)).ToList();
+                if (spaced.Count == 0) break;
+                var p = spaced[Math.Min(spaced.Count - 1, (int)(rng.NextDouble() * spaced.Count))];
+                pool.Remove(p);
+                if (Centre(p, rng, minDist, maxDist, inScope) is { } c) { picked.Add(p); centres.Add(c); }
+            }
+            return new FanOutPick(centres.Count > 0 ? PickOutcome.Picked : PickOutcome.NoEligible, centres);
+        }
+        catch (Exception e)
+        {
+            return new FanOutPick(PickOutcome.QueryFailed, [], e.Message);
+        }
+    }
+
+    /// <summary>Choose's centre for one player: a random angle and distance, retried at the other 11 angles when out of
+    /// scope; null when no angle is in scope.</summary>
+    static (float X, float Y, float Z)? Centre(PickCandidate p, IRandom rng, int minDist, int maxDist, Func<float, float, bool>? inScope)
+    {
+        var start = rng.NextDouble() * 2 * Math.PI;
+        var dist = minDist + rng.NextDouble() * (maxDist - minDist);
+        for (var k = 0; k < SpawnPoints.Angles; k++)
+        {
+            var a = start + k * 2 * Math.PI / SpawnPoints.Angles;
+            var x = p.X + (float)(dist * Math.Cos(a));
+            var z = p.Z + (float)(dist * Math.Sin(a));
+            if (inScope is null || inScope(x, z)) return (x, p.Y, z);
+        }
+        return null;
+    }
+
+    static double Spacing(PickCandidate a, PickCandidate b) => Math.Sqrt((a.X - b.X) * (double)(a.X - b.X) + (a.Z - b.Z) * (double)(a.Z - b.Z));
 }
+
+/// <summary>A fanned-out wave's centres in pick order, or why there are none (automation D5). No player identity.</summary>
+public sealed record FanOutPick(PickOutcome Outcome, IReadOnlyList<(float X, float Y, float Z)> Centres, string? Error = null);
 
 /// <summary>A player as a Hunt tick sees it (event-spawns D13): its key (the service's handle), position, and the flags
 /// that make it ineligible.</summary>
@@ -649,7 +702,74 @@ public static class WaveGate
         var units = WavePlan.Split(WaveRoll.Group(rolled), maxPerWave, occupied, maxTracked, caps);
         return new(WaveOutcome.Spawn, null, units, caps);
     }
+
+    /// <summary>A fanned-out wave (automation D6, S-4): the wave rules of <see cref="Decide"/> in the same order, then per
+    /// centre in pick order a claimed centre skips only its group (unless allowTerritory) and each other group is rolled
+    /// on its own. The rolled groups together are clamped once, by MaxUnitsPerWave and then the free MaxTrackedUnits slots,
+    /// and the allowed units are dealt one at a time to the groups in pick order, round robin, each group giving its rolled
+    /// units in entry order; a group dealt 0 is dropped. The wave is spawned when a group spawns; when every group rolled 0
+    /// it is ZeroRolled; otherwise skipped with the first group's reason. One centre decides exactly as Decide.</summary>
+    public static FanOutDecision DecideGroups(WaveFacts facts, IReadOnlyList<GroupCentre> centres, Func<IReadOnlyList<string>> roll,
+        int maxPerWave, int occupied, int maxTracked)
+    {
+        if (facts.Blocked || facts.MapFailed && facts.NeedsMap || facts.Pick is PickOutcome.NoEligible or PickOutcome.QueryFailed || centres.Count <= 1)
+        {
+            var centre = centres.Count > 0 ? centres[0] : default;
+            var one = Decide(facts with { CentreClaimed = centres.Count > 0 && centre.Claimed }, roll, maxPerWave, occupied, maxTracked);
+            IReadOnlyList<WaveGroup> groups = one.Outcome == WaveOutcome.Spawn ? [new WaveGroup(0, (centre.X, centre.Y, centre.Z), one.Units)] : [];
+            return new(one.Outcome, one.Line, groups, one.CapLines);
+        }
+
+        var rolled = new List<(int Index, List<string> Units)>();
+        string? firstReason = null;
+        for (var i = 0; i < centres.Count; i++)
+        {
+            if (centres[i].Claimed && !facts.AllowTerritory)
+            {
+                firstReason ??= WaveLines.CentreClaimed(facts.Wave, facts.EventId);
+                continue;
+            }
+            var units = roll().ToList();
+            if (units.Count == 0) { firstReason ??= WaveLines.ZeroRolled(facts.Wave, facts.EventId); continue; }
+            rolled.Add((i, units));
+        }
+        if (rolled.Count == 0)
+            return centres.All(c => !c.Claimed || facts.AllowTerritory)
+                ? new(WaveOutcome.ZeroRolled, WaveLines.ZeroRolled(facts.Wave, facts.EventId), [], [])
+                : new(WaveOutcome.Skip, firstReason, [], []);
+
+        var caps = new List<string>();
+        var allowed = Precedence.WaveSize(rolled.Sum(g => g.Units.Count), maxPerWave, occupied, maxTracked, caps);
+        var dealt = rolled.Select(_ => new List<string>()).ToList();
+        for (var round = 0; allowed > 0; round++)
+        {
+            var any = false;
+            for (var g = 0; g < rolled.Count && allowed > 0; g++)
+            {
+                if (round >= rolled[g].Units.Count) continue;
+                dealt[g].Add(rolled[g].Units[round]);
+                allowed--;
+                any = true;
+            }
+            if (!any) break;
+        }
+        var result = rolled.Select((g, k) => (g.Index, Units: dealt[k])).Where(g => g.Units.Count > 0)
+            .Select(g => new WaveGroup(g.Index, (centres[g.Index].X, centres[g.Index].Y, centres[g.Index].Z), WaveRoll.Group(g.Units)))
+            .ToList();
+        return result.Count > 0
+            ? new(WaveOutcome.Spawn, null, result, caps)
+            : new(WaveOutcome.Skip, WaveLines.NoFreeSlot(facts.Wave, facts.EventId), [], caps);
+    }
 }
+
+/// <summary>A fanned-out wave's centre and whether it lies in claimed territory (automation D6).</summary>
+public readonly record struct GroupCentre(float X, float Y, float Z, bool Claimed);
+
+/// <summary>One group of a fanned-out wave: its centre's place in pick order, the centre, and its units after the caps.</summary>
+public sealed record WaveGroup(int Index, (float X, float Y, float Z) Centre, IReadOnlyList<UnitEntry> Units);
+
+/// <summary>A fanned-out wave's decision (automation D6): its outcome and line, the groups to spawn, the cap lines.</summary>
+public sealed record FanOutDecision(WaveOutcome Outcome, string? Line, IReadOnlyList<WaveGroup> Groups, IReadOnlyList<string> CapLines);
 
 /// <summary>An event's units, hunt seeds and kept territory map, ended together (event-spawns D33, A39): every end path
 /// empties all three for the event and leaves every other event's state as it is.</summary>

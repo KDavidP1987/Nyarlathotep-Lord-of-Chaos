@@ -39,6 +39,7 @@ public sealed class HookSet(IHookRegistry registry, Action<string> log)
     public static Hook? HookFor(TriggerType type) => type switch
     {
         TriggerType.VBloodKilled => Hook.DeathEvent,
+        TriggerType.FactionKills => Hook.DeathEvent,
         TriggerType.GameTime => Hook.DayNight,
         _ => null,
     };

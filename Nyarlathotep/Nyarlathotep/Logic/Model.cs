@@ -8,7 +8,9 @@ namespace Nyarlathotep.Logic;
 
 public enum Pillar { Empowerment, Spawns, Boss, Zones, Sieges }
 
-public enum TriggerType { Manual, Schedule, GameTime, VBloodKilled }
+/// <summary>How a definition starts. Interval, RegionEntered and FactionKills are automation's (docs/dod/automation.md D1, D8,
+/// D10): a random clock, a player walking into a region, and kills of listed factions.</summary>
+public enum TriggerType { Manual, Schedule, GameTime, VBloodKilled, Interval, RegionEntered, FactionKills }
 
 public enum DayPhase { Day, Night }
 
@@ -16,13 +18,23 @@ public enum GameMode { Any, Pve, Pvp }
 
 public enum LocationType { Point, Admin, AroundPlayer }
 
+/// <summary>A trigger. Each type reads only its own fields: Interval <see cref="MinMinutes"/>..<see cref="MaxMinutes"/>;
+/// RegionEntered <see cref="PlayerCooldownMinutes"/> and its <see cref="Scope"/>; FactionKills <see cref="Factions"/>,
+/// <see cref="Kills"/> within <see cref="WindowSeconds"/>, per player or <see cref="Shared"/> (automation D1, D8, D10).</summary>
 public sealed record Trigger(
     TriggerType Type,
     IReadOnlyList<DayOfWeek> Days,
     IReadOnlyList<TimeOnly> Times,
     DayPhase Phase,
     IReadOnlyList<string> Bosses,
-    Scope Scope = default)
+    Scope Scope = default,
+    int MinMinutes = 0,
+    int MaxMinutes = 0,
+    int PlayerCooldownMinutes = 0,
+    IReadOnlyList<string>? Factions = null,
+    int Kills = 0,
+    int WindowSeconds = 0,
+    bool Shared = false)
 {
     public static Trigger Manual() => new(TriggerType.Manual, [], [], DayPhase.Night, []);
 }
@@ -61,6 +73,10 @@ public enum BehaviourType { Hunt }
 /// wave centre.</summary>
 public sealed record Behaviour(BehaviourType Type, int Range);
 
+/// <summary>An AroundPlayer wave spread over up to <see cref="MaxInstances"/> players, each at least
+/// <see cref="MinSpacing"/> metres from the others (automation D4, D5).</summary>
+public sealed record FanOut(int MaxInstances, int MinSpacing);
+
 public sealed record SpawnWavesAction(
     IReadOnlyList<UnitEntry> Units,
     int Waves,
@@ -72,7 +88,8 @@ public sealed record SpawnWavesAction(
     SpawnModifiers? Modifiers = null,
     bool Loot = false,
     Behaviour? Behaviour = null,
-    bool AllowTerritory = false);
+    bool AllowTerritory = false,
+    FanOut? FanOut = null);
 
 /// <summary>The Empower action's multipliers (faction-empowerment S-1): each 1.0–3.0 of the base value, 1.0 meaning
 /// unchanged, at least one above 1.0.</summary>

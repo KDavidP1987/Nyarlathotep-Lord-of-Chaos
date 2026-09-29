@@ -12,9 +12,9 @@ public partial class DependencyFailureTests
         [Dependency.EventsJson] = EventsJson,
         [Dependency.StateJson] = StateJson,
         [Dependency.CfgValues] = CfgValues,
-        [Dependency.HookDeathEvent] = () => HookFault(Hook.DeathEvent, TriggerType.VBloodKilled),
+        [Dependency.HookDeathEvent] = () => HookFault(Hook.DeathEvent, TriggerType.VBloodKilled, TriggerType.FactionKills),
         [Dependency.HookDayNight] = () => HookFault(Hook.DayNight, TriggerType.GameTime),
-        [Dependency.HookUserConnect] = () => HookFault(Hook.UserConnect, null),
+        [Dependency.HookUserConnect] = () => HookFault(Hook.UserConnect),
         [Dependency.HookUserDisconnect] = DisconnectHook,
         [Dependency.ConnectedUsers] = ConnectedUsers,
         [Dependency.CommandRegistration] = CommandRegistration,
@@ -168,7 +168,7 @@ public partial class DependencyFailureTests
         Assert.All(clamped, c => Assert.NotNull(c.Log));
     }
 
-    static void HookFault(Hook failing, TriggerType? blocked)
+    static void HookFault(Hook failing, params TriggerType[] blocked)
     {
         var log = new LogLines();
         var registry = new FakeHooks(failing);
@@ -185,14 +185,14 @@ public partial class DependencyFailureTests
             Assert.Contains(other, registry.Registered);
         }
         foreach (var t in Enum.GetValues<TriggerType>())
-            Assert.Equal(t != blocked, hooks.AllowsTrigger(t));
+            Assert.Equal(!blocked.Contains(t), hooks.AllowsTrigger(t));
     }
 
     /// <summary>raphael-api-core D21: the disconnect hook unavailable is logged once, and a subscriber who left is
     /// still removed by the offline prune at the next push.</summary>
     static void DisconnectHook()
     {
-        HookFault(Hook.UserDisconnect, null);
+        HookFault(Hook.UserDisconnect);
         var log = new LogLines();
         var users = new FakeUsers();
         var hub = new PushHub(users, [60], log.Add);

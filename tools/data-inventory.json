@@ -56,7 +56,8 @@
         "walkable-spawns › build outputs",
         "raphael-api-admin › build outputs",
         "regions › build outputs",
-        "event-spawns › build outputs"
+        "event-spawns › build outputs",
+        "automation › build outputs"
       ]
     },
     {
@@ -81,7 +82,9 @@
         "regions › release zip",
         "regions › tag and GitHub release v0.6.0",
         "event-spawns › release zip",
-        "event-spawns › tag and GitHub release v0.7.0"
+        "event-spawns › tag and GitHub release v0.7.0",
+        "automation › release zip",
+        "automation › tag and GitHub release v0.8.0"
       ]
     },
     {
@@ -115,7 +118,8 @@
       "singleCopy": false,
       "rows": [
         "event-library › Template catalogue",
-        "event-spawns › templates.json examples"
+        "event-spawns › templates.json examples",
+        "automation › templates.json examples"
       ]
     },
     {
@@ -156,7 +160,11 @@
         "regions › `scope` keys",
         "event-spawns › events.json new keys",
         "event-spawns › events.json.bak",
-        "event-spawns › events.json.tmp, state.json.tmp"
+        "event-spawns › events.json.tmp, state.json.tmp",
+        "automation › events.json new trigger types and fanOut",
+        "automation › state.json NextInterval",
+        "automation › events.json.bak",
+        "automation › events.json.tmp, state.json.tmp"
       ]
     },
     {
@@ -262,7 +270,8 @@
         "raphael-api-admin › plan, reviews, audit, feature doc",
         "regions › review pages",
         "regions › plan, reviews, audit, feature doc",
-        "event-spawns › plan, reviews, audit, feature doc"
+        "event-spawns › plan, reviews, audit, feature doc",
+        "automation › plan, reviews, audit, feature doc"
       ],
       "location": "the repository (docs/, tools/, READMEs, changelogs)",
       "owner": "project owner",
@@ -345,7 +354,8 @@
         "walkable-spawns › snapshot",
         "raphael-api-admin › snapshot",
         "regions › snapshot",
-        "event-spawns › snapshot"
+        "event-spawns › snapshot",
+        "automation › snapshot"
       ],
       "location": "%TEMP%\\nyar-snap-* (saved\\manifest.json plus the copies)",
       "owner": "tools/dev-snapshot.ps1",
@@ -465,7 +475,8 @@
         "walkable-spawns › session log copies",
         "raphael-api-admin › session log copies",
         "regions › session log copies",
-        "event-spawns › session log copies"
+        "event-spawns › session log copies",
+        "automation › session log copies"
       ]
     },
     {
@@ -528,7 +539,9 @@
         "regions › review prompts",
         "regions › Claude's scratchpad (Codex prompts, outputs)",
         "event-spawns › review prompts",
-        "event-spawns › Claude's scratchpad (Codex prompts and outputs, drafts)"
+        "event-spawns › Claude's scratchpad (Codex prompts and outputs, drafts)",
+        "automation › review prompts",
+        "automation › Claude's scratchpad (Codex prompts and outputs, drafts)"
       ]
     },
     {
@@ -612,7 +625,68 @@
       "deletion": "reset when the streak recovers and on restart (event-spawns D30)",
       "singleCopy": false,
       "rows": [
-        "event-spawns › health and failure-streak state"
+        "event-spawns › health and failure-streak state",
+        "automation › health and failure-streak state"
+      ]
+    },
+    {
+      "artifact": "Player region rows",
+      "covers": [],
+      "location": "memory (RegionEntries), in the server process",
+      "owner": "TriggerBus",
+      "retention": "one per connected player: the last scan's region",
+      "deletion": "dropped when the player is absent from a scan, and on restart (automation D9)",
+      "singleCopy": false,
+      "rows": [
+        "automation › region rows"
+      ]
+    },
+    {
+      "artifact": "RegionEntered cooldown rows",
+      "covers": [],
+      "location": "memory (RegionEntries), in the server process",
+      "owner": "TriggerBus",
+      "retention": "per definition and player until playerCooldownMinutes pass, 2000 in all",
+      "deletion": "on expiry, when over 2000 (the stalest first), and on restart (automation D9)",
+      "singleCopy": false,
+      "rows": [
+        "automation › cooldown rows"
+      ]
+    },
+    {
+      "artifact": "FactionKills counters",
+      "covers": [],
+      "location": "memory (KillWindows), in the server process",
+      "owner": "TriggerBus",
+      "retention": "per definition and player (or shared), at most `kills` timestamps",
+      "deletion": "on firing, when older than windowSeconds, over 200 per definition or 2000 in all, when the definition leaves the startable set, and on restart (automation D11)",
+      "singleCopy": false,
+      "rows": [
+        "automation › kill counters"
+      ]
+    },
+    {
+      "artifact": "Start focus",
+      "covers": [],
+      "location": "memory, per running instance (ActiveEvent), in the server process",
+      "owner": "EventEngine",
+      "retention": "the running instance",
+      "deletion": "at every end path, with the instance (automation D13)",
+      "singleCopy": false,
+      "rows": [
+        "automation › focus"
+      ]
+    },
+    {
+      "artifact": "Player-trigger refusal throttle and dedupe keys",
+      "covers": [],
+      "location": "memory (PlayerTriggerGate), in the server process",
+      "owner": "TriggerBus",
+      "retention": "60 s (throttle) and 5 s (dedupe)",
+      "deletion": "on expiry and on restart (automation D14)",
+      "singleCopy": false,
+      "rows": [
+        "automation › refusal-line throttle and dedupe keys"
       ]
     }
   ]

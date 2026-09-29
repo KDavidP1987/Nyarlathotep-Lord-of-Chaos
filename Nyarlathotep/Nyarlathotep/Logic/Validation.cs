@@ -180,7 +180,7 @@ public static class EventValidator
             var enabledEl = Required(e, "enabled", "enabled must be true or false");
             if (enabledEl.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) throw new Fail("enabled must be true or false");
             var pillar = ParsePillar(Required(e, "pillar", "pillar is required"));
-            var trigger = ParseTrigger(Required(e, "trigger", "trigger is required"), units, regions);
+            var trigger = ParseTrigger(Required(e, "trigger", "trigger is required"), units, factions, regions);
             var conditions = e.TryGetProperty("conditions", out var c) ? ParseConditions(c) : new Conditions();
             var duration = Int(Required(e, "durationSeconds", "durationSeconds must be 30-7200"), 30, 7200, "durationSeconds must be 30-7200");
             var (action, empower) = ParseAction(Required(e, "action", "action is required"), pillar, trigger, units, factions, regions);
@@ -254,11 +254,49 @@ public static class EventValidator
         };
     }
 
-    /// <summary>The trigger by its type, then its optional scope (regions D3): every trigger type takes one.</summary>
-    static Trigger ParseTrigger(JsonElement t, IUnitCatalog units, IRegionCatalog regions)
+    /// <summary>The trigger by its type, then its optional scope (regions D3): every trigger type takes one, and
+    /// RegionEntered needs one that names regions (automation D8).</summary>
+    static Trigger ParseTrigger(JsonElement t, IUnitCatalog units, IFactionCatalog factions, IRegionCatalog regions)
     {
-        var trigger = ParseTriggerType(t, units);
-        return t.TryGetProperty("scope", out var s) ? trigger with { Scope = ParseScope(s, "trigger.scope", regions) } : trigger;
+        var trigger = ParseTriggerType(t, units, factions);
+        if (t.TryGetProperty("scope", out var s)) trigger = trigger with { Scope = ParseScope(s, "trigger.scope", regions) };
+        if (trigger.Type == TriggerType.RegionEntered && trigger.Scope.IsGlobal) throw new Fail(RegionEnteredScopeRule);
+        return trigger;
+    }
+
+    public const int MinIntervalMinutes = 5;
+    public const int MaxIntervalMinutes = 1440;
+    public const int MaxPlayerCooldownMinutes = 1440;
+    public const int DefaultPlayerCooldownMinutes = 30;
+    public const int MinKills = 3;
+    public const int MaxKills = 500;
+    public const int MinKillWindowSeconds = 10;
+    public const int MaxKillWindowSeconds = 3600;
+    public const string MinMinutesRule = "trigger.minMinutes must be 5-1440";
+    public const string MaxMinutesRule = "trigger.maxMinutes must be 5-1440";
+    public const string IntervalOrder = "trigger.minMinutes must be at most trigger.maxMinutes";
+    public const string RegionEnteredScopeRule = "trigger.scope must name regions for RegionEntered";
+    public const string PlayerCooldownRule = "trigger.playerCooldownMinutes must be 0-1440";
+    public const string TriggerFactionsRule = "trigger.factions must be 1-5 faction names";
+    public const string KillsRule = "trigger.kills must be 3-500";
+    public const string KillWindowRule = "trigger.windowSeconds must be 10-3600";
+    public const string SharedRule = "trigger.shared must be true or false";
+
+    /// <summary>1-5 distinct factions, each not deny-listed and known to <paramref name="factions"/>; the Empower action's
+    /// rules and reasons (faction-empowerment D1), under <paramref name="rule"/>.</summary>
+    static List<string> FactionNames(JsonElement f, string rule, IFactionCatalog factions)
+    {
+        if (f.ValueKind != JsonValueKind.Array || f.GetArrayLength() is < 1 or > MaxFactions) throw new Fail(rule);
+        var list = new List<string>();
+        foreach (var x in f.EnumerateArray())
+        {
+            var name = Str(x, rule);
+            if (list.Contains(name)) throw new Fail(rule);
+            if (FactionDenyList.IsDenied(name)) throw new Fail($"faction{Shown(name)} is deny-listed");
+            if (!name.StartsWith("Faction_", StringComparison.Ordinal) || !factions.IsKnown(name)) throw new Fail($"unknown faction{Shown(name)}");
+            list.Add(name);
+        }
+        return list;
     }
 
     /// <summary>`scope` (regions D3, A3, A15): "Global" or 1 to <see cref="RegionNames.Count"/> distinct region names,
@@ -284,7 +322,7 @@ public static class EventValidator
         return new Scope(names);
     }
 
-    static Trigger ParseTriggerType(JsonElement t, IUnitCatalog units)
+    static Trigger ParseTriggerType(JsonElement t, IUnitCatalog units, IFactionCatalog factions)
     {
         if (t.ValueKind != JsonValueKind.Object) throw new Fail("trigger must be an object with a type");
         var type = t.TryGetProperty("type", out var ty) && ty.ValueKind == JsonValueKind.String ? ty.GetString()! : "";
@@ -337,6 +375,32 @@ public static class EventValidator
                 foreach (var boss in bosses)
                     if (boss != "any" && (!boss.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(boss))) throw new Fail($"unknown unit{Shown(boss)}");
                 return new Trigger(TriggerType.VBloodKilled, [], [], DayPhase.Night, bosses);
+            }
+            case "Interval":
+            {
+                OnlyKeys(t, "trigger", "type", "minMinutes", "maxMinutes", "scope");
+                var min = Int(Required(t, "minMinutes", MinMinutesRule), MinIntervalMinutes, MaxIntervalMinutes, MinMinutesRule);
+                var max = Int(Required(t, "maxMinutes", MaxMinutesRule), MinIntervalMinutes, MaxIntervalMinutes, MaxMinutesRule);
+                if (min > max) throw new Fail(IntervalOrder);
+                return new Trigger(TriggerType.Interval, [], [], DayPhase.Night, [], MinMinutes: min, MaxMinutes: max);
+            }
+            case "RegionEntered":
+            {
+                OnlyKeys(t, "trigger", "type", "scope", "playerCooldownMinutes");
+                if (!t.TryGetProperty("scope", out _)) throw new Fail(RegionEnteredScopeRule);
+                var cooldown = t.TryGetProperty("playerCooldownMinutes", out var pc)
+                    ? Int(pc, 0, MaxPlayerCooldownMinutes, PlayerCooldownRule)
+                    : DefaultPlayerCooldownMinutes;
+                return new Trigger(TriggerType.RegionEntered, [], [], DayPhase.Night, [], PlayerCooldownMinutes: cooldown);
+            }
+            case "FactionKills":
+            {
+                OnlyKeys(t, "trigger", "type", "factions", "kills", "windowSeconds", "shared", "scope");
+                var list = FactionNames(Required(t, "factions", TriggerFactionsRule), TriggerFactionsRule, factions);
+                var kills = Int(Required(t, "kills", KillsRule), MinKills, MaxKills, KillsRule);
+                var window = Int(Required(t, "windowSeconds", KillWindowRule), MinKillWindowSeconds, MaxKillWindowSeconds, KillWindowRule);
+                var shared = t.TryGetProperty("shared", out var sh) && Bool(sh, SharedRule);
+                return new Trigger(TriggerType.FactionKills, [], [], DayPhase.Night, [], Factions: list, Kills: kills, WindowSeconds: window, Shared: shared);
             }
             default:
                 throw new Fail($"unknown trigger type{Shown(type)}");
@@ -410,17 +474,7 @@ public static class EventValidator
         OnlyKeys(a, "action", "type", "factions", "includeUnits", "excludeUnits", "includeVBloods", "stats", "scope");
 
         const string factionsRule = "action.factions must be 1-5 distinct Faction_ names";
-        var f = Required(a, "factions", factionsRule);
-        if (f.ValueKind != JsonValueKind.Array || f.GetArrayLength() is < 1 or > MaxFactions) throw new Fail(factionsRule);
-        var factionList = new List<string>();
-        foreach (var x in f.EnumerateArray())
-        {
-            var name = Str(x, factionsRule);
-            if (factionList.Contains(name)) throw new Fail(factionsRule);
-            if (FactionDenyList.IsDenied(name)) throw new Fail($"faction{Shown(name)} is deny-listed");
-            if (!name.StartsWith("Faction_", StringComparison.Ordinal) || !factions.IsKnown(name)) throw new Fail($"unknown faction{Shown(name)}");
-            factionList.Add(name);
-        }
+        var factionList = FactionNames(Required(a, "factions", factionsRule), factionsRule, factions);
 
         var include = UnitList(a, "includeUnits", units, refuseDenied: true);
         var exclude = UnitList(a, "excludeUnits", units, refuseDenied: false);
@@ -472,7 +526,7 @@ public static class EventValidator
     static SpawnWavesAction ParseSpawnWaves(JsonElement a, Trigger trigger, IUnitCatalog units, IRegionCatalog regions)
     {
         OnlyKeys(a, "action", "type", "units", "waves", "intervalSeconds", "radius", "location", "unitLifetimeSeconds", "scope",
-            "modifiers", "loot", "behaviour", "allowTerritory");
+            "modifiers", "loot", "behaviour", "allowTerritory", "fanOut");
 
         const string unitsRule = "action.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-50 }";
         var u = Required(a, "units", unitsRule);
@@ -504,7 +558,28 @@ public static class EventValidator
         var allowTerritory = a.TryGetProperty("allowTerritory", out var at) && Bool(at, "action.allowTerritory must be true or false");
         if (behaviour is { Type: BehaviourType.Hunt } hunt && location.Type == LocationType.AroundPlayer && location.MaxDist > hunt.Range)
             throw new Fail(MaxDistOverRange);
-        return new SpawnWavesAction(list, waves, interval, radius, location, lifetime, scope, modifiers, loot, behaviour, allowTerritory);
+        var fanOut = a.TryGetProperty("fanOut", out var fo) ? ParseFanOut(fo, location) : null;
+        return new SpawnWavesAction(list, waves, interval, radius, location, lifetime, scope, modifiers, loot, behaviour, allowTerritory, fanOut);
+    }
+
+    public const int MinFanOutInstances = 2;
+    public const int MaxFanOutInstances = 10;
+    public const int MinFanOutSpacing = 50;
+    public const int MaxFanOutSpacing = 500;
+    public const string FanOutObject = "action.fanOut must be an object";
+    public const string FanOutLocation = "action.fanOut needs an AroundPlayer location";
+    public const string FanOutInstancesRule = "action.fanOut.maxInstances must be 2-10";
+    public const string FanOutSpacingRule = "action.fanOut.minSpacing must be 50-500";
+
+    /// <summary>`fanOut` (automation D4): { "maxInstances": 2-10, "minSpacing": 50-500 }, only with an AroundPlayer location.</summary>
+    static FanOut ParseFanOut(JsonElement f, Location location)
+    {
+        if (f.ValueKind != JsonValueKind.Object) throw new Fail(FanOutObject);
+        if (location.Type != LocationType.AroundPlayer) throw new Fail(FanOutLocation);
+        OnlyKeys(f, "action.fanOut", "maxInstances", "minSpacing");
+        var n = Int(Required(f, "maxInstances", FanOutInstancesRule), MinFanOutInstances, MaxFanOutInstances, FanOutInstancesRule);
+        var spacing = Int(Required(f, "minSpacing", FanOutSpacingRule), MinFanOutSpacing, MaxFanOutSpacing, FanOutSpacingRule);
+        return new FanOut(n, spacing);
     }
 
     public const double MinChance = 0.05;

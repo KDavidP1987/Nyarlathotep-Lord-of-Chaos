@@ -33,6 +33,9 @@ public static class ApiLines
         TriggerType.Schedule => "schedule",
         TriggerType.GameTime => "ingame",
         TriggerType.VBloodKilled => "vbloodkilled",
+        TriggerType.Interval => "interval",
+        TriggerType.RegionEntered => "regionentered",
+        TriggerType.FactionKills => "factionkills",
         _ => "manual",
     };
 

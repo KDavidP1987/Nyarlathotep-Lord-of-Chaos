@@ -61,8 +61,8 @@ public partial class WireFormatTests
     {
         Assert.Contains(" ready=0 ", Wire.Version(Sample with { Ready = false }));
         Assert.Contains(" ready=1 ", Wire.Version(Sample with { Ready = true }));
-        Assert.Contains(" api=5 ", Wire.Version(Sample with { Api = Wire.Api }));
-        Assert.Equal(5, Wire.Api);   // raphael-api-core D4, faction-empowerment D11, raphael-api-admin D10, regions D10
+        Assert.Contains(" api=6 ", Wire.Version(Sample with { Api = Wire.Api }));
+        Assert.Equal(6, Wire.Api);   // raphael-api-core D4, faction-empowerment D11, raphael-api-admin D10, regions D10, automation D17
         Assert.Contains(" plugin=0.2.0 ", Wire.Version(Sample));
     }
 

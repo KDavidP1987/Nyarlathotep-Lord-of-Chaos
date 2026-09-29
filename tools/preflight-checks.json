@@ -8,7 +8,8 @@
     "docs/dod/walkable-spawns.md",
     "docs/dod/raphael-api-admin.md",
     "docs/dod/regions.md",
-    "docs/dod/event-spawns.md"
+    "docs/dod/event-spawns.md",
+    "docs/dod/automation.md"
   ],
   "sessionsUncounted": {
     "event-spawns": [1]
@@ -18,7 +19,8 @@
     "walkable-spawns": 1,
     "raphael-api-admin": 1,
     "regions": 1,
-    "event-spawns": 1
+    "event-spawns": 1,
+    "automation": 1
   },
   "dataTests": {
     "event-spawns": [
@@ -57,6 +59,9 @@
     ],
     "event-spawns": [
       "docs/features/EVENT_SPAWNS.md"
+    ],
+    "automation": [
+      "docs/features/AUTOMATION.md"
     ],
     "boss-reinforcements": [
       "docs/features/BOSS_REINFORCEMENTS.md"

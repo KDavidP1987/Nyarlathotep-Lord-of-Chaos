@@ -75,6 +75,12 @@ public partial class CommandArgTests
         "trigger.times" => "20:00",
         "trigger.phase" => "day",
         "trigger.bosses" => "any",
+        "trigger.playerCooldownMinutes" => "30",
+        "trigger.factions" => "Faction_Bandits",
+        "trigger.kills" => "20",
+        "trigger.windowSeconds" => "300",
+        "trigger.shared" => "true",
+        "action.fanOut" => "3 150",
         "action.factions" => "Faction_Legion",
         "action.units" => "CHAR_Bandit_Thug:2",
         "location" => "here",
@@ -94,7 +100,7 @@ public partial class CommandArgTests
     [Fact]
     public void SettableFields_passes_every_table_name()
     {
-        Assert.Equal(33, CommandArgs.SettableFields.Count);
+        Assert.Equal(41, CommandArgs.SettableFields.Count);      // automation D16: 7 trigger fields and action.fanOut
         foreach (var (name, (family, who)) in CommandArgs.SettableFields)
         {
             var field = name.Replace(".N.", ".1.", StringComparison.Ordinal);        // the table's unit-chance placeholder
