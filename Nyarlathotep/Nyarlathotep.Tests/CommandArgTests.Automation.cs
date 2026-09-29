@@ -25,7 +25,7 @@ public partial class CommandArgTests
     [InlineData("trigger.windowSeconds", "3601", EventValidator.KillWindowRule)]
     [InlineData("trigger.shared", "yes", EventValidator.SharedRule)]
     [InlineData("trigger.shared", "True", EventValidator.SharedRule)]
-    [InlineData("trigger.factions", "Faction_A,Faction_B,Faction_C,Faction_D,Faction_E,Faction_F", "trigger.factions must be 1-5 Faction_ names, comma separated")]
+    [InlineData("trigger.factions", "Faction_A,Faction_B,Faction_C,Faction_D,Faction_E,Faction_F", EventValidator.TriggerFactionsRule)]
     [InlineData("trigger.factions", "Bandits", "trigger.factions names must be CHAR_ or Faction_ then A-Za-z0-9_, at most 96 characters")]
     [InlineData("action.fanOut", "1 150", EventValidator.FanOutInstancesRule)]
     [InlineData("action.fanOut", "11 150", EventValidator.FanOutInstancesRule)]
@@ -117,7 +117,7 @@ public partial class CommandArgTests
         EventValidator.MinMinutesRule, EventValidator.MaxMinutesRule, EventValidator.IntervalOrder, EventValidator.RegionEnteredScopeRule,
         EventValidator.PlayerCooldownRule, EventValidator.TriggerFactionsRule, EventValidator.KillsRule, EventValidator.KillWindowRule,
         EventValidator.SharedRule, EventValidator.FanOutLocation, EventValidator.FanOutInstancesRule, EventValidator.FanOutSpacingRule,
-        CommandArgs.TriggerTypeRule, CommandArgs.FanOutRule, "trigger.factions must be 1-5 Faction_ names, comma separated",
+        CommandArgs.TriggerTypeRule, CommandArgs.FanOutRule, WaveLines.ZeroRolledSkip(int.MaxValue, "x"),
         "trigger.minMinutes needs an Interval trigger", "trigger.playerCooldownMinutes needs a RegionEntered trigger", "trigger.shared needs a FactionKills trigger",
     ];
 

@@ -480,6 +480,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 ## Amendments
 - A1 · 2026-09-29 · discovered · ~D21 · layer: 5.2 · Review 4 F2 (advisory): an unconditional "player scans" count in -TimingSpan would break event-spawns' TimingSpan fixtures and its closed D24 success line, which hold no "player triggers:" lines; -MinScans (default 0, output unchanged) gates it and D21 passes -MinScans 10. Probes: 4.2 the empty case is -MinScans 0 (0.7.0's line) and a span with no scan line under -MinScans 10 fails; 4.5 every span is counted the same way; 12.4 the fixture with no scan line must fail
 - A2 · 2026-09-29 · discovered · ~D11 · layer: 4.1 · Review 4 F4 (advisory): D11 did not say how a kill by a castle servant or structure (EntityOwner not a player character) counts; it resolves to no player and counts nothing, and KillWindows' fixture gains the case
+- A3 · 2026-09-29 · discovered · ~D6 · layer: 4.2 · step 1 code review F3 (advisory): D6 named no reason for a fanned-out wave whose rolled groups are all dealt 0 units because MaxTrackedUnits has no free slot; it is skipped with "wave <n> of <id> skipped: no free unit slot" after the cap line "skipped by MaxTrackedUnits: <n> of <n>", while the one-centre wave keeps WaveGate.Decide's 0.7.0 outcome (D6's equivalence); FanOutCaps_fails_when_no_group_spawns holds the case
 
 ## Log
 - 2026-09-29 · status → draft · plan
@@ -488,6 +489,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-29 · status → ready · approve
 - 2026-09-29 · status → in-progress · start
 - 2026-09-29 · note · S-7's fallback reworded (Review 4 F8), meaning unchanged
+- 2026-09-29 · note · amendment A3 from the step 1 code review's advisory F3 (discovered, layer 4.2, not a gating probe)
 
 ## Baseline
 - [ ] D1 · **Interval trigger validated** Logic/Validation.cs ParseTriggerType accepts `{ "type": "Interval", "minMinutes": 5-1440, "maxMinutes": 5-1440 }` with an optional `scope`, minMinutes at most maxMinutes; a missing or out-of-range value, min above max, or any other key disables the definition with one reason naming the field: "trigger.minMinutes must be 5-1440", "trigger.maxMinutes must be 5-1440", "trigger.minMinutes must be at most trigger.maxMinutes", "unknown field trigger.<key>"; the other trigger types parse as in 0.7.0 · test: Nyarlathotep.Tests EventValidationTests IntervalTrigger (fails when: a missing or out-of-range value, min above max, or an unknown key is accepted, or a valid Interval trigger is disabled)

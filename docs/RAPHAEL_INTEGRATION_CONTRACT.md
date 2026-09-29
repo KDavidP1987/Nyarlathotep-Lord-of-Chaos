@@ -26,7 +26,7 @@
 >
 > api 6 ships with the `automation` release (0.8.0): three new values of `trigger` on `[NYAR:def]` rows, `interval`,
 > `regionentered` and `factionkills` (§3). It adds no tag, key, push kind or command; a fanned-out wave still sends one
-> `wave` push. An api 5 client ignores no key here but may show such an event's trigger wrongly. api 7 and later are
+> `wave` push. api 6 adds no key; an api 5 client may show an unknown `trigger` value wrongly. api 7 and later are
 > PLANNED in §10, the rows each later child adds. Nothing in §10 is sent yet.
 
 ### Tags and commands

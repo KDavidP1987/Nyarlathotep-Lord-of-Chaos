@@ -174,6 +174,20 @@ public sealed class KillWindows
         return false;
     }
 
+    /// <summary>Drops every counter whose newest kill left its definition's window (the Design › Data row), and the
+    /// counters of definitions not in <paramref name="definitions"/>; TriggerBus calls it on each scan.</summary>
+    public void Prune(IEnumerable<EventDefinition> definitions, DateTime utcNow)
+    {
+        var windows = definitions.ToDictionary(d => d.Id, d => TimeSpan.FromSeconds(d.Trigger.WindowSeconds), StringComparer.Ordinal);
+        foreach (var (id, counters) in _byDefinition.ToList())
+        {
+            if (!windows.TryGetValue(id, out var window)) { _byDefinition.Remove(id); continue; }
+            foreach (var (key, c) in counters.ToList())
+                if (c.Kills.Count == 0 || utcNow - c.Kills.Last() > window) counters.Remove(key);
+            if (counters.Count == 0) _byDefinition.Remove(id);
+        }
+    }
+
     /// <summary>Drops the counters of every definition that left the startable FactionKills set.</summary>
     public void Keep(IEnumerable<string> startableIds)
     {
@@ -250,10 +264,12 @@ public static class Phantoms
     }
 
     /// <summary>The phantoms for one pick: none without an eligible real player (online, alive, not in PvP combat, a usable
-    /// position); else up to <paramref name="n"/>, the i-th at +i × 200 m on x, those at an unusable position skipped.</summary>
-    public static IReadOnlyList<PickCandidate> Place(IReadOnlyList<PickCandidate> real, int n)
+    /// position, and, as the pick itself requires (D5), <paramref name="allowed"/>: outside claimed territory and inside the
+    /// action scope); else up to <paramref name="n"/>, the i-th at +i × 200 m on x, those at an unusable position skipped.</summary>
+    public static IReadOnlyList<PickCandidate> Place(IReadOnlyList<PickCandidate> real, int n, Func<float, float, bool>? allowed = null)
     {
-        var first = real.ToList().FindIndex(p => p.Online && p.Alive && !p.InPvpCombat && PlayerPosition.Usable(p.X, p.Y, p.Z) && !IsPhantom(p.PlatformId));
+        var first = real.ToList().FindIndex(p => p.Online && p.Alive && !p.InPvpCombat && PlayerPosition.Usable(p.X, p.Y, p.Z) && !IsPhantom(p.PlatformId)
+            && (allowed is null || allowed(p.X, p.Z)));
         if (first < 0) return [];
         var anchor = real[first];
         var placed = new List<PickCandidate>();

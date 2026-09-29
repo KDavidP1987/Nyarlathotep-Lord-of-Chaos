@@ -10,12 +10,8 @@ public partial class PushTests
 
     static GroupCentre[] Centres(int n) => Enumerable.Range(0, n).Select(i => new GroupCentre(i * 200f, 0, 0, false)).ToArray();
 
-    /// <summary>The wave action's report of a fanned-out wave: the engine counts and pushes a spawned wave once.</summary>
-    static void Report(EventEngine engine, FanOutDecision d, string id)
-    {
-        if (d.Outcome == WaveOutcome.Spawn) engine.WaveSpawned(id);
-        else engine.WaveSkipped(id);
-    }
+    /// <summary>The wave action's report of a fanned-out wave: EventEngine.WaveDecided, once per wave.</summary>
+    static void Report(EventEngine engine, FanOutDecision d, string id) => engine.WaveDecided(id, d.Outcome);
 
     static string Hunters => Json.Event("hunters", action: Json.ValidAction.Replace("{ \"type\": \"Point\", \"x\": -1200.5, \"z\": -800 }",
         "{ \"type\": \"AroundPlayer\", \"minDist\": 20, \"maxDist\": 40 }").TrimEnd('}') + ", \"fanOut\": { \"maxInstances\": 3, \"minSpacing\": 150 } }");

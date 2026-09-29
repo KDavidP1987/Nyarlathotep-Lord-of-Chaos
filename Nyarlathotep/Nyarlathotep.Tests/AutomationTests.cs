@@ -248,8 +248,12 @@ public class AutomationTests
         var zero = WaveGate.DecideGroups(Facts(), [G(0), G(200)], Rolls(0, 0), 20, 0, 150);
         Assert.Equal((WaveOutcome.ZeroRolled, "wave 2 of hunt: 0 units rolled"), (zero.Outcome, zero.Line));
         var noSlot = WaveGate.DecideGroups(Facts(), [G(0), G(200)], Rolls(3, 3), 20, 150, 150);
-        Assert.Equal((WaveOutcome.Skip, "wave 2 of hunt skipped: no free unit slot"), (noSlot.Outcome, noSlot.Line));
+        Assert.Equal((WaveOutcome.Skip, "wave 2 of hunt skipped: no free unit slot"), (noSlot.Outcome, noSlot.Line));   // A3
         Assert.Empty(noSlot.Groups);
+        // a picked wave with no centre spawns nothing, never a group at the origin (step 1 code review F8)
+        var none = WaveGate.DecideGroups(Facts(), [], Rolls(3), 20, 0, 150);
+        Assert.Equal((WaveOutcome.Skip, "wave 2 of hunt skipped: no eligible player"), (none.Outcome, none.Line));
+        Assert.Empty(none.Groups);
     }
 
     [Fact]
@@ -258,7 +262,7 @@ public class AutomationTests
         var claimedFirst = WaveGate.DecideGroups(Facts(), [G(0, claimed: true), G(200)], Rolls(0), 20, 0, 150);
         Assert.Equal((WaveOutcome.Skip, "wave 2 of hunt skipped: centre in claimed territory"), (claimedFirst.Outcome, claimedFirst.Line));
         var zeroFirst = WaveGate.DecideGroups(Facts(), [G(0), G(200, claimed: true)], Rolls(0), 20, 0, 150);
-        Assert.Equal((WaveOutcome.Skip, "wave 2 of hunt: 0 units rolled"), (zeroFirst.Outcome, zeroFirst.Line));
+        Assert.Equal((WaveOutcome.Skip, "wave 2 of hunt skipped: 0 units rolled"), (zeroFirst.Outcome, zeroFirst.Line));   // D6's form
     }
 
     [Fact]
@@ -467,6 +471,15 @@ public class AutomationTests
         Assert.False(windows.Add(def, "p1", T0.AddSeconds(30)));
         Assert.False(windows.Add(def, "p1", T0.AddSeconds(61)));                                // the first kill left the window
         Assert.True(windows.Add(def, "p1", T0.AddSeconds(62)));
+        // a counter whose kills all left the window is dropped by the scan's prune, not only by a later kill
+        Assert.False(windows.Add(def, "p2", T0));
+        windows.Prune([def], T0.AddSeconds(60));
+        Assert.Equal(1, windows.CountersFor(def.Id));
+        windows.Prune([def], T0.AddSeconds(61));
+        Assert.Equal(0, windows.Counters);
+        Assert.False(windows.Add(def, "p3", T0));
+        windows.Prune([], T0);                                                                  // the definition left the set
+        Assert.Equal(0, windows.Counters);
     }
 
     [Fact]
@@ -738,6 +751,10 @@ public class AutomationTests
     {
         Assert.Empty(Phantoms.Place([], 4));
         Assert.Empty(Phantoms.Place([P(0, "dead", alive: false), P(100, "pvp", pvp: true), P(float.NaN, "nan")], 4));
+        // the anchor passes the pick's own territory and scope test (D5): a player in claimed territory is skipped
+        var placed = Phantoms.Place([P(0, "castle"), P(1000, "field")], 2, (x, _) => x > 500);
+        Assert.Equal([1200f, 1400f], placed.Select(p => p.X));
+        Assert.Empty(Phantoms.Place([P(0, "castle")], 2, (_, _) => false));
     }
 
     [Fact]
@@ -802,6 +819,14 @@ public class AutomationTests
     [Fact]
     public void StateNextInterval_passes_fixture_round_trip()
     {
+        // writing an empty NextInterval leaves it out without changing the document (step 1 code review F1)
+        var held = new Dictionary<string, DateTime>();
+        var empty = new StateDocument { NextInterval = held };
+        Assert.DoesNotContain("NextInterval", Encoding.UTF8.GetString(empty.Serialize()));
+        Assert.Same(held, empty.NextInterval);
+        held["tick"] = T0;
+        Assert.Contains("\"NextInterval\"", Encoding.UTF8.GetString(empty.Serialize()));
+
         var doc = new StateDocument { NextInterval = new() { ["tick"] = T0.AddMinutes(75) } };
         var text = Encoding.UTF8.GetString(doc.Serialize());
         Assert.Contains("\"NextInterval\": {", text);

@@ -125,10 +125,15 @@ public sealed class StateDocument
         WriteIndented = true,
     };
 
+    /// <summary>The document's bytes. An empty NextInterval is left out ("{}" is never written, D31) without changing the
+    /// document, so a caller holding the dictionary keeps writing into the one that is saved next.</summary>
     public byte[] Serialize()
     {
-        if (NextInterval is { Count: 0 }) NextInterval = null;            // "{}" is never written (D31)
-        return JsonSerializer.SerializeToUtf8Bytes(this, Options);
+        var next = NextInterval;
+        if (next is not { Count: 0 }) return JsonSerializer.SerializeToUtf8Bytes(this, Options);
+        NextInterval = null;
+        try { return JsonSerializer.SerializeToUtf8Bytes(this, Options); }
+        finally { NextInterval = next; }
     }
 
     /// <summary>Null when the bytes are not a state.json object with a SchemaVersion of 1 or higher.</summary>

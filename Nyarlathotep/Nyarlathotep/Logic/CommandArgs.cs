@@ -306,6 +306,7 @@ public static class CommandArgs
     static Arg<object> Factions(string field, string? value)
     {
         var parts = CommaList(value, EventValidator.MaxFactions);
+        if (parts is null && field == "trigger.factions") return Arg<object>.Bad(EventValidator.TriggerFactionsRule);     // D10's rule (automation D16)
         if (parts is null) return Arg<object>.Bad($"{field} must be 1-{EventValidator.MaxFactions} Faction_ names, comma separated");
         if (parts.Any(f => !IsNameValue(f, "Faction_"))) return Arg<object>.Bad(NameRule(field));
         if (Repeated(parts) is { } twice) return Arg<object>.Bad(Twice(field, twice));

@@ -299,6 +299,14 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
         Push?.Wave(id, a.WavesUsed);
     }
 
+    /// <summary>The one report of a decided wave (automation D17): a spawned wave, however many groups it fanned out to, is
+    /// counted and pushed once; any other outcome is a skipped wave.</summary>
+    public void WaveDecided(string id, WaveOutcome outcome)
+    {
+        if (outcome == WaveOutcome.Spawn) WaveSpawned(id);
+        else WaveSkipped(id);
+    }
+
     /// <summary>A wave of <paramref name="id"/> was skipped or rolled no unit (event-spawns D29): its time is used, so the
     /// next wave comes at its own time, but it is not a spawned wave (the status row's `wave` stays spawned/total) and
     /// is not reported, since nothing spawned (D20; A59, A62).</summary>

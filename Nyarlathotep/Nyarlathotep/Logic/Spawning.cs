@@ -279,6 +279,8 @@ public sealed class SystemRandom(Random random) : IRandom
 public static class WaveLines
 {
     public static string ZeroRolled(int wave, string id) => $"wave {wave} of {id}: 0 units rolled";
+    /// <summary>A fanned-out wave skipped for another group's reason whose first group rolled 0 (automation D6).</summary>
+    public static string ZeroRolledSkip(int wave, string id) => $"wave {wave} of {id} skipped: 0 units rolled";
     public static string NoEligiblePlayer(int wave, string id) => $"wave {wave} of {id} skipped: no eligible player";
     public static string CentreClaimed(int wave, string id) => $"wave {wave} of {id} skipped: centre in claimed territory";
     public static string TerritoryUnknown(int wave, string id) => $"wave {wave} of {id} skipped: territory unknown";
@@ -712,6 +714,7 @@ public static class WaveGate
     public static FanOutDecision DecideGroups(WaveFacts facts, IReadOnlyList<GroupCentre> centres, Func<IReadOnlyList<string>> roll,
         int maxPerWave, int occupied, int maxTracked)
     {
+        if (facts.Pick == PickOutcome.Picked && centres.Count == 0) facts = facts with { Pick = PickOutcome.NoEligible };   // no centre, no group
         if (facts.Blocked || facts.MapFailed && facts.NeedsMap || facts.Pick is PickOutcome.NoEligible or PickOutcome.QueryFailed || centres.Count <= 1)
         {
             var centre = centres.Count > 0 ? centres[0] : default;
@@ -730,7 +733,7 @@ public static class WaveGate
                 continue;
             }
             var units = roll().ToList();
-            if (units.Count == 0) { firstReason ??= WaveLines.ZeroRolled(facts.Wave, facts.EventId); continue; }
+            if (units.Count == 0) { firstReason ??= WaveLines.ZeroRolledSkip(facts.Wave, facts.EventId); continue; }
             rolled.Add((i, units));
         }
         if (rolled.Count == 0)
