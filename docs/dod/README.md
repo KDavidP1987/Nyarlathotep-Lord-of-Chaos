@@ -5,7 +5,7 @@
 
 | Plan | Title | Status | Size | Verified | Baseline items | Prediction | Parent |
 |---|---|---|---|---|---|---|---|
-| [automation](automation.md) | Automation — interval, player-action triggers and fan-out | ready | L | 0/31 | 31 | 100 % | nyarlathotep |
+| [automation](automation.md) | Automation — interval, player-action triggers and fan-out | in-progress | L | 0/31 | 31 | 94 % | nyarlathotep |
 | [boss-reinforcements](boss-reinforcements.md) | Boss reinforcements — adds, phases and the anti-carry burst, and release 0.8.0 | ready | L | 0/20 | 20 | 100 % | nyarlathotep |
 | [event-library](event-library.md) | Event library — built-in templates and in-game authoring | done | L | 36/36 | 34 | 55 % | nyarlathotep |
 | [event-spawns](event-spawns.md) | Event spawns — modifiers, Hunt and player locations | done | L | 24/24 | 24 | 26 % | nyarlathotep |
@@ -18,6 +18,6 @@
 | [spikes](spikes.md) | Spikes S1-S3, march, restart marker, carrier buff | done | M | 20/20 | 20 | 50 % | nyarlathotep |
 | [walkable-spawns](walkable-spawns.md) | Walkable spawns — the walk probe, walkable spawn points and release 0.5.1 | done | M | 12/12 | 12 | 41 % | nyarlathotep |
 
-Most-missed layers — done plans: layer 12.4 (33), layer 14.4 (24), layer 6.2 (16), layer 6.1 (16), layer 4.1 (14); open plans (provisional): layer 6.1 (3), layer 14.1 (2), layer 5.1 (1), layer 10.1 (1), layer 3.1 (1).
+Most-missed layers — done plans: layer 12.4 (33), layer 14.4 (24), layer 6.2 (16), layer 6.1 (16), layer 4.1 (14); open plans (provisional): layer 6.1 (3), layer 5.2 (2), layer 4.1 (2), layer 14.1 (2), layer 5.1 (1).
 
 Store: `docs/dod`. Plans are the source of truth; this file is regenerated.
