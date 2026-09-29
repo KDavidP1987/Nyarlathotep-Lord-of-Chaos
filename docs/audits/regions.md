@@ -24,6 +24,14 @@ under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line. S
 - feature doc read: docs/features/REGIONS.md (Status: step 1 built; no open questions); plan D4-D6, D8-D11, D14, Business rules, Paths walked step 2
 - in-game baseline: not needed (step 2 has no in-game part; Session 1 is step 3)
 
+### Step 3 · 2026-09-28 · d062a68
+- git status: clean at d062a68 (step 2 code a85852e and its post-audit)
+- compile: 0 Warning(s), 0 Error(s); tests: 1842 passed
+- preflight: PREFLIGHT OK (before the 0.6.0 version pair, A35)
+- dod status: regions 12/16 verified (D1, D3-D11, D14, D15); open D2, D12, D13, D16, all step 3; review READY after Review 9; amendments A1-A38
+- feature doc read: docs/features/REGIONS.md (Status: step 2 built and post-audited; no open questions); plan D2, D12, D13, D15, D16, Build plan step 3, Rollout, A31, A33, A35, A36
+- in-game baseline: the rg1 boot of the 0.6.0 build is the baseline before Session 1 (its "regions:" line against the fixture, A31); rg0 was step 2's
+
 ## Post-audit
 ### Step 1 · 2026-09-28 · e512382
 - built: Logic/Regions.cs (RegionNames: the 10 WorldRegionType names except None and Other, A16; Scope, Global by default, a read-only copy; IRegionCatalog and NoRegions; RegionIndex, box then even-odd test with the half-open rule, degenerate polygons dropped and untagged ones left out, both counted, box and polygon tests counted for D15; RegionState, the build that never throws, its boot line (A24), health entry and reload retry); `scope` on every trigger type and on SpawnWaves and Empower actions (Logic/Model.cs, Logic/Validation.cs: "Global" or 1-RegionNames.Count names, case-insensitive, "unknown region <name>", "regions unavailable" before "region <name> is not on the map", A3, A15, A25); Services/RegionMap.cs (read-only WorldRegionPolygon query, second in Core.TryInitialize before EventStore, retried by `.nyar event reload`); HealthMonitor entry; Dependency.Regions with its policy row (A17); tests RegionTests (36), EventValidationTests Scope_ (23), DependencyFailureTests Regions_ (9)
