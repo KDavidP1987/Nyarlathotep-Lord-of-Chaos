@@ -406,25 +406,56 @@ public partial class SpawningTests
         Assert.Equal([1L], seeds.SeededOn(100));
     }
 
-    [Theory]
-    [InlineData("damage")]
-    [InlineData("weight")]
-    [InlineData("entity")]
-    public void Hunt_fails_when_replaced_entry_removed(string field)
+    [Fact]
+    public void Hunt_fails_when_replaced_entry_removed()
     {
+        // the game added a second entry for player 1: the player is shared, so every entry for 1 is the game's (A67;
+        // an entry for another Entity is keyed by that Entity, so a record for 1 reads it as missing, Review 33 F5)
         var seeds = new HuntSeeds();
         seeds.Wrote(100, "raid", Seed(1));
         seeds.Wrote(100, "raid", Seed(2));
-        var now = field switch
-        {
-            "damage" => Seed(1) with { DamageValue = 5f },
-            "weight" => Seed(1) with { Weight = 3f },
-            _ => Seed(1) with { Target = 77 },
-        };
+        var now = new AggroSeed(1, 1f, 10f, Count: 2);
         Assert.Equal((1, 1), seeds.Reconcile(100, new Dictionary<long, AggroSeed> { [1] = now, [2] = Seed(2) }));
         Assert.Equal([2L], seeds.SeededOn(100));
         var (_, removes) = seeds.Plan(100, [], new HashSet<long> { 1, 2 });
         Assert.Equal([2L], removes);                                           // the game's entry for 1 stays
+    }
+
+    [Fact]
+    public void Hunt_fails_when_buffer_read_hides_a_shared_player()
+    {
+        // Codex A67 F2: the count is explicit; a single entry with a NaN value is still one entry
+        var read = HuntBuffer.Read([new(1, 1f, 10f), new(2, 5f, 3f), new(2, 1f, 10f), new(3, 0f, 0f), new(3, 0f, 0f), new(3, 0f, 0f),
+            new(4, float.NaN, float.NaN)]);
+        Assert.Equal([1, 2, 3, 1], new long[] { 1, 2, 3, 4 }.Select(t => read[t].Count));
+        Assert.Equal(5f, read[2].DamageValue);                                 // the first entry's values
+        Assert.Empty(HuntBuffer.Read([]));
+    }
+
+    [Fact]
+    public void Hunt_fails_when_removal_takes_a_shared_or_other_entry()
+    {
+        // Codex A67 F1: the removal takes the player's only entry, whatever its values, and never a shared player's
+        Assert.Equal(1, HuntBuffer.RemovalIndex([7, 1, 9], 1));
+        Assert.Equal(-1, HuntBuffer.RemovalIndex([7, 1, 1], 1));
+        Assert.Equal(-1, HuntBuffer.RemovalIndex([7, 9], 1));
+        Assert.Equal(-1, HuntBuffer.RemovalIndex([], 1));
+    }
+
+    [Theory]
+    [InlineData("damage")]
+    [InlineData("weight")]
+    public void Hunt_fails_when_rewritten_seed_left_to_the_game(string field)
+    {
+        // Session 1 (A67): the game rewrites a seed's values as the unit takes the aggro; the seed stays HuntAction's and
+        // is removed once when its player stops being a target (the game re-adds it on its next aggro event).
+        var seeds = new HuntSeeds();
+        seeds.Wrote(100, "raid", Seed(1));
+        seeds.Wrote(100, "raid", Seed(2));
+        var now = field == "damage" ? Seed(1) with { DamageValue = 5f } : Seed(1) with { Weight = 3f };
+        Assert.Equal((2, 0), seeds.Reconcile(100, new Dictionary<long, AggroSeed> { [1] = now, [2] = Seed(2) }));
+        var (_, removes) = seeds.Plan(100, [], new HashSet<long> { 1, 2 });
+        Assert.Equal([1L, 2], removes);
     }
 
     [Fact]

@@ -263,7 +263,7 @@ public static class ControlCases
         T("D13", "Hunt", "SpawningTests",
             ["ineligible_player_targeted", "tally_counts_a_player_twice", "sixth_target_added", "order_not_by_distance", "duplicate_planned", "player_in_buffer_seeded",
              "plan_for_ended_wave", "stale_seed_kept", "game_entry_removed", "empty_targets_keep_a_seed", "race_leaves_record_buffer_lacks",
-             "replaced_entry_removed", "tick_reads_other_map", "seeds_while_latest_build_failed"],
+             "replaced_entry_removed", "rewritten_seed_left_to_the_game", "buffer_read_hides_a_shared_player", "removal_takes_a_shared_or_other_entry", "tick_reads_other_map", "seeds_while_latest_build_failed"],
             ["tick_seeds_and_keeps", "tally_counts_each_player_once"], ["no_players"]) with { Plan = EventSpawns },
         T("D16", "PlayerPick", "SpawningTests",
             ["ineligible_player_picked", "distance_leaves_range", "pick_not_uniform", "queued_centre_changes", "out_of_scope_player_picked",

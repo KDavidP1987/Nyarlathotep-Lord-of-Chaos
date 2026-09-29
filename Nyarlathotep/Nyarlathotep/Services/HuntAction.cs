@@ -16,7 +16,8 @@ namespace Nyarlathotep.Services;
 /// The Hunt behaviour (event-spawns D13). Every 5 s, for each live unit of a Hunt wave, the targets of Logic
 /// HuntPlan.Targets around the wave's centre get one AggroBuffer entry each, written on our own spawned units only
 /// (CLAUDE.md › Spawn &amp; buff safety). The seed record (Logic/HuntSeeds), not the buffer, says which entries are ours:
-/// a recorded seed whose entry is gone is dropped, one the game rewrote is left to the game, and a player the buffer
+/// a recorded seed whose entry is gone is dropped, a recorded player's single entry stays ours whatever values the game
+/// rewrote into it, one the game shares (more than one entry) is left to the game (A67), and a player the buffer
 /// already holds is never seeded. The territory flag comes from the event's latest successful map
 /// (TerritoryMap.Maps.ForHunt); while its latest build failed every seed goes and none is added (fail closed). A throw is
 /// caught per event and logged "hunt &lt;id&gt;: seed failed" once per streak; the wave keeps its units (D21).
@@ -148,18 +149,13 @@ internal static class HuntAction
             : HuntPlan.Targets(players.Select(p => Candidate(p, map)), (tag.X, tag.Z), tag.Range);
         var (adds, removes) = _seeds.Plan(key, targets, inBuffer.Keys.ToList());
 
+        // A seed is the player's only entry, whatever values the game gave it (A67); a shared player keeps every entry.
         foreach (var target in removes)
         {
-            var written = new AggroSeed(target, SeedDamage, SeedWeight);
-            for (var i = buffer.Length - 1; i >= 0; i--)
-            {
-                var e = buffer[i];
-                if (KeyOf(e.Entity) == target && e.DamageValue == written.DamageValue && e.Weight == written.Weight)
-                {
-                    buffer.RemoveAt(i);
-                    break;
-                }
-            }
+            var entryTargets = new List<long>(buffer.Length);
+            for (var i = 0; i < buffer.Length; i++) entryTargets.Add(KeyOf(buffer[i].Entity));
+            var index = HuntBuffer.RemovalIndex(entryTargets, target);
+            if (index >= 0) buffer.RemoveAt(index);
             _seeds.Removed(key, target);
         }
         foreach (var target in adds)
@@ -175,18 +171,12 @@ internal static class HuntAction
     static HuntCandidate Candidate(PlayerRow p, IReadOnlySet<(int X, int Z)> map) =>
         new(p.Key, p.X, p.Z, true, p.Alive, Territory.IsClaimed(map, p.X, p.Z), p.InPvpCombat);
 
-    /// <summary>The buffer's entries by target. A target with more than one entry is not ours alone, so it reads as
-    /// changed (left to the game, D13).</summary>
+    /// <summary>The buffer's entries by target with their counts (Logic HuntBuffer.Read, A67).</summary>
     static Dictionary<long, AggroSeed> BufferSeeds(DynamicBuffer<AggroBuffer> buffer)
     {
-        var result = new Dictionary<long, AggroSeed>();
-        for (var i = 0; i < buffer.Length; i++)
-        {
-            var e = buffer[i];
-            var target = KeyOf(e.Entity);
-            result[target] = result.ContainsKey(target) ? new AggroSeed(target, float.NaN, float.NaN) : new AggroSeed(target, e.DamageValue, e.Weight);
-        }
-        return result;
+        var entries = new List<AggroSeed>(buffer.Length);
+        for (var i = 0; i < buffer.Length; i++) entries.Add(new AggroSeed(KeyOf(buffer[i].Entity), buffer[i].DamageValue, buffer[i].Weight));
+        return HuntBuffer.Read(entries);
     }
 
     internal static long KeyOf(Entity e) => ((long)e.Index << 32) | (uint)e.Version;

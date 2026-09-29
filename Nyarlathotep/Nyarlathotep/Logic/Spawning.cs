@@ -432,7 +432,35 @@ public static class PlayerPick
 public readonly record struct HuntCandidate(long Key, float X, float Z, bool Online, bool Alive, bool InTerritory, bool InPvpCombat);
 
 /// <summary>The AggroBuffer entry HuntAction wrote for a target (event-spawns D13, A12).</summary>
-public readonly record struct AggroSeed(long Target, float DamageValue, float Weight);
+public readonly record struct AggroSeed(long Target, float DamageValue, float Weight, int Count = 1);
+
+/// <summary>The AggroBuffer as HuntAction reads it (event-spawns D13, A67): its entries by target, each with how many
+/// entries the buffer holds for that player, and the one entry a seed's removal may take.</summary>
+public static class HuntBuffer
+{
+    /// <summary>The entries by target; a target with more than one entry has that Count (the game shares the player).</summary>
+    public static Dictionary<long, AggroSeed> Read(IEnumerable<AggroSeed> entries)
+    {
+        var result = new Dictionary<long, AggroSeed>();
+        foreach (var e in entries)
+            result[e.Target] = result.TryGetValue(e.Target, out var seen) ? seen with { Count = seen.Count + 1 } : e with { Count = 1 };
+        return result;
+    }
+
+    /// <summary>The index of the entry a seed's removal takes: the buffer's only entry for <paramref name="target"/>,
+    /// whatever its values; -1 when it holds none or more than one (then every entry is the game's).</summary>
+    public static int RemovalIndex(IReadOnlyList<long> entryTargets, long target)
+    {
+        var found = -1;
+        for (var i = 0; i < entryTargets.Count; i++)
+        {
+            if (entryTargets[i] != target) continue;
+            if (found >= 0) return -1;
+            found = i;
+        }
+        return found;
+    }
+}
 
 /// <summary>A Hunt tick's player counts for the verbose log (A66): every player read is a target or has one reason.</summary>
 public readonly record struct HuntTally(int Players, int Targets, int Dead, int InTerritory, int InPvpCombat, int OutOfRange, int OverCap)
@@ -483,8 +511,9 @@ public static class HuntPlan
 }
 
 /// <summary>HuntAction's seed record, keyed by unit and target (event-spawns D13, A6, A12): the record, not the
-/// AggroBuffer, says which entries are HuntAction's. An entry is never adopted from the buffer; an entry whose Entity,
-/// DamageValue or Weight differs from what HuntAction wrote is the game's.</summary>
+/// AggroBuffer, says which entries are HuntAction's. An entry is never adopted from the buffer. The game rewrites an
+/// entry's DamageValue and Weight as soon as the unit takes the aggro (Session 1, A67), so a recorded player's single
+/// entry stays HuntAction's whatever its values; more than one entry for the player is the game's.</summary>
 public sealed class HuntSeeds
 {
     readonly Dictionary<long, (string EventId, Dictionary<long, AggroSeed> Seeds)> _byUnit = new();
@@ -494,8 +523,9 @@ public sealed class HuntSeeds
     public IReadOnlyCollection<long> SeededOn(long unit) => _byUnit.TryGetValue(unit, out var u) ? u.Seeds.Keys : [];
 
     /// <summary>Checks the record of <paramref name="unit"/> against its AggroBuffer, keyed by target: a record entry the
-    /// buffer does not hold is dropped (a partial write, or the game removed it); one whose fields differ is the game's:
-    /// dropped, the entry left. Returns the seeds kept and those left to the game.</summary>
+    /// buffer does not hold is dropped (a partial write, or the game removed it); one the game shares (more than one
+    /// entry for the player, <see cref="HuntBuffer.Read"/>) is the game's: dropped, the entry left (A67).
+    /// Returns the seeds kept and those left to the game.</summary>
     public (int Kept, int LeftToGame) Reconcile(long unit, IReadOnlyDictionary<long, AggroSeed> buffer)
     {
         if (!_byUnit.TryGetValue(unit, out var u)) return (0, 0);
@@ -503,7 +533,7 @@ public sealed class HuntSeeds
         foreach (var (target, written) in u.Seeds.ToList())
         {
             if (!buffer.TryGetValue(target, out var now)) { u.Seeds.Remove(target); continue; }
-            if (now != written) { u.Seeds.Remove(target); left++; }
+            if (now.Count != 1) { u.Seeds.Remove(target); left++; }
         }
         return (u.Seeds.Count, left);
     }

@@ -1057,3 +1057,25 @@ VERDICT: READY
 - F4 · accepted · SpawningTests.Hunt_fails_when_tally_counts_a_player_twice on D13's row
 - F5 · accepted · PrivacyTests.EventSpawns: every HuntTally property is an int
 - F6 · accepted · A65 lists the three files; design line 154 reads `action.units.N.chance`; the temp folders go at the end of Session 1, before the commit
+
+## Review 33 · 2026-09-29 · subagent · plan uncommitted · plan 176993 B · 24 items · files 0 · e3b0c44298fc · prompt 95c86d20d664 · scope A67
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendment A67 (design §9 D26); the prompt held no Steam ID. It checked A67 against D13's no-go branch and the uncommitted code, and ran the SpawningTests Hunt and ControlCase filters (45/45).
+
+F1 · advisory · 12.4 · A67 names Hunt_fails_when_replaced_entry_removed for the rewritten-values case, which lives in Hunt_fails_when_rewritten_seed_left_to_the_game. Fix: name both.
+F2 · advisory · 4.2 · D13's body and fails-when still describe the value comparison. Fix: amend D13's text; record the game's rewrite in RESEARCH_NOTES S1.
+F3 · advisory · 4.2 / 12.4 · SeedUnit's Entity-only removal has no control and the re-check cannot see it. Fix: an in-game disengage step, or a verbose removed count.
+F4 · advisory · 9.2 · the fallback is now the common case, not a rare race. Fix: say so in A67.
+F5 · advisory · 12.4 · the `entity` fixture (Target 77 under key 1) cannot occur: BufferSeeds keys by Entity. Fix: drop it.
+F6 · advisory · 7.3 · D13's manual criterion also records the units coming; one of three came. Fix: the re-check records how many came.
+
+15/15 layers · 49/49 probes
+
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · A67 names all four tests and what each expects
+- F2 · accepted · D13's body and fails-when follow A67; the game's rewrite is recorded in A67 and docs/features/EVENT_SPAWNS.md › Test results (parts B and C), not in docs/RESEARCH_NOTES.md, which lies outside this child's Paths walked
+- F3 · accepted · as Logic `HuntBuffer.RemovalIndex`, which SeedUnit calls, with Hunt_fails_when_removal_takes_a_shared_or_other_entry (Codex A67 round 1 F1 asked the same)
+- F4 · accepted · A67 says it
+- F5 · accepted · the case and Reconcile's Target check are gone; the fixture's comment says why
+- F6 · accepted · the re-check records how many of the wave's units came

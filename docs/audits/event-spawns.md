@@ -70,3 +70,11 @@ one under "## Post-audit"; every post-audit entry carries a "Codex verdict:" lin
 - Codex verdict: REVISE (round 1) — F1 VCF usage attributes hold `<id>` → deferred to step 3 (Log note, since event-library); F2 the tally left players over the cap uncounted → fixed (HuntTally.OverCap); F3 the diagnostic before Release → fixed (Left never throws, Release in finally); F4 no Services seam → rejected (observed in part B)
 - Codex verdict: READY (round 2) — no findings; after it, the code review's F1 guard only
 - privacy grep (7656119, kdpenland): 0 hits in the diff
+
+### Step 2 · D13's fallback (A67) · 2026-09-29 · 0309313
+- found in Session 1 part B: the tick after seeding logged "0 seeds kept, 3 left to the game", D13's no-go branch; A67 recorded before the fix; plan Review 33 (subagent, scope A67): READY, F1-F6 accepted (D13's text follows A67; the rewrite recorded in A67 and the Test results)
+- compile: 0 Warning(s), 0 Error(s); tests: 2156 passed; preflight OK
+- Codex verdict: REVISE (round 1) — F1 the Entity-only removal had no control → fixed (Logic HuntBuffer.RemovalIndex, SeedUnit calls it); F2 the NaN duplicate marker → fixed (HuntBuffer.Read, AggroSeed.Count)
+- Codex verdict: READY (round 2) — F1 advisory, HuntAction's class summary still described the value comparison → fixed (comment only)
+- in-game: Session 1 part C, all three Thugs reached the owner; five consecutive ticks "2 seeds kept, 0 left to the game" (EVENT_SPAWNS.md › Test results)
+- privacy grep (7656119, kdpenland): 0 hits in the diff

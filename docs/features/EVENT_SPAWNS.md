@@ -254,6 +254,38 @@ deployed on the same world; owner connected about 10:58–11:03; server stopped 
   or the runtime, as REGIONS.md and FACTION_EMPOWERMENT.md recorded before; part A's 85.6 ms tick is the one after a
   3-unit despawn batch. Step 3's soak measures the budget
 
+### Owner steps for Session 1 part C · A67, the Hunt seeds re-checked
+
+Setup (Claude): the build with A67 deployed (snapshot es1c), VerboseLogging on, and a planted es-hunt (3 Bandit Thugs,
+Hunt 60, enabled). The seed counts go to the log; from you I need only whether the Thugs came, and how many.
+
+1. Connect to **127.0.0.1:9876** (Nyar Dev) with your admin character. Open the console (the ~ key), enter
+   `adminauth`, and close it.
+2. Leave every castle's territory: open the map and stand outside any territory outline, at least 100 m from any
+   castle, in open ground away from other monsters if you can.
+3. Pick a spot with a building, rock or hill you can hide behind about 40 m away. Stand on the spot and run
+   `.nyar event set es-hunt location here`.
+4. Walk about 40 m away, out of sight behind the cover, still outside any territory. Run `.nyar event start es-hunt`.
+5. Stay out of sight and don't attack. Wait about 20 seconds. Count how many of the three Thugs reach you.
+6. Run `.nyar event stop es-hunt`, then stay connected for about 2 minutes so the server autosaves. Tell me you're
+   done and how many Thugs came.
+
+### Session 1 · 2026-09-29 · event-spawns step 2, part C (0309313 plus the uncommitted A67, with the owner)
+
+Setup as in the part C steps (snapshot es1c); owner connected about 11:36–11:40; server stopped after autosave 2001,
+which followed the disconnect; both logs copied to %TEMP%
+yar-es1c-logs and deleted after.
+
+- [x] D13 (A67), outside any claimed territory, Hunt 60, the owner about 40 m from the centre out of sight: "3 units queued
+  (0 moved, 0 unchecked)"; every Hunt tick "1 players read, 1 targeted" and "0 left to the game"; seeds kept 0, 2, 0, 0,
+  then "2 seeds kept, 0 left to the game" on five consecutive ticks and "3 seeds kept, 0 left to the game" on the last two
+  (a 0 is a tick after the game removed the entries, which HuntAction then wrote again); the owner saw all three Thugs
+  reach them; stop → "3 units queued", "3 of 3 destroyed"
+- [x] logs: no [Error]; BepInEx warnings only the known kinds; the server log's 224 "unknown state" at save load. Tick
+  timing: one 206.0 ms tick in the minute of the wave start and its first Hunt ticks (avg 8.1 ms, the only average over
+  5 ms), the first wave after a fresh boot, where parts A and B measured 30.1 and 34.2 ms; step 3's budget item measures
+  a wave start's tick (Log note)
+
 ### S2 restart spike · 2026-09-24 · spikes step 3 sessions 9–12 (throwaway save)
 
 Units: CHAR_Bandit_Thug from `.nyar spike tag`, marked by the inert AB_Consumable_PhysicalPowerPotion_T01_Buff carrying SpellLevel 1314472274, with LifeTime (EndAction Destroy) and DestroyWhenDisabled. Even-numbered units also carry PersistenceV2.DontSaveEntity. `keep 1` sets CanPreventDisableWhenNoPlayersInRange.CanDisable = false. Restarts are a hard stop right after an autosave finishes (spikes A8).
