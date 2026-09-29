@@ -16,6 +16,14 @@ under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line. S
 - feature doc read: docs/features/REGIONS.md, created with this entry (Status: in build; no open questions); plan D1-D3, D7, Business rules, Interfaces, Design, Failure & observability, Build plan step 1, A1-A8; code: Logic/{Model,Validation,Empowerment,Engine,Spawning,DefinitionEditor,EventAdmin,AdminFlows,Outcome,Messages,ApiLines,Wire}.cs, Services/{EventStore,HealthMonitor,TriggerBus,EmpowerAction,AdminOps}.cs, Core.cs, Patches/DeathEventPatch.cs; KindredCommands Services/RegionService.cs (how WorldRegionPolygon, PolygonBounds and WorldRegionPolygonVertex.VertexPos are read; re-implemented, not copied)
 - in-game baseline: not needed (step 1 has no in-game part; Session 1 is step 3)
 
+### Step 2 · 2026-09-28 · 8be5926
+- git status: clean at 8be5926 (step 1 code e512382 and its post-audit)
+- compile: 0 Warning(s), 0 Error(s) (step 1 post-audit, unchanged tree); tests: 1770 passed
+- preflight: PREFLIGHT OK
+- dod status: regions 2/16 verified (D1, D3); review READY after Review 6; amendments A1-A27, of which step 2 builds A1, A4-A6, A8-A12, A14, A18-A23, A26-A27
+- feature doc read: docs/features/REGIONS.md (Status: step 1 built; no open questions); plan D4-D6, D8-D11, D14, Business rules, Paths walked step 2
+- in-game baseline: not needed (step 2 has no in-game part; Session 1 is step 3)
+
 ## Post-audit
 ### Step 1 · 2026-09-28 · e512382
 - built: Logic/Regions.cs (RegionNames: the 10 WorldRegionType names except None and Other, A16; Scope, Global by default, a read-only copy; IRegionCatalog and NoRegions; RegionIndex, box then even-odd test with the half-open rule, degenerate polygons dropped and untagged ones left out, both counted, box and polygon tests counted for D15; RegionState, the build that never throws, its boot line (A24), health entry and reload retry); `scope` on every trigger type and on SpawnWaves and Empower actions (Logic/Model.cs, Logic/Validation.cs: "Global" or 1-RegionNames.Count names, case-insensitive, "unknown region <name>", "regions unavailable" before "region <name> is not on the map", A3, A15, A25); Services/RegionMap.cs (read-only WorldRegionPolygon query, second in Core.TryInitialize before EventStore, retried by `.nyar event reload`); HealthMonitor entry; Dependency.Regions with its policy row (A17); tests RegionTests (36), EventValidationTests Scope_ (23), DependencyFailureTests Regions_ (9)
