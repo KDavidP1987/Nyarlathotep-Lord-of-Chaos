@@ -29,7 +29,8 @@ with no file edits.
 - **Waves stay on the centre's level (A23):** the game drops each unit onto the terrain under its ring point. A unit that
   lands on another level than the wave's centre (more than 2 m above or below it, e.g. past a plateau's edge) is moved
   once, about a second after it appears, to within 1 m of the centre. `.nyar spawn` does the same around the admin; a
-  Point without a stored height is left as it lands.
+  Point without a stored height is left as it lands, and so is every unit of an AroundPlayer group, whose centre takes
+  the player's height and not its own ground's (automation A4, design §9 D30).
 - **Slow-tick warning (A25):** a mod tick of 250 ms or more logs one warning, `[nyar] slow tick: <t> ms (<phase> <ms> ms,
   …; outside phases <r> ms)`, naming its slowest phases; at most one a minute, with the count it held back. It is on
   whatever Debug.TimingLog says, so a server stall points at the part of the tick that waited.

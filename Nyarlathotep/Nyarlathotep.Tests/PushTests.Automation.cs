@@ -62,7 +62,7 @@ public partial class PushTests
         return problems;
     }
 
-    static string WaveActionSource()
+    internal static string WaveActionSource()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "tools", "preflight.ps1"))) dir = dir.Parent;

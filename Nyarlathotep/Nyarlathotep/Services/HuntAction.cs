@@ -230,20 +230,20 @@ internal static class PlayerQuery
     {
         var rows = new List<PlayerRow>();
         var users = Users().ToComponentDataArray<User>(Allocator.Temp);
-            try
+        try
+        {
+            foreach (var user in users)
             {
-                foreach (var user in users)
-                {
-                    if (!user.IsConnected) continue;
-                    var character = user.LocalCharacter._Entity;
-                    if (!character.Exists() || !character.TryGetComponent<Translation>(out var t)) continue;
-                    if (!PlayerPosition.Usable(t.Value.x, t.Value.y, t.Value.z) || !character.TryGetComponent<Health>(out var h)) continue;
-                    var alive = !character.Has<Dead>() && float.IsFinite(h.Value) && h.Value > 0f;
-                    rows.Add(new PlayerRow(character, HuntAction.KeyOf(character), t.Value.x, t.Value.y, t.Value.z, alive, InPvpCombat(character),
-                        user.PlatformId.ToString(CultureInfo.InvariantCulture)));
-                }
+                if (!user.IsConnected) continue;
+                var character = user.LocalCharacter._Entity;
+                if (!character.Exists() || !character.TryGetComponent<Translation>(out var t)) continue;
+                if (!PlayerPosition.Usable(t.Value.x, t.Value.y, t.Value.z) || !character.TryGetComponent<Health>(out var h)) continue;
+                var alive = !character.Has<Dead>() && float.IsFinite(h.Value) && h.Value > 0f;
+                rows.Add(new PlayerRow(character, HuntAction.KeyOf(character), t.Value.x, t.Value.y, t.Value.z, alive, InPvpCombat(character),
+                    user.PlatformId.ToString(CultureInfo.InvariantCulture)));
             }
-            finally { users.Dispose(); }
+        }
+        finally { users.Dispose(); }
         return rows;
     }
 

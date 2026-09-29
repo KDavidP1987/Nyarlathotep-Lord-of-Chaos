@@ -31,7 +31,10 @@ where events come without anyone typing a command:
     holds a health entry ("triggers: player scan failing", "triggers: kill read failing") until a read succeeds.
   - A player-action start is focused on its player. Its refusal line is throttled to one per definition per minute.
   - WaveAction picks with `ChooseMany` (the focus first), sizes with `DecideGroups`, gives each group its own Hunt tag,
-    and reports each wave once: `WaveRun.Run` queues the groups, then calls `EventEngine.WaveDecided`. Phantom players exist only in a Debug build.
+    and reports each wave once: `WaveRun.Run` queues the groups, then calls `EventEngine.WaveDecided`.
+  - An AroundPlayer group is never regrouped: its units stay where the game grounds them at their ring points, and
+    its walk check reads at the player's height (A4, design §9 D30). The walk check reads heights from -100 m (A5).
+    The player read reuses one query over User (A6). Phantom players exist only in a Debug build.
 - **Privacy:** no line names or locates a player. The per-player rows (regions, cooldowns, kill counters, the start's
   focus) live in memory only; state.json gains only `NextInterval`.
 - **Wire:** api 6 adds the trigger values `interval`, `regionentered` and `factionkills`; a fanned-out wave sends one

@@ -25,7 +25,7 @@ ring, then half the ring, then the centre, without adding, dropping or reorderin
   11 other angles of the ring, the 12 at half the radius, then the centre; a point is walkable when a 0.5 m circle is
   free in world metres and its tile is grounded. WavePoints keeps one point per unit in ring order under the per-tick
   WalkBudget (2,500 game calls). The wave line gains "(<m> moved, <u> unchecked)" and ", walk h <level>". A Point
-  saved without a height is not checked. A failing check (no tile world, a height outside 0–1000 m, a throw) leaves
+  saved without a height is not checked. A failing check (no tile world, a height outside -100 to 1000 m (automation A5), a throw) leaves
   the rest of the wave on its ring points, logs "walk check unavailable: <reason>" once per streak and shows
   "spawns: walk check unavailable" in health until a wave's check answers; the next wave tries again (D5, D6).
   Release 0.5.1 follows Session 2.

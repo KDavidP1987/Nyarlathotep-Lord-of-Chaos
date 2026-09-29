@@ -54,6 +54,22 @@ public partial class EngineTests
         Assert.Equal(42.5f, WavePlan.WalkY(new Location(LocationType.Point, 1, 2, 42.5f), (0, 0, 0), null));
         Assert.Equal((7f, 8f, 9f), WavePlan.GroupAnchor(new Location(LocationType.Admin, 0, 0), (7, 8, 9)));
         Assert.Null(WavePlan.WalkY(new Location(LocationType.Point, 1, 2), (0, 5, 0), null));
+        // WaveAction's wiring (step 2 fix round 1, Codex F1): its groups take GroupAnchor and WalkY, no inline anchor
+        var source = PushTests.WaveActionSource();
+        Assert.Empty(AnchorWiringProblems(source));
+        Assert.NotEmpty(AnchorWiringProblems(source.Replace("WavePlan.GroupAnchor(location, active.Origin)",
+            "location.Type == LocationType.AroundPlayer ? (gx, gy, gz) : WavePlan.Anchor(location, active.Origin)")));
+        Assert.NotEmpty(AnchorWiringProblems(source.Replace("WavePlan.WalkY(location, group.Centre, active.Origin)", "anchor?.Y")));
+    }
+
+    /// <summary>What is wrong with WaveAction's group anchor and walk height wiring (automation A4).</summary>
+    internal static List<string> AnchorWiringProblems(string source)
+    {
+        var problems = new List<string>();
+        if (!source.Contains("var anchor = WavePlan.GroupAnchor(location, active.Origin);")) problems.Add("anchor not from GroupAnchor");
+        if (!source.Contains("WalkCheck.OpenWave(WavePlan.WalkY(location, group.Centre, active.Origin))")) problems.Add("walk height not from WalkY");
+        if (System.Text.RegularExpressions.Regex.Matches(source, @"WalkCheck\.OpenWave\(").Count != 1) problems.Add("another walk check");
+        return problems;
     }
 
     /// <summary>A23, from Session 4: a unit the game snapped from the plateau (5.0) to the ground below (0.0) regroups; one
