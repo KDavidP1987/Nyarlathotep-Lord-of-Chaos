@@ -7,7 +7,7 @@
 |---|---|---|---|---|---|---|---|
 | [boss-reinforcements](boss-reinforcements.md) | Boss reinforcements — adds, phases and the anti-carry burst, and release 0.8.0 | ready | L | 0/20 | 20 | 100 % | nyarlathotep |
 | [event-library](event-library.md) | Event library — built-in templates and in-game authoring | done | L | 36/36 | 34 | 55 % | nyarlathotep |
-| [event-spawns](event-spawns.md) | Event spawns — modifiers, Hunt and player locations | ready | L | 0/24 | 24 | 100 % | nyarlathotep |
+| [event-spawns](event-spawns.md) | Event spawns — modifiers, Hunt and player locations | in-progress | L | 8/24 | 24 | 31 % | nyarlathotep |
 | [faction-empowerment](faction-empowerment.md) | Faction empowerment — timed carrier buffs on every NPC of a faction | done | L | 30/30 | 29 | 69 % | nyarlathotep |
 | [foundation](foundation.md) | Foundation engine, store, spawner, scheduler, announcer and commands | done | L | 40/40 | 38 | 63 % | nyarlathotep |
 | [nyarlathotep](nyarlathotep.md) | Nyarlathotep, Lord of Chaos, v0.1 to v1.0 | in-progress | Epic | 38/47 | 36 | 73 % |  |
@@ -17,6 +17,6 @@
 | [spikes](spikes.md) | Spikes S1-S3, march, restart marker, carrier buff | done | M | 20/20 | 20 | 50 % | nyarlathotep |
 | [walkable-spawns](walkable-spawns.md) | Walkable spawns — the walk probe, walkable spawn points and release 0.5.1 | done | M | 12/12 | 12 | 41 % | nyarlathotep |
 
-Most-missed layers — done plans: layer 14.4 (16), layer 12.4 (16), layer 6.1 (16), layer 6.2 (10), layer 7.3 (8); open plans (provisional): layer 6.1 (3), layer 14.1 (2), layer 5.1 (1), layer 10.1 (1), layer 3.1 (1).
+Most-missed layers — done plans: layer 14.4 (16), layer 12.4 (16), layer 6.1 (16), layer 6.2 (10), layer 7.3 (8); open plans (provisional): layer 12.4 (14), layer 10.1 (9), layer 4.1 (7), layer 6.2 (6), layer 14.4 (6).
 
 Store: `docs/dod`. Plans are the source of truth; this file is regenerated.
