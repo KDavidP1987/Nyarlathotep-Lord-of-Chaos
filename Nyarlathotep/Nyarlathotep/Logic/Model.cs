@@ -14,7 +14,7 @@ public enum DayPhase { Day, Night }
 
 public enum GameMode { Any, Pve, Pvp }
 
-public enum LocationType { Point, Admin }
+public enum LocationType { Point, Admin, AroundPlayer }
 
 public sealed record Trigger(
     TriggerType Type,
@@ -36,11 +36,30 @@ public sealed record Conditions(
     TimeWindow? Window = null,
     GameMode Mode = GameMode.Any);
 
-public sealed record UnitEntry(string Prefab, int Count);
+/// <summary>One unit entry of a wave; each of its <see cref="Count"/> copies spawns with probability
+/// <see cref="Chance"/> (event-spawns D8), 1.0 when absent.</summary>
+public sealed record UnitEntry(string Prefab, int Count, double Chance = 1.0);
 
 /// <summary>Where a SpawnWaves action spawns. A Point's Y is the height (event-library A20); a Point stored without one
-/// spawns at height 0, as before.</summary>
-public sealed record Location(LocationType Type, float X, float Z, float? Y = null);
+/// spawns at height 0, as before. An AroundPlayer centre is <see cref="MinDist"/>..<see cref="MaxDist"/> metres from a
+/// random eligible player, picked per wave (event-spawns D16).</summary>
+public sealed record Location(LocationType Type, float X, float Z, float? Y = null, int MinDist = 0, int MaxDist = 0);
+
+/// <summary>A wave's unit modifiers (event-spawns D6, D9): an absolute <see cref="Level"/> or a <see cref="LevelDelta"/>
+/// on the prefab's level (never both), and stat multipliers 0.5-3.0, 1.0 meaning unchanged.</summary>
+public sealed record SpawnModifiers(
+    int? Level = null,
+    int? LevelDelta = null,
+    double MaxHealth = 1.0,
+    double Power = 1.0,
+    double MoveSpeed = 1.0,
+    double AttackSpeed = 1.0);
+
+public enum BehaviourType { Hunt }
+
+/// <summary>A wave's behaviour (event-spawns D13): Hunt seeds aggro on players within <see cref="Range"/> metres of the
+/// wave centre.</summary>
+public sealed record Behaviour(BehaviourType Type, int Range);
 
 public sealed record SpawnWavesAction(
     IReadOnlyList<UnitEntry> Units,
@@ -49,7 +68,11 @@ public sealed record SpawnWavesAction(
     int Radius,
     Location Location,
     int? UnitLifetimeSeconds,
-    Scope Scope = default);
+    Scope Scope = default,
+    SpawnModifiers? Modifiers = null,
+    bool Loot = false,
+    Behaviour? Behaviour = null,
+    bool AllowTerritory = false);
 
 /// <summary>The Empower action's multipliers (faction-empowerment S-1): each 1.0–3.0 of the base value, 1.0 meaning
 /// unchanged, at least one above 1.0.</summary>

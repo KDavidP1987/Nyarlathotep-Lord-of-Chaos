@@ -108,7 +108,7 @@ public sealed class AdminFlows(IAdminOps ops, ActionGateway gateway, PurgeArming
         if (BadId(id) is { } bad) return bad;
         var v = CommandArgs.SettableValue(field, value);
         if (v.Error is not null)
-            return Outcome.Refused(v.Error, RefusalCode.BadArg, CommandArgs.SettableFields.ContainsKey(field) ? "value" : "field");
+            return Outcome.Refused(v.Error, RefusalCode.BadArg, CommandArgs.IsSettable(field) ? "value" : "field");
         var newValue = v.Value;
         if (newValue is LocationHere)                                 // the admin's position, rounded to 0.1 (D11)
         {

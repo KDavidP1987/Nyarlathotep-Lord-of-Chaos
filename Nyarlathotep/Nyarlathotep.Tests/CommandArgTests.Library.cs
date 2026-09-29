@@ -78,6 +78,12 @@ public partial class CommandArgTests
         "action.factions" => "Faction_Legion",
         "action.units" => "CHAR_Bandit_Thug:2",
         "location" => "here",
+        "action.loot" or "action.allowTerritory" => "true",
+        "action.behaviour" => "hunt 40",
+        "action.modifiers.level" => "30",
+        "action.modifiers.levelDelta" => "-2",
+        _ when field.StartsWith("action.modifiers.", StringComparison.Ordinal) => "1.5",
+        _ when field.StartsWith("action.units.", StringComparison.Ordinal) => "0.5",
         "trigger.scope" or "action.scope" => "Global",
         _ when field.StartsWith("action.stats.", StringComparison.Ordinal) => "1.5",
         "conditions.chancePercent" => "50",
@@ -88,9 +94,10 @@ public partial class CommandArgTests
     [Fact]
     public void SettableFields_passes_every_table_name()
     {
-        Assert.Equal(23, CommandArgs.SettableFields.Count);
-        foreach (var (field, (family, who)) in CommandArgs.SettableFields)
+        Assert.Equal(33, CommandArgs.SettableFields.Count);
+        foreach (var (name, (family, who)) in CommandArgs.SettableFields)
         {
+            var field = name.Replace("<n>", "1", StringComparison.Ordinal);        // the table's unit-chance placeholder
             Assert.True(CommandArgs.SettableValue(field, ValidValue(field)).Ok, field);
             Assert.Contains(family, new[] { "definition", "trigger", "empower action", "spawn action", "location", "action" });
             Assert.Equal("admin", who);

@@ -7,13 +7,20 @@
     "docs/dod/event-library.md",
     "docs/dod/walkable-spawns.md",
     "docs/dod/raphael-api-admin.md",
-    "docs/dod/regions.md"
+    "docs/dod/regions.md",
+    "docs/dod/event-spawns.md"
   ],
   "snapshotSessions": {
     "event-library": 1,
     "walkable-spawns": 1,
     "raphael-api-admin": 1,
-    "regions": 1
+    "regions": 1,
+    "event-spawns": 1
+  },
+  "dataTests": {
+    "event-spawns": [
+      "EndPathTests"
+    ]
   },
   "probeRecords": {
     "walkable-spawns": 1
@@ -238,7 +245,9 @@
         "every file git sees, fixtures included",
         "Nyarlathotep/Nyarlathotep/dist/** and Nyarlathotep/Nyarlathotep/build/** (zips opened)",
         "every index blob (git grep --cached -I -P)",
-        "every script under tools/ (fixtures aside in the real repository): the gh credential command, the POSIX environment printer, the environment drive, .NET/Python/Node environment reads and $env names outside the allow-list, the tcli token variable"
+        "every script under tools/ (fixtures aside in the real repository): the gh credential command, the POSIX environment printer, the environment drive, .NET/Python/Node environment reads and $env names outside the allow-list, the tcli token variable",
+        "every .ps1, .psm1, .py, .mjs, .js and .cs file outside the fixtures: the tcli token variable's name (event-spawns D31)",
+        "the release sentinel pattern in every file above, the zip's entries, dist/, build/ and the build log build/tcli-build.log (event-spawns D31)"
       ],
       "plant": {
         "bad": "README.md with a Thunderstore token assignment appended (stored base64 as README.md.b64plant)",
@@ -248,7 +257,13 @@
         "bad-6": "tools/read.mjs destructures env from process and reads GH_TOKEN",
         "bad-7": "tools/show.sh, a shell script (tools/ scripts are PowerShell, Python or Node), expanding GH_TOKEN",
         "bad-8": "tools/show, an extensionless shell script run through a shebang, expanding GH_TOKEN",
-        "bad-9": "tools/show.zsh, a zsh script expanding GH_TOKEN"
+        "bad-9": "tools/show.zsh, a zsh script expanding GH_TOKEN",
+        "bad-sentinel-zip": "the release sentinel inside manifest.json of dist/kdpen-Nyarlathotep-0.7.0.zip (event-spawns D31)",
+        "bad-sentinel-dist": "the release sentinel in dist/CHANGELOG.md (event-spawns D31)",
+        "bad-sentinel-build": "the release sentinel in build/manifest.json (event-spawns D31)",
+        "bad-sentinel-log": "the release sentinel in the build log build/tcli-build.log (event-spawns D31)",
+        "empty-sentinel": "release outputs with nothing to scan: dist/ holds only a zip with no entries, \"secrets: nothing scanned\" (event-spawns D31)",
+        "bad-envread": "tools/save-token.ps1 writes the tcli token variable to a file (event-spawns D31)"
       }
     },
     {
@@ -342,7 +357,8 @@
         "git worktree list --porcelain (worktrees.txt)",
         "git ls-remote --tags origin (ls-remote-tags.txt)",
         "gh release list --json tagName (releases.json)",
-        "with -DeclaredOf <slug>: docs/dod/<slug>.md › Rollout › Paths walked, and the paths created or changed since the commit of docs/audits/<slug>.md's Step 1 pre-audit (declared-of.txt, changed.txt; event-library D30, A13), that base checked against git's parent of the audit's creating commit (audit-added-parent.txt), and the %TEMP%\\nyar-<name> folders tools/*.ps1, tools/*.py and tools/ingame/* name (A14)"
+        "with -DeclaredOf <slug>: docs/dod/<slug>.md › Rollout › Paths walked, and the paths created or changed since the commit of docs/audits/<slug>.md's Step 1 pre-audit (declared-of.txt, changed.txt; event-library D30, A13), that base checked against git's parent of the audit's creating commit (audit-added-parent.txt), and the %TEMP%\\nyar-<name> folders tools/*.ps1, tools/*.py and tools/ingame/* name (A14)",
+        "with -DeclaredOf <slug>: tools/preflight-checks.json dataTests.<slug>, each class run through Invoke-ClassTests (class-tests.txt; event-spawns D27), required when docs/dod/<slug>.md names dataTests, and holding the slug's $script:DataTestFloor classes (event-spawns A57)"
       ],
       "plant": {
         "bad": "an unmanifested tracked path (stray/notes.txt) added to the walk",
@@ -352,6 +368,9 @@
         "bad-remote": "an undeclared tag v0.4.0 on origin in the ls-remote listing (faction-empowerment D26)",
         "bad-soak": "a leftover %TEMP%\\nyar-soak-* folder in the temp listing, with the manifest declaring temp: nyar-soak-* (event-library D30)",
         "bad-record": "with -DeclaredOf event-library, the fixture audit names %TEMP%\\nyar-stray-logs (a hand-made session log copy, deleted, so nothing is on disk) and the plan's Rollout › Paths walked omits it (event-library A24, Review 18)",
+        "bad-datatests": "with -DeclaredOf, the slug's dataTests entry names NoDataTests, a class that runs zero tests (class-tests.txt): \"tests: NoDataTests ran 0 tests\" (event-spawns D27)",
+        "bad-datatests-floor": "with -DeclaredOf event-spawns, the dataTests entry names only SpawningTests, which passes (class-tests.txt), and leaves out the floor's EndPathTests: \"event-spawns data tests miss EndPathTests (floor)\" (event-spawns A57)",
+        "empty-datatests": "with -DeclaredOf, a plan naming dataTests whose entry is empty: \"<slug> names no data tests\" (event-spawns D27)",
         "bad-undeclared": "with -DeclaredOf event-library (declared-of.txt), a changed tools/stray-drill.ps1 (changed.txt) that tracked: tools/*.ps1 covers but the plan's Rollout › Paths walked omits (event-library D30, A13)",
         "bad-base": "with -DeclaredOf, the audit's Step 1 pre-audit heading names 2b083dc, a later commit than e84c8a3, the parent of the commit that created the audit (audit-added-parent.txt; event-library A14)",
         "bad-transient": "with -DeclaredOf, a tools/ script names a %TEMP%\\nyar-scratch-* folder that no Paths walked token declares, though no such folder exists at check time (event-library A14)",
@@ -414,7 +433,7 @@
       "mode": "default",
       "fixtures": "tools/preflight-fixtures/GatewayOnly",
       "inputs": [
-        "every .cs file under Nyarlathotep/Nyarlathotep/Commands/, Patches/ and Services/ (the [Mutating] declarations and every use of their names)",
+        "every .cs file of Nyarlathotep/Nyarlathotep/ outside Logic/, tracked or untracked (the [Mutating] declarations and every use of their bare names; the System-actor entry calls from Services/EventScheduler.cs, Core.cs and Patches/)",
         "every .cs file under Nyarlathotep/Nyarlathotep/Logic/ (each .Op<Name> access of AdminOps or IAdminOps and the work argument of <g>.Run<…>( around it, <g> declared an ActionGateway)"
       ],
       "plant": {
@@ -428,7 +447,42 @@
         "bad-8": "Logic/OtherFlows.cs, another Logic file holding an IAdminOps, calls ops.OpReload outside Run<T> (A2)",
         "bad-9": "Logic/AdminFlows.cs calls ops.OpStopEvent in the denied argument of ActionGateway.Run<T>, not its work",
         "bad-10": "Logic/AdminFlows.cs calls ops.OpStopEvent inside Task.Run<T>, another type's Run<T>",
-        "bad-11": "Logic/AdminFlows.cs takes ops.OpStopEvent as a method group outside Run<T> and calls it later"
+        "bad-11": "Logic/AdminFlows.cs takes ops.OpStopEvent as a method group outside Run<T> and calls it later",
+        "bad-tickcaller": "Commands/StatusCommands.cs calls the System-actor entry point SpawnTracker.Tick directly (event-spawns D22)",
+        "bad-rootcaller": "Plugin.cs, at the package root, calls EventStore.Reload() outside Gateway.Run (event-spawns D22, A2)",
+        "bad-instance": "Commands/StatusCommands.cs calls Persistence.Disk.Delete through its instance receiver (event-spawns D22, A16)",
+        "bad-samename": "Services/HealthMonitor.cs declares a Tick that is not [Mutating], sharing the bare name (event-spawns D22, A16)",
+        "bad-systemcaller": "Patches/GameDataInitializedPatch.cs, a System-actor file, calls Persistence.Disk.Delete, which is no entry point (event-spawns D22)",
+        "bad-new": "a new untracked Services/Stray.cs declares a [Mutating] method outside the dispatched services (event-spawns D22)",
+        "bad-systemtype": "Services/EventScheduler.cs, a System-actor file, calls Persistence.Tick, a [Mutating] Tick of a service that is no entry point (event-spawns D22, Codex step 1 F2)",
+        "bad-alias": "Patches/GameDataInitializedPatch.cs aliases SpawnTracker to Persistence and calls SpawnTracker.Tick, so the pair names another service's [Mutating] Tick (event-spawns D22, Codex step 1 round 2 F1)",
+        "bad-tuple": "Services/SpawnTracker.cs declares a [Mutating] PurgeUnits returning a tuple, as the real one does, and Commands/StatusCommands.cs calls it (event-spawns D22, A55, Review 25 F1)",
+        "bad-shadow":"Patches/GameDataInitializedPatch.cs declares a local var SpawnTracker = Services.Persistence.Store and calls SpawnTracker.Tick (event-spawns D22, A54, Review 24 F1)"
+      }
+    },
+    {
+      "name": "EntityWrites",
+      "function": "Test-CheckEntityWrites",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/EntityWrites",
+      "emptyLine": "entity writes: no source files",
+      "inputs": [
+        "every .cs file under Nyarlathotep/Nyarlathotep/ outside Logic/ (each entity write call, unsafe code, and the members and [Mutating] attributes of the dispatched services)",
+        "every .cs file under Nyarlathotep/Nyarlathotep/Logic/ (its using directives only)"
+      ],
+      "plant": {
+        "bad": "Commands/SpawnCommands.cs calls unit.Write(...) directly (event-spawns D34)",
+        "bad-new": "a new untracked Services/Stray.cs, no dispatched service, writes an entity",
+        "bad-unmarked": "Services/SpawnTracker.cs has a public writing method without [Mutating]",
+        "bad-em": "Commands/SpawnCommands.cs calls Core.EntityManager.SetComponentData",
+        "bad-split": "a new Services/Stray.cs clears a var mods = Core.EntityManager.GetBuffer<…>(…) local in a later statement",
+        "bad-refrw": "Commands/SpawnCommands.cs assigns through a RefRW's .ValueRW",
+        "bad-ecb": "Commands/SpawnCommands.cs calls an EntityCommandBuffer's SetComponent",
+        "bad-lookup": "Commands/SpawnCommands.cs assigns through a ComponentLookup indexer",
+        "bad-unsafe": "Services/UnitSetup.cs calls GetUnsafePtr",
+        "bad-logicusing": "Logic/Spawning.cs has using ProjectM;",
+        "bad-privatehelper": "Services/SpawnTracker.cs has a public method without [Mutating] that calls a private method holding DestroySafe",
+        "bad-destroyutility": "Commands/SpawnCommands.cs calls DestroyUtility.Destroy with a nested first argument, outside EntityExtensions.cs (event-spawns A49)"
       }
     },
     {
@@ -737,6 +791,42 @@
       }
     },
     {
+      "name": "MutatingFloor",
+      "function": "Test-CheckMutatingFloor",
+      "mode": "default",
+      "fixtures": "tools/preflight-fixtures/MutatingFloor",
+      "inputs": [
+        "every .cs file of Nyarlathotep/Nyarlathotep/ outside Logic/: its [Mutating] attributes and the declarations they mark (tuple return types included)",
+        "$script:MutatingFloor in tools/preflight.ps1: every [Mutating] method of the real tree, by service (event-spawns D22, A55)"
+      ],
+      "plant": {
+        "bad": "Services/Persistence.cs's Delete loses [Mutating] (event-spawns A55, Codex step 1 round 4 F1)",
+        "bad-tuple": "Services/SpawnTracker.cs's tuple-returning PurgeUnits loses [Mutating] (event-spawns A55, Review 25 F1)",
+        "bad-renamed": "Services/Persistence.cs's Delete is renamed Remove, still [Mutating]: the floor's Delete is not declared and Remove is unlisted (event-spawns A55)",
+        "bad-unlisted": "Services/WaveAction.cs gains a [Mutating] Seed the floor does not list (event-spawns A55)",
+        "bad-missing": "Services/Pusher.cs, a floor service, is deleted (event-spawns A55)",
+        "bad-unreadable": "Services/Announcer.cs puts [Mutating] on a property, a declaration the check cannot read (event-spawns A55)",
+        "bad-parens": "Services/WaveAction.cs gains a new writer marked [Mutating()], which the entity-writes check takes as marked (event-spawns A55, Review 26 F1)"
+      }
+    },
+    {
+      "name": "AuthSuite",
+      "function": "Test-CheckAuthSuite",
+      "mode": "authsuite",
+      "fixtures": "tools/preflight-fixtures/AuthSuite",
+      "inputs": [
+        "every .cs file git sees: the [Command] attributes of the command walk (group, name, usage, adminOnly)",
+        "the spawn-changing commands event-spawns inherits: .nyar event start, stop, enable, disable, set, copy, delete, .nyar template use and .nyar spawn (event-spawns D22); each verb in its usage and its handler (a case branch, TemplateUse, SpawnManual) in the command method's body"
+      ],
+      "plant": {
+        "bad": "Commands/SpawnCommands.cs: .nyar spawn without adminOnly (event-spawns D22)",
+        "bad-inherited": "Commands/EventCommands.cs: .nyar event, which runs event start, without adminOnly (event-spawns D22)",
+        "bad-unhandled": "Commands/EventCommands.cs keeps start in the .nyar event usage but its case \"start\" branch is deleted (event-spawns D22, Codex step 1 F4)",
+        "bad-literal": "Commands/TemplateCommands.cs replaces the Gateway.Flows.TemplateUse(...) call of .nyar template use with a string literal holding the same text (event-spawns D22, Codex step 1 round 2 F2)",
+        "bad-gutted": "Commands/EventCommands.cs keeps the case \"start\" label but its section is only return;, the flows.Start call gone (event-spawns D22, Codex step 1 round 3 F2)"
+      }
+    },
+    {
       "name": "TestRuns",
       "function": "Test-CheckTestRuns",
       "mode": "fixture",
@@ -757,12 +847,14 @@
       "mode": "default",
       "fixtures": "tools/preflight-fixtures/DependencySuite",
       "inputs": [
-        "tools/preflight-checks.json dependencySuites.event-library, checks and externalSelfTests",
+        "tools/preflight-checks.json dependencySuites.<slug> (event-library, event-spawns): categories, rows, checks and externalSelfTests",
         "Nyarlathotep/Nyarlathotep.Tests/*.cs (the <Control>_ test methods of each tests row)"
       ],
       "plant": {
         "bad": "the events-write row names control EventsWrote, which matches no test",
-        "bad-2": "the table without its cfg-save row"
+        "bad-2": "the table without its cfg-save row",
+        "bad-spawns-missing": "the event-spawns suite's unit-recipe category has no test: SpawnsDependencyFailureTests without its UnitRecipe_ method (event-spawns D21)",
+        "bad-floor": "event-library's entry drops the vcf category together with its row, below the script's floor (event-spawns A52)"
       }
     },
     {
@@ -902,63 +994,76 @@
     }
   ],
   "dependencySuites": {
-    "event-library": [
-      {
-        "name": "events-write",
-        "kind": "tests",
-        "class": "LibraryDependencyFailureTests",
-        "control": "EventsWrite"
-      },
-      {
-        "name": "events-promote",
-        "kind": "tests",
-        "class": "LibraryDependencyFailureTests",
-        "control": "EventsPromote"
-      },
-      {
-        "name": "state-write",
-        "kind": "tests",
-        "class": "LibraryDependencyFailureTests",
-        "control": "StateWrite"
-      },
-      {
-        "name": "cfg-save",
-        "kind": "tests",
-        "class": "PillarSwitchTests",
-        "control": "SaveFailure"
-      },
-      {
-        "name": "catalogue",
-        "kind": "tests",
-        "class": "LibraryDependencyFailureTests",
-        "control": "Catalogue"
-      },
-      {
-        "name": "location-context",
-        "kind": "tests",
-        "class": "LibraryDependencyFailureTests",
-        "control": "LocationContext"
-      },
-      {
-        "name": "phase-source",
-        "kind": "tests",
-        "class": "LibraryDependencyFailureTests",
-        "control": "PhaseSource"
-      },
-      {
-        "name": "vcf",
-        "kind": "check",
-        "function": "Test-CheckVcfDependency"
-      },
-      {
-        "name": "release-tools",
-        "kind": "selftests",
-        "selftests": [
-          "release-verify",
-          "repo-rollback-drill"
-        ]
-      }
-    ]
+    "event-library": {
+      "categories": [
+        "events-write",
+        "events-promote",
+        "state-write",
+        "cfg-save",
+        "catalogue",
+        "location-context",
+        "phase-source",
+        "vcf",
+        "release-tools"
+      ],
+      "rows": [
+        {
+          "name": "events-write",
+          "kind": "tests",
+          "class": "LibraryDependencyFailureTests",
+          "control": "EventsWrite"
+        },
+        {
+          "name": "events-promote",
+          "kind": "tests",
+          "class": "LibraryDependencyFailureTests",
+          "control": "EventsPromote"
+        },
+        {
+          "name": "state-write",
+          "kind": "tests",
+          "class": "LibraryDependencyFailureTests",
+          "control": "StateWrite"
+        },
+        {
+          "name": "cfg-save",
+          "kind": "tests",
+          "class": "PillarSwitchTests",
+          "control": "SaveFailure"
+        },
+        {
+          "name": "catalogue",
+          "kind": "tests",
+          "class": "LibraryDependencyFailureTests",
+          "control": "Catalogue"
+        },
+        {
+          "name": "location-context",
+          "kind": "tests",
+          "class": "LibraryDependencyFailureTests",
+          "control": "LocationContext"
+        },
+        {
+          "name": "phase-source",
+          "kind": "tests",
+          "class": "LibraryDependencyFailureTests",
+          "control": "PhaseSource"
+        },
+        {
+          "name": "vcf",
+          "kind": "check",
+          "function": "Test-CheckVcfDependency"
+        },
+        {
+          "name": "release-tools",
+          "kind": "selftests",
+          "selftests": [
+            "release-verify",
+            "repo-rollback-drill"
+          ]
+        }
+      ]
+    }
   },
   "controlSuites": {
     "event-library": [

@@ -29,6 +29,8 @@
 		<None Include="..\..\docs\dod\walkable-spawns.md" Link="Resources\walkable-spawns.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\dod\raphael-api-admin.md" Link="Resources\raphael-api-admin.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\dod\regions.md" Link="Resources\regions.md" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\..\docs\dod\event-spawns.md" Link="Resources\event-spawns.md" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\..\docs\audits\event-spawns.md" Link="Resources\audits\event-spawns.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\RAPHAEL_INTEGRATION_CONTRACT.md" Link="Resources\RAPHAEL_INTEGRATION_CONTRACT.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\NYARLATHOTEP_DESIGN.md" Link="Resources\NYARLATHOTEP_DESIGN.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\RAPHAEL_HANDOFF_API4.md" Link="Resources\RAPHAEL_HANDOFF_API4.md" CopyToOutputDirectory="PreserveNewest" />

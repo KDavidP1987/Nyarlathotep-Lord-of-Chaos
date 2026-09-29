@@ -4,7 +4,7 @@ namespace Nyarlathotep.Tests;
 
 /// <summary>walkable-spawns D6: the walk check's health entry, which HealthMonitor.Degraded adds to the health line, the
 /// admin status and the admin login notice.</summary>
-public class HealthTests
+public partial class HealthTests
 {
     [Fact]
     public void WalkHealth_fails_when_streak_open()

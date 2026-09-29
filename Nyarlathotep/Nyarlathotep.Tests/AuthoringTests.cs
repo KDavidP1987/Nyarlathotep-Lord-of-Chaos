@@ -7,7 +7,7 @@ namespace Nyarlathotep.Tests;
 
 /// <summary>event-library D6 (event new), D7 (copy), D8 (delete with confirm), D9 (trigger fields), D10 (action fields),
 /// D11 (location here) and D12 (every chat write equals a file edit plus a reload).</summary>
-public class AuthoringTests
+public partial class AuthoringTests
 {
     internal static readonly DateTime Now = Zones.Utc(2026, 9, 26, 12, 0);
 
@@ -408,7 +408,7 @@ public class AuthoringTests
     {
         var lib = Lib(Json.Event("raid"));
         Unchanged(lib, () => Assert.Equal("location here needs your character in the world", Set(lib, "raid", "location", "here", null)));
-        Unchanged(lib, () => Assert.Equal("location takes here: .nyar event set id location here", Set(lib, "raid", "location", "there")));
+        Unchanged(lib, () => Assert.Equal("location takes here or aroundplayer <minDist> <maxDist>", Set(lib, "raid", "location", "there")));
     }
 
     // ---- D12 Equivalence

@@ -171,7 +171,7 @@ public static class EventValidator
         try
         {
             foreach (var p in e.EnumerateObject())
-                if (!EventKeys.Contains(p.Name)) throw new Fail($"unknown field {p.Name}");
+                if (!EventKeys.Contains(p.Name)) throw new Fail(UnknownField("", p.Name));
 
             if (id is null || !IdRx.IsMatch(id)) throw new Fail("id must be 1-32 of a-z 0-9 -");
             var name = Required(e, "name", "name must be 1-40 characters, no angle brackets or control characters");
@@ -209,7 +209,7 @@ public static class EventValidator
     static void OnlyKeys(JsonElement obj, string prefix, params string[] keys)
     {
         foreach (var p in obj.EnumerateObject())
-            if (Array.IndexOf(keys, p.Name) < 0) throw new Fail($"unknown field {prefix}.{p.Name}");
+            if (Array.IndexOf(keys, p.Name) < 0) throw new Fail(UnknownField(prefix, p.Name));
     }
 
     static int Int(JsonElement v, int min, int max, string rule)
@@ -222,6 +222,16 @@ public static class EventValidator
         v.ValueKind == JsonValueKind.String ? v.GetString()! : throw new Fail(rule);
 
     /// <summary>1..max characters, no '&lt;', '&gt;' or control characters.</summary>
+    /// <summary>"unknown field &lt;prefix&gt;.&lt;name&gt;"; a name longer than 32 characters or not plain text is left out
+    /// ("unknown field in &lt;prefix&gt;"), so the reason stays within one chat line (event-spawns D32, A53).</summary>
+    public static string UnknownField(string prefix, string name) =>
+        IsPlainText(name, 32) ? $"unknown field {(prefix.Length == 0 ? name : $"{prefix}.{name}")}"
+        : prefix.Length == 0 ? "unknown field" : $"unknown field in {prefix}";
+
+    /// <summary>" &lt;value&gt;" for a reason that echoes the admin's input, or "" when the value is longer than a name may
+    /// be (96) or not plain text, so no reason outgrows one chat line or carries rich text (event-spawns D32, A53).</summary>
+    public static string Shown(string? value) => value is not null && IsPlainText(value, CommandArgs.MaxNameLength) ? " " + value : "";
+
     public static bool IsPlainText(string s, int max)
     {
         if (s.Length < 1 || s.Length > max) return false;
@@ -240,7 +250,7 @@ public static class EventValidator
             "boss" => Pillar.Boss,
             "zones" => Pillar.Zones,
             "sieges" => Pillar.Sieges,
-            _ => throw new Fail($"unknown pillar {s}"),
+            _ => throw new Fail($"unknown pillar{Shown(s)}"),
         };
     }
 
@@ -264,7 +274,7 @@ public static class EventValidator
         foreach (var x in v.EnumerateArray())
         {
             var name = Str(x, rule);
-            if (!RegionNames.TryCanonical(name, out var canonical)) throw new Fail($"unknown region {name}");
+            if (!RegionNames.TryCanonical(name, out var canonical)) throw new Fail($"unknown region{Shown(name)}");
             if (names.Contains(canonical)) throw new Fail(rule);
             names.Add(canonical);
         }
@@ -325,11 +335,11 @@ public static class EventValidator
                 foreach (var x in b.EnumerateArray()) bosses.Add(Str(x, rule));
                 if (bosses.Contains("any") && bosses.Count > 1) throw new Fail(rule);
                 foreach (var boss in bosses)
-                    if (boss != "any" && (!boss.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(boss))) throw new Fail($"unknown unit {boss}");
+                    if (boss != "any" && (!boss.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(boss))) throw new Fail($"unknown unit{Shown(boss)}");
                 return new Trigger(TriggerType.VBloodKilled, [], [], DayPhase.Night, bosses);
             }
             default:
-                throw new Fail($"unknown trigger type {type}");
+                throw new Fail($"unknown trigger type{Shown(type)}");
         }
     }
 
@@ -383,7 +393,7 @@ public static class EventValidator
                 if (pillar != Pillar.Empowerment) throw new Fail("action Empower needs pillar empowerment");
                 return (null, ParseEmpower(a, units, factions, regions));
             default:
-                throw new Fail($"unknown action type {type}");
+                throw new Fail($"unknown action type{Shown(type)}");
         }
     }
 
@@ -407,8 +417,8 @@ public static class EventValidator
         {
             var name = Str(x, factionsRule);
             if (factionList.Contains(name)) throw new Fail(factionsRule);
-            if (FactionDenyList.IsDenied(name)) throw new Fail($"faction {name} is deny-listed");
-            if (!name.StartsWith("Faction_", StringComparison.Ordinal) || !factions.IsKnown(name)) throw new Fail($"unknown faction {name}");
+            if (FactionDenyList.IsDenied(name)) throw new Fail($"faction{Shown(name)} is deny-listed");
+            if (!name.StartsWith("Faction_", StringComparison.Ordinal) || !factions.IsKnown(name)) throw new Fail($"unknown faction{Shown(name)}");
             factionList.Add(name);
         }
 
@@ -428,7 +438,7 @@ public static class EventValidator
         var values = new Dictionary<string, double>(StringComparer.Ordinal);
         foreach (var p in st.EnumerateObject())
         {
-            if (!StatKeys.Contains(p.Name)) throw new Fail($"unknown field action.stats.{p.Name}");
+            if (!StatKeys.Contains(p.Name)) throw new Fail(UnknownField("action.stats", p.Name));
             if (p.Value.ValueKind != JsonValueKind.Number || !p.Value.TryGetDouble(out var v) || double.IsNaN(v) || v < MinStat || v > MaxStat)
                 throw new Fail($"action.stats.{p.Name} must be a number 1.0-3.0");
             values[p.Name] = v;
@@ -452,8 +462,8 @@ public static class EventValidator
         {
             var prefab = Str(x, rule);
             if (list.Contains(prefab)) throw new Fail(rule);
-            if (refuseDenied && (UnitDenyList.IsDenied(prefab) || units.IsDenied(prefab))) throw new Fail($"unit {prefab} is deny-listed");
-            if (!prefab.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(prefab)) throw new Fail($"unknown unit {prefab}");
+            if (refuseDenied && (UnitDenyList.IsDenied(prefab) || units.IsDenied(prefab))) throw new Fail($"unit{Shown(prefab)} is deny-listed");
+            if (!prefab.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(prefab)) throw new Fail($"unknown unit{Shown(prefab)}");
             list.Add(prefab);
         }
         return list;
@@ -461,7 +471,8 @@ public static class EventValidator
 
     static SpawnWavesAction ParseSpawnWaves(JsonElement a, Trigger trigger, IUnitCatalog units, IRegionCatalog regions)
     {
-        OnlyKeys(a, "action", "type", "units", "waves", "intervalSeconds", "radius", "location", "unitLifetimeSeconds", "scope");
+        OnlyKeys(a, "action", "type", "units", "waves", "intervalSeconds", "radius", "location", "unitLifetimeSeconds", "scope",
+            "modifiers", "loot", "behaviour", "allowTerritory");
 
         const string unitsRule = "action.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-50 }";
         var u = Required(a, "units", unitsRule);
@@ -470,11 +481,13 @@ public static class EventValidator
         foreach (var x in u.EnumerateArray())
         {
             if (x.ValueKind != JsonValueKind.Object) throw new Fail(unitsRule);
-            OnlyKeys(x, "action.units", "prefab", "count");
+            OnlyKeys(x, "action.units", "prefab", "count", "chance");
             var prefab = Str(Required(x, "prefab", unitsRule), unitsRule);
-            if (UnitDenyList.IsDenied(prefab) || units.IsDenied(prefab)) throw new Fail($"unit {prefab} is deny-listed");
-            if (!prefab.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(prefab)) throw new Fail($"unknown unit {prefab}");
-            list.Add(new UnitEntry(prefab, Int(Required(x, "count", unitsRule), 1, 50, "action.units.count must be 1-50")));
+            if (UnitDenyList.IsDenied(prefab) || units.IsDenied(prefab)) throw new Fail($"unit{Shown(prefab)} is deny-listed");
+            if (!prefab.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(prefab)) throw new Fail($"unknown unit{Shown(prefab)}");
+            var count = Int(Required(x, "count", unitsRule), 1, 50, "action.units.count must be 1-50");
+            var chance = x.TryGetProperty("chance", out var ch) ? Number(ch, MinChance, 1.0, ChanceRule) : 1.0;
+            list.Add(new UnitEntry(prefab, count, chance));
         }
         var waves = Int(Required(a, "waves", "action.waves must be 1-10"), 1, 10, "action.waves must be 1-10");
         var interval = Int(Required(a, "intervalSeconds", "action.intervalSeconds must be 10-600"), 10, 600, "action.intervalSeconds must be 10-600");
@@ -485,12 +498,99 @@ public static class EventValidator
         // regions D6: a Point outside the scope is refused here; an Admin origin is checked at the start (ScopeGate).
         if (!scope.IsGlobal && location.Type == LocationType.Point && !scope.Names(regions.RegionOf(location.X, location.Z)))
             throw new Fail("action.location is outside action.scope");
-        return new SpawnWavesAction(list, waves, interval, radius, location, lifetime, scope);
+        var modifiers = a.TryGetProperty("modifiers", out var mo) ? ParseModifiers(mo) : null;
+        var loot = a.TryGetProperty("loot", out var lo) && Bool(lo, "action.loot must be true or false");
+        var behaviour = a.TryGetProperty("behaviour", out var be) ? ParseBehaviour(be) : null;
+        var allowTerritory = a.TryGetProperty("allowTerritory", out var at) && Bool(at, "action.allowTerritory must be true or false");
+        if (behaviour is { Type: BehaviourType.Hunt } hunt && location.Type == LocationType.AroundPlayer && location.MaxDist > hunt.Range)
+            throw new Fail(MaxDistOverRange);
+        return new SpawnWavesAction(list, waves, interval, radius, location, lifetime, scope, modifiers, loot, behaviour, allowTerritory);
+    }
+
+    public const double MinChance = 0.05;
+    public const string ChanceRule = "action.units.chance must be a number 0.05-1.0";
+    public const double MinModifier = 0.5;
+    public const double MaxModifier = 3.0;
+    public const int MaxLevelDelta = 5;
+    public const int MinHuntRange = 10;
+    public const int MaxHuntRange = 60;
+    public const string EmptyModifiers = "action.modifiers must name at least one modifier";
+    public const string BothLevels = "action.modifiers takes level or levelDelta, not both";
+    public const string LevelRule = "action.modifiers.level must be 1-120";
+    public const string LevelDeltaRule = "action.modifiers.levelDelta must be -5..5";
+    public const string HuntRangeRule = "action.behaviour.range must be 10-60";
+    public const string MaxDistOverRange = "action.location.maxDist must be at most behaviour.range for Hunt";
+    public const string MinDistRule = "action.location.minDist must be 10-60";
+    public const string MaxDistRule = "action.location.maxDist must be 15-80";
+    public const string DistOrder = "action.location.minDist must be less than maxDist";
+
+    /// <summary>The multiplier keys of `modifiers`, in the order they are listed and applied (D6, D9).</summary>
+    public static readonly IReadOnlyList<string> ModifierKeys = ["maxHealth", "power", "moveSpeed", "attackSpeed"];
+
+    public static string ModifierRule(string key) => $"action.modifiers.{key} must be a number 0.5-3.0 with at most two decimals";
+    /// <summary>"unknown behaviour type &lt;t&gt;"; a type longer than 32 characters or not plain text is left out, so the
+    /// reason stays within one chat line (D32).</summary>
+    public static string UnknownBehaviour(string type) =>
+        type.Length <= 32 && IsPlainText(type, 32) ? $"unknown behaviour type {type}" : "unknown behaviour type";
+
+    /// <summary>`modifiers` (D6): level 1-120 or levelDelta -5..5, never both, and multipliers 0.5-3.0 with at most two
+    /// decimals; an empty object is refused.</summary>
+    static SpawnModifiers ParseModifiers(JsonElement m)
+    {
+        if (m.ValueKind != JsonValueKind.Object) throw new Fail("action.modifiers must be an object");
+        var r = new SpawnModifiers();
+        var any = false;
+        foreach (var p in m.EnumerateObject())
+        {
+            any = true;
+            r = p.Name switch
+            {
+                "level" => r with { Level = Int(p.Value, 1, 120, LevelRule) },
+                "levelDelta" => r with { LevelDelta = Int(p.Value, -MaxLevelDelta, MaxLevelDelta, LevelDeltaRule) },
+                "maxHealth" => r with { MaxHealth = Multiplier(p.Value, p.Name) },
+                "power" => r with { Power = Multiplier(p.Value, p.Name) },
+                "moveSpeed" => r with { MoveSpeed = Multiplier(p.Value, p.Name) },
+                "attackSpeed" => r with { AttackSpeed = Multiplier(p.Value, p.Name) },
+                _ => throw new Fail(UnknownField("action.modifiers", p.Name)),
+            };
+        }
+        if (!any) throw new Fail(EmptyModifiers);
+        if (r.Level is not null && r.LevelDelta is not null) throw new Fail(BothLevels);
+        return r;
+    }
+
+    /// <summary>A multiplier of `modifiers`: a JSON number 0.5-3.0 with at most two decimals (S-8).</summary>
+    static double Multiplier(JsonElement v, string key)
+    {
+        if (v.ValueKind != JsonValueKind.Number || !v.TryGetDecimal(out var d) || d < (decimal)MinModifier || d > (decimal)MaxModifier
+            || decimal.Round(d, 2) != d)
+            throw new Fail(ModifierRule(key));
+        return (double)d;
+    }
+
+    /// <summary>`behaviour` (D6): { "type": "Hunt", "range": 10-60 }; any other type, Guard and Ambush included until
+    /// child spawn-extras, is unknown.</summary>
+    static Behaviour ParseBehaviour(JsonElement b)
+    {
+        if (b.ValueKind != JsonValueKind.Object) throw new Fail("action.behaviour must be { \"type\": \"Hunt\", \"range\": 10-60 }");
+        var type = b.TryGetProperty("type", out var ty) && ty.ValueKind == JsonValueKind.String ? ty.GetString()! : "";
+        if (type != "Hunt") throw new Fail(UnknownBehaviour(type));
+        OnlyKeys(b, "action.behaviour", "type", "range");
+        return new Behaviour(BehaviourType.Hunt, Int(Required(b, "range", HuntRangeRule), MinHuntRange, MaxHuntRange, HuntRangeRule));
+    }
+
+    static bool Bool(JsonElement v, string rule) =>
+        v.ValueKind is JsonValueKind.True or JsonValueKind.False ? v.GetBoolean() : throw new Fail(rule);
+
+    static double Number(JsonElement v, double min, double max, string rule)
+    {
+        if (v.ValueKind != JsonValueKind.Number || !v.TryGetDouble(out var d) || double.IsNaN(d) || d < min || d > max) throw new Fail(rule);
+        return d;
     }
 
     static Location ParseLocation(JsonElement l, Trigger trigger)
     {
-        const string rule = "action.location must be { \"type\": \"Point\", \"x\": number, \"z\": number, optional \"y\": number } or { \"type\": \"Admin\" }";
+        const string rule = "action.location must be { \"type\": \"Point\", \"x\": number, \"z\": number, optional \"y\": number }, { \"type\": \"Admin\" } or { \"type\": \"AroundPlayer\", \"minDist\": 10-60, \"maxDist\": 15-80 }";
         if (l.ValueKind != JsonValueKind.Object) throw new Fail(rule);
         var type = l.TryGetProperty("type", out var ty) && ty.ValueKind == JsonValueKind.String ? ty.GetString() : null;
         switch (type)
@@ -503,6 +603,14 @@ public static class EventValidator
                 OnlyKeys(l, "action.location", "type");
                 if (trigger.Type != TriggerType.Manual) throw new Fail("action.location Admin needs a Manual trigger");
                 return new Location(LocationType.Admin, 0, 0);
+            case "AroundPlayer":
+            {
+                OnlyKeys(l, "action.location", "type", "minDist", "maxDist");
+                var min = Int(Required(l, "minDist", MinDistRule), 10, 60, MinDistRule);
+                var max = Int(Required(l, "maxDist", MaxDistRule), 15, 80, MaxDistRule);
+                if (min >= max) throw new Fail(DistOrder);
+                return new Location(LocationType.AroundPlayer, 0, 0, null, min, max);   // allowed with every trigger (D6)
+            }
             default:
                 throw new Fail(rule);
         }

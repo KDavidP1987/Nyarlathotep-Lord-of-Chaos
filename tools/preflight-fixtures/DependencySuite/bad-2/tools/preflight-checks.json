@@ -120,56 +120,69 @@
     }
   ],
   "dependencySuites": {
-    "event-library": [
-      {
-        "name": "events-write",
-        "kind": "tests",
-        "class": "LibraryDependencyFailureTests",
-        "control": "EventsWrite"
-      },
-      {
-        "name": "events-promote",
-        "kind": "tests",
-        "class": "LibraryDependencyFailureTests",
-        "control": "EventsPromote"
-      },
-      {
-        "name": "state-write",
-        "kind": "tests",
-        "class": "LibraryDependencyFailureTests",
-        "control": "StateWrite"
-      },
-      {
-        "name": "catalogue",
-        "kind": "tests",
-        "class": "LibraryDependencyFailureTests",
-        "control": "Catalogue"
-      },
-      {
-        "name": "location-context",
-        "kind": "tests",
-        "class": "LibraryDependencyFailureTests",
-        "control": "LocationContext"
-      },
-      {
-        "name": "phase-source",
-        "kind": "tests",
-        "class": "LibraryDependencyFailureTests",
-        "control": "PhaseSource"
-      },
-      {
-        "name": "vcf",
-        "kind": "check",
-        "function": "Test-CheckVcfDependency"
-      },
-      {
-        "name": "release-tools",
-        "kind": "selftests",
-        "selftests": [
-          "release-verify",
-          "repo-rollback-drill"
-        ]
-      }
-    ]
+    "event-library": {
+      "categories": [
+        "events-write",
+        "events-promote",
+        "state-write",
+        "cfg-save",
+        "catalogue",
+        "location-context",
+        "phase-source",
+        "vcf",
+        "release-tools"
+      ],
+      "rows": [
+        {
+          "name": "events-write",
+          "kind": "tests",
+          "class": "LibraryDependencyFailureTests",
+          "control": "EventsWrite"
+        },
+        {
+          "name": "events-promote",
+          "kind": "tests",
+          "class": "LibraryDependencyFailureTests",
+          "control": "EventsPromote"
+        },
+        {
+          "name": "state-write",
+          "kind": "tests",
+          "class": "LibraryDependencyFailureTests",
+          "control": "StateWrite"
+        },
+        {
+          "name": "catalogue",
+          "kind": "tests",
+          "class": "LibraryDependencyFailureTests",
+          "control": "Catalogue"
+        },
+        {
+          "name": "location-context",
+          "kind": "tests",
+          "class": "LibraryDependencyFailureTests",
+          "control": "LocationContext"
+        },
+        {
+          "name": "phase-source",
+          "kind": "tests",
+          "class": "LibraryDependencyFailureTests",
+          "control": "PhaseSource"
+        },
+        {
+          "name": "vcf",
+          "kind": "check",
+          "function": "Test-CheckVcfDependency"
+        },
+        {
+          "name": "release-tools",
+          "kind": "selftests",
+          "selftests": [
+            "release-verify",
+            "repo-rollback-drill"
+          ]
+        }
+      ]
+    }
   }
 }

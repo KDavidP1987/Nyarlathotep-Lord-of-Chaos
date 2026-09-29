@@ -99,6 +99,33 @@ public static class CommandArgs
     /// <summary>The settable fields of a SpawnWaves action, refused on an Empower definition.</summary>
     public static readonly IReadOnlyList<string> WaveFields = ["action.waves", "action.intervalSeconds", "action.radius"];
 
+    /// <summary>The settable modifier fields of a SpawnWaves action (event-spawns D18): the two level forms, then the
+    /// multipliers of EventValidator.ModifierKeys.</summary>
+    public static readonly IReadOnlyList<string> ModifierFields =
+        new[] { "level", "levelDelta" }.Concat(EventValidator.ModifierKeys).Select(k => "action.modifiers." + k).ToList();
+
+    public const string UnitChanceField = "action.units.<n>.chance";
+
+    /// <summary>Every event-spawns field (D18), all of a SpawnWaves action; `action.units.&lt;n&gt;.chance` stands for
+    /// one field per unit entry, n 1-10.</summary>
+    public static readonly IReadOnlyList<string> SpawnKeyFields =
+        ModifierFields.Concat(["action.loot", "action.allowTerritory", "action.behaviour", UnitChanceField]).ToList();
+
+    /// <summary>The entry number n (1-10) of an `action.units.&lt;n&gt;.chance` field, or null for any other name.</summary>
+    public static int? UnitChanceIndex(string field)
+    {
+        const string head = "action.units.", tail = ".chance";
+        if (field.Length <= head.Length + tail.Length || !field.StartsWith(head, StringComparison.Ordinal) || !field.EndsWith(tail, StringComparison.Ordinal))
+            return null;
+        var n = field.AsSpan(head.Length, field.Length - head.Length - tail.Length);
+        return n.Length is 1 or 2 && n[0] != '0' && int.TryParse(n, NumberStyles.None, CultureInfo.InvariantCulture, out var i) && i is >= 1 and <= 10
+            ? i : null;
+    }
+
+    /// <summary>The table name of <paramref name="field"/>: `action.units.&lt;n&gt;.chance` for a unit's chance, else the
+    /// field itself.</summary>
+    public static string TableName(string field) => UnitChanceIndex(field) is null ? field : UnitChanceField;
+
     /// <summary>A stat multiplier: 1.0–3.0 with at most two decimals, '.' as the separator (invariant culture). The value
     /// is a decimal, so 1.3 is written to events.json as 1.3.</summary>
     public static Arg<object> Stat(string field, string? text)
@@ -125,7 +152,7 @@ public static class CommandArgs
             d[f] = ("definition", "admin");
         foreach (var f in TriggerFields) d[f] = ("trigger", "admin");
         foreach (var f in StatFields.Append("action.factions")) d[f] = ("empower action", "admin");
-        foreach (var f in WaveFields.Append("action.units")) d[f] = ("spawn action", "admin");
+        foreach (var f in WaveFields.Append("action.units").Concat(SpawnKeyFields)) d[f] = ("spawn action", "admin");
         d["location"] = ("location", "admin");
         d["trigger.scope"] = ("trigger", "admin");                  // regions D9, A28: every trigger type
         d["action.scope"] = ("action", "admin");                    // either action type
@@ -274,18 +301,92 @@ public static class CommandArgs
         return Arg<object>.Of(names.ToArray());
     }
 
+    /// <summary>True when `event set` takes <paramref name="field"/>: a name of the table, or a unit's chance
+    /// `action.units.&lt;n&gt;.chance` with n 1-10 (the table's placeholder itself is no field).</summary>
+    public static bool IsSettable(string field) => field != UnitChanceField && SettableFields.ContainsKey(TableName(field));
+
+    /// <summary>`location here` or `location aroundplayer &lt;minDist&gt; &lt;maxDist&gt;` (event-library D11, event-spawns
+    /// D18), each distance in D6's range and minDist below maxDist.</summary>
+    static Arg<object> LocationValue(string? value)
+    {
+        const string rule = "location takes here or aroundplayer <minDist> <maxDist>";
+        if (value == "here") return Arg<object>.Of(LocationHere.Instance);
+        var parts = (value ?? "").Split(' ');
+        if (parts.Length != 3 || !string.Equals(parts[0], "aroundplayer", StringComparison.OrdinalIgnoreCase)) return Arg<object>.Bad(rule);
+        if (!(int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var min) && min is >= 10 and <= 60))
+            return Arg<object>.Bad(EventValidator.MinDistRule);
+        if (!(int.TryParse(parts[2], NumberStyles.None, CultureInfo.InvariantCulture, out var max) && max is >= 15 and <= 80))
+            return Arg<object>.Bad(EventValidator.MaxDistRule);
+        return min < max ? Arg<object>.Of(new AroundPlayerArg(min, max)) : Arg<object>.Bad(EventValidator.DistOrder);
+    }
+
+    /// <summary>A decimal in [min, max] with at most two decimals, '.' as the separator; null otherwise.</summary>
+    static decimal? Decimal2(string? text, decimal min, decimal max)
+    {
+        if (string.IsNullOrEmpty(text) || text.Length > 6 || text[0] == '.' || text[^1] == '.') return null;
+        if (!decimal.TryParse(text, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var m)) return null;
+        return m >= min && m <= max && decimal.Round(m, 2) == m ? m : null;
+    }
+
+    public const string BehaviourRule = "action.behaviour takes none or hunt <range>";
+    public const string ValueRequired = "value required";
+    public const string UnitChanceRule = "action.units.<n>.chance must be 0.05-1.0 with at most two decimals";
+
+    /// <summary>The event-spawns fields (D18), each value in D6's range: a modifier (or none), loot and allowTerritory
+    /// true or false, behaviour none or hunt &lt;range&gt; (any other type is "unknown behaviour type"), and a unit's
+    /// chance 0.05-1.0. Whether level and levelDelta end up together is EventsEditor's, on the file.</summary>
+    static Arg<object> SpawnKeyValue(string field, string? value)
+    {
+        if (UnitChanceIndex(field) is not null)
+            return Decimal2(value, (decimal)EventValidator.MinChance, 1.0m) is { } c ? Arg<object>.Of(c) : Arg<object>.Bad(UnitChanceRule);
+        if (value == "none" && field is not ("action.loot" or "action.allowTerritory")) return Arg<object>.Of(FieldRemoval.Instance);
+        switch (field)
+        {
+            case "action.loot" or "action.allowTerritory":
+                return value switch
+                {
+                    "true" => Arg<object>.Of(true),
+                    "false" => Arg<object>.Of(false),
+                    _ => Arg<object>.Bad($"{field} must be true or false"),
+                };
+            case "action.behaviour":
+            {
+                var parts = (value ?? "").Split(' ');
+                if (parts[0].Length == 0 || parts.Length > 2) return Arg<object>.Bad(BehaviourRule);
+                if (!string.Equals(parts[0], "hunt", StringComparison.OrdinalIgnoreCase))
+                    return Arg<object>.Bad(IsNameValue("CHAR_" + parts[0], "CHAR_") ? EventValidator.UnknownBehaviour(parts[0].ToLowerInvariant()) : BehaviourRule);
+                return parts.Length == 2 && int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var r)
+                       && r >= EventValidator.MinHuntRange && r <= EventValidator.MaxHuntRange
+                    ? Arg<object>.Of(new BehaviourArg(r)) : Arg<object>.Bad(EventValidator.HuntRangeRule);
+            }
+            case "action.modifiers.level":
+                return int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var level) && level is >= 1 and <= 120
+                    ? Arg<object>.Of(level) : Arg<object>.Bad(EventValidator.LevelRule);
+            case "action.modifiers.levelDelta":
+                return value is { Length: <= 2 } && int.TryParse(value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var delta)
+                       && Math.Abs(delta) <= EventValidator.MaxLevelDelta
+                    ? Arg<object>.Of(delta) : Arg<object>.Bad(EventValidator.LevelDeltaRule);
+            default:        // a multiplier
+                return Decimal2(value, (decimal)EventValidator.MinModifier, (decimal)EventValidator.MaxModifier) is { } m
+                    ? Arg<object>.Of(m) : Arg<object>.Bad(EventValidator.ModifierRule(field["action.modifiers.".Length..]));
+        }
+    }
+
     /// <summary>`event set` whitelist (foundation S-10, event-library D9, D10, D11): field → validator of the new value.
     /// Only the character set and shape are checked here, before any write; name knowledge is the validator's, on
     /// reload. Whether the field fits the event's trigger or action type is checked on the file by EventsEditor.</summary>
     public static Arg<object> SettableValue(string field, string? value)
     {
-        if (!SettableFields.ContainsKey(field)) return Arg<object>.Bad($"field {field} is not settable; edit events.json and reload");
+        if (!IsSettable(field)) return Arg<object>.Bad($"field {field} is not settable; edit events.json and reload");
+        if ((SpawnKeyFields.Contains(TableName(field)) || field == "location") && string.IsNullOrWhiteSpace(value))
+            return Arg<object>.Bad(ValueRequired);                   // event-spawns D18's empty input
+        if (SpawnKeyFields.Contains(TableName(field))) return SpawnKeyValue(field, value);
         if (StatFields.Contains(field)) return Stat(field, value);
         if (TriggerFields.Contains(field)) return TriggerValue(field, value);
         if (field == "action.factions") return Factions(field, value);
         if (field == "action.units") return Units(field, value);
         if (field is "trigger.scope" or "action.scope") return ScopeValue(field, value);
-        if (field == "location") return value == "here" ? Arg<object>.Of(LocationHere.Instance) : Arg<object>.Bad("location takes here: .nyar event set id location here");
+        if (field == "location") return LocationValue(value);
         static Arg<object> IntIn(string f, string? v, int min, int max) =>
             int.TryParse(v, NumberStyles.None, CultureInfo.InvariantCulture, out var i) && i >= min && i <= max
                 ? Arg<object>.Of(i)
@@ -306,6 +407,28 @@ public static class CommandArgs
             _ => Arg<object>.Bad($"field {field} is not settable; edit events.json and reload"),
         };
     }
+}
+
+/// <summary>The value "none" of an event-spawns field (event-spawns D18): the key is removed from the action, and a
+/// modifiers object left empty goes with it.</summary>
+public sealed class FieldRemoval
+{
+    public static readonly FieldRemoval Instance = new();
+    FieldRemoval() { }
+    public override string ToString() => "none";
+}
+
+/// <summary>`action.behaviour hunt &lt;range&gt;` (event-spawns D18): written as { "type": "Hunt", "range": r }.</summary>
+public readonly record struct BehaviourArg(int Range)
+{
+    public override string ToString() => FormattableString.Invariant($"hunt {Range}");
+}
+
+/// <summary>`location aroundplayer &lt;minDist&gt; &lt;maxDist&gt;` (event-spawns D18): written as action.location
+/// { "type": "AroundPlayer", "minDist", "maxDist" }.</summary>
+public readonly record struct AroundPlayerArg(int MinDist, int MaxDist)
+{
+    public override string ToString() => FormattableString.Invariant($"aroundplayer {MinDist} {MaxDist}");
 }
 
 /// <summary>The value of `.nyar event set &lt;id&gt; location here`: the command reads the admin's position and passes

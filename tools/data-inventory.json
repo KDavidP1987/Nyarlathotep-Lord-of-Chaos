@@ -55,7 +55,8 @@
       "rows": [
         "walkable-spawns › build outputs",
         "raphael-api-admin › build outputs",
-        "regions › build outputs"
+        "regions › build outputs",
+        "event-spawns › build outputs"
       ]
     },
     {
@@ -78,7 +79,9 @@
         "raphael-api-admin › release zip",
         "raphael-api-admin › tag and GitHub release v0.5.2",
         "regions › release zip",
-        "regions › tag and GitHub release v0.6.0"
+        "regions › tag and GitHub release v0.6.0",
+        "event-spawns › release zip",
+        "event-spawns › tag and GitHub release v0.7.0"
       ]
     },
     {
@@ -111,7 +114,8 @@
       "deletion": "stop the server and delete the file (Epic D12)",
       "singleCopy": false,
       "rows": [
-        "event-library › Template catalogue"
+        "event-library › Template catalogue",
+        "event-spawns › templates.json examples"
       ]
     },
     {
@@ -149,7 +153,10 @@
         "raphael-api-core › Dev world and mod data",
         "event-library › Chat-written definitions",
         "event-library › events.json.tmp",
-        "regions › `scope` keys"
+        "regions › `scope` keys",
+        "event-spawns › events.json new keys",
+        "event-spawns › events.json.bak",
+        "event-spawns › events.json.tmp, state.json.tmp"
       ]
     },
     {
@@ -254,7 +261,8 @@
         "raphael-api-admin › review pages",
         "raphael-api-admin › plan, reviews, audit, feature doc",
         "regions › review pages",
-        "regions › plan, reviews, audit, feature doc"
+        "regions › plan, reviews, audit, feature doc",
+        "event-spawns › plan, reviews, audit, feature doc"
       ],
       "location": "the repository (docs/, tools/, READMEs, changelogs)",
       "owner": "project owner",
@@ -336,7 +344,8 @@
         "event-library › Session snapshots, release download, rollback worktrees, drill config",
         "walkable-spawns › snapshot",
         "raphael-api-admin › snapshot",
-        "regions › snapshot"
+        "regions › snapshot",
+        "event-spawns › snapshot"
       ],
       "location": "%TEMP%\\nyar-snap-* (saved\\manifest.json plus the copies)",
       "owner": "tools/dev-snapshot.ps1",
@@ -455,7 +464,8 @@
         "event-library › Session log copies",
         "walkable-spawns › session log copies",
         "raphael-api-admin › session log copies",
-        "regions › session log copies"
+        "regions › session log copies",
+        "event-spawns › session log copies"
       ]
     },
     {
@@ -516,7 +526,9 @@
         "raphael-api-admin › review prompts",
         "raphael-api-admin › Claude's scratchpad (Codex prompts, outputs)",
         "regions › review prompts",
-        "regions › Claude's scratchpad (Codex prompts, outputs)"
+        "regions › Claude's scratchpad (Codex prompts, outputs)",
+        "event-spawns › review prompts",
+        "event-spawns › Claude's scratchpad (Codex prompts and outputs, drafts)"
       ]
     },
     {
@@ -529,6 +541,78 @@
       "singleCopy": false,
       "rows": [
         "regions › region index"
+      ]
+    },
+    {
+      "artifact": "Territory block set",
+      "covers": [],
+      "location": "memory, per event (Logic/Spawning.cs TerritoryMaps, built by Services/TerritoryMap.cs), in the server process",
+      "owner": "TerritoryMap",
+      "retention": "built per wave; the event's latest successful build is kept for its Hunt ticks",
+      "deletion": "replaced by the event's next successful build; dropped at every end path (event-spawns D33)",
+      "singleCopy": false,
+      "rows": [
+        "event-spawns › territory block set"
+      ]
+    },
+    {
+      "artifact": "Hunt seed set",
+      "covers": [],
+      "location": "memory (Logic/Spawning.cs HuntSeeds), in the server process",
+      "owner": "HuntAction",
+      "retention": "while the wave lives",
+      "deletion": "at every end path (event-spawns D23, D33)",
+      "singleCopy": false,
+      "rows": [
+        "event-spawns › hunt seed set"
+      ]
+    },
+    {
+      "artifact": "Seeded AggroBuffer entries",
+      "covers": [],
+      "location": "ECS, on units Nyarlathotep spawned only",
+      "owner": "HuntAction",
+      "retention": "until the target stops being eligible or the unit despawns",
+      "deletion": "removed by HuntAction's next tick (event-spawns D13) or with the unit at every end path (D33)",
+      "singleCopy": false,
+      "rows": [
+        "event-spawns › seeded AggroBuffer entries"
+      ]
+    },
+    {
+      "artifact": "Spawned-unit marker buff and stat modifiers",
+      "covers": [],
+      "location": "ECS, on units Nyarlathotep spawned only",
+      "owner": "SpawnTracker / UnitSetup",
+      "retention": "the unit's life",
+      "deletion": "with the unit's despawn; the boot marker sweep removes leftovers (foundation)",
+      "singleCopy": false,
+      "rows": [
+        "event-spawns › marker buff and stat modifiers"
+      ]
+    },
+    {
+      "artifact": "Player-pick snapshot",
+      "covers": [],
+      "location": "memory, per queued wave (PlayerPick, EventRuntime), in the server process",
+      "owner": "EventRuntime",
+      "retention": "until the wave is spawned",
+      "deletion": "dropped when the wave spawns or its event ends (event-spawns D16, D33)",
+      "singleCopy": false,
+      "rows": [
+        "event-spawns › player-pick snapshot"
+      ]
+    },
+    {
+      "artifact": "Spawn health and hunt failure streaks",
+      "covers": [],
+      "location": "memory (SpawnHealth, HuntAction), in the server process",
+      "owner": "SpawnHealth, HuntAction",
+      "retention": "the process",
+      "deletion": "reset when the streak recovers and on restart (event-spawns D30)",
+      "singleCopy": false,
+      "rows": [
+        "event-spawns › health and failure-streak state"
       ]
     }
   ]

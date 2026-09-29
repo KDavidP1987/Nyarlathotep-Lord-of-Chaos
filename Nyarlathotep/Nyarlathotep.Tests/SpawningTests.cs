@@ -4,7 +4,7 @@ namespace Nyarlathotep.Tests;
 
 /// <summary>walkable-spawns D2 (SpawnPoints, the walkable-point search) and D3 (WavePoints, a wave's points under the
 /// per-tick budget).</summary>
-public class SpawningTests
+public partial class SpawningTests
 {
     const float Eps = 1e-3f;
 

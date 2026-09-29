@@ -54,11 +54,12 @@ public sealed class DefinitionEditor(EventsFile file, IFileStore files, EventCat
 
     public Outcome Edit(string id, string path, object value, IUnitCatalog units)
     {
-        if (value is PointArg) path = "action.location";
+        if (value is PointArg or AroundPlayerArg) path = "action.location";      // one field name for every location form (A50)
         var shown = value switch
         {
             string[] list => string.Join(",", list),
             UnitEntry[] u => string.Join(",", u.Select(e => $"{e.Prefab}:{e.Count}")),
+            bool b => b ? "true" : "false",                                           // as typed and as events.json spells it (A50)
             _ => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture),
         };
         var done = path == "enabled" ? $"event {id} {((bool)value ? "enabled" : "disabled")}" : $"event {id} {path} = {shown}";

@@ -39,23 +39,23 @@ internal static class EventScheduler
         {
             yield return wait;
             if (!Core.IsReady) continue;
-            try { Tick(); }
+            try { RunPhases(); }
             catch (Exception ex) { Core.Log.LogError($"[nyar] tick failed outside its phases: {ex.Message}"); }   // the coroutine must outlive any fault
         }
     }
 
-    static void Tick()
+    static void RunPhases()
     {
         var watch = Stopwatch.StartNew();
         var now = DateTime.UtcNow;
         _phases.Clear();
         WalkCheck.Budget.Reset();                                         // walkable-spawns D3, A3
         Phase("spawn queues", SpawnTracker.Tick);
-        Phase("triggers", () => TriggerBus.Tick(now));
+        Phase("triggers", () => TriggerBus.Poll(now));
         Phase("events", () => EventRuntime.Tick(now));
         Phase("announcements", () => Announcer.Tick(now));
         Phase("push", () => Pusher.Tick(now));
-        Phase("health", () => HealthMonitor.Tick(now));
+        Phase("health", () => HealthMonitor.Beat(now));
         Phase("state flush", () => Persistence.State.Flush());
         watch.Stop();
         var ms = watch.Elapsed.TotalMilliseconds;

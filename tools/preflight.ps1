@@ -396,6 +396,61 @@ function Test-CheckCommands([string]$Root) {
     return New-Result $true "commands: $admin admin-only, $public public (allow-listed)"
 }
 
+# -AuthSuite's command inventory (event-spawns D22): the commands that can activate or change a spawn event, the ones
+# event-spawns inherits and that now run its new keys (Design › Actor matrix). Each row is the chat command, the verb its
+# usage must offer ('' for none) and the handler that must stand in the command method's body (Codex step 1 F4: a verb
+# kept in the usage with its branch deleted fails). An event verb's handler is its flow call inside its own case section,
+# between its label and the next case or default (Codex step 1 round 3 F2: a label kept with its call deleted fails).
+# The [Mutating] calls they reach are the gateway check's, run by the same suite. Known limit (Review 24 F4): the match is
+# textual, so a call made unreachable in its section ("return; flows.Start(...)") still counts; the authorization
+# control is each command's adminOnly, checked separately.
+function Get-EventVerbHandler([string]$Verb, [string]$Flow) {
+    return 'case\s+(?:"\w+"\s+or\s+)*"' + $Verb + '"(?:\s+or\s+"\w+")*\s*:(?:(?!\bcase\s+"|\bdefault\s*:)[\s\S])*?\bflows\s*\.\s*' + $Flow + '\s*\('
+}
+$script:SpawnChangingCommands = @(
+    @('.nyar event', 'start', (Get-EventVerbHandler 'start' 'Start')), @('.nyar event', 'stop', (Get-EventVerbHandler 'stop' 'Stop')),
+    @('.nyar event', 'enable', (Get-EventVerbHandler 'enable' 'Enable')), @('.nyar event', 'disable', (Get-EventVerbHandler 'disable' 'Enable')),
+    @('.nyar event', 'set', (Get-EventVerbHandler 'set' 'Set')), @('.nyar event', 'copy', (Get-EventVerbHandler 'copy' 'Copy')),
+    @('.nyar event', 'delete', (Get-EventVerbHandler 'delete' 'DeleteEvent')), @('.nyar template', 'use', '\bTemplateUse\s*\('),
+    @('.nyar spawn', '', '\bSpawnManual\s*\(')
+)
+
+# $Text with every string literal blanked to spaces (same length, so indices hold) except a plain literal that is a
+# switch label ("case "start"" or "case "enable" or "disable""), so a handler named only inside a string is no handler
+# (Codex step 1 round 2 F2).
+function Hide-CsStringsButCases([string]$Text) {
+    return $script:CsLexRx.Replace($Text, {
+        param($m)
+        if ($m.Groups['lc'].Success -or $m.Groups['bc'].Success -or $m.Groups['c'].Success) { return $m.Value }
+        if ($m.Groups['s'].Success -and -not $m.Value.StartsWith('$') -and
+            $Text.Substring(0, $m.Index) -match '\bcase\s+(?:"\w+"\s+or\s+)*$') { return $m.Value }
+        return '"' + (' ' * ($m.Value.Length - 2)) + '"'
+    })
+}
+
+# Every spawn-changing command is found exactly once in the command walk ([Command] attributes of every .cs file) and is
+# adminOnly, its verb is a word of its usage, and its handler is in the command method's body, so none is reachable by
+# a player who is not an admin and none is listed but unhandled.
+function Test-CheckAuthSuite([string]$Root) {
+    $walk = @(Get-CommandWalk $Root)
+    if ($walk.Count -eq 0) { return New-Result $false 'command inventory: no commands found' }
+    $bad = @()
+    foreach ($want in $script:SpawnChangingCommands) {
+        $full, $verb, $handler = $want
+        $label = (@($full, $verb) | Where-Object { $_ }) -join ' '
+        $cmd = @($walk | Where-Object Full -eq $full)
+        if ($cmd.Count -ne 1) { $bad += "$label found $($cmd.Count) times"; continue }
+        if (-not $cmd[0].Admin) { $bad += "$label not adminOnly ($($cmd[0].File))" }
+        $text = Remove-CsComments (Read-Text $Root $cmd[0].File)
+        $attr = [regex]::Match($text, "\[Command(?:Attribute)?\s*\(\s*(?:name\s*:\s*)?`"$([regex]::Escape($cmd[0].Name))`"[^\]]*?(?:usage\s*:\s*`"([^`"]*)`"[^\]]*)?\]")
+        if (-not $attr.Success) { $bad += "$label has no readable [Command] attribute"; continue }
+        if ($verb -and $attr.Groups[1].Value -notmatch "(?<![\w-])$verb(?![\w-])") { $bad += "$label is not in the usage of $full" }
+        if ((Get-MethodBody (Hide-CsStringsButCases $text) ($attr.Index + $attr.Length)) -notmatch $handler) { $bad += "$label has no handler in $($cmd[0].File)" }
+    }
+    if ($bad) { return New-Result $false "command inventory: $($bad -join '; ')" }
+    return New-Result $true "command inventory: $($script:SpawnChangingCommands.Count)/$($script:SpawnChangingCommands.Count) spawn-changing commands adminOnly and handled"
+}
+
 # Start index of the method declaration that encloses $Index: the last "<modifier> ... name(" signature
 # line before it, where the text between that signature's "{" and $Index is still inside its braces.
 function Get-EnclosingMethodStart([string]$Text, [int]$Index) {
@@ -608,7 +663,11 @@ $script:SecretPatterns = @(
     'gh[pousr]_[A-Za-z0-9]{20,}',
     'github_pat_[A-Za-z0-9_]{20,}',
     'Authorization:\s*Bearer\s+[A-Za-z0-9._~+/=-]{8,}',
-    '(TCLI_AUTH_TOK[E]N|GH_TOK[E]N)\s*[=:]\s*\S+'
+    '(TCLI_AUTH_TOK[E]N|GH_TOK[E]N)\s*[=:]\s*\S+',
+    # The release step builds the zip with the tcli token variable set to this sentinel, one random suffix per build, and
+    # the check then finds it wherever the build leaked the variable: the zip, dist/, build/ or the build log
+    # build/tcli-build.log (event-spawns D31). Spelled so that this line is no match.
+    'tcli-sentin[e]l-[0-9a-f]{8}'
 )
 
 # A tools/ script may not read a credential or the environment beyond an allow-list (raphael-api-core D10, A4). The
@@ -689,28 +748,87 @@ function Test-CheckSecrets([string]$Root) {
         $t = [IO.File]::ReadAllText($abs); $scanned++
         if (Find-Secret $t) { $hits += $f }
         if ($ext -eq '.cs' -and (Remove-CsComments $t) -match 'Environment\.GetEnvironmentVariabl[e]') { $hits += "$f (reads the environment)" }
+        # Only the owner's own shell reads the tcli token: no script or source file names it (event-spawns D31; docs may).
+        if (@('.ps1', '.psm1', '.py', '.mjs', '.js', '.cs') -contains $ext -and $f -notlike 'tools/preflight-fixtures/*' -and
+            $(if ($ext -eq '.cs') { Remove-CsComments $t } else { $t }) -match 'TCLI_AUTH_TOK[E]N') { $hits += "$f (reads the tcli token)" }
         if ($f -like 'tools/*' -and $f -notlike 'tools/preflight-fixtures/*') {
             $why = Find-ToolsEnvAccess $ext $t
             if ($why) { $hits += "$f (reads a credential or the environment: $why)" }
         }
     }
+    # Files but no text among them (only binaries, or a zip with no entries): nothing was scanned, which is no pass (D31).
+    if ($scanned -eq 0) { return New-Result $false 'secrets: nothing scanned' }
     # The index can hold content the working tree no longer shows (a token staged or committed, then
     # edited out or deleted only on disk), so every blob in the index is searched as well.
     $indexNote = ''
     if (-not (Test-IsFixture $Root)) {
-        $blobs = @(git -C $Root ls-files --cached 2>$null).Count
-        foreach ($p in $script:SecretPatterns) {
-            $found = git -C $Root grep --cached -I -l -P $p 2>&1
-            if ($LASTEXITCODE -gt 1) { return New-Result $false "secrets: git grep --cached failed: $found" }
-            $hits += @($found | Where-Object { $_ } | ForEach-Object { "$_ (index)" })
-        }
-        $found = git -C $Root grep --cached -I -l -P 'Environment\.GetEnvironmentVariabl[e]' -- '*.cs' 2>&1
-        if ($LASTEXITCODE -gt 1) { return New-Result $false "secrets: git grep --cached failed: $found" }
-        $hits += @($found | Where-Object { $_ } | ForEach-Object { "$_ (index, reads the environment)" })
-        $indexNote = ", $blobs index blobs"
+        $ix = Get-IndexSecretHits $Root
+        if ($ix.Error) { return New-Result $false "secrets: $($ix.Error)" }
+        $hits += $ix.Hits
+        $indexNote = ", $($ix.Blobs) index blobs"
     }
     if ($hits) { return New-Result $false "secrets: FOUND in $(@($hits | Sort-Object -Unique) -join ', ')" }
     return New-Result $true "secrets: none ($scanned files scanned$indexNote)"
+}
+
+# The index side of the secrets check: every rule the working-tree scan applies, over the staged blobs, so content
+# staged and then edited out on disk still fails (Codex step 1 round 5 F1): the secret patterns, a C# environment
+# read, a script or source naming the tcli token, and a tools/ script reading a credential or the environment.
+function Get-IndexSecretHits([string]$Root) {
+    $hits = @()
+    $blobs = @(git -C $Root ls-files --cached 2>$null).Count
+    if ($blobs -eq 0) { return @{ Error = 'index empty: no staged blob to search' } }    # never a silent pass (Review 27 F2)
+    foreach ($p in $script:SecretPatterns) {
+        $found = git -C $Root grep --cached -I -l -P $p 2>&1
+        if ($LASTEXITCODE -gt 1) { return @{ Error = "git grep --cached failed: $found" } }
+        $hits += @($found | Where-Object { $_ } | ForEach-Object { "$_ (index)" })
+    }
+    $found = git -C $Root grep --cached -I -l -P 'Environment\.GetEnvironmentVariabl[e]' -- '*.cs' 2>&1
+    if ($LASTEXITCODE -gt 1) { return @{ Error = "git grep --cached failed: $found" } }
+    $hits += @($found | Where-Object { $_ } | ForEach-Object { "$_ (index, reads the environment)" })
+    $found = git -C $Root grep --cached -I -l -P 'TCLI_AUTH_TOK[E]N' -- '*.ps1' '*.psm1' '*.py' '*.mjs' '*.js' '*.cs' ':(exclude)tools/preflight-fixtures/*' 2>&1
+    if ($LASTEXITCODE -gt 1) { return @{ Error = "git grep --cached failed: $found" } }
+    $hits += @($found | Where-Object { $_ } | ForEach-Object { "$_ (index, reads the tcli token)" })
+    foreach ($f in @(git -C $Root ls-files --cached -- tools ':(exclude)tools/preflight-fixtures/*' 2>$null)) {
+        $ext = [IO.Path]::GetExtension($f).ToLowerInvariant()
+        $t = if ($script:ToolsScriptExt -contains $ext) { (git -C $Root show ":$f" 2>$null) -join "`n" } else { '' }
+        $why = Find-ToolsEnvAccess $ext $t
+        if ($why) { $hits += "$f (index, reads a credential or the environment: $why)" }
+    }
+    return @{ Hits = $hits; Blobs = $blobs; Error = $null }
+}
+
+# Proof that the index side runs (Codex step 1 round 5 F1): a scratch repository stages a script naming the tcli token,
+# then cleans it on disk; Get-IndexSecretHits must find it, and must find nothing once the clean copy is staged.
+# The token name is assembled at run time so this file does not name it. Returns $null on success, else the reason.
+function Test-IndexSecretProbe {
+    $dir = Join-Path ([IO.Path]::GetTempPath()) "nyar-secrets-index-$PID"
+    if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
+    try {
+        New-Item -ItemType Directory -Force (Join-Path $dir 'tools') | Out-Null
+        git -C $dir init -q 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) { return 'index probe: scratch repository setup failed (git init)' }
+        # Each case stages a leak, cleans it on disk and must be found by its label (Review 27 F1: both rules).
+        $cases = @(
+            @(('$x = $' + 'env' + ':' + 'TCLI_AUTH_TOK' + 'EN'), 'tools/leak.ps1 (index, reads the tcli token)', 'a staged tcli token read'),
+            @(('$x = ' + 'gh ' + 'auth ' + 'token'), 'tools/leak.ps1 (index, reads a credential or the environment*', 'a staged credential read in tools/')
+        )
+        $leak = Join-Path $dir 'tools/leak.ps1'
+        foreach ($c in $cases) {
+            Set-Content -LiteralPath $leak -Value $c[0] -NoNewline
+            git -C $dir add -- tools/leak.ps1 2>$null | Out-Null
+            if ($LASTEXITCODE -ne 0) { return 'index probe: scratch repository setup failed (git add)' }
+            Set-Content -LiteralPath $leak -Value '$x = $null' -NoNewline
+            $ix = Get-IndexSecretHits $dir
+            if ($ix.Error) { return "index probe: $($ix.Error)" }
+            if (-not @($ix.Hits | Where-Object { $_ -like $c[1] })) { return "index probe: $($c[2]) passed" }
+        }
+        git -C $dir add -- tools/leak.ps1 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) { return 'index probe: scratch repository setup failed (git add)' }
+        $ix = Get-IndexSecretHits $dir
+        if ($ix.Error -or $ix.Hits) { return "index probe: the clean staged copy failed ($($ix.Error)$($ix.Hits -join ', '))" }
+        return $null
+    } finally { if (Test-Path $dir) { Remove-Item $dir -Recurse -Force } }
 }
 
 # ---------------------------------------------------------------- checks: process records (Epic D17-D19, D21)
@@ -1164,8 +1282,11 @@ function Get-DeclaredTokens([string]$Plan) {
     if ($cur.Length) { $words.Add($cur.ToString()) }
     $tokens = @()
     foreach ($w in $words) {
-        $t = $w.Trim('.', '-', '+')
-        if (-not $t -or $t -notmatch '[/\\*]|^[\w-]+(\.[\w-]+)*\.[A-Za-z]\w*$') { continue }
+        # Sentence punctuation is trimmed, but one leading dot before a name is a dotfile or dot-folder (.claude/,
+        # .gitignore; event-spawns A48) and stays.
+        $t = $w.TrimEnd('.', '-', '+').TrimStart('-', '+')
+        $t = if ($t -match '^\.[\w]') { $t } else { $t.TrimStart('.') }
+        if (-not $t -or $t -notmatch '[/\\*]|^\.?[\w-]+(\.[\w-]+)*\.[A-Za-z]\w*$') { continue }
         # A token of only * and / (a stray ** or a bare glob) would cover every path.
         if ($t -match '^[*/]+$') { continue }
         $tokens += @(Expand-Braces $t)
@@ -1214,6 +1335,33 @@ function Get-WalkedPaths([string]$Root) {
         })
     }
     return $out
+}
+
+# The classes each slug's `dataTests` entry must list (event-spawns A57): the end-path tests D27 names.
+$script:DataTestFloor = @{ 'event-spawns' = @('EndPathTests') }
+
+# The test classes tools/preflight-checks.json `dataTests` lists for $Slug (event-spawns D27), names only.
+function Get-DataTestClasses([string]$Root, [string]$Slug) {
+    $cfg = Read-Text $Root 'tools/preflight-checks.json'
+    if ($null -eq $cfg) { return @() }
+    try { $entry = ($cfg | ConvertFrom-Json).dataTests.$Slug } catch { return @() }
+    return @($entry | Where-Object { "$_" -match '^\w+$' } | Sort-Object -Unique)
+}
+
+# One row per class, Class, Passed and Why ($null when it passed): in the real repository from Invoke-ClassTests, each
+# class run on its own; in a fixture from class-tests.txt, "<class> <passed>" or "<class> <passed> <why>" per line, as
+# Invoke-ClassTests would report it. $null when the fixture lacks the file.
+function Get-DataTestRuns([string]$Root, [string[]]$Classes) {
+    if (Test-IsFixture $Root) {
+        $t = Read-Text $Root 'class-tests.txt'
+        if ($null -eq $t) { return $null }
+        return @(foreach ($l in @($t -split '\r?\n' | Where-Object { $_ -match '^(\w+) (\d+)(?: (.+))?$' })) {
+            $null = $l -match '^(\w+) (\d+)(?: (.+))?$'
+            [pscustomobject]@{ Class = $Matches[1]; Passed = [int]$Matches[2]; Why = $Matches[3] }
+        })
+    }
+    $rows = @(Invoke-ClassTests @($Classes | ForEach-Object { Get-ClassFilter $_ }))
+    return @(for ($i = 0; $i -lt $Classes.Count; $i++) { [pscustomobject]@{ Class = $Classes[$i]; Passed = $rows[$i].Passed; Why = $rows[$i].Why } })
 }
 
 function Test-CheckPaths([string]$Root) {
@@ -1269,6 +1417,27 @@ function Test-CheckPaths([string]$Root) {
             if ($u.Uncovered.Count) { $problems += "declared: $($u.Total - $u.Uncovered.Count)/$($u.Total) in $slug, not in its Paths walked: $(($u.Uncovered | Select-Object -First 10) -join ', ')" }
             else { $declLine = "; declared: $($u.Total)/$($u.Total) in $slug" }
         }
+        # The slug's data tests (event-spawns D27): the classes tools/preflight-checks.json `dataTests` lists for it, the
+        # persisted artifacts' and runtime state's tests (EndPathTests, D33), so probe 3.3 is this one command. A plan that
+        # names `dataTests` needs its entry; the plans closed before it (event-library, regions, ...) keep their commands.
+        $classes = @(Get-DataTestClasses $Root $slug)
+        $wantsData = $null -ne $plan -and $plan.Contains('dataTests')
+        # The floor (event-spawns A57): the entry is editable, so the classes a plan names cannot be dropped from it.
+        $missFloor = @($script:DataTestFloor[$slug] | Where-Object { $_ -and $classes -cnotcontains $_ })
+        if ($classes.Count -eq 0) { if ($wantsData -or $missFloor) { $problems += "$slug names no data tests" } }
+        elseif ($missFloor) { $problems += "$slug data tests miss $($missFloor -join ', ') (floor)" }
+        else {
+            $runs = Get-DataTestRuns $Root $classes
+            if ($null -eq $runs) { $problems += "data tests of $slug unreadable" }
+            else {
+                $failed = @(foreach ($c in $classes) {
+                    $r = @($runs | Where-Object Class -eq $c)[0]
+                    if ($null -eq $r -or $r.Passed -eq 0) { "tests: $c ran 0 tests" } elseif ($r.Why) { "tests: $c failed ($($r.Why))" }
+                })
+                if ($failed) { $problems += $failed }
+                else { $declLine += "; data tests $(($runs | Measure-Object Passed -Sum).Sum) passed" }
+            }
+        }
     }
     # The real tree's -DeclaredOf also runs every planted Paths fixture, and each must fail (event-library A19), so
     # the gating command cannot pass with a scan removed. A second listing of %TEMP% after the checks catches a nyar-*
@@ -1276,13 +1445,15 @@ function Test-CheckPaths([string]$Root) {
     if ($null -ne $in.Declared -and -not (Test-IsFixture $Root)) {
         $plantDir = Join-Path $Root 'tools/preflight-fixtures/Paths'
         $plants = @(Get-ChildItem -LiteralPath $plantDir -Directory -Filter 'bad*' -ErrorAction SilentlyContinue | Sort-Object Name)
-        $need = @('bad-base', 'bad-composed', 'bad-record', 'bad-scratch', 'bad-tempvar', 'bad-transient', 'bad-undeclared')
+        $need = @('bad-base', 'bad-composed', 'bad-datatests', 'bad-datatests-floor', 'bad-record', 'bad-scratch', 'bad-tempvar', 'bad-transient', 'bad-undeclared')
         $absent = @($need | Where-Object { $plants.Name -notcontains $_ })
         $passing = @()
         foreach ($p in $plants) {
             $script:FixtureRoot = $p.FullName
             try { $r = Test-CheckPaths $p.FullName } finally { $script:FixtureRoot = $null }
             if ($r.Pass) { $passing += $p.Name }
+            # bad-datatests-floor would fail for another fault too, so it must fail for its floor (Review 28 F1).
+            elseif ($p.Name -eq 'bad-datatests-floor' -and $r.Line -notmatch 'miss EndPathTests \(floor\)') { $passing += "$($p.Name) (not for its floor: $($r.Line))" }
         }
         # bad-tempvar holds many unmarked %TEMP% roots, and one would mask another, so each is asserted on its own
         # (event-library A24): the scan must report exactly the lines its unmarked.txt lists.
@@ -1727,20 +1898,106 @@ function Test-InSpan([int]$Index, $Spans) {
     return $false
 }
 
-# Every method marked [Mutating] in a dispatched service is a mutating method. Any other file under Commands/,
-# Patches/ or Services/ may name a mutating method only inside the parentheses of a Gateway.Run(...) call; every named use inside such a call, in any of the
-# walked files, is a call site. A use is the identifier anywhere except its own declaration, so a method group
-# captured outside Gateway.Run and passed in later fails too (foundation D11, Epic D36).
+# The System actor (event-spawns D22, A23): the scheduler tick, the deferred init and the Harmony patches run with no
+# chat identity, so EventScheduler.cs, Core.cs and every Patches/ file may call these [Mutating] tick and boot entry
+# points directly: SpawnTracker.Tick and EventRuntime.Tick (the scheduler's phases), EmpowerAction.BeginCarrierTick and
+# TickCarriers (EmpowerAction's tick) and SpawnTracker.BootSweep (the boot marker sweep, from Core). Only these names:
+# any other [Mutating] name in those files still fails outside Gateway.Run.
+# Each is "<service>.<method>": the use must name its service right before the method (SpawnTracker.Tick, or
+# Services.SpawnTracker.BootSweep), so another service's [Mutating] Tick is no entry point (Codex step 1 F2).
+$script:SystemEntryPoints = @('SpawnTracker.Tick', 'SpawnTracker.BootSweep', 'EventRuntime.Tick', 'EmpowerAction.BeginCarrierTick', 'EmpowerAction.TickCarriers')
+# True when the use of $Name at $Index in $Text is written "<Type>.<Name>" and that pair is a System-actor entry point.
+# A use written "<Type>.<Name>" whose type's own file, Services/<Type>.cs, declares no [Mutating] <Name> is that type's
+# method, not a mutating one (Announcer.Tick beside SpawnTracker.Tick), so a System-actor file may name it too.
+function Test-SystemEntryUse([string]$Text, [int]$Index, [string]$Name, $Mutating, $Files) {
+    $m = [regex]::Match($Text.Substring(0, $Index), '(\w+)\s*\.\s*$')
+    if (-not $m.Success) { return $false }
+    $type = $m.Groups[1].Value
+    if ($script:SystemEntryPoints -contains "$type.$Name") { return $true }
+    $own = "$PkgRel/Services/$type.cs"
+    return $Files -contains $own -and @($Mutating[$Name]) -notcontains $own
+}
+# A method declaration's return type: words, generics, arrays, nullables, and tuples such as "(int Queued, int
+# Cancelled)" (Review 25 F1: SpawnTracker.RequestWave, EndEventUnits and PurgeUnits return tuples and were never seen).
+$script:MethodTypeRx = '(?:[\w<>\[\],.?]|\([^()\n]*\))(?:[\w<>\[\],.? ]|\([^()\n]*\))*?'
+$script:MethodModsRx = '(?:(?:public|internal|private|protected|static|override|virtual|async|sealed|new|extern)\s+)+'
+# A [Mutating] method declaration; group 1 is its name.
+$script:MutatingDeclRx = '\[Mutating\]\s*(?:\[[^\]]*\]\s*)*' + $script:MethodModsRx + $script:MethodTypeRx + '\s+(\w+)\s*(?:<[^<>()]*>)?\s*\('
+# Every [Mutating] method of the real tree, by service (A55). Test-CheckMutatingFloor fails when a listed service or
+# method is missing, when a listed method is declared without [Mutating], and when a [Mutating] method is not listed,
+# so the list cannot fall behind the tree and removing the attribute cannot drop a writer out of the gateway check.
+$script:MutatingFloor = [ordered]@{
+    'AdminOps'        = @('OpAuthor', 'OpDelete', 'OpEdit', 'OpPurge', 'OpReload', 'OpSetPillar', 'OpStartEvent', 'OpStopEvent', 'OpUseTemplate')
+    'Announcer'       = @('AdminAnnounce')
+    'EmpowerAction'   = @('BeginCarrierTick', 'EndCarriers', 'QueueBootCarriers', 'StartCarriers', 'StopAllCarriers', 'StopCarriers', 'TickCarriers')
+    'EventRuntime'    = @('Purge', 'StartEvent', 'StopEvent', 'Tick')
+    'EventStore'      = @('Author', 'DeleteDefinition', 'Edit', 'Reload')
+    'Persistence'     = @('Delete', 'Promote', 'PromoteNew', 'Rename', 'WriteFile')
+    'PillarSwitches'  = @('SetPillar')
+    'Pusher'          = @('Subscribe', 'Unsubscribe')
+    'SpawnTracker'    = @('BootSweep', 'EndEventUnits', 'PurgeUnits', 'RequestWave', 'SpawnManual', 'Tick')
+    'TemplateLibrary' = @('UseTemplate')
+    'UnitSetup'       = @('Apply', 'StatModifiers')
+    'WaveAction'      = @('QueueDueWave')
+}
+$script:SystemCallers = @("$PkgRel/Services/EventScheduler.cs", "$PkgRel/Core.cs")
+function Test-IsSystemCaller([string]$File) { $script:SystemCallers -contains $File -or $File -like "$PkgRel/Patches/*" }
+
+# The [Mutating] floor (event-spawns D22, A55): every service of $script:MutatingFloor exists, each listed method is
+# declared there with [Mutating] (a rename or a removed attribute fails), no [Mutating] method of any .cs file of the
+# plugin is unlisted, and every [Mutating] attribute in code belongs to a declaration the check can read.
+function Test-CheckMutatingFloor([string]$Root) {
+    $files = @(Get-CsFiles $Root | Where-Object { $_.StartsWith("$PkgRel/") -and -not $_.StartsWith("$PkgRel/Logic/") })
+    if ($files.Count -eq 0) { return New-Result $false 'mutating floor: no source files' }
+    $anyDecl = "(?:\[[^\]]*\]\s*)*$($script:MethodModsRx)$($script:MethodTypeRx)\s+({0})\s*(?:<[^<>()]*>)?\s*\("
+    $bad = @(); $listed = 0; $found = @{}
+    foreach ($f in $files) {
+        $t = Remove-CsLiterals (Read-Text $Root $f)
+        $decls = @([regex]::Matches($t, $script:MutatingDeclRx))
+        # any attribute list naming Mutating, as the entity-writes check reads it ([Mutating()], [Mutating, Obsolete],
+        # [MutatingAttribute]): a spelling the declaration regex cannot read fails as unreadable (Review 26 F1)
+        $attrs = [regex]::Matches($t, '\[[^\]]*\bMutating(?:Attribute)?\b[^\]]*\]').Count
+        if ($attrs -ne $decls.Count) { $bad += "$f has $attrs [Mutating] attributes but $($decls.Count) readable declarations" }
+        foreach ($d in $decls) { $found["$f|$($d.Groups[1].Value)"] = $true }
+    }
+    foreach ($svc in $script:MutatingFloor.Keys) {
+        $f = "$PkgRel/Services/$svc.cs"
+        if ($files -notcontains $f) { $bad += "service $svc is missing"; continue }
+        $t = Remove-CsLiterals (Read-Text $Root $f)
+        foreach ($name in $script:MutatingFloor[$svc]) {
+            $listed++
+            if (-not $found.ContainsKey("$f|$name")) {
+                $bad += if ([regex]::IsMatch($t, ($anyDecl -f $name))) { "$svc.$name is declared without [Mutating]" } else { "$svc.$name is not declared" }
+            }
+        }
+    }
+    foreach ($k in $found.Keys) {
+        $f, $name = $k -split '\|', 2
+        $svc = [IO.Path]::GetFileNameWithoutExtension($f)
+        if ($f -ne "$PkgRel/Services/$svc.cs" -or -not $script:MutatingFloor.Contains($svc) -or $script:MutatingFloor[$svc] -notcontains $name) {
+            $bad += "$svc.$name is [Mutating] but not in the floor"
+        }
+    }
+    if ($bad) { return New-Result $false "mutating floor: $(@($bad | Sort-Object -Unique) -join '; ')" }
+    return New-Result $true "mutating floor: $listed/$listed listed methods [Mutating] in $($script:MutatingFloor.Count) services, none unlisted"
+}
+
+# Every method marked [Mutating] in a dispatched service is a mutating method. Any other .cs file of the plugin outside
+# Logic/ (Plugin.cs, Core.cs, Config/ and EntityExtensions.cs included, event-spawns D22 and A2; Get-TreeFiles, so a new
+# untracked file is seen) may name a mutating method only inside the parentheses of a Gateway.Run(...) call, or, in a
+# System-actor file, name one of $script:SystemEntryPoints; every named use inside such a call, in any of the walked
+# files, is a call site. A use is the identifier anywhere except its own declaration, so a method group captured
+# outside Gateway.Run and passed in later fails too (foundation D11, Epic D36), and so does a method of another type
+# that merely shares a [Mutating] name (the names are matched bare, event-spawns A16).
 # raphael-api-admin D11 (A1, A2): an access ".Op<Name>" of AdminOps or IAdminOps also fails outside the work argument
 # (the third) of a Gateway.Run in every scanned file but the dispatched services; every Logic/*.cs file is scanned for
 # it too, where the gate is the work argument of "<g>.Run<…>(" and <g> a name the file declares as an ActionGateway
 # (AdminFlows reaches IAdminOps only there: not in the denied argument, not in another type's Run<T>).
 function Test-CheckGatewayOnly([string]$Root) {
-    $dirs = @("$PkgRel/Commands/", "$PkgRel/Patches/", "$PkgRel/Services/")
-    $files = @(Get-CsFiles $Root | Where-Object { $f = $_; @($dirs | Where-Object { $f.StartsWith($_) }).Count -gt 0 })
+    $files = @(Get-CsFiles $Root | Where-Object { $_.StartsWith("$PkgRel/") -and -not $_.StartsWith("$PkgRel/Logic/") })
     $texts = @{}
     foreach ($f in $files) { $texts[$f] = Remove-CsLiterals (Read-Text $Root $f) }
-    $decl = '\[Mutating\]\s*(?:\[[^\]]*\]\s*)*(?:(?:public|internal|private|protected|static|override|virtual|async|sealed)\s+)+[\w<>\[\],.? ]+?\s+(\w+)\s*\('
+    $decl = $script:MutatingDeclRx
     $mutating = @{}    # name -> declaring files
     $declAt = @{}      # "<file>|<index>" of each declaration's name
     foreach ($f in $files) {
@@ -1751,20 +2008,42 @@ function Test-CheckGatewayOnly([string]$Root) {
             $declAt["$f|$($m.Groups[1].Index)"] = $true
         }
     }
-    if ($mutating.Count -eq 0) { return New-Result $false 'gateway: no [Mutating] method found under Commands/, Patches/ or Services/' }
+    if ($mutating.Count -eq 0) { return New-Result $false 'gateway: no [Mutating] method found' }
     $dispatched = $script:DispatchedServices
     $strays = @($mutating.Values | ForEach-Object { $_ } | Sort-Object -Unique | Where-Object { $dispatched -notcontains $_ })
     if ($strays) { return New-Result $false "gateway: [Mutating] declared outside the dispatched services in $($strays -join ', ')" }
-    $sites = 0; $bad = @()
+    $sites = 0; $system = 0; $bad = @()
+    # A using alias named after a service ("using SpawnTracker = ...Persistence;", global or not, in any file of the
+    # plugin) would make "<Type>.<Name>" name another type, so the System-actor pairs could not be trusted (Codex step 1
+    # round 2 F1).
+    $serviceTypes = @($files | Where-Object { $_ -like "$PkgRel/Services/*.cs" } | ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_) })
+    foreach ($f in @(Get-CsFiles $Root | Where-Object { $_.StartsWith("$PkgRel/") })) {
+        foreach ($a in [regex]::Matches((Remove-CsLiterals (Read-Text $Root $f)), '(?m)^\s*(?:global\s+)?using\s+(\w+)\s*=')) {
+            if ($serviceTypes -contains $a.Groups[1].Value) { $bad += "using alias $($a.Groups[1].Value) names a service in $f" }
+        }
+    }
+    # Likewise a field, property, local or parameter named after a service in a System-actor file ("static Store
+    # SpawnTracker = ...;", "var Announcer = Persistence.Disk;"): "<Type>.<Name>" would name that value (Review 24 F1).
+    $notTypes = @('return', 'new', 'is', 'as', 'in', 'out', 'ref', 'case', 'typeof', 'nameof', 'throw', 'await', 'yield', 'else', 'using', 'class', 'namespace', 'static')
+    foreach ($f in @($files | Where-Object { Test-IsSystemCaller $_ })) {
+        foreach ($d in [regex]::Matches($texts[$f], '(?<![.\w])([A-Za-z_][\w.]*(?:<[^<>;{}()]*>)?\??(?:\[\])?)\s+(\w+)\s*(?:=(?!=)|;|,|\)|\{|=>)')) {
+            if ($notTypes -notcontains $d.Groups[1].Value -and $serviceTypes -contains $d.Groups[2].Value) {
+                $bad += "$($d.Groups[2].Value) is declared as a value in $f, shadowing the service"
+            }
+        }
+    }
     foreach ($f in $files) {
         $t = $texts[$f]
         $spans = Get-GateSpans $t '\bGateway\s*\.\s*Run\s*\('
         $work = Get-GateArgSpans $t '\bGateway\s*\.\s*Run\s*\(' 2
+        $sysFile = Test-IsSystemCaller $f
         foreach ($name in $mutating.Keys) {
             foreach ($u in [regex]::Matches($t, "\b$name\b")) {
                 if ($declAt.ContainsKey("$f|$($u.Index)")) { continue }
                 if (Test-InSpan $u.Index $spans) { $sites++ }
-                elseif ($dispatched -notcontains $f) { $bad += "$name used outside Gateway.Run in $f" }
+                elseif ($dispatched -contains $f) { continue }
+                elseif ($sysFile -and (Test-SystemEntryUse $t $u.Index $name $mutating $files)) { $system++ }
+                else { $bad += "$name used outside Gateway.Run in $f" }
             }
         }
         if ($dispatched -notcontains $f) {
@@ -1783,7 +2062,260 @@ function Test-CheckGatewayOnly([string]$Root) {
         }
     }
     if ($bad) { return New-Result $false "gateway: $(@($bad | Select-Object -Unique) -join '; ')" }
-    return New-Result $true "gateway: only ActionGateway mutates ($sites call sites, $opSites admin ops inside Run<T>)"
+    return New-Result $true "gateway: only ActionGateway mutates ($sites call sites, $opSites admin ops inside Run<T>, $system System-actor entry calls)"
+}
+
+# ---------------------------------------------------------------- entity writes (event-spawns D34)
+
+# The entity-write patterns one regex finds, by label (D34). Each match is one write site; no form is excluded.
+$script:EntityWriteRx = [ordered]@{
+    '.Write'             = '\.\s*Write\s*[(<]'
+    'EntityExtensions'   = '\b(?:AddComponentSafe|RemoveComponentSafe|AddBufferSafe|DestroySafe|RemoveBuffSafe)\b'
+    'instantiate'        = '\b(?:InstantiateEntityImmediate|TryInstantiateBuffEntityImmediate)\b'
+    'EntityManager'      = '\bEntityManager\s*\.\s*(?:(?:Set|Add|Remove|Destroy|Instantiate)\w*|CreateEntity\b)'
+    '.ValueRW'           = '\.\s*ValueRW\b'
+    'DestroyUtility'     = '\bDestroyUtility\s*\.\s*Destroy\w*\s*\('   # the deferred destroy, as StructuralEdits spells it (A49)
+    'SystemAPI'          = '\bSystemAPI\s*\.\s*(?:SetComponent|SetBuffer|SetComponentEnabled)\b'
+}
+# A pointer write cannot be classified, so any of these fails the check outright.
+$script:EntityUnsafeRx = '\bunsafe\b|\bGetUnsafePtr\b|\bGetUnsafeReadOnlyPtr\b|\bUnsafeUtility\b'
+# A write through a buffer: a mutating call or an (compound) indexer assignment.
+$script:BufferWriteTail = '\s*(?:\.\s*(?:Add|AddRange|Clear|RemoveAt|RemoveRange|RemoveAtSwapBack|Insert|InsertRange|ResizeUninitialized|Resize|ElementAt|CopyFrom|TrimExcess|EnsureCapacity)\s*\(|\[[^\]]*\]\s*(?:[-+*/%&|^]|<<|>>|\?\?)?=(?![=>]))'
+$script:EcbMethodRx = '\.\s*(?:AddComponent|SetComponent|SetComponentEnabled|RemoveComponent|DestroyEntity|AppendToBuffer|SetBuffer|AddBuffer|Instantiate)\b'
+$script:GenericTail = '<(?:[^<>;{}()]|<(?:[^<>;{}()]|<[^<>;{}()]*>)*>)*>'
+
+# The index of the character that ends the expression statement starting inside $T at $From: a ";" or a "{" outside
+# every bracket opened after $From (a ")" of a bracket opened before it does not end it), or the "}" of the block.
+function Get-EwStatementEnd([string]$T, [int]$From) {
+    $pd = 0; $bd = 0
+    for ($i = $From; $i -lt $T.Length; $i++) {
+        $c = $T[$i]
+        if ($c -eq '(' -or $c -eq '[') { $pd++ }
+        elseif ($c -eq ')' -or $c -eq ']') { $pd-- }
+        elseif ($c -eq '{') { if ($pd -le 0 -and $bd -eq 0) { return $i }; $bd++ }
+        elseif ($c -eq '}') { if ($bd -eq 0) { return $i }; $bd-- }
+        elseif ($c -eq ';' -and $bd -eq 0 -and $pd -le 0) { return $i }
+    }
+    return $T.Length
+}
+
+# The index just after the ";", "{" or "}" that starts the statement holding $At.
+function Get-EwStatementStart([string]$T, [int]$At) {
+    for ($i = $At - 1; $i -ge 0; $i--) { if ($T[$i] -eq ';' -or $T[$i] -eq '{' -or $T[$i] -eq '}') { return $i + 1 } }
+    return 0
+}
+
+# $Text with comments blanked and every literal masked to "_" except an interpolated string's holes, which stay code
+# (Hide-InterpolatedText). Every step keeps the length, so offsets and line numbers match the source.
+function Get-EwCodeText([string]$Text) {
+    return $script:CsLexRx.Replace((Hide-CsSpans $Text), {
+        param($m)
+        if ($m.Value.StartsWith('$') -or $m.Value.StartsWith('@$')) { return Hide-InterpolatedText $m.Value }
+        return [regex]::Replace($m.Value, '[^\r\n]', '_')
+    })
+}
+
+# The (open, close) of the innermost "{ }" block around $At, or (-1, length) at the top.
+function Get-EwBlock([string]$T, [int]$At) {
+    $depth = 0
+    for ($i = $At - 1; $i -ge 0; $i--) {
+        if ($T[$i] -eq '}') { $depth++ }
+        elseif ($T[$i] -eq '{') { if ($depth -eq 0) { $close = Get-CloseIndex $T $i '{' '}'; return @($i, $(if ($close -lt 0) { $T.Length } else { $close })) }; $depth-- }
+    }
+    return @(-1, $T.Length)
+}
+
+# Every entity write site of $T (Get-EwCodeText: comments and literals masked, interpolation holes kept), a hashtable
+# index -> label. Statements and blocks are found in $S (Hide-CsSpans -Literals, holes masked too), which has the same
+# offsets, so a quote nested in a hole (the known lexer limit) cannot unbalance a brace.
+function Find-EntityWrites([string]$T, [string]$S) {
+    $sites = @{}
+    foreach ($k in $script:EntityWriteRx.Keys) {
+        foreach ($m in [regex]::Matches($T, $script:EntityWriteRx[$k])) { if (-not $sites.ContainsKey($m.Index)) { $sites[$m.Index] = $k } }
+    }
+    # An EntityManager held in a local or field: its Set*, Add*, Remove*, Destroy*, Instantiate* and CreateEntity calls.
+    $ems = @([regex]::Matches($T, '\bEntityManager\s+(\w+)\s*[=;,)]') | ForEach-Object { $_.Groups[1].Value }) +
+        @([regex]::Matches($T, '(\w+)\s*=\s*[\w.]*\bEntityManager\s*;') | ForEach-Object { $_.Groups[1].Value })
+    foreach ($n in @($ems | Where-Object { $_ -and $_ -ne 'EntityManager' } | Sort-Object -Unique)) {
+        foreach ($m in [regex]::Matches($T, "\b$n\s*\.\s*(?:(?:Set|Add|Remove|Destroy|Instantiate)\w*|CreateEntity\b)")) { if (-not $sites.ContainsKey($m.Index)) { $sites[$m.Index] = 'EntityManager' } }
+    }
+    # GetBuffer<…>(…) written in the same statement: .Add(, .Clear(, another mutating call or an indexer assignment.
+    foreach ($g in [regex]::Matches($T, '\bGetBuffer\s*<')) {
+        $end = Get-EwStatementEnd $S $g.Index
+        $w = [regex]::new($script:BufferWriteTail).Match($T.Substring($g.Index, $end - $g.Index))
+        if ($w.Success -and -not $sites.ContainsKey($g.Index + $w.Index)) { $sites[$g.Index + $w.Index] = 'GetBuffer' }
+    }
+    # A buffer local: assigned from GetBuffer< or ReadBuffer (any declared type, var included), taken as TryGetBuffer's out
+    # var, or declared DynamicBuffer<…>; written later in its block.
+    $locals = @()
+    foreach ($g in [regex]::Matches($T, '\bGetBuffer\s*<|\bReadBuffer\b|\bTryGetBuffer\b')) {
+        $st = Get-EwStatementStart $S $g.Index
+        $end = Get-EwStatementEnd $S $g.Index
+        $a = [regex]::Matches($T.Substring($st, $g.Index - $st), '(\w+)\s*(?<![=!<>])=(?![=>])')
+        if ($a.Count) { $locals += , @($a[$a.Count - 1].Groups[1].Value, $st) }
+        foreach ($o in [regex]::Matches($T.Substring($g.Index, $end - $g.Index), '\bout\s+var\s+(\w+)')) { $locals += , @($o.Groups[1].Value, $g.Index) }
+    }
+    foreach ($d in [regex]::Matches($T, "\bDynamicBuffer\s*$($script:GenericTail)\s*(\w+)")) { $locals += , @($d.Groups[1].Value, $d.Index) }
+    foreach ($l in $locals) {
+        $blk = Get-EwBlock $S $l[1]
+        $from = $l[1]; $to = $blk[1]
+        foreach ($m in [regex]::Matches($T.Substring($from, $to - $from), "\b$($l[0])$($script:BufferWriteTail)")) {
+            $i = $from + $m.Index
+            if (-not $sites.ContainsKey($i)) { $sites[$i] = 'buffer local' }
+        }
+    }
+    # ComponentLookup / BufferLookup / ComponentDataFromEntity locals: an indexer assignment.
+    $lookups = @([regex]::Matches($T, "\b(?:ComponentLookup|BufferLookup|ComponentDataFromEntity|BufferFromEntity)\s*$($script:GenericTail)\s*(\w+)") | ForEach-Object { $_.Groups[1].Value }) +
+        @([regex]::Matches($T, '(\w+)\s*=\s*[^;]*?\b(?:GetComponentLookup|GetBufferLookup|GetComponentDataFromEntity|GetBufferFromEntity)\b') | ForEach-Object { $_.Groups[1].Value })
+    foreach ($n in @($lookups | Sort-Object -Unique)) {
+        foreach ($m in [regex]::Matches($T, "\b$n\s*\[[^\]]*\]\s*(?:[-+*/%&|^]|<<|>>|\?\?)?=(?![=>])")) { if (-not $sites.ContainsKey($m.Index)) { $sites[$m.Index] = 'lookup indexer' } }
+    }
+    # An EntityCommandBuffer or CommandBuffer receiver's structural or component call.
+    $ecbs = @([regex]::Matches($T, '\bEntityCommandBuffer(?:\s*\.\s*ParallelWriter)?\s+(\w+)') | ForEach-Object { $_.Groups[1].Value }) +
+        @([regex]::Matches($T, '(\w+)\s*=\s*[^;]*?\b(?:CreateCommandBuffer|AsParallelWriter)\s*\(') | ForEach-Object { $_.Groups[1].Value })
+    foreach ($m in [regex]::Matches($T, $script:EcbMethodRx)) {
+        $pre = $T.Substring([Math]::Max(0, $m.Index - 300), [Math]::Min(300, $m.Index))
+        $r = [regex]::Match($pre, '([\w.]+(?:\s*\([^()]*\))?)\s*$')
+        if (-not $r.Success) { continue }
+        $root = ([regex]::Match($r.Groups[1].Value, '\w+')).Value
+        if ($r.Groups[1].Value -match '(?i)CommandBuffer|\becb\b' -or $ecbs -contains $root) { if (-not $sites.ContainsKey($m.Index)) { $sites[$m.Index] = 'command buffer' } }
+    }
+    return $sites
+}
+
+# The type declarations of $T: Name, Open, Close, Private (no public/internal/protected in its header) and Parent (an
+# index into the list, -1 at the top level). A declaration with no body (a positional record) is skipped.
+function Get-EwTypes([string]$T) {
+    $types = [Collections.Generic.List[object]]::new()
+    foreach ($m in [regex]::Matches($T, '\b(?:record\s+(?:class|struct)|class|struct|record|interface|enum)\s+(\w+)')) {
+        $open = -1
+        for ($i = $m.Index + $m.Length; $i -lt $T.Length; $i++) { if ($T[$i] -eq '{') { $open = $i; break }; if ($T[$i] -eq ';') { break } }
+        if ($open -lt 0) { continue }
+        $close = Get-CloseIndex $T $open '{' '}'
+        if ($close -lt 0) { $close = $T.Length }
+        $hs = Get-EwStatementStart $T $m.Index
+        $head = [regex]::Replace($T.Substring($hs, $m.Index - $hs), '\[[^\]]*\]', ' ')
+        $types.Add([pscustomobject]@{ Name = $m.Groups[1].Value; Open = $open; Close = $close; Private = $head -notmatch '\b(?:public|internal|protected)\b'; Parent = -1 })
+    }
+    for ($a = 0; $a -lt $types.Count; $a++) {
+        $best = -1
+        for ($b = 0; $b -lt $types.Count; $b++) {
+            if ($a -eq $b) { continue }
+            if ($types[$b].Open -lt $types[$a].Open -and $types[$b].Close -gt $types[$a].Close -and ($best -lt 0 -or $types[$b].Open -gt $types[$best].Open)) { $best = $b }
+        }
+        $types[$a].Parent = $best
+    }
+    return , $types
+}
+
+# The members of the type body ($Open, $Close) of $T: each declaration at depth 0 of the body up to its ";" or its
+# closing "}". Start, Body (the index of its first "{" or "=" at depth 0, where the header ends), End, Name, NonPrivate,
+# Mutating and IsType.
+function Get-EwMembers([string]$T, [int]$Open, [int]$Close) {
+    $out = [Collections.Generic.List[object]]::new()
+    $bd = 0; $pd = 0; $start = $Open + 1; $head = -1
+    for ($i = $Open + 1; $i -le $Close; $i++) {
+        $c = $T[$i]; $endAt = -1
+        if ($i -eq $Close) { $endAt = $i }
+        elseif ($c -eq '(' -or $c -eq '[') { $pd++ }
+        elseif ($c -eq ')' -or $c -eq ']') { $pd-- }
+        elseif ($c -eq '{') { if ($bd -eq 0 -and $pd -eq 0 -and $head -lt 0) { $head = $i }; $bd++ }
+        elseif ($c -eq '}') { $bd--; if ($bd -eq 0 -and $pd -eq 0) { $endAt = $i } }
+        elseif ($c -eq '=' -and $bd -eq 0 -and $pd -eq 0 -and $head -lt 0) { $head = $i }
+        elseif ($c -eq ';' -and $bd -eq 0 -and $pd -eq 0) { $endAt = $i }
+        if ($endAt -lt 0) { continue }
+        $hEnd = if ($head -ge 0) { $head } else { $endAt }
+        $header = $T.Substring($start, $hEnd - $start)
+        if ($header -match '\S') {
+            $mut = $header -match '\[[^\]]*\bMutating\b[^\]]*\]'
+            $plain = [regex]::Replace($header, '\[[^\]]*\]', ' ')
+            $isType = $plain -match '\b(?:class|struct|record|interface|enum)\s+\w+'
+            $name = ''
+            $p = $plain.IndexOf('(')
+            if ($p -ge 0) { $nm = [regex]::Match($plain.Substring(0, $p), "(\w+)\s*(?:$($script:GenericTail))?\s*$"); if ($nm.Success) { $name = $nm.Groups[1].Value } }
+            else { $nm = [regex]::Matches($plain, '\w+'); if ($nm.Count) { $name = $nm[$nm.Count - 1].Value } }
+            $out.Add([pscustomobject]@{ Start = $start; Body = $hEnd; End = $endAt; Name = $name; NonPrivate = $plain -match '\b(?:public|internal|protected)\b'; Mutating = $mut; IsType = $isType })
+        }
+        $start = $endAt + 1; $head = -1
+    }
+    return , $out
+}
+
+# Entity writes stay in services (event-spawns D34). Every .cs file of the plugin outside Logic/ (Get-TreeFiles, so a
+# new untracked file is seen) is scanned for the write patterns above, independent of any annotation. A write may sit in
+# EntityExtensions.cs, or in a dispatched service's class (the one named after its file): inside a private member (a
+# member of a private nested class, such as EmpowerAction.Ops, counts as private), or inside a non-private member marked
+# [Mutating]. A non-private member that names a private writing member of the same file writes too (transitively), so a
+# write moved into a private helper still needs [Mutating] on the member that reaches it. An unsafe block or a
+# GetUnsafePtr, GetUnsafeReadOnlyPtr or UnsafeUtility call fails outright. Logic/ is compiled into the test project,
+# which references no game assembly, so it is not scanned; a Logic/ file with a using of Unity*, ProjectM* or
+# Stunlock* fails instead.
+function Test-CheckEntityWrites([string]$Root) {
+    $all = @(Get-CsFiles $Root | Where-Object { $_.StartsWith("$PkgRel/") })
+    $logic = @($all | Where-Object { $_.StartsWith("$PkgRel/Logic/") })
+    $files = @($all | Where-Object { -not $_.StartsWith("$PkgRel/Logic/") })
+    if ($files.Count -eq 0) { return New-Result $false 'entity writes: no source files' }
+    $bad = @()
+    foreach ($f in $logic) {
+        $t = Hide-CsSpans (Read-Text $Root $f) -Literals
+        foreach ($u in [regex]::Matches($t, '(?m)^\s*(?:global\s+)?using\s+(?:static\s+)?(?:\w+\s*=\s*)?((?:Unity|ProjectM|Stunlock)[\w.]*)')) {
+            $bad += "$f has using $($u.Groups[1].Value) (Logic/ holds no game code)"
+        }
+    }
+    $dispatched = $script:DispatchedServices
+    $sites = 0; $mutating = 0
+    foreach ($f in $files) {
+        $raw = Read-Text $Root $f
+        if (-not $raw) { continue }
+        $t = Get-EwCodeText $raw
+        $s = Hide-CsSpans $raw -Literals
+        $lineOf = { param($i) ([regex]::Matches($t.Substring(0, $i), "`n")).Count + 1 }
+        foreach ($u in [regex]::Matches($t, $script:EntityUnsafeRx)) { $bad += "$($u.Value) in ${f}:$(& $lineOf $u.Index) (a pointer write cannot be classified)" }
+        $found = Find-EntityWrites $t $s
+        $sites += $found.Count
+        if ($found.Count -eq 0 -or $f -eq "$PkgRel/EntityExtensions.cs") { continue }
+        if ($dispatched -notcontains $f) {
+            foreach ($i in @($found.Keys | Sort-Object)) { $bad += "entity write ($($found[$i])) in ${f}:$(& $lineOf $i), outside the dispatched services" }
+            continue
+        }
+        # A dispatched service: attribute each site to its member.
+        $svc = [IO.Path]::GetFileNameWithoutExtension($f)
+        $types = Get-EwTypes $s
+        $members = [Collections.Generic.List[object]]::new()
+        for ($k = 0; $k -lt $types.Count; $k++) {
+            $top = $k; $priv = $false
+            while ($types[$top].Parent -ge 0) { if ($types[$top].Private) { $priv = $true }; $top = $types[$top].Parent }
+            foreach ($m in (Get-EwMembers $s $types[$k].Open $types[$k].Close)) {
+                if ($m.IsType) { continue }
+                $m | Add-Member -NotePropertyName Private -NotePropertyValue ($priv -or -not $m.NonPrivate)
+                $m | Add-Member -NotePropertyName InService -NotePropertyValue ($types[$top].Name -eq $svc)
+                $m | Add-Member -NotePropertyName Writes -NotePropertyValue $false
+                $members.Add($m)
+            }
+        }
+        foreach ($i in @($found.Keys | Sort-Object)) {
+            $own = $null
+            foreach ($m in $members) { if ($i -ge $m.Start -and $i -le $m.End -and ($null -eq $own -or $m.Start -gt $own.Start)) { $own = $m } }
+            if ($null -eq $own -or -not $own.InService) { $bad += "entity write ($($found[$i])) in ${f}:$(& $lineOf $i), outside the $svc class"; continue }
+            $own.Writes = $true
+        }
+        # A member that names a private writing member writes too, to a fixpoint.
+        do {
+            $grew = $false
+            $names = @($members | Where-Object { $_.Writes -and $_.Private -and $_.Name } | ForEach-Object Name | Sort-Object -Unique)
+            if (-not $names) { break }
+            $rx = [regex]"\b(?:$($names -join '|'))\b"
+            foreach ($m in $members) {
+                if ($m.Writes -or -not $m.InService) { continue }
+                if ($rx.IsMatch($t.Substring($m.Body, $m.End - $m.Body + 1))) { $m.Writes = $true; $grew = $true }
+            }
+        } while ($grew)
+        foreach ($m in @($members | Where-Object { $_.Writes -and -not $_.Private })) {
+            if ($m.Mutating) { $mutating++ } else { $bad += "$svc.$($m.Name) writes an entity but is not [Mutating] (${f}:$(& $lineOf $m.Body))" }
+        }
+    }
+    if ($bad) { return New-Result $false "entity writes: $(@($bad | Select-Object -Unique) -join '; ')" }
+    return New-Result $true "entity writes: only dispatched services ($sites sites, $mutating [Mutating] methods)"
 }
 
 # ---------------------------------------------------------------- human replies and thin shims (raphael-api-admin D1)
@@ -2625,26 +3157,36 @@ function Invoke-ClassTests([string[]]$Filters) {
     }
 }
 
-# The dependency suite's category table (event-library D33): tools/preflight-checks.json dependencySuites.<slug>, rows
-# of kind "tests" (class, control), "check" (function, run over its fixtures and the real tree) or "selftests" (names
-# of externalSelfTests entries).
-$script:DependencyCategories = @('events-write', 'events-promote', 'state-write', 'cfg-save', 'catalogue', 'location-context', 'phase-source', 'vcf', 'release-tools')
-
-function Get-DependencyTable([string]$Root, [string]$Slug) {
-    $path = Join-Path $Root 'tools/preflight-checks.json'
-    if (-not (Test-Path -LiteralPath $path)) { return @() }
-    $json = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
-    return @($json.dependencySuites.$Slug | Where-Object { $_ })
+# The dependency suite's category table (event-library D33): tools/preflight-checks.json dependencySuites.<slug> is
+# { "categories": [...], "rows": [...] }. categories names the slug's required categories (event-spawns D21: read per
+# slug, no longer one fixed list), so a row deleted from rows is still missed; each row is of kind "tests" (class,
+# control), "check" (function, run over its fixtures and the real tree) or "selftests" (names of externalSelfTests entries).
+# Each listed slug's required categories, kept here as a floor so a category removed from the entry together with its
+# row still fails (event-spawns A52). event-spawns' five join in step 2 with its entry.
+$script:SuiteFloor = @{
+    'event-library' = @('events-write', 'events-promote', 'state-write', 'cfg-save', 'catalogue', 'location-context', 'phase-source', 'vcf', 'release-tools')
 }
 
-# Every way the table of $Slug is wrong, statically: no rows, a required category missing or doubled, a tests row whose
-# class has no <Control>_ test method under Nyarlathotep.Tests, a check row naming no Test-Check function of the manifest,
-# a selftests row naming no externalSelfTests entry.
+function Get-DependencySuite([string]$Root, [string]$Slug) {
+    $path = Join-Path $Root 'tools/preflight-checks.json'
+    if (-not (Test-Path -LiteralPath $path)) { return @{ Categories = @(); Rows = @() } }
+    $s = (Get-Content -LiteralPath $path -Raw | ConvertFrom-Json).dependencySuites.$Slug
+    return @{ Categories = @($s.categories | Where-Object { "$_" -match '\S' }); Rows = @($s.rows | Where-Object { $_ }) }
+}
+
+function Get-DependencyTable([string]$Root, [string]$Slug) { return @((Get-DependencySuite $Root $Slug).Rows) }
+
+# Every way the table of $Slug is wrong, statically: no categories, a required category missing or doubled among the rows,
+# a row outside the categories, a tests row whose class has no <Control>_ test method under Nyarlathotep.Tests, a check
+# row naming no Test-Check function of the manifest, a selftests row naming no externalSelfTests entry.
 function Get-DependencyTableProblems([string]$Root, [string]$Slug) {
-    $rows = @(Get-DependencyTable $Root $Slug)
-    if ($rows.Count -eq 0) { return @("dependency suite: $Slug has no categories") }
+    $suite = Get-DependencySuite $Root $Slug
+    $rows = @($suite.Rows)
+    if ($suite.Categories.Count -eq 0) { return @("dependency suite: $Slug has no categories") }
     $p = @()
-    foreach ($want in $script:DependencyCategories) {
+    foreach ($f in @($script:SuiteFloor[$Slug])) { if ($f -and $suite.Categories -notcontains $f) { $p += "category $f missing from the entry (floor)" } }
+    foreach ($r in $rows) { if ($suite.Categories -notcontains $r.name) { $p += "row $($r.name) is not a category of $Slug" } }
+    foreach ($want in $suite.Categories) {
         $n = @($rows | Where-Object name -eq $want).Count
         if ($n -eq 0) { $p += "category $want missing" } elseif ($n -gt 1) { $p += "category $want listed $n times" }
     }
@@ -2669,10 +3211,19 @@ function Get-DependencyTableProblems([string]$Root, [string]$Slug) {
     return $p
 }
 
+# Every slug of dependencySuites, each against its own categories (event-spawns D21).
 function Test-CheckDependencySuite([string]$Root) {
-    $problems = @(Get-DependencyTableProblems $Root 'event-library')
+    $path = Join-Path $Root 'tools/preflight-checks.json'
+    $slugs = if (Test-Path -LiteralPath $path) { @((Get-Content -LiteralPath $path -Raw | ConvertFrom-Json).dependencySuites.PSObject.Properties.Name) } else { @() }
+    if ($slugs.Count -eq 0) { return New-Result $false 'dependency table: no dependency suites' }
+    $slugs = @($slugs + @($script:SuiteFloor.Keys | Where-Object { $slugs -notcontains $_ } | Sort-Object))   # a floor slug without an entry fails
+    $problems = @(); $seen = @()
+    foreach ($s in $slugs) {
+        $sp = @(Get-DependencyTableProblems $Root $s)
+        if ($sp) { $problems += @($sp | ForEach-Object { "${s}: $_" }) } else { $seen += "$s $((Get-DependencySuite $Root $s).Categories.Count)/$((Get-DependencySuite $Root $s).Categories.Count)" }
+    }
     if ($problems) { return New-Result $false "dependency table: $($problems -join '; ')" }
-    return New-Result $true "dependency table: event-library $($script:DependencyCategories.Count)/$($script:DependencyCategories.Count) categories"
+    return New-Result $true "dependency table: $($seen -join ', ') categories"
 }
 
 # ---------------------------------------------------------------- runner
@@ -2690,13 +3241,14 @@ function Invoke-Check([string]$Function, [string]$Root) {
 # Copy one stored fixture (good/, bad/ or empty/) into a scratch directory. ".gitkeep" only keeps an
 # empty fixture in git and is never copied. A file named "<name>.b64plant" is written as <name> with its
 # base64-decoded bytes: the secrets fixture plants its token that way so the repository itself never
-# holds a token-shaped string.
+# holds a token-shaped string. A directory named "<name>.ignored" is written as <name>: a fixture holds dist/, build/ and
+# artifacts/ that way, which .gitignore would otherwise keep out of the repository (event-spawns D31).
 function Copy-Fixture([string]$From, [string]$To) {
     if (-not (Test-Path $From)) { throw "fixture directory $From not found" }
     $base = (Resolve-Path $From).Path.TrimEnd('\', '/')
     foreach ($f in Get-ChildItem -Path $base -Recurse -File -Force) {
         if ($f.Name -eq '.gitkeep') { continue }
-        $rel = $f.FullName.Substring($base.Length + 1)
+        $rel = @($f.FullName.Substring($base.Length + 1) -split '[\\/]' | ForEach-Object { $_ -replace '\.ignored$', '' }) -join '\'
         $dest = Join-Path $To $rel
         New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
         if ($f.Name.EndsWith('.b64plant')) {
@@ -2716,9 +3268,11 @@ function Invoke-FixtureBattery($Check, [string]$Tmp) {
     # good and empty, plus every bad fixture: bad/ and any bad-<n>/ (one planted fault each).
     $bads = @(Get-ChildItem $fx -Directory -Filter 'bad*' -ErrorAction SilentlyContinue | ForEach-Object Name | Sort-Object)
     if ($bads -notcontains 'bad') { $bads = @('bad') + $bads }
-    foreach ($b in $bads) { if (-not $Check.plant.$b) { $ok = $false; $problems += "$($Check.name): no plant description for $b" } }
+    # Every empty-<name>/ fails too, like empty (event-spawns D27, D31), and is described like a bad fixture.
+    $empties = @(Get-ChildItem $fx -Directory -Filter 'empty-*' -ErrorAction SilentlyContinue | ForEach-Object Name | Sort-Object)
+    foreach ($b in $bads + $empties) { if (-not $Check.plant.$b) { $ok = $false; $problems += "$($Check.name): no plant description for $b" } }
     $goods = @(Get-ChildItem $fx -Directory -Filter 'good-*' -ErrorAction SilentlyContinue | ForEach-Object Name | Sort-Object)
-    foreach ($kind in @(@('good') + $goods + $bads + @('empty'))) {
+    foreach ($kind in @(@('good') + $goods + $bads + @('empty') + $empties)) {
         if (-not (Test-Path (Join-Path $fx $kind))) { $ok = $false; $problems += "$($Check.name): $kind fixture missing ($($Check.fixtures)/$kind)"; continue }
         $dir = Join-Path $Tmp "$($Check.name)-$kind"
         if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
@@ -2784,6 +3338,8 @@ function Get-SelfTestResult {
     # Then the secrets check on the real tracked tree: a token in the repository fails the selftest too (D22).
     $sec = Invoke-Check 'Test-CheckSecrets' $repoRoot
     if (-not $sec.Pass) { $problems += "real tree: $($sec.Line)" }
+    $probe = Test-IndexSecretProbe
+    if ($probe) { $problems += $probe } else { $sec.Line += '; index probe: a staged tcli token read and a staged tools/ credential read fail' }
     return @{ Passed = $passed; Total = $checks.Count; Extra = $extra; ExtOk = $extOk; ExtTotal = $reg.Entries.Count; SecLine = $sec.Line; Problems = $problems }
 }
 
@@ -2857,7 +3413,8 @@ if ($DependencySuite) {
     $reg = Get-SelfTestRegistry $repoRoot
     $tmp = Join-Path ([IO.Path]::GetTempPath()) "nyar-depsuite-$PID"
     $done = @(); $fail = @()
-    foreach ($want in $script:DependencyCategories) {
+    $categories = @((Get-DependencySuite $repoRoot $slug).Categories)
+    foreach ($want in $categories) {
         $r = @(Get-DependencyTable $repoRoot $slug | Where-Object name -eq $want)[0]
         $why = @()
         switch ($r.kind) {
@@ -2883,7 +3440,7 @@ if ($DependencySuite) {
         if ($why) { $fail += "${want}: $($why -join ', ')" } else { $done += $want }
     }
     if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
-    $total = $script:DependencyCategories.Count
+    $total = $categories.Count
     if ($fail) {
         Write-Host "dependency suite: $slug $($done.Count)/$total — FAILED" -ForegroundColor Red
         $fail | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
@@ -2914,8 +3471,8 @@ if ($ListCommands -eq 'admin') {
 
 if ($AuthSuite) {
     # Every direct and indirect path of the actor matrix in one run (raphael-api-core D7): the ActionKind × actor and
-    # row/push access tests, then the checks that keep adminOnly, the admin list and the gateway honest, then the
-    # public/admin split of the api commands. A filter that runs no test is a failure.
+    # row/push access tests, then the checks that keep adminOnly, the admin list, the gateway and the entity writes
+    # (event-spawns D34) honest, then the public/admin split of the api commands. A filter that runs no test is a failure.
     $parts = @(); $fail = @()
     # Each class runs on its own, so a deleted, renamed or fully skipped class is "no tests ran", not hidden by the other.
     $testsOk = $true
@@ -2923,9 +3480,12 @@ if ($AuthSuite) {
         if ($row.Why) { $fail += "$($row.Filter) $($row.Why)"; $testsOk = $false }
     }
     if ($testsOk) { $parts += 'tests' }
-    foreach ($c in @(@('commands', 'Test-CheckCommands'), @('admin list', 'Test-CheckAdminList'), @('gateway', 'Test-CheckGatewayOnly'), @('vcf dependency', 'Test-CheckVcfDependency'))) {
-        $r = Invoke-Check $c[1] $repoRoot
-        if ($r.Pass) { $parts += $c[0] } else { $fail += $r.Line }
+    # "commands" is the adminOnly walk and the spawn-changing command inventory together (event-spawns D22).
+    foreach ($c in @(@('commands', @('Test-CheckCommands', 'Test-CheckAuthSuite')), @('admin list', @('Test-CheckAdminList')), @('gateway', @('Test-CheckGatewayOnly', 'Test-CheckMutatingFloor')),
+            @('entity writes', @('Test-CheckEntityWrites')), @('vcf', @('Test-CheckVcfDependency')))) {
+        $ok = $true
+        foreach ($fn in $c[1]) { $r = Invoke-Check $fn $repoRoot; if (-not $r.Pass) { $fail += $r.Line; $ok = $false } }
+        if ($ok) { $parts += $c[0] }
     }
     $walk = @(Get-CommandWalk $repoRoot)
     foreach ($want in @(@('.nyar api version', $false), @('.nyar api status', $false), @('.nyar api sub', $false), @('.nyar api events', $true))) {

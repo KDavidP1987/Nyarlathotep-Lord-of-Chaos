@@ -846,3 +846,136 @@ VERDICT: READY
 ### Dispositions
 - F1 · accepted · no change: Paths walked's header declares the plan store for every step, as in the closed children, whose steps passed -Paths -DeclaredOf with their plan stores amended
 - F2 · accepted · no change: A21's Nyarlathotep/Nyarlathotep.Tests/** is the declaration; the named list is a guide
+
+## Review 22 · 2026-09-29 · subagent · plan uncommitted · plan 154187 B · 24 items · files 0 · e3b0c44298fc · prompt 13ad6338e245 · scope A48
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendment A48 (design §9 D26); the prompt held no Steam ID.
+
+F1 · advisory · 14.4 · A48: .claude/ also holds hooks/ and settings.local.json, which this child does not write; the .claude/ glob covers them, but naming two files may read as the whole content. Fix: optional wording.
+
+F2 · advisory · 14.4 · A48: a worktree agent also writes git metadata (.git/worktrees/<name>, a temporary branch ref), removed with the worktree and branch. Fix: none needed.
+
+F3 · advisory · — · the rest of the plan was not regraded, per the scope.
+
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · rejected · the declaration names what this child writes; the .claude/ glob already covers the rest
+- F2 · accepted · no change: the worktree and its branch were removed after the merge; git's own metadata went with them
+- F3 · accepted · no change: the scope excludes the rest of the plan
+
+## Review 23 · 2026-09-29 · subagent · plan uncommitted · plan 156627 B · 24 items · files 0 · e3b0c44298fc · prompt 975364e7d093 · scope A49,A50,A51,A52
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A49-A52 (design §9 D26); the prompt held no Steam ID.
+
+F1 · advisory · 12.4 · A49's fixture bad-destroyutility is named only in D34's pattern list, not in D34's -SelfTest fails-when list, the 12.4 EntityWrites and -AuthSuite rows, or step 1's EntityWrites bullet. Fix: name it in all three.
+F2 · advisory · 10.1 · D34 names DestroyUtility.Destroy as a literal, while the StructuralEdits check matches DestroyUtility.Destroy\w*( with a nested first argument. Fix: say D34 matches the same form.
+F3 · advisory · 12.4 · event-spawns' five floor categories would be checked in step 1, before its dependencySuites entry exists (step 2). Fix: the floor joins in step 2 with the entry, or is checked only for a named slug; add bad-floor to the 12.4 DependencySuite row and step 1.
+F4 · advisory · 5.1 · A50's three behaviours (the refused chance's argument name, the aroundplayer edit's field name, lowercase booleans) are named by no fails-when. Fix: add them to D18's tests and fails-when.
+
+Scenarios hunted: a nested-argument DestroyUtility call in Commands/ (F2); step 1's preflight with the event-spawns floor but no entry (F3); an empty entry and floor for a new slug (already "has no categories", exit 1).
+
+15/15 layers · 49/49 probes
+
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · bad-destroyutility named in D34's fails-when, the EntityWrites 12.4 row (the -AuthSuite row reads "the EntityWrites bad fixtures above") and step 1
+- F2 · accepted · D34 and $script:EntityWriteRx match DestroyUtility.Destroy\w*( ; the fixture's first argument is nested, Em(Core.Server)
+- F3 · accepted · $script:SuiteFloor holds event-library's nine in step 1; event-spawns' five join with its entry in step 2; a floor slug without an entry fails; bad-floor in the 12.4 row and step 1
+- F4 · accepted · D18's fails-when names all three; AuthoringTests.Spawns_fails_when_refusal_names_wrong_argument pins the argument name, Spawns_passes_valid_set_changes_file now compares exactly and pins action.location and lowercase true; the exact compare found set replies still printed True, fixed in DefinitionEditor.cs
+
+## Review 24 · 2026-09-29 · subagent · plan uncommitted · plan 159007 B · 24 items · files 0 · e3b0c44298fc · prompt 22f807a582f3 · scope A53,A54
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A53 and A54 (design §9 D26); the prompt held no Steam ID.
+
+F1 · advisory · 10.1 · Test-SystemEntryUse trusts the identifier before the method; A54 closes the using alias only, and a field, local or parameter named after a service in a System-actor file passes the same way. Fix: extend the rule to declarations, fixture GatewayOnly/bad-shadow.
+F2 · advisory · 10.1 · the second System-actor exemption (a <Type>.<Name> whose Services/<Type>.cs declares no [Mutating] <Name>, Announcer.Tick and Pusher.Tick) is recorded nowhere; D22 still describes renaming. Fix: one clause in A54 or D22.
+F3 · advisory · 12.4 · D22's fails-when does not name the five new fixtures; only the 12.4 row does. Fix: append them.
+F4 · advisory · 10.1 · the handler check is textual; an unreachable flow call after return still passes. Not an authorization gap (adminOnly is checked separately). Fix: reject it, or note the limit beside Get-EventVerbHandler.
+F5 · advisory · 11.3 · other validator reasons echo raw input unbounded (unknown pillar, region, unit, faction, trigger and action type; deny-listed unit and faction), breaking D32 as A53's case did and passing rich text. Fix: one bounded echo helper, or a deferred defect.
+F6 · advisory · 12.4 · no ChatBytes case plants an over-long action.stats key though A53 names it. Fix: add it on an Empower definition.
+F7 · advisory · A53 is tagged 11.2 while the plan maps D32 to 11.3. Fix: re-tag, or leave.
+
+15/15 layers · 49/49 probes
+
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · Test-CheckGatewayOnly fails on a value declared under a service's name in a System-actor file; fixture GatewayOnly/bad-shadow (var SpawnTracker = Services.Persistence.Store; SpawnTracker.Tick())
+- F2 · accepted · D22 states the type-qualified match, the own-method acceptance of Announcer.Tick and Pusher.Tick, and the alias and value failures (A54)
+- F3 · accepted · D22's fails-when names bad-systemtype, bad-alias, bad-shadow, bad-unhandled, bad-literal and bad-gutted
+- F4 · accepted · noted as a known limit beside Get-EventVerbHandler; the authorization control is adminOnly
+- F5 · accepted · EventValidator.Shown bounds every echoed value (96 characters, plain text), in A53; tested with 480-character and rich-text values
+- F6 · accepted · the ChatBytes test plants a 480-character stats key on an Empower definition
+- F7 · accepted · A53 re-tagged 11.3
+
+## Review 25 · 2026-09-29 · subagent · plan uncommitted · plan 161040 B · 24 items · files 0 · e3b0c44298fc · prompt 2175e8e85d73 · scope A55
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendment A55 (design §9 D26); the prompt held no Steam ID.
+
+F1 · blocking · 10.1 · the floor is said to hold every real [Mutating] method, but SpawnTracker's RequestWave, EndEventUnits and PurgeUnits return tuples, which neither the gateway check's declaration regex nor the floor's reads, so they were never protected and a call from Commands/ passes; nothing fails when the floor is incomplete. Fix: read tuple return types, fail on a [Mutating] declaration missing from the floor, list the three, fixture GatewayOnly/bad-tuple, all in D22's fails-when.
+F2 · advisory · 10.1 / 12.4 · the floor skips a missing service file or a name matching no declaration (a rename, a generic, no modifier). Fix: fail when a floor name matches no declaration.
+F3 · advisory · 12.4 · the 12.4 table's gateway rows do not name the new fixture. Fix: add it beside the A54 fixtures.
+F4 · advisory · 12.4 · bad-unmarked is untracked; the step 1 commit must add it (its path is declared).
+
+Scenarios hunted: a later command calls SpawnTracker.EndEventUnits directly (F1); Persistence.cs moved or Delete made generic without the attribute (F2); step 2 adds HuntAction's writers without the floor (F1).
+
+14/15 layers · 48/49 probes
+
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · $script:MutatingDeclRx reads tuple return types (and generic method names); the floor lists all 43 real [Mutating] methods, SpawnTracker's three included; the new Test-CheckMutatingFloor (in -AuthSuite's gateway part) fails on an unlisted [Mutating] method, a listed method without [Mutating], and a [Mutating] attribute on a declaration it cannot read; fixtures GatewayOnly/bad-tuple and MutatingFloor/bad-tuple, bad-unlisted, bad-unreadable; D22 names them
+- F2 · accepted · a floor service missing or a floor name not declared fails (MutatingFloor/bad-missing, bad-renamed); the fixtures carry copies of the real services, so no fixture exemption is needed
+- F3 · accepted · the 12.4 gateway row names the A55 fixtures
+- F4 · accepted · the fixture moved to MutatingFloor/bad; the step 1 commit adds tools/preflight-fixtures/MutatingFloor/**, declared in step 1's paths
+
+## Review 26 · 2026-09-29 · subagent · plan uncommitted · plan 162281 B · 24 items · files 0 · e3b0c44298fc · prompt 4c194929d84a · scope A55
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendment A55, round 2 (design §9 D26); the prompt held no Steam ID.
+
+F1 · advisory · 10.1 · the floor counts only the spelling [Mutating], while the entity-writes check takes [Mutating()] or [Mutating, Obsolete] as marked; a new writer spelled that way is neither unreadable nor listed and the gateway check never learns it. Fix: count any attribute list naming Mutating, fixture MutatingFloor/bad-parens.
+F2 · advisory · 12.4 / 14.4 · the floor check is authsuite mode, so plain preflight never runs it. Fix: default mode, or say so in D22.
+F3 · advisory · 4.5 · the floor protects writers that carry [Mutating]; a new file-writing method without the attribute is outside every check, so "cannot drop a writer (a Persistence disk write among them)" holds for listed writers only. Fix: narrow the sentence, or add file-write patterns.
+
+Earlier findings: all resolved (Review 25 F1, F2 in code and fixtures; F3, F4 advisories).
+
+15/15 layers · 49/49 probes
+
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · Test-CheckMutatingFloor counts `\[[^\]]*\bMutating(?:Attribute)?\b[^\]]*\]`, so [Mutating()] fails as unreadable; fixture MutatingFloor/bad-parens
+- F2 · accepted · MutatingFloor runs in default mode: plain preflight prints "mutating floor: 43/43 listed methods [Mutating] in 12 services, none unlisted"
+- F3 · accepted · D22 narrowed to listed writers, naming the file-writing method without [Mutating] as outside, as before
+
+## Review 27 · 2026-09-29 · subagent · plan uncommitted · plan 163830 B · 24 items · files 0 · e3b0c44298fc · prompt 4143d85750bd · scope A56
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendment A56 (design §9 D26); the prompt held no Steam ID. It removed the index-side token search in a scratchpad copy and saw the probe fail.
+
+F1 · advisory · 10.3 / 12.4 · the tools/ credential rule on the index is claimed but no evidence guards it: the probe checks only the tcli token label, so deleting the tools/ loop leaves -SelfTest green. Fix: a second probe case (a staged `gh auth token`), named in D31's fails-when.
+F2 · advisory · 12.4 · an empty index returns no hits and 0 blobs and reads as a pass. Fix: fail on Blobs -eq 0.
+F3 · advisory · 6.2 · the probe discards git init and git add failures, so a setup failure shows a misleading reason. Fix: check $LASTEXITCODE.
+F4 · advisory · 13.1 · the tools/ index loop runs one git show per script. Fix: none now; git cat-file --batch if it slows.
+
+15/15 layers · 49/49 probes
+
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · the probe stages a tools/ credential read as a second case and requires its "(index, reads a credential or the environment" hit; D31's fails-when names it
+- F2 · accepted · Get-IndexSecretHits returns "index empty: no staged blob to search" as an error
+- F3 · accepted · the probe returns "scratch repository setup failed (git init|git add)"
+- F4 · rejected · no change needed at today's size (10 tracked tools/ scripts); the reviewer's own fix is conditional
+
+## Review 28 · 2026-09-29 · subagent · plan uncommitted · plan 165263 B · 24 items · files 0 · e3b0c44298fc · prompt 7b01d02e9981 · scope A57
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendment A57 (design §9 D26); the prompt held no Steam ID. In a scratch copy it emptied $script:DataTestFloor and saw Paths/bad-datatests-floor pass, and ran -Paths -DeclaredOf event-spawns on the real tree.
+
+F1 · advisory · 12.4 · the Paths plant loops check only that a bad fixture fails, not that it fails for its plant, so a later unrelated fault in Paths/bad-datatests-floor would keep it failing with the floor removed. Fix: an expected line per plant.
+F2 · advisory · 12.4 / D33 · the floor requires EndPathTests to run at least one test, not D33's "fewer than 5 tests run: fail". Fix: a per-class minimum beside the floor, if wanted.
+F3 · advisory · text · the floor compares with -notcontains, which ignores case, so a misspelt entry is reported as "ran 0 tests" rather than as the floor. Fix: -cnotcontains.
+
+15/15 layers · 49/49 probes
+
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · the real tree's plant loop requires Paths/bad-datatests-floor to report "miss EndPathTests (floor)", else it counts as passing ("plants: bad-datatests-floor (not for its floor: ...) passed")
+- F2 · rejected · out of A57's scope: D33's own evidence (dotnet test --filter EndPaths, "Passed!" with at least 5 tests) carries its test-count bound, and -Paths runs the class only to prove it runs and passes
+- F3 · accepted · the floor compares with -cnotcontains

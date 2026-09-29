@@ -45,7 +45,7 @@ sealed class MemoryFileStore : IFileStore
     public DateTime WriteUtc(DataFile file, FileVariant variant) =>
         _files.TryGetValue((file, variant), out var f) ? f.Utc : DateTime.MinValue;
 
-    public void Write(DataFile file, FileVariant variant, byte[] content)
+    public void WriteFile(DataFile file, FileVariant variant, byte[] content)
     {
         Ops.Add($"write {DataPaths.FileName(file, variant)}");
         Now += WriteDelay;

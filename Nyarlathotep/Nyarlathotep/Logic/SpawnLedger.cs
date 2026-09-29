@@ -3,11 +3,20 @@ using System.Collections.Generic;
 
 namespace Nyarlathotep.Logic;
 
-/// <summary>How a spawned unit is tuned: a level (null keeps the prefab's) and Health and PhysicalPower
-/// multipliers (foundation Design › UX, `.nyar spawn`).</summary>
-public sealed record UnitTuning(LevelArg? Level, float Health, float Power)
+/// <summary>The unit stats a tuning scales, named as the game's UnitStatType members UnitSetup maps them to
+/// (event-spawns D9).</summary>
+public enum TuningStat { MaxHealth, PhysicalPower, SpellPower, MovementSpeed, PrimaryAttackSpeed, AbilityAttackSpeed }
+
+/// <summary>One MultiplyBaseAdd modifier of a tuning: <see cref="Value"/> is the multiplier − 1 (event-spawns D9).</summary>
+public readonly record struct StatScale(TuningStat Stat, float Value);
+
+/// <summary>How a spawned unit is tuned: a level (null keeps the prefab's) and the stat modifiers its marker buff carries
+/// (foundation Design › UX, `.nyar spawn`; event-spawns D9, built by SpawnTuning.TuningFrom).</summary>
+public sealed record UnitTuning(LevelArg? Level, IReadOnlyList<StatScale> Stats)
 {
-    public static readonly UnitTuning None = new(null, 1f, 1f);
+    public static readonly UnitTuning None = new(null, []);
+
+    public bool IsNone => Level is null && Stats.Count == 0;
 }
 
 /// <summary>When a unit is due for the budgeted despawn, and the game LifeTime it carries as the backstop: its due time
@@ -15,9 +24,14 @@ public sealed record UnitTuning(LevelArg? Level, float Health, float Power)
 public readonly record struct UnitLifetime(DateTime DueUtc, int LifetimeSeconds);
 
 /// <summary>One unit waiting in the spawn queue: what, for which event (null for `.nyar spawn`), where, and for how
-/// long. Its slot under MaxTrackedUnits is held from the request until it is confirmed or failed.</summary>
+/// long. Its slot under MaxTrackedUnits is held from the request until it is confirmed or failed. <see cref="Loot"/> keeps
+/// the unit's drop table (event-spawns D11; off by default, Epic S-10).</summary>
 public sealed record SpawnOrder(long Ticket, string Prefab, string? EventId, float X, float Y, float Z, int LifetimeSeconds,
-    DateTime DueUtc, UnitTuning Tuning, (float X, float Y, float Z)? Anchor = null);
+    DateTime DueUtc, UnitTuning Tuning, (float X, float Y, float Z)? Anchor = null, bool Loot = false)
+{
+    /// <summary>True when SpawnTracker.Prepare clears the unit's DropTableBuffer: every order without loot (D11).</summary>
+    public bool ClearDrops => !Loot;
+}
 
 /// <summary>A unit the ledger tracks. <see cref="Key"/> is the service's handle for the entity; at
 /// <see cref="DueUtc"/> the ledger queues it for despawn (A21).</summary>
@@ -73,7 +87,7 @@ public sealed class SpawnLedger(LedgerLimits limits)
     /// <summary>Queues up to <paramref name="count"/> units, first clamped by MaxUnitsPerWave, then by the free
     /// MaxTrackedUnits slots. <paramref name="place"/> gives the position of the i-th unit.</summary>
     public SpawnRequestResult Request(string prefab, string? eventId, int count, UnitLifetime life, UnitTuning tuning,
-        Func<int, (float X, float Y, float Z)> place, (float X, float Y, float Z)? anchor = null)
+        Func<int, (float X, float Y, float Z)> place, (float X, float Y, float Z)? anchor = null, bool loot = false)
     {
         if (count < 1) return new SpawnRequestResult(0, null);
         var n = count;
@@ -92,7 +106,7 @@ public sealed class SpawnLedger(LedgerLimits limits)
         for (var i = 0; i < n; i++)
         {
             var (x, y, z) = place(i);
-            _spawnQueue.Enqueue(new SpawnOrder(++_nextTicket, prefab, eventId, x, y, z, life.LifetimeSeconds, life.DueUtc, tuning, anchor));
+            _spawnQueue.Enqueue(new SpawnOrder(++_nextTicket, prefab, eventId, x, y, z, life.LifetimeSeconds, life.DueUtc, tuning, anchor, loot));
         }
         return new SpawnRequestResult(n, skipped);
     }

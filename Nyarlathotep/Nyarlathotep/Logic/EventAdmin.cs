@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -47,10 +48,13 @@ public static class EventsEditor
         var ev = events.OfType<JsonObject>().FirstOrDefault(e => e["id"] is JsonValue v && v.TryGetValue<string>(out var s) && s == id);
         if (ev is null) { error = AdminLines.UnknownEvent(id); return null; }
 
+        var actionType = ev["action"] is JsonObject act && act["type"] is JsonValue tv && tv.TryGetValue<string>(out var t) ? t : null;
+        if (path == "location" && value is AroundPlayerArg) path = "action.location";     // event-spawns D18
+        if (CommandArgs.SpawnKeyFields.Contains(CommandArgs.TableName(path)))
+            return SetSpawnKey(root, ev, actionType, path, value, out error);
+
         var node = ToNode(value);
         if (node is null) { error = Invalid($"{path} has an unsupported value", Reasons.Value); return null; }
-
-        var actionType = ev["action"] is JsonObject act && act["type"] is JsonValue tv && tv.TryGetValue<string>(out var t) ? t : null;
         if (path.StartsWith("trigger.", StringComparison.Ordinal))
             return SetTrigger(root, ev, path, node, out error);
         if (path is "action.factions" or "action.units" or "action.location")
@@ -62,7 +66,9 @@ public static class EventsEditor
                 error = Invalid(path == "action.location" ? "location is a SpawnWaves field" : $"{path} is not {Article(actionType)} field", Reasons.Field);
                 return null;
             }
-            ((JsonObject)ev["action"]!)[path["action.".Length..]] = node;
+            var action = (JsonObject)ev["action"]!;
+            if (path == "action.units") KeepChances(action["units"] as JsonArray, (JsonArray)node);
+            action[path["action.".Length..]] = node;
             return root.ToJsonString(Write) + Environment.NewLine;
         }
         var isStat = path.StartsWith("action.stats.", StringComparison.Ordinal);
@@ -102,8 +108,70 @@ public static class EventsEditor
         string[] list => new JsonArray(list.Select(x => (JsonNode?)JsonValue.Create(x)).ToArray()),
         UnitEntry[] units => new JsonArray(units.Select(u => (JsonNode?)new JsonObject { ["prefab"] = u.Prefab, ["count"] = u.Count }).ToArray()),
         PointArg p => new JsonObject { ["type"] = "Point", ["x"] = p.X, ["y"] = p.Y, ["z"] = p.Z },
+        AroundPlayerArg a => new JsonObject { ["type"] = "AroundPlayer", ["minDist"] = a.MinDist, ["maxDist"] = a.MaxDist },
+        BehaviourArg b => new JsonObject { ["type"] = "Hunt", ["range"] = b.Range },
         _ => null,
     };
+
+    /// <summary>An event-spawns field (D18) of a SpawnWaves action, refused on any other: a unit's chance on an existing
+    /// entry; a modifier into action.modifiers (created when missing; "none" removes the key, and the object once it is
+    /// empty), never level beside levelDelta; loot, allowTerritory and behaviour on the action ("none" removes it).</summary>
+    static string? SetSpawnKey(JsonNode root, JsonObject ev, string? actionType, string path, object value, out Outcome? error)
+    {
+        error = null;
+        if (actionType != "SpawnWaves" || ev["action"] is not JsonObject action)
+        {
+            error = Invalid($"{CommandArgs.TableName(path)} is not {Article(actionType)} field", Reasons.Field);
+            return null;
+        }
+        if (CommandArgs.UnitChanceIndex(path) is { } n)
+        {
+            if (action["units"] is not JsonArray units || n > units.Count || units[n - 1] is not JsonObject unit)
+            {
+                error = Invalid($"action.units has no entry {n}", Reasons.Field);
+                return null;
+            }
+            unit["chance"] = ToNode(value);
+            return root.ToJsonString(Write) + Environment.NewLine;
+        }
+        var key = path["action.".Length..];
+        if (key.StartsWith("modifiers.", StringComparison.Ordinal))
+        {
+            var name = key["modifiers.".Length..];
+            var mods = action["modifiers"] as JsonObject;
+            if (value is FieldRemoval)
+            {
+                mods?.Remove(name);
+                if (mods is { Count: 0 }) action.Remove("modifiers");         // an empty modifiers object is refused (D6)
+                return root.ToJsonString(Write) + Environment.NewLine;
+            }
+            var other = name switch { "level" => "levelDelta", "levelDelta" => "level", _ => null };
+            if (other is not null && mods?[other] is not null)
+            {
+                error = Invalid($"{EventValidator.BothLevels}: set action.modifiers.{other} none first", Reasons.Value);
+                return null;
+            }
+            if (mods is null) action["modifiers"] = mods = new JsonObject();
+            mods[name] = ToNode(value);
+            return root.ToJsonString(Write) + Environment.NewLine;
+        }
+        if (value is FieldRemoval) action.Remove(key);
+        else action[key] = ToNode(value);
+        return root.ToJsonString(Write) + Environment.NewLine;
+    }
+
+    /// <summary>A new action.units list keeps the chance of each prefab the old list gave one (event-spawns D18), so
+    /// resetting the units does not silently drop a chance.</summary>
+    static void KeepChances(JsonArray? old, JsonArray now)
+    {
+        if (old is null) return;
+        foreach (var entry in now.OfType<JsonObject>())
+        {
+            var prefab = entry["prefab"]?.GetValue<string>();
+            var was = old.OfType<JsonObject>().FirstOrDefault(o => o["prefab"] is JsonValue v && v.TryGetValue<string>(out var s) && s == prefab);
+            if (was?["chance"] is JsonNode chance) entry["chance"] = JsonNode.Parse(chance.ToJsonString());      // net6 has no DeepClone
+        }
+    }
 
     /// <summary>A value the field refuses (raphael-api-admin Business rules 3: invalid, arg field).</summary>
     static Outcome Invalid(string human, string reason) => Outcome.Refused(human, RefusalCode.Invalid, "field", reason: reason);
@@ -219,12 +287,25 @@ public static class EventLines
         }
         if (d.Action is { } a)
         {
-            var where = a.Location.Type == LocationType.Admin ? "at the admin"
-                : FormattableString.Invariant($"at {a.Location.X:0.#} {a.Location.Z:0.#}") +
-                  (a.Location.Y is { } h ? FormattableString.Invariant($" height {h:0.#}") : "");
-            lines.Add($"action: {a.Waves} waves every {a.IntervalSeconds}s, radius {a.Radius}, {where}, units " +
-                string.Join(", ", a.Units.Select(u => $"{u.Count} {u.Prefab}")) +
-                (a.UnitLifetimeSeconds is { } l ? $", unit lifetime {l}s" : ""));
+            var where = a.Location.Type switch
+            {
+                LocationType.Admin => "at the admin",
+                LocationType.AroundPlayer => $"around a player {a.Location.MinDist}-{a.Location.MaxDist} m",     // event-spawns D16
+                _ => FormattableString.Invariant($"at {a.Location.X:0.#} {a.Location.Z:0.#}") +
+                     (a.Location.Y is { } h ? FormattableString.Invariant($" height {h:0.#}") : ""),
+            };
+            var head = $"action: {a.Waves} waves every {a.IntervalSeconds}s, radius {a.Radius}, {where}";
+            var life = a.UnitLifetimeSeconds is { } l ? $", unit lifetime {l}s" : "";
+            var units = a.Units.Select(u => $"{u.Count} {u.Prefab}").ToList();
+            var one = $"{head}, units {string.Join(", ", units)}{life}";
+            if (Encoding.UTF8.GetByteCount(one) <= Wire.MaxBytes) lines.Add(one);
+            else
+            {
+                // Ten long prefab names overflow one chat line (event-spawns D32): the units follow on lines of their own.
+                lines.Add($"{head}{life}, units below");
+                lines.AddRange(PackList("units: ", units));
+            }
+            if (SpawnKeys(a) is { } keys) lines.Add(keys);
         }
         lines.Add($"trigger scope: {d.Trigger.Scope}");                 // regions D9
         lines.Add($"action scope: {d.Action?.Scope ?? d.Empower?.Scope ?? Scope.Global}");
@@ -233,6 +314,50 @@ public static class EventLines
             : $"running: started by {active.Trigger}, {Math.Max(0, (int)Math.Ceiling((active.Instance.EndsUtc - utcNow).TotalSeconds))}s left" +
               (d.Empower is null ? $", wave {active.WavesSpawned}/{d.Action?.Waves ?? 0}" : ""));
         return lines;
+    }
+
+    /// <summary><paramref name="prefix"/> and the items joined by ", ", on as few lines of at most Wire.MaxBytes UTF-8 bytes
+    /// as fit, never splitting an item (each item is at most a 96-character prefab name and its count).</summary>
+    static IEnumerable<string> PackList(string prefix, IReadOnlyList<string> items)
+    {
+        var line = new StringBuilder(prefix);
+        var first = true;
+        foreach (var item in items)
+        {
+            var add = (first ? "" : ", ") + item;
+            if (!first && Encoding.UTF8.GetByteCount(line.ToString()) + Encoding.UTF8.GetByteCount(add) > Wire.MaxBytes)
+            {
+                yield return line.ToString();
+                line.Clear().Append(prefix);
+                add = item;
+            }
+            line.Append(add);
+            first = false;
+        }
+        yield return line.ToString();
+    }
+
+    /// <summary>"spawn: modifiers level 30, maxHealth x1.5; chance #2 0.5; loot on; hunt 40 m; claimed territory allowed" for the
+    /// event-spawns keys a SpawnWaves action sets (event-spawns D18, UX 11.1); null when it sets none.</summary>
+    public static string? SpawnKeys(SpawnWavesAction a)
+    {
+        var parts = new List<string>();
+        if (a.Modifiers is { } m)
+        {
+            var mods = new List<string>();
+            if (m.Level is { } lv) mods.Add(FormattableString.Invariant($"level {lv}"));
+            if (m.LevelDelta is { } d) mods.Add(FormattableString.Invariant($"levelDelta {(d > 0 ? "+" : "")}{d}"));
+            foreach (var (name, value) in new[] { ("maxHealth", m.MaxHealth), ("power", m.Power), ("moveSpeed", m.MoveSpeed), ("attackSpeed", m.AttackSpeed) })
+                if (value != 1.0) mods.Add(FormattableString.Invariant($"{name} x{value:0.##}"));
+            if (mods.Count > 0) parts.Add("modifiers " + string.Join(", ", mods));
+        }
+        var chances = a.Units.Select((u, i) => (u.Chance, N: i + 1)).Where(u => u.Chance < 1.0)
+            .Select(u => FormattableString.Invariant($"#{u.N} {u.Chance:0.######}")).ToList();   // the file may hold more than 2 decimals
+        if (chances.Count > 0) parts.Add("chance " + string.Join(", ", chances));      // units by entry number, as `event set` names them
+        if (a.Loot) parts.Add("loot on");
+        if (a.Behaviour is { Type: BehaviourType.Hunt } hunt) parts.Add($"hunt {hunt.Range} m");
+        if (a.AllowTerritory) parts.Add("claimed territory allowed");
+        return parts.Count == 0 ? null : "spawn: " + string.Join("; ", parts);
     }
 
     public static string Trigger(Trigger t) => t.Type switch

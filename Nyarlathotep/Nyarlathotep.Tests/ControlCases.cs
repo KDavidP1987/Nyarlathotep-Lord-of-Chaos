@@ -11,6 +11,14 @@ public sealed record ControlRow(string Control, string Name, string Kind, string
     public string Key => $"{Plan} {Control}";
 }
 
+/// <summary>A control whose test or fixture a later Build-plan step builds (event-spawns D22, A15, A22, A29): it has no row
+/// until that step, and fails once the step's post-audit is recorded or, for a step-4 control, once the csproj Version
+/// is the plan's release.</summary>
+public sealed record PendingControl(string Plan, string Control, int Step, string Release)
+{
+    public string Key => $"{Plan} {Control}";
+}
+
 /// <summary>The authoritative list of the plans' control cases (event-library D31, walkable-spawns D9), compared with
 /// each listed plan's own D-items by ControlCaseTests.</summary>
 public static class ControlCases
@@ -19,9 +27,19 @@ public static class ControlCases
     public const string WalkableSpawns = "walkable-spawns";
     public const string RaphaelApiAdmin = "raphael-api-admin";
     public const string Regions = "regions";
+    public const string EventSpawns = "event-spawns";
 
     /// <summary>The plans whose controls the table lists; each is copied to the test output under Resources/.</summary>
-    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions];
+    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns];
+
+    /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
+    public static readonly IReadOnlyList<PendingControl> Pending =
+    [
+        new(EventSpawns, "D21", 2, "0.7.0"),
+        new(EventSpawns, "D19", 3, "0.7.0"),
+        new(EventSpawns, "D24", 3, "0.7.0"),
+        new(EventSpawns, "D25", 4, "0.7.0"),
+    ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
         new(control, name, "test", cls, bad.Select(x => $"{name}_fails_when_{x}").ToArray(), good.Select(x => $"{name}_passes_{x}").ToArray(),
@@ -37,12 +55,13 @@ public static class ControlCases
         "TemplateLibraryTests", "TemplateCommandTests", "AuthoringTests", "AuthoringCapacityTests", "PillarSwitchTests",
         "ReadinessTests", "LibraryDependencyFailureTests", "SpawningTests", "HealthTests",
         "HumanReplyTests", "OutcomeCodeTests", "ApiTwinTests", "RateGateTests", "ApiOverloadTests", "EventAdminTests",
+        "EndPathTests", "WavePrecedenceTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
     public static readonly string[] ExistingClasses =
         ["CommandArgTests", "ConfigChangedTests", "AuthorizationTests", "ContractDocTests", "ControlPrecedenceTests", "DependencyFailureTests",
-         "ApiLinesTests", "WireFormatTests", "PushTests", "PrivacyTests"];
+         "ApiLinesTests", "WireFormatTests", "PushTests", "PrivacyTests", "EventValidationTests"];
 
     public static readonly IReadOnlyList<ControlRow> Table =
     [
@@ -97,7 +116,8 @@ public static class ControlCases
         C("D30", "DataInventory", "preflight -SelfTest › data inventory and -Paths -DeclaredOf",
             ["selftest DataInventory/bad-el", "selftest DataInventory/bad-tmp", "selftest DataInventory/bad-tmp-2", "selftest Paths/bad-undeclared", "selftest Paths/bad-soak"],
             ["selftest DataInventory/good"], ["selftest DataInventory/empty"]),
-        T("D31", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule"], ["plan_and_table_agree"], ["plan_without_controls"]),
+        T("D31", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_key_is_no_control", "pending_after_its_post_audit",
+            "audit_missing", "pending_at_release"], ["plan_and_table_agree"], ["plan_without_controls"]),
         T("D32", "Degraded", "LibraryDependencyFailureTests", ["write_uncertain"], ["cleared_by_clean_write_or_reload"], ["healthy"]),
         C("D33", "DependencySuite", "preflight -DependencySuite",
             ["selftest DependencySuite/bad", "selftest DependencySuite/bad-2"], ["selftest DependencySuite/good"], ["selftest DependencySuite/empty"]),
@@ -229,5 +249,84 @@ public static class ControlCases
             ["tools/preflight-fixtures/Version/bad", "tools/preflight-fixtures/RollbackRoutes/bad", "tools/preflight-fixtures/RollbackRoutes/bad-2", "tools/preflight-fixtures/RollbackRoutes/bad-3", "selftest missing asset", "selftest differing hash"],
             ["tools/preflight-fixtures/Version/good", "tools/preflight-fixtures/RollbackRoutes/good", "selftest hashes equal"],
             ["tools/preflight-fixtures/Version/empty", "tools/preflight-fixtures/RollbackRoutes/empty", "selftest no release"]) with { Plan = Regions },
+        // ---- event-spawns (D22): D19, D21, D24 and D25 are pending; the cmd rows join with their preflight fixtures
+        T("D6", "Spawns", "EventValidationTests",
+            ["key_out_of_range", "unknown_key"], ["every_new_key", "every_trigger_takes_aroundplayer", "definition_without_new_keys_unchanged"],
+            ["modifiers_object"]) with { Plan = EventSpawns },
+        T("D8", "WaveRoll", "SpawningTests",
+            ["chance_one_loses_a_copy", "copies_rolled_as_one", "order_changes", "caps_clamp_pre_roll_count", "zero_roll_spawns_or_throws"],
+            ["independent_copies_in_entry_order"], ["unit_list"]) with { Plan = EventSpawns },
+        T("D9", "Tuning", "SpawningTests",
+            ["stat_maps_to_another", "value_not_multiplier_minus_one", "power_or_attack_speed_not_two_entries", "one_gives_an_entry", "level_delta_not_from_prefab_level"],
+            ["every_modifier", "spawn_command_same_function"], ["no_modifiers"]) with { Plan = EventSpawns },
+        T("D11", "Loot", "SpawningTests", ["order_without_loot_keeps_drops", "loot_order_clears_drops"], ["each_order_carries_its_flag"], ["order_without_loot"])
+            with { Plan = EventSpawns },
+        T("D13", "Hunt", "SpawningTests",
+            ["ineligible_player_targeted", "sixth_target_added", "order_not_by_distance", "duplicate_planned", "player_in_buffer_seeded",
+             "plan_for_ended_wave", "stale_seed_kept", "game_entry_removed", "empty_targets_keep_a_seed", "race_leaves_record_buffer_lacks",
+             "replaced_entry_removed", "tick_reads_other_map", "seeds_while_latest_build_failed"],
+            ["tick_seeds_and_keeps"], ["no_players"]) with { Plan = EventSpawns },
+        T("D16", "PlayerPick", "SpawningTests",
+            ["ineligible_player_picked", "distance_leaves_range", "pick_not_uniform", "queued_centre_changes", "out_of_scope_player_picked",
+             "out_of_scope_centre_used", "throwing_read_spawns", "claimed_first_angle_moves_centre"],
+            ["eligible_player_centre"], ["no_players"]) with { Plan = EventSpawns },
+        T("D16", "PlayerPick", "PrivacyTests", ["a_line_names_the_player"], ["no_line_names_or_locates_the_player"], ["no_players"]) with { Plan = EventSpawns },
+        T("D17", "Territory", "SpawningTests",
+            ["block_conversion_differs", "listed_block_point_free", "outside_point_claimed", "out_of_range_block_kept", "allow_territory_wave_refused",
+             "failed_map_spawns_wave_that_needs_it"],
+            ["castle_blocks_claimed"], ["block_set"]) with { Plan = EventSpawns },
+        T("D18", "Spawns", "AuthoringTests", ["value_refused", "second_level_form", "empower_definition", "refusal_names_wrong_argument"], ["valid_set_changes_file"], ["value"])
+            with { Plan = EventSpawns },
+        T("D18", "Spawns", "CommandArgTests", ["value_out_of_range", "field_not_settable"], ["values_in_range"], ["value"]) with { Plan = EventSpawns },
+        T("D20", "Spawns", "PushTests", ["skipped_wave_pushes", "row_carries_a_new_field"], ["api_5_and_rows_unchanged"], ["definition_without_new_keys"])
+            with { Plan = EventSpawns },
+        T("D29", "WavePrecedence", "WavePrecedenceTests",
+            ["blocked_reaches_roll", "player_skip_before_territory_unknown", "claimed_before_player_skip", "claimed_before_query_failed",
+             "roll_before_claimed", "caps_before_zero_roll", "allow_territory_lifts_a_cap", "allow_territory_lifts_player_skip",
+             "allow_territory_lifts_unknown_on_aroundplayer", "allow_territory_lifts_unknown_on_hunt", "point_with_allow_territory_and_failed_map_skipped",
+             "skipped_wave_rolls"],
+            ["stated_order", "allow_territory_lifts_only_territory_skip"], ["nothing_blocked_roll_zero"]) with { Plan = EventSpawns },
+        T("D30", "Spawns", "HealthTests", ["streak_open", "ended_event_keeps_territory_unknown"], ["recovered_check_clears_entry", "text_equals_table"], ["no_open_streak"])
+            with { Plan = EventSpawns },
+        T("D32", "ChatBytes", "CommandArgTests", ["line_exceeds_480"], ["new_lines_at_maximum_lengths"], ["fields"]) with { Plan = EventSpawns },
+        T("D33", "EndPaths", "EndPathTests",
+            ["natural_end_leaves_state", "event_stop_leaves_state", "fault_cancel_leaves_state", "purge_leaves_state", "restart_keeps_state",
+             "stopping_one_touches_the_other"],
+            ["every_path_empties_all_three"], ["event_without_units"]) with { Plan = EventSpawns },
+        C("D22", "Authorization", "preflight -AuthSuite (the real tree) and -SelfTest (these fixture batteries) › Test-CheckGatewayOnly, Test-CheckMutatingFloor and Test-CheckAuthSuite",
+            ["tools/preflight-fixtures/AuthSuite/bad-inherited", "tools/preflight-fixtures/AuthSuite/bad-unhandled", "tools/preflight-fixtures/AuthSuite/bad-literal", "tools/preflight-fixtures/AuthSuite/bad-gutted", "tools/preflight-fixtures/GatewayOnly/bad-tickcaller", "tools/preflight-fixtures/GatewayOnly/bad-new",
+             "tools/preflight-fixtures/GatewayOnly/bad-rootcaller", "tools/preflight-fixtures/GatewayOnly/bad-instance", "tools/preflight-fixtures/GatewayOnly/bad-samename",
+             "tools/preflight-fixtures/GatewayOnly/bad-systemcaller", "tools/preflight-fixtures/GatewayOnly/bad-systemtype", "tools/preflight-fixtures/GatewayOnly/bad-alias", "tools/preflight-fixtures/GatewayOnly/bad-shadow", "tools/preflight-fixtures/GatewayOnly/bad-tuple",
+             "tools/preflight-fixtures/MutatingFloor/bad", "tools/preflight-fixtures/MutatingFloor/bad-tuple", "tools/preflight-fixtures/MutatingFloor/bad-renamed",
+             "tools/preflight-fixtures/MutatingFloor/bad-unlisted", "tools/preflight-fixtures/MutatingFloor/bad-missing", "tools/preflight-fixtures/MutatingFloor/bad-unreadable",
+             "tools/preflight-fixtures/MutatingFloor/bad-parens"],
+            ["tools/preflight-fixtures/AuthSuite/good", "tools/preflight-fixtures/GatewayOnly/good", "tools/preflight-fixtures/MutatingFloor/good"],
+            ["tools/preflight-fixtures/AuthSuite/empty", "tools/preflight-fixtures/GatewayOnly/empty", "tools/preflight-fixtures/MutatingFloor/empty"]) with { Plan = EventSpawns },
+        C("D26", "Release", "preflight › Test-CheckReleaseTags and Test-CheckVersion, then release-verify.ps1 -SelfTest",
+            ["tools/preflight-fixtures/ReleaseTags/bad", "tools/preflight-fixtures/ReleaseTags/bad-2", "tools/preflight-fixtures/Version/bad",
+             "selftest missing asset", "selftest differing hash"],
+            ["tools/preflight-fixtures/ReleaseTags/good", "tools/preflight-fixtures/Version/good", "selftest hashes equal"],
+            ["tools/preflight-fixtures/ReleaseTags/empty", "tools/preflight-fixtures/Version/empty", "selftest no release"]) with { Plan = EventSpawns },
+        C("D27", "Records", "preflight -AuditOf, -SessionsOf and -Paths -DeclaredOf › AuditSteps, SessionLogs, Paths and DataInventory",
+            ["tools/preflight-fixtures/AuditSteps/bad", "tools/preflight-fixtures/AuditSteps/bad-2", "tools/preflight-fixtures/SessionLogs/bad", "tools/preflight-fixtures/SessionLogs/bad-2",
+             "tools/preflight-fixtures/Paths/bad-undeclared", "tools/preflight-fixtures/Paths/bad-temp", "tools/preflight-fixtures/Paths/bad-tempvar",
+             "tools/preflight-fixtures/Paths/bad-datatests", "tools/preflight-fixtures/Paths/bad-datatests-floor", "tools/preflight-fixtures/DataInventory/bad", "tools/preflight-fixtures/DataInventory/bad-2"],
+            ["tools/preflight-fixtures/AuditSteps/good", "tools/preflight-fixtures/SessionLogs/good", "tools/preflight-fixtures/Paths/good",
+             "tools/preflight-fixtures/Paths/good-datatests", "tools/preflight-fixtures/DataInventory/good"],
+            ["tools/preflight-fixtures/AuditSteps/empty", "tools/preflight-fixtures/SessionLogs/empty", "tools/preflight-fixtures/Paths/empty",
+             "tools/preflight-fixtures/Paths/empty-datatests", "tools/preflight-fixtures/DataInventory/empty"]) with { Plan = EventSpawns },
+        C("D31", "Secrets", "preflight › Test-CheckSecrets",
+            ["tools/preflight-fixtures/Secrets/bad", "tools/preflight-fixtures/Secrets/bad-3", "tools/preflight-fixtures/Secrets/bad-envread",
+             "tools/preflight-fixtures/Secrets/bad-sentinel-zip", "tools/preflight-fixtures/Secrets/bad-sentinel-dist",
+             "tools/preflight-fixtures/Secrets/bad-sentinel-build", "tools/preflight-fixtures/Secrets/bad-sentinel-log"],
+            ["tools/preflight-fixtures/Secrets/good", "tools/preflight-fixtures/Secrets/good-sentinel"],
+            ["tools/preflight-fixtures/Secrets/empty", "tools/preflight-fixtures/Secrets/empty-sentinel"]) with { Plan = EventSpawns },
+        C("D34", "EntityWrites", "preflight › Test-CheckEntityWrites",
+            ["tools/preflight-fixtures/EntityWrites/bad", "tools/preflight-fixtures/EntityWrites/bad-new", "tools/preflight-fixtures/EntityWrites/bad-unmarked",
+             "tools/preflight-fixtures/EntityWrites/bad-em", "tools/preflight-fixtures/EntityWrites/bad-split", "tools/preflight-fixtures/EntityWrites/bad-refrw",
+             "tools/preflight-fixtures/EntityWrites/bad-ecb", "tools/preflight-fixtures/EntityWrites/bad-lookup", "tools/preflight-fixtures/EntityWrites/bad-unsafe",
+             "tools/preflight-fixtures/EntityWrites/bad-logicusing", "tools/preflight-fixtures/EntityWrites/bad-privatehelper",
+             "tools/preflight-fixtures/EntityWrites/bad-destroyutility"],
+            ["tools/preflight-fixtures/EntityWrites/good"], ["tools/preflight-fixtures/EntityWrites/empty"]) with { Plan = EventSpawns },
     ];
 }
