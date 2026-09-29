@@ -60,7 +60,7 @@ under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line. S
   - both logs read (copied to %TEMP%\nyar-s-rg0-logs, deleted after): BepInEx warnings only the known four kinds (Il2CppInterop Class::Init; Beelzebub's two TUNE lines; ours "event example-empowerment: pillar empowerment takes an Empower action", the dev world's own events.json); the server log's 224 "PrefabLookupMap.TryGet … is in an unknown state" warnings at save load, the known set; no [Error]
   - snapshot restored; hashes equal (rg0, the snapshot folder deleted); the step 2 build redeployed after the restore
 
-### Step 3 · 2026-09-28 · (release commit below)
+### Step 3 · 2026-09-28 · 85f6080 (chore(release): v0.6.0)
 - rg1: before it, `-LogCheck` on the last logs clean; `pwsh tools/dev-snapshot.ps1 -Save rg1`; the 0.6.0 build deployed (version pair uncommitted, A33, A35); boot line "regions: 10 polygons, 10 regions (…); 0 untagged, 0 dropped", equal to Nyarlathotep.Tests/Fixtures/region-index-size.txt (10), so no fixture change (A31)
 - Session 1 (owner, 22:10–23:23): record in docs/features/REGIONS.md › Test results › Session 1; steps 3, 4, 5, 7 and 11 (chat-only replies) confirmed by the owner on 2026-09-28, the rest read from the log; steps 12–13 could not pass as written (no ordinary Undead in the Cursed Forest) → A39 (discovered, ~D12), shown instead by rg-bandit-fw in Farbane ("sweep 200 applied, 138 skipped (region 136 vblood 2)", bandit rows "carrier rg-bandit-fw", "carrier none" after the stop)
 - session 1 log check: 0 unhandled, 296 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons
@@ -72,3 +72,11 @@ under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line. S
 - Codex verdict: REVISE (round 1) — F1 (blocking) the audit, changelog and session record disagreed on the unconfirmed chat-only steps → owner confirmation recorded in all three; F2 (advisory) A39 overstated unit_index as placement evidence and the region skip as proof of absence → A39, the record and the changelog reworded to the observed condition; kind and layer judged honest
 - Codex verdict: READY (round 2) — no findings
 - privacy grep (7656119, kdpenland): none in the added lines of the step 3 diff
+- tcli build: kdpen-Nyarlathotep-0.6.0.zip (338440 bytes), built in the repository at the release commit 85f6080 with a clean tree (`dotnet build -c Release --no-incremental`, 0 warnings, 0 errors; the DLL also deployed to the stopped dev server) with icon.png, README.md, manifest.json, BepInEx/plugins/Nyarlathotep.dll (468480 bytes), CHANGELOG.md, LICENSE
+- zip sha256: kdpen-Nyarlathotep-0.6.0.zip A8F37F0C2FEF42DFCE32597304BEC14E7370C35A27752AF6E8865FABBBB4FC2E
+- tag: v0.6.0 annotated at 85f6080 (chore(release): v0.6.0)
+- Rollout › Rollback worded to the gate's route phrases ("after data is written", "withdrawn by retitling"), committed at 0661e19; the first gate run failed only on them ("rollback routes: regions 3/5")
+- rollback gate before the push: `pwsh tools/rollback-gate.ps1 -From v0.5.2 -To v0.6.0 -Plan regions` → "rollback gate: 4/4" (repository drill with -BeforePush; N-1 boot drill "events.json: v0.6.0 '6 valid, 0 disabled', v0.5.2 '6 valid, 0 disabled'", "boot v0.6.0 (seed): log check: … regions 10 polygons", v0.5.2 initialized on v0.6.0's files; snapshot selftest 6/6; "rollback routes: regions 5/5")
+- privacy grep before the push (`git grep -n -E` for the SteamID prefix and the owner's mail name): only lines quoting the pattern
+- release: main (0661e19) and v0.6.0 pushed; GitHub pre-release https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.6.0 with the zip, created once (exit 0); no tcli publish (the owner publishes)
+- release verify: `pwsh tools/release-verify.ps1 -Tag v0.6.0 -Asset kdpen-Nyarlathotep-0.6.0.zip` → "release verify: hashes equal"; the v0.6.0 remote tag and release added to tools/paths-manifest.txt (`remote-tag:`, `remote-release:`)

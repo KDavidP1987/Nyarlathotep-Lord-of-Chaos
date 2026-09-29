@@ -116,6 +116,7 @@ remote-tag: v0.4.0
 remote-tag: v0.5.0
 remote-tag: v0.5.1
 remote-tag: v0.5.2
+remote-tag: v0.6.0
 remote-release: v0.2.0
 remote-release: v0.2.1
 remote-release: v0.3.0
@@ -123,3 +124,4 @@ remote-release: v0.4.0
 remote-release: v0.5.0
 remote-release: v0.5.1
 remote-release: v0.5.2
+remote-release: v0.6.0

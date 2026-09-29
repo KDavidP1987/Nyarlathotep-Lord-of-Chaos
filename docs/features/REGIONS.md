@@ -1,9 +1,9 @@
 # Regions — global or regional scope for triggers and actions
 
-**Status:** in build (docs/dod/regions.md, audit docs/audits/regions.md). Step 1 (region index, scope model,
+**Status:** released in 0.6.0 (docs/dod/regions.md done, audit docs/audits/regions.md). Step 1 (region index, scope model,
 regions unavailable) built at e512382; step 2 (scope enforced in triggers, empowerment and waves; `.nyar region`;
 scope in `event info|list|set`; `{region}`; api 5) built and post-audited at a85852e (Codex READY at round 4). Its baseline boot read the dev
-world's index: 10 polygons, one per region. Step 3 (Session 1 on 0.6.0, then the release) is next. 0.5.2 is the current published release.
+world's index: 10 polygons, one per region. Step 3: Session 1 passed (A39), 0.6.0 tagged at 85f6080 and pre-released on GitHub.
 
 ## Goal
 
