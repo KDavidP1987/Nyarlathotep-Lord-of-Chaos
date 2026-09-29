@@ -3,6 +3,48 @@
 The complete technical history. The concise, player-facing changelog that ships to Thunderstore lives at
 `Nyarlathotep/Nyarlathotep/CHANGELOG.md`. Public beta from 0.2.0; features stay experimental until validated on live servers.
 
+## [0.6.0] - 2026-09-28
+
+The `regions` child of the DoD Epic (`docs/dod/regions.md`): an event's trigger and action can be limited to named
+world regions. Design and session: `docs/features/REGIONS.md`; audit: `docs/audits/regions.md`; contract:
+`docs/RAPHAEL_INTEGRATION_CONTRACT.md` (api 5).
+
+- **Region index.** `Services/RegionMap.cs` reads the game's `WorldRegionPolygon` entities once per boot (read-only:
+  `PolygonBounds` and the `WorldRegionPolygonVertex` buffer) into `Logic/Regions.cs` `RegionIndex`: a box test, then
+  an even-odd point-in-polygon test. The boot line is `regions: <p> polygons, <r> regions (<names>); <k> untagged,
+  <d> dropped`; the dev world reads 10 polygons, one per region. Region names are the game's `WorldRegionType` names
+  except None and Other (StartCave, FarbaneWoods, DunleyFarmlands, CursedForest, HallowedMountains, SilverlightHills,
+  Gloomrot_South, Gloomrot_North, RuinsOfMortium, Strongblade), checked against the game at boot.
+- **`scope` key.** `trigger.scope` and `action.scope` in events.json and templates: `"Global"` (the default when absent)
+  or an array of 1–10 distinct region names, matched case-insensitively and stored in the game's spelling. The two are
+  independent. An unknown, None, Other, empty, duplicate or non-string entry disables the event with a reason; so does
+  a name the built index holds no polygon for ("region <name> is not on the map"). SchemaVersion stays 1.
+- **Triggers.** A scoped VBloodKilled trigger starts only for a kill inside its regions (the victim's position is read
+  only when a scoped definition matches; an unreadable position starts only Global ones). Schedule, GameTime and
+  Manual need an online player in the regions: a scheduled or game-time occurrence with none is consumed and logged
+  `event <id>: skipped, no player in <regions>`; an admin start is refused with `no player is in the event's regions`
+  (`code=state reason=no_player_in_region`).
+- **Empowerment.** A regional Empower sweep skips units outside the scope with the new skip reason `region` (after
+  `other`); a unit already carrying the buff keeps it until the event ends.
+- **Waves.** A Point location outside the scope disables the event at load; an Admin location outside it refuses the
+  start with `your position is outside the event's regions` (`code=badarg reason=out_of_region`); a ring point outside
+  the scope counts as blocked in the walkable-point search, before the walk budget.
+- **Unavailable.** When the map cannot be read, every regional definition is disabled with "regions unavailable",
+  Global ones run unchanged, the health line adds `regions: unavailable`, and `.nyar event reload` retries the build.
+- **Commands.** `.nyar region list` (one line per region with its enabled-event count, then `global:`) and
+  `.nyar region here` (admin-only; both only read). `event info` shows `trigger scope:` and `action scope:`,
+  `event list` appends ` [<regions>]`, `event set <id> trigger.scope|action.scope <Global|name,name>` edits them, a
+  `trigger.type` change clears `trigger.scope`, and announcements take `{region}`.
+- **Wire, api 5.** `.nyar api regions [page]` (`[NYAR:region] id= events=` rows); `[NYAR:def]` and `[NYAR:event]`
+  rows and the event-start and event-end pushes gain `region=` (the action scope, `-` for Global).
+- **Session 1.** A regional wave refused in Dunley and started in Farbane; a Rufus kill started the Farbane-scoped
+  vengeance event and not its Dunley copy; a Cursed Forest empowerment skipped all 193 Undead by region; a
+  Farbane-scoped bandit empowerment applied 200 carriers and skipped 136 bandits outside Farbane. Tick timing averages
+  stayed under 5 ms (sweep minutes up to 3.7 ms avg).
+- **Upgrading / rollback.** No new cfg keys or files; a definition without `scope` behaves exactly as in 0.5.x. 0.5.2
+  loads 0.6.0's files, but disables a definition carrying `scope` (unknown key) or an announcement using `{region}`
+  (unknown placeholder) until they are removed (rollback gate).
+
 ## [0.5.2] - 2026-09-28
 
 The `raphael-api-admin` child of the DoD Epic (`docs/dod/raphael-api-admin.md`): api 4, the admin actions as

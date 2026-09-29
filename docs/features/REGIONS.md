@@ -90,3 +90,52 @@ Afterwards (Claude): stop after an autosave that follows the last step; copy bot
 carry ", regions 10 polygons", A33, A36); read every [Error] and [Warning] line; record every observed line below;
 the tick-timing averages during the rg-undead sweeps (under 5 ms, Epic D24); `dev-snapshot.ps1 -Restore`, then
 redeploy.
+
+### Session 1 · 2026-09-28 · regions step 3 (eb57d80 plus the uncommitted 0.6.0 version pair, dev world nyardev, with the owner)
+
+Setup as in the steps above (`pwsh tools/dev-snapshot.ps1 -Save rg1` before the deploy). Owner connected about 22:10–23:23. `.nyar region`, `event info` and
+`event list` log nothing by design (RegionCommands D14), so steps 3, 4, 5, 7 and 11 are read from the owner's chat only.
+
+- [x] boot: "regions: 10 polygons, 10 regions (StartCave, FarbaneWoods, DunleyFarmlands, CursedForest, HallowedMountains,
+  SilverlightHills, Gloomrot_South, Gloomrot_North, RuinsOfMortium, Strongblade); 0 untagged, 0 dropped", equal to the fixture
+- [x] step 2: every command accepted ("template undead-nightfall added as rg-undead (disabled)", "event rg-undead
+  action.scope = CursedForest", "event rg-vengeance copied to rg-vengeance-dunley (disabled)", "event … enabled"); the
+  action.scope set was sent seven times, each accepted
+- [x] steps 3, 4, 5, 7, 11 (`event info`, `region list`, `region here`): not in the log; the owner confirmed on
+  2026-09-28 that each showed its expected text ("trigger scope: Global" / "action scope: CursedForest" and the reverse
+  for rg-vengeance; "FarbaneWoods (Farbane Woods): 2 events", "DunleyFarmlands (Dunley Farmlands): 1 events",
+  "CursedForest (Cursed Forest): 1 events", then "global:"; "you are in DunleyFarmlands (Dunley Farmlands)", "you are in
+  FarbaneWoods (Farbane Woods)", "you are in CursedForest (Cursed Forest)"). The api rows the owner pasted from the retest carry "region=FarbaneWoods" on rg-ambush and rg-bandit-fw, "region=CursedForest"
+  on rg-undead and "region=-" on the trigger-scoped rg-vengeance pair (the row reports the action scope)
+- [x] step 6, wave refused outside its regions: after step 5's "you are in DunleyFarmlands", "event rg-ambush not
+  started by manual: your position is outside the event's regions"; a second refusal follows before step 7 (where the
+  owner stood for it is unreported); the accepted start follows step 7's "you are in FarbaneWoods"
+- [x] step 8, wave in its region: "event rg-ambush started by manual", "wave 1/3: 6 units queued (0 moved, 0 unchecked)",
+  "spawn batch: 6 of 6 spawned"; stop → "despawn batch: 5 of 5 destroyed … 1 left", "1 of 1 destroyed … 0 left"
+- [x] step 9, regional V Blood trigger: "trigger: VBloodKilled CHAR_Bandit_Foreman_VBlood", "event rg-vengeance started by
+  VBloodKilled CHAR_Bandit_Foreman_VBlood"; rg-vengeance-dunley did not start; "sweep 328 applied, 11 skipped (dead 6
+  vblood 5)", stop → "328 removed, 0 left to expire"
+- [x] step 10, empowerment outside its regions: rg-undead (CursedForest) "query 193 of 193 faction entities", "sweep 0
+  applied, 193 skipped (region 193)"; the Farbane skeleton rows "CHAR_Undead_SkeletonSoldier_Armored_Farbane native Undead
+  … carrier none"
+- [ ] steps 12–13 as written could not pass on the dev world: no Undead stood within 40 m of the owner at the Cursed
+  Forest edge (the row showed only CHAR_Cursed_Bear_Standard and CHAR_Spider_Baneling), rg-undead's sweep skipped all
+  193 queried Undead as "region" (outside the scope or unreadable), and Reference Data/unit_index.tsv names no ordinary
+  Undead variant for the Cursed Forest (its only Cursed-named Undead are the Cursed Smith's floating weapons; the index
+  has no placement field, so this is a naming read, not a placement proof). rg-undead had already been stopped before the
+  owner reached the forest. Replaced by the retest below
+- [x] retest, empowerment inside its regions: rg-bandit-fw (a copy of rg-vengeance, Manual, action.scope FarbaneWoods)
+  started in Farbane → "query 338 of 338 faction entities", "sweep 200 applied, 138 skipped (region 136 vblood 2)";
+  rows "CHAR_Bandit_Rascal native Bandits d 1m carrier rg-bandit-fw left 585s … mods PhysicalPower:MultiplyBaseAdd:0.3,
+  PrimaryAttackSpeed:MultiplyBaseAdd:0.3,AbilityAttackSpeed:MultiplyBaseAdd:0.3 … pp 14.943 sp 11.494 aspd 1.3", Scouts
+  likewise, Deer/Bear/Wolf "carrier none"; stop → "200 carriers queued for removal (stopped)", "200 removed, 0 left to
+  expire", every row "carrier none" at base (pp 11.494, aspd 1). The status row right after the start read "units=123",
+  the carriers applied so far by the paced sweep
+- [x] tick timing (D12, Epic D24): every average under 5 ms (idle 0.04–0.09 ms); the sweep minutes avg 3.678 ms max 77.0 ms
+  (the wave and Rufus kill), avg 2.540 ms max 89.9 ms (rg-undead's 193 region skips), avg 1.390 ms max 54.3 ms (rg-bandit-fw)
+- [x] stopped after AutoSave_1765 (23:24:46), which follows the last step; both logs copied; -LogCheck "0 unhandled, 296 nyar
+  lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; BepInEx warnings: the known Il2CppInterop and two Beelzebub
+  lines, example-empowerment's "pillar empowerment takes an Empower action", and our stop warnings; no [Error]; Unity log
+  0 exceptions
+- [x] `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (rg1, … deleted)"; redeployed (Release
+  build, 0 warnings)

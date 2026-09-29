@@ -3,17 +3,17 @@
 <p align="center"><img src="docs/img/nyarlathotep-cover.jpg" alt="Nyarlathotep, Lord of Chaos" width="512"></p>
 
 A server-side BepInEx IL2CPP plugin for V Rising that adds admin-configured, event-driven NPC behaviour.
-0.5.x ships the event engine with spawn-wave events, timed faction empowerment, six built-in event templates
-with in-game authoring, wave warnings and banners, and a kill switch; castle sieges, defended zones, boss-fight reinforcements, spawn modifiers and leaderboards
-are planned, one release each. The companion client Raphael reads a machine-readable API (api 4): live event
+0.6.x ships the event engine with spawn-wave events, timed faction empowerment, six built-in event templates
+with in-game authoring, regional scope for triggers and actions, wave warnings and banners, and a kill switch; castle sieges, defended zones, boss-fight reinforcements, spawn modifiers and leaderboards
+are planned, one release each. The companion client Raphael reads a machine-readable API (api 5): live event
 status, event definitions for admins, pushed updates, and admin actions that answer one line each.
 
-0.5.x is a public beta. Every pillar and automatic announcement starts disabled; admins opt in. The 0.1.0 key
+0.6.x is a public beta. Every pillar and automatic announcement starts disabled; admins opt in. The 0.1.0 key
 `General.AnnounceEvents` is retired and ignored; the `[Announcements]` switches replace it.
 
 ## Status
 
-**v0.5.2.** See [`CHANGELOG.md`](CHANGELOG.md) for what ships and [`docs/dod/`](docs/dod/) for the
+**v0.6.0.** See [`CHANGELOG.md`](CHANGELOG.md) for what ships and [`docs/dod/`](docs/dod/) for the
 build plan.
 
 ## Quick start
@@ -49,6 +49,7 @@ which everything the event created is reverted or despawned. Four services carry
 | Event library: six built-in templates, chat authoring (`template`, `event new/copy/delete/set`, `pillar`), readiness column | 0.5.0 | [`docs/features/EVENT_LIBRARY.md`](docs/features/EVENT_LIBRARY.md) |
 | Walkable spawn points: wave units moved off water, cliffs and walls by the game's tile collision | 0.5.1 | [`docs/features/WALKABLE_SPAWNS.md`](docs/features/WALKABLE_SPAWNS.md) |
 | Raphael api 4: admin action twins (`api event`, `api template use`, `api pillar`, `api purge`) that answer one line each, at most 5 per admin per second, and reads (`api templates`, `api template info`, `api pillar list`, `api killswitch`) that answer rows and an end line | 0.5.2 | [`docs/features/RAPHAEL_API_ADMIN.md`](docs/features/RAPHAEL_API_ADMIN.md) |
+| Regions: `scope` on triggers and actions (the game's world regions), `.nyar region list\|here`, `{region}`, api 5 (`api regions`, `region=` keys); 0.5.x disables, after a rollback, a definition carrying `scope` (unknown key) or an announcement using `{region}` (unknown placeholder) | 0.6.0 | [`docs/features/REGIONS.md`](docs/features/REGIONS.md) |
 | Boss reinforcements | in development | [`docs/features/BOSS_REINFORCEMENTS.md`](docs/features/BOSS_REINFORCEMENTS.md) |
 | Defended zones | in development | [`docs/features/DEFENDED_ZONES.md`](docs/features/DEFENDED_ZONES.md) |
 | Sieges | in development | [`docs/features/SIEGES.md`](docs/features/SIEGES.md) |

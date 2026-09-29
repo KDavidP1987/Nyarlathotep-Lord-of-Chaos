@@ -6,7 +6,7 @@ A **server-side** event layer for V Rising. Admins stage NPC events the base gam
 enemies and empowered factions on a schedule, at nightfall or after a V Blood falls, with warnings and banners
 for players, and in later releases castle sieges, defended zones and boss-fight adds.
 
-> **Public beta (0.5.2).** Every pillar and automatic announcement is off by default; no event runs until an
+> **Public beta (0.6.0).** Every pillar and automatic announcement is off by default; no event runs until an
 > admin turns on its pillar and enables it.
 
 ## What it does
@@ -102,6 +102,23 @@ or would not start (`ready`, `off (pillar)`, `full (cap)`, …).
 </details>
 
 <details>
+<summary><b>Regions</b> · <i>0.6.0</i></summary>
+
+Any event can be limited to named map regions: StartCave, FarbaneWoods, DunleyFarmlands, CursedForest,
+HallowedMountains, SilverlightHills, Gloomrot_South, Gloomrot_North, RuinsOfMortium and Strongblade, read from the
+game's own map. Set `trigger.scope` and `action.scope` in `events.json` (`"Global"`, the default, or a list of
+names), or in game with `.nyar event set <id> action.scope FarbaneWoods,DunleyFarmlands`.
+
+- **Trigger scope:** a V Blood trigger fires only for a kill inside the regions; a scheduled, nightfall/daybreak or
+  manual start needs a player standing in one of them (a scheduled one is skipped, not retried).
+- **Action scope:** empowerment buffs only NPCs standing in the regions; waves spawn only there, and an admin
+  start from outside is refused.
+
+`.nyar region here` names the region you stand in; `.nyar region list` shows how many events use each region.
+Announcements can say `{region}`. If the map cannot be read, regional events are disabled and the rest run.
+</details>
+
+<details>
 <summary><b>Boss reinforcements</b> · <i>in development</i></summary>
 
 Adds join a V Blood fight when it starts or when the boss drops below a health threshold, and leave when the
@@ -193,6 +210,7 @@ set running.
 | `.nyar status` | Active events and minutes left (admins also see tracked units and any degraded hook) |
 | `.nyar api version` | Machine-readable handshake for the Raphael client |
 | `.nyar api status` / `api sub on\|off` | Active events and live updates as machine-readable lines, for Raphael |
+| `.nyar api regions [page]` | The map's regions and their active events as machine-readable lines, for Raphael (0.6.0) |
 </details>
 
 <details>
@@ -203,8 +221,9 @@ set running.
 | `.nyar event list [page]` / `info <id>` | Event definitions and their state |
 | `.nyar event start <id>` / `stop <id>` | Start now / end early |
 | `.nyar event enable <id>` / `disable <id>` | Switch an event on or off (saved to `events.json`) |
-| `.nyar event set <id> <field> <value>` | Change `name`, `durationSeconds`, `conditions.minPlayers`, `conditions.cooldownMinutes`, `conditions.chancePercent`, `trigger.type`, `trigger.days`, `trigger.times`, `trigger.phase`, `trigger.bosses`, `action.factions`, `action.units` (`CHAR_<name>[:<count>]`), `action.waves`, `action.intervalSeconds`, `action.radius` or `location here`; on an empowerment, `action.stats.<stat>` (1.0-3.0) |
+| `.nyar event set <id> <field> <value>` | Change `name`, `durationSeconds`, `conditions.minPlayers`, `conditions.cooldownMinutes`, `conditions.chancePercent`, `trigger.type`, `trigger.days`, `trigger.times`, `trigger.phase`, `trigger.bosses`, `action.factions`, `action.units` (`CHAR_<name>[:<count>]`), `action.waves`, `action.intervalSeconds`, `action.radius`, `trigger.scope`, `action.scope` (`Global` or `Name,Name`) or `location here`; on an empowerment, `action.stats.<stat>` (1.0-3.0) |
 | `.nyar event reload` | Re-read `events.json` |
+| `.nyar region list` / `region here` | The map's regions with their event counts / the region you stand in (0.6.0) |
 | `.nyar spawn <unit> [count] [level\|+n\|-n] [hp] [power]` | One-off test spawn beside you, removed after `ManualSpawnLifetimeSeconds` |
 | `.nyar debug here [radius]` | The mod's units near you, with lifetime, level and stats, then up to 10 native NPCs with their empowerment buff |
 | `.nyar announce <text>` | Broadcast a line to everyone (quote text longer than 16 words) |
@@ -267,7 +286,8 @@ Faction empowerment above.
 
 Stop the server and delete `Nyarlathotep.dll`. The mod's units carry a timer and expire on their own, and so
 do empowerment buffs. To downgrade to 0.3.0, run `.nyar purge confirm` first: 0.3.0 does not remove the buffs,
-which otherwise stay until their event's time runs out. To
+which otherwise stay until their event's time runs out. 0.5.x disables a definition carrying `scope` (unknown
+key) or an announcement using `{region}` (unknown placeholder) until you remove them. To
 remove its data too, delete `BepInEx/config/kdpen.Nyarlathotep.cfg` and the `BepInEx/config/Nyarlathotep/`
 folder.
 

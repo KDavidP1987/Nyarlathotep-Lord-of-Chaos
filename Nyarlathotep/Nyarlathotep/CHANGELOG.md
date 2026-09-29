@@ -2,6 +2,18 @@
 
 Public beta. Event pillars and automatic announcements default off; admins opt in per feature.
 
+## 0.6.0 (2026-09-28)
+
+- **Regional events.** An event's trigger and action can be limited to named map regions (Farbane Woods, Dunley
+  Farmlands, the Cursed Forest …) with the new `scope` key, or `.nyar event set <id> trigger.scope|action.scope`.
+  A V Blood trigger then fires only for a kill in its regions, a timed or manual start needs a player there,
+  empowerment reaches only NPCs standing there, and waves spawn only there.
+- **New commands:** `.nyar region list` (the regions and how many events use each) and `.nyar region here`
+  (the region you stand in). `event info` and `event list` show each event's scope; announcements can use `{region}`.
+- Raphael api 5: `.nyar api regions` and a `region=` key on event rows.
+- No new cfg keys; without `scope` every event behaves as in 0.5.2. Rolling back to 0.5.2 disables events that use
+  `scope` or `{region}` until those are removed.
+
 ## 0.5.2 (2026-09-28)
 
 - **Raphael admin actions (api 4).** Admins using the Raphael client panel get machine-readable versions of the
