@@ -4,13 +4,13 @@ rubric: 2
 id: dod-20260928-evs1
 slug: event-spawns
 title: Event spawns — modifiers, Hunt and player locations
-status: in-progress
+status: done
 size: L
 parent: nyarlathotep
 kind: feature
 created: 2026-09-28
 baselined: 2026-09-28
-closed: none
+closed: 2026-09-29
 commit: c67d5df
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
@@ -644,7 +644,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - A53 · 2026-09-29 · defect · — · layer: 11.3 · Codex step 1 round 3 F1: an unknown JSON field name was copied whole into the disabled reason (event, action, action.stats, action.modifiers and every OnlyKeys object), so a 480-character name made `.nyar event info` and list lines exceed 480 bytes, against D32; EventValidator.UnknownField leaves out a name over 32 characters or not plain text ("unknown field in <prefix>"), and, by Review 24 F5, EventValidator.Shown leaves out an echoed value (pillar, region, unit, faction, trigger or action type) over 96 characters or not plain text; tested through validation and EventLines.Info in ChatBytes_fails_when_line_exceeds_480, the stats level included
 - A54 · 2026-09-29 · defect · — · layer: 10.1 · Codex step 1 rounds 1-3 on D22's checks: the System-actor exemption matched bare method names (fixed type-qualified, fixture GatewayOnly/bad-systemtype) and trusted a using alias named after a service (fixture bad-alias) or, by Review 24 F1, a value declared under a service's name in a System-actor file (fixture bad-shadow); the command inventory took the usage text for the handler (bad-unhandled), a string literal for a handler call (bad-literal, bodies read with literals blanked) and a case label for its verb's call (bad-gutted, the flow call must stand in the verb's own case section); the plan's controls were right, the checks were not
 - A55 · 2026-09-29 · discovered · ~D22 · layer: 10.1 · Codex step 1 round 4 F1: the gateway check took its protected methods only from [Mutating] attributes, so removing one hid its method and its callers (a Persistence.Delete called from Commands/ passed); D34 closed this for entity writes only; the script now keeps a floor of every real [Mutating] method per service, checked both ways by Test-CheckMutatingFloor (MutatingFloor fixtures); by Review 25 F1 the declaration regex reads tuple return types, which hid SpawnTracker.RequestWave, EndEventUnits and PurgeUnits from the gateway check (fixture GatewayOnly/bad-tuple), and by F2 a rename or a missing service fails instead of being left to the diff review
-- A56 · 2026-09-29 · defect · ~D31 · layer: 10.3 · Codex step 1 round 5 F1: the index side of the Secrets check searched only the secret patterns and C# environment reads, so a script naming the tcli token, staged and then cleaned on disk, passed (the token name is followed by neither = nor :); Get-IndexSecretHits applies the token rule and the tools/ credential rule to the staged blobs too, and -SelfTest runs Test-IndexSecretProbe in a scratch repository (%TEMP%\nyar-secrets-index-<pid>, removed after), since the fixture battery never scans an index
+- A56 · 2026-09-29 · discovered · ~D31 · layer: 10.3 · Codex step 1 round 5 F1: the index side of the Secrets check searched only the secret patterns and C# environment reads, so a script naming the tcli token, staged and then cleaned on disk, passed (the token name is followed by neither = nor :); Get-IndexSecretHits applies the token rule and the tools/ credential rule to the staged blobs too, and -SelfTest runs Test-IndexSecretProbe in a scratch repository (%TEMP%\nyar-secrets-index-<pid>, removed after), since the fixture battery never scans an index
 - A57 · 2026-09-29 · discovered · ~D27 · layer: 12.4 · Codex step 1 round 6 F1: -Paths -DeclaredOf ran whatever classes the mutable `dataTests.<slug>` entry listed, so an entry naming only another passing class dropped the end-path tests D27 names (EndPathTests, D33) and still passed; $script:DataTestFloor in tools/preflight.ps1 (event-spawns › EndPathTests) is required of the entry, fixture Paths/bad-datatests-floor
 - A58 · 2026-09-29 · defect · — · layer: 12.4 · step 2 build: Test-CheckDependencySuite read the suite slugs through an `if` expression, whose output unrolls a one-slug array to a string, so adding a floor slug concatenated the names ("event-libraryevent-spawns") and the DependencySuite good fixture failed once event-spawns joined $script:SuiteFloor; the slugs are read with @(if …); the DependencySuite fixtures good, bad, bad-2 and bad-floor gain the event-spawns entry and a SpawnsDependencyFailureTests with its four controls, and the MutatingFloor fixtures gain Services/HuntAction.cs, so each still fails for its own plant only (recorded after the fix, before the step 2 commit)
 - A59 · 2026-09-29 · discovered · — · layer: 4.3 · step 2 build: the plan says a skipped or zero-rolled wave logs its line and pushes nothing (D20, D29) but not whether it uses up its wave; it does: Logic `EventEngine.WaveSkipped` counts it without the push, so the next wave comes at its own time and an event whose waves are all skipped ends on schedule rather than retrying each second (recorded after building, before the step 2 commit)
@@ -766,3 +766,17 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-29 · D33 · pass · test: dotnet test Nyarlathotep/Nyarlathotep.Tests --filter FullyQualifiedName~EndPath → Passed! (20 tests); Session 2's five end paths (D23) · 3aa2215 · claude
 - 2026-09-29 · D34 · pass · cmd: pwsh tools/preflight.ps1 → "entity writes: only dispatched services (70 sites, 8 [Mutating] methods)"; -SelfTest → "selftest: 40/40 checks, 7/7 external selftests (3 fixtures each, 233 extra bad fixtures; …)" · 3aa2215 · claude
 - 2026-09-29 · note · D24's failing fixtures, beyond the plan's list: TimingSpan/bad, bad-tracked and bad-slowlast (Review 36 F5, Codex step 3 F1), each in the ControlCases D24 row and -SelfTest
+- 2026-09-29 · note · close: the owner confirmed the defect amendments A53, A54, A58, A60, A61 and A72 as honestly classified and accepted reclassifying A56 (it changed D31's text) as discovered (2026-09-29)
+- 2026-09-29 · status → done · close
+
+## Report · 2026-09-29
+Baseline items            24
+Discovered (planning gaps) 67 amendments · 68 design changes (wrong 47 · missed 21) · probes: 12.4 (A3, A4, A14, A15, A20, A22, A28, A29, A33, A35, A41, A45, A52, A57, A63, A71, A73), 10.1 (A2, A10, A16, A23, A31, A34, A49, A55), 14.4 (A21, A30, A46, A47, A48, A50, A64, A69), 6.2 (A1, A9, A11, A19, A40, A44), 4.1 (A8, A13, A18, A24, A32, A43), 4.2 (A6, A12, A17, A25, A67), 4.4 (A26, A27, A36, A37, A38), 12.2 (A5, A66), 5.1 (A7, A51), 3.3 (A39, A42), 11.2 (A65, A68), 10.3 (A56), 4.3 (A59), 5.3 (A62), 13.1 (A70)
+Corrected (reversals)      0            (counts in the rate)
+Requested scope changes    0    (excluded)
+Emergent / defect / external 0 · 6 · 0  (excluded; A53, A54, A58, A60, A61, A72 confirmed by the owner; A56 reclassified discovered)
+Prediction rate            24 / (24 + 68) = 26 %   target ≥ 90 %
+Completion                 vs baseline 24/24 · vs current 24/24
+Review                     subagent · READY at Review 11 after Reviews 1-10 · scoped re-reviews 12-38 (the last, Review 38 of A73, READY); every step's Codex cross-inspection READY (step 1 round 7, step 2 round 2, step 3 round 2, step 4 round 5)
+Timeline                   draft 09-28 · ready 09-28 · start 09-29 · done 09-29 · released 0.7.0
+Missed probes              12.4 failing cases (17), 10.1 authorization (8) and 14.4 paths (8) dominate, as in every child since foundation: most came from the reviews of the static checks (each new check or fixture lacked its planted failure or its declared path), not from game behaviour; the in-game misses were 6.2 and 4.x (player and territory reads, Hunt's seed record, A67), found in Sessions 1-2. Profile note for docs/dod/profile.md: "a new preflight check or tool mode lists, at planning time, its failing fixture per rule and its fixture paths under Paths walked"
