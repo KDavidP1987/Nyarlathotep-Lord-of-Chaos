@@ -198,7 +198,7 @@ steps 10 and 12 on a build with A65 and A66.
   summaries; the server log's 224 "PrefabLookupMap.TryGet … is in an unknown state" warnings at save load, the known set;
   tick timing max 30.1 ms once (the es-hunt start), otherwise under 5 ms
 
-### Owner steps for Session 1 part B · A65, A66 and the redo of steps 10 and 12
+#### Owner steps for Session 1 part B · A65, A66 and the redo of steps 10 and 12
 
 Setup (Claude): the build with A65 and A66 deployed on the same world (snapshot es1 still held), VerboseLogging on.
 The es-* events from part A are still in events.json; es-castle already has allowTerritory true.
@@ -225,7 +225,7 @@ The es-* events from part A are still in events.json; es-castle already has allo
 5. Stay connected for about 2 minutes, so the server autosaves after these steps. Then tell me you're done, and
    paste anything that differed from an expectation.
 
-### Session 1 · 2026-09-29 · event-spawns step 2, part B (b918028 plus the uncommitted A65 and A66, with the owner)
+#### Part B · 2026-09-29 · event-spawns step 2 (b918028 plus the uncommitted A65 and A66, with the owner)
 
 The A65-A66 build before Codex round 1's fixes (the Hunt line without the over-the-cap count; Left without its guard),
 deployed on the same world; owner connected about 10:58–11:03; server stopped after autosave 1997, both logs copied to
@@ -254,7 +254,9 @@ deployed on the same world; owner connected about 10:58–11:03; server stopped 
   or the runtime, as REGIONS.md and FACTION_EMPOWERMENT.md recorded before; part A's 85.6 ms tick is the one after a
   3-unit despawn batch. Step 3's soak measures the budget
 
-### Owner steps for Session 1 part C · A67, the Hunt seeds re-checked
+- [x] after parts A and B: `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (es1, C:\Users\<user>\AppData\Local\Temp\nyar-snap-es1 deleted)"; part C was wrapped by `-Save es1c` and "snapshot restored; hashes equal (es1c, C:\Users\<user>\AppData\Local\Temp\nyar-snap-es1c deleted)"
+
+#### Owner steps for Session 1 part C · A67, the Hunt seeds re-checked
 
 Setup (Claude): the build with A67 deployed (snapshot es1c), VerboseLogging on, and a planted es-hunt (3 Bandit Thugs,
 Hunt 60, enabled). The seed counts go to the log; from you I need only whether the Thugs came, and how many.
@@ -270,7 +272,7 @@ Hunt 60, enabled). The seed counts go to the log; from you I need only whether t
 6. Run `.nyar event stop es-hunt`, then stay connected for about 2 minutes so the server autosaves. Tell me you're
    done and how many Thugs came.
 
-### Session 1 · 2026-09-29 · event-spawns step 2, part C (0309313 plus the uncommitted A67, with the owner)
+#### Part C · 2026-09-29 · event-spawns step 2 (0309313 plus the uncommitted A67, with the owner)
 
 Setup as in the part C steps (snapshot es1c); owner connected about 11:36–11:40; server stopped after autosave 2001,
 which followed the disconnect; both logs copied to %TEMP%\nyar-es1c-logs and deleted after.
@@ -351,6 +353,52 @@ Afterwards (Claude):
   - D19: `.nyar template info undead-rising` shows its modifiers (I run it through the console log, or you may, any time).
   - D33: nothing tracked after any path.
 - Run `dev-snapshot.ps1 -Restore`, then redeploy.
+
+### Session 2 · 2026-09-29 · event-spawns step 3 (332b54f, dev world nyardev, with the owner)
+
+Setup as in the Session 2 steps: `pwsh tools/dev-snapshot.ps1 -Save es2` ("snapshot saved: es2 (28 files)"), the step 3
+build deployed, `python tools/ingame/session-events.py es2`; the boot loaded "reloaded: 6 valid, 0 disabled" and
+"templates: 6/6 valid". The dev server has no invulnerability: every unit was CHAR_Forest_Deer (no attack ability), as
+D24 allows ("admin invulnerability allowed during the span and recorded"). Five boots; both logs copied to
+%TEMP%\nyar-s2-logs before each stop or restart and deleted after this record.
+
+- [x] stop path (D23), owner 12:43–12:44: "event es2-stop wave 1/2: 15 units queued (9 moved, 0 unchecked), due in 630s,
+  lifetime 720s", wave 2/2 the same; `.nyar status` "tracked units: 30"; `.nyar event stop es2-stop` → "event es2-stop
+  stopped: 30 units queued, 0 spawns cancelled", six "despawn batch: 5 of 5 destroyed" to "0 left"; `.nyar status` "No
+  active events." and "tracked units: 0 (spawning 0, despawning 0)"; the next window "hunt targets: 0"
+- [x] natural path (D23): es2-natural (60 s), two waves of 15; "hunt targets: 1" while it ran; "event es2-natural ended
+  (2 of 2 waves)", six despawn batches to "0 left"; `.nyar status` at 12:46 "tracked units: 0"; the next window
+  "hunt targets: 0"
+- [x] purge path (D23, Epic D11): es2-purge, both waves; `.nyar purge` → "purge ends 1 events and despawns 30 units";
+  `.nyar purge confirm` → "purged: 1 events, 30 units queued" and the log "purge: 1 events ended, 30 units queued, 0
+  spawns cancelled, cooldown 60s", six despawn batches to "0 left"; `.nyar status` "tracked units: 0"; "hunt targets: 0"
+- [x] tick budget (D24), owner idle in shade 12:49–13:25 within Hunt range: es2-load, ten waves of 15 over 3 min; `.nyar
+  status` "tracked units: 150" at 12:53 and 13:20; health lines "1 events, 150 tracked, degraded: none" at each
+  10-minute mark; `pwsh tools/preflight.ps1 -TimingSpan <log copy> -MinTracked 140 -MinTargets 1 -Windows 10` →
+  "timing span: 10/10 windows under 5 ms, tracked >= 140, targets >= 1, 0 slow ticks". The span's averages 0.28–0.35 ms,
+  maxima 1.2–2.7 ms, the slowest tick's top phase "hunt" (1.0–2.5 ms) in all but one window. After the span: one window
+  avg 1.748 ms, max 69.5 ms ("health 67.1 ms", the 10-minute health line's tick), one with "hunt 13.2 ms"
+- [x] natural path at the cap (D23): "event es2-load ended (10 of 10 waves)", despawn batches to "0 left" (150 units);
+  `.nyar status` at 13:25 "No active events." and "tracked units: 0"; "hunt targets: 0"
+- [x] restart path (D23), owner 13:25–13:26: es2-restart's two waves; the watcher hard-stopped the server at 13:26:41 right
+  after AutoSave_2032; boot 1: "event es2-restart cancelled by restart", "boot marker sweep: 30 found, 30 queued for
+  despawn (30 listed in state.json)", despawn batches to "0 left"; stopped after AutoSave_2033; boot 2: "boot marker
+  sweep: 0 found, 0 queued for despawn (0 listed in state.json)"; the owner reconnected at 13:35: `.nyar status` "No
+  active events." and "tracked units: 0", no deer left
+- [x] uninstall path (D23, Epic D12): es2-uninstall's two waves ("due in 300s, lifetime 390s"); the watcher hard-stopped
+  the server at 13:38:15 after the next autosave; Nyarlathotep.dll removed; the server ran 13:38–13:47 without it (0
+  Nyarlathotep lines), stopped after AutoSave_2041; the DLL reinstalled; boot: "event es2-uninstall cancelled by restart",
+  "boot marker sweep: 0 found, 0 queued for despawn (30 listed in state.json)": the game's LifeTime removed all 30
+- [x] wave-start tick (A70's attribution): the first wave after the boot logged "slowest tick: 172.7 ms (spawn queues
+  105.0 ms, hunt 62.3 ms, state flush 5.3 ms; outside phases 0.0 ms)" in a window of avg 8.557 ms (es2-stop's start,
+  outside the span; under the 250 ms slow-tick line); every later wave start was under 20 ms. Session 1 measured 30.1,
+  34.2 and 206.0 ms at the first wave after a fresh boot: the first spawn and the first Hunt tick after a boot are the
+  cost, not the load
+- [x] logs: no [Error] in any boot; BepInEx warnings only the three known kinds (Il2CppInterop, Beelzebub's two TUNE lines)
+  and the stop and purge summaries; -LogCheck on each boot 0 unhandled, 0 orphan errors, 0 unity errors (docs/audits)
+- [x] Review 36 F3: tools/preflight-fixtures/TimingSpan/good/LogOutput.log is now the real span (37 lines from this log
+  copy, no Steam ID) and still passes
+- [x] `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (es2, C:\Users\<user>\AppData\Local\Temp\nyar-snap-es2 deleted)"; the step 3 build redeployed (0 Error(s))
 
 ### S2 restart spike · 2026-09-24 · spikes step 3 sessions 9–12 (throwaway save)
 
