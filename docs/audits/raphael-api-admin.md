@@ -100,4 +100,5 @@ yar-rel-052) at the release commit 32cc082 (0 warnings, 0 errors); the zip's DLL
 - zip sha256: kdpen-Nyarlathotep-0.5.2.zip EEFE3F4F245FEF2F10EB15E05D43BF5C9864C20E6D67C4F089AFD81A3E7F2902
 - tag: v0.5.2 annotated at 32cc082 (the release-tags check places a tag on its chore(release) commit); a first local tag at da24c74 was deleted before any push
 - Rollout › Rollback reworded to the gate's route phrases ("after data is written", "withdrawn by retitling"); the first gate run failed on them and on the tag's commit
+- rollback gate before the push: `pwsh tools/rollback-gate.ps1 -From v0.5.1 -To v0.5.2 -Plan raphael-api-admin` → "rollback gate: 4/4" (repository drill with -BeforePush; N-1 boot drill "events.json: v0.5.2 '6 valid, 0 disabled', v0.5.1 '6 valid, 0 disabled'", v0.5.1 initialized on v0.5.2's files; snapshot selftest; "rollback routes: raphael-api-admin 5/5")
 
