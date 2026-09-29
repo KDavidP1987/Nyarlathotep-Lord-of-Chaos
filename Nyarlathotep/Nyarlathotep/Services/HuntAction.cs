@@ -35,12 +35,18 @@ internal static class HuntAction
 
     internal static HuntSeeds Seeds => _seeds;
 
+    /// <summary>D24's "hunt targets: &lt;n&gt;": the distinct players HuntPlan.Targets chose across every Hunt unit at the
+    /// latest tick, whether seeded then, kept or held by the game (Review 34 F3); 0 with no Hunt unit.</summary>
+    internal static int LastTargets { get; private set; }
+    static readonly HashSet<long> _tickTargets = new();
+
     /// <summary>At IsReady: a restart keeps no seed (D33).</summary>
     internal static void Initialize()
     {
         _seeds = new HuntSeeds();
         _units.Clear();
         _next = default;
+        LastTargets = 0;
     }
 
     /// <summary>SpawnTracker confirmed a unit of a Hunt wave.</summary>
@@ -74,8 +80,11 @@ internal static class HuntAction
     [Mutating]
     internal static void Tick(DateTime now)
     {
-        if (_units.Count == 0 || now < _next) return;
+        if (_units.Count == 0) { LastTargets = 0; return; }
+        if (now < _next) return;
         _next = now.AddSeconds(HuntPlan.IntervalSeconds);
+        _tickTargets.Clear();
+        LastTargets = 0;                                                     // a throw past the per-event catch reads 0 (Review 35 F4)
 
         // The sweep and the player read fail every event's tick alike, never the scheduler's (D21; A61).
         List<IGrouping<string, KeyValuePair<long, (Entity Unit, string EventId, HuntTag Tag)>>> byEvent;
@@ -84,12 +93,13 @@ internal static class HuntAction
         {
             foreach (var gone in _units.Where(u => !u.Value.Unit.Exists()).Select(u => u.Key).ToList()) Forget(gone);
             byEvent = _units.GroupBy(u => u.Value.EventId).ToList();
-            if (byEvent.Count == 0) return;
+            if (byEvent.Count == 0) { LastTargets = 0; return; }
             players = PlayerQuery.Read();
         }
         catch (Exception ex)
         {
             foreach (var id in _units.Values.Select(u => u.EventId).Distinct().ToList()) Failed(id, ex);
+            LastTargets = 0;
             return;
         }
 
@@ -99,13 +109,15 @@ internal static class HuntAction
             {
                 var map = TerritoryMap.Maps.ForHunt(g.Key);
                 int kept = 0, left = 0;
+                var held = new HashSet<long>();
                 foreach (var (key, (unit, _, tag)) in g.ToList())
                 {
                     if (!unit.Exists()) { Forget(key); continue; }
-                    var (k, l) = SeedUnit(key, unit, g.Key, tag, players, map);
+                    var (k, l) = SeedUnit(key, unit, g.Key, tag, players, map, held);
                     kept += k;
                     left += l;
                 }
+                _tickTargets.UnionWith(held);                                // an event counts only once its whole tick held
                 WalkCheck.Health.Recovered(SpawnFailure.HuntSeed, g.Key);
                 if (Settings.VerboseLogging.Value)
                 {
@@ -127,6 +139,7 @@ internal static class HuntAction
                 Failed(g.Key, ex);
             }
         }
+        LastTargets = _tickTargets.Count;
     }
 
     static void Failed(string eventId, Exception ex)
@@ -135,9 +148,10 @@ internal static class HuntAction
     }
 
     /// <summary>One unit's tick: reconcile the record with the buffer, then remove the seeds of players no longer targets
-    /// and add the new targets'. Returns the seeds kept and those left to the game.</summary>
+    /// and add the new targets'. Adds to <paramref name="held"/> each target the buffer holds afterwards (already there
+    /// and kept, or written now). Returns the seeds kept and those left to the game.</summary>
     static (int Kept, int Left) SeedUnit(long key, Entity unit, string eventId, HuntTag tag, List<PlayerRow> players,
-        IReadOnlySet<(int X, int Z)> map)
+        IReadOnlySet<(int X, int Z)> map, HashSet<long> held)
     {
         if (!Core.EntityManager.HasBuffer<AggroBuffer>(unit)) { _seeds.ForgetUnit(key); return (0, 0); }
         var buffer = Core.EntityManager.GetBuffer<AggroBuffer>(unit);
@@ -158,12 +172,14 @@ internal static class HuntAction
             if (index >= 0) buffer.RemoveAt(index);
             _seeds.Removed(key, target);
         }
+        foreach (var target in targets) if (inBuffer.ContainsKey(target) && !removes.Contains(target)) held.Add(target);
         foreach (var target in adds)
         {
             var player = players.FirstOrDefault(p => p.Key == target);
             if (!player.Character.Exists()) continue;
             buffer.Add(new AggroBuffer { Entity = player.Character, DamageValue = SeedDamage, Weight = SeedWeight });
             _seeds.Wrote(key, eventId, new AggroSeed(target, SeedDamage, SeedWeight));
+            held.Add(target);                                                // counted once written (Review 36 F4)
         }
         return (kept, left);
     }

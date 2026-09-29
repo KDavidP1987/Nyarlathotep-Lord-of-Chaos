@@ -1,0 +1,43 @@
+[Message:   BepInEx] Loading [Nyarlathotep 0.7.0]
+[Info   :Nyarlathotep] [nyar] Nyarlathotep 0.7.0 ready: 12 events loaded, 0 disabled
+[Info   :Nyarlathotep] [nyar] nyar health: 0 events, 0 tracked, degraded: none
+[Info   :Nyarlathotep] [nyar] hunt targets: 0
+[Info   :Nyarlathotep] [nyar] tick timing: avg 0.049 ms, max 0.117 ms over 61 ticks
+[Info   :Nyarlathotep] [nyar] slowest tick: 0.1 ms (spawn queues 0.1 ms; outside phases 0.0 ms)
+[Info   :Nyarlathotep] [nyar] event es2-hunt-a wave 1/2: 20 units queued (0 moved, 0 unchecked), due in 1200s, lifetime 1200s
+[Info   :Nyarlathotep] [nyar] nyar health: 3 events, 150 tracked, degraded: none
+[Info   :Nyarlathotep] [nyar] hunt targets: 1
+[Info   :Nyarlathotep] [nyar] tick timing: avg 8.081 ms, max 205.958 ms over 60 ticks
+[Info   :Nyarlathotep] [nyar] slowest tick: 206.0 ms (events 150.2 ms, spawn queues 40.5 ms, hunt 15.0 ms; outside phases 0.1 ms)
+[Info   :Nyarlathotep] [nyar] hunt targets: 1
+[Info   :Nyarlathotep] [nyar] tick timing: avg 2.614 ms, max 23.024 ms over 60 ticks
+[Info   :Nyarlathotep] [nyar] slowest tick: 23.0 ms (spawn queues 12.1 ms, hunt 6.3 ms, events 3.2 ms; outside phases 0.1 ms)
+[Info   :Nyarlathotep] [nyar] hunt targets: 1
+[Info   :Nyarlathotep] [nyar] tick timing: avg 1.614 ms, max 18.412 ms over 60 ticks
+[Info   :Nyarlathotep] [nyar] slowest tick: 18.4 ms (hunt 9.8 ms, spawn queues 5.0 ms, events 2.1 ms; outside phases 0.1 ms)
+[Info   :Nyarlathotep] [nyar] hunt targets: 1
+[Info   :Nyarlathotep] [nyar] tick timing: avg 0.654 ms, max 35.375 ms over 60 ticks
+[Info   :Nyarlathotep] [nyar] slowest tick: 35.4 ms (spawn queues 30.2 ms, hunt 3.1 ms, events 1.0 ms; outside phases 0.1 ms)
+[Info   :Nyarlathotep] [nyar] hunt targets: 0
+[Info   :Nyarlathotep] [nyar] tick timing: avg 1.203 ms, max 9.870 ms over 60 ticks
+[Info   :Nyarlathotep] [nyar] slowest tick: 9.9 ms (hunt 7.7 ms, events 1.1 ms, push 0.4 ms; outside phases 0.1 ms)
+[Info   :Nyarlathotep] [nyar] hunt targets: 1
+[Info   :Nyarlathotep] [nyar] tick timing: avg 0.981 ms, max 8.102 ms over 60 ticks
+[Info   :Nyarlathotep] [nyar] slowest tick: 8.1 ms (hunt 6.9 ms, events 0.8 ms, push 0.2 ms; outside phases 0.1 ms)
+[Info   :Nyarlathotep] [nyar] nyar health: 3 events, 148 tracked, degraded: none
+[Info   :Nyarlathotep] [nyar] hunt targets: 1
+[Info   :Nyarlathotep] [nyar] tick timing: avg 1.050 ms, max 11.334 ms over 60 ticks
+[Info   :Nyarlathotep] [nyar] slowest tick: 11.3 ms (hunt 9.0 ms, events 1.6 ms, state flush 0.5 ms; outside phases 0.1 ms)
+[Info   :Nyarlathotep] [nyar] hunt targets: 1
+[Info   :Nyarlathotep] [nyar] tick timing: avg 0.912 ms, max 7.410 ms over 60 ticks
+[Info   :Nyarlathotep] [nyar] slowest tick: 7.4 ms (hunt 6.2 ms, events 0.9 ms, push 0.2 ms; outside phases 0.1 ms)
+[Info   :Nyarlathotep] [nyar] hunt targets: 1
+[Info   :Nyarlathotep] [nyar] tick timing: avg 1.337 ms, max 12.908 ms over 60 ticks
+[Info   :Nyarlathotep] [nyar] slowest tick: 12.9 ms (hunt 10.1 ms, events 2.0 ms, push 0.3 ms; outside phases 0.1 ms)
+[Info   :Nyarlathotep] [nyar] hunt targets: 1
+[Info   :Nyarlathotep] [nyar] tick timing: avg 1.101 ms, max 9.066 ms over 60 ticks
+[Info   :Nyarlathotep] [nyar] slowest tick: 9.1 ms (hunt 7.5 ms, events 1.2 ms, push 0.2 ms; outside phases 0.1 ms)
+[Info   :Nyarlathotep] [nyar] hunt targets: 1
+[Info   :Nyarlathotep] [nyar] tick timing: avg 0.998 ms, max 8.771 ms over 60 ticks
+[Info   :Nyarlathotep] [nyar] slowest tick: 8.8 ms (hunt 7.0 ms, events 1.4 ms, push 0.2 ms; outside phases 0.1 ms)
+[Info   :Nyarlathotep] [nyar] event es2-hunt-a ended (2 of 2 waves)

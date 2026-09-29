@@ -104,7 +104,8 @@
           { "prefab": "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "count": 2 }
         ],
         "waves": 2, "intervalSeconds": 90, "radius": 12,
-        "location": { "type": "Admin" }
+        "location": { "type": "Admin" },
+        "modifiers": { "levelDelta": 2, "maxHealth": 1.2 }
       },
       "announce": { "start": [ "The dead claw their way up: {event}." ], "end": [ "The dead lie still. {event} is over." ], "warnings": false }
     }

@@ -1,0 +1,12 @@
+[Message:   BepInEx] Loading [Nyarlathotep 0.7.0]
+[Info   :Nyarlathotep] [nyar] Nyarlathotep 0.7.0 ready: 12 events loaded, 0 disabled
+[Info   :Nyarlathotep] [nyar] nyar health: 0 events, 0 tracked, degraded: none
+[Info   :Nyarlathotep] [nyar] hunt targets: 0
+[Info   :Nyarlathotep] [nyar] tick timing: avg 0.049 ms, max 0.117 ms over 61 ticks
+[Info   :Nyarlathotep] [nyar] slowest tick: 0.1 ms (spawn queues 0.1 ms; outside phases 0.0 ms)
+[Info   :Nyarlathotep] [nyar] event es2-hunt-a wave 1/2: 20 units queued (0 moved, 0 unchecked), due in 1200s, lifetime 1200s
+[Info   :Nyarlathotep] [nyar] nyar health: 3 events, 150 tracked, degraded: none
+[Info   :Nyarlathotep] [nyar] hunt targets: 1
+[Info   :Nyarlathotep] [nyar] tick timing: avg 8.081 ms, max 205.958 ms over 60 ticks
+[Info   :Nyarlathotep] [nyar] slowest tick: 206.0 ms (events 150.2 ms, spawn queues 40.5 ms, hunt 15.0 ms; outside phases 0.1 ms)
+[Info   :Nyarlathotep] [nyar] event es2-hunt-a ended (2 of 2 waves)

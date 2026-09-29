@@ -107,7 +107,7 @@ public class TemplateLibraryTests
         ("undead-nightfall", "empowerment", "gametime night", 0, 1200, "empower Faction_Undead: physicalPower 1.25, spellPower 1.25"),
         ("militia-crackdown", "empowerment", "vbloodkilled " + string.Join(",", MilitiaVBloods), 30, 900, "empower Faction_Militia,Faction_ChurchOfLum: maxHealth 1.3"),
         ("bandit-ambush", "spawns", "manual", 0, 600, "waves CHAR_Bandit_Thug:4,CHAR_Bandit_Hunter:2 x3 every 60s radius 10 at Admin"),
-        ("undead-rising", "spawns", "manual", 0, 600, "waves CHAR_Undead_SkeletonSoldier_Armored_Farbane:5,CHAR_Undead_ArmoredSkeletonCrossbow_Farbane:2 x2 every 90s radius 12 at Admin"),
+        ("undead-rising", "spawns", "manual", 0, 600, "waves CHAR_Undead_SkeletonSoldier_Armored_Farbane:5,CHAR_Undead_ArmoredSkeletonCrossbow_Farbane:2 x2 every 90s radius 12 at Admin modifiers levelDelta 2, maxHealth 1.2"),
     ];
 
     static string Describe(EventDefinition d)
@@ -120,7 +120,13 @@ public class TemplateLibraryTests
             return $"empower {string.Join(",", e.Factions)}: {string.Join(", ", stats)}";
         }
         var a = d.Action!;
-        return $"waves {string.Join(",", a.Units.Select(u => $"{u.Prefab}:{u.Count}"))} x{a.Waves} every {a.IntervalSeconds}s radius {a.Radius} at {a.Location.Type}";
+        var mods = a.Modifiers is { } m
+            ? " modifiers " + string.Join(", ", new (string, double?)[] { ("level", m.Level), ("levelDelta", m.LevelDelta), ("maxHealth", m.MaxHealth),
+                ("power", m.Power), ("moveSpeed", m.MoveSpeed), ("attackSpeed", m.AttackSpeed) }
+                .Where(x => x.Item2 is { } v && v != 1.0 || x.Item1.StartsWith("level", StringComparison.Ordinal) && x.Item2 is not null)
+                .Select(x => FormattableString.Invariant($"{x.Item1} {x.Item2}")))
+            : "";
+        return $"waves {string.Join(",", a.Units.Select(u => $"{u.Prefab}:{u.Count}"))} x{a.Waves} every {a.IntervalSeconds}s radius {a.Radius} at {a.Location.Type}{mods}";
     }
 
     /// <summary>Every difference between a catalogue and <see cref="Expected"/>; empty when they agree.</summary>
@@ -190,6 +196,42 @@ public class TemplateLibraryTests
         }
         var c = TemplateCatalog.Load(Bytes(root.ToJsonString()), Units(), Units());
         Assert.NotEmpty(Differences(c));
+    }
+
+    // ---- event-spawns D19: undead-rising's modifiers; every template disabled and valid
+
+    [Theory]
+    [InlineData("removed")]
+    [InlineData("levelDelta")]
+    [InlineData("maxHealth")]
+    [InlineData("on bandit-ambush")]
+    public void StarterTemplates_fails_when_spawn_modifiers_differ(string mutation)
+    {
+        var root = JsonNode.Parse(RealText)!;
+        var events = (JsonArray)root["events"]!;
+        JsonObject Action(string id) => (JsonObject)events.OfType<JsonObject>().First(e => (string)e["id"]! == id)["action"]!;
+        switch (mutation)
+        {
+            case "removed": Action("undead-rising").Remove("modifiers"); break;
+            case "levelDelta": Action("undead-rising")["modifiers"]!["levelDelta"] = 3; break;
+            case "maxHealth": Action("undead-rising")["modifiers"]!["maxHealth"] = 1.3; break;
+            default: Action("bandit-ambush")["modifiers"] = JsonNode.Parse("{\"power\": 1.1}"); break;
+        }
+        Assert.NotEmpty(Differences(TemplateCatalog.Load(Bytes(root.ToJsonString()), Units(), Units())));
+    }
+
+    [Theory]
+    [InlineData("enabled", "template undead-rising does not ship \"enabled\": false")]
+    [InlineData("invalid", "template undead-rising invalid: ")]
+    public void StarterTemplates_fails_when_a_spawn_template_is_enabled_or_invalid(string mutation, string problem)
+    {
+        var root = JsonNode.Parse(RealText)!;
+        var rising = ((JsonArray)root["events"]!).OfType<JsonObject>().First(e => (string)e["id"]! == "undead-rising");
+        if (mutation == "enabled") rising["enabled"] = true;
+        else rising["action"]!["modifiers"]!["levelDelta"] = 6;                     // outside D6's -5..5
+        var c = TemplateCatalog.Load(Bytes(root.ToJsonString()), Units(), Units());
+        Assert.Contains(TemplateCatalog.Problems(c, DefaultIds()), p => p.StartsWith(problem, StringComparison.Ordinal));
+        Assert.Empty(TemplateCatalog.Problems(Real(), DefaultIds()));                // "templates: 6/6 valid", all disabled
     }
 
     [Fact]

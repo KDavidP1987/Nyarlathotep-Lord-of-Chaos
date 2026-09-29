@@ -35,8 +35,6 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        new(EventSpawns, "D19", 3, "0.7.0"),
-        new(EventSpawns, "D24", 3, "0.7.0"),
         new(EventSpawns, "D25", 4, "0.7.0"),
     ];
 
@@ -297,9 +295,17 @@ public static class ControlCases
             ["stated_order", "allow_territory_lifts_only_territory_skip"], ["nothing_blocked_roll_zero"]) with { Plan = EventSpawns },
         T("D30", "Spawns", "HealthTests", ["streak_open", "ended_event_keeps_territory_unknown"], ["recovered_check_clears_entry", "text_equals_table"], ["no_open_streak"])
             with { Plan = EventSpawns },
-        T("D32", "ChatBytes", "CommandArgTests", ["line_exceeds_480", "line_holds_markup"], ["new_lines_at_maximum_lengths"], ["fields"]) with { Plan = EventSpawns },
+        T("D19", "StarterTemplates", "TemplateLibraryTests", ["spawn_modifiers_differ", "a_spawn_template_is_enabled_or_invalid"],
+            ["six_as_business_rules"], ["no_templates"]) with { Plan = EventSpawns },
+        C("D24", "TimingSpan", "preflight -TimingSpan › Test-CheckTimingSpan",
+            ["tools/preflight-fixtures/TimingSpan/bad", "tools/preflight-fixtures/TimingSpan/bad-avg", "tools/preflight-fixtures/TimingSpan/bad-slow",
+             "tools/preflight-fixtures/TimingSpan/bad-gap", "tools/preflight-fixtures/TimingSpan/bad-notarget", "tools/preflight-fixtures/TimingSpan/bad-tracked",
+             "tools/preflight-fixtures/TimingSpan/bad-slowlast"],
+            ["tools/preflight-fixtures/TimingSpan/good"], ["tools/preflight-fixtures/TimingSpan/empty"]) with { Plan = EventSpawns },
+        T("D24", "TickTimer", "EngineTests", ["slowest_names_another_tick"], ["top_three_phases_of_the_slowest_tick"], ["window_without_phases"]) with { Plan = EventSpawns },
+        T("D32", "ChatBytes", "CommandArgTests", ["line_exceeds_480", "line_holds_markup", "usage_holds_markup"], ["new_lines_at_maximum_lengths"], ["fields"]) with { Plan = EventSpawns },
         T("D33", "EndPaths", "EndPathTests",
-            ["natural_end_leaves_state", "event_stop_leaves_state", "fault_cancel_leaves_state", "purge_leaves_state", "restart_keeps_state",
+            ["natural_end_leaves_state", "event_stop_leaves_state", "fault_cancel_leaves_state", "purge_leaves_state", "purge_leaves_a_streak_open", "event_end_leaves_its_streaks", "runtime_skips_a_streak_close", "restart_keeps_state",
              "stopping_one_touches_the_other"],
             ["every_path_empties_all_three"], ["event_without_units"]) with { Plan = EventSpawns },
         C("D22", "Authorization", "preflight -AuthSuite (the real tree) and -SelfTest (these fixture batteries) › Test-CheckGatewayOnly, Test-CheckMutatingFloor and Test-CheckAuthSuite",

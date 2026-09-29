@@ -273,8 +273,7 @@ Hunt 60, enabled). The seed counts go to the log; from you I need only whether t
 ### Session 1 · 2026-09-29 · event-spawns step 2, part C (0309313 plus the uncommitted A67, with the owner)
 
 Setup as in the part C steps (snapshot es1c); owner connected about 11:36–11:40; server stopped after autosave 2001,
-which followed the disconnect; both logs copied to %TEMP%
-yar-es1c-logs and deleted after.
+which followed the disconnect; both logs copied to %TEMP%\nyar-es1c-logs and deleted after.
 
 - [x] D13 (A67), outside any claimed territory, Hunt 60, the owner about 40 m from the centre out of sight: "3 units queued
   (0 moved, 0 unchecked)"; every Hunt tick "1 players read, 1 targeted" and "0 left to the game"; seeds kept 0, 2, 0, 0,
@@ -285,6 +284,73 @@ yar-es1c-logs and deleted after.
   timing: one 206.0 ms tick in the minute of the wave start and its first Hunt ticks (avg 8.1 ms, the only average over
   5 ms), the first wave after a fresh boot, where parts A and B measured 30.1 and 34.2 ms; step 3's budget item measures
   a wave start's tick (Log note)
+
+### Owner steps for Session 2 · event-spawns step 3 (end paths and the tick budget)
+
+Setup (Claude): the step 3 build deployed, snapshot es2, and `python tools/ingame/session-events.py es2` run. Every event is
+a herd of **Forest Deer** that hunts you (Hunt 60, levels +2, health ×1.2, no loot). Deer cannot attack, so you can stand
+idle among 150 of them. The dev server has no invulnerability; the deer stand in for it (D24). Purge cooldown is 60 s.
+Log lines are mine to read. From you I need the `.nyar status` numbers asked for, and anything that differs.
+
+**Part A · the end paths (about 10 minutes)**
+
+1. Connect to **127.0.0.1:9876** (Nyar Dev) with your admin character. Open the console (the ~ key), enter `adminauth`,
+   and close it.
+2. Find the spot for the whole session:
+   - outside every castle's territory (open the map; at least 100 m from any castle outline);
+   - away from roads, camps and wandering monsters;
+   - in lasting shade: under a roof, a bridge or a cave mouth, because in Part B you stand idle there for 37 minutes and a
+     tree's shadow moves with the sun.
+
+   Stand there and run `.nyar status`. Expect "tracked units: 0 (spawning 0, despawning 0)".
+3. **Stop.** Run `.nyar event start es2-stop`. Two herds of 15 deer appear around you, the second about 20 seconds after
+   the first. When both are there, run `.nyar status` (expect 30 tracked), then `.nyar event stop es2-stop`. Expect the
+   deer to vanish within a few seconds. Run `.nyar status` again (expect 0 tracked and no active event).
+4. **Natural end.** Run `.nyar event start es2-natural`. The two herds appear the same way. Do nothing: the event ends
+   on its own 60 seconds after the start, and its deer vanish about 30 seconds after that. About 2 minutes after the
+   start, run `.nyar status` (expect 0 tracked and no active event).
+5. **Purge.** Run `.nyar event start es2-purge` and wait for both herds (about 25 seconds). Run `.nyar purge`, then
+   `.nyar purge confirm` within 30 seconds. Expect "purged: 1 events, 30 units queued" and the deer to vanish within a
+   few seconds. Run `.nyar status` (expect 0 tracked).
+6. Wait 1 minute (the purge cooldown).
+
+**Part B · the tick budget (about 37 minutes, idle)**
+
+7. Still on your shaded spot, run `.nyar event start es2-load`. Ten herds of 15 appear over 3 minutes (150 deer). After
+   about 4 minutes, run `.nyar status` (expect 150 tracked).
+8. Now stay where you are for **35 minutes** from the start of step 7. Stay within about 20 m of your spot, stay out of any
+   castle territory, don't attack anything, and don't run stop or purge. Going idle at the keyboard is fine. The event ends
+   on its own after 35 minutes, and the deer vanish about 30 seconds later. If your character dies, or you are
+   disconnected, or you have to move away, tell me when; that part is run again.
+9. When the deer are gone, run `.nyar status` (expect 0 tracked).
+
+**Part C · restart and uninstall (about 10 minutes of yours, plus my part)**
+
+10. **Restart.** Run `.nyar event start es2-restart` and wait for both herds (about 25 seconds). Stay close to them and
+    stay connected. Within about 2 minutes the server stops and disconnects you: I stop it right after the next autosave.
+    Tell me **"restart ready"**. I restart the server twice (about 6 minutes) and tell you when it is up.
+11. Reconnect to **127.0.0.1:9876** (`adminauth` if asked). Go back to your spot and run `.nyar status`. Expect 0 tracked
+    and no active event: the restart cancelled es2-restart, and none of its deer are left. Tell me if you see any.
+12. **Uninstall.** Run `.nyar event start es2-uninstall` and wait for both herds (about 25 seconds). Stay close and
+    connected. Within about 2 minutes the server stops again after an autosave. You're done: tell me **"session 2 done"**
+    with anything that differed. Without you, I remove the mod's DLL, run the server for over 5 minutes (the deer's own
+    lifetime), put the DLL back and check that the mod finds none of them.
+
+Afterwards (Claude):
+- Between the parts: steps 10 and 12 are stopped by a watcher right after the first autosave that follows wave 2. Restart
+  path: boot 1 logs "boot marker sweep: <n> found" (n = 30), its despawn batches run, stop after an autosave, boot 2 logs
+  "0 found". Uninstall: delete BepInEx/plugins/Nyarlathotep.dll, boot, wait 6 minutes plus the next autosave, stop,
+  reinstall the DLL, boot, read "boot marker sweep: 0 found".
+- Copy both logs to %TEMP%\nyar-s2-logs before each restart; run `-LogCheck` and read every [Error] and [Warning] line.
+- Run `pwsh tools/preflight.ps1 -TimingSpan <log copy> -MinTracked 140 -MinTargets 1 -Windows 10` (D24).
+- Replace the TimingSpan good fixture's window lines with lines from the real copy (Review 36 F3; no Steam ID).
+- Record under Session 2 below:
+  - D23: each path's log lines ("ended", "units queued", "despawn batch", "purge:", the two sweeps) and the `.nyar status`
+    numbers, then "hunt targets: 0" on the timing line after each path.
+  - D24: the -TimingSpan line and the span's windows.
+  - D19: `.nyar template info undead-rising` shows its modifiers (I run it through the console log, or you may, any time).
+  - D33: nothing tracked after any path.
+- Run `dev-snapshot.ps1 -Restore`, then redeploy.
 
 ### S2 restart spike · 2026-09-24 · spikes step 3 sessions 9–12 (throwaway save)
 

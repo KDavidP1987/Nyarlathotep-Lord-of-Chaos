@@ -241,6 +241,14 @@ public sealed class SpawnHealth
     /// <summary>The class worked again for the event (or the event ended): closes its streak.</summary>
     public void Recovered(SpawnFailure cls, string id) => _failing.Remove((cls, id));
 
+    /// <summary>An end path of event <paramref name="id"/> (natural end, stop, fault cancel, pillar off): each of its
+    /// streaks closes, every other event's stays (D33, A71).</summary>
+    public void EventEnded(string id) => _failing.RemoveWhere(f => f.Id == id);
+
+    /// <summary>`purge confirm`: every D21 streak closes, the "manual" unit-setup one of `.nyar spawn` included (A61,
+    /// A71). The walk-check streak and "territory unknown" are not an event's and stay with their own sources.</summary>
+    public void Purged() => _failing.Clear();
+
     public static string FailingEntry(SpawnFailure cls, string id) => cls switch
     {
         SpawnFailure.UnitSetup => $"spawns: unit setup failing ({id})",

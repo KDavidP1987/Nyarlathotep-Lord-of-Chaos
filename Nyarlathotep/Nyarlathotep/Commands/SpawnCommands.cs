@@ -13,7 +13,7 @@ namespace Nyarlathotep.Commands;
 [CommandGroup("nyar")]
 internal static class SpawnCommands
 {
-    [Command("spawn", usage: "<unit> [count] [level|+n|-n] [hp] [power]", description: "Spawn tracked units around you.", adminOnly: true)]
+    [Command("spawn", usage: "UNIT [count] [level|+n|-n] [hp] [power]", description: "Spawn tracked units around you.", adminOnly: true)]
     public static void Spawn(ChatCommandContext ctx, string unit, string count = "", string level = "", string hp = "", string power = "")
     {
         if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }

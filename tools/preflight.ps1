@@ -76,6 +76,12 @@
                  : every category of dependencySuites.<slug>: tests rows one control at a time, check rows over their
                    fixtures and the real tree, selftests rows with their success lines; prints "dependency suite: <slug>
                    <n>/<n> (<categories>)", or "dependency suite: <slug> has no categories" (event-library D33).
+    -TimingSpan <log copy> [-MinTracked 140] [-MinTargets 1] [-Windows 10]
+                 : Test-CheckTimingSpan (event-spawns D24) on a copy of a session's BepInEx/LogOutput.log: after the first
+                   health line with at least MinTracked tracked, one warm-up timing window is skipped, then Windows timing
+                   windows must each average under 5 ms and follow a "hunt targets: <n>" line with n >= MinTargets, with no
+                   health line below MinTracked and no "slow tick:" line among them; prints "timing span: <w>/<w> windows
+                   under 5 ms, tracked >= <t>, targets >= <n>, 0 slow ticks", or "timing span: no span (...)" as a failure.
     -ListCommands admin
                  : every admin-only command of the commands walk, one per line, then "admin commands: <n>"
                    (foundation D19); Test-CheckAdminList keeps that list equal to the commands check's count.
@@ -124,6 +130,10 @@ param(
     [string]$Tests,                 # comma-separated test classes, each run on its own, fail-closed (event-library D34)
     [string]$ControlSuite,          # plan slug: its controlSuites classes, then the selftest body (event-library D34)
     [string]$DependencySuite,       # plan slug: every dependency-failure category of dependencySuites.<slug> (event-library D33)
+    [string]$TimingSpan,            # a copy of a session's BepInEx/LogOutput.log: the tick budget with behaviours (event-spawns D24)
+    [int]$MinTracked = 140,         # with -TimingSpan
+    [int]$MinTargets = 1,           # with -TimingSpan
+    [int]$Windows = 10,             # with -TimingSpan
     [ValidateSet('', 'admin')]
     [string]$ListCommands = '',     # 'admin': print every admin-only command, then "admin commands: <n>" (foundation D19)
     [string]$ServerPath = 'C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer',
@@ -1849,7 +1859,7 @@ function Get-ParenEnd([string]$Text, [int]$Open) {
 # Pusher runs ActionKind.Subscribe (`.nyar api sub`, raphael-api-core step 3).
 # EmpowerAction is the empowerment service EventRuntime and SpawnTracker call directly (faction-empowerment D21).
 # AdminOps is the game side of Logic/AdminFlows (raphael-api-admin D11): its Op members are one-call shims.
-# HuntAction writes the AggroBuffer seeds of our own Hunt units, driven by EventRuntime's tick (event-spawns D13, D22).
+# HuntAction writes the AggroBuffer seeds of our own Hunt units, driven by the scheduler's "hunt" phase (event-spawns D13, D22, A70).
 $script:DispatchedServices = @('EventRuntime', 'SpawnTracker', 'UnitSetup', 'WaveAction', 'Persistence', 'EventStore', 'Announcer', 'Pusher', 'EmpowerAction', 'TemplateLibrary', 'PillarSwitches', 'AdminOps', 'HuntAction') |
     ForEach-Object { "$PkgRel/Services/$_.cs" }
 
@@ -1902,11 +1912,12 @@ function Test-InSpan([int]$Index, $Spans) {
 # The System actor (event-spawns D22, A23): the scheduler tick, the deferred init and the Harmony patches run with no
 # chat identity, so EventScheduler.cs, Core.cs and every Patches/ file may call these [Mutating] tick and boot entry
 # points directly: SpawnTracker.Tick and EventRuntime.Tick (the scheduler's phases), EmpowerAction.BeginCarrierTick and
-# TickCarriers (EmpowerAction's tick) and SpawnTracker.BootSweep (the boot marker sweep, from Core). Only these names:
+# TickCarriers (EmpowerAction's tick), HuntAction.Tick (the scheduler's "hunt" phase, A70) and SpawnTracker.BootSweep
+# (the boot marker sweep, from Core). Only these names:
 # any other [Mutating] name in those files still fails outside Gateway.Run.
 # Each is "<service>.<method>": the use must name its service right before the method (SpawnTracker.Tick, or
 # Services.SpawnTracker.BootSweep), so another service's [Mutating] Tick is no entry point (Codex step 1 F2).
-$script:SystemEntryPoints = @('SpawnTracker.Tick', 'SpawnTracker.BootSweep', 'EventRuntime.Tick', 'EmpowerAction.BeginCarrierTick', 'EmpowerAction.TickCarriers')
+$script:SystemEntryPoints = @('SpawnTracker.Tick', 'SpawnTracker.BootSweep', 'EventRuntime.Tick', 'EmpowerAction.BeginCarrierTick', 'EmpowerAction.TickCarriers', 'HuntAction.Tick')
 # True when the use of $Name at $Index in $Text is written "<Type>.<Name>" and that pair is a System-actor entry point.
 # A use written "<Type>.<Name>" whose type's own file, Services/<Type>.cs, declares no [Mutating] <Name> is that type's
 # method, not a mutating one (Announcer.Tick beside SpawnTracker.Tick), so a System-actor file may name it too.
@@ -3142,6 +3153,56 @@ function Test-CheckTestRuns([string]$Root) {
     return New-Result $true "test run: $n passed"
 }
 
+# The tick budget with behaviours (event-spawns D24): in a copy of a session's BepInEx/LogOutput.log (a fixture's
+# LogOutput.log), after the first "nyar health: <n> events, <m> tracked" line with m >= MinTracked, one warm-up
+# "tick timing" window is skipped; the next Windows timing lines must each have avg < 5 ms and be preceded, since the
+# previous timing line, by a "hunt targets: <n>" line with n >= MinTargets; from the warm-up line to the last of them
+# every health line shows m >= MinTracked and no "slow tick:" line appears ("slowest tick:", A70's window line, is not
+# one), the last window's own tick included: the scheduler logs a slow tick after the timing line of the tick that closed
+# the window, so the lines right after the last timing line are read too (Codex step 3 F1).
+# → "timing span: <w>/<w> windows under 5 ms, tracked >= <t>, targets >= <n>, 0 slow ticks".
+$script:TimingSpanLog = $null
+$script:TimingSpanArgs = @{ MinTracked = 140; MinTargets = 1; Windows = 10 }
+function Test-CheckTimingSpan([string]$Root) {
+    $path = if (Test-IsFixture $Root) { Join-Path $Root 'LogOutput.log' } else { $script:TimingSpanLog }
+    $a = $script:TimingSpanArgs
+    if ($a.MinTracked -lt 0 -or $a.MinTargets -lt 0 -or $a.Windows -lt 1) { return New-Result $false 'timing span: -MinTracked and -MinTargets must be 0 or more, -Windows 1 or more' }
+    if (-not $path -or -not (Test-Path -LiteralPath $path -PathType Leaf)) { return New-Result $false 'timing span: no span (no log)' }
+    $lines = @([IO.File]::ReadAllLines($path))
+    $health = '\[nyar\] nyar health: \d+ events, (\d+) tracked'
+    $timing = '\[nyar\] tick timing: avg ([\d.]+) ms, max [\d.]+ ms over \d+ ticks'
+    $start = -1
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match $health -and [int]$Matches[1] -ge $a.MinTracked) { $start = $i; break }
+    }
+    if ($start -lt 0) { return New-Result $false "timing span: no span (no health line with $($a.MinTracked) tracked)" }
+    $warm = -1; $windows = 0; $targets = -1
+    for ($i = $start + 1; $i -lt $lines.Count -and $windows -lt $a.Windows; $i++) {
+        $l = $lines[$i]
+        if ($warm -lt 0) { if ($l -match $timing) { $warm = $i; $targets = -1 }; continue }
+        if ($l -match '\[nyar\] hunt targets: (\d+)\s*$') { $targets = [int]$Matches[1]; continue }
+        if ($l -match '\[nyar\] slow tick: ') { return New-Result $false "timing span: slow tick in the span (line $($i + 1))" }
+        if ($l -match $health -and [int]$Matches[1] -lt $a.MinTracked) { return New-Result $false "timing span: $($Matches[1]) tracked in the span (line $($i + 1)), below $($a.MinTracked)" }
+        if ($l -match $timing) {
+            $windows++
+            $avg = [double]::Parse($Matches[1], [Globalization.CultureInfo]::InvariantCulture)
+            if ($avg -ge 5) { return New-Result $false "timing span: window $windows avg $($Matches[1]) ms, not under 5 ms (line $($i + 1))" }
+            if ($targets -lt $a.MinTargets) {
+                $why = if ($targets -lt 0) { 'no hunt targets line' } else { "hunt targets $targets" }
+                return New-Result $false "timing span: window $windows has $why, below $($a.MinTargets) (line $($i + 1))"
+            }
+            $targets = -1
+        }
+    }
+    if ($warm -lt 0) { return New-Result $false 'timing span: no span (no warm-up window after the health line)' }
+    if ($windows -lt $a.Windows) { return New-Result $false "timing span: $windows/$($a.Windows) windows after the warm-up" }
+    # $i is the line after the last timing line: its own tick's "slowest tick:" and "slow tick:" lines follow it at once.
+    for (; $i -lt $lines.Count -and $lines[$i] -match '\[nyar\] slow(est)? tick: '; $i++) {
+        if ($lines[$i] -match '\[nyar\] slow tick: ') { return New-Result $false "timing span: slow tick in the span (line $($i + 1))" }
+    }
+    return New-Result $true "timing span: $windows/$($a.Windows) windows under 5 ms, tracked >= $($a.MinTracked), targets >= $($a.MinTargets), 0 slow ticks"
+}
+
 function Get-ClassFilter([string]$Class) { "FullyQualifiedName~Nyarlathotep.Tests.$Class." }
 
 # Runs `dotnet test` once per VSTest filter, each written with | and & only (the word "or" is refused), building once
@@ -3363,13 +3424,15 @@ function Invoke-SelfTest {
 # qualifier only with its own mode, so no combination silently runs the first mode and drops the rest.
 $modes = @(@{ SelfTest = [bool]$SelfTest; Paths = [bool]$Paths; RollbackOf = [bool]$RollbackOf; ServerWrites = [bool]$ServerWrites
     LogCheck = [bool]$LogCheck; AuditOf = [bool]$AuditOf; SessionsOf = [bool]$SessionsOf; AuthSuite = [bool]$AuthSuite; Tests = [bool]$Tests
-    ControlSuite = [bool]$ControlSuite; DependencySuite = [bool]$DependencySuite; ListCommands = [bool]$ListCommands }.GetEnumerator() |
+    ControlSuite = [bool]$ControlSuite; DependencySuite = [bool]$DependencySuite; ListCommands = [bool]$ListCommands; TimingSpan = [bool]$TimingSpan }.GetEnumerator() |
     Where-Object { $_.Value } | ForEach-Object { "-$($_.Key)" } | Sort-Object)
 if ($modes.Count -gt 1) { Write-Host "usage: one mode at a time, not $($modes -join ' ')" -ForegroundColor Red; exit 2 }
 if ($DeclaredOf -and -not $Paths) { Write-Host 'usage: -DeclaredOf <slug> needs -Paths' -ForegroundColor Red; exit 2 }
 if (($From -or $To) -and -not $RollbackOf) { Write-Host 'usage: -From and -To go with -RollbackOf' -ForegroundColor Red; exit 2 }
 if ([bool]$From -xor [bool]$To) { Write-Host 'usage: -From and -To name a range together, or neither is given' -ForegroundColor Red; exit 2 }
 if (($Snapshot -or $Compare -or $AfterCleanup) -and -not $ServerWrites) { Write-Host 'usage: -Snapshot, -Compare and -AfterCleanup go with -ServerWrites' -ForegroundColor Red; exit 2 }
+if (@('MinTracked', 'MinTargets', 'Windows' | Where-Object { $PSBoundParameters.ContainsKey($_) }).Count -and -not $TimingSpan) { Write-Host 'usage: -MinTracked, -MinTargets and -Windows go with -TimingSpan' -ForegroundColor Red; exit 2 }
+if ($TimingSpan -and ($MinTracked -lt 0 -or $MinTargets -lt 0 -or $Windows -lt 1)) { Write-Host 'usage: -MinTracked and -MinTargets must be 0 or more, -Windows 1 or more' -ForegroundColor Red; exit 2 }
 
 if ($SelfTest) { Invoke-SelfTest }
 
@@ -3500,6 +3563,15 @@ if ($AuthSuite) {
     if ($fail) { Write-Host "auth suite: FAILED — $($fail -join '; ')" -ForegroundColor Red; exit 1 }
     Write-Host "auth suite: pass ($($parts -join ', '))" -ForegroundColor Green
     exit 0
+}
+
+if ($TimingSpan) {
+    $script:TimingSpanLog = $TimingSpan
+    $script:TimingSpanArgs = @{ MinTracked = $MinTracked; MinTargets = $MinTargets; Windows = $Windows }
+    $r = Test-CheckTimingSpan $repoRoot
+    if ($r.Pass) { Write-Host $r.Line -ForegroundColor Green; exit 0 }
+    Write-Host $r.Line -ForegroundColor Red
+    exit 1
 }
 
 $manifest = Get-Manifest

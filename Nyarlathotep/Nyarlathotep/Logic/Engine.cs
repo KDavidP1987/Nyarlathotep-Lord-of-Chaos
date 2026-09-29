@@ -359,28 +359,49 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
 
 /// <summary>Debug.TimingLog (D24): the scheduler adds each tick's duration; once a minute has passed since the first
 /// sample of the window it returns "tick timing: avg &lt;a&gt; ms, max &lt;m&gt; ms over &lt;n&gt; ticks" and starts a
-/// new window.</summary>
+/// new window. With the tick's phases, the closed window's <see cref="Slowest"/> is "slowest tick: &lt;t&gt; ms
+/// (&lt;phase&gt; &lt;ms&gt; ms, …; outside phases &lt;r&gt; ms)", the top <see cref="SlowTickLog.MaxPhases"/> phases of its
+/// slowest tick (event-spawns A70: a wave start's 206 ms tick below the slow-tick threshold could not be placed).</summary>
 public sealed class TickTimer
 {
     public static readonly TimeSpan Window = TimeSpan.FromMinutes(1);
+    public const double MinPhaseMs = 0.1;
 
     DateTime? _since;
     double _total;
     double _max;
     int _count;
+    List<(string Phase, double Ms)> _maxPhases = new();
 
-    public string? Add(double milliseconds, DateTime utcNow)
+    /// <summary>The closed window's slowest tick by phase; null until a window closes, and after one closed without phases.</summary>
+    public string? Slowest { get; private set; }
+
+    public string? Add(double milliseconds, DateTime utcNow) => Add(milliseconds, utcNow, []);
+
+    public string? Add(double milliseconds, DateTime utcNow, IReadOnlyList<(string Phase, double Ms)> phases)
     {
         _since ??= utcNow;
         _total += milliseconds;
+        if (_count == 0 || milliseconds > _max) _maxPhases = phases.ToList();   // a copy: the caller reuses its list
         _max = Math.Max(_max, milliseconds);
         _count++;
         if (utcNow - _since.Value < Window) return null;
         var line = FormattableString.Invariant($"tick timing: avg {_total / _count:0.000} ms, max {_max:0.000} ms over {_count} ticks");
+        Slowest = _maxPhases.Count == 0 ? null : SlowestLine(_max, _maxPhases);
         _since = null;
         _total = _max = 0;
         _count = 0;
+        _maxPhases = new();
         return line;
+    }
+
+    static string SlowestLine(double totalMs, IReadOnlyList<(string Phase, double Ms)> phases)
+    {
+        var named = phases.Where(p => p.Ms >= MinPhaseMs).OrderByDescending(p => p.Ms).Take(SlowTickLog.MaxPhases)
+            .Select(p => FormattableString.Invariant($"{p.Phase} {p.Ms:0.0} ms")).ToList();
+        var outside = Math.Max(0, totalMs - phases.Sum(p => p.Ms));
+        var slowest = named.Count > 0 ? string.Join(", ", named) : "no phase of 0.1 ms";
+        return FormattableString.Invariant($"slowest tick: {totalMs:0.0} ms ({slowest}; outside phases {outside:0.0} ms)");
     }
 }
 

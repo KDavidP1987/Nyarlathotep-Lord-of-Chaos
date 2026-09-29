@@ -9,7 +9,7 @@ namespace Nyarlathotep.Commands;
 [CommandGroup("nyar")]
 internal static class PillarCommands
 {
-    [Command("pillar", usage: "list | <name> on|off",
+    [Command("pillar", usage: "list | NAME on|off",
         description: "List the pillar switches, or turn one pillar on or off (saved to the cfg).", adminOnly: true)]
     public static void Pillars(ChatCommandContext ctx, string name = "", string state = "")
     {

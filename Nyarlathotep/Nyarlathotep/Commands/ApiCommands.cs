@@ -71,7 +71,7 @@ internal static class ApiCommands
     /// <summary>`.nyar api sub on|off` (raphael-api-core D5, D7): the caller's own push subscription, keyed by the
     /// caller's SteamID; no argument names another player. Replies `[NYAR:ok] cmd=sub on=1|0`, or
     /// `[NYAR:err] cmd=sub code=badarg arg=state` for any other argument.</summary>
-    [Command("sub", usage: "<on|off>", description: "Push lines on or off for you (for the Raphael client).")]
+    [Command("sub", usage: "on|off", description: "Push lines on or off for you (for the Raphael client).")]
     public static void Sub(ChatCommandContext ctx, string state = "")
     {
         if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }

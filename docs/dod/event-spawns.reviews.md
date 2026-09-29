@@ -1079,3 +1079,76 @@ VERDICT: READY
 - F4 · accepted · A67 says it
 - F5 · accepted · the case and Reconcile's Target check are gone; the fixture's comment says why
 - F6 · accepted · the re-check records how many of the wave's units came
+
+## Review 34 · 2026-09-29 · subagent · plan uncommitted · plan 184606 B · 24 items · files 0 · e3b0c44298fc · prompt 1e255abd8ea7 · scope A68,A69,A70,A71
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A68-A71 (design §9 D26); the prompt held no Steam ID. It read the uncommitted step 3 code and tools/preflight.ps1 to check each claim.
+
+F1 · blocking · 12.4 · A71's two tests drive SpawnHealth directly; removing Health.Purged() from EventRuntime.Purge or Health.EventEnded(id) from EndSpawnState still fails no test. Fix: a source-reading test of Services/EventRuntime.cs on D33's row, or route the runtime through WaveLifecycle.
+F2 · advisory · 10.1 · the "hunt" phase makes EventScheduler.cs call [Mutating] HuntAction.Tick, which $script:SystemEntryPoints does not list. Fix: A70 says it gains HuntAction.Tick, and where the phase runs.
+F3 · advisory · 13.1 / D24 · "the distinct players seeded at the latest Hunt tick" reads two ways, and a player the game holds gets no seed, so -MinTargets 1 could fail with the owner in range. Fix: define n as HuntPlan.Targets' distinct players at the latest tick.
+F4 · advisory · 12.4 · the new "slowest tick" line could match a loose slow-tick matcher, and fixtures without it would not spell the real log. Fix: the fixtures carry the three-line window, one where "slowest tick" must not count.
+F5 · advisory · 12.4 · A70's test names no row, and D24 is still pending. Fix: say it joins D24's row in step 3.
+F6 · advisory · 11.2 · a [Command] without usage: gets VCF's generated usage, where a [Remainder] parameter is `<name...>`. Fix: fail on that case too.
+F7 · advisory · 11.2 / D32 · D32's fails-when names only 480 bytes, and its pass line predates A68. Fix: add the markup cases; a fresh D32 evidence line after step 3.
+F8 · advisory · 14.4 · checked, no change: -DeclaredOf reads every token of Paths walked, so A69's union is the tool's behaviour.
+
+14/15 layers · 48/49 probes
+
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · EndPathTests.EndPaths_fails_when_runtime_skips_a_streak_close reads Services/EventRuntime.cs and fails when any of the four calls is removed (each planted); on D33's row; A71 says so
+- F2 · accepted · $script:SystemEntryPoints gains HuntAction.Tick; the phase runs right after "events"; the entry points apply only to EventScheduler.cs, Core.cs and Patches/, so a call from Commands/ still fails, as fixtures GatewayOnly/bad-tickcaller and bad-new show; A70 says so
+- F3 · accepted · HuntAction.LastTargets is the distinct players HuntPlan.Targets chose across the Hunt units at the latest tick, 0 with none; A70 says so
+- F4 · accepted · applied when -TimingSpan is built in step 3; A70 says so
+- F5 · accepted · the test is split into TickTimer_fails_when_/passes_/empty_ forms that join D24's rows in step 3
+- F6 · accepted · CommandArgTests.ChatBytes_fails_when_usage_holds_markup also fails on a [Command] without usage: holding a [Remainder] parameter (planted)
+- F7 · accepted · D32's text names the markup cases; a fresh D32 evidence line follows step 3
+- F8 · accepted · no change
+
+## Review 35 · 2026-09-29 · subagent · plan uncommitted · plan 185920 B · 24 items · files 0 · e3b0c44298fc · prompt c7100c40f13f · scope A68,A69,A70,A71
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A68-A71 after Review 34's revisions (design §9 D26); the prompt held no Steam ID. It checked each claim against the uncommitted step 3 code, tools/preflight.ps1 and VCF's HelpCommand.
+
+F1 · advisory · 12.4 · GeneratedMarkup's real-tree scan has no lower bound; a no-usage command of another shape is skipped silently. Fix: the no-usage [Command( count equals the scanned candidates.
+F2 · advisory · 13.1 / 12.4 · A70's line omits "; outside phases <r> ms" and the "no phase of 0.1 ms" variant the code prints. Fix: write both exact forms into A70 before the fixtures.
+F3 · advisory · 12.4 / D33 · D33's fails-when names units, seeds and maps, not the streaks A71's tests cover. Fix: add the streak cases to D33's fails-when.
+F4 · advisory · 12.2 · a throw past HuntAction.Tick's per-event catch leaves LastTargets stale, so a broken tick could still read n >= 1. Fix: set LastTargets = 0 at the start of each planning tick.
+F5 · advisory · 7.2 · a stop or purge inside the span makes the next "hunt targets" 0 and the span fail. Fix: D24 says no stop or purge inside the span.
+F6 · advisory · 10.1 · checked, no change: the entry points apply to EventScheduler.cs, Core.cs and Patches/ only.
+
+EARLIER: all resolved
+15/15 layers · 49/49 probes
+
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · ChatBytes_fails_when_usage_holds_markup counts every [Command( without usage: in Commands/*.cs and fails unless each is one the scan matched (5 today)
+- F2 · accepted · A70 carries both exact forms; the -TimingSpan fixtures spell them
+- F3 · accepted · A71 is now ~D33 and D33's fails-when names the streaks and the runtime's calls; a scoped Review 36 follows
+- F4 · accepted · HuntAction.Tick sets LastTargets = 0 when a planning tick starts
+- F5 · accepted · as a Session 2 step rule (a span with a stop, a purge or the character's death is run again), which is where D24's run rules live, not as D24's text
+- F6 · accepted · no change
+
+## Review 36 · 2026-09-29 · subagent · plan uncommitted · plan 186544 B · 24 items · files 0 · e3b0c44298fc · prompt bb62ec2c2655 · scope A70,A71
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A70 and A71 after Review 35 made A71 a ~D33 change (design §9 D26); the prompt held no Steam ID. It read the uncommitted step 3 code, tools/preflight.ps1 and the TimingSpan fixtures.
+
+F1 · advisory · 12.4 · A71's source control matches each call by substring, so a commented-out call still passes. Fix: strip comments before matching and plant a commented-out case.
+F2 · advisory · 12.4 · no TickTimer test pins the "no phase of 0.1 ms" form. Fix: a window whose phases are all under 0.1 ms, its exact line asserted.
+F3 · advisory · 12.4 · the fixtures' "slowest tick" and "hunt targets" lines follow the code's format; no session has logged them yet. Fix: after Session 2, replace good's window lines with the real copy (no Steam ID), recorded in the post-audit.
+F4 · advisory · 13.1 / D24 · targets are counted before the seed write, so a span whose writes all throw could still read n >= 1. Fix: count after the write.
+F5 · advisory · 12.4 · TimingSpan/bad and bad-tracked are registered but not in D24's fixture list. Fix: add them when step 3 closes.
+F6 · advisory · 2.3 / 12.1 · the `.nyar spawn` streak's key "manual" can be an event id, so ending that event closes it early (health only). Fix: refuse the id or key the manual streak apart.
+F7 · advisory · 12.4 / 10.1 · checked, no change: every end path reaches the streak close; the entry point, LastTargets reset and slow-tick matcher are right.
+
+15/15 layers · 49/49 probes
+
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · Body strips // and /* */ comments; the Theory also plants each call commented out both ways
+- F2 · accepted · TickTimer_passes_top_three_phases_of_the_slowest_tick asserts "slowest tick: 0.3 ms (no phase of 0.1 ms; outside phases 0.1 ms)"
+- F3 · accepted · after Session 2, recorded in step 3's post-audit
+- F4 · accepted · SeedUnit adds its targets once its removals and writes are done
+- F5 · accepted · deferred: a D24 text change would need a fourth round of this run; the Log carries it to step 4's close, and the extra fixtures only add failing cases to D24's list
+- F6 · accepted · deferred: pre-existing (walkable-spawns' key) and health-only; the Log carries it to child spawn-extras
+- F7 · accepted · no change

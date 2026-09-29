@@ -112,6 +112,23 @@ public partial class EngineTests
     }
 
     [Fact]
+    public void NextWave_releases_overdue_waves_one_per_tick()
+    {
+        // A stalled scheduler (a host pause) leaves all three waves overdue: each tick releases the next one only, a
+        // skipped wave counts as used, and nothing comes twice (event-spawns step 3 note, Review 29 F4).
+        var e = Engine(Json.Event("raid"));
+        Assert.Null(e.Start("raid", "manual", T0, Open()));
+        Assert.Equal(1, e.NextWave("raid", T0.AddSeconds(130))!.Wave);
+        Assert.Equal(1, e.NextWave("raid", T0.AddSeconds(130))!.Wave);       // undecided, it stays wave 1
+        e.WaveSpawned("raid");
+        Assert.Equal(2, e.NextWave("raid", T0.AddSeconds(131))!.Wave);
+        e.WaveSkipped("raid");
+        Assert.Equal(3, e.NextWave("raid", T0.AddSeconds(132))!.Wave);
+        e.WaveSpawned("raid");
+        Assert.Null(e.NextWave("raid", T0.AddSeconds(133)));
+    }
+
+    [Fact]
     public void A_wave_due_at_or_after_the_end_never_comes()
     {
         var e = Engine(Json.Event("raid", action:
@@ -324,6 +341,56 @@ public partial class EngineTests
         Assert.Null(t.Add(3.0, T0.AddSeconds(59)));
         Assert.Equal("tick timing: avg 2.000 ms, max 3.000 ms over 3 ticks", t.Add(2.0, T0.AddSeconds(60)));
         Assert.Null(t.Add(5.0, T0.AddSeconds(61)));
+    }
+
+    // ---- event-spawns A70: the window's slowest tick by phase (D24's row)
+
+    /// <summary>A window of three ticks whose second, 206 ms, is the slowest; the caller's list is reused between ticks.</summary>
+    static TickTimer SlowWindow(out string? line)
+    {
+        var t = new TickTimer();
+        var phases = new List<(string, double)> { ("spawn queues", 2.0), ("events", 1.0) };
+        Assert.Null(t.Add(3.0, T0, phases));
+        phases.Clear();
+        phases.AddRange([("spawn queues", 40.5), ("events", 150.2), ("hunt", 15.0), ("push", 0.04)]);
+        Assert.Null(t.Add(206.0, T0.AddSeconds(30), phases));
+        phases.Clear();
+        phases.AddRange([("hunt", 9.0)]);
+        Assert.Null(t.Slowest);                                               // no line before the window closes
+        line = t.Add(9.0, T0.AddSeconds(60), phases);
+        return t;
+    }
+
+    [Fact]
+    public void TickTimer_fails_when_slowest_names_another_tick()
+    {
+        var t = SlowWindow(out _);
+        Assert.StartsWith("slowest tick: 206.0 ms (events 150.2 ms,", t.Slowest);  // not the last tick's (hunt 9.0) or the first's
+        Assert.DoesNotContain("9.0 ms", t.Slowest);
+    }
+
+    [Fact]
+    public void TickTimer_passes_top_three_phases_of_the_slowest_tick()
+    {
+        var t = SlowWindow(out var line);
+        Assert.Equal("tick timing: avg 72.667 ms, max 206.000 ms over 3 ticks", line);
+        Assert.Equal("slowest tick: 206.0 ms (events 150.2 ms, spawn queues 40.5 ms, hunt 15.0 ms; outside phases 0.3 ms)", t.Slowest);
+
+        // Every phase under 0.1 ms: the line says so (Review 36 F2).
+        var quiet = new TickTimer();
+        Assert.Null(quiet.Add(0.3, T0, [("spawn queues", 0.05), ("events", 0.05), ("hunt", 0.05), ("push", 0.05)]));
+        Assert.Null(quiet.Slowest);                                           // the first sample opens the window
+        Assert.NotNull(quiet.Add(0.3, T0.AddSeconds(60), [("spawn queues", 0.05), ("events", 0.05), ("hunt", 0.05), ("push", 0.05)]));
+        Assert.Equal("slowest tick: 0.3 ms (no phase of 0.1 ms; outside phases 0.1 ms)", quiet.Slowest);
+    }
+
+    [Fact]
+    public void TickTimer_empty_window_without_phases()
+    {
+        var t = SlowWindow(out _);
+        Assert.Null(t.Add(1.0, T0.AddSeconds(61)));
+        Assert.NotNull(t.Add(1.0, T0.AddSeconds(121)));
+        Assert.Null(t.Slowest);                                               // a window without phases names none
     }
 
     // ---- slow-tick warning (event-library D36)

@@ -115,6 +115,83 @@ public class EndPathTests
         Assert.Equal(0, life.Ledger.Occupied);
     }
 
+    /// <summary>Two events' D21 streaks and `.nyar spawn`'s "manual" one, open.</summary>
+    static SpawnHealth Failing()
+    {
+        var h = new SpawnHealth();
+        foreach (var id in new[] { "raid", "other" })
+            foreach (var cls in Enum.GetValues<SpawnFailure>()) h.Failing(cls, id);
+        h.Failing(SpawnFailure.UnitSetup, "manual");
+        return h;
+    }
+
+    [Fact]
+    public void EndPaths_fails_when_purge_leaves_a_streak_open()
+    {
+        var h = Failing();
+        Assert.True(h.Failed());                                                  // the walk check's, not an event's
+        h.Purged();
+        Assert.Equal([SpawnHealth.Entry], h.Entries);
+        Assert.True(h.Failing(SpawnFailure.HuntSeed, "raid"));                     // a new streak opens and logs again
+    }
+
+    [Fact]
+    public void EndPaths_fails_when_event_end_leaves_its_streaks()
+    {
+        var h = Failing();
+        h.EventEnded("raid");
+        Assert.DoesNotContain(h.Entries, e => e.Contains("(raid)", StringComparison.Ordinal));
+        Assert.Equal(4, h.Entries.Count);                                         // "other"'s three and "manual" stay
+        Assert.Contains(SpawnHealth.FailingEntry(SpawnFailure.UnitSetup, "manual"), h.Entries);
+    }
+
+    /// <summary>The body of the member of Services/EventRuntime.cs that <paramref name="signature"/> opens, to its closing
+    /// brace at four spaces; empty when the member is missing.</summary>
+    static string Body(string source, string signature)
+    {
+        var at = source.IndexOf(signature, StringComparison.Ordinal);
+        if (at < 0) return "";
+        var open = source.IndexOf("\n    {\n", at, StringComparison.Ordinal);
+        var close = open < 0 ? -1 : source.IndexOf("\n    }\n", open, StringComparison.Ordinal);
+        // A commented-out call is no call (Review 36 F1).
+        return close < 0 ? "" : System.Text.RegularExpressions.Regex.Replace(source[open..close], @"//[^\n]*|/\*.*?\*/", "", System.Text.RegularExpressions.RegexOptions.Singleline);
+    }
+
+    /// <summary>Every end path of EventRuntime that does not reach its streak close (A71, Review 34 F1): the purge closes
+    /// every streak, EndSpawnState the event's, and the stop and the natural end run EndSpawnState.</summary>
+    static List<string> RuntimeGaps(string source)
+    {
+        source = source.Replace("\r\n", "\n");
+        var gaps = new List<string>();
+        if (!Body(source, "internal static Outcome Purge()").Contains("Health.Purged()", StringComparison.Ordinal)) gaps.Add("Purge");
+        if (!Body(source, "static void EndSpawnState(string id)").Contains("Health.EventEnded(id)", StringComparison.Ordinal)) gaps.Add("EndSpawnState");
+        if (!Body(source, "static bool End(string id, string why)").Contains("EndSpawnState(id)", StringComparison.Ordinal)) gaps.Add("End");
+        if (!Body(source, "internal static void Tick(DateTime now)").Contains("EndSpawnState(ended.Id)", StringComparison.Ordinal)) gaps.Add("Tick");
+        return gaps;
+    }
+
+    static string RuntimeSource()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "tools", "preflight.ps1"))) dir = dir.Parent;
+        return File.ReadAllText(Path.Combine(dir!.FullName, "Nyarlathotep", "Nyarlathotep", "Services", "EventRuntime.cs"));
+    }
+
+    [Theory]
+    [InlineData("WalkCheck.Health.Purged();", "Purge")]
+    [InlineData("WalkCheck.Health.EventEnded(id);", "EndSpawnState")]
+    [InlineData("EndSpawnState(id);", "End")]
+    [InlineData("EndSpawnState(ended.Id);", "Tick")]
+    public void EndPaths_fails_when_runtime_skips_a_streak_close(string call, string gap)
+    {
+        var source = RuntimeSource().Replace("\r\n", "\n");
+        Assert.Empty(RuntimeGaps(source));
+        Assert.Contains(call, source);
+        Assert.Equal([gap], RuntimeGaps(source.Replace(call, "")));
+        Assert.Equal([gap], RuntimeGaps(source.Replace(call, "// " + call)));
+        Assert.Equal([gap], RuntimeGaps(source.Replace(call, "/* " + call + " */")));
+    }
+
     [Fact]
     public void EndPaths_fails_when_restart_keeps_state()
     {

@@ -217,6 +217,41 @@ public partial class CommandArgTests
         Assert.Empty(Markup([CommandArgs.UnitChanceField, CommandArgs.UnitChanceRule, CommandArgs.BehaviourRule, CommandArgs.LocationSetRule]));
     }
 
+    /// <summary>Each `usage:` and `description:` string of the [Command] attributes in <paramref name="source"/>.</summary>
+    static List<(string Key, string Text)> AttributeStrings(string source) =>
+        System.Text.RegularExpressions.Regex.Matches(source, "\\b(usage|description):\\s*\"((?:[^\"\\\\]|\\\\.)*)\"")
+            .Select(m => (m.Groups[1].Value, m.Groups[2].Value)).ToList();
+
+    [Fact]
+    public void ChatBytes_fails_when_usage_holds_markup()
+    {
+        // VCF's .help prints each usage attribute raw, and the chat drops `<id>` as a tag (A68).
+        Assert.Equal(["<id>"], Markup(AttributeStrings("[" + "Command(\"x\", usage: \"<id>\", description: \"d\")]").Select(a => a.Text)));
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "tools", "preflight.ps1"))) dir = dir.Parent;
+        var commands = Path.Combine(dir!.FullName, "Nyarlathotep", "Nyarlathotep", "Commands");
+        var strings = Directory.GetFiles(commands, "*.cs").SelectMany(f => AttributeStrings(File.ReadAllText(f))).ToList();
+        Assert.Contains(strings, a => a.Key == "usage");
+        Assert.Empty(Markup(strings.Select(a => a.Text)));
+
+        // Without usage:, VCF writes a [Remainder] parameter as "<name...>" (Review 34 F6).
+        Assert.Equal(["Say"], GeneratedMarkup("[" + "Command(\"say\")]\n    public static void Say(ChatCommandContext ctx, [Remainder] string text)"));
+        var sources = Directory.GetFiles(commands, "*.cs").Select(File.ReadAllText).ToList();
+        Assert.Empty(sources.SelectMany(GeneratedMarkup));
+        // Every [Command] without usage: is one the scan read, so none is skipped by its shape (Review 35 F1).
+        var noUsage = sources.Sum(s => System.Text.RegularExpressions.Regex.Matches(s, @"\[Command\((?![^\]]*usage:)").Count);
+        Assert.True(noUsage > 0);
+        Assert.Equal(noUsage, sources.Sum(s => NoUsageCommands(s).Count()));
+    }
+
+    static IEnumerable<System.Text.RegularExpressions.Match> NoUsageCommands(string source) =>
+        System.Text.RegularExpressions.Regex.Matches(source, @"\[Command\(([^\]]*)\]\s*public static void (\w+)\(([^)]*)\)")
+            .Where(m => !m.Groups[1].Value.Contains("usage:", StringComparison.Ordinal));
+
+    /// <summary>The [Command] methods without `usage:` whose parameters hold a [Remainder] one.</summary>
+    static List<string> GeneratedMarkup(string source) =>
+        NoUsageCommands(source).Where(m => m.Groups[3].Value.Contains("[Remainder]", StringComparison.Ordinal)).Select(m => m.Groups[2].Value).ToList();
+
     [Fact]
     public void ChatBytes_passes_new_lines_at_maximum_lengths()
     {

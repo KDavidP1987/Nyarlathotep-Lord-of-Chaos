@@ -842,6 +842,26 @@
       }
     },
     {
+      "name": "TimingSpan",
+      "function": "Test-CheckTimingSpan",
+      "mode": "fixture",
+      "fixtures": "tools/preflight-fixtures/TimingSpan",
+      "inputs": [
+        "-TimingSpan <log copy>: a copy of a session's BepInEx/LogOutput.log (a fixture's LogOutput.log), read with -MinTracked 140, -MinTargets 1 and -Windows 10 (event-spawns D24, A70)"
+      ],
+      "plant": {
+        "bad": "the log ends at the warm-up window: 0/10 windows",
+        "bad-avg": "window 7 averages 5.012 ms",
+        "bad-slow": "a \"slow tick:\" warning between windows 4 and 5",
+        "bad-gap": "only nine windows follow the warm-up",
+        "bad-notarget": "window 4 is preceded by \"hunt targets: 0\"",
+        "bad-tracked": "a health line of 139 tracked inside the span",
+        "bad-slowlast": "a \"slow tick:\" warning right after window 10's own timing line (Codex step 3 F1)",
+        "empty": "no health line with 140 tracked: \"timing span: no span\""
+      },
+      "note": "good holds ten windows after the warm-up, each with its \"hunt targets: 1\" and A70's \"slowest tick:\" line, which must not count as a slow tick (Review 34 F4)"
+    },
+    {
       "name": "DependencySuite",
       "function": "Test-CheckDependencySuite",
       "mode": "default",

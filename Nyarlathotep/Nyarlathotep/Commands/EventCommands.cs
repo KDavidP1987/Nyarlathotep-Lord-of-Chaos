@@ -14,7 +14,7 @@ namespace Nyarlathotep.Commands;
 [CommandGroup("nyar")]
 internal static class EventCommands
 {
-    [Command("event", usage: "list [page] | info|start|stop|enable|disable <id> | set <id> <field> <value> | reload | new <id> <pillar> | copy <id> <newId> | delete <id> [confirm]",
+    [Command("event", usage: "list [page] | info|start|stop|enable|disable ID | set ID FIELD VALUE | reload | new ID PILLAR | copy ID NEWID | delete ID [confirm]",
         description: "List, inspect, start, stop, enable, disable, edit, reload, create, copy or delete event definitions.", adminOnly: true)]
     public static void Event(ChatCommandContext ctx, string verb = "", string id = "", string field = "", string value = "")
     {

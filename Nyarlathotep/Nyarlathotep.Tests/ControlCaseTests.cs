@@ -138,7 +138,9 @@ public class ControlCaseTests
         Assert.Empty(PendingProblems(ControlCases.Pending, ControlCases.Table, AllPlanKeys(), AuditText, ModVersion()));
     }
 
-    static readonly PendingControl D19 = ControlCases.Pending.Single(c => c.Key == "event-spawns D19");
+    /// <summary>A step-3 pending control as the check sees one (D19 was pending until step 3 built its row).</summary>
+    static readonly PendingControl D19 = new(ControlCases.EventSpawns, "D19", 3, "0.7.0");
+    static readonly List<ControlRow> WithoutD19 = ControlCases.Table.Where(r => r.Key != D19.Key).ToList();
     static readonly PendingControl D25 = ControlCases.Pending.Single(c => c.Key == "event-spawns D25");
     const string CleanAudit = "# Audit\n\n## Pre-audit\n\n### Step 1 · x\n\n## Post-audit\n\n### Step 1 · x\n";
 
@@ -158,13 +160,13 @@ public class ControlCaseTests
     public void ControlCases_fails_when_pending_after_its_post_audit()
     {
         var audit = CleanAudit + "\n### Step 3 · 2026-09-30 · abc\n";
-        Assert.Contains("pending event-spawns D19 outlived step 3's post-audit", PendingProblems([D19], ControlCases.Table, AllPlanKeys(), _ => audit, "0.6.0"));
-        Assert.Empty(PendingProblems([D19], ControlCases.Table, AllPlanKeys(), _ => "# Audit\n\n## Pre-audit\n\n### Step 3 · x\n\n## Post-audit\n", "0.6.0"));
+        Assert.Contains("pending event-spawns D19 outlived step 3's post-audit", PendingProblems([D19], WithoutD19, AllPlanKeys(), _ => audit, "0.6.0"));
+        Assert.Empty(PendingProblems([D19], WithoutD19, AllPlanKeys(), _ => "# Audit\n\n## Pre-audit\n\n### Step 3 · x\n\n## Post-audit\n", "0.6.0"));
     }
 
     [Fact]
     public void ControlCases_fails_when_audit_missing() =>
-        Assert.Contains("audit file missing: docs/audits/event-spawns.md", PendingProblems([D19], ControlCases.Table, AllPlanKeys(), _ => null, "0.6.0"));
+        Assert.Contains("audit file missing: docs/audits/event-spawns.md", PendingProblems([D19], WithoutD19, AllPlanKeys(), _ => null, "0.6.0"));
 
     [Fact]
     public void ControlCases_fails_when_pending_at_release()

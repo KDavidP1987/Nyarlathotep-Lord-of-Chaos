@@ -12,7 +12,7 @@ namespace Nyarlathotep.Commands;
 [CommandGroup("nyar")]
 internal static class MessageCommands
 {
-    [Command("announce", usage: "<text> (quote text of more than 16 words)", description: "Broadcast a line to every connected player.", adminOnly: true)]
+    [Command("announce", usage: "TEXT (quote text of more than 16 words)", description: "Broadcast a line to every connected player.", adminOnly: true)]
     public static void Announce(ChatCommandContext ctx, string w1 = "", string w2 = "", string w3 = "", string w4 = "",
         string w5 = "", string w6 = "", string w7 = "", string w8 = "", string w9 = "", string w10 = "", string w11 = "",
         string w12 = "", string w13 = "", string w14 = "", string w15 = "", string w16 = "")

@@ -15,14 +15,14 @@ namespace Nyarlathotep.Commands;
 [CommandGroup("nyar api")]
 internal static class ApiAdminCommands
 {
-    [Command("event", usage: "<verb> [id] [field] [value]", description: "Event admin actions as machine-readable lines (for the Raphael client).", adminOnly: true)]
+    [Command("event", usage: "VERB [ID] [FIELD] [VALUE]", description: "Event admin actions as machine-readable lines (for the Raphael client).", adminOnly: true)]
     public static void Event(ChatCommandContext ctx, string verb = "", string id = "", string field = "", string value = "", string extra = "")
     {
         if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }
         ctx.Reply(Gateway.Flows.ApiEvent(EventCommands.Caller(ctx), verb, id, field, value, extra));
     }
 
-    [Command("template", usage: "use <template> [as <id>] | info <template>", description: "Template use and info as machine-readable lines (for the Raphael client).", adminOnly: true)]
+    [Command("template", usage: "use TEMPLATE [as ID] | info TEMPLATE", description: "Template use and info as machine-readable lines (for the Raphael client).", adminOnly: true)]
     public static void Template(ChatCommandContext ctx, string verb = "", string template = "", string asWord = "", string asId = "", string extra = "")
     {
         if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }
@@ -36,7 +36,7 @@ internal static class ApiAdminCommands
         Reply(ctx, Gateway.Flows.ApiTemplates(pillar, page, extra));
     }
 
-    [Command("pillar", usage: "list | <name> on|off", description: "Pillar switches as machine-readable lines (for the Raphael client).", adminOnly: true)]
+    [Command("pillar", usage: "list | NAME on|off", description: "Pillar switches as machine-readable lines (for the Raphael client).", adminOnly: true)]
     public static void Pillar(ChatCommandContext ctx, string name = "", string state = "", string extra = "")
     {
         if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }

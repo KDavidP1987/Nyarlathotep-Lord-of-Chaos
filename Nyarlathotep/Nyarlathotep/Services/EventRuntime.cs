@@ -143,10 +143,10 @@ internal static class EventRuntime
         var cooldown = Settings.Limit(Limits.PurgeCooldownSeconds);
         var events = Engine.CancelAll(cooldown);
         var (queued, cancelled) = SpawnTracker.PurgeUnits();
-        foreach (var e in events) EndSpawnState(e.Id);                        // event-spawns D33: their streaks close (A61)
+        foreach (var e in events) EndSpawnState(e.Id);                        // event-spawns D33
         HuntAction.Clear();                                                  // seeds and kept maps go too
         TerritoryMap.Clear();
-        WalkCheck.Health.Recovered(SpawnFailure.UnitSetup, "manual");         // `.nyar spawn` units went with the purge
+        WalkCheck.Health.Purged();                                           // every streak, `.nyar spawn`'s "manual" too (A61, A71)
         EmpowerAction.StopAllCarriers();
         var doc = Persistence.State.Document;
         doc.Instances.Clear();
@@ -214,7 +214,6 @@ internal static class EventRuntime
                 if (!_degraded.Contains(note)) _degraded.Add(note);
             }
         }
-        HuntAction.Tick(now);                                                // event-spawns D13, every 5 s
     }
 
     /// <summary>An event's spawn state beyond its units (event-spawns D13, D30, D33): its hunt seeds, its kept territory
@@ -223,8 +222,7 @@ internal static class EventRuntime
     {
         HuntAction.EndEvent(id);
         TerritoryMap.Forget(id);
-        WalkCheck.Health.Recovered(SpawnFailure.UnitSetup, id);
-        WalkCheck.Health.Recovered(SpawnFailure.PlayerQuery, id);
+        WalkCheck.Health.EventEnded(id);                                    // A71
     }
 
     /// <summary>`.nyar pillar &lt;name&gt; off` (event-library D14, S-7): ends every running event of that pillar through the

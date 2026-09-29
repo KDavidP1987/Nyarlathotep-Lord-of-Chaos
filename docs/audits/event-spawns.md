@@ -24,6 +24,14 @@ one under "## Post-audit"; every post-audit entry carries a "Codex verdict:" lin
 - feature doc read: docs/features/EVENT_SPAWNS.md (Status: designed, not started; Spike S2 go); plan D10, D11, D13, D16, D17, D21, D22, D31, D32, Build plan step 2
 - in-game baseline: boot of the deployed 0.6.0 DLL, no player; -LogCheck → "log check: 0 unhandled, 9 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; its warnings are Il2CppInterop's substitute signature, Beelzebub's two TUNE lines, and the owner's example-empowerment event ("pillar empowerment takes an Empower action"), all seen in earlier boots
 
+### Step 3 · 2026-09-29 · b249b9a
+- git status: clean at b249b9a (Session 1's evidence)
+- compile: 0 Warning(s), 0 Error(s); tests: 2156 passed
+- preflight: PREFLIGHT OK; `dod-index.mjs --check event-spawns` → 0 problems
+- dod status: event-spawns items D6, D8-D11, D13, D16-D18, D20-D22, D29-D34 per their evidence lines; open for step 3: D19, D23, D24
+- feature doc read: docs/features/EVENT_SPAWNS.md (Session 1 parts A-C); plan D19, D23, D24, D32, D33, Build plan step 3; A68-A71 recorded before the code (Reviews 34 REVISE, 35 and 36 READY)
+- in-game baseline: Session 1 part C's boot of 0309313 plus A67 (logs checked, no [Error])
+
 ## Post-audit
 ### Step 1 · 2026-09-29 · c5e8f33
 - built: the SpawnWaves schema and validation (per-unit chance, modifiers level/levelDelta/maxHealth/power/moveSpeed/attackSpeed, loot, behaviour Hunt, AroundPlayer location, allowTerritory; D6), the `.nyar event set` keys and their refusals (D18, AdminFlows, DefinitionEditor, CommandArgs), the pure planners in Logic/Spawning.cs (unit chance rolls, WaveGate, WaveLifecycle, TerritoryMaps and HuntSeeds end paths, PlayerPick with the action scope, D8, D9, D16, D17, D29, D33), SpawnLedger and SpawnHealth entries (D11, D30), EventLines' new info lines (D32), and the preflight checks and fixtures: EntityWrites (D34), the gateway check's type-qualified System actor, alias and shadow rules, MutatingFloor (A55), -AuthSuite's command inventory, the Secrets sentinel, TCLI and index rules, the per-slug -DependencySuite with its floor (A52), -Paths dataTests; tools/data-inventory.json runtime rows; ControlCases rows
@@ -78,3 +86,14 @@ one under "## Post-audit"; every post-audit entry carries a "Codex verdict:" lin
 - Codex verdict: READY (round 2) — F1 advisory, HuntAction's class summary still described the value comparison → fixed (comment only)
 - in-game: Session 1 part C, all three Thugs reached the owner; five consecutive ticks "2 seeds kept, 0 left to the game" (EVENT_SPAWNS.md › Test results)
 - privacy grep (7656119, kdpenland): 0 hits in the diff
+
+### Step 3 · 2026-09-29 · (this commit)
+- built: undead-rising's modifiers (D19); the usage strings in capitals and their markup control (A68, D32); the scheduler's "hunt" phase, "hunt targets: n" and TickTimer's "slowest tick:" line (A70, D24); SpawnHealth.EventEnded and Purged at the end paths (A71, D33); preflight -TimingSpan with its fixtures (D24); session-events.py mode es2 (Session 2)
+- compile: `dotnet build Nyarlathotep/Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__` → 0 Error(s); tests: 2173 passed
+- preflight: PREFLIGHT OK; -SelfTest → "selftest: 40/40 checks, 7/7 external selftests (3 fixtures each, 228 extra bad fixtures; …)"; -AuthSuite → "auth suite: pass (tests, commands, admin list, gateway, entity writes, vcf)"; -Paths -DeclaredOf event-spawns → "paths: 1747 walked, all in manifest; declared: 538/538 in event-spawns; data tests 20 passed; plants: 15/15 fail, tempvar 15/15 lines"
+- -TimingSpan on each fixture: good "timing span: 10/10 windows under 5 ms, tracked >= 140, targets >= 1, 0 slow ticks"; bad, bad-avg, bad-slow, bad-gap, bad-notarget, bad-tracked, bad-slowlast and empty fail with their planted reason; -MinTargets -2 → usage error
+- /code-review (fresh subagent, read-only): F1 HuntAction counted a target that no write held (a player gone before the write, or a later unit of the event throwing) → fixed: SeedUnit adds only targets its buffer holds afterwards, and an event's targets join the tick's count only after its whole loop
+- Codex verdict: REVISE (round 1) — F1 -TimingSpan stopped at the tenth timing line, so a slow tick logged right after it for the same tick went unread → fixed (the lines after the last timing line are read; fixture TimingSpan/bad-slowlast); F2 negative -MinTracked/-MinTargets or -Windows < 1 accepted → fixed (usage error, and the check refuses them)
+- Codex verdict: READY (round 2) — F1 advisory, D24's ControlCases row lacked bad-slowlast → fixed; F2 advisory, the usage markup scan reads source literals, not runtime strings (an escaped `<` would pass) → accepted as is: no usage string in Commands/*.cs uses an escape, a constant or a concatenation, so the literals are the runtime strings
+- privacy grep (7656119, kdpenland): 0 hits in the diff beyond the plan's D31 line that quotes the pattern
+- in-game: Session 2 (owner kick-off, then the load, the restart and the uninstall) follows this commit; its steps are in docs/features/EVENT_SPAWNS.md › Owner steps for Session 2

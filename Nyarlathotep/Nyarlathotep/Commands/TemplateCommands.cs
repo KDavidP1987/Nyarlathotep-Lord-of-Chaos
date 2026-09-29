@@ -10,7 +10,7 @@ namespace Nyarlathotep.Commands;
 [CommandGroup("nyar")]
 internal static class TemplateCommands
 {
-    [Command("template", usage: "list [pillar] [page] | info <template> | use <template> [as <id>]",
+    [Command("template", usage: "list [pillar] [page] | info TEMPLATE | use TEMPLATE [as ID]",
         description: "List, inspect or copy the starter event templates into events.json.", adminOnly: true)]
     public static void Template(ChatCommandContext ctx, string verb = "", string a = "", string b = "", string c = "")
     {

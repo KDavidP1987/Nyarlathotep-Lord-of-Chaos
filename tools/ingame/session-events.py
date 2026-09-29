@@ -3,7 +3,8 @@
 # with an unknown unit), d23b (the same file with a comma removed), restore-valid (d23a again), cool (the last valid file
 # with t-cool due every minute from now+2 to now+13, so a purge right after it has due times inside its cooldown). State in
 # %TEMP%/nyar-session. s17a/s17b: session 17; rac2: raphael-api-core session 2; fe1, fe2, fe3 and show: faction-empowerment
-# sessions 1, 2 and 3 (see each mode's comment); el1: event-library session 1; soak: its four-hour soak.
+# sessions 1, 2 and 3 (see each mode's comment); el1: event-library session 1; soak: its four-hour soak; es2:
+# event-spawns session 2 (end paths and the tick budget).
 # `python session-events.py --help` lists the modes and writes nothing.
 import json, sys, datetime, io, os, shutil
 SERVER = r"C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer"
@@ -39,6 +40,13 @@ USAGE = """usage: python tools/ingame/session-events.py <mode> [args]
   soak [--delay M] [--every N] [--dry-run] [--server DIR]   event-library step 5, the four-hour soak: events.json gets
         copies of the four empowerment templates, all enabled, legion-weekend-surge retimed to twelve times N minutes
         apart (default 22) from 2 min after now + M (default 3); the cfg keys as el1. Backups and writes as fe1.
+  es2 [--dry-run] [--server DIR]   event-spawns session 2 (step 3, D23 and D24): events.json gets six Manual SpawnWaves
+        events at the admin's position, all of CHAR_Forest_Deer (no attack ability, so an idle character survives the
+        load), each with Hunt 60, modifiers levelDelta 2 and maxHealth 1.2, loot false: es2-stop, es2-purge,
+        es2-natural (60 s), es2-restart (2 waves of 15, the D23 shape) and es2-uninstall (the same, unit lifetime
+        300 s), plus es2-load (10 waves of 15 every 20 s = MaxTrackedUnits 150, 2100 s, unit lifetime 2100 s, D24).
+        The cfg gets Pillars.EventSpawns and Debug.TimingLog = true, Debug.VerboseLogging = false and
+        Limits.PurgeCooldownSeconds = 60. Backups and writes as fe1.
   show [--server DIR]   prints the server's events.json and the cfg keys fe1, fe2 and fe3 set; writes nothing.
 The server defaults to """ + SERVER + "."
 def here():
@@ -201,7 +209,7 @@ elif mode == "rac2":
                               "durationSeconds": 60, "action": point(unit(1))})
     write(doc)
     print("rac2 written:", len(doc["events"]), "definitions")
-elif mode in ("fe1", "fe2", "fe3", "el1", "soak", "show"):
+elif mode in ("fe1", "fe2", "fe3", "el1", "soak", "es2", "show"):
     # faction-empowerment session 1 (step 4, unattended, D17): fe-short ends by expiry and its sample line reverts one
     # tick later; fe-long is still running when the server is stopped mid-window, so the next boot's carrier sweep finds
     # k > 0. Only these two definitions are written (nothing else starts on its own); the -Save snapshot of
@@ -221,6 +229,8 @@ elif mode in ("fe1", "fe2", "fe3", "el1", "soak", "show"):
     if mode in ("el1", "soak"): CFG_KEYS = [("Pillars", "FactionEmpowerment", "true"), ("Pillars", "EventSpawns", "true"), ("Debug", "TimingLog", "true")]
     if mode in ("fe2", "fe3", "show"): CFG_KEYS += [("Pillars", "EventSpawns", "true"), ("Debug", "TimingLog", "true"), ("Announcements", "EventBanners", "true")]
     if mode in ("fe3", "show"): CFG_KEYS += [("Limits", "PurgeCooldownSeconds", "60"), ("Limits", "EmpowerBatchPerTick", "50")]
+    if mode == "es2": CFG_KEYS = [("Pillars", "EventSpawns", "true"), ("Debug", "TimingLog", "true"),
+                                  ("Debug", "VerboseLogging", "false"), ("Limits", "PurgeCooldownSeconds", "60")]
     DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]   # the validator's names, whatever the locale
     def cfg_get(text, section, key):
         cur = None
@@ -266,6 +276,10 @@ elif mode in ("fe1", "fe2", "fe3", "el1", "soak", "show"):
                     t, a = e.get("trigger", {}), e.get("action", {})
                     when = f"{','.join(t.get('days', []))} {','.join(t.get('times', []))}".strip()
                     what = f"Empower {','.join(a.get('factions', []))} {json.dumps(a.get('stats', {}))}" if a.get("type") == "Empower" else a.get("type")
+                    if a.get("type") == "SpawnWaves":
+                        what += (f" {a.get('waves')}x{sum(u.get('count', 0) for u in a.get('units', []))}"
+                                 f" every {a.get('intervalSeconds')}s lifetime={a.get('unitLifetimeSeconds', '-')}"
+                                 f" behaviour={json.dumps(a.get('behaviour'))} modifiers={json.dumps(a.get('modifiers'))} loot={a.get('loot', False)}")
                     print(f"    {e.get('id')}: enabled={e.get('enabled')} pillar={e.get('pillar')} trigger={t.get('type')} {when} durationSeconds={e.get('durationSeconds')} action={what}")
             except ValueError as x: print(f"    (not valid JSON: {x})")
         print(f"  {cfg_path}:")
@@ -290,6 +304,26 @@ elif mode in ("fe1", "fe2", "fe3", "el1", "soak", "show"):
     if mode == "fe1":
         doc = {"SchemaVersion": 1, "events": [empower("fe-short", "FE short (expires)", 2, 60),
                                               empower("fe-long", "FE long (stopped mid-window)", 5, 1200)]}
+    elif mode == "es2":
+        # event-spawns session 2 (step 3): D23's end paths each get "a modified Hunt event of 30 units over two waves at the
+        # default caps, loot false"; D24's load fills MaxTrackedUnits (150) with Hunt units while the owner idles within
+        # range. The dev server has no invulnerability, so every unit is CHAR_Forest_Deer (level 8, Faction_Critters,
+        # AggroBuffer and AggroConsumer present, abilities only AB_Feed_): Hunt can seed it and nothing can kill the owner.
+        def deer(id, name, waves, count, duration, lifetime=None):
+            a = {"type": "SpawnWaves", "units": [{"prefab": "CHAR_Forest_Deer", "count": count}], "waves": waves,
+                 "intervalSeconds": 20, "radius": 10, "location": {"type": "Admin"},
+                 "modifiers": {"levelDelta": 2, "maxHealth": 1.2}, "loot": False, "behaviour": {"type": "Hunt", "range": 60}}
+            if lifetime is not None: a["unitLifetimeSeconds"] = lifetime
+            return {"id": id, "name": name, "enabled": True, "pillar": "spawns", "trigger": {"type": "Manual"},
+                    "durationSeconds": duration, "action": a}
+        doc = {"SchemaVersion": 1, "events": [
+            deer("es2-stop", "Deer herd (stopped)", 2, 15, 600),
+            deer("es2-purge", "Deer herd (purged)", 2, 15, 600),
+            deer("es2-natural", "Deer herd (ends on its own)", 2, 15, 60),
+            deer("es2-load", "Deer stampede (tick budget)", 10, 15, 2100, 2100),
+            deer("es2-restart", "Deer herd (restart)", 2, 15, 900),
+            deer("es2-uninstall", "Deer herd (uninstall)", 2, 15, 900, 300),
+        ]}
     elif mode == "el1":
         # event-library session 1 (step 3, D3): the shipped templates as `.nyar template use` copies them, disabled; the two
         # the session watches are enabled. legion-weekend-surge keeps its 1800 s and stats, only its day and time move.
