@@ -81,6 +81,11 @@ public sealed class RegionEntries
         _region.Clear();
         _attempts.Clear();
     }
+
+    /// <summary>No scan ran (no startable RegionEntered definition, or regions unavailable): the region rows go, so the
+    /// next scan sees every player for the first time and a login during the gap is no entry (step 2 code review F1);
+    /// the cooldown rows keep their own expiry.</summary>
+    public void ForgetRegions() => _region.Clear();
 }
 
 /// <summary>A death as the kill rule sees it (automation D11). <see cref="KillerPlayer"/> is the platform id of the killer
@@ -322,11 +327,14 @@ public sealed class PlayerTriggerFeed
     public void Scan(Func<IReadOnlyList<ScanRow>> read, Func<float, float, string>? regionOf, DefinitionSet set,
         Func<string, bool> isActive, DateTime utcNow, Action<string> log, Action<PlayerFire> start, Action<string>? verbose = null)
     {
-        Kills.Prune(TriggerRouter.Candidates(set, TriggerType.FactionKills), utcNow);
+        var killDefinitions = TriggerRouter.Candidates(set, TriggerType.FactionKills).ToList();
+        Kills.Prune(killDefinitions, utcNow);
+        if (killDefinitions.Count == 0) _killFaults.Ok();                      // no kill is read, so none is failing (review F2)
         var definitions = TriggerRouter.Candidates(set, TriggerType.RegionEntered).ToList();
         if (definitions.Count == 0 || regionOf is null)
         {
             _scanFaults.Ok();                                                   // nothing is scanned, so nothing is failing
+            Entries.ForgetRegions();
             return;
         }
         IReadOnlyList<RegionEntry> entries;
@@ -392,7 +400,7 @@ public sealed class PlayerTriggerFeed
 
     /// <summary>Garbage refused where read (D15): an unusable position becomes unknown, a faction that is no Faction_ name
     /// (an unnamed guid reads as "PrefabGuid(n)") becomes none.</summary>
-    static KillFacts Clean(KillFacts kill)
+    public static KillFacts Clean(KillFacts kill)
     {
         if (kill.X is not { } x || kill.Z is not { } z || !PlayerPosition.Usable(x, z)) kill = kill with { X = null, Z = null };
         if (kill.VictimFaction is { } f && !f.StartsWith("Faction_", StringComparison.Ordinal)) kill = kill with { VictimFaction = null };

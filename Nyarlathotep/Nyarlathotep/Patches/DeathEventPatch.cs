@@ -28,7 +28,14 @@ internal static class DeathEventPatch
             var deaths = __instance._DeathEventQuery.ToComponentDataArray<DeathEvent>(Allocator.Temp);
             try
             {
-                var wantsKills = TriggerBus.WantsKills;
+                bool wantsKills;
+                try { wantsKills = TriggerBus.WantsKills; }
+                catch (Exception ex)
+                {
+                    // kill-rule code: a throw here never skips SpawnTracker.Died (step 2 code review F3)
+                    wantsKills = false;
+                    if (KillFaults.Fail()) Core.Log.LogError($"[nyar] faction kills: death skipped: {ex.Message}");
+                }
                 foreach (var death in deaths)
                 {
                     var ours = false;

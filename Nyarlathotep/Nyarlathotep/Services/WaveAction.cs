@@ -113,7 +113,7 @@ internal static class WaveAction
             level ??= check.Level;
             total += groupTotal;
 #if DEBUG
-            PhantomGroupLine(id, due.Wave, group);
+            if (location.Type == LocationType.AroundPlayer) PhantomGroupLine(id, due.Wave, group);   // never a stale pick's (review F6)
 #endif
         }
         EventRuntime.Engine.WaveDecided(id, decision.Outcome);

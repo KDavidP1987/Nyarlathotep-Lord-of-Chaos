@@ -70,7 +70,6 @@ internal static class TriggerBus
             Persistence.State.MarkDirty();
             Fire(def, $"Schedule {occurrence}");
         }
-        PollIntervals();
 
         if (due.Entered is not { } phase) return;
         Core.Log.LogInfo($"[nyar] trigger: GameTime {phase.ToString().ToLowerInvariant()} began");
@@ -84,13 +83,13 @@ internal static class TriggerBus
     static PhaseSampler NewSampler() => new(() => _dayNight.GetSingleton<DayNightCycle>().TimeOfDay == TimeOfDay.Day,
         line => Core.Log.LogError($"[nyar] {line}"));
 
-    /// <summary>automation D2: every startable Interval definition is polled; a due one starts, and the clock draws its
-    /// next on the first poll that sees it inactive again, whatever ended it or refused it.</summary>
-    static void PollIntervals()
+    /// <summary>The tick phase "interval" (automation D2), its own phase so a fault never costs a Schedule or GameTime
+    /// start (step 2 code review F4): every startable Interval definition is polled; a due one starts, and the clock draws
+    /// its next on the first poll that sees it inactive again, whatever ended it or refused it.</summary>
+    internal static void PollIntervals(DateTime utcNow)
     {
         var doc = Persistence.State.Document;
         var nexts = doc.NextInterval ??= new Dictionary<string, DateTime>(StringComparer.Ordinal);
-        var utcNow = DateTime.UtcNow;
         var (due, changed) = IntervalClock.PollAll(EventStore.Catalog.Current, nexts, id => EventRuntime.Engine.Find(id) is not null, utcNow, _rng);
         if (changed) Persistence.State.MarkDirty();
         foreach (var def in due) Fire(def, nameof(TriggerType.Interval));

@@ -94,6 +94,19 @@ public class AutomationDependencyFailureTests
     }
 
     [Fact]
+    public void PlayerScan_fails_when_login_during_a_gap_is_an_entry()
+    {
+        // step 2 code review F1: a scan, a gap with no startable RegionEntered definition, then the player in scope
+        var feed = new PlayerTriggerFeed();
+        var log = new LogLines();
+        Scan(feed, () => [At(-10)], Entered, T0, log);
+        Scan(feed, () => [At(-10)], Set(Json.Event("manual")), T0.AddSeconds(5), log);
+        Assert.Empty(Scan(feed, () => [At(10)], Entered, T0.AddSeconds(10), log));
+        Assert.Empty(Scan(feed, () => [At(-10)], Entered, T0.AddSeconds(15), log));
+        Assert.Single(Scan(feed, () => [At(10)], Entered, T0.AddSeconds(20), log));      // a real move still enters
+    }
+
+    [Fact]
     public void PlayerScan_empty_reads_no_player_without_a_definition()
     {
         var feed = new PlayerTriggerFeed();
@@ -136,6 +149,20 @@ public class AutomationDependencyFailureTests
     }
 
     [Fact]
+    public void KillRead_passes_entry_clears_when_no_definition_reads_kills()
+    {
+        // step 2 code review F2: the entry ends when no FactionKills definition is startable any more
+        var feed = new PlayerTriggerFeed();
+        var log = new LogLines();
+        Die(feed, _ => throw new InvalidOperationException("x"), Kills, T0, log);
+        Assert.Equal([PlayerTriggerFeed.KillFailing], feed.Health);
+        Scan(feed, () => [], Kills, T0.AddSeconds(5), log);
+        Assert.Equal([PlayerTriggerFeed.KillFailing], feed.Health);           // still startable: still failing
+        Scan(feed, () => [], Set(Json.Event("manual")), T0.AddSeconds(10), log);
+        Assert.Empty(feed.Health);
+    }
+
+    [Fact]
     public void KillRead_fails_when_unavailable_hook_leaves_factionkills_on()
     {
         var feed = new PlayerTriggerFeed();
@@ -156,6 +183,8 @@ public class AutomationDependencyFailureTests
         var log = new LogLines();
         for (var i = 0; i < 5; i++) Die(feed, _ => Kill(faction: "PrefabGuid(-123)"), Kills, T0.AddSeconds(i), log);
         Assert.Equal(0, feed.Kills.Counters);                                   // an unnamed faction counts for nothing
+        Assert.Null(PlayerTriggerFeed.Clean(Kill(faction: "PrefabGuid(-123)")).VictimFaction);   // refused where read (review F5)
+        Assert.Equal("Faction_Bandits", PlayerTriggerFeed.Clean(Kill()).VictimFaction);
         var scoped = Set(Json.Event("scoped", ScopedReprisal));
         var positions = new List<bool>();
         for (var i = 0; i < 5; i++)
