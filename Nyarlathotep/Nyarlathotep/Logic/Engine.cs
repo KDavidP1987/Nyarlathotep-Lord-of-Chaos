@@ -300,9 +300,11 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
     }
 
     /// <summary>The one report of a decided wave (automation D17): a spawned wave, however many groups it fanned out to, is
-    /// counted and pushed once; any other outcome is a skipped wave.</summary>
+    /// counted and pushed once; NoWave (blocked) is neither counted nor used, as in 0.7.0; any other outcome is a skipped
+    /// wave.</summary>
     public void WaveDecided(string id, WaveOutcome outcome)
     {
+        if (outcome == WaveOutcome.NoWave) return;
         if (outcome == WaveOutcome.Spawn) WaveSpawned(id);
         else WaveSkipped(id);
     }

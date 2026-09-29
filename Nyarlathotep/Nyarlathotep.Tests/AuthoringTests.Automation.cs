@@ -48,6 +48,10 @@ public partial class AuthoringTests
     [Fact]
     public void Automation_fails_when_fanout_on_point_or_empower()
     {
+        // a fanned-out event cannot be moved off AroundPlayer either (round 2 F4)
+        var fanned = Lib(Json.Event("hunt", action: AroundPlayerAction.TrimEnd('}') + ", \"fanOut\": { \"maxInstances\": 3, \"minSpacing\": 150 } }"));
+        Unchanged(fanned, () => Assert.Equal($"{EventValidator.FanOutLocation}: set action.fanOut none first",
+            Set(fanned, "hunt", "location", "here", (10f, 0f, 10f))));
         var lib = AutomationLib();
         Unchanged(lib, () => Assert.Equal(EventValidator.FanOutLocation, Set(lib, "raid", "action.fanOut", "3 150")));
         Unchanged(lib, () => Assert.Equal("action.fanOut is not an Empower field", Set(lib, "surge", "action.fanOut", "3 150")));
@@ -107,6 +111,8 @@ public partial class AuthoringTests
         Assert.Contains("next start: after the running instance ends", EventLines.Info(d, active, Now, null));
         Assert.Equal("next start in 0 min", EventLines.NextStartLine(false, Now.AddMinutes(-5), Now));
         Assert.Contains(EventLines.Info(d, null, Now), l => l.Contains("trigger interval 60-90 min", StringComparison.Ordinal));
+        // a disabled definition never promises a next start, running or not (round 2 F5)
+        Assert.DoesNotContain(EventLines.Info(d with { Enabled = false }, active, Now, null), l => l.StartsWith("next start", StringComparison.Ordinal));
         // another type never shows a next start, even with one passed
         var kills = Lib(Json.Event("kills", trigger: KillsTrigger)).Catalog.Current.Find("kills")!;
         Assert.DoesNotContain(EventLines.Info(kills, null, Now, Now.AddMinutes(5)), l => l.StartsWith("next start", StringComparison.Ordinal));

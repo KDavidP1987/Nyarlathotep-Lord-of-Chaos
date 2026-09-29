@@ -24,7 +24,7 @@ public sealed record RegionEntry(EventDefinition Definition, string PlayerId, fl
 public sealed class RegionEntries
 {
     readonly Dictionary<string, string> _region = new(StringComparer.Ordinal);
-    readonly Dictionary<(string Definition, string Player), DateTime> _attempts = new();
+    readonly Dictionary<(string Definition, string Player), (DateTime Last, DateTime Until)> _attempts = new();
 
     public int RegionRows => _region.Count;
     public int CooldownRows => _attempts.Count;
@@ -35,7 +35,7 @@ public sealed class RegionEntries
     public IReadOnlyList<RegionEntry> Scan(IReadOnlyList<ScanRow> players, Func<float, float, string> regionOf,
         IReadOnlyList<EventDefinition> definitions, DateTime utcNow)
     {
-        Expire(definitions, utcNow);
+        Expire(utcNow);
         var entries = new List<RegionEntry>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var p in players)
@@ -47,7 +47,7 @@ public sealed class RegionEntries
                 foreach (var d in definitions)
                 {
                     if (!d.Trigger.Scope.Names(now) || d.Trigger.Scope.Names(before)) continue;
-                    if (_attempts.TryGetValue((d.Id, p.PlayerId), out var last) && utcNow - last < TimeSpan.FromMinutes(d.Trigger.PlayerCooldownMinutes))
+                    if (_attempts.TryGetValue((d.Id, p.PlayerId), out var row) && utcNow - row.Last < TimeSpan.FromMinutes(d.Trigger.PlayerCooldownMinutes))
                         continue;
                     entries.Add(new RegionEntry(d, p.PlayerId, p.X, p.Z));
                 }
@@ -62,18 +62,17 @@ public sealed class RegionEntries
     public void Attempted(EventDefinition definition, string playerId, DateTime utcNow)
     {
         if (definition.Trigger.PlayerCooldownMinutes <= 0) return;
-        _attempts[(definition.Id, playerId)] = utcNow;
+        _attempts[(definition.Id, playerId)] = (utcNow, utcNow.AddMinutes(definition.Trigger.PlayerCooldownMinutes));
         while (_attempts.Count > TriggerLimits.CooldownRows)
-            _attempts.Remove(_attempts.MinBy(a => a.Value).Key);
+            _attempts.Remove(_attempts.MinBy(a => a.Value.Last).Key);
     }
 
-    /// <summary>Drops the cooldown rows that have run out or whose definition left the startable set.</summary>
-    void Expire(IReadOnlyList<EventDefinition> definitions, DateTime utcNow)
+    /// <summary>Drops the cooldown rows that have run out (Design › Data): a row outlives a disable, a reload or regions
+    /// unavailable, so re-enabling a definition never lifts a player's cooldown (step 1 code review round 2 F2).</summary>
+    void Expire(DateTime utcNow)
     {
-        var byId = definitions.ToDictionary(d => d.Id, StringComparer.Ordinal);
         foreach (var key in _attempts.Keys.ToList())
-            if (!byId.TryGetValue(key.Definition, out var d) || utcNow - _attempts[key] >= TimeSpan.FromMinutes(d.Trigger.PlayerCooldownMinutes))
-                _attempts.Remove(key);
+            if (utcNow >= _attempts[key].Until) _attempts.Remove(key);
     }
 
     /// <summary>A restart: nothing is kept.</summary>
@@ -96,7 +95,8 @@ public readonly record struct KillFacts(
     bool VictimOurs,
     string? VictimFaction,
     float? X = null,
-    float? Z = null)
+    float? Z = null,
+    bool VictimIsKiller = false)
 {
     /// <summary>The player the kill counts for, or null.</summary>
     public string? Player => KillerPlayer ?? OwnerPlayer;
@@ -106,13 +106,13 @@ public readonly record struct KillFacts(
 public static class KillRule
 {
     /// <summary>True when the death counts for <paramref name="definition"/>: a player killed it (directly or through what it
-    /// owns), the victim is not a player, a minion or one of our units, its faction is listed, and with a regional scope
+    /// owns), the victim is not a player, a minion, one of our units or the killer itself, its faction is listed, and with a regional scope
     /// the victim stands in a named region (an unknown position counts nothing there).</summary>
     public static bool Counts(KillFacts kill, EventDefinition definition, Func<float, float, string>? regionOf)
     {
         var t = definition.Trigger;
         if (t.Type != TriggerType.FactionKills || kill.Player is null) return false;
-        if (kill.VictimIsPlayer || kill.VictimMinion || kill.VictimOurs) return false;
+        if (kill.VictimIsPlayer || kill.VictimMinion || kill.VictimOurs || kill.VictimIsKiller) return false;
         if (kill.VictimFaction is null || !(t.Factions ?? []).Contains(kill.VictimFaction, StringComparer.Ordinal)) return false;
         if (t.Scope.IsGlobal) return true;
         return kill.X is { } x && kill.Z is { } z && regionOf is not null && t.Scope.Names(regionOf(x, z));

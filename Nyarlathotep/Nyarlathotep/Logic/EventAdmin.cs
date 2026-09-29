@@ -53,6 +53,11 @@ public static class EventsEditor
         if (CommandArgs.SpawnKeyFields.Contains(CommandArgs.TableName(path)) || path == CommandArgs.FanOutField)
             return SetSpawnKey(root, ev, actionType, path, value, out error);
 
+        if (path == "action.location" && value is PointArg && ev["action"] is JsonObject fanned && fanned["fanOut"] is not null)
+        {
+            error = Invalid($"{EventValidator.FanOutLocation}: set action.fanOut none first", Reasons.Field);   // automation D16
+            return null;
+        }
         var node = ToNode(value);
         if (node is null) { error = Invalid($"{path} has an unsupported value", Reasons.Value); return null; }
         if (path.StartsWith("trigger.", StringComparison.Ordinal))
@@ -329,7 +334,7 @@ public static class EventLines
             ? "not running"
             : $"running: started by {active.Trigger}, {Math.Max(0, (int)Math.Ceiling((active.Instance.EndsUtc - utcNow).TotalSeconds))}s left" +
               (d.Empower is null ? $", wave {active.WavesSpawned}/{d.Action?.Waves ?? 0}" : ""));
-        if (d.Trigger.Type == TriggerType.Interval && NextStartLine(active is not null, nextInterval, utcNow) is { } next) lines.Add(next);
+        if (d.Trigger.Type == TriggerType.Interval && d.Enabled && NextStartLine(active is not null, nextInterval, utcNow) is { } next) lines.Add(next);
         return lines;
     }
 

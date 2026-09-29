@@ -362,6 +362,10 @@ public class AutomationTests
         Assert.Equal(1, entries.CooldownRows);
         entries.Scan([At(-10)], RegionOf, defs, T0.AddSeconds(10));
         Assert.Empty(entries.Scan([At(10)], RegionOf, defs, T0.AddSeconds(15)));
+        // a disable, reload or regions unavailable drops the definition from a scan but keeps the cooldown (round 2 F2)
+        entries.Scan([At(-10)], RegionOf, [], T0.AddSeconds(20));
+        Assert.Equal(1, entries.CooldownRows);
+        Assert.Empty(entries.Scan([At(10)], RegionOf, defs, T0.AddSeconds(25)));
     }
 
     [Fact]
@@ -440,6 +444,7 @@ public class AutomationTests
         Assert.False(KillRule.Counts(Kill(killer: null), def, null));                          // an environment death
         Assert.False(KillRule.Counts(Kill(killer: null, owner: null), def, null));             // a castle servant or structure: no player owner
         Assert.False(KillRule.Counts(Kill(player: true), def, null));                          // a player victim, the killer included
+        Assert.False(KillRule.Counts(Kill(owner: "p1", killer: null) with { VictimIsKiller = true }, def, null));   // an owned unit killing itself
     }
 
     [Fact]
@@ -826,6 +831,9 @@ public class AutomationTests
         Assert.Same(held, empty.NextInterval);
         held["tick"] = T0;
         Assert.Contains("\"NextInterval\"", Encoding.UTF8.GetString(empty.Serialize()));
+        // an unspecified time is written as the UTC it already holds, never shifted by the server's offset (round 2 F7)
+        var unspecified = new StateDocument { NextInterval = new() { ["tick"] = DateTime.SpecifyKind(T0, DateTimeKind.Unspecified) } };
+        Assert.Equal(T0, StateDocument.TryParse(unspecified.Serialize())!.NextInterval!["tick"]);
 
         var doc = new StateDocument { NextInterval = new() { ["tick"] = T0.AddMinutes(75) } };
         var text = Encoding.UTF8.GetString(doc.Serialize());

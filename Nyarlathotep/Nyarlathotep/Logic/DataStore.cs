@@ -182,7 +182,7 @@ public sealed class NextIntervalConverter : JsonConverter<Dictionary<string, Dat
     {
         writer.WriteStartObject();
         foreach (var (id, at) in value!.OrderBy(e => e.Key, StringComparer.Ordinal))
-            writer.WriteString(id, DateTime.SpecifyKind(at.ToUniversalTime(), DateTimeKind.Utc));
+            writer.WriteString(id, at.Kind == DateTimeKind.Local ? at.ToUniversalTime() : DateTime.SpecifyKind(at, DateTimeKind.Utc));
         writer.WriteEndObject();
     }
 }

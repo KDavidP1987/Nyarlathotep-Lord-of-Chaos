@@ -62,5 +62,8 @@ public partial class PushTests
         Report(e, WaveGate.DecideGroups(FanFacts(), Centres(3), () => ["CHAR_Bandit_Thug"], 20, 150, 150), "hunters");
         Assert.Equal(before, Texts(hub).Count);
         Assert.Equal(3, e.Active.Single().WavesSkipped);
+        // a blocked wave (NoWave) is neither counted nor pushed, as in 0.7.0 (round 2 F1)
+        Report(e, WaveGate.DecideGroups(FanFacts() with { Blocked = true }, Centres(3), () => ["CHAR_Bandit_Thug"], 20, 0, 150), "hunters");
+        Assert.Equal((3, 0), (e.Active.Single().WavesSkipped, e.Active.Single().WavesSpawned));
     }
 }
