@@ -18,6 +18,7 @@ internal static class DeathEventPatch
 {
     static readonly Logic.FailureStreak Faults = new();
     static readonly Logic.FailureStreak KillFaults = new();
+    static readonly Logic.FailureStreak VBloodFaults = new();
 
     [HarmonyPostfix]
     public static void OnUpdate(DeathEventListenerSystem __instance)
@@ -47,11 +48,20 @@ internal static class DeathEventPatch
                     }
                     SpawnTracker.Died(death.Died);
                     // faction-empowerment D13: a V Blood kill carries VBloodConsumeSource; a gate boss with VBloodUnit alone
-                    // raises nothing (DEV_REMINDERS #26).
-                    if (Logic.DeathRule.IsVBloodKill(death.Died.Has<VBloodConsumeSource>(), death.Died.Has<VBloodUnit>()))
+                    // raises nothing (DEV_REMINDERS #26). Guarded per death, so a throw never skips this death's kill feed
+                    // or a later death's SpawnTracker.Died (step 2 Codex round 2 F1).
+                    try
                     {
-                        var died = death.Died;
-                        TriggerBus.VBloodKilled(died.GetPrefabGuid().GetPrefabName(), () => KillPosition(died));   // read on demand (A38)
+                        if (Logic.DeathRule.IsVBloodKill(death.Died.Has<VBloodConsumeSource>(), death.Died.Has<VBloodUnit>()))
+                        {
+                            var died = death.Died;
+                            TriggerBus.VBloodKilled(died.GetPrefabGuid().GetPrefabName(), () => KillPosition(died));   // read on demand (A38)
+                        }
+                        VBloodFaults.Ok();
+                    }
+                    catch (Exception ex)
+                    {
+                        if (VBloodFaults.Fail()) Core.Log.LogError($"[nyar] vblood kill: death skipped: {ex.Message}");
                     }
                     if (!wantsKills) continue;
                     try
