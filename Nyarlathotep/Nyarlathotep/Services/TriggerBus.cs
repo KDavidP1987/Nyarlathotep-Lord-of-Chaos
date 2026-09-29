@@ -88,11 +88,8 @@ internal static class TriggerBus
     /// its next on the first poll that sees it inactive again, whatever ended it or refused it.</summary>
     internal static void PollIntervals(DateTime utcNow)
     {
-        var doc = Persistence.State.Document;
-        var nexts = doc.NextInterval ??= new Dictionary<string, DateTime>(StringComparer.Ordinal);
-        var (due, changed) = IntervalClock.PollAll(EventStore.Catalog.Current, nexts, id => EventRuntime.Engine.Find(id) is not null, utcNow, _rng);
-        if (changed) Persistence.State.MarkDirty();
-        foreach (var def in due) Fire(def, nameof(TriggerType.Interval));
+        foreach (var def in IntervalClock.PollState(Persistence.State, EventStore.Catalog.Current, IsActive, utcNow, _rng))
+            Fire(def, nameof(TriggerType.Interval));
     }
 
     /// <summary>The next Interval start of <paramref name="id"/>, for `.nyar event info` (automation D16).</summary>

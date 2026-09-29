@@ -774,6 +774,25 @@ public sealed record WaveGroup(int Index, (float X, float Y, float Z) Centre, IR
 /// <summary>A fanned-out wave's decision (automation D6): its outcome and line, the groups to spawn, the cap lines.</summary>
 public sealed record FanOutDecision(WaveOutcome Outcome, string? Line, IReadOnlyList<WaveGroup> Groups, IReadOnlyList<string> CapLines);
 
+/// <summary>Carries out a decided wave for Services/WaveAction (automation D17; step 2 Codex round 3 F1): a wave that is
+/// not spawned logs its line and is reported; a spawned wave queues each group, then is reported. Every decided wave is
+/// reported exactly once, whatever its group count. A throwing queue stops the wave unreported (EventRuntime counts the
+/// fault, event-spawns D25).</summary>
+public static class WaveRun
+{
+    public static void Run(FanOutDecision decision, Action<string> skipped, Action<WaveGroup> queue, Action<WaveOutcome> report)
+    {
+        if (decision.Outcome != WaveOutcome.Spawn)
+        {
+            if (decision.Line is { } line) skipped(line);
+            report(decision.Outcome);                                           // NoWave is neither counted nor pushed
+            return;
+        }
+        foreach (var group in decision.Groups) queue(group);
+        report(decision.Outcome);
+    }
+}
+
 /// <summary>An event's units, hunt seeds and kept territory map, ended together (event-spawns D33, A39): every end path
 /// empties all three for the event and leaves every other event's state as it is.</summary>
 public sealed class WaveLifecycle(SpawnLedger ledger, HuntSeeds seeds, TerritoryMaps maps)

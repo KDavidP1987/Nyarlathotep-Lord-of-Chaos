@@ -34,30 +34,31 @@ public partial class PushTests
         Assert.NotEqual(1, Texts(plantedHub).Count - start);
     }
 
-    /// <summary>WaveAction's reporting, read from its source (step 2 Codex F3; the service needs the game, so the check is
-    /// structural): no WaveSpawned or WaveSkipped call of its own, exactly two EventEngine.WaveDecided calls (the skip
-    /// path, which returns, and the spawn path), and none inside the loop over the groups.</summary>
-    internal static List<string> WaveReportProblems(string source)
+    /// <summary>Runs <paramref name="d"/> through WaveRun, the sequence WaveAction carries out (step 2 Codex round 3 F1),
+    /// and returns the calls it made in order: "skip", "queue &lt;index&gt;", "report &lt;outcome&gt;".</summary>
+    internal static List<string> RunCalls(FanOutDecision d, Action<WaveGroup>? queue = null)
+    {
+        var calls = new List<string>();
+        try
+        {
+            WaveRun.Run(d, _ => calls.Add("skip"), g => { calls.Add($"queue {g.Index}"); queue?.Invoke(g); },
+                o => calls.Add($"report {o}"));
+        }
+        catch (InvalidOperationException) { calls.Add("threw"); }
+        return calls;
+    }
+
+    /// <summary>WaveAction reports only through WaveRun: one WaveDecided call, handed to WaveRun.Run, and no WaveSpawned or
+    /// WaveSkipped of its own (the service needs the game, so this wiring check is structural).</summary>
+    internal static List<string> WaveWiringProblems(string source)
     {
         var problems = new List<string>();
         if (source.Contains("WaveSpawned(") || source.Contains("WaveSkipped(")) problems.Add("reports a wave around WaveDecided");
         var calls = System.Text.RegularExpressions.Regex.Matches(source, @"\bWaveDecided\(").Count;
-        if (calls != 2) problems.Add($"{calls} WaveDecided calls, not 2");
-        const string loop = "foreach (var group in decision.Groups)";
-        var at = source.IndexOf(loop, StringComparison.Ordinal);
-        if (at < 0) problems.Add("no loop over the groups");
-        else
-        {
-            var open = source.IndexOf('{', at);
-            var depth = 0;
-            var end = open;
-            for (; end < source.Length; end++)
-            {
-                if (source[end] == '{') depth++;
-                else if (source[end] == '}' && --depth == 0) break;
-            }
-            if (source[open..end].Contains("WaveDecided(")) problems.Add("reports inside the group loop");
-        }
+        if (calls != 1) problems.Add($"{calls} WaveDecided calls, not 1");
+        var run = source.IndexOf("WaveRun.Run(", StringComparison.Ordinal);
+        var report = source.IndexOf("outcome => EventRuntime.Engine.WaveDecided(id, outcome));", StringComparison.Ordinal);
+        if (run < 0 || report < run) problems.Add("WaveDecided is not WaveRun's report");
         return problems;
     }
 
@@ -71,17 +72,27 @@ public partial class PushTests
     [Fact]
     public void Automation_fails_when_wave_action_reports_per_group()
     {
+        // every outcome, run: exactly one report, after the groups, and a skipped wave queues nothing
+        var spawned = WaveGate.DecideGroups(FanFacts(), Centres(3), () => ["CHAR_Bandit_Thug"], 20, 0, 150);
+        Assert.Equal(["queue 0", "queue 1", "queue 2", "report Spawn"], RunCalls(spawned));
+        var claimed = Centres(3).Select(c => c with { Claimed = true }).ToArray();
+        Assert.Equal(["skip", "report Skip"], RunCalls(WaveGate.DecideGroups(FanFacts(), claimed, () => ["CHAR_Bandit_Thug"], 20, 0, 150)));
+        Assert.Equal(["skip", "report ZeroRolled"], RunCalls(WaveGate.DecideGroups(FanFacts(), Centres(3), () => [], 20, 0, 150)));
+        Assert.Equal(["report NoWave"], RunCalls(WaveGate.DecideGroups(FanFacts() with { Blocked = true }, Centres(3),
+            () => ["CHAR_Bandit_Thug"], 20, 0, 150)));
+        foreach (var n in new[] { 1, 2, 10 })
+            Assert.Single(RunCalls(WaveGate.DecideGroups(FanFacts(), Centres(n), () => ["CHAR_Bandit_Thug"], 20, 0, 150)),
+                c => c.StartsWith("report", StringComparison.Ordinal));
+        // a throwing group stops the wave unreported (EventRuntime counts the fault)
+        Assert.Equal(["queue 0", "threw"], RunCalls(spawned, _ => throw new InvalidOperationException("x")));
+        // WaveAction's wiring, and the planted per-group, second and pre-automation reports
         var source = WaveActionSource();
-        Assert.Empty(WaveReportProblems(source));
-        // planted: a report per group, a third report, and the pre-automation calls
-        const string loop = "foreach (var group in decision.Groups)";
-        var perGroup = source.Replace(loop + "\r\n        {", loop + "\r\n        {\r\n            EventRuntime.Engine.WaveDecided(id, decision.Outcome);")
-                             .Replace(loop + "\n        {", loop + "\n        {\n            EventRuntime.Engine.WaveDecided(id, decision.Outcome);");
-        Assert.Contains("reports inside the group loop", WaveReportProblems(perGroup));
-        Assert.Contains("3 WaveDecided calls, not 2", WaveReportProblems(perGroup));
-        Assert.Contains("reports a wave around WaveDecided", WaveReportProblems(source + "EventRuntime.Engine.WaveSpawned(id);"));
-        Assert.Contains("1 WaveDecided calls, not 2", WaveReportProblems(source[..source.IndexOf("WaveDecided(", StringComparison.Ordinal)]
-            + source[(source.IndexOf("WaveDecided(", StringComparison.Ordinal) + "WaveDecided(".Length)..]));
+        Assert.Empty(WaveWiringProblems(source));
+        var marker = "var (gx, gy, gz) = group.Centre;";
+        Assert.Contains("2 WaveDecided calls, not 1", WaveWiringProblems(source.Replace(marker, marker + " EventRuntime.Engine.WaveDecided(id, WaveOutcome.Spawn);")));
+        Assert.Contains("reports a wave around WaveDecided", WaveWiringProblems(source + "EventRuntime.Engine.WaveSpawned(id);"));
+        Assert.Contains("WaveDecided is not WaveRun's report", WaveWiringProblems(source.Replace("outcome => EventRuntime.Engine.WaveDecided(id, outcome));",
+            "_ => { }); EventRuntime.Engine.WaveDecided(id, decision.Outcome);")));
     }
 
     [Fact]

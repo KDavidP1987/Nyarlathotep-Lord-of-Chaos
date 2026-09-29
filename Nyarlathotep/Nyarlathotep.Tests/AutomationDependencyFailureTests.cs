@@ -230,8 +230,7 @@ public class AutomationDependencyFailureTests
     {
         var state = new StateStore(new DataStore(fs, log.Add), () => fs.Now, log.Add);
         state.Load();
-        var nexts = state.Document.NextInterval ??= new Dictionary<string, DateTime>(StringComparer.Ordinal);
-        if (IntervalClock.PollAll(Ticking, nexts, _ => false, T0, new ScriptedRandom(0.0)).Changed) state.MarkDirty();
+        Assert.Empty(IntervalClock.PollState(state, Ticking, _ => false, T0, new ScriptedRandom(0.0)));   // the production poll
         return state;
     }
 
@@ -245,8 +244,8 @@ public class AutomationDependencyFailureTests
         Assert.Equal(1, log.Count("state.json write failed"));
         Assert.Equal(T0.AddMinutes(5), state.Document.NextInterval!["tick"]);  // kept in memory
         // the clock keeps using it: no redraw, and it fires when due
-        var (due, _) = IntervalClock.PollAll(Ticking, state.Document.NextInterval, _ => false, T0.AddMinutes(5), new ScriptedRandom(0.9));
-        Assert.Equal("tick", Assert.Single(due).Id);
+        Assert.Empty(IntervalClock.PollState(state, Ticking, _ => false, T0.AddMinutes(4), new ScriptedRandom(0.9)));
+        Assert.Equal("tick", Assert.Single(IntervalClock.PollState(state, Ticking, _ => false, T0.AddMinutes(5), new ScriptedRandom(0.9))).Id);
     }
 
     [Fact]
@@ -265,6 +264,16 @@ public class AutomationDependencyFailureTests
         var reloaded = new StateStore(new DataStore(fs, log.Add), () => fs.Now, log.Add);
         reloaded.Load();
         Assert.Equal(T0.AddMinutes(5), reloaded.Document.NextInterval!["tick"]);
+        // a later draw (the start seen, then its end) is marked dirty by the same poll and written by the next flush
+        IntervalClock.PollState(state, Ticking, _ => false, T0.AddMinutes(5), new ScriptedRandom(0.0));
+        IntervalClock.PollState(state, Ticking, _ => true, T0.AddMinutes(6), new ScriptedRandom(0.0));
+        IntervalClock.PollState(state, Ticking, _ => false, T0.AddMinutes(7), new ScriptedRandom(0.0));
+        Assert.True(state.Dirty);
+        fs.Now += TimeSpan.FromSeconds(2);
+        state.Flush();
+        reloaded.Load();
+        Assert.Equal(state.Document.NextInterval!["tick"], reloaded.Document.NextInterval!["tick"]);
+        Assert.NotEqual(T0.AddMinutes(5), reloaded.Document.NextInterval!["tick"]);
     }
 
     [Fact]
@@ -274,8 +283,8 @@ public class AutomationDependencyFailureTests
         var log = new LogLines();
         var state = new StateStore(new DataStore(fs, log.Add), () => fs.Now, log.Add);
         state.Load();
-        var nexts = state.Document.NextInterval ??= new Dictionary<string, DateTime>(StringComparer.Ordinal);
-        Assert.False(IntervalClock.PollAll(Set(Json.Event("manual")), nexts, _ => false, T0, new ScriptedRandom()).Changed);
+        Assert.Empty(IntervalClock.PollState(state, Set(Json.Event("manual")), _ => false, T0, new ScriptedRandom()));
+        Assert.False(state.Dirty);
         Assert.Null(state.SaveNow());
         Assert.DoesNotContain("NextInterval", fs.Text(DataFile.State, FileVariant.Main));
     }

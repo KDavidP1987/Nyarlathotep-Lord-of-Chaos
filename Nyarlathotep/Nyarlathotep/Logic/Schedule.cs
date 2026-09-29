@@ -143,6 +143,18 @@ public static class IntervalClock
         }
         return (due, changed);
     }
+
+    /// <summary>The tick phase "interval" over state.json (automation D2, D15; step 2 Codex round 3 F2): polls the nexts
+    /// held in <paramref name="state"/>'s document and marks it dirty when they changed, so a failed flush keeps them in
+    /// memory and a later flush writes them. Services/TriggerBus starts the returned definitions.</summary>
+    public static IReadOnlyList<EventDefinition> PollState(StateStore state, DefinitionSet set, Func<string, bool> isActive,
+        DateTime utcNow, IRandom rng)
+    {
+        var nexts = state.Document.NextInterval ??= new Dictionary<string, DateTime>(StringComparer.Ordinal);
+        var (due, changed) = PollAll(set, nexts, isActive, utcNow, rng);
+        if (changed) state.MarkDirty();
+        return due;
+    }
 }
 
 /// <summary>One scheduler tick's trigger starts (Services/TriggerBus, event-library A5): the Schedule definitions due

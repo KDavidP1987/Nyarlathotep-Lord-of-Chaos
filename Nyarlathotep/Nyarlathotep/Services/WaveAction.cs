@@ -69,12 +69,6 @@ internal static class WaveAction
         var decision = WaveGate.DecideGroups(facts, centres, () => WaveRoll.Expand(action.Units, _rng), ledger.Limits.MaxPerWave,
             ledger.Occupied, ledger.Limits.MaxTracked);
         foreach (var line in decision.CapLines) Core.Log.LogWarning($"[nyar] event {id} wave {due.Wave}: {line}");
-        if (decision.Outcome != WaveOutcome.Spawn)
-        {
-            if (decision.Line is { } skipped) Core.Log.LogInfo($"[nyar] {skipped}");
-            EventRuntime.Engine.WaveDecided(id, decision.Outcome);         // NoWave is neither counted nor pushed
-            return;
-        }
 
         var life = SpawnLedger.Lifetime(now, active.Instance.EndsUtc, action.UnitLifetimeSeconds,
             Settings.Limit(Limits.GraceSeconds), Settings.Limit(Limits.ManualSpawnLifetimeSeconds), SpawnTracker.DrainMargin());
@@ -84,7 +78,7 @@ internal static class WaveAction
             : (x, z) => (inScope is null || inScope(x, z)) && !claimed(x, z);
         int total = 0, moved = 0, unchecked_ = 0;
         byte? level = null;
-        foreach (var group in decision.Groups)
+        WaveRun.Run(decision, skipped => Core.Log.LogInfo($"[nyar] {skipped}"), group =>
         {
             var (gx, gy, gz) = group.Centre;
             var groupTotal = group.Units.Sum(u => u.Count);
@@ -115,8 +109,8 @@ internal static class WaveAction
 #if DEBUG
             if (location.Type == LocationType.AroundPlayer) PhantomGroupLine(id, due.Wave, group);   // never a stale pick's (review F6)
 #endif
-        }
-        EventRuntime.Engine.WaveDecided(id, decision.Outcome);
+        }, outcome => EventRuntime.Engine.WaveDecided(id, outcome));
+        if (decision.Outcome != WaveOutcome.Spawn) return;
         var levelText = level is { } h ? $", walk h {h}" : "";
         var where = location.Type == LocationType.AroundPlayer ? $" {WaveLines.AroundPlayers(decision.Groups.Count)}" : "";
         Core.Log.LogInfo($"[nyar] event {id} wave {due.Wave}/{due.Waves}{where}: {total} units queued ({moved} moved, {unchecked_} unchecked), due in {(int)Math.Ceiling((life.DueUtc - now).TotalSeconds)}s, lifetime {life.LifetimeSeconds}s{levelText}");
