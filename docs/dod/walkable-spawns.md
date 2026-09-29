@@ -4,13 +4,13 @@ rubric: 2
 id: dod-20260928-wks1
 slug: walkable-spawns
 title: Walkable spawns — the walk probe, walkable spawn points and release 0.5.1
-status: in-progress
+status: done
 size: M
 parent: nyarlathotep
 kind: feature
 created: 2026-09-28
 baselined: 2026-09-28
-closed: none
+closed: 2026-09-28
 commit: de87b99
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
@@ -364,3 +364,17 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-28 · D10 · pass · cmd: pwsh tools/preflight.ps1 -AuditOf walkable-spawns → "audit steps: walkable-spawns 2/2 pre, 2/2 post, 2/2 Codex verdicts"; pwsh tools/preflight.ps1 -SessionsOf walkable-spawns → "session logs: walkable-spawns 2/2 checked; snapshots 2/2 from session 1; probe records 1/1"; pwsh tools/preflight.ps1 -Paths -DeclaredOf walkable-spawns → "paths: 1087 walked, all in manifest; declared: 120/120 in walkable-spawns" (after A15); Sessions 1 and 2 under WALKABLE_SPAWNS.md › Test results, each with its log-check and "snapshot restored; hashes equal" line in the audit; the -SelfTest battery runs SessionLogs bad-probe to bad-probe-4 · 437dbb4 · claude
 - 2026-09-28 · D11 · pass · cmd: pwsh tools/preflight.ps1 → "secrets: none (1092 files scanned, 1071 index blobs)" (Secrets fixtures under -SelfTest 34/34); git grep -n -E "7656119|kdpenland" over the tree and git log -p v0.5.0..HEAD → only lines quoting the pattern (the plans' Secrets items and the audits' grep records); no 17-digit id in the tree, the range or the commit messages; the walk verb (whose reply carried the admin's own coordinates) is removed · 437dbb4 · claude
 - 2026-09-28 · D12 · pass · cmd: pwsh tools/preflight.ps1 → PREFLIGHT OK with "version: 0.5.1", "changelogs: 0.5.1 in both" and "release tags: 6/6"; pwsh tools/rollback-gate.ps1 -From v0.5.0 -To v0.5.1 -Plan walkable-spawns → "rollback gate: 4/4" before the push; annotated tag v0.5.1 at 437dbb4 pushed with main; gh release create v0.5.1 --prerelease with kdpen-Nyarlathotep-0.5.1.zip succeeded first time (https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.5.1); pwsh tools/release-verify.ps1 -Tag v0.5.1 -Asset kdpen-Nyarlathotep-0.5.1.zip → "release verify: hashes equal"; no tcli publish · 437dbb4 · claude
+- 2026-09-28 · note · close: the owner confirmed A11 as a defect (plan right, code wrong); no requested, emergent or external amendments
+- 2026-09-28 · status → done · close
+
+## Report · 2026-09-28
+Baseline items            12
+Discovered (planning gaps) 14 amendments · 17 design changes (wrong 15 · missed 2) · probes: 12.4 (A1, A7, A9), 4.1 (A4, A12), 5.1 (A2, A13), 6.1 (A8), 6.2 (A5, A10), 14.4 (A14, A15), 8.1 (A6), 13.1 (A3)
+Corrected (reversals)      0            (counts in the rate)
+Requested scope changes    0    (excluded)
+Emergent / defect / external 0 · 1 · 0  (excluded; A11 confirmed by the owner)
+Prediction rate            12 / (12 + 17) = 41 %   target ≥ 90 %
+Completion                 vs baseline 12/12 · vs current 12/12
+Review                     subagent · Review 2 READY · author 15/15 layers · 49/49 probes · reviewer 15/15 layers · 49/49 probes; every step's Codex cross-inspection READY
+Timeline                   draft 09-28 · ready 09-28 · start 09-28 · done 09-28 · released 0.5.1
+Missed probes              7 of 14 are Review 2's advisory findings taken in at start; of the build's own finds, 6.1/6.2 game-API facts (A8 which collision source, A10 a default TileWorld) could only be settled by the in-game probe the plan scheduled, and 14.4 paths (A14, A15) repeats across children

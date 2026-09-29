@@ -261,9 +261,9 @@ Constraints each child inherits (a child's review checks they appear verbatim or
 - raphael-api-core · done
 - faction-empowerment · done
 - event-library · done
-- walkable-spawns · in-progress · A26
-- raphael-api-admin · planned · A27
-- regions · planned · A28
+- walkable-spawns · done · A26
+- raphael-api-admin · done · A27
+- regions · done · A28
 - event-spawns · planned
 - boss-reinforcements · planned
 - anti-farming · planned · A29
