@@ -49,3 +49,5 @@ under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line. S
 - Codex verdict: READY (round 4, on def4d20..75d92a7) — no findings
 - in-game: Session 1 (D3, D12, D27) follows; results under docs/features/AUTOMATION.md › Test results
 - dod status: D15, D17, D20, D28 pass at 75d92a7 and are checked; D3, D12, D27 wait for Session 1
+- session 1 log check: boot 1 "log check: 0 unhandled, 833 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; boot 2 "log check: 0 unhandled, 34 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; every [Warning] kind listed in docs/features/AUTOMATION.md › Session 1; no [Error]
+- session 1 snapshot: "snapshot restored; hashes equal (au1, …)"
