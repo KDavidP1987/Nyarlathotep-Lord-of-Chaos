@@ -23,11 +23,15 @@ public sealed record UnitTuning(LevelArg? Level, IReadOnlyList<StatScale> Stats)
 /// plus the queue's drain time, counted from its spawn (Business rules 2, A16, A21).</summary>
 public readonly record struct UnitLifetime(DateTime DueUtc, int LifetimeSeconds);
 
+/// <summary>A Hunt wave's centre and range (event-spawns D13), carried by each of its orders so HuntAction knows which
+/// centre a spawned unit hunts around.</summary>
+public readonly record struct HuntTag(float X, float Z, int Range);
+
 /// <summary>One unit waiting in the spawn queue: what, for which event (null for `.nyar spawn`), where, and for how
 /// long. Its slot under MaxTrackedUnits is held from the request until it is confirmed or failed. <see cref="Loot"/> keeps
-/// the unit's drop table (event-spawns D11; off by default, Epic S-10).</summary>
+/// the unit's drop table (event-spawns D11; off by default, Epic S-10); <see cref="Hunt"/> marks a Hunt wave's unit (D13).</summary>
 public sealed record SpawnOrder(long Ticket, string Prefab, string? EventId, float X, float Y, float Z, int LifetimeSeconds,
-    DateTime DueUtc, UnitTuning Tuning, (float X, float Y, float Z)? Anchor = null, bool Loot = false)
+    DateTime DueUtc, UnitTuning Tuning, (float X, float Y, float Z)? Anchor = null, bool Loot = false, HuntTag? Hunt = null)
 {
     /// <summary>True when SpawnTracker.Prepare clears the unit's DropTableBuffer: every order without loot (D11).</summary>
     public bool ClearDrops => !Loot;
@@ -87,7 +91,7 @@ public sealed class SpawnLedger(LedgerLimits limits)
     /// <summary>Queues up to <paramref name="count"/> units, first clamped by MaxUnitsPerWave, then by the free
     /// MaxTrackedUnits slots. <paramref name="place"/> gives the position of the i-th unit.</summary>
     public SpawnRequestResult Request(string prefab, string? eventId, int count, UnitLifetime life, UnitTuning tuning,
-        Func<int, (float X, float Y, float Z)> place, (float X, float Y, float Z)? anchor = null, bool loot = false)
+        Func<int, (float X, float Y, float Z)> place, (float X, float Y, float Z)? anchor = null, bool loot = false, HuntTag? hunt = null)
     {
         if (count < 1) return new SpawnRequestResult(0, null);
         var n = count;
@@ -106,7 +110,7 @@ public sealed class SpawnLedger(LedgerLimits limits)
         for (var i = 0; i < n; i++)
         {
             var (x, y, z) = place(i);
-            _spawnQueue.Enqueue(new SpawnOrder(++_nextTicket, prefab, eventId, x, y, z, life.LifetimeSeconds, life.DueUtc, tuning, anchor, loot));
+            _spawnQueue.Enqueue(new SpawnOrder(++_nextTicket, prefab, eventId, x, y, z, life.LifetimeSeconds, life.DueUtc, tuning, anchor, loot, hunt));
         }
         return new SpawnRequestResult(n, skipped);
     }

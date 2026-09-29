@@ -35,7 +35,6 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        new(EventSpawns, "D21", 2, "0.7.0"),
         new(EventSpawns, "D19", 3, "0.7.0"),
         new(EventSpawns, "D24", 3, "0.7.0"),
         new(EventSpawns, "D25", 4, "0.7.0"),
@@ -55,7 +54,7 @@ public static class ControlCases
         "TemplateLibraryTests", "TemplateCommandTests", "AuthoringTests", "AuthoringCapacityTests", "PillarSwitchTests",
         "ReadinessTests", "LibraryDependencyFailureTests", "SpawningTests", "HealthTests",
         "HumanReplyTests", "OutcomeCodeTests", "ApiTwinTests", "RateGateTests", "ApiOverloadTests", "EventAdminTests",
-        "EndPathTests", "WavePrecedenceTests",
+        "EndPathTests", "WavePrecedenceTests", "SpawnsDependencyFailureTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -120,7 +119,7 @@ public static class ControlCases
             "audit_missing", "pending_at_release"], ["plan_and_table_agree"], ["plan_without_controls"]),
         T("D32", "Degraded", "LibraryDependencyFailureTests", ["write_uncertain"], ["cleared_by_clean_write_or_reload"], ["healthy"]),
         C("D33", "DependencySuite", "preflight -DependencySuite",
-            ["selftest DependencySuite/bad", "selftest DependencySuite/bad-2"], ["selftest DependencySuite/good"], ["selftest DependencySuite/empty"]),
+            ["selftest DependencySuite/bad", "selftest DependencySuite/bad-2", "selftest DependencySuite/bad-floor-spawns"], ["selftest DependencySuite/good"], ["selftest DependencySuite/empty"]),
         C("D34", "TestRuns", "preflight Invoke-ClassTests",
             ["selftest TestRuns/bad", "selftest TestRuns/bad-2", "selftest TestRuns/bad-3"], ["selftest TestRuns/good"], ["selftest TestRuns/empty"]),
         T("D36", "SlowTick", "EngineTests", ["tick_reaches_250ms", "ticks_repeat_within_a_minute"], ["ticks_under_250ms"], ["no_phase_timings"]),
@@ -249,7 +248,7 @@ public static class ControlCases
             ["tools/preflight-fixtures/Version/bad", "tools/preflight-fixtures/RollbackRoutes/bad", "tools/preflight-fixtures/RollbackRoutes/bad-2", "tools/preflight-fixtures/RollbackRoutes/bad-3", "selftest missing asset", "selftest differing hash"],
             ["tools/preflight-fixtures/Version/good", "tools/preflight-fixtures/RollbackRoutes/good", "selftest hashes equal"],
             ["tools/preflight-fixtures/Version/empty", "tools/preflight-fixtures/RollbackRoutes/empty", "selftest no release"]) with { Plan = Regions },
-        // ---- event-spawns (D22): D19, D21, D24 and D25 are pending; the cmd rows join with their preflight fixtures
+        // ---- event-spawns (D22): D19, D24 and D25 are pending (D21 joined in step 2); the cmd rows join with their preflight fixtures
         T("D6", "Spawns", "EventValidationTests",
             ["key_out_of_range", "unknown_key"], ["every_new_key", "every_trigger_takes_aroundplayer", "definition_without_new_keys_unchanged"],
             ["modifiers_object"]) with { Plan = EventSpawns },
@@ -278,7 +277,17 @@ public static class ControlCases
         T("D18", "Spawns", "AuthoringTests", ["value_refused", "second_level_form", "empower_definition", "refusal_names_wrong_argument"], ["valid_set_changes_file"], ["value"])
             with { Plan = EventSpawns },
         T("D18", "Spawns", "CommandArgTests", ["value_out_of_range", "field_not_settable"], ["values_in_range"], ["value"]) with { Plan = EventSpawns },
-        T("D20", "Spawns", "PushTests", ["skipped_wave_pushes", "row_carries_a_new_field"], ["api_5_and_rows_unchanged"], ["definition_without_new_keys"])
+        T("D21", "Territory", "SpawnsDependencyFailureTests",
+            ["out_of_range_block_kept", "failed_build_spawns_a_wave_that_needs_it", "failed_build_keeps_hunting"],
+            ["rebuilt_map_clears_territory_unknown"], ["no_castle_hearts"]) with { Plan = EventSpawns },
+        T("D21", "HuntSeed", "SpawnsDependencyFailureTests",
+            ["failure_ends_the_wave_or_repeats_its_line", "partial_write_leaves_a_record_the_buffer_lacks"],
+            ["recovered_seeding_clears_entry"], ["no_hunt_units"]) with { Plan = EventSpawns },
+        T("D21", "PlayerQuery", "SpawnsDependencyFailureTests", ["nan_position_is_picked", "failed_query_or_region_read_spawns"],
+            ["readable_player_is_picked"], ["no_players"]) with { Plan = EventSpawns },
+        T("D21", "UnitRecipe", "SpawnsDependencyFailureTests", ["failing_unit_untracks_the_others_or_stays_tracked"],
+            ["every_recipe_applies"], ["zero_units_requested"]) with { Plan = EventSpawns },
+        T("D20", "Spawns", "PushTests", ["skipped_wave_pushes", "skipped_wave_pushes_or_is_retried", "row_carries_a_new_field"], ["api_5_and_rows_unchanged"], ["definition_without_new_keys"])
             with { Plan = EventSpawns },
         T("D29", "WavePrecedence", "WavePrecedenceTests",
             ["blocked_reaches_roll", "player_skip_before_territory_unknown", "claimed_before_player_skip", "claimed_before_query_failed",

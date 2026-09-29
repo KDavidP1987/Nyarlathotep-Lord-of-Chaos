@@ -66,6 +66,27 @@ public partial class PushTests
         Assert.DoesNotContain("[NYAR:", d.Line ?? "");
     }
 
+    /// <summary>A59: the engine counts a skipped wave without pushing it, so the next wave comes at its own time; A62: the
+    /// status row's and `event info`'s spawned count leaves it out, while the push numbers the wave in the schedule.</summary>
+    [Fact]
+    public void Spawns_fails_when_skipped_wave_pushes_or_is_retried()
+    {
+        var (e, _, hub) = Wired(Json.Event("raid"));
+        Assert.Null(e.Start("raid", "manual", T0, Open()));
+        var before = Texts(hub).Count;
+        Assert.Equal(1, e.NextWave("raid", T0)!.Wave);
+        e.WaveSkipped("raid");
+        Assert.Equal(before, Texts(hub).Count);                                // no wave line
+        Assert.Null(e.NextWave("raid", T0.AddSeconds(1)));                     // not retried the next second
+        Assert.Equal(2, e.NextWave("raid", T0.AddSeconds(60))!.Wave);
+        e.WaveSpawned("raid");
+        Assert.Equal(before + 1, Texts(hub).Count);                            // a spawned wave still reports
+        Assert.Contains(" wave=2", Texts(hub)[^1]);
+        var active = e.Active.Single(a => a.Id == "raid");
+        Assert.Equal((1, 1, 2), (active.WavesSpawned, active.WavesSkipped, active.WavesUsed));
+        Assert.Contains(" wave=1/", ApiLines.Status([active], [], new DefinitionSet([active.Definition]), new Dictionary<string, int>(), true, T0.AddSeconds(61))[0]);
+    }
+
     [Fact]
     public void Spawns_fails_when_row_carries_a_new_field()
     {

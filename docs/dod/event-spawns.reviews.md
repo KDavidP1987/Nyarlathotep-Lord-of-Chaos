@@ -979,3 +979,59 @@ VERDICT: READY
 - F1 · accepted · the real tree's plant loop requires Paths/bad-datatests-floor to report "miss EndPathTests (floor)", else it counts as passing ("plants: bad-datatests-floor (not for its floor: ...) passed")
 - F2 · rejected · out of A57's scope: D33's own evidence (dotnet test --filter EndPaths, "Passed!" with at least 5 tests) carries its test-count bound, and -Paths runs the class only to prove it runs and passes
 - F3 · accepted · the floor compares with -cnotcontains
+
+## Review 29 · 2026-09-29 · subagent · plan uncommitted · plan 168878 B · 24 items · files 0 · e3b0c44298fc · prompt 0734c276f132 · scope A58-A59
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A58 and A59 (design §9 D26); the prompt held no Steam ID. It ran -SelfTest with verbose output (each DependencySuite and MutatingFloor fixture fails for its own plant), -DependencySuite event-spawns and event-library, and the PushTests Spawns tests.
+
+F1 · blocking · 5.3 · A59 counts a skipped wave in ActiveEvent.WavesSpawned, the status row's `wave=<spawned>/<total>` (Logic/ApiLines.cs, docs/RAPHAEL_INTEGRATION_CONTRACT.md) and `.nyar event info`'s wave n/m, so a skipped wave reads as spawned, against D20's unchanged contract. Fix: redefine the field, or keep spawned meaning spawned with a separate counter, with a fails-when.
+F2 · advisory · 4.3 · no test covers WaveAction.QueueDueWave's call to WaveSkipped; deleting it passes every test. Fix: a Session 1 observation (the skip line once, the next wave one interval later) or a static check.
+F3 · advisory · 12.4 · event-spawns' floor has no fixture of its own; A58's one-slug unroll is defensive and pinned by no fixture. Fix: DependencySuite/bad-floor-spawns.
+F4 · advisory · 7.3 / 9.3 · a NoWave outcome (a control blocker) does not count the wave, so a blocker lifted after several intervals releases the overdue waves one per tick. Fix: state catch-up or counting.
+F5 · advisory · 11.2 · the Announcer's next-wave warning fires before a wave that then skips. Fix: document it, or leave it to spawn-extras.
+
+14/15 layers · 48/49 probes
+
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · A62: the second option, keeping spawned meaning spawned; WavesSkipped counts skips, WavesUsed drives the schedule, the warning and the `wave` push's number, the status row and event info keep WavesSpawned; the PushTests control asserts the status row reads wave=1/ after a skip and a spawn
+- F2 · accepted · as a Session 1 observation: docs/features/EVENT_SPAWNS.md's owner steps give es-castle two waves 60 s apart, and the record needs the skip line once per wave, the second one interval after the first
+- F3 · accepted · A63: fixture DependencySuite/bad-floor-spawns, "event-spawns: category hunt-seed missing from the entry (floor)"
+- F4 · rejected · out of scope for A58-A59 and not new: NoWave is WaveGate's step 1 outcome for a wave that must not be decided yet; the catch-up after a lifted blocker is a step 3 question (recorded as a step 3 note in the plan's Log, Review 30 F5), not part of D24's text
+- F5 · accepted · documented in docs/features/EVENT_SPAWNS.md › Edge cases: a warned wave can still skip (territory, no eligible player, a zero roll); the warning promises the time, not the units
+
+## Review 30 · 2026-09-29 · subagent · plan uncommitted · plan 171527 B · 24 items · files 0 · e3b0c44298fc · prompt 6e6773c2ca08 · scope A58,A59,A60,A61,A62,A63
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A58-A63 (design §9 D26), round 2 of this run; the prompt held no Steam ID. It checked each amendment against the uncommitted step 2 code and ran dotnet test (2150 passed), -DependencySuite event-spawns (5/5) and -SelfTest (39/39, each DependencySuite and MutatingFloor fixture failing for its own plant, bad-floor-spawns included).
+
+F1 · advisory · 5.3 · after A62 the `wave` push numbers the wave in the schedule while the status row counts spawned waves; the contract does not say which count the push's <n> is. Fix: a sentence in docs/features/EVENT_SPAWNS.md › Edge cases.
+F2 · advisory · 11.2 / 4.3 · A62's switch of AnnouncerCore.UpcomingWave to WavesUsed has no control. Fix: an AnnouncerTests case with a skip.
+F3 · advisory · 12.1 · A61's purge-path streak close is in Services only; removing it fails no command. Fix: a Session observation or a Logic seam EndPathTests drives.
+F4 · advisory · — · bad-floor-spawns sits in the D33 DependencySuite row, not beside D21's rows. Fix: none needed.
+F5 · advisory · — · Review 29's F4 disposition points the NoWave catch-up at D24, whose text does not cover it. Fix: a step 3 note, or reword.
+
+EARLIER: all resolved
+
+15/15 layers · 49/49 probes
+
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · docs/features/EVENT_SPAWNS.md › Edge cases: the push and the warning number a wave by its place in the schedule, so after a skip the push's wave=2 can run ahead of the status row's wave=1/3
+- F2 · accepted · AnnouncerTests.A_skipped_wave_moves_the_warning_to_the_next_wave
+- F3 · accepted · as a step 3 note in the plan's Log (a Logic seam for EndPathTests, or a Session 2 observation); a streak cannot be opened on demand in Session 1
+- F4 · rejected · no change needed, as the reviewer says; the D33 row is where the DependencySuite fixtures live
+- F5 · accepted · Review 29's F4 disposition reworded; the catch-up is a step 3 note in the plan's Log
+
+## Review 31 · 2026-09-29 · subagent · plan uncommitted · plan 172835 B · 24 items · files 0 · e3b0c44298fc · prompt bc106a0633cf · scope A64
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendment A64 (design §9 D26), round 3 of this run; the prompt held no Steam ID. It ran -Paths -DeclaredOf event-spawns (declared 517/517) and checked every changed path in git status against the plan's declarations.
+
+F1 · advisory · 14.4 · -DeclaredOf matches the plan's declarations as a whole; step 2 touched files declared only under Step 1 or a glob (Spawning.cs, SpawnLedger.cs, test partials, fixture folders), so Step 2's list is incomplete as a record. Fix: add them, or say the step lists are attribution only.
+F2 · advisory · 14.4 · a Logic seam for A61's purge close in step 3 would need a Step 3 path. Fix: an amendment when it is built.
+
+15/15 layers · 49/49 probes
+
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · deferred to step 3's Paths walked amendment (a step 3 note in the Log), so this run's review rounds end at 3 without another gating edit
+- F2 · accepted · the same step 3 note

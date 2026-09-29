@@ -193,7 +193,12 @@ public sealed class ActiveEvent(RunningInstance instance, string trigger, (float
     public string Id => Instance.Definition.Id;
     public string Trigger { get; } = trigger;
     public (float X, float Y, float Z)? Origin { get; } = origin;
+    /// <summary>Waves that spawned: the `wave=&lt;spawned&gt;/&lt;total&gt;` of the status row and `event info` (D20).</summary>
     public int WavesSpawned { get; internal set; }
+    /// <summary>Waves skipped or rolled with no unit (event-spawns D29, A62).</summary>
+    public int WavesSkipped { get; internal set; }
+    /// <summary>The waves whose time has been used, spawned or skipped: the schedule counts these (A59, A62).</summary>
+    public int WavesUsed => WavesSpawned + WavesSkipped;
     public int Faults { get; internal set; }
 }
 
@@ -267,18 +272,26 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
     public WaveDue? NextWave(string id, DateTime utcNow)
     {
         if (!_active.TryGetValue(id, out var a) || a.Definition.Action is not { } action) return null;
-        if (a.WavesSpawned >= action.Waves) return null;
-        var at = a.Instance.StartedUtc.AddSeconds((double)a.WavesSpawned * action.IntervalSeconds);
+        if (a.WavesUsed >= action.Waves) return null;
+        var at = a.Instance.StartedUtc.AddSeconds((double)a.WavesUsed * action.IntervalSeconds);
         if (at > utcNow || at >= a.Instance.EndsUtc) return null;
-        return new WaveDue(a, a.WavesSpawned + 1, action.Waves);
+        return new WaveDue(a, a.WavesUsed + 1, action.Waves);
     }
 
-    /// <summary>A wave of <paramref name="id"/> was queued: counted, and reported with its number.</summary>
+    /// <summary>A wave of <paramref name="id"/> was queued: counted, and reported with its number in the schedule.</summary>
     public void WaveSpawned(string id)
     {
         if (!_active.TryGetValue(id, out var a)) return;
         a.WavesSpawned++;
-        Push?.Wave(id, a.WavesSpawned);
+        Push?.Wave(id, a.WavesUsed);
+    }
+
+    /// <summary>A wave of <paramref name="id"/> was skipped or rolled no unit (event-spawns D29): its time is used, so the
+    /// next wave comes at its own time, but it is not a spawned wave (the status row's `wave` stays spawned/total) and
+    /// is not reported, since nothing spawned (D20; A59, A62).</summary>
+    public void WaveSkipped(string id)
+    {
+        if (_active.TryGetValue(id, out var a)) a.WavesSkipped++;
     }
 
     /// <summary>A fault in the event's tick; true when it is the <see cref="FaultLimit"/>-th in a row, and the caller

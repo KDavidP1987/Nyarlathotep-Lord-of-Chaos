@@ -397,6 +397,15 @@ public class SpawnLedgerTests
         Assert.Equal(["no tracked units within 30 m"], AdminLines.DebugReport([], 30));
         Assert.Equal("CHAR_Bandit_Thug manual left 0s lvl 18 hp 150/150 pp 12", AdminLines.DebugUnit("CHAR_Bandit_Thug", null, -4, 18, 150, 150, 12));
         Assert.Equal("CHAR_Bandit_Thug raid left NONE lvl 18 hp 90/150 pp 12", AdminLines.DebugUnit("CHAR_Bandit_Thug", "raid", null, 18, 90, 150, 12));
+        // event-spawns D10: the readings a modifier changes, and the unit's own place, in the invariant culture
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("de-DE");
+            Assert.Equal("CHAR_Bandit_Thug raid left 30s lvl 20 hp 90/150 pp 12 sp 10 ms 4.5 as 1.25 at 120,-340",
+                AdminLines.DebugUnit("CHAR_Bandit_Thug", "raid", 30, 20, 90, 150, 12, 10, 4.5f, 1.25f, (120, -340)));
+        }
+        finally { System.Globalization.CultureInfo.CurrentCulture = culture; }
         Assert.Equal("recipe ok", AdminLines.Recipe(true, true, true, false));
         Assert.Equal("recipe +DontSave", AdminLines.Recipe(true, true, true, true));
         Assert.Equal("recipe -LifeTime -Age -DestroyWhenDisabled", AdminLines.Recipe(false, false, false, false));

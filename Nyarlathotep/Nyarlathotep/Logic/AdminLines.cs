@@ -122,6 +122,13 @@ public static partial class AdminLines
     public static string DebugUnit(string prefab, string? eventId, int? leftSeconds, int level, int health, int maxHealth, int power) =>
         $"{prefab} {eventId ?? "manual"} left {(leftSeconds is { } s ? $"{Math.Max(0, s)}s" : "NONE")} lvl {level} hp {health}/{maxHealth} pp {power}";
 
+    /// <summary>The unit line with the readings of event-spawns D10: SpellPower, MovementSpeed and the primary attack
+    /// speed, and the unit's x/z, e.g. "… pp 12 sp 10 ms 4.5 as 1 at 120,-340" (a unit's place, never a player's).</summary>
+    public static string DebugUnit(string prefab, string? eventId, int? leftSeconds, int level, int health, int maxHealth, int power,
+        int spellPower, float moveSpeed, float attackSpeed, (int X, int Z) at) =>
+        DebugUnit(prefab, eventId, leftSeconds, level, health, maxHealth, power)
+        + FormattableString.Invariant($" sp {spellPower} ms {moveSpeed:0.##} as {attackSpeed:0.##} at {at.X},{at.Z}");
+
     /// <summary>The spawn recipe as `debug here` sees it (D27): "recipe ok" when the unit has LifeTime, Age and
     /// DestroyWhenDisabled and no DontSaveEntity (A9), otherwise "recipe" and each fault, e.g. "recipe -Age +DontSave".</summary>
     public static string Recipe(bool lifeTime, bool age, bool destroyWhenDisabled, bool dontSave)

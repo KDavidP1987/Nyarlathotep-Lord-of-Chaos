@@ -145,6 +145,9 @@ public partial class CommandArgTests
         [
             WaveLines.ZeroRolled(wave, id), WaveLines.NoEligiblePlayer(wave, id), WaveLines.CentreClaimed(wave, id),
             WaveLines.TerritoryUnknown(wave, id), WaveLines.PlayerQueryFailed(wave, id),
+            // `.nyar debug here` with D10's readings (A46), every field at its widest, with the widest recipe and flag
+            AdminLines.DebugUnit(MaxUnit, id, int.MaxValue, int.MinValue, int.MinValue, int.MinValue, int.MinValue, int.MinValue,
+                -float.MaxValue, -float.MaxValue, (int.MinValue, int.MinValue)) + " " + AdminLines.Recipe(false, false, false, true) + " UNMARKED",
         ]);
         return lines;
     }

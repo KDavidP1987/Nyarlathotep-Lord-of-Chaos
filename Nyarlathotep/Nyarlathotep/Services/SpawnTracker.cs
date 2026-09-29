@@ -57,6 +57,8 @@ internal static class SpawnTracker
         _entities.Clear();
         _stateUnits.Clear();
         _regroup.Clear();
+        HuntAction.Initialize();                                             // event-spawns D33: a restart keeps no seed
+        TerritoryMap.Initialize();                                           // and no kept map
     }
 
     /// <summary>Once at IsReady, through Logic/SweepPlan (faction-empowerment D7): every unit carrying our unit marker is a
@@ -117,16 +119,18 @@ internal static class SpawnTracker
     /// <paramref name="first"/>.. of <paramref name="total"/> on a circle of <paramref name="radius"/> around
     /// <paramref name="center"/>. WaveAction has sized the wave already, so the ledger's own caps only guard. Each ring
     /// point is moved onto walkable ground by <see cref="WavePoints.Plan"/> with the wave's <paramref name="walk"/>
-    /// (walkable-spawns D3); the result carries the queued units' moved and unchecked counts.</summary>
+    /// (walkable-spawns D3), a point failing <paramref name="allowed"/> (out of scope, or claimed, D17) counting as blocked;
+    /// each unit carries the event's <paramref name="tuning"/> (D9), <paramref name="loot"/> (D11) and
+    /// <paramref name="hunt"/> tag (D13). The result carries the queued units' moved and unchecked counts.</summary>
     [Mutating]
     internal static (int Queued, int Moved, int Unchecked) RequestWave(string prefab, string eventId, int count, UnitLifetime life,
         float3 center, float radius, int first, int total, double angle, (float X, float Y, float Z)? anchor, WaveWalk walk,
-        Func<float, float, bool> inScope = null)
+        Func<float, float, bool> allowed = null, UnitTuning tuning = null, bool loot = false, HuntTag? hunt = null)
     {
         var ring = new List<(float X, float Z)>(Math.Max(0, count));
         for (var i = 0; i < count; i++) ring.Add(SpawnLedger.Around(center.x, center.z, radius, first + i, total, angle));
-        var points = WavePoints.Plan(ring, (center.x, center.z), radius, walk, inScope);
-        var result = _ledger.Request(prefab, eventId, count, life, UnitTuning.None, i => (points[i].X, center.y, points[i].Z), anchor);
+        var points = WavePoints.Plan(ring, (center.x, center.z), radius, walk, allowed);
+        var result = _ledger.Request(prefab, eventId, count, life, tuning ?? UnitTuning.None, i => (points[i].X, center.y, points[i].Z), anchor, loot, hunt);
         if (result.Skipped is not null) Core.Log.LogWarning($"[nyar] event {eventId} {prefab}: {result.Skipped}");
         var (moved, unchecked_) = WavePoints.Counts(points.Take(result.Queued));
         return (result.Queued, moved, unchecked_);
@@ -169,12 +173,16 @@ internal static class SpawnTracker
             string error;
             try { unit = Spawn(order, out error); }
             catch (Exception ex) { unit = Entity.Null; error = ex.Message; }
+            // A failed recipe discards the unit (Abandon) and logs once per streak and event (event-spawns D21, D30); the
+            // units already spawned stay tracked and on their due time.
+            var streak = order.EventId ?? "manual";
             if (!unit.Exists())
             {
                 _ledger.Fail(order);
-                Core.Log.LogWarning($"[nyar] spawn of {order.Prefab} failed: {error}");
+                if (WalkCheck.Health.Failing(SpawnFailure.UnitSetup, streak)) Core.Log.LogWarning($"[nyar] spawn of {order.Prefab} failed: {error}");
                 continue;
             }
+            WalkCheck.Health.Recovered(SpawnFailure.UnitSetup, streak);
             var key = KeyOf(unit);
             if (!_ledger.Confirm(order, key, now))
             {
@@ -182,6 +190,7 @@ internal static class SpawnTracker
                 continue;
             }
             _entities[key] = unit;
+            if (order.Hunt is { } hunt && order.EventId is { } huntEvent) HuntAction.Track(key, unit, huntEvent, hunt);
             var stateUnit = new StateUnit(order.EventId ?? "manual", order.Prefab, order.X, order.Z, now);
             _stateUnits[key] = stateUnit;
             Persistence.State.Document.Units.Add(stateUnit);
@@ -293,12 +302,17 @@ internal static class SpawnTracker
                 : null;
             var level = unit.TryGetComponent<UnitLevel>(out var ul) ? ul.Level._Value : 0;
             var health = unit.TryGetComponent<Health>(out var h) ? h : default;
-            var power = unit.TryGetComponent<UnitStats>(out var stats) ? stats.PhysicalPower._Value : 0f;
+            var hasStats = unit.TryGetComponent<UnitStats>(out var stats);
+            var power = hasStats ? stats.PhysicalPower._Value : 0f;
+            var spell = hasStats ? stats.SpellPower._Value : 0f;
+            var attack = unit.TryGetComponent<AbilityBar_Shared>(out var bar) ? bar.PrimaryAttackSpeed._Value : 0f;
+            var move = unit.TryGetComponent<Movement>(out var movement) ? movement.Speed._Value : 0f;
             var flag = marked.Contains(unit) ? "" : " UNMARKED";
             var recipe = AdminLines.Recipe(unit.Has<LifeTime>(), unit.Has<Age>(), unit.Has<DestroyWhenDisabled>(),
                 unit.Has<ProjectM.PersistenceV2.DontSaveEntity>());
             lines.Add((distance, AdminLines.DebugUnit(tracked.Prefab, tracked.EventId, left, level,
-                (int)MathF.Round(health.Value), (int)MathF.Round(health.MaxHealth._Value), (int)MathF.Round(power)) + " " + recipe + flag));
+                (int)MathF.Round(health.Value), (int)MathF.Round(health.MaxHealth._Value), (int)MathF.Round(power),
+                (int)MathF.Round(spell), move, attack, ((int)MathF.Round(pos.Value.x), (int)MathF.Round(pos.Value.z))) + " " + recipe + flag));
         }
         var report = AdminLines.DebugReport(lines.OrderBy(l => l.Distance).Select(l => l.Line).ToList(), radius);
         // faction-empowerment D14: then at most 10 native NPCs, read back from the live unit and its carrier.
@@ -308,6 +322,7 @@ internal static class SpawnTracker
     static void Release(long key)
     {
         _entities.Remove(key);
+        HuntAction.Forget(key);
         if (_stateUnits.Remove(key, out var stateUnit))
         {
             Persistence.State.Document.Units.Remove(stateUnit);
@@ -351,7 +366,14 @@ internal static class SpawnTracker
         if (unit.Has<LastTranslation>()) unit.Write(new LastTranslation { Value = position });
         if (!unit.AddComponentSafe<DestroyWhenDisabled>()) return Abandon(unit, "DestroyWhenDisabled could not be added", out error);
         // No DontSaveEntity (A9): it kept the unit out of the save but not its child entities, which came back as orphans.
-        if (unit.Has<DropTableBuffer>()) Core.EntityManager.GetBuffer<DropTableBuffer>(unit).Clear();
+        // The drop table goes unless the event keeps its loot (event-spawns D11).
+        var before = unit.Has<DropTableBuffer>() ? Core.EntityManager.GetBuffer<DropTableBuffer>(unit).Length : 0;
+        if (order.ClearDrops && unit.Has<DropTableBuffer>()) Core.EntityManager.GetBuffer<DropTableBuffer>(unit).Clear();
+        if (Settings.VerboseLogging.Value)
+        {
+            var after = unit.Has<DropTableBuffer>() ? Core.EntityManager.GetBuffer<DropTableBuffer>(unit).Length : 0;
+            Core.Log.LogInfo($"[nyar] drops {order.Prefab}: {before} before, {after} after setup");
+        }
 
         UnitSetup.Apply(unit, order.Tuning);
         return unit;

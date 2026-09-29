@@ -189,6 +189,49 @@
           ]
         }
       ]
+    },
+    "event-spawns": {
+      "categories": [
+        "territory",
+        "hunt-seed",
+        "player-query",
+        "unit-recipe",
+        "release-tools"
+      ],
+      "rows": [
+        {
+          "name": "territory",
+          "kind": "tests",
+          "class": "SpawnsDependencyFailureTests",
+          "control": "Territory"
+        },
+        {
+          "name": "hunt-seed",
+          "kind": "tests",
+          "class": "SpawnsDependencyFailureTests",
+          "control": "HuntSeed"
+        },
+        {
+          "name": "player-query",
+          "kind": "tests",
+          "class": "SpawnsDependencyFailureTests",
+          "control": "PlayerQuery"
+        },
+        {
+          "name": "unit-recipe",
+          "kind": "tests",
+          "class": "SpawnsDependencyFailureTests",
+          "control": "UnitRecipe"
+        },
+        {
+          "name": "release-tools",
+          "kind": "selftests",
+          "selftests": [
+            "release-verify",
+            "repo-rollback-drill"
+          ]
+        }
+      ]
     }
   }
 }

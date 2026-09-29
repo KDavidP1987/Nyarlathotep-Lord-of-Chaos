@@ -342,6 +342,9 @@ public static class PlayerPosition
 
     public static bool Usable(float x, float z) =>
         float.IsFinite(x) && float.IsFinite(z) && MathF.Abs(x) <= Limit && MathF.Abs(z) <= Limit;
+
+    /// <summary>With the height, which becomes an AroundPlayer centre's (D16; A60).</summary>
+    public static bool Usable(float x, float y, float z) => Usable(x, z) && float.IsFinite(y) && MathF.Abs(y) <= Limit;
 }
 
 /// <summary>Claimed castle territory as block coordinates (event-spawns D17, S-7): block = floor((floor(v × 2) + 6400) /
@@ -384,6 +387,10 @@ public sealed record PickResult(PickOutcome Outcome, (float X, float Y, float Z)
 /// <summary>The AroundPlayer pick (event-spawns D16, A8, A11, A13): once per wave, uniformly among eligible players.</summary>
 public static class PlayerPick
 {
+    /// <summary>Buff_InCombat_PvPVampire (Reference Data/prefab_names.tsv): a player carrying it is in PvP combat and is
+    /// neither picked nor hunted (D13, D16).</summary>
+    public const int PvpCombatBuff = 697095869;
+
     /// <summary>Eligible: online, alive, a usable position, not in PvP combat, not in claimed territory and, with a
     /// regional scope (<paramref name="inScope"/> not null), inside it. The centre is at a random angle and a distance in
     /// minDist..maxDist from the player, at the player's height; with a scope an out-of-scope centre is retried at the 11
@@ -394,7 +401,7 @@ public static class PlayerPick
     {
         try
         {
-            var pool = players.Where(p => p.Online && p.Alive && !p.InPvpCombat && PlayerPosition.Usable(p.X, p.Z)
+            var pool = players.Where(p => p.Online && p.Alive && !p.InPvpCombat && PlayerPosition.Usable(p.X, p.Y, p.Z)
                 && !isClaimed(p.X, p.Z) && (inScope is null || inScope(p.X, p.Z))).ToList();
             while (pool.Count > 0)
             {

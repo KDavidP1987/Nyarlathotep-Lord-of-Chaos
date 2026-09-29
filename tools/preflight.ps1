@@ -1849,7 +1849,8 @@ function Get-ParenEnd([string]$Text, [int]$Open) {
 # Pusher runs ActionKind.Subscribe (`.nyar api sub`, raphael-api-core step 3).
 # EmpowerAction is the empowerment service EventRuntime and SpawnTracker call directly (faction-empowerment D21).
 # AdminOps is the game side of Logic/AdminFlows (raphael-api-admin D11): its Op members are one-call shims.
-$script:DispatchedServices = @('EventRuntime', 'SpawnTracker', 'UnitSetup', 'WaveAction', 'Persistence', 'EventStore', 'Announcer', 'Pusher', 'EmpowerAction', 'TemplateLibrary', 'PillarSwitches', 'AdminOps') |
+# HuntAction writes the AggroBuffer seeds of our own Hunt units, driven by EventRuntime's tick (event-spawns D13, D22).
+$script:DispatchedServices = @('EventRuntime', 'SpawnTracker', 'UnitSetup', 'WaveAction', 'Persistence', 'EventStore', 'Announcer', 'Pusher', 'EmpowerAction', 'TemplateLibrary', 'PillarSwitches', 'AdminOps', 'HuntAction') |
     ForEach-Object { "$PkgRel/Services/$_.cs" }
 
 # A member access of an AdminOps or IAdminOps member: ".Op<Name>", called or taken as a method group (raphael-api-admin
@@ -1932,6 +1933,7 @@ $script:MutatingFloor = [ordered]@{
     'EmpowerAction'   = @('BeginCarrierTick', 'EndCarriers', 'QueueBootCarriers', 'StartCarriers', 'StopAllCarriers', 'StopCarriers', 'TickCarriers')
     'EventRuntime'    = @('Purge', 'StartEvent', 'StopEvent', 'Tick')
     'EventStore'      = @('Author', 'DeleteDefinition', 'Edit', 'Reload')
+    'HuntAction'      = @('Tick')
     'Persistence'     = @('Delete', 'Promote', 'PromoteNew', 'Rename', 'WriteFile')
     'PillarSwitches'  = @('SetPillar')
     'Pusher'          = @('Subscribe', 'Unsubscribe')
@@ -3162,9 +3164,10 @@ function Invoke-ClassTests([string[]]$Filters) {
 # slug, no longer one fixed list), so a row deleted from rows is still missed; each row is of kind "tests" (class,
 # control), "check" (function, run over its fixtures and the real tree) or "selftests" (names of externalSelfTests entries).
 # Each listed slug's required categories, kept here as a floor so a category removed from the entry together with its
-# row still fails (event-spawns A52). event-spawns' five join in step 2 with its entry.
+# row still fails (event-spawns A52). event-spawns' five joined in step 2 with its entry (D21).
 $script:SuiteFloor = @{
     'event-library' = @('events-write', 'events-promote', 'state-write', 'cfg-save', 'catalogue', 'location-context', 'phase-source', 'vcf', 'release-tools')
+    'event-spawns'  = @('territory', 'hunt-seed', 'player-query', 'unit-recipe', 'release-tools')
 }
 
 function Get-DependencySuite([string]$Root, [string]$Slug) {
@@ -3214,7 +3217,8 @@ function Get-DependencyTableProblems([string]$Root, [string]$Slug) {
 # Every slug of dependencySuites, each against its own categories (event-spawns D21).
 function Test-CheckDependencySuite([string]$Root) {
     $path = Join-Path $Root 'tools/preflight-checks.json'
-    $slugs = if (Test-Path -LiteralPath $path) { @((Get-Content -LiteralPath $path -Raw | ConvertFrom-Json).dependencySuites.PSObject.Properties.Name) } else { @() }
+    # @(...) around the if: its output unrolls a one-slug array to a string, which + would then concatenate.
+    $slugs = @(if (Test-Path -LiteralPath $path) { (Get-Content -LiteralPath $path -Raw | ConvertFrom-Json).dependencySuites.PSObject.Properties.Name })
     if ($slugs.Count -eq 0) { return New-Result $false 'dependency table: no dependency suites' }
     $slugs = @($slugs + @($script:SuiteFloor.Keys | Where-Object { $slugs -notcontains $_ } | Sort-Object))   # a floor slug without an entry fails
     $problems = @(); $seen = @()

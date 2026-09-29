@@ -193,7 +193,6 @@
     "event-spawns": {
       "categories": [
         "territory",
-        "hunt-seed",
         "player-query",
         "unit-recipe",
         "release-tools"
@@ -204,12 +203,6 @@
           "kind": "tests",
           "class": "SpawnsDependencyFailureTests",
           "control": "Territory"
-        },
-        {
-          "name": "hunt-seed",
-          "kind": "tests",
-          "class": "SpawnsDependencyFailureTests",
-          "control": "HuntSeed"
         },
         {
           "name": "player-query",

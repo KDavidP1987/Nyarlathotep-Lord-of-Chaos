@@ -457,7 +457,7 @@
         "bad-systemtype": "Services/EventScheduler.cs, a System-actor file, calls Persistence.Tick, a [Mutating] Tick of a service that is no entry point (event-spawns D22, Codex step 1 F2)",
         "bad-alias": "Patches/GameDataInitializedPatch.cs aliases SpawnTracker to Persistence and calls SpawnTracker.Tick, so the pair names another service's [Mutating] Tick (event-spawns D22, Codex step 1 round 2 F1)",
         "bad-tuple": "Services/SpawnTracker.cs declares a [Mutating] PurgeUnits returning a tuple, as the real one does, and Commands/StatusCommands.cs calls it (event-spawns D22, A55, Review 25 F1)",
-        "bad-shadow":"Patches/GameDataInitializedPatch.cs declares a local var SpawnTracker = Services.Persistence.Store and calls SpawnTracker.Tick (event-spawns D22, A54, Review 24 F1)"
+        "bad-shadow": "Patches/GameDataInitializedPatch.cs declares a local var SpawnTracker = Services.Persistence.Store and calls SpawnTracker.Tick (event-spawns D22, A54, Review 24 F1)"
       }
     },
     {
@@ -854,7 +854,8 @@
         "bad": "the events-write row names control EventsWrote, which matches no test",
         "bad-2": "the table without its cfg-save row",
         "bad-spawns-missing": "the event-spawns suite's unit-recipe category has no test: SpawnsDependencyFailureTests without its UnitRecipe_ method (event-spawns D21)",
-        "bad-floor": "event-library's entry drops the vcf category together with its row, below the script's floor (event-spawns A52)"
+        "bad-floor": "event-library's entry drops the vcf category together with its row, below the script's floor (event-spawns A52)",
+        "bad-floor-spawns": "event-spawns' entry drops the hunt-seed category together with its row, below the script's floor (event-spawns A63)"
       }
     },
     {
@@ -1053,6 +1054,49 @@
           "name": "vcf",
           "kind": "check",
           "function": "Test-CheckVcfDependency"
+        },
+        {
+          "name": "release-tools",
+          "kind": "selftests",
+          "selftests": [
+            "release-verify",
+            "repo-rollback-drill"
+          ]
+        }
+      ]
+    },
+    "event-spawns": {
+      "categories": [
+        "territory",
+        "hunt-seed",
+        "player-query",
+        "unit-recipe",
+        "release-tools"
+      ],
+      "rows": [
+        {
+          "name": "territory",
+          "kind": "tests",
+          "class": "SpawnsDependencyFailureTests",
+          "control": "Territory"
+        },
+        {
+          "name": "hunt-seed",
+          "kind": "tests",
+          "class": "SpawnsDependencyFailureTests",
+          "control": "HuntSeed"
+        },
+        {
+          "name": "player-query",
+          "kind": "tests",
+          "class": "SpawnsDependencyFailureTests",
+          "control": "PlayerQuery"
+        },
+        {
+          "name": "unit-recipe",
+          "kind": "tests",
+          "class": "SpawnsDependencyFailureTests",
+          "control": "UnitRecipe"
         },
         {
           "name": "release-tools",

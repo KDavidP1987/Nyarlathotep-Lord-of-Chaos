@@ -114,10 +114,10 @@ public static class UpcomingWave
 {
     public static (int Wave, DateTime AtUtc)? Of(ActiveEvent active)
     {
-        if (active.Definition.Action is not { } action || active.WavesSpawned >= action.Waves) return null;
-        var at = active.Instance.StartedUtc.AddSeconds((double)active.WavesSpawned * action.IntervalSeconds);
+        if (active.Definition.Action is not { } action || active.WavesUsed >= action.Waves) return null;
+        var at = active.Instance.StartedUtc.AddSeconds((double)active.WavesUsed * action.IntervalSeconds);
         if (at >= active.Instance.EndsUtc) return null;
-        return (active.WavesSpawned + 1, at);
+        return (active.WavesUsed + 1, at);
     }
 
     public static int SecondsLeft(DateTime atUtc, DateTime utcNow) => (int)Math.Ceiling((atUtc - utcNow).TotalSeconds);

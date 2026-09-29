@@ -1,15 +1,7 @@
 # Audit — event-spawns
 
 Build plan steps 1–4 of docs/dod/event-spawns.md. Each step has one "### Step <n>" entry under "## Pre-audit" and
-one under "### Step 2 · 2026-09-29 · 9580152
-- git status: clean at 9580152 (step 1 code c5e8f33 and its post-audit)
-- compile: 0 Warning(s), 0 Error(s); tests: 2133 passed
-- preflight: PREFLIGHT OK
-- dod status: event-spawns 6/24 verified (D6, D8, D9, D18, D29, D30; D11 and D32 test parts pass, manual parts in Session 1); review subagent after Review 28; amendments A1-A57
-- feature doc read: docs/features/EVENT_SPAWNS.md (Status: designed, not started; Spike S2 go); plan D10, D11, D13, D16, D17, D21, D22, D31, D32, Build plan step 2
-- in-game baseline: boot of the deployed 0.6.0 DLL, no player; -LogCheck → "log check: 0 unhandled, 9 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; its warnings are Il2CppInterop's substitute signature, Beelzebub's two TUNE lines, and the owner's example-empowerment event ("pillar empowerment takes an Empower action"), all seen in earlier boots
-
-## Post-audit"; every post-audit entry carries a "Codex verdict:" line. Session log checks are lines
+one under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line. Session log checks are lines
 "- session <n> log check: …". Rollback base: v0.6.0.
 
 ## Pre-audit
@@ -23,6 +15,14 @@ one under "### Step 2 · 2026-09-29 · 9580152
 - tooling versions: git 2.53.0, gh 2.92.0, pwsh 7.5.2, .NET SDK 10.0.302 (builds net6.0), codex-cli 0.151.0
 - feature doc read: docs/features/EVENT_SPAWNS.md (Status: designed, not started); plan D6, D8, D9, D16-D18, D20, D27, D29, D30, D33, D34, Build plan step 1, A1-A9; code: Logic/{Model,Validation,Spawning,CommandArgs,Authoring,Regions}.cs, Services/SpawnTracker.cs, tools/preflight.ps1
 - in-game baseline: not needed (step 1 has no in-game part; Session 1 is step 2)
+
+### Step 2 · 2026-09-29 · 9580152
+- git status: clean at 9580152 (step 1 code c5e8f33 and its post-audit)
+- compile: 0 Warning(s), 0 Error(s); tests: 2133 passed
+- preflight: PREFLIGHT OK
+- dod status: event-spawns 6/24 verified (D6, D8, D9, D18, D29, D30; D11 and D32 test parts pass, manual parts in Session 1); review subagent after Review 28; amendments A1-A57
+- feature doc read: docs/features/EVENT_SPAWNS.md (Status: designed, not started; Spike S2 go); plan D10, D11, D13, D16, D17, D21, D22, D31, D32, Build plan step 2
+- in-game baseline: boot of the deployed 0.6.0 DLL, no player; -LogCheck → "log check: 0 unhandled, 9 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; its warnings are Il2CppInterop's substitute signature, Beelzebub's two TUNE lines, and the owner's example-empowerment event ("pillar empowerment takes an Empower action"), all seen in earlier boots
 
 ## Post-audit
 ### Step 1 · 2026-09-29 · c5e8f33
@@ -45,3 +45,19 @@ one under "### Step 2 · 2026-09-29 · 9580152
 - privacy grep (7656119, kdpenland): only lines quoting the pattern (D31, the plans' "Grep for" lines, earlier audits' grep lines)
 - design notes: the tcli build log is build/tcli-build.log; fixture directories that git must not treat as dist/ or build/ are stored as dist.ignored/ and build.ignored/ and renamed by Copy-Fixture; `dataTests` is required only when the plan names it, and Paths/good-datatests exercises the run; EventScheduler's own Tick is RunPhases
 - in-game: none in step 1 (Session 1 is step 2)
+
+### Step 2 · 2026-09-29 · (this commit)
+- built: Services/TerritoryMap.cs (the claimed-territory map per wave, D17), Services/HuntAction.cs (the Hunt seeds and PlayerQuery, D13, D16), WaveAction's gate, AroundPlayer pick, territory-blocked ring points, tuning, loot and Hunt tag (D16, D17, D29), SpawnTracker's loot-aware drop clear with its verbose drops line (D11), the unit-setup failure streak (D21), the DebugUnit readings sp, ms, as and position (D10), EventRuntime's end paths for the spawn state (D33), Engine.WaveSkipped with WavesSkipped and WavesUsed (A59, A62), SpawnsDependencyFailureTests (D21) and the dependencySuites.event-spawns entry, ControlCases' D21 rows (D21 left the pending list)
+- compile: `dotnet build Nyarlathotep/Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__` → 0 Warning(s), 0 Error(s); tests: 2151 passed
+- preflight: PREFLIGHT OK ("mutating floor: 44/44 listed methods [Mutating] in 13 services"; "dependency table: event-library 9/9, event-spawns 5/5")
+- -AuthSuite → "auth suite: pass (tests, commands, admin list, gateway, entity writes, vcf)"
+- -SelfTest → "selftest: 39/39 checks, 7/7 external selftests (3 fixtures each, 222 extra bad fixtures; ...)"
+- -DependencySuite event-spawns → "dependency suite: event-spawns 5/5 (territory, hunt-seed, player-query, unit-recipe, release-tools)"
+- -Paths -DeclaredOf event-spawns → "paths: 1739 walked, all in manifest; declared: 517/517 in event-spawns; data tests 14 passed; plants: 15/15 fail, tempvar 15/15 lines"
+- not foreseen by the plan, recorded before the commit: A58 (the suite slug unroll, defect), A59 (a skipped wave uses its slot), A60 (the player height and Health, defect), A61 (the purge streaks and the Hunt tick guard, defect), A62 (spawned stays spawned), A63 (bad-floor-spawns), A64 (the Announcer paths); plan Reviews 29 (REVISE, F1 the wave counter), 30 (READY A58-A63), 31 (READY A64)
+- /code-review (fresh subagent, read-only) on the uncommitted diff: F1 the AroundPlayer centre at the player's height → rejected (D16 states it; the landing is a Session 1 observation) and "walk h" as a privacy leak → rejected (a height-level byte, which does not locate a player); F2 the purge left streaks open → fixed (A61); F3 HuntAction.Tick's sweep unguarded → fixed (A61)
+- Codex verdict: REVISE (round 1) — F1 seeds left on units after an end path → rejected (Design › Data: removed with the unit at every end path; seeding stops); F2 purge bypassed EndSpawnState → fixed (A61); F3 a NaN or infinite player height → fixed (A60); F4 a character without Health counted alive → fixed (A60); F5 the NaN control covered x only → fixed (x, y and z)
+- Codex verdict: READY (round 2) — no findings; after it, Review 30's advisories added only AnnouncerTests.A_skipped_wave_moves_the_warning_to_the_next_wave and doc lines (no production code)
+- dod status: see the Log's status lines after this commit
+- privacy grep (7656119, kdpenland): 0 hits in the diff
+- in-game: Session 1 (owner) follows this commit; its steps are in docs/features/EVENT_SPAWNS.md › Owner steps for Session 1

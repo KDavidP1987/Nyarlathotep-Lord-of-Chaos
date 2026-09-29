@@ -143,6 +143,10 @@ internal static class EventRuntime
         var cooldown = Settings.Limit(Limits.PurgeCooldownSeconds);
         var events = Engine.CancelAll(cooldown);
         var (queued, cancelled) = SpawnTracker.PurgeUnits();
+        foreach (var e in events) EndSpawnState(e.Id);                        // event-spawns D33: their streaks close (A61)
+        HuntAction.Clear();                                                  // seeds and kept maps go too
+        TerritoryMap.Clear();
+        WalkCheck.Health.Recovered(SpawnFailure.UnitSetup, "manual");         // `.nyar spawn` units went with the purge
         EmpowerAction.StopAllCarriers();
         var doc = Persistence.State.Document;
         doc.Instances.Clear();
@@ -174,6 +178,7 @@ internal static class EventRuntime
                 // Its waiting orders go now: one spawned later would get a fresh LifeTime and outlive end + grace, and the
                 // cleanup after the grace keeps waiting orders, which then belong to a restart of the same event.
                 SpawnTracker.EndEventUnits(ended.Id, DateTime.MinValue);
+                EndSpawnState(ended.Id);
                 Core.Log.LogInfo($"[nyar] event {ended.Id} ended ({ended.WavesSpawned} of {ended.Definition.Action?.Waves ?? 0} waves)");
             }
             Announcer.EventEnded(ended.Definition);
@@ -209,6 +214,17 @@ internal static class EventRuntime
                 if (!_degraded.Contains(note)) _degraded.Add(note);
             }
         }
+        HuntAction.Tick(now);                                                // event-spawns D13, every 5 s
+    }
+
+    /// <summary>An event's spawn state beyond its units (event-spawns D13, D30, D33): its hunt seeds, its kept territory
+    /// map and its open failure streaks go with the event.</summary>
+    static void EndSpawnState(string id)
+    {
+        HuntAction.EndEvent(id);
+        TerritoryMap.Forget(id);
+        WalkCheck.Health.Recovered(SpawnFailure.UnitSetup, id);
+        WalkCheck.Health.Recovered(SpawnFailure.PlayerQuery, id);
     }
 
     /// <summary>`.nyar pillar &lt;name&gt; off` (event-library D14, S-7): ends every running event of that pillar through the
@@ -231,6 +247,7 @@ internal static class EventRuntime
         else
         {
             var (queued, cancelled) = SpawnTracker.EndEventUnits(id, DateTime.MaxValue);
+            EndSpawnState(id);
             Core.Log.LogWarning($"[nyar] event {id} {why}: {queued} units queued, {cancelled} spawns cancelled");
         }
         Announcer.EventEnded(ended.Definition);

@@ -84,6 +84,18 @@ public partial class AnnouncerTests
     }
 
     [Fact]
+    public void A_skipped_wave_moves_the_warning_to_the_next_wave()
+    {
+        // event-spawns A62 (Review 30 F2): a skipped wave uses its slot, so the warning aims at wave 2, not the past slot.
+        var active = new ActiveEvent(new RunningInstance(Raid(), T0, T0.AddSeconds(600)), "Manual", null) { WavesSkipped = 1 };
+        Assert.Equal((2, T0.AddSeconds(90)), UpcomingWave.Of(active));
+        active.WavesSpawned = 1;
+        Assert.Equal((3, T0.AddSeconds(180)), UpcomingWave.Of(active));
+        active.WavesSkipped = 2;
+        Assert.Null(UpcomingWave.Of(active));
+    }
+
+    [Fact]
     public void A_three_wave_event_warns_at_60_and_10_seconds_before_waves_2_and_3()
     {
         // D30's event: 3 waves 90 s apart; the service's loop, one tick a second.
