@@ -5,8 +5,10 @@ using System.Collections.Generic;
 namespace Nyarlathotep.Logic;
 
 /// <summary>How a wave unit's spawn point was found (walkable-spawns D2, D3): its own ring point, another point of the
-/// search, the centre, or no checked point (all blocked, the budget spent, the check failed, or no height to check at).</summary>
-public enum PointKind { Ring, Moved, Centre, Unchecked }
+/// search, the centre, or no checked point (all blocked, the budget spent, the check failed, or no height to check at).
+/// Shortened: a point of the search whose line from the reach origin was blocked, placed at the line's farthest
+/// walkable sample (automation A7, D32).</summary>
+public enum PointKind { Ring, Moved, Centre, Unchecked, Shortened }
 
 public readonly record struct PlacedPoint(float X, float Z, PointKind Kind);
 
@@ -23,11 +25,20 @@ public static class SpawnPoints
     /// <summary>The ring point when free; else the 11 other angles of 12 on the same ring (starting from the ring point's
     /// angle), then the same 12 angles at half the radius, then the centre; all blocked gives the centre, unchecked. At
     /// radius 0 the centre is checked once.</summary>
-    public static PlacedPoint Choose((float X, float Z) point, (float X, float Z) centre, float radius, Func<float, float, bool> isFree)
+    public static PlacedPoint Choose((float X, float Z) point, (float X, float Z) centre, float radius, Func<float, float, bool> isFree) =>
+        Choose(point, centre, radius, (x, z) => isFree(x, z) ? (x, z, false) : null);
+
+    /// <summary><see cref="Choose(ValueTuple{float, float}, ValueTuple{float, float}, float, Func{float, float, bool})"/>'s
+    /// search over <paramref name="accept"/>, which gives the place of an accepted candidate (itself, or a shortened point,
+    /// automation A7) or null. A shortened place is kind Shortened whatever candidate it came from.</summary>
+    public static PlacedPoint Choose((float X, float Z) point, (float X, float Z) centre, float radius,
+        Func<float, float, (float X, float Z, bool Shortened)?> accept)
     {
+        PlacedPoint Placed((float X, float Z, bool Shortened) p, PointKind kind) =>
+            new(p.X, p.Z, p.Shortened ? PointKind.Shortened : kind);
         if (radius <= 0)
-            return new PlacedPoint(centre.X, centre.Z, isFree(centre.X, centre.Z) ? PointKind.Centre : PointKind.Unchecked);
-        if (isFree(point.X, point.Z)) return new PlacedPoint(point.X, point.Z, PointKind.Ring);
+            return accept(centre.X, centre.Z) is { } c0 ? Placed(c0, PointKind.Centre) : new PlacedPoint(centre.X, centre.Z, PointKind.Unchecked);
+        if (accept(point.X, point.Z) is { } p0) return Placed(p0, PointKind.Ring);
 
         var start = Math.Atan2(point.Z - centre.Z, point.X - centre.X);
         foreach (var (r, from) in new[] { (radius, 1), (radius / 2, 0) })
@@ -37,10 +48,46 @@ public static class SpawnPoints
                 var a = start + k * 2 * Math.PI / Angles;
                 var x = centre.X + r * (float)Math.Cos(a);
                 var z = centre.Z + r * (float)Math.Sin(a);
-                if (isFree(x, z)) return new PlacedPoint(x, z, PointKind.Moved);
+                if (accept(x, z) is { } p) return Placed(p, PointKind.Moved);
             }
         }
-        return new PlacedPoint(centre.X, centre.Z, isFree(centre.X, centre.Z) ? PointKind.Centre : PointKind.Unchecked);
+        return accept(centre.X, centre.Z) is { } c ? Placed(c, PointKind.Centre) : new PlacedPoint(centre.X, centre.Z, PointKind.Unchecked);
+    }
+}
+
+/// <summary>Where a wave's units must be able to walk from (automation A7, design §9 D31): the picked player for an
+/// AroundPlayer group, the wave centre otherwise; a shortened point lies at least <see cref="MinDist"/> from it.</summary>
+public readonly record struct WalkReach(float X, float Z, float MinDist);
+
+/// <summary>The straight walk from a reach origin to a point (automation A7, D32), sampled every <see cref="Step"/> m; the
+/// unit's 0.5 m circle at each sample covers the gap to the next. The origin itself is not sampled: a player stands there.</summary>
+public static class WalkLine
+{
+    public const float Step = 1f;
+
+    /// <summary>The samples from <paramref name="from"/> (excluded) to <paramref name="to"/> (included, last).</summary>
+    public static IEnumerable<(float X, float Z)> Samples((float X, float Z) from, (float X, float Z) to)
+    {
+        var dx = to.X - from.X;
+        var dz = to.Z - from.Z;
+        var length = MathF.Sqrt(dx * dx + dz * dz);
+        var n = (int)MathF.Ceiling(length / Step);
+        for (var k = 1; k < n; k++) yield return (from.X + dx * k * Step / length, from.Z + dz * k * Step / length);
+        if (n > 0) yield return to;
+    }
+
+    /// <summary>The farthest place a unit reaches walking from <paramref name="from"/> to <paramref name="to"/>: the point
+    /// itself when every sample is walkable (Whole), else the last walkable sample before the first that is not; null
+    /// when the first sample is not walkable. Stops at the first walkable call that is false.</summary>
+    public static (float X, float Z, bool Whole)? Reach((float X, float Z) from, (float X, float Z) to, Func<float, float, bool> walkable)
+    {
+        (float X, float Z)? last = null;
+        foreach (var s in Samples(from, to))
+        {
+            if (!walkable(s.X, s.Z)) return last is { } l ? (l.X, l.Z, false) : null;
+            last = s;
+        }
+        return last is { } w ? (w.X, w.Z, true) : null;
     }
 }
 
@@ -95,6 +142,10 @@ public sealed class WaveWalk(IWalkProbe? probe, WalkBudget budget)
     public IWalkProbe? Probe { get; } = probe;
     public WalkBudget Budget { get; } = budget;
 
+    /// <summary>Walk answers of this wave by tile (two per metre), so the lines of one wave, which share their origin,
+    /// ask the game once per tile (automation A7).</summary>
+    internal Dictionary<(int, int), bool> Known { get; } = new();
+
     /// <summary>The reason of the failure that opened this wave's fall-open, or null.</summary>
     public string? Failure { get; private set; }
 
@@ -116,9 +167,14 @@ public static class WavePoints
     /// rest of the wave keep their ring points, unchecked); a spent budget leaves the point unchecked at its ring point.
     /// With <paramref name="inScope"/> (regions D6, A1, A9) a point outside the action scope counts as blocked before any
     /// budget is spent, and an unchecked ring point outside it uses the centre instead, which the Point and Admin checks
-    /// keep in scope.</summary>
+    /// keep in scope. With <paramref name="reach"/> (automation A7, D32) a candidate is accepted only when the straight
+    /// line from the reach origin to it is walkable (<see cref="WalkLine"/>); a blocked line gives its farthest walkable
+    /// sample, Shortened, when that is in scope and at least the reach's minimum distance from the origin. When the search
+    /// accepts nothing, the farthest in-scope walkable sample any of its lines reached is used, Shortened, even under the
+    /// minimum: a unit near the player beats one behind a wall. Walk answers are kept per tile for the wave, so a tile
+    /// costs its game calls once.</summary>
     public static List<PlacedPoint> Plan(IReadOnlyList<(float X, float Z)> ring, (float X, float Z) centre, float radius, WaveWalk walk,
-        Func<float, float, bool>? inScope = null)
+        Func<float, float, bool>? inScope = null, WalkReach? reach = null)
     {
         var points = new List<PlacedPoint>(ring.Count);
         PlacedPoint Unchecked((float X, float Z) p) =>
@@ -131,21 +187,41 @@ public static class WavePoints
                 continue;
             }
             var spent = false;
+            bool Walkable(float x, float z)
+            {
+                if (spent) return false;
+                if (float.IsNaN(x) || float.IsNaN(z) || float.IsInfinity(x) || float.IsInfinity(z))
+                    throw new ArgumentException("point is not a number");
+                var tile = ((int)MathF.Floor(x * 2), (int)MathF.Floor(z * 2));
+                if (walk.Known.TryGetValue(tile, out var known)) return known;
+                if (!walk.Budget.TryTake(1)) { spent = true; return false; }
+                var free = probe.IsFree(x, z);
+                walk.Returned();
+                if (free)
+                {
+                    if (!walk.Budget.TryTake(1)) { spent = true; return false; }
+                    free = probe.IsGrounded(x, z);
+                }
+                walk.Known[tile] = free;
+                return free;
+            }
+            (float X, float Z, float Out)? best = null;                        // A7: the fallback
             try
             {
                 var chosen = SpawnPoints.Choose(p, centre, radius, (x, z) =>
                 {
-                    if (spent) return false;
-                    if (float.IsNaN(x) || float.IsNaN(z) || float.IsInfinity(x) || float.IsInfinity(z))
-                        throw new ArgumentException("point is not a number");
-                    if (inScope is not null && !inScope(x, z)) return false;           // before the budget (A1)
-                    if (!walk.Budget.TryTake(1)) { spent = true; return false; }
-                    var free = probe.IsFree(x, z);
-                    walk.Returned();
-                    if (!free) return false;
-                    if (!walk.Budget.TryTake(1)) { spent = true; return false; }
-                    return probe.IsGrounded(x, z);
+                    if (inScope is not null && !inScope(x, z)) return null;          // before the budget (A1)
+                    if (reach is not { } r) return Walkable(x, z) ? (x, z, false) : null;
+                    var line = WalkLine.Reach((r.X, r.Z), (x, z), Walkable);        // A7
+                    if (line is not { } l) return null;
+                    if (l.Whole) return (x, z, false);
+                    if (inScope is not null && !inScope(l.X, l.Z)) return null;
+                    var out_ = MathF.Sqrt((l.X - r.X) * (l.X - r.X) + (l.Z - r.Z) * (l.Z - r.Z));
+                    if (out_ >= r.MinDist) return (l.X, l.Z, true);
+                    if (best is not { } b || out_ > b.Out) best = (l.X, l.Z, out_);
+                    return null;
                 });
+                if (!spent && chosen.Kind == PointKind.Unchecked && best is { } fb) chosen = new PlacedPoint(fb.X, fb.Z, PointKind.Shortened);
                 points.Add(spent ? Unchecked(p) : chosen);
             }
             catch (Exception e)
@@ -163,6 +239,9 @@ public static class WavePoints
         scope.IsGlobal ? null
         : regionOf is null ? (_, _) => false
         : (x, z) => scope.Names(regionOf(x, z));
+
+    /// <summary>The shortened count of a plan, for the wave line (automation A7).</summary>
+    public static int Shortened(IEnumerable<PlacedPoint> points) => points.Count(p => p.Kind == PointKind.Shortened);
 
     /// <summary>The moved and unchecked counts of a plan, for the wave line (A2).</summary>
     public static (int Moved, int Unchecked) Counts(IEnumerable<PlacedPoint> points)
@@ -462,7 +541,10 @@ public static class PlayerPick
                 pool.Remove(p);
                 if (Centre(p, rng, minDist, maxDist, inScope) is { } c) { picked.Add(p); centres.Add(c); }
             }
-            return new FanOutPick(centres.Count > 0 ? PickOutcome.Picked : PickOutcome.NoEligible, centres);
+            return new FanOutPick(centres.Count > 0 ? PickOutcome.Picked : PickOutcome.NoEligible, centres)
+            {
+                Origins = picked.Select(p => (p.X, p.Z)).ToList(),
+            };
         }
         catch (Exception e)
         {
@@ -489,8 +571,13 @@ public static class PlayerPick
     static double Spacing(PickCandidate a, PickCandidate b) => Math.Sqrt((a.X - b.X) * (double)(a.X - b.X) + (a.Z - b.Z) * (double)(a.Z - b.Z));
 }
 
-/// <summary>A fanned-out wave's centres in pick order, or why there are none (automation D5). No player identity.</summary>
-public sealed record FanOutPick(PickOutcome Outcome, IReadOnlyList<(float X, float Y, float Z)> Centres, string? Error = null);
+/// <summary>A fanned-out wave's centres in pick order, or why there are none (automation D5). No player identity; each
+/// centre's <see cref="Origins"/> entry is its picked player's x and z, held for the wave's walk lines only (A7), never
+/// logged or stored.</summary>
+public sealed record FanOutPick(PickOutcome Outcome, IReadOnlyList<(float X, float Y, float Z)> Centres, string? Error = null)
+{
+    public IReadOnlyList<(float X, float Z)> Origins { get; init; } = [];
+}
 
 /// <summary>A player as a Hunt tick sees it (event-spawns D13): its key (the service's handle), position, and the flags
 /// that make it ineligible.</summary>

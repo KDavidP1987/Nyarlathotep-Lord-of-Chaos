@@ -28,6 +28,11 @@ ring, then half the ring, then the centre, without adding, dropping or reorderin
   saved without a height is not checked. A failing check (no tile world, a height outside -100 to 1000 m (automation A5), a throw) leaves
   the rest of the wave on its ring points, logs "walk check unavailable: <reason>" once per streak and shows
   "spawns: walk check unavailable" in health until a wave's check answers; the next wave tries again (D5, D6).
+- **Since automation A7 (0.8.0):** a point also needs a walkable straight line, sampled every 1 m, from the wave centre, or
+  from the picked player for an AroundPlayer group; a blocked line gives its farthest walkable sample, at least minDist
+  from the player when one exists, else the farthest found (kind Shortened). The spot test alone had placed ambush
+  units across ponds and on scenery no one walks onto. Walk answers are kept per tile for the wave, and the wave line
+  reads "(<m> moved, <s> shortened, <u> unchecked)". Design §9 D31.
   Release 0.5.1 follows Session 2.
 
 ## Test plan

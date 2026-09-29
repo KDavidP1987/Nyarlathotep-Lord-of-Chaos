@@ -369,6 +369,12 @@ public partial class EngineTests
         Assert.Null(t.Add(1.0, T0));
         Assert.Null(t.Add(3.0, T0.AddSeconds(59)));
         Assert.Equal("tick timing: avg 2.000 ms, max 3.000 ms over 3 ticks", t.Add(2.0, T0.AddSeconds(60)));
+        // automation A8: a window with player scans counts them; the next window starts at 0
+        t.Scanned(2);
+        t.Add(1.0, T0.AddSeconds(61));
+        t.Scanned(1);
+        Assert.Equal("tick timing: avg 1.000 ms, max 1.000 ms over 2 ticks, 3 player scans", t.Add(1.0, T0.AddSeconds(121)));
+        Assert.Equal("tick timing: avg 1.000 ms, max 1.000 ms over 2 ticks", new[] { t.Add(1.0, T0.AddSeconds(122)), t.Add(1.0, T0.AddSeconds(182)) }[1]);
         Assert.Null(t.Add(5.0, T0.AddSeconds(61)));
     }
 

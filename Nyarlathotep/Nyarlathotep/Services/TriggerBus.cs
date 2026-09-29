@@ -135,8 +135,22 @@ internal static class TriggerBus
 
     static double Ms(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
 
-    static IReadOnlyList<ScanRow> ReadPlayers() =>
-        PlayerQuery.Read().Select(p => new ScanRow(p.PlatformId, p.X, p.Z, p.Alive)).ToList();
+    static IReadOnlyList<ScanRow> ReadPlayers()
+    {
+        var rows = PlayerQuery.Read().Select(p => new ScanRow(p.PlatformId, p.X, p.Z, p.Alive)).ToList();
+        _scans++;                                                              // automation A8: counted in the timing window
+        return rows;
+    }
+
+    static int _scans;
+
+    /// <summary>The player scans that read players since the last call (automation A8, D21's -MinScans).</summary>
+    internal static int TakeScans()
+    {
+        var n = _scans;
+        _scans = 0;
+        return n;
+    }
 
     /// <summary>True when a death is to be read for FactionKills (Patches/DeathEventPatch reads the victim's ledger
     /// membership only then).</summary>

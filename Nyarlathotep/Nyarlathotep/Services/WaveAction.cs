@@ -55,11 +55,13 @@ internal static class WaveAction
 
         PickOutcome? pick = null;
         IReadOnlyList<GroupCentre> centres;
+        IReadOnlyList<(float X, float Z)> origins = [];                 // AroundPlayer: each group's picked player (A7)
         if (location.Type == LocationType.AroundPlayer && !mapFailed)
         {
             var result = Pick(id, location, action.FanOut, active.Focus, claimed, inScope);
             pick = result.Outcome;
             centres = result.Centres.Select(c => new GroupCentre(c.X, c.Y, c.Z, map is not null && claimed(c.X, c.Z))).ToList();
+            origins = result.Origins;
         }
         else
         {
@@ -77,7 +79,7 @@ internal static class WaveAction
         // A claimed ring point counts as blocked, like an out-of-scope one, unless allowTerritory (D17).
         Func<float, float, bool> allowed = map is null || action.AllowTerritory ? inScope
             : (x, z) => (inScope is null || inScope(x, z)) && !claimed(x, z);
-        int total = 0, moved = 0, unchecked_ = 0;
+        int total = 0, moved = 0, shortened = 0, unchecked_ = 0;
         byte? level = null;
         WaveRun.Run(decision, skipped => Core.Log.LogInfo($"[nyar] {skipped}"), group =>
         {
@@ -88,13 +90,15 @@ internal static class WaveAction
             HuntTag? hunt = action.Behaviour is { Type: BehaviourType.Hunt } b ? new HuntTag(gx, gz, b.Range) : null;   // one per group
             var first = 0;
             var check = WalkCheck.OpenWave(WavePlan.WalkY(location, group.Centre, active.Origin));   // walkable-spawns D3, A13
+            var reach = WavePlan.Reach(location, (gx, gz), group.Index < origins.Count ? origins[group.Index] : null);   // A7
             try
             {
                 foreach (var entry in group.Units)
                 {
                     var queued = SpawnTracker.RequestWave(entry.Prefab, id, entry.Count, life, new float3(gx, gy, gz), action.Radius, first,
-                        groupTotal, angle, anchor, check.Walk, allowed, tuning, action.Loot, hunt);
+                        groupTotal, angle, anchor, check.Walk, allowed, tuning, action.Loot, hunt, reach);
                     moved += queued.Moved;
+                    shortened += queued.Shortened;
                     unchecked_ += queued.Unchecked;
                     first += entry.Count;
                 }
@@ -114,7 +118,7 @@ internal static class WaveAction
         if (decision.Outcome != WaveOutcome.Spawn) return;
         var levelText = level is { } h ? $", walk h {h}" : "";
         var where = location.Type == LocationType.AroundPlayer ? $" {WaveLines.AroundPlayers(decision.Groups.Count)}" : "";
-        Core.Log.LogInfo($"[nyar] event {id} wave {due.Wave}/{due.Waves}{where}: {total} units queued ({moved} moved, {unchecked_} unchecked), due in {(int)Math.Ceiling((life.DueUtc - now).TotalSeconds)}s, lifetime {life.LifetimeSeconds}s{levelText}");
+        Core.Log.LogInfo($"[nyar] event {id} wave {due.Wave}/{due.Waves}{where}: {total} units queued ({moved} moved, {shortened} shortened, {unchecked_} unchecked), due in {(int)Math.Ceiling((life.DueUtc - now).TotalSeconds)}s, lifetime {life.LifetimeSeconds}s{levelText}");
     }
 
     /// <summary>The wave's AroundPlayer centres (D16; automation D5, D13): up to fanOut.maxInstances spaced players, one

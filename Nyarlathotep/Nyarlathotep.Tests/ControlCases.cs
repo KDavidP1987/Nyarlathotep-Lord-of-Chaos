@@ -54,7 +54,7 @@ public static class ControlCases
         "TemplateLibraryTests", "TemplateCommandTests", "AuthoringTests", "AuthoringCapacityTests", "PillarSwitchTests",
         "ReadinessTests", "LibraryDependencyFailureTests", "SpawningTests", "HealthTests",
         "HumanReplyTests", "OutcomeCodeTests", "ApiTwinTests", "RateGateTests", "ApiOverloadTests", "EventAdminTests",
-        "EndPathTests", "WavePrecedenceTests", "SpawnsDependencyFailureTests", "AutomationTests", "AutomationDependencyFailureTests",
+        "EndPathTests", "WavePrecedenceTests", "SpawnsDependencyFailureTests", "AutomationTests", "AutomationDependencyFailureTests", "SpawnPlacementTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -414,6 +414,9 @@ public static class ControlCases
              "tools/preflight-fixtures/FaultInjection/empty"]) with { Plan = Automation },
         T("D27", "ChatBytes", "CommandArgTests", ["automation_line_exceeds_480", "automation_line_holds_markup"], ["automation_lines_at_maximum_lengths"],
             ["automation_fields"]) with { Plan = Automation },
+        T("D32", "WalkLine", "SpawnPlacementTests", ["point_behind_a_wall_accepted", "point_across_water_accepted", "point_on_enclosed_island_accepted",
+            "shortened_under_min_dist_or_past_its_block", "budget_overspent"], ["open_field_unchanged", "reach_origin_per_location"],
+            ["reach_checks_only_the_spot"]) with { Plan = Automation },
         C("D28", "DependencySuite", "preflight -DependencySuite automation",
             ["selftest DependencySuite/bad", "selftest DependencySuite/bad-2", "selftest DependencySuite/bad-floor-spawns"], ["selftest DependencySuite/good"],
             ["selftest DependencySuite/empty"]) with { Plan = Automation },

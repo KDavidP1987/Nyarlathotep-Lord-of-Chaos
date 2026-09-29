@@ -163,6 +163,14 @@ public static class WavePlan
     public static float? WalkY(Location location, (float X, float Y, float Z) centre, (float X, float Y, float Z)? origin) =>
         location.Type == LocationType.AroundPlayer ? centre.Y : Anchor(location, origin)?.Y;
 
+    /// <summary>Where a group's units must walk from (automation A7, design §9 D31): the picked player of an AroundPlayer
+    /// group, a shortened point at least minDist from it; no reach for an AroundPlayer group without its player (nothing
+    /// is line-checked); the group centre with no minimum otherwise.</summary>
+    public static WalkReach? Reach(Location location, (float X, float Z) centre, (float X, float Z)? player) =>
+        location.Type != LocationType.AroundPlayer ? new WalkReach(centre.X, centre.Z, 0)
+        : player is { } p ? new WalkReach(p.X, p.Z, location.MinDist)
+        : null;
+
     /// <summary>True when a unit the game snapped to height <paramref name="unitY"/> stands on another terrain level than
     /// its anchor at <paramref name="anchorY"/>, so it is moved to the anchor (A23).</summary>
     public static bool Regroup(float unitY, float anchorY) => MathF.Abs(unitY - anchorY) > RegroupTolerance;
@@ -395,7 +403,8 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
 /// sample of the window it returns "tick timing: avg &lt;a&gt; ms, max &lt;m&gt; ms over &lt;n&gt; ticks" and starts a
 /// new window. With the tick's phases, the closed window's <see cref="Slowest"/> is "slowest tick: &lt;t&gt; ms
 /// (&lt;phase&gt; &lt;ms&gt; ms, …; outside phases &lt;r&gt; ms)", the top <see cref="SlowTickLog.MaxPhases"/> phases of its
-/// slowest tick (event-spawns A70: a wave start's 206 ms tick below the slow-tick threshold could not be placed).</summary>
+/// slowest tick (event-spawns A70: a wave start's 206 ms tick below the slow-tick threshold could not be placed). A window
+/// in which the player scan read players ends ", &lt;s&gt; player scans" (automation A8, D21).</summary>
 public sealed class TickTimer
 {
     public static readonly TimeSpan Window = TimeSpan.FromMinutes(1);
@@ -405,7 +414,11 @@ public sealed class TickTimer
     double _total;
     double _max;
     int _count;
+    int _scans;
     List<(string Phase, double Ms)> _maxPhases = new();
+
+    /// <summary>Player scans that read players since the last tick (automation A8).</summary>
+    public void Scanned(int scans) => _scans += scans;
 
     /// <summary>The closed window's slowest tick by phase; null until a window closes, and after one closed without phases.</summary>
     public string? Slowest { get; private set; }
@@ -420,11 +433,13 @@ public sealed class TickTimer
         _max = Math.Max(_max, milliseconds);
         _count++;
         if (utcNow - _since.Value < Window) return null;
-        var line = FormattableString.Invariant($"tick timing: avg {_total / _count:0.000} ms, max {_max:0.000} ms over {_count} ticks");
+        var line = FormattableString.Invariant($"tick timing: avg {_total / _count:0.000} ms, max {_max:0.000} ms over {_count} ticks")
+            + (_scans > 0 ? FormattableString.Invariant($", {_scans} player scans") : "");
         Slowest = _maxPhases.Count == 0 ? null : SlowestLine(_max, _maxPhases);
         _since = null;
         _total = _max = 0;
         _count = 0;
+        _scans = 0;
         _maxPhases = new();
         return line;
     }

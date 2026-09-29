@@ -34,7 +34,10 @@ where events come without anyone typing a command:
     and reports each wave once: `WaveRun.Run` queues the groups, then calls `EventEngine.WaveDecided`.
   - An AroundPlayer group is never regrouped: its units stay where the game grounds them at their ring points, and
     its walk check reads at the player's height (A4, design §9 D30). The walk check reads heights from -100 m (A5).
-    The player read reuses one query over User (A6). Phantom players exist only in a Debug build.
+    The player read reuses one query over User (A6), and the verbose "player triggers" line is written only when its
+    counts change: a console write every 5 s scan cost up to 190 ms (A6). A spawn point needs a walkable line from the
+    picked player (A7, design §9 D31; docs/features/WALKABLE_SPAWNS.md). With Debug.TimingLog, each "tick timing" line
+    ends ", <n> player scans" when the scan read players in that window (A8, D21). Phantom players exist only in a Debug build.
 - **Privacy:** no line names or locates a player. The per-player rows (regions, cooldowns, kill counters, the start's
   focus) live in memory only; state.json gains only `NextInterval`.
 - **Wire:** api 6 adds the trigger values `interval`, `regionentered` and `factionkills`; a fanned-out wave sends one
