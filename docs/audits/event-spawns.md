@@ -120,3 +120,10 @@ one under "## Post-audit"; every post-audit entry carries a "Codex verdict:" lin
 - Codex verdict: REVISE (round 3) — two findings on the frozen ## Baseline copy of D25 and D27 → rejected (the Baseline is never edited; the live items carry A72 and A73)
 - Codex verdict: REVISE (round 4) — D32's screen-reader statement "missing": it existed but wrapped across two lines → reworded on one line
 - Codex verdict: READY (round 5) — no findings
+- privacy grep (7656119, kdpenland): none in the added lines of the release diff; over the tree before the push, only lines quoting the pattern
+- tcli build: kdpen-Nyarlathotep-0.7.0.zip (368147 bytes), built at the release commit 3aa2215 with a clean tree (`dotnet build -c Release --no-incremental`, 0 warnings, 0 errors; the DLL also deployed to the stopped dev server) with icon.png, README.md, manifest.json, BepInEx/plugins/Nyarlathotep.dll (540160 bytes), CHANGELOG.md, LICENSE
+- zip sha256: kdpen-Nyarlathotep-0.7.0.zip FCA7CAA14CA46FB9EE83CE5F1A1CEAFD126579765CCCCDD4D1351E9F1A59FA66
+- tag: v0.7.0 annotated at 3aa2215 (chore(release): v0.7.0)
+- rollback gate before the push: `pwsh tools/rollback-gate.ps1 -From v0.6.0 -To v0.7.0 -Plan event-spawns` → "rollback gate: 4/4" (repository drill with -BeforePush: "rollback: clean"; N-1 boot drill "events.json: v0.7.0 '6 valid, 0 disabled', v0.6.0 '6 valid, 0 disabled' (0 newer action types, 0 newer keys)", v0.6.0 initialized on v0.7.0's files; snapshot selftest 6/6; "rollback routes: event-spawns 5/5")
+- release: main (3aa2215) and v0.7.0 pushed; GitHub pre-release https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.7.0 with the zip, created once (exit 0); no tcli publish (the owner publishes)
+- release verify: `pwsh tools/release-verify.ps1 -Tag v0.7.0 -Asset kdpen-Nyarlathotep-0.7.0.zip` → "release verify: hashes equal"; the v0.7.0 remote tag and release added to tools/paths-manifest.txt (`remote-tag:`, `remote-release:`)
