@@ -93,4 +93,6 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - session 2 log check: 0 unhandled, 100 nyar lines, 0 orphan errors, 0 unity errors
 - session 2 logs read (both, copied to %TEMP%\nyar-s2-raa-logs and deleted after): BepInEx warnings only the known four kinds and the session's own "event bandit-ambush stopped: 6 units queued" and "purge: 1 events ended, 12 units queued, 0 spawns cancelled, cooldown 240s"; spawn batches 6 of 6, despawns to 0 left; Unity log 0 exceptions, 224 PrefabLookupMap "unknown state" lines and two "converted but does not exist" lines (GUIDs 2020929481, 1669971369) inside the same save-load block, neither in our code nor the prefab dump
 - Codex verdict: REVISE (round 4) — F1 (medium) step 11's ba-new delete was not pasted → rejected with reason: D13 asks for each twin, and step 10 quotes the delete twin whole (ask, the read, confirm, the read) on ba-copy; step 11 repeats the same twin (the log and the reload count confirm it); the record says so
+- Codex verdict: READY (round 5) — "No findings. Round 4's disposition holds: D13 requires evidence for each distinct D3/D4 twin, not every repeated invocation … Sessions 1 and 2 jointly satisfy D13, and the audit evidence is consistent."
+- privacy grep (7656119, kdpenland): none in the added lines of the step 3 diff
 
