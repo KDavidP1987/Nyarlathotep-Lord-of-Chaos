@@ -164,3 +164,17 @@ VERDICT: READY
 - F4 · accepted · A25: "Other" is named among D3's refused names and in its test
 - F5 · accepted · A24: the boot line's exact shape, p the indexed count (D2)
 - F6 · accepted · A21: Start checks RegionOf(kill) against the trigger scope (D4)
+
+## Review 6 · 2026-09-28 · subagent · plan commit c9b90ff · plan 81307 B · 16 items · files 0 · e3b0c44298fc · prompt c04d909392a1 · scope A21,A22,A23,A24,A25
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A21-A25 (design §9 D26); the prompt held no Steam ID. It found each amendment consistent with the code it names and each fails-when clause testable.
+
+F1 · advisory · A21 does not say where EventEngine.Start gets its region lookup for RegionOf(kill), or which reason a refused kill-position start returns; if it reused no_player_in_region, A23's helper would log a System kill refusal as a skip. Fix: name how the lookup reaches Start (e.g. in the start controls, like the position reader), give the refusal its own reason or name the one it reuses, keep the generic line for it, and add a test case.
+
+F2 · advisory · A21 makes Start re-check what TriggerRouter.VBloodKilled already filtered; the plan does not say both are kept on purpose, so one could later be removed as redundant. Fix: say so in D4.
+
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · A26: the lookup is in the start controls (null refuses); the refusal is state arg=scope reason=out_of_region, logged with the generic line (D4)
+- F2 · accepted · A27: D4 states that both checks are kept on purpose
