@@ -38,7 +38,7 @@ public partial class CommandArgTests
     [InlineData("location", "aroundplayer 30 30", EventValidator.DistOrder)]
     [InlineData("location", "aroundplayer 61 70", EventValidator.MinDistRule)]
     [InlineData("location", "aroundplayer 20 14", EventValidator.MaxDistRule)]
-    [InlineData("location", "aroundplayer 20", "location takes here or aroundplayer <minDist> <maxDist>")]
+    [InlineData("location", "aroundplayer 20", "location takes here or aroundplayer MIN MAX")]
     public void Spawns_fails_when_value_out_of_range(string field, string value, string error)
     {
         var arg = CommandArgs.SettableValue(field, value);
@@ -48,7 +48,7 @@ public partial class CommandArgTests
 
     [Theory]
     [InlineData("action.spawnVisual")]
-    [InlineData("action.units.<n>.chance")]
+    [InlineData("action.units.N.chance")]
     [InlineData("action.units.0.chance")]
     [InlineData("action.units.01.chance")]
     [InlineData("action.units.11.chance")]
@@ -96,7 +96,7 @@ public partial class CommandArgTests
     public static TheoryData<string> SpawnFields()
     {
         var data = new TheoryData<string>();
-        foreach (var f in CommandArgs.SpawnKeyFields.Select(f => f.Replace("<n>", "1", StringComparison.Ordinal)).Append("location")) data.Add(f);
+        foreach (var f in CommandArgs.SpawnKeyFields.Select(f => f.Replace(".N.", ".1.", StringComparison.Ordinal)).Append("location")) data.Add(f);
         return data;
     }
 
@@ -126,7 +126,7 @@ public partial class CommandArgTests
         .. EventValidator.ModifierKeys.Select(EventValidator.ModifierRule), EventValidator.UnknownBehaviour(type), CommandArgs.BehaviourRule,
         CommandArgs.UnitChanceRule, "action.loot must be true or false", "action.allowTerritory must be true or false", "unknown field action.spawnVisual",
         $"{EventValidator.BothLevels}: set action.modifiers.levelDelta none first", "action.units has no entry 10",
-        "location takes here or aroundplayer <minDist> <maxDist>", LocationRule,
+        "location takes here or aroundplayer MIN MAX", LocationRule,
     ];
 
     /// <summary>Every new line of the child, built from its template: the D18 set replies (each with the longest reload
@@ -135,7 +135,7 @@ public partial class CommandArgTests
     {
         var reasons = Reasons(type).ToList();
         var longest = reasons.OrderByDescending(r => Encoding.UTF8.GetByteCount(r)).First();
-        var fields = CommandArgs.SpawnKeyFields.Select(f => f.Replace("<n>", "10", StringComparison.Ordinal)).Append("location").ToList();
+        var fields = CommandArgs.SpawnKeyFields.Select(f => f.Replace(".N.", ".10.", StringComparison.Ordinal)).Append("location").ToList();
         var lines = new List<string>();
         lines.AddRange(fields.Select(f => $"event {id} {f} = {value}; now disabled: {longest}"));
         lines.AddRange(fields.Select(f => $"{CommandArgs.TableName(f)} is not an Empower field"));
@@ -204,6 +204,19 @@ public partial class CommandArgTests
         Assert.Equal("unknown field action.modifiers.hp", EventValidator.UnknownField("action.modifiers", "hp"));   // a short name stays
     }
 
+    static List<string> Markup(IEnumerable<string> lines) => lines.Where(l => l.IndexOfAny(['<', '>']) >= 0).ToList();
+
+    [Fact]
+    public void ChatBytes_fails_when_line_holds_markup()
+    {
+        // The game's chat reads <n> as a rich-text tag and drops it (Session 1: "action.units..chance", A65).
+        var planted = "action.units.<n>.chance must be 0.05-1.0 with at most two decimals";
+        Assert.Equal([planted], Markup(NewLines(MaxId, "aroundplayer 60 80", "<b>", 10).Append(planted)));
+        Assert.Single(Markup(["hunt >"]));
+        Assert.Equal("unknown behaviour type", EventValidator.UnknownBehaviour("<b>"));   // a type from the file is left out
+        Assert.Empty(Markup([CommandArgs.UnitChanceField, CommandArgs.UnitChanceRule, CommandArgs.BehaviourRule, CommandArgs.LocationSetRule]));
+    }
+
     [Fact]
     public void ChatBytes_passes_new_lines_at_maximum_lengths()
     {
@@ -221,6 +234,7 @@ public partial class CommandArgTests
         Assert.Contains(lines, l => l.Contains("around a player 60-80 m", StringComparison.Ordinal));
         Assert.True(lines.Count > 60);
         Assert.Empty(OverLimit(lines));
+        Assert.Empty(Markup(lines));
 
         // Ten distinct maximum-length units (Codex step 1 F1): the unit list moves to packed "units:" lines, none dropped.
         var ten = Enumerable.Range(0, 10).Select(i => new UnitEntry(MaxUnit[..^1] + i, 50, 0.55)).ToList();

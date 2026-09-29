@@ -261,10 +261,10 @@ public static class ControlCases
         T("D11", "Loot", "SpawningTests", ["order_without_loot_keeps_drops", "loot_order_clears_drops"], ["each_order_carries_its_flag"], ["order_without_loot"])
             with { Plan = EventSpawns },
         T("D13", "Hunt", "SpawningTests",
-            ["ineligible_player_targeted", "sixth_target_added", "order_not_by_distance", "duplicate_planned", "player_in_buffer_seeded",
+            ["ineligible_player_targeted", "tally_counts_a_player_twice", "sixth_target_added", "order_not_by_distance", "duplicate_planned", "player_in_buffer_seeded",
              "plan_for_ended_wave", "stale_seed_kept", "game_entry_removed", "empty_targets_keep_a_seed", "race_leaves_record_buffer_lacks",
              "replaced_entry_removed", "tick_reads_other_map", "seeds_while_latest_build_failed"],
-            ["tick_seeds_and_keeps"], ["no_players"]) with { Plan = EventSpawns },
+            ["tick_seeds_and_keeps", "tally_counts_each_player_once"], ["no_players"]) with { Plan = EventSpawns },
         T("D16", "PlayerPick", "SpawningTests",
             ["ineligible_player_picked", "distance_leaves_range", "pick_not_uniform", "queued_centre_changes", "out_of_scope_player_picked",
              "out_of_scope_centre_used", "throwing_read_spawns", "claimed_first_angle_moves_centre"],
@@ -297,7 +297,7 @@ public static class ControlCases
             ["stated_order", "allow_territory_lifts_only_territory_skip"], ["nothing_blocked_roll_zero"]) with { Plan = EventSpawns },
         T("D30", "Spawns", "HealthTests", ["streak_open", "ended_event_keeps_territory_unknown"], ["recovered_check_clears_entry", "text_equals_table"], ["no_open_streak"])
             with { Plan = EventSpawns },
-        T("D32", "ChatBytes", "CommandArgTests", ["line_exceeds_480"], ["new_lines_at_maximum_lengths"], ["fields"]) with { Plan = EventSpawns },
+        T("D32", "ChatBytes", "CommandArgTests", ["line_exceeds_480", "line_holds_markup"], ["new_lines_at_maximum_lengths"], ["fields"]) with { Plan = EventSpawns },
         T("D33", "EndPaths", "EndPathTests",
             ["natural_end_leaves_state", "event_stop_leaves_state", "fault_cancel_leaves_state", "purge_leaves_state", "restart_keeps_state",
              "stopping_one_touches_the_other"],

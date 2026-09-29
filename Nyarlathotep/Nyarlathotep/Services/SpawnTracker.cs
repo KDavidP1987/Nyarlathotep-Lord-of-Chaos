@@ -155,7 +155,19 @@ internal static class SpawnTracker
     internal static void Died(Entity unit)
     {
         var key = KeyOf(unit);
-        if (_ledger.Forget(key)) Release(key);
+        if (!_ledger.Forget(key)) return;
+        try { Left(key, "died"); }
+        finally { Release(key); }
+    }
+
+    /// <summary>A66: with VerboseLogging, a tracked unit leaving the ledger outside a despawn says so. Never throws.</summary>
+    static void Left(long key, string how)
+    {
+        try
+        {
+            if (Settings.VerboseLogging.Value && _stateUnits.TryGetValue(key, out var u)) Core.Log.LogInfo($"[nyar] {u.Prefab} of {u.EventId} {how}");
+        }
+        catch { /* a diagnostic line never stops the release */ }
     }
 
     /// <summary>The scheduler's first phase each second: spawn a batch, prune units the game removed, despawn a batch.
@@ -208,7 +220,8 @@ internal static class SpawnTracker
         foreach (var gone in _ledger.Units.Where(u => !_entities.TryGetValue(u.Key, out var e) || !e.Exists()).Select(u => u.Key).ToList())
         {
             _ledger.Forget(gone);
-            Release(gone);
+            try { Left(gone, "removed by the game"); }
+            finally { Release(gone); }
         }
 
         // Units past their due time join the budgeted queue here; LifeTime stays the backstop (A21).

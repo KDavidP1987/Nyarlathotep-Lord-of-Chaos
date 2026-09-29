@@ -279,6 +279,34 @@ public partial class SpawningTests
     }
 
     [Fact]
+    public void Hunt_passes_tally_counts_each_player_once()
+    {
+        // Session 1 (A66): a player standing on a castle plot read as "0 seeds kept" with no reason.
+        var players = new[]
+        {
+            P(1, 20), P(2, 5, territory: true), P(3, 5, alive: false, territory: true), P(4, 5, pvp: true, territory: true),
+            P(5, 5, pvp: true), P(6, 40.5f), P(7, float.NaN), P(8, 5, online: false),
+        };
+        var t = HuntPlan.Tally(players, (0, 0), 40);
+        Assert.Equal(new HuntTally(8, 1, 3, 2, 1, 1, 0), t);
+        Assert.Equal(t.Players, t.Targets + t.Dead + t.InTerritory + t.InPvpCombat + t.OutOfRange + t.OverCap);
+        Assert.Equal("8 players read, 1 targeted; left out: 3 dead or unreadable, 2 in claimed territory, 1 in PvP combat, 1 out of range, 0 over the cap of 5",
+            t.ToString());
+        // six eligible, five targeted: the sixth is over the cap (Codex F2)
+        Assert.Equal(new HuntTally(7, 5, 0, 0, 0, 1, 1), HuntPlan.Tally(Enumerable.Range(1, 7).Select(i => P(i, 70 - i * 5)).ToList(), (0, 0), 60));
+        Assert.Equal(new HuntTally(0, 0, 0, 0, 0, 0, 0), HuntPlan.Tally([], (0, 0), 40));
+    }
+
+    [Fact]
+    public void Hunt_fails_when_tally_counts_a_player_twice()
+    {
+        // one player with every reason at once is counted once, under the first (Review 32 F4)
+        Assert.Equal(new HuntTally(1, 0, 1, 0, 0, 0, 0), HuntPlan.Tally([P(1, 90, alive: false, territory: true, pvp: true)], (0, 0), 40));
+        Assert.Equal(new HuntTally(1, 0, 0, 1, 0, 0, 0), HuntPlan.Tally([P(1, 90, territory: true, pvp: true)], (0, 0), 40));
+        Assert.Equal(new HuntTally(1, 0, 0, 0, 1, 0, 0), HuntPlan.Tally([P(1, 90, pvp: true)], (0, 0), 40));
+    }
+
+    [Fact]
     public void Hunt_fails_when_sixth_target_added()
     {
         var players = Enumerable.Range(1, 7).Select(i => P(i, 70 - i * 5)).ToList();

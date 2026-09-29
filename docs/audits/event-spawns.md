@@ -61,3 +61,12 @@ one under "## Post-audit"; every post-audit entry carries a "Codex verdict:" lin
 - dod status: see the Log's status lines after this commit
 - privacy grep (7656119, kdpenland): 0 hits in the diff
 - in-game: Session 1 (owner) follows this commit; its steps are in docs/features/EVENT_SPAWNS.md › Owner steps for Session 1
+
+### Step 2 · Session 1 and its fix · 2026-09-29 · b918028
+- in-game: Session 1 part A (steps 2-12) and part B (A65 re-check, redo of steps 10 and 12), results in docs/features/EVENT_SPAWNS.md › Test results; part A's finds recorded before the fix: A65 (~D32, the chat drops `<n>`), A66 (the Hunt and unit-removal diagnostics); plan Review 32 (subagent, scope A65-A66): READY, F1 rejected (ChatUsage strips brackets), F2-F6 accepted
+- logs (both sessions, copied and deleted after): no [Error]; BepInEx warnings only the known kinds; the server log's 224 "unknown state" at save load; tick averages ≤ 2.6 ms, single slow ticks 114.0 and 85.2 ms in idle windows (host pauses, as before)
+- compile: 0 Warning(s), 0 Error(s); tests: 2154 passed; preflight OK; -Paths -DeclaredOf event-spawns: "declared: 519/519 in event-spawns" once the Session 1 temp folders were gone
+- /code-review (fresh subagent, read-only): no blocking; F1 a failed tally would read as a failed seed → fixed (its own guard); F2 the usage table's placeholders → the step 3 note (VCF usage attributes; CommandForm.ChatUsage strips them in our own replies)
+- Codex verdict: REVISE (round 1) — F1 VCF usage attributes hold `<id>` → deferred to step 3 (Log note, since event-library); F2 the tally left players over the cap uncounted → fixed (HuntTally.OverCap); F3 the diagnostic before Release → fixed (Left never throws, Release in finally); F4 no Services seam → rejected (observed in part B)
+- Codex verdict: READY (round 2) — no findings; after it, the code review's F1 guard only
+- privacy grep (7656119, kdpenland): 0 hits in the diff

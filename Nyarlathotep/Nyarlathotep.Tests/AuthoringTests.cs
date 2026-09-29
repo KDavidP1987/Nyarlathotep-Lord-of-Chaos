@@ -408,7 +408,7 @@ public partial class AuthoringTests
     {
         var lib = Lib(Json.Event("raid"));
         Unchanged(lib, () => Assert.Equal("location here needs your character in the world", Set(lib, "raid", "location", "here", null)));
-        Unchanged(lib, () => Assert.Equal("location takes here or aroundplayer <minDist> <maxDist>", Set(lib, "raid", "location", "there")));
+        Unchanged(lib, () => Assert.Equal("location takes here or aroundplayer MIN MAX", Set(lib, "raid", "location", "there")));
     }
 
     // ---- D12 Equivalence

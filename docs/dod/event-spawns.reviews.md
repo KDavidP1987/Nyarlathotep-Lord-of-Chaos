@@ -1035,3 +1035,25 @@ VERDICT: READY
 ### Dispositions
 - F1 · accepted · deferred to step 3's Paths walked amendment (a step 3 note in the Log), so this run's review rounds end at 3 without another gating edit
 - F2 · accepted · the same step 3 note
+
+## Review 32 · 2026-09-29 · subagent · plan uncommitted · plan 174955 B · 24 items · files 0 · e3b0c44298fc · prompt 9a524873255c · scope A65,A66
+Reviewer: a fresh-context general-purpose Claude subagent, told read-only, scoped to amendments A65 and A66 (design §9 D26); the prompt held no Steam ID. It checked each amendment against the uncommitted code, reverted nothing, and ran dotnet test (2153 passed; the ChatBytes, Hunt, ControlCases and Privacy filters 66/66).
+
+F1 · advisory · 11.2 · event-library's usage forms in CommandForms.Library (`.nyar event set <id> <field> <value>`) still hold angle-bracket placeholders that the chat drops. Fix: an event-library amendment or backlog note, or Markup() over CommandForms.Library.
+F2 · advisory · 11.2 · the location refusal is a private const; the markup control checks a literal copy, so a revert is caught only by the equality tests. Fix: a public const in the Markup list.
+F3 · advisory · 12.2 · A66 is observability (12.2), not 13.1; the tally is taken at the first unit's wave centre, which the log line does not say. Fix: retag, and say so in the line.
+F4 · advisory · 12.4 · removing the new diagnostics fails no test; the tally has a pass case only. Fix: none required; optionally a fails-when case on D13's row.
+F5 · advisory · 10.4 · "counts only" holds by construction, but PrivacyTests does not pin HuntTally's fields. Fix: a reflection check that every property is an int.
+F6 · advisory · 14.4 · -Paths -DeclaredOf event-spawns finds no undeclared path but fails on the Session 1 temp folders; A65's text omits CommandArgTests.Library.cs, ControlCases.cs and the design §6 row; design line 154 may still read `<n>`. Fix: clear the folders before the commit, list the files, update line 154.
+
+15/15 layers · 49/49 probes
+
+VERDICT: READY
+
+### Dispositions
+- F1 · rejected · usage forms reach chat only through CommandForm.ChatUsage (Logic/CommandArgs.cs), which strips '<' and '>'; the raw forms are VCF's help text and the wire's
+- F2 · accepted · CommandArgs.LocationSetRule (public const), in ChatBytes_fails_when_line_holds_markup's list
+- F3 · accepted · A66 retagged 12.2; the Hunt line reads "at the first unit's centre:" and A66 says so
+- F4 · accepted · SpawningTests.Hunt_fails_when_tally_counts_a_player_twice on D13's row
+- F5 · accepted · PrivacyTests.EventSpawns: every HuntTally property is an int
+- F6 · accepted · A65 lists the three files; design line 154 reads `action.units.N.chance`; the temp folders go at the end of Session 1, before the commit

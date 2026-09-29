@@ -104,14 +104,14 @@ public static class CommandArgs
     public static readonly IReadOnlyList<string> ModifierFields =
         new[] { "level", "levelDelta" }.Concat(EventValidator.ModifierKeys).Select(k => "action.modifiers." + k).ToList();
 
-    public const string UnitChanceField = "action.units.<n>.chance";
+    public const string UnitChanceField = "action.units.N.chance";
 
-    /// <summary>Every event-spawns field (D18), all of a SpawnWaves action; `action.units.&lt;n&gt;.chance` stands for
+    /// <summary>Every event-spawns field (D18), all of a SpawnWaves action; `action.units.N.chance` stands for
     /// one field per unit entry, n 1-10.</summary>
     public static readonly IReadOnlyList<string> SpawnKeyFields =
         ModifierFields.Concat(["action.loot", "action.allowTerritory", "action.behaviour", UnitChanceField]).ToList();
 
-    /// <summary>The entry number n (1-10) of an `action.units.&lt;n&gt;.chance` field, or null for any other name.</summary>
+    /// <summary>The entry number n (1-10) of an `action.units.N.chance` field, or null for any other name.</summary>
     public static int? UnitChanceIndex(string field)
     {
         const string head = "action.units.", tail = ".chance";
@@ -122,7 +122,7 @@ public static class CommandArgs
             ? i : null;
     }
 
-    /// <summary>The table name of <paramref name="field"/>: `action.units.&lt;n&gt;.chance` for a unit's chance, else the
+    /// <summary>The table name of <paramref name="field"/>: `action.units.N.chance` for a unit's chance, else the
     /// field itself.</summary>
     public static string TableName(string field) => UnitChanceIndex(field) is null ? field : UnitChanceField;
 
@@ -302,14 +302,14 @@ public static class CommandArgs
     }
 
     /// <summary>True when `event set` takes <paramref name="field"/>: a name of the table, or a unit's chance
-    /// `action.units.&lt;n&gt;.chance` with n 1-10 (the table's placeholder itself is no field).</summary>
+    /// `action.units.N.chance` with n 1-10 (the table's placeholder itself is no field).</summary>
     public static bool IsSettable(string field) => field != UnitChanceField && SettableFields.ContainsKey(TableName(field));
 
     /// <summary>`location here` or `location aroundplayer &lt;minDist&gt; &lt;maxDist&gt;` (event-library D11, event-spawns
     /// D18), each distance in D6's range and minDist below maxDist.</summary>
     static Arg<object> LocationValue(string? value)
     {
-        const string rule = "location takes here or aroundplayer <minDist> <maxDist>";
+        const string rule = LocationSetRule;
         if (value == "here") return Arg<object>.Of(LocationHere.Instance);
         var parts = (value ?? "").Split(' ');
         if (parts.Length != 3 || !string.Equals(parts[0], "aroundplayer", StringComparison.OrdinalIgnoreCase)) return Arg<object>.Bad(rule);
@@ -328,9 +328,10 @@ public static class CommandArgs
         return m >= min && m <= max && decimal.Round(m, 2) == m ? m : null;
     }
 
-    public const string BehaviourRule = "action.behaviour takes none or hunt <range>";
+    public const string LocationSetRule = "location takes here or aroundplayer MIN MAX";
+    public const string BehaviourRule = "action.behaviour takes none or hunt RANGE";
     public const string ValueRequired = "value required";
-    public const string UnitChanceRule = "action.units.<n>.chance must be 0.05-1.0 with at most two decimals";
+    public const string UnitChanceRule = "action.units.N.chance must be 0.05-1.0 with at most two decimals";
 
     /// <summary>The event-spawns fields (D18), each value in D6's range: a modifier (or none), loot and allowTerritory
     /// true or false, behaviour none or hunt &lt;range&gt; (any other type is "unknown behaviour type"), and a unit's

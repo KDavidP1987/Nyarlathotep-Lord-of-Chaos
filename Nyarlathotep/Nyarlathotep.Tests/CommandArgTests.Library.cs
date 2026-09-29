@@ -97,7 +97,7 @@ public partial class CommandArgTests
         Assert.Equal(33, CommandArgs.SettableFields.Count);
         foreach (var (name, (family, who)) in CommandArgs.SettableFields)
         {
-            var field = name.Replace("<n>", "1", StringComparison.Ordinal);        // the table's unit-chance placeholder
+            var field = name.Replace(".N.", ".1.", StringComparison.Ordinal);        // the table's unit-chance placeholder
             Assert.True(CommandArgs.SettableValue(field, ValidValue(field)).Ok, field);
             Assert.Contains(family, new[] { "definition", "trigger", "empower action", "spawn action", "location", "action" });
             Assert.Equal("admin", who);

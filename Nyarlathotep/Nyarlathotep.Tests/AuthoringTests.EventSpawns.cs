@@ -63,7 +63,7 @@ public partial class AuthoringTests
     [InlineData("action.allowTerritory", "true", "action.allowTerritory is not an Empower field")]
     [InlineData("action.behaviour", "hunt 40", "action.behaviour is not an Empower field")]
     [InlineData("action.behaviour", "none", "action.behaviour is not an Empower field")]
-    [InlineData("action.units.1.chance", "0.5", "action.units.<n>.chance is not an Empower field")]
+    [InlineData("action.units.1.chance", "0.5", "action.units.N.chance is not an Empower field")]
     [InlineData("location", "aroundplayer 20 40", "location is a SpawnWaves field")]
     public void Spawns_fails_when_empower_definition(string field, string value, string reply)
     {
@@ -123,7 +123,7 @@ public partial class AuthoringTests
     public void Spawns_empty_value()
     {
         var lib = Lib(Json.Event("raid"));
-        foreach (var field in CommandArgs.SpawnKeyFields.Select(f => f.Replace("<n>", "1", StringComparison.Ordinal)).Append("location"))
+        foreach (var field in CommandArgs.SpawnKeyFields.Select(f => f.Replace(".N.", ".1.", StringComparison.Ordinal)).Append("location"))
             foreach (var value in new[] { "", " " })
                 Unchanged(lib, () => Assert.False(CommandArgs.SettableValue(field, value).Ok, field));
         Unchanged(lib, () => Assert.Equal("value required", Set(lib, "raid", "action.loot", "")));
@@ -135,7 +135,7 @@ public partial class AuthoringTests
     public void Spawns_fails_when_refusal_names_wrong_argument()
     {
         // A50: a unit chance out of range is a bad value, not a bad field, although SettableFields lists only the
-        // placeholder action.units.<n>.chance; a field that is not settable stays a bad field.
+        // placeholder action.units.N.chance; a field that is not settable stays a bad field.
         var r = HumanReplyTests.Default();
         var bad = r.Flows.Set(r.Who, "raid", "action.units.1.chance", "0.01");
         Assert.Equal((RefusalCode.BadArg, "value"), (bad.Code!.Value, bad.Arg));

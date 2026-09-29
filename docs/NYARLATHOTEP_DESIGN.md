@@ -151,7 +151,7 @@ Business rules 11.
 ### Settable fields
 
 Every field `.nyar event set` takes (event-library D20). A trigger field needs its trigger type, and an action field needs its
-action type, except `trigger.scope` and `action.scope` (regions D9), which fit every type; `trigger.type` replaces the trigger with that type's default. The event-spawns fields (event-spawns D18) take `none` to remove a modifier or the behaviour; `action.units.<n>.chance` names unit entry n (1-10); `location` also takes `aroundplayer <minDist> <maxDist>`. Values are checked before any write, and names on reload.
+action type, except `trigger.scope` and `action.scope` (regions D9), which fit every type; `trigger.type` replaces the trigger with that type's default. The event-spawns fields (event-spawns D18) take `none` to remove a modifier or the behaviour; `action.units.N.chance` names unit entry N (1-10); `location` also takes `aroundplayer <minDist> <maxDist>`. Values are checked before any write, and names on reload.
 
 | Field | Family | Who |
 |---|---|---|
@@ -185,7 +185,7 @@ action type, except `trigger.scope` and `action.scope` (regions D9), which fit e
 | `action.loot` | spawn action | admin |
 | `action.allowTerritory` | spawn action | admin |
 | `action.behaviour` | spawn action | admin |
-| `action.units.<n>.chance` | spawn action | admin |
+| `action.units.N.chance` | spawn action | admin |
 | `location` | location | admin |
 | `action.scope` | action | admin |
 

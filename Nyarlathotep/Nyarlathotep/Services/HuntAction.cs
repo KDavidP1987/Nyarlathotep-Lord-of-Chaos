@@ -106,7 +106,20 @@ internal static class HuntAction
                     left += l;
                 }
                 WalkCheck.Health.Recovered(SpawnFailure.HuntSeed, g.Key);
-                if (Settings.VerboseLogging.Value) Core.Log.LogInfo($"[nyar] hunt {g.Key}: {kept} seeds kept, {left} left to the game");
+                if (Settings.VerboseLogging.Value)
+                {
+                    // Why whom (A66), at the first unit's wave centre: counts only (Security › Personal data). A failed
+                    // diagnostic never reads as a failed seed.
+                    string why;
+                    try
+                    {
+                        var tag = g.First().Value.Tag;
+                        why = map is null ? "no territory map, nobody targeted"
+                            : HuntPlan.Tally(players.Select(p => Candidate(p, map)).ToList(), (tag.X, tag.Z), tag.Range).ToString();
+                    }
+                    catch { why = "counts unreadable"; }
+                    Core.Log.LogInfo($"[nyar] hunt {g.Key}: {kept} seeds kept, {left} left to the game; at the first unit's centre: {why}");
+                }
             }
             catch (Exception ex)
             {
@@ -132,8 +145,7 @@ internal static class HuntAction
 
         // No map (its latest build failed): no target, so every seed goes (fail closed, D13).
         var targets = map is null ? new List<long>()
-            : HuntPlan.Targets(players.Select(p => new HuntCandidate(p.Key, p.X, p.Z, true, p.Alive, Territory.IsClaimed(map, p.X, p.Z), p.InPvpCombat)),
-                (tag.X, tag.Z), tag.Range);
+            : HuntPlan.Targets(players.Select(p => Candidate(p, map)), (tag.X, tag.Z), tag.Range);
         var (adds, removes) = _seeds.Plan(key, targets, inBuffer.Keys.ToList());
 
         foreach (var target in removes)
@@ -159,6 +171,9 @@ internal static class HuntAction
         }
         return (kept, left);
     }
+
+    static HuntCandidate Candidate(PlayerRow p, IReadOnlySet<(int X, int Z)> map) =>
+        new(p.Key, p.X, p.Z, true, p.Alive, Territory.IsClaimed(map, p.X, p.Z), p.InPvpCombat);
 
     /// <summary>The buffer's entries by target. A target with more than one entry is not ours alone, so it reads as
     /// changed (left to the game, D13).</summary>

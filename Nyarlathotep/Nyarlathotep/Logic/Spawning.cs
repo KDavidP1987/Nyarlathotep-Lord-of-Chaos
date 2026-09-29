@@ -434,6 +434,14 @@ public readonly record struct HuntCandidate(long Key, float X, float Z, bool Onl
 /// <summary>The AggroBuffer entry HuntAction wrote for a target (event-spawns D13, A12).</summary>
 public readonly record struct AggroSeed(long Target, float DamageValue, float Weight);
 
+/// <summary>A Hunt tick's player counts for the verbose log (A66): every player read is a target or has one reason.</summary>
+public readonly record struct HuntTally(int Players, int Targets, int Dead, int InTerritory, int InPvpCombat, int OutOfRange, int OverCap)
+{
+    public override string ToString() =>
+        $"{Players} players read, {Targets} targeted; left out: {Dead} dead or unreadable, {InTerritory} in claimed territory, " +
+        $"{InPvpCombat} in PvP combat, {OutOfRange} out of range, {OverCap} over the cap of {HuntPlan.MaxTargets}";
+}
+
 /// <summary>Hunt's target plan (event-spawns D13).</summary>
 public static class HuntPlan
 {
@@ -450,6 +458,22 @@ public static class HuntPlan
             .Take(MaxTargets)
             .Select(p => p.Key)
             .ToList();
+
+    /// <summary>Why a Hunt tick targets whom (A66, verbose only): each player read is counted once, as a target or under
+    /// the first reason <see cref="Targets"/> leaves it out for. Counts only, never a position or name.</summary>
+    public static HuntTally Tally(IReadOnlyCollection<HuntCandidate> players, (float X, float Z) centre, int range)
+    {
+        int dead = 0, territory = 0, pvp = 0, far = 0;
+        foreach (var p in players)
+        {
+            if (!p.Online || !p.Alive || !PlayerPosition.Usable(p.X, p.Z)) dead++;
+            else if (p.InTerritory) territory++;
+            else if (p.InPvpCombat) pvp++;
+            else if (Distance(p.X, p.Z, centre) > range) far++;
+        }
+        var targets = Targets(players, centre, range).Count;
+        return new HuntTally(players.Count, targets, dead, territory, pvp, far, players.Count - targets - dead - territory - pvp - far);
+    }
 
     /// <summary>The seeds to add (targets not yet seeded) and to remove (seeded players no longer targets).</summary>
     public static (List<long> Adds, List<long> Removes) Diff(IReadOnlyCollection<long> seeded, IReadOnlyList<long> targets) =>

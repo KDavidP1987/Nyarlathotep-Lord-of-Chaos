@@ -59,6 +59,8 @@ public partial class PrivacyTests
         Assert.Equal(["Centre", "Error", "Outcome"], typeof(PickResult).GetProperties().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal));
         foreach (var m in typeof(WaveLines).GetMethods(BindingFlags.Public | BindingFlags.Static))
             Assert.Equal([typeof(int), typeof(string)], m.GetParameters().Select(p => p.ParameterType));
+        // the Hunt line's tally holds counts only (A66, Review 32 F5)
+        Assert.All(typeof(HuntTally).GetProperties(), p => Assert.Equal(typeof(int), p.PropertyType));
     }
 
     [Fact]

@@ -1,6 +1,6 @@
 # Event spawns (Pillar D)
 
-**Status:** steps 1-2 built and post-audited; Session 1 (owner, in game) next. Depends on Foundation. Spike S2: go (2026-09-24; LifeTime needs Age; Test results). Shares the `SpawnWaves` action with
+**Status:** steps 1-2 built, post-audited and tested in game (Session 1, 2026-09-29, parts A and B); step 3 next. Depends on Foundation. Spike S2: go (2026-09-24; LifeTime needs Age; Test results). Shares the `SpawnWaves` action with
 Pillars B and C — this doc defines it.
 
 ## Goal
@@ -162,6 +162,97 @@ Afterwards (Claude):
     allowTerritory wave.
   - D32: the owner's rendering notes.
 - Run `dev-snapshot.ps1 -Restore`, then redeploy.
+
+### Session 1 · 2026-09-29 · event-spawns step 2, part A (b918028, dev world nyardev, with the owner)
+
+Setup as in the steps above (`pwsh tools/dev-snapshot.ps1 -Save es1` before the deploy). The owner ran steps 2–12 and
+disconnected; the server was stopped after autosave 1954, both logs copied to %TEMP%\nyar-es1a-logs. Part B redoes
+steps 10 and 12 on a build with A65 and A66.
+
+- [x] step 2 (D18, D32): every set accepted with its field and value, e.g. "event es-hunt action.behaviour = hunt 60;
+  reloaded: 15 valid, 3 disabled"; each reply whole in chat
+- [ ] step 3 (D18, D32): five refusals whole and readable without colour; the unit-chance refusal read "action.units..chance
+  must be 0.05-1.0 …", because the chat drops `<n>` as a tag → A65 (`action.units.N.chance`, and "hunt RANGE",
+  "aroundplayer MIN MAX"); re-checked in part B
+- [x] step 4 (D6, D32): `.nyar event list` showed both reasons whole: "action.modifiers.maxHealth must be a number 0.5-3.0
+  with at most two decimals" and "unknown behaviour type Guard"
+- [x] step 5 (D10): es-plain rows "lvl 16 hp 54/54 pp 14 sp 14 ms 3.2 as 1 at … recipe ok" (ms 1 on a unit standing)
+- [x] step 6 (D9, D10, D11): es-mod rows hp 108 (2×), pp and sp 20 (1.5× of a base between 13.5 and 13.67, both
+  rounded by `debug here`), ms 4.8 and 1.5 (1.5×), as 2 (2×); drops "1 before, 0 after setup" for es-plain and "1 before,
+  1 after setup" for es-mod; the owner killed two es-mod Thugs and saw loot drop; the stop queued the one left
+- [x] step 7 (D9): es-lvl rows lvl 30; es-delta rows lvl 21 (16 + 5)
+- [x] step 8 (D16): "event es-around wave 1/1 around a player: 3 units queued (3 moved, 0 unchecked)"; the owner saw them
+  appear around them, not on top
+- [x] step 9 (D16, 1A): with action.scope CursedForest, "wave 1 of es-around skipped: no eligible player"; no Thugs
+- [ ] step 10 (D13): es-hunt's three Thugs spawned; `debug here 45` listed them and `debug here 35` did not, as expected;
+  every Hunt tick logged "0 seeds kept, 0 left to the game" and the Thugs did not come. The owner stood on their castle
+  plot, which is claimed territory (D13 leaves such a player out), and the log could not say so. The three left the
+  ledger about 15 s later with no line (died or removed by the game), so the stop queued 0 → A66 (the Hunt line's
+  counts, and a verbose line when a unit dies or the game removes it); redone in part B away from any castle plot
+- [x] step 11 (D17): "wave 1 of es-castle skipped: centre in claimed territory", and wave 2's line one interval later
+  (Review 29 F2); no Thugs
+- [ ] step 12 (D17): not run: the stops were typed `en-castle`, so es-castle stayed active ("not started by manual:
+  already active") and ended on its own ("ended (0 of 2 waves)"); redone in part B
+- [x] logs: no [Error]; BepInEx warnings only the known kinds (Il2CppInterop Class::Init; Beelzebub's two TUNE lines; the
+  dev world's example-empowerment line at each reload), the two planted invalid events at each reload, and the stop
+  summaries; the server log's 224 "PrefabLookupMap.TryGet … is in an unknown state" warnings at save load, the known set;
+  tick timing max 30.1 ms once (the es-hunt start), otherwise under 5 ms
+
+### Owner steps for Session 1 part B · A65, A66 and the redo of steps 10 and 12
+
+Setup (Claude): the build with A65 and A66 deployed on the same world (snapshot es1 still held), VerboseLogging on.
+The es-* events from part A are still in events.json; es-castle already has allowTerritory true.
+
+1. Connect to **127.0.0.1:9876** (Nyar Dev) with your admin character. Open the console (the ~ key), enter
+   `adminauth`, and close it.
+2. **Chat text (A65).** Send each of these. Each should be refused, and the reply should show whole, with nothing
+   missing between the dots or at the end:
+   - `.nyar event set es-mod action.units.1.chance 2` → "action.units.N.chance must be 0.05-1.0 with at most two
+     decimals"
+   - `.nyar event set es-mod action.behaviour "hunt 20 30"` → "action.behaviour takes none or hunt RANGE"
+   - `.nyar event set es-around location "aroundplayer 20"` → "location takes here or aroundplayer MIN MAX"
+3. **Claimed territory allowed (redo of step 12).** Go inside your castle, within its floor. Run
+   `.nyar event set es-castle location here`, then `.nyar event start es-castle`. Expect three Thugs inside the castle.
+   Then run `.nyar event stop es-castle` (check the spelling: **es**-castle) right away. Expect them to vanish within a
+   few seconds.
+4. **Hunt (redo of step 10).** Leave your castle's territory entirely: the plot reaches well past the walls, so open
+   the map and stand outside your castle's territory outline, at least 100 m from any castle. Pick a spot with a
+   building, rock or hill you can hide behind about 40 m away. Stand on the spot and run
+   `.nyar event set es-hunt location here`. Walk about 40 m away, out of sight behind the cover, still outside any
+   castle's territory. Run `.nyar event start es-hunt`. Then run `.nyar debug here 45` and `.nyar debug here 35`.
+   Stay out of sight and don't attack. Expect the Thugs to come to you within about 15 seconds. Tell me whether they
+   came. Then run `.nyar event stop es-hunt`.
+5. Stay connected for about 2 minutes, so the server autosaves after these steps. Then tell me you're done, and
+   paste anything that differed from an expectation.
+
+### Session 1 · 2026-09-29 · event-spawns step 2, part B (b918028 plus the uncommitted A65 and A66, with the owner)
+
+The A65-A66 build before Codex round 1's fixes (the Hunt line without the over-the-cap count; Left without its guard),
+deployed on the same world; owner connected about 10:58–11:03; server stopped after autosave 1997, both logs copied to
+%TEMP%\nyar-es1b-logs.
+
+- [x] step 2 (A65, D32): the three refusals whole in chat: "action.units.N.chance must be 0.05-1.0 with at most two
+  decimals", "action.behaviour takes none or hunt RANGE", "location takes here or aroundplayer MIN MAX"
+- [x] step 3 (D17, redo of part A step 12): with allowTerritory true, "event es-castle wave 1/2: 3 units queued (0 moved, 0
+  unchecked)" at the part A castle point (the owner's `location here.` with a period was refused with the location rule,
+  so the point stayed); the owner saw the Thugs inside the castle; stop → "3 units queued", "despawn batch: 3 of 3
+  destroyed"
+- [x] step 4 (D13, redo of part A step 10), outside any claimed territory: the first Hunt tick "1 players read, 1 targeted;
+  left out: 0 dead or unreadable, 0 in claimed territory, 0 in PvP combat, 0 out of range" (A66) wrote the seeds; the next
+  "0 seeds kept, 3 left to the game": the game took over the three entries (D13: a changed entry is the game's). One Thug
+  came at the owner. One stood on a raised floor ("regrouped CHAR_Bandit_Thug from height 5.0 to its centre at height
+  0.0", A23) and the owner saw it on a raised castle plot nearby; one had other stats in `debug here` (hp 65/65 pp 22, a
+  game buff, not ours: es-hunt has no modifiers) and "CHAR_Bandit_Thug of es-hunt died" (A66) about 25 s after the start,
+  with a Skeleton Golem and its minions fighting 29–36 m away. The stop queued the two left ("2 units queued", "2 of 2
+  destroyed"). Whether a unit reaches the player is the game's pathing once it holds the aggro; step 3's Session 2
+  watches where the ring points of a wave near a raised plot land
+- [x] part A's open items: step 3 passes with A65 (step 2 above); step 10 passes (step 4 above); step 12 passes (step 3 above)
+- [x] logs: no [Error]; BepInEx warnings only the known kinds and the two planted invalid events at each reload; the
+  server log's 224 "PrefabLookupMap.TryGet … is in an unknown state" at save load, the known set. Tick timing: every
+  average ≤ 2.6 ms; two single slow ticks, 114.0 ms and 85.2 ms, each in an idle window (0 events, 0 tracked) whose only
+  line is a GameTime day/night edge, while the other eight edges of parts A and B cost under 1 ms; a pause of the host
+  or the runtime, as REGIONS.md and FACTION_EMPOWERMENT.md recorded before; part A's 85.6 ms tick is the one after a
+  3-unit despawn batch. Step 3's soak measures the budget
 
 ### S2 restart spike · 2026-09-24 · spikes step 3 sessions 9–12 (throwaway save)
 
