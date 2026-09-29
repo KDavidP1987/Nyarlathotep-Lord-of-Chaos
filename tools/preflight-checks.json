@@ -6,12 +6,14 @@
     "docs/dod/faction-empowerment.md",
     "docs/dod/event-library.md",
     "docs/dod/walkable-spawns.md",
-    "docs/dod/raphael-api-admin.md"
+    "docs/dod/raphael-api-admin.md",
+    "docs/dod/regions.md"
   ],
   "snapshotSessions": {
     "event-library": 1,
     "walkable-spawns": 1,
-    "raphael-api-admin": 1
+    "raphael-api-admin": 1,
+    "regions": 1
   },
   "probeRecords": {
     "walkable-spawns": 1
@@ -39,6 +41,9 @@
     ],
     "raphael-api-admin": [
       "docs/features/RAPHAEL_API_ADMIN.md"
+    ],
+    "regions": [
+      "docs/features/REGIONS.md"
     ],
     "event-spawns": [
       "docs/features/EVENT_SPAWNS.md"

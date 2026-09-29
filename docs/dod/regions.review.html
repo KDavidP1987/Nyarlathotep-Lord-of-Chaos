@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review — Regions — global or regional scope for triggers and actions, and release 0.6.0</title>
+<style>
+:root { color-scheme: light dark; --bg:#fbfbfa; --fg:#1b1b1a; --dim:#55534e; --line:#d9d7d1; --card:#ffffff;
+  --ok:#1b5e3a; --warn:#7a4a00; --accent:#1f4f82; }
+@media (prefers-color-scheme: dark) { :root { --bg:#16181a; --fg:#eceae5; --dim:#a8a49c; --line:#33363a;
+  --card:#1e2124; --ok:#7fd8a4; --warn:#e8b765; --accent:#8fbde8; } }
+* { box-sizing: border-box; }
+/* plan text carries long unbroken tokens — a review-page URL in a Log note, a path, a hostile string with no
+   space in it — and at 375 px one of those is what pushes the document wider than the window (D20) */
+body, p, td, th, li, caption { overflow-wrap: anywhere; }
+body { margin:0; padding:1.5rem 1rem 4rem; background:var(--bg); color:var(--fg); max-width:60rem;
+  font:16px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+h1 { font-size:1.5rem; line-height:1.25; margin:0 0 .25rem; }
+h2 { font-size:1.15rem; margin:2.25rem 0 .5rem; padding-bottom:.25rem; border-bottom:1px solid var(--line); }
+h3 { font-size:1rem; margin:1.25rem 0 .35rem; color:var(--dim); }
+p { margin:.4rem 0; }
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.9em; }
+.sub { color:var(--dim); margin:0 0 1rem; }
+.absent { color:var(--dim); font-style:italic; }
+.legend { color:var(--dim); }
+.scroll { overflow-x:auto; }
+table { border-collapse:collapse; width:100%; min-width:32rem; }
+caption { text-align:left; color:var(--dim); padding:.25rem 0; }
+th, td { text-align:left; vertical-align:top; padding:.35rem .5rem; border-bottom:1px solid var(--line); }
+th { color:var(--dim); font-weight:600; white-space:nowrap; }
+td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+tr:target td { background:var(--card); outline:2px solid var(--accent); }
+ul.tree { list-style:none; margin:0; padding:0; }
+ul.tree li { padding:.2rem 0; border-bottom:1px solid var(--line); display:flex; gap:.5rem; flex-wrap:wrap; }
+ul.tree li span.pkg { font-weight:600; }
+ul.tree li.lvl2 { padding-left:1.25rem; }
+ul.tree li .pct { margin-left:auto; font-variant-numeric:tabular-nums; color:var(--dim); }
+a { color:var(--accent); }
+a:focus-visible { outline:3px solid var(--accent); outline-offset:2px; border-radius:2px; }
+.k { display:inline-block; min-width:5.5rem; color:var(--dim); }
+.done { color:var(--ok); } .open { color:var(--warn); }
+ol.said { margin:.25rem 0 .75rem; padding-left:1.25rem; }
+ol.said li { padding:.15rem 0; }
+.declared { border-left:3px solid var(--warn); padding:.35rem .6rem; margin:.5rem 0; color:var(--fg); }
+</style>
+</head>
+<body>
+<h1>Review — Regions — global or regional scope for triggers and actions, and release 0.6.0</h1>
+
+<p class="sub"><span class="mono">regions</span> · in-progress · size L · parent nyarlathotep · 16 item(s)</p>
+
+<p class="legend mono">legend: D item · A amendment · S assumption · F review finding · P proposal · W work package · n.m layer.probe</p>
+
+<p class="legend">Every probe of this plan's rubric is below with the plan's own answer. The author's own marking is not on this page — form your own before you look at theirs.</p>
+
+<h2 id="L1">1. Purpose &amp; typical use</h2>
+<p class="absent">the plan writes no numbered sentences under Purpose &amp; typical use for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 1</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">1.1</td><td>Who uses it (role, frequency) and the one sentence they would say when they want it.</td><td><span class="open">no answer</span></td></tr><tr><td class="mono">1.2</td><td>The job it does for them — the outcome, not the mechanism.</td><td><span class="open">no answer</span></td></tr><tr><td class="mono">1.3</td><td>What exists today that it replaces, extends, or must coexist with.</td><td><span class="open">no answer</span></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L2">2. Actors &amp; permissions</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 2</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">2.1 ⛔</td><td>Every actor that can reach it (including unauthenticated, service accounts, admins) and what each may do.</td><td><a href="#D11">D11</a> <a href="#D14">D14</a></td></tr><tr><td class="mono">2.2</td><td>What happens on the unauthorized path — silent deny, error, redirect, audit entry.</td><td><a href="#D11">D11</a></td></tr><tr><td class="mono">2.3</td><td>Ownership: who may see, change, or delete what someone else created, and what happens when ownership changes hands — a holder replaced mid-flight, a closed thing legitimately reopened.</td><td><a href="#D8">D8</a> <a href="#D9">D9</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L3">3. Inputs, outputs &amp; data</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 3</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">3.1</td><td>Every input: shape, limits, validation, and the response to invalid input.</td><td><a href="#D3">D3</a> <a href="#D8">D8</a></td></tr><tr><td class="mono">3.2</td><td>Every output and side effect, including what other systems receive.</td><td><a href="#D8">D8</a> <a href="#D9">D9</a> <a href="#D10">D10</a></td></tr><tr><td class="mono">3.3 ⛔</td><td>Persistence: what is stored, where, who owns it, how long it is kept, how it is deleted — for every artifact the feature produces, including by-products (logs, working directories, intermediates), and which of them exist only once.</td><td><a href="#D13">D13</a> <a href="#D16">D16</a></td></tr><tr><td class="mono">3.4</td><td>Migration of existing data, if the shape changes.</td><td><a href="#D3">D3</a> <a href="#D16">D16</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L4">4. Business rules &amp; invariants</h2>
+<h3>What the plan says under “Business rules”</h3>
+<ol class="said"><li>**Scope (4.1, D3):** `scope` is &quot;Global&quot; (the default) or 1 to RegionNames.Count distinct WorldRegionType names except None. A trigger scope and an action scope are independent of each other. The game&#39;s spelling is stored; matching is case-insensitive.</li><li>**Where each scope applies (4.1, D4, D5, D6):** - **trigger.scope:** on VBloodKilled, the victim&#39;s position; on Schedule, GameTime and Manual, whether at least one online player stands in a named region when the trigger fires (D4). - **action.scope, Empower:** the unit&#39;s position at the sweep that would buff it. - **action.scope, SpawnWaves:** the Point location at load, the admin&#39;s origin at start, and every ring point when placed.</li><li>**Invariants (4.2):** a Global scope never reads a position (D5, D6, D15). A unit is never unbuffed early because it walked out (S-4). Nothing is written to any game entity (D2).</li><li>**Time (4.3):** positions are read when a decision is made (the kill, the sweep, the start, the placement), never cached across ticks. The region index is static for a server build and built once per boot (D2).</li><li>**Precedence (4.4):** the existing controls come first (Precedence.StartBlocker, the caps, Eligibility&#39;s earlier skips), then the scope: &quot;region&quot; follows &quot;other&quot; in SkipReasons (D5), and the scope check follows walkable&#39;s free check in the point search (D6). There is no exception path and no actor can bypass the scope.</li><li>**&quot;Every&quot; sets (4.5):** - &quot;Every trigger and action&quot; (D21) is the trigger and the action of each definition, over the four trigger types of Logic/Model.cs TriggerType (Manual, Schedule, GameTime, VBloodKilled), each with a D4 case; a later trigger type adds its own case to D4&#39;s route in its child. - &quot;Every region&quot; is the WorldRegionType names except None, which D2 checks against the game at boot. - &quot;Every control&quot; is every D-item whose evidence carries a `(fails when:` clause; ControlCaseTests reads this plan (D11). - &quot;Every path this child writes&quot; is computed by `-Paths -DeclaredOf regions` (D13; known exclusion: a path created and deleted inside one step, S-7).</li></ol>
+<div class="scroll">
+<table><caption>probes of layer 4</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">4.1</td><td>Calculations, thresholds, and policies stated precisely enough to write a test from, and which document is authoritative for a threshold stated in two places.</td><td><a href="#D3">D3</a> <a href="#D4">D4</a> <a href="#D5">D5</a> <a href="#D6">D6</a></td></tr><tr><td class="mono">4.2</td><td>Invariants that must never be violated (uniqueness, ordering, balance, totals).</td><td><a href="#D5">D5</a> <a href="#D6">D6</a> <a href="#D15">D15</a></td></tr><tr><td class="mono">4.3</td><td>Temporal rules — time zones, cut-offs, expiry, retroactive changes.</td><td><a href="#D4">D4</a> <a href="#D5">D5</a> <a href="#D2">D2</a></td></tr><tr><td class="mono">4.4 ⛔</td><td>Precedence when rules conflict, and who decides an exception.</td><td><a href="#D5">D5</a> <a href="#D6">D6</a></td></tr><tr><td class="mono">4.5</td><td>(rubric 2) “Every X” sets: for every rule of the form “every X”, how X is computed, what valid content the computation misses, who checks the computation — and, when a tool derives X (a grep, a diff, a directory walk), whether that tool can see every member at the moment it runs: a file not yet tracked, a file this build creates, a path the tool excludes.</td><td><a href="#D2">D2</a> <a href="#D11">D11</a> <a href="#D13">D13</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L5">5. Internal interfaces</h2>
+<p class="absent">the plan writes no numbered sentences under Interfaces for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 5</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">5.1</td><td>What it reads from other features/modules, with paths or symbols.</td><td><a href="#D4">D4</a> <a href="#D5">D5</a> <a href="#D6">D6</a></td></tr><tr><td class="mono">5.2</td><td>What it writes to or changes about other features, and what breaks there if this is wrong.</td><td><a href="#D3">D3</a> <a href="#D10">D10</a></td></tr><tr><td class="mono">5.3</td><td>Shared types, events, schemas or contracts it introduces or alters — each field enumerated against what the code emits or reads, not against the prose that describes it.</td><td><a href="#D3">D3</a> <a href="#D10">D10</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L6">6. External dependencies &amp; contracts</h2>
+<p class="absent">the plan writes no numbered sentences under Interfaces for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 6</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">6.1</td><td>Every external API, service, package, or vendor it depends on — version, quota, cost — and every input contract sampled across all its record types, not only the ones the feature expects.</td><td><a href="#D2">D2</a> <a href="#D12">D12</a> <a href="#D10">D10</a></td></tr><tr><td class="mono">6.2 ⛔</td><td>Behaviour when each dependency is slow, down, rate-limited, or returns garbage, including internal collaborators — sibling agents and your own tools.</td><td><a href="#D7">D7</a> <a href="#D4">D4</a> <a href="#D16">D16</a></td></tr><tr><td class="mono">6.3</td><td>Sandbox / test-mode behaviour and how it is kept out of production.</td><td><a href="#D13">D13</a> <a href="#D1">D1</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L7">7. States &amp; lifecycle</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 7</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">7.1</td><td>Empty, first-run, loading, partial, and error states.</td><td><a href="#D3">D3</a> <a href="#D7">D7</a></td></tr><tr><td class="mono">7.2</td><td>Concurrent use — two users, two tabs, a retry racing the original — and which of these actors is you: the planner, the orchestrator, the build tooling.</td><td><a href="#D2">D2</a> <a href="#D13">D13</a></td></tr><tr><td class="mono">7.3</td><td>Stale data, cancel, undo, and re-entry after interruption, and what a correction invalidates.</td><td><a href="#D5">D5</a> <a href="#D4">D4</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L8">8. Minimal stretch</h2>
+<p class="absent">the plan writes no numbered sentences under Use cases for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 8</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">8.1</td><td>The least a user can do: empty input, one item, defaults only, skipping optional steps.</td><td><a href="#D3">D3</a> <a href="#D7">D7</a></td></tr><tr><td class="mono">8.2</td><td>The feature used once and never again — does anything leak, linger, or nag.</td><td><a href="#D7">D7</a> <a href="#D3">D3</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L9">9. Maximal stretch</h2>
+<p class="absent">the plan writes no numbered sentences under Use cases for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 9</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">9.1</td><td>Volume: 100× the expected count, size, or rate — what degrades and how.</td><td><a href="#D15">D15</a> <a href="#D12">D12</a></td></tr><tr><td class="mono">9.2</td><td>Abuse and misuse: hostile input, automation, the clever workaround a power user will try.</td><td><a href="#D11">D11</a> <a href="#D3">D3</a></td></tr><tr><td class="mono">9.3</td><td>Repeated or parallel use of the same action — idempotency, duplicates, double-submit.</td><td><a href="#D8">D8</a> <a href="#D9">D9</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L10">10. Security &amp; privacy</h2>
+<p class="absent">the plan writes no numbered sentences under Security for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 10</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">10.1 ⛔</td><td>Authorization checked on every path, including indirect ones (jobs, webhooks, exports) — and an allowed program&#39;s options that change what runs (`git --upload-pack`, `npm --script-shell`, `node --require`) are the same boundary as the program itself.</td><td><a href="#D11">D11</a></td></tr><tr><td class="mono">10.2</td><td>Injection and unsafe content on every input that reaches a query, shell, template, or URL.</td><td><a href="#D3">D3</a></td></tr><tr><td class="mono">10.3 ⛔</td><td>Secrets and credentials: where they live, how they rotate, what must never be logged.</td><td><a href="#D14">D14</a></td></tr><tr><td class="mono">10.4</td><td>Personal data: what is collected, minimised, exposed in logs or exports, and the audit trail.</td><td><a href="#D14">D14</a> <a href="#D8">D8</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L11">11. Design &amp; UX</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 11</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">11.1</td><td>Where it lives in the product and how a user discovers it.</td><td><a href="#D16">D16</a> <a href="#D8">D8</a></td></tr><tr><td class="mono">11.2</td><td>Feedback: progress, success, failure, and empty-result messaging in the product&#39;s voice.</td><td><a href="#D8">D8</a> <a href="#D9">D9</a></td></tr><tr><td class="mono">11.3</td><td>Accessibility (keyboard, screen reader, contrast) and small-screen behaviour.</td><td><a href="#D12">D12</a></td></tr><tr><td class="mono">11.4</td><td>(rubric 2) Activation: how the feature is invoked or activated when nobody asks for it — a trigger, a pointer line, a hook, a schedule — and what shows it was; the should-not-activate cases are unrelated to the feature&#39;s purpose, never adjacent to it — an agent that has just finished an adjacent task invokes it for a good reason.</td><td><a href="#D9">D9</a> <a href="#D10">D10</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L12">12. Failure handling &amp; observability</h2>
+<p class="absent">the plan writes no numbered sentences under Failure &amp; observability for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 12</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">12.1</td><td>What the user sees for each failure class, and what they can do next.</td><td><a href="#D7">D7</a> <a href="#D2">D2</a> <a href="#D3">D3</a> <a href="#D6">D6</a></td></tr><tr><td class="mono">12.2</td><td>What is logged or measured, with enough context to debug without reproducing.</td><td><a href="#D2">D2</a> <a href="#D4">D4</a> <a href="#D5">D5</a></td></tr><tr><td class="mono">12.3</td><td>How you would know in production that it is broken — the alert or the dashboard.</td><td><a href="#D7">D7</a> <a href="#D13">D13</a></td></tr><tr><td class="mono">12.4 ⛔</td><td>(rubric 2) Failing case: for every check the plan introduces, the input that makes it report a failure, the input it must stay silent on, and what it prints on an empty input — which must not read as a pass; one evidence command per gating probe, able to fail for its stated `fails when`; and a selftest fixture spells what the real input spells and plants the state the real run produces, never a corrected copy of either.</td><td><a href="#D11">D11</a> <a href="#D1">D1</a> <a href="#D3">D3</a> <a href="#D4">D4</a> <a href="#D5">D5</a> <a href="#D6">D6</a> <a href="#D7">D7</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L13">13. Performance &amp; scale</h2>
+<p class="absent">the plan writes no numbered sentences under Performance for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 13</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">13.1</td><td>The latency or throughput budget, and the hot path that decides it.</td><td><a href="#D15">D15</a> <a href="#D12">D12</a></td></tr><tr><td class="mono">13.2</td><td>Limits and pagination — what is bounded and what happens at the bound, the case a limit came from, and the valid case it excludes.</td><td><a href="#D3">D3</a> <a href="#D10">D10</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L14">14. Rollout &amp; compatibility</h2>
+<p class="absent">the plan writes no numbered sentences under Rollout for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 14</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">14.1</td><td>How it ships: flag, staged, all at once; who can turn it off.</td><td><a href="#D16">D16</a></td></tr><tr><td class="mono">14.2</td><td>Backward compatibility with existing clients, data, and integrations.</td><td><a href="#D3">D3</a> <a href="#D10">D10</a> <a href="#D16">D16</a></td></tr><tr><td class="mono">14.3 ⛔</td><td>Rollback: the exact steps to undo it, whether they are still possible after data has been written, and the commit range they cover when the change is committed more than once.</td><td><a href="#D16">D16</a></td></tr><tr><td class="mono">14.4 ⛔</td><td>(rubric 2) Paths walked: every path the change ships, writes or regenerates, found by walking the Build plan step by step — generated indexes, tooling, fixtures, notes, ignored and generated files, the shipped files a release has to touch, the paths the review process itself writes (review pages, re-review records) and the plan store itself.</td><td><a href="#D13">D13</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L15">15. Out of scope</h2>
+<p class="absent">the plan writes no numbered sentences under Out of scope for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 15</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">15.1</td><td>What was explicitly considered and excluded, so a builder does not fill the gap by guessing.</td><td><span class="open">no answer</span></td></tr><tr><td class="mono">15.2</td><td>What is deferred to a later item, and the slug or issue it lives in.</td><td><span class="open">no answer</span></td></tr></tbody>
+</table>
+</div>
+
+<h2>Items in full</h2>
+
+<h3 id="D1"><span class="mono">D1</span> Point in region</h3>
+<p>Logic/Regions.cs `RegionIndex` holds polygons (a region name, an axis-aligned box and x/z vertices) and answers `RegionOf(x, z)`: the box test first, then the even-odd crossing test over the vertices, the first polygon in index order that contains the point wins, and a point in none answers &quot;None&quot;; a polygon with fewer than 3 vertices or a non-finite coordinate is dropped when the index is built and counted</p>
+<p class="mono">test: Nyarlathotep.Tests RegionTests (fails when: a point inside a concave polygon&#39;s notch answers that region, a point on the far side of a box-only overlap answers the box&#39;s region, a point outside every polygon answers other than None, a vertex on the query point&#39;s ray is counted twice, a NaN point answers a region, or a degenerate polygon enters the index uncounted)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D2"><span class="mono">D2</span> Regions read from the game</h3>
+<p>Services/RegionMap.cs builds the RegionIndex once, after Core.IsReady, from every entity with ProjectM.Terrain.WorldRegionPolygon (disabled included), its PolygonBounds and its WorldRegionPolygonVertex buffer, naming each polygon by WorldRegionType.ToString(); it logs &quot;regions: &lt;p&gt; polygons, &lt;r&gt; regions (&lt;names&gt;)&quot; and never writes a component; the region names the game knows are the WorldRegionType names except None, and Logic&#39;s RegionNames list must equal them, checked at boot with &quot;regions: names differ from the game: &lt;diff&gt;&quot; as a warning</p>
+<p class="mono">manual: Session 1 records the boot line and `.nyar region list` · cmd: pwsh tools/preflight.ps1 -LogCheck on Session 1&#39;s log → the &quot;regions:&quot; line present with p &gt; 0, which -LogCheck asserts when the log loads Nyarlathotep 0.6.0 or later (A2; fixtures LogCheck/bad-regions-missing, bad-regions-zero and bad-regions-differ; a log with nyar lines whose Nyarlathotep version cannot be read fails, fixture LogCheck/bad-regions-noversion, and LogCheck/good-regions passes, A14) (fails when: the line is missing, p is 0, the names-differ warning appears, the loaded version is unreadable, or the good 0.6.0 fixture fails)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D3"><span class="mono">D3</span> Scope in events.json</h3>
+<p>trigger and action each take an optional `scope`: the string &quot;Global&quot; (the default when absent) or an array of 1 to RegionNames.Count (10 at 1.1.12) distinct region names, matched case-insensitively and stored in the game&#39;s spelling; an unknown name, &quot;None&quot;, an empty or longer array, a duplicate, or a non-string disables the event with &quot;trigger.scope must be Global or 1-&lt;RegionNames.Count&gt; region names&quot; or &quot;action.scope must be …&quot; (or &quot;unknown region &lt;name&gt;&quot;); a known name that the built index holds no polygon for disables the event with &quot;region &lt;name&gt; is not on the map&quot; (A3); every trigger type takes a scope (D4 gives each its meaning); SchemaVersion stays 1, templates accept the same key, and a definition without either key behaves exactly as in 0.5.x; the trigger scope and the action scope are independent, so a trigger on CursedForest with an action on FarbaneWoods is valid</p>
+<p class="mono">test: Nyarlathotep.Tests EventValidationTests Scope (fails when: a trigger scope disjoint from its action scope is refused, an absent scope is not Global, &quot;cursedforest&quot; is not stored as CursedForest, an unknown, None, empty, longer-than-RegionNames.Count, duplicate or numeric scope is accepted, a name absent from the built index loads enabled, the maximum is a literal instead of RegionNames.Count, a trigger scope on any of the four trigger types is refused, or a 0.5.x definition&#39;s parse result changes)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D4"><span class="mono">D4</span> Regional triggers</h3>
+<p>a trigger scope other than Global is a start condition for every trigger type (owner, S-5): VBloodKilled: DeathEventPatch passes the victim&#39;s x and z to TriggerBus.VBloodKilled, and TriggerRouter.VBloodKilled starts a definition only when its trigger scope contains RegionOf(x, z); a kill whose position cannot be read starts only Global definitions and logs &quot;vblood kill: position unreadable&quot; once per streak. Schedule and GameTime: when an occurrence is due, Logic ScopeGate.AnyPlayerIn(scope, positions) over the online players&#39; x/z (read by Services only for a definition with a trigger scope) decides; with no player in a named region the occurrence is consumed as handled, not retried in the same slot, and logs &quot;event &lt;id&gt;: skipped, no player in &lt;regions&gt;&quot;: the scheduler, on a no_player_in_region refusal from Start, keeps the slot marked handled and logs that line instead of the generic refused-start line (A12). Manual (`.nyar event start` and its api twin): with no player in a named region the start is refused with &quot;no player is in the event&#39;s regions&quot; (Outcome refusal state arg=scope reason=no_player_in_region, A8; the check runs in EventEngine.Start after Precedence.StartBlocker, reading the online players&#39; x/z through a reader in its start controls that Services supply, A4: the reader is a defaulted `ControlState` parameter (null reads nothing), so existing constructions are unchanged, A11; the player gate applies to Manual, Schedule and GameTime starts only, keyed on def.Trigger.Type, and a VBloodKilled start is decided by the kill position alone, A10; so the Schedule and GameTime skips and the Manual refusal share one check, the reason added to Logic/Outcome.cs Reasons with an OutcomeCodeTests row and to contract §5a). A Global trigger reads no position</p>
+<p class="mono">test: Nyarlathotep.Tests TriggerActivationTests Region and EngineTests ScopeGate (fails when: a scoped definition starts on a kill outside its regions, a Global one fails to start, an unreadable kill position starts a scoped one, the log repeats within a streak, a scheduled or game-time occurrence starts with no player in its regions or is retried in the same slot, one fails to start with a player inside, a Manual start with no player inside starts or answers another code, an in-region kill with no player in the region fails to start, a skipped occurrence logs the generic refused-start line, or a Global trigger reads positions)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D5"><span class="mono">D5</span> Regional empowerment</h3>
+<p>Eligibility.Decide gains the skip reason &quot;region&quot; after &quot;other&quot;: a unit whose position (read into UnitFacts at sweep time) lies outside the action&#39;s scope is skipped; a unit whose position cannot be read is skipped with &quot;region&quot; when the scope is not Global; a unit already carrying the event&#39;s buff keeps it until the event ends, wherever it walks (S-4); a Global scope never reads a position</p>
+<p class="mono">test: Nyarlathotep.Tests EmpowerEligibilityTests Region (fails when: an out-of-region unit is empowered, an in-region unit is skipped, an unreadable position is empowered under a regional scope, &quot;region&quot; is ordered before &quot;denied&quot; or &quot;other&quot;, or a Global scope reads the position)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D6"><span class="mono">D6</span> Regional waves</h3>
+<p>a SpawnWaves action with a regional scope: a Point location outside the scope disables the event at load with &quot;action.location is outside action.scope&quot; (checked at load; RegionMap builds before the definitions, D7, A6); an Admin location whose origin lies outside the scope refuses the start with &quot;your position is outside the event&#39;s regions&quot; (Outcome refusal badarg arg=location reason=out_of_region, the reason added to Logic/Outcome.cs Reasons with an OutcomeCodeTests row and to contract §5a&#39;s reason list); a ring point outside the scope counts as blocked in walkable-spawns&#39; SpawnPoints search (isFree and in scope), so units move inward before falling back to the centre; the scope check runs before WalkBudget and spends none of it, so a spent budget never keeps a ring point outside the scope (A1); an Unchecked placement (spent budget, fall-open or no probe) whose ring point is outside the scope uses the wave centre, which the Point and Admin checks keep in scope (A9)</p>
+<p class="mono">test: Nyarlathotep.Tests SpawningTests Region and EngineTests Region (fails when: a point outside the scope is used while an in-scope one is free, a spent walk budget keeps an out-of-scope ring point, a fall-open or no-probe wave places an out-of-scope ring point, a Point location outside the scope loads enabled, an Admin start outside the scope starts, out_of_region is missing from Reasons or §5a, or a Global scope calls the region check)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D7"><span class="mono">D7</span> Regions unavailable</h3>
+<p>RegionMap builds in Core&#39;s deferred init before EventStore applies the definitions, so a boot never validates a regional definition without the index; when RegionMap finds no polygon, or its build throws, every definition with a regional scope is disabled with &quot;regions unavailable&quot; and Global ones run unchanged; HealthMonitor.Degraded adds &quot;regions: unavailable&quot;; `.nyar region here` replies &quot;regions unavailable&quot;; the build is retried at the next `.nyar event reload`; when the index is unavailable this message wins over D3&#39;s &quot;region &lt;name&gt; is not on the map&quot;, which applies only to a built, non-empty index (A15)</p>
+<p class="mono">test: Nyarlathotep.Tests DependencyFailureTests Regions, also run as dotnet test Nyarlathotep/Nyarlathotep.Tests --filter Regions_ → &quot;Passed!&quot; with at least 5 tests (fails when: a regional definition runs without an index, a Global one is disabled, the health entry is missing or stays after a successful rebuild, a throwing build stops the boot, definitions are applied before the build, an unavailable index disables with &quot;region &lt;name&gt; is not on the map&quot;, or the filter runs fewer than 5 tests)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D8"><span class="mono">D8</span> Admin commands</h3>
+<p>`.nyar region list` (adminOnly) replies one line per region in RegionNames order, &quot;&lt;name&gt; (&lt;display name&gt;): &lt;n&gt; events&quot;, n counting enabled definitions whose trigger or action scope names it, then &quot;global: &lt;g&gt; events&quot;; `.nyar region here` (adminOnly) replies &quot;you are in &lt;name&gt; (&lt;display name&gt;)&quot; or &quot;you are outside every region&quot; from the admin&#39;s position; any other verb replies &quot;argument must be list or here&quot;; neither changes anything</p>
+<p class="mono">test: Nyarlathotep.Tests RegionTests Lines (fails when: a line&#39;s text differs from Design › UX, a count includes a disabled definition, or the display name is not the CamelCase name split at capitals with `_` as a space)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D9"><span class="mono">D9</span> Scope in replies</h3>
+<p>`.nyar event info` shows &quot;trigger scope: &lt;Global|names&gt;&quot; and &quot;action scope: &lt;Global|names&gt;&quot;; `.nyar event list` appends &quot; [&lt;names&gt;]&quot; to a regional event; `.nyar event set &lt;id&gt; trigger.scope|action.scope &lt;Global|name,name&gt;` edits the key through the existing editor and gateway row (SetEventField); an edit to a running event applies at its next start, DefinitionEditor&#39;s rule for every field (A5); a `trigger.type` change clears `trigger.scope` with the other trigger keys (Logic/EventAdmin.cs&#39;s reset), so the event returns to a Global trigger; an announcement may use the placeholder {region}, the action scope&#39;s display names joined by &quot;, &quot; or &quot;the world&quot; for Global</p>
+<p class="mono">test: Nyarlathotep.Tests EventAdminTests Scope and AnnouncerTests Region (fails when: info lacks either line, a Global event gains a list suffix, `set` accepts a name `.nyar event reload` would reject, a `trigger.type` change keeps `trigger.scope`, a scope edit changes a running instance, or {region} renders other than the stated text)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D10"><span class="mono">D10</span> Wire at api 5</h3>
+<p>`.nyar api regions [page]` (anyone) replies `[NYAR:region] id=&lt;name&gt; events=&lt;n&gt;` rows paged per contract §4, n counting active events whose action scope names the region; `[NYAR:def]` and `[NYAR:event]` rows gain `region=&lt;name,…&gt;` (action scope; `-` for Global) as their last key; event-start and event-end pushes gain `region=` after `secs`; Wire.Api is 5 and docs/RAPHAEL_INTEGRATION_CONTRACT.md marks the `region` tag and `regions` command IMPLEMENTED (api 5), moves §10.2&#39;s regions row and §10.4&#39;s region keys into §3, and says &quot;**Current api:** 5&quot;; docs/RAPHAEL_HANDOFF_API4.md gains the region picker note</p>
+<p class="mono">test: Nyarlathotep.Tests WireFormatTests Region, ApiLinesTests Region and ContractDocTests (fails when: a key set or order differs from the contract&#39;s example, a Global event carries other than `region=-`, a line exceeds 480 bytes with 10 regions, Wire.Api differs from the contract, or a row still PLANNED); cmd: pwsh tools/preflight.ps1 → &quot;wire contract: &lt;n&gt; tags, &lt;m&gt; api commands, all documented (api 5)&quot;</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D11"><span class="mono">D11</span> Authorization and static checks</h3>
+<p>`region` is one adminOnly command with the ready guard; `api regions` is public and allow-listed in $script:PublicCommands; RegionMap is read-only, so no [Mutating] method and no ActionKind is added; the scope edit runs through the existing SetEventField row; ControlCases gains a row per control of this plan, the set being every D-item whose evidence carries a `(fails when:` clause (D1-D11, D13-D16), and ControlCaseTests reads this plan from the test Resources</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 -AuthSuite → &quot;auth suite: pass (…)&quot;; pwsh tools/preflight.ps1 → PREFLIGHT OK with &quot;commands: &lt;n&gt; admin-only, &lt;m&gt; public (allow-listed)&quot;; pwsh tools/preflight.ps1 -SelfTest → &quot;selftest: &lt;n&gt;/&lt;n&gt; checks, &lt;k&gt;/&lt;k&gt; external selftests&quot; (fails when: `region` loses adminOnly or its ready guard, `api regions` is public without its allow-list entry, fixture Commands/bad-3 (a `region` command without adminOnly) passes, or a control lacks its row)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D12"><span class="mono">D12</span> Regions in game</h3>
+<p>Session 1 on the local server (127.0.0.1:9876): `.nyar region here` in Farbane Woods, Dunley Farmlands and the Cursed Forest names each; an Empower event of Faction_Undead scoped to CursedForest shows, via `.nyar debug here`, a carrier on an undead unit in the Cursed Forest and none on one in Farbane Woods; a SpawnWaves event with an Admin location scoped to FarbaneWoods refuses to start in Dunley and starts in Farbane; a VBloodKilled event scoped to FarbaneWoods starts on a Farbane V Blood kill; with Debug.TimingLog on, every &quot;tick timing&quot; line during the empowerment sweep shows avg under 5 ms (Epic D24)</p>
+<p class="mono">manual: Session 1 in docs/features/REGIONS.md › Test results records each observed line</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D13"><span class="mono">D13</span> Sessions, records, paths and data</h3>
+<p>every server session is &quot;### Session &lt;n&gt; · &lt;date&gt;&quot; under docs/features/REGIONS.md › Test results, with its -LogCheck line in docs/audits/regions.md before the next restart and &quot;snapshot restored; hashes equal&quot; from tools/dev-snapshot.ps1; the audit has a pre-audit, a post-audit and a &quot;Codex verdict:&quot; line per Build plan step; tools/preflight-checks.json gains `childDocs`, `snapshotSessions` (1) and `dataTables` entries for regions; tools/data-inventory.json has a &quot;regions › &lt;artifact&gt;&quot; entry per Design › Data row</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 -AuditOf regions → &quot;audit steps: regions 3/3 pre, 3/3 post, 3/3 Codex verdicts&quot;; pwsh tools/preflight.ps1 -SessionsOf regions → &quot;session logs: regions 1/1 checked; snapshots 1/1 from session 1&quot;; pwsh tools/preflight.ps1 -Paths -DeclaredOf regions → &quot;paths: &lt;n&gt; walked, all in manifest; declared: &lt;d&gt;/&lt;d&gt; in regions&quot; (fails when: a step lacks an entry or verdict, a session lacks its log-check or snapshot line, a walked path matches no manifest glob or is undeclared, a %TEMP%\nyar-* folder outlives its session, or a Data row lacks an inventory entry or field)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D14"><span class="mono">D14</span> Secrets and privacy</h3>
+<p>this child adds no credential; no wire line, announcement or log line carries a player&#39;s position or name because of a region (the `region=` key names only an event&#39;s configured scope, and `region here` answers the admin alone); no tracked file holds a SteamID digit run or the owner&#39;s mail name except lines quoting the pattern</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 → &quot;secrets: none (&lt;n&gt; files scanned…)&quot;; then, before each push, git grep -n -E &quot;7656119|kdpenland&quot; → only lines that quote the pattern; test: Nyarlathotep.Tests PrivacyTests Region (fails when: a token shape is in the scanned set, which the existing Secrets fixtures plant under -SelfTest, a region line or push carries a player position, name or SteamID, or the grep finds a SteamID digit run or the owner&#39;s address on any other line)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D15"><span class="mono">D15</span> Tick cost bounded</h3>
+<p>a regional empowerment sweep reads one position and runs at most RegionIndex&#39;s polygon count box tests per unit, bounded by EmpowerBatchPerTick (200); RegionIndex answers 10,000 random points over a real-sized index (the polygon count read from the boot line in step 3 into Nyarlathotep.Tests/Fixtures/region-index-size.txt; the test is added in step 3 with it) with at most the polygon count box tests and at most the box hits&#39; polygon tests per point, counted by the index; the elapsed time is logged by the test with a 200 ms ceiling (A7)</p>
+<p class="mono">test: Nyarlathotep.Tests RegionTests Cost (fails when: the fixture is missing or holds 0 polygons, a Global scope reads positions, a unit costs more box tests than polygons, a point costs more polygon tests than its box hits, or the 10,000-point run exceeds 200 ms)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D16"><span class="mono">D16</span> Release 0.6.0</h3>
+<p>csproj Version and thunderstore.toml versionNumber are 0.6.0; both changelogs and both READMEs describe regional scope, `.nyar region list|here` and api 5; the README states that 0.5.x disables, after a rollback, a definition carrying `scope` (unknown key) or an announcement using `{region}` (unknown placeholder); the annotated tag v0.6.0 is pushed and the GitHub pre-release carries the tcli zip; after a failed or ambiguous `gh release create` the step runs `gh release view v0.6.0` and retries only when the release is absent; no tcli publish</p>
+<p class="mono">cmd: pwsh tools/preflight.ps1 → PREFLIGHT OK and &quot;release tags: &lt;n&gt;/&lt;n&gt;&quot;; then pwsh tools/rollback-gate.ps1 -From v0.5.2 -To v0.6.0 -Plan regions → &quot;rollback gate: 4/4&quot;; then pwsh tools/release-verify.ps1 -Tag v0.6.0 -Asset kdpen-Nyarlathotep-0.6.0.zip → &quot;release verify: hashes equal&quot; (fails when: a surface differs, 0.5.2 does not initialize on 0.6.0&#39;s files, the repository revert of v0.5.2..v0.6.0 is not clean, a Rollback route is missing or names another range, the tag is missing or unpushed, the release has no zip, or the hashes differ)</p>
+<p class="absent">no evidence line yet</p>
+</body>
+</html>

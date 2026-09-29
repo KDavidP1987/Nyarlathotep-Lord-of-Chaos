@@ -54,7 +54,8 @@
       "singleCopy": false,
       "rows": [
         "walkable-spawns › build outputs",
-        "raphael-api-admin › build outputs"
+        "raphael-api-admin › build outputs",
+        "regions › build outputs"
       ]
     },
     {
@@ -75,7 +76,9 @@
         "walkable-spawns › release zip",
         "walkable-spawns › tag and GitHub release v0.5.1",
         "raphael-api-admin › release zip",
-        "raphael-api-admin › tag and GitHub release v0.5.2"
+        "raphael-api-admin › tag and GitHub release v0.5.2",
+        "regions › release zip",
+        "regions › tag and GitHub release v0.6.0"
       ]
     },
     {
@@ -145,7 +148,8 @@
       "rows": [
         "raphael-api-core › Dev world and mod data",
         "event-library › Chat-written definitions",
-        "event-library › events.json.tmp"
+        "event-library › events.json.tmp",
+        "regions › `scope` keys"
       ]
     },
     {
@@ -165,7 +169,8 @@
         "faction-empowerment › Server logs, dev world, mod config",
         "walkable-spawns › walk probe replies",
         "walkable-spawns › dev-server files",
-        "raphael-api-admin › dev-server files"
+        "raphael-api-admin › dev-server files",
+        "regions › dev-server files"
       ]
     },
     {
@@ -247,7 +252,9 @@
         "walkable-spawns › review pages",
         "walkable-spawns › plan, reviews, audit, feature doc",
         "raphael-api-admin › review pages",
-        "raphael-api-admin › plan, reviews, audit, feature doc"
+        "raphael-api-admin › plan, reviews, audit, feature doc",
+        "regions › review pages",
+        "regions › plan, reviews, audit, feature doc"
       ],
       "location": "the repository (docs/, tools/, READMEs, changelogs)",
       "owner": "project owner",
@@ -262,7 +269,8 @@
         "raphael-api-core › Test and preflight fixtures",
         "faction-empowerment › Preflight and drill fixtures",
         "event-library › Soak and preflight fixtures",
-        "raphael-api-admin › human-reply capture"
+        "raphael-api-admin › human-reply capture",
+        "regions › polygon-count fixture for D15"
       ],
       "location": "tools/preflight-fixtures/**, tools/rollback-drill-fixtures/**, Nyarlathotep/Nyarlathotep.Tests/Fixtures/** (tracked)",
       "owner": "project owner",
@@ -327,7 +335,8 @@
         "faction-empowerment › Session snapshots",
         "event-library › Session snapshots, release download, rollback worktrees, drill config",
         "walkable-spawns › snapshot",
-        "raphael-api-admin › snapshot"
+        "raphael-api-admin › snapshot",
+        "regions › snapshot"
       ],
       "location": "%TEMP%\\nyar-snap-* (saved\\manifest.json plus the copies)",
       "owner": "tools/dev-snapshot.ps1",
@@ -343,7 +352,8 @@
       "rows": [
         "event-library › Session working folder",
         "walkable-spawns › session marker",
-        "raphael-api-admin › session marker"
+        "raphael-api-admin › session marker",
+        "regions › session marker"
       ],
       "location": "%TEMP%\nyar-session (session-events.py definitions and cfg copies, session-watch.ps1 watcher.log)",
       "owner": "tools/ingame/session-events.py and tools/ingame/session-watch.ps1",
@@ -444,7 +454,8 @@
       "rows": [
         "event-library › Session log copies",
         "walkable-spawns › session log copies",
-        "raphael-api-admin › session log copies"
+        "raphael-api-admin › session log copies",
+        "regions › session log copies"
       ]
     },
     {
@@ -463,7 +474,8 @@
       "rows": [
         "event-library › Self-test scratch folders",
         "walkable-spawns › release and drill temp folders",
-        "raphael-api-admin › release and drill temp folders"
+        "raphael-api-admin › release and drill temp folders",
+        "regions › release and drill temp folders"
       ]
     },
     {
@@ -502,7 +514,21 @@
         "walkable-spawns › review prompts",
         "walkable-spawns › Claude's scratchpad (Codex prompts, outputs)",
         "raphael-api-admin › review prompts",
-        "raphael-api-admin › Claude's scratchpad (Codex prompts, outputs)"
+        "raphael-api-admin › Claude's scratchpad (Codex prompts, outputs)",
+        "regions › review prompts",
+        "regions › Claude's scratchpad (Codex prompts, outputs)"
+      ]
+    },
+    {
+      "artifact": "Region index",
+      "covers": [],
+      "location": "memory (Logic/Regions.cs RegionIndex, built by Services/RegionMap.cs), in the server process",
+      "owner": "RegionMap",
+      "retention": "the process",
+      "deletion": "rebuilt on boot and on `.nyar event reload` after a failure (regions D7)",
+      "singleCopy": false,
+      "rows": [
+        "regions › region index"
       ]
     }
   ]
