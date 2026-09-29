@@ -371,11 +371,17 @@ public partial class EngineTests
         Assert.Equal("tick timing: avg 2.000 ms, max 3.000 ms over 3 ticks", t.Add(2.0, T0.AddSeconds(60)));
         // automation A8: a window with player scans counts them; the next window starts at 0
         t.Scanned(2);
-        t.Add(1.0, T0.AddSeconds(61));
-        t.Scanned(1);
-        Assert.Equal("tick timing: avg 1.000 ms, max 1.000 ms over 2 ticks, 3 player scans", t.Add(1.0, T0.AddSeconds(121)));
-        Assert.Equal("tick timing: avg 1.000 ms, max 1.000 ms over 2 ticks", new[] { t.Add(1.0, T0.AddSeconds(122)), t.Add(1.0, T0.AddSeconds(182)) }[1]);
         Assert.Null(t.Add(5.0, T0.AddSeconds(61)));
+        t.Scanned(1);
+        Assert.Equal("tick timing: avg 3.000 ms, max 5.000 ms over 2 ticks, 3 player scans", t.Add(1.0, T0.AddSeconds(121)));
+        Assert.Null(t.Add(1.0, T0.AddSeconds(122)));
+        Assert.Equal("tick timing: avg 1.000 ms, max 1.000 ms over 2 ticks", t.Add(1.0, T0.AddSeconds(182)));
+        // the scheduler drains the scan count every tick and feeds it only while TimingLog is on (review round 1 F4)
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "tools", "preflight.ps1"))) dir = dir.Parent;
+        var scheduler = File.ReadAllText(Path.Combine(dir!.FullName, "Nyarlathotep", "Nyarlathotep", "Services", "EventScheduler.cs"));
+        var drain = scheduler.IndexOf("var scans = TriggerBus.TakeScans();", StringComparison.Ordinal);
+        Assert.True(drain >= 0 && drain < scheduler.IndexOf("if (Settings.TimingLog.Value) _timer.Scanned(scans);", StringComparison.Ordinal));
     }
 
     // ---- event-spawns A70: the window's slowest tick by phase (D24's row)

@@ -97,6 +97,11 @@ public class SpawnPlacementTests
         var walled = Plan(Wall, Reach, out var walledProbe, new WalkBudget(30));
         Assert.Equal(30, walledProbe.Calls);
         Assert.DoesNotContain(walled, p => p.Kind == PointKind.Shortened);
+        // review round 2 F3: the budget ends a line past minDist (about 25 m of a wall at 35 m): still unchecked
+        bool Far(float x, float z) => x is >= 35 and < 36;
+        var far = Plan(Far, Reach, out var farProbe, new WalkBudget(50));
+        Assert.Equal(50, farProbe.Calls);
+        Assert.Equal(Ring(5).Select(r => new PlacedPoint(r.X, r.Z, PointKind.Unchecked)), far);
     }
 
     [Fact]
@@ -123,6 +128,18 @@ public class SpawnPlacementTests
         var none = WavePoints.Plan([(5, 5)], (5, 5), 0, new WaveWalk(blocked, new WalkBudget()), null, new WalkReach(5, 5, 0));
         Assert.Equal(new PlacedPoint(5, 5, PointKind.Unchecked), Assert.Single(none));
         Assert.Equal(1, blocked.Calls);
+    }
+
+    [Fact]
+    public void WalkLine_fails_when_out_of_scope_line_end_drops_the_line()
+    {
+        // review round 2 F1: the scope leaves out a band x 16-25 and a wall stands at x 18 inside it; each in-scope
+        // target's line ends out of scope, so it keeps its farthest in-scope sample
+        bool Wall(float x, float z) => x is >= 18 and < 19;
+        var probe = new LineProbe(Wall);
+        var points = WavePoints.Plan(Ring(5), Centre, 10, new WaveWalk(probe, new WalkBudget()), (x, _) => x < 16 || x >= 25, Reach);
+        Assert.All(points, p => Assert.Equal(PointKind.Shortened, p.Kind));
+        Assert.All(points, p => Assert.InRange(p.X, 14, 16));
     }
 
     [Fact]

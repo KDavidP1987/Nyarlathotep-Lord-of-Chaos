@@ -62,7 +62,8 @@ public static class SpawnPoints
 public readonly record struct WalkReach(float X, float Z, float MinDist);
 
 /// <summary>The straight walk from a reach origin to a point (automation A7, D32), sampled every <see cref="Step"/> m; the
-/// unit's 0.5 m circle at each sample covers the gap to the next. The origin itself is not sampled: a player stands there.</summary>
+/// unit's 0.5 m circle at each sample covers the gap to the next. The origin (the player, or the group centre) is not
+/// sampled; a line of length 0 checks its point.</summary>
 public static class WalkLine
 {
     public const float Step = 1f;
@@ -81,15 +82,19 @@ public static class WalkLine
     /// <summary>The farthest place a unit reaches walking from <paramref name="from"/> to <paramref name="to"/>: the point
     /// itself when every sample is walkable (Whole), else the last walkable sample before the first that is not; null
     /// when the first sample is not walkable. Stops at the first walkable call that is false. A point at the origin is
-    /// its own one sample (Codex round 1 F1: a Point wave's centre fallback).</summary>
-    public static (float X, float Z, bool Whole)? Reach((float X, float Z) from, (float X, float Z) to, Func<float, float, bool> walkable)
+    /// its own one sample (Codex round 1 F1: a Point wave's centre fallback). With <paramref name="keep"/> a blocked line
+    /// gives its farthest walkable sample that also passes it (the scope test; review round 2 F1).</summary>
+    public static (float X, float Z, bool Whole)? Reach((float X, float Z) from, (float X, float Z) to, Func<float, float, bool> walkable,
+        Func<float, float, bool>? keep = null)
     {
         if (!Samples(from, to).Any()) return walkable(to.X, to.Z) ? (to.X, to.Z, true) : null;
         (float X, float Z)? last = null;
+        (float X, float Z)? kept = null;
         foreach (var s in Samples(from, to))
         {
-            if (!walkable(s.X, s.Z)) return last is { } l ? (l.X, l.Z, false) : null;
+            if (!walkable(s.X, s.Z)) return kept is { } k ? (k.X, k.Z, false) : null;
             last = s;
+            if (keep is null || keep(s.X, s.Z)) kept = s;
         }
         return last is { } w ? (w.X, w.Z, true) : null;
     }
@@ -219,7 +224,7 @@ public static class WavePoints
                 {
                     if (inScope is not null && !inScope(x, z)) return null;          // before the budget (A1)
                     if (reach is not { } r) return Walkable(x, z) ? (x, z, false) : null;
-                    var line = WalkLine.Reach((r.X, r.Z), (x, z), Walkable);        // A7
+                    var line = WalkLine.Reach((r.X, r.Z), (x, z), Walkable, inScope);   // A7
                     if (line is not { } l) return null;
                     if (l.Whole) return (x, z, false);
                     if (inScope is not null && !inScope(l.X, l.Z)) return null;
