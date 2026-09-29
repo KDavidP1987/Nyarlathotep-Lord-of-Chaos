@@ -114,3 +114,66 @@ follow-up); each line below is quoted from the chat text the owner copied:
   sweeps 0). Stopped after AutoSave_1707, which followed the last delete; -LogCheck "0 unhandled, 194 nyar lines, 0
   orphan errors, 0 unity errors". Then `pwsh tools/dev-snapshot.ps1 -Restore` →
   "snapshot restored; hashes equal (raa1, …nyar-snap-raa1 deleted)".
+
+### Session 2 · 2026-09-28 · twin effects in event info (owner, 0.5.2+aa5a479, snapshot raa2)
+
+A19: each twin is followed by the human read D13 names; quote each twin's `[NYAR:…]` reply and each read. Server
+**Nyar Dev** at **127.0.0.1:9876**; connect as the admin and stand in an open spot.
+
+1. `.nyar api sub on` → `[NYAR:ok] cmd=sub on=1`
+2. `.nyar api template use bandit-ambush` → `… verb=use id=bandit-ambush tpl=bandit-ambush`; `.nyar event info bandit-ambush` → disabled
+3. `.nyar api event set bandit-ambush action.waves 2` → `… field=action.waves value=2`; event info → 2 waves
+4. `.nyar api event set bandit-ambush location here` → `… field=location value=<x>,<z>`; event info → action line "… at <x> <z> height <y> …" (info drops a trailing .0 the wire value shows)
+5. `.nyar api event enable bandit-ambush` → `… changed=1`; event info → enabled
+6. `.nyar api event start bandit-ambush` → `… verb=start id=bandit-ambush`; wait for the first wave; event info → running …, wave 1/2
+7. `.nyar api event stop bandit-ambush` → `… verb=stop id=bandit-ambush`; event info → not running
+8. `.nyar api event copy bandit-ambush ba-copy` → `… verb=copy id=ba-copy from=bandit-ambush`; `.nyar event info ba-copy` → disabled
+9. `.nyar api event new ba-new spawns` → `… verb=new id=ba-new pillar=spawns`; `.nyar event info ba-new` → disabled, pillar spawns, 1 waves … at the admin
+10. `.nyar api event delete ba-copy` → `… confirm=30`; `.nyar event info ba-copy` → still there (an ask only arms); `.nyar api event delete ba-copy confirm` → `… done=1`; `.nyar event info ba-copy` → unknown event ba-copy
+11. The same for ba-new (→ unknown event ba-new)
+12. `.nyar api event reload` → `… verb=reload id=- count=…`; event info bandit-ambush → unchanged (enabled, 2 waves)
+13. `.nyar api event disable bandit-ambush` → `… changed=1`; event info → disabled
+14. `.nyar api pillar spawns off` → `… id=spawns on=0 changed=1`; `.nyar pillar list` → spawns off
+15. `.nyar api pillar spawns on` → `… id=spawns on=1 changed=1`; `.nyar pillar list` → spawns on
+16. `.nyar api event enable bandit-ambush`, then `.nyar api event start bandit-ambush`; wait for the first wave; event info → running
+17. `.nyar api purge` → `… verb=ask id=- confirm=30`; event info bandit-ambush → still running; `.nyar api purge confirm` → `… verb=confirm id=- events=1 units=… secs=…`; event info bandit-ambush → not running
+18. Stay connected about 2 minutes (for the autosave), then say done.
+
+Setup (Claude): `pwsh tools/dev-snapshot.ps1 -Save raa2`; a first boot showed 0.5.1, because restoring raa1 had put
+back the DLL it held; the server was stopped with no one connected and 0.5.2 (aa5a479, code as 32cc082) deployed.
+
+**Results (19:54–20:04, owner as admin with the Raphael client; lines quoted from the owner's copied chat, whole).**
+The client showed every `[NYAR:def]` row this time.
+
+- 1: `[NYAR:ok] cmd=sub on=1`.
+- 2–3: `[NYAR:ok] cmd=template verb=use id=bandit-ambush tpl=bandit-ambush`; `[NYAR:ok] cmd=event verb=set
+  id=bandit-ambush field=action.waves value=2` (sent twice; the second also answered ok, A5). The owner skipped the
+  read after step 2; the read after step 3 shows both effects: `bandit-ambush "Bandit ambush" disabled pillar spawns
+  trigger manual duration 600s` and `action: 2 waves every 60s, radius 10, at the admin, units 4 CHAR_Bandit_Thug, 2
+  CHAR_Bandit_Hunter`.
+- 4: `… field=location value=-1977.2,-1667.6`; event info `action: 2 waves every 60s, radius 10, at -1977.2 -1667.6
+  height 0, …`.
+- 5: `verb=enable id=bandit-ambush changed=1`; event info `… enabled pillar spawns …`.
+- 6: `verb=start id=bandit-ambush`; event info `running: started by manual, 593s left, wave 1/2`.
+- 7: `verb=stop id=bandit-ambush`; event info `not running`.
+- 8: `verb=copy id=ba-copy from=bandit-ambush`; `.nyar event info ba-copy` → `ba-copy "Bandit ambush" disabled …`,
+  the copied action line.
+- 9: `verb=new id=ba-new pillar=spawns`; `ba-new "ba-new" disabled pillar spawns …`, `action: 1 waves every 60s,
+  radius 8, at the admin, units 3 CHAR_Bandit_Thug`.
+- 10: `verb=delete id=ba-copy confirm=30`; event info still showed ba-copy; `verb=delete id=ba-copy done=1`;
+  `unknown event ba-copy`: the delete twin (ask and confirm) whole, with both reads. 11: a repeat of the same twin on
+  ba-new, which the owner ran but did not paste; the log has "event ba-new deleted", and the reload in step 12
+  counted 12. D13 asks for each twin, which step 10 covers (and Session 1 quoted both deletes' ok lines).
+- 12: `verb=reload id=- count=12`; event info unchanged (enabled, 2 waves, the location).
+- 13: `verb=disable id=bandit-ambush changed=1`; event info `… disabled pillar spawns …`.
+- 14–15: `cmd=pillar verb=set id=spawns on=0 changed=1`, `.nyar pillar list` `spawns off (Pillars.EventSpawns)`;
+  `on=1 changed=1`, `spawns on (Pillars.EventSpawns)`.
+- 16: `verb=enable … changed=1`, `verb=start id=bandit-ambush` (the owner skipped the read; step 17's first read shows
+  it running).
+- 17: `cmd=purge verb=ask id=- confirm=30`; event info `running: started by manual, 477s left, wave 2/2`;
+  `cmd=purge verb=confirm id=- events=1 units=12 secs=240` (version line `killswitch=1`); event info `not running`.
+- Server log: every spawn batch 6 of 6; the stop despawned 6 and the purge 12, each to 0 left.
+- Stopped after AutoSave_1716 (20:06), which followed the last action; -LogCheck "0 unhandled, 100 nyar lines, 0
+  orphan errors, 0 unity errors". Then `pwsh tools/dev-snapshot.ps1 -Restore` →
+  "snapshot restored; hashes equal (raa2, …nyar-snap-raa2 deleted)". raa2 was saved before 0.5.2 was redeployed,
+  so the restore put back 0.5.1's DLL; the next session deploys first.
