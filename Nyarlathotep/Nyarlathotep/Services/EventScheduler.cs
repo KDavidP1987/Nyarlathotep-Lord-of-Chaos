@@ -63,7 +63,8 @@ internal static class EventScheduler
         Phase("state flush", () => Persistence.State.Flush());
         watch.Stop();
         var ms = watch.Elapsed.TotalMilliseconds;
-        _timer.Scanned(TriggerBus.TakeScans());                                // automation A8
+        var scans = TriggerBus.TakeScans();                                    // automation A8
+        if (Settings.TimingLog.Value) _timer.Scanned(scans);                   // only while windows close (review F4)
         if (Settings.TimingLog.Value && _timer.Add(ms, now, _phases) is { } line)
         {
             Core.Log.LogInfo($"[nyar] hunt targets: {HuntAction.LastTargets}");    // event-spawns D24, before its window

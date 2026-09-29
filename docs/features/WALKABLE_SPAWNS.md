@@ -30,9 +30,11 @@ ring, then half the ring, then the centre, without adding, dropping or reorderin
   "spawns: walk check unavailable" in health until a wave's check answers; the next wave tries again (D5, D6).
 - **Since automation A7 (0.8.0):** a point also needs a walkable straight line, sampled every 1 m, from the wave centre, or
   from the picked player for an AroundPlayer group; a blocked line gives its farthest walkable sample, at least minDist
-  from the player when one exists, else the farthest found (kind Shortened). The spot test alone had placed ambush
-  units across ponds and on scenery no one walks onto. Walk answers are kept per tile for the wave, and the wave line
-  reads "(<m> moved, <s> shortened, <u> unchecked)". Design §9 D31.
+  from the player when one exists, else the farthest found (kind Shortened, A10). The spot test alone had placed ambush
+  units across ponds and on scenery no one walks onto. A line-checked search tries the ring point, the 11 other ring
+  angles and the centre (no half-radius ring), so a wall near the player cannot spend the walk budget on one unit. A
+  tile's grounded and blocked answers are reused within the wave, a free one never. The wave line reads
+  "(<m> moved, <s> shortened, <u> unchecked)". Design §9 D31.
   Release 0.5.1 follows Session 2.
 
 ## Test plan

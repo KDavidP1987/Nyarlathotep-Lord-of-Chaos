@@ -30,9 +30,11 @@ public static class SpawnPoints
 
     /// <summary><see cref="Choose(ValueTuple{float, float}, ValueTuple{float, float}, float, Func{float, float, bool})"/>'s
     /// search over <paramref name="accept"/>, which gives the place of an accepted candidate (itself, or a shortened point,
-    /// automation A7) or null. A shortened place is kind Shortened whatever candidate it came from.</summary>
+    /// automation A7) or null. A shortened place is kind Shortened whatever candidate it came from. Without
+    /// <paramref name="halfRing"/> the 12 angles at half the radius are skipped, bounding a line-checked search to 13
+    /// candidates (A10: each walks its line).</summary>
     public static PlacedPoint Choose((float X, float Z) point, (float X, float Z) centre, float radius,
-        Func<float, float, (float X, float Z, bool Shortened)?> accept)
+        Func<float, float, (float X, float Z, bool Shortened)?> accept, bool halfRing = true)
     {
         PlacedPoint Placed((float X, float Z, bool Shortened) p, PointKind kind) =>
             new(p.X, p.Z, p.Shortened ? PointKind.Shortened : kind);
@@ -41,7 +43,7 @@ public static class SpawnPoints
         if (accept(point.X, point.Z) is { } p0) return Placed(p0, PointKind.Ring);
 
         var start = Math.Atan2(point.Z - centre.Z, point.X - centre.X);
-        foreach (var (r, from) in new[] { (radius, 1), (radius / 2, 0) })
+        foreach (var (r, from) in halfRing ? new[] { (radius, 1), (radius / 2, 0) } : new[] { (radius, 1) })
         {
             for (var k = from; k < Angles; k++)
             {
@@ -78,9 +80,11 @@ public static class WalkLine
 
     /// <summary>The farthest place a unit reaches walking from <paramref name="from"/> to <paramref name="to"/>: the point
     /// itself when every sample is walkable (Whole), else the last walkable sample before the first that is not; null
-    /// when the first sample is not walkable. Stops at the first walkable call that is false.</summary>
+    /// when the first sample is not walkable. Stops at the first walkable call that is false. A point at the origin is
+    /// its own one sample (Codex round 1 F1: a Point wave's centre fallback).</summary>
     public static (float X, float Z, bool Whole)? Reach((float X, float Z) from, (float X, float Z) to, Func<float, float, bool> walkable)
     {
+        if (!Samples(from, to).Any()) return walkable(to.X, to.Z) ? (to.X, to.Z, true) : null;
         (float X, float Z)? last = null;
         foreach (var s in Samples(from, to))
         {
@@ -142,9 +146,12 @@ public sealed class WaveWalk(IWalkProbe? probe, WalkBudget budget)
     public IWalkProbe? Probe { get; } = probe;
     public WalkBudget Budget { get; } = budget;
 
-    /// <summary>Walk answers of this wave by tile (two per metre), so the lines of one wave, which share their origin,
-    /// ask the game once per tile (automation A7).</summary>
-    internal Dictionary<(int, int), bool> Known { get; } = new();
+    /// <summary>What this wave learned per tile (two per metre; automation A7), so its lines, which share their origin,
+    /// ask the game less: a tile's grounded answer holds for the whole tile; a blocked circle answer is reused only as
+    /// blocked (conservative), and a free one never, since another point's circle in the tile can differ (Codex round 1
+    /// F3).</summary>
+    internal Dictionary<(int, int), bool> Grounded { get; } = new();
+    internal HashSet<(int, int)> Blocked { get; } = new();
 
     /// <summary>The reason of the failure that opened this wave's fall-open, or null.</summary>
     public string? Failure { get; private set; }
@@ -168,11 +175,12 @@ public static class WavePoints
     /// With <paramref name="inScope"/> (regions D6, A1, A9) a point outside the action scope counts as blocked before any
     /// budget is spent, and an unchecked ring point outside it uses the centre instead, which the Point and Admin checks
     /// keep in scope. With <paramref name="reach"/> (automation A7, D32) a candidate is accepted only when the straight
-    /// line from the reach origin to it is walkable (<see cref="WalkLine"/>); a blocked line gives its farthest walkable
+    /// line from the reach origin to it is walkable (<see cref="WalkLine"/>), and the search skips the half-radius ring
+    /// (A10); a blocked line gives its farthest walkable
     /// sample, Shortened, when that is in scope and at least the reach's minimum distance from the origin. When the search
     /// accepts nothing, the farthest in-scope walkable sample any of its lines reached is used, Shortened, even under the
-    /// minimum: a unit near the player beats one behind a wall. Walk answers are kept per tile for the wave, so a tile
-    /// costs its game calls once.</summary>
+    /// minimum: a unit near the player beats one behind a wall (A10). The wave keeps what it learned per tile
+    /// (<see cref="WaveWalk.Grounded"/>, <see cref="WaveWalk.Blocked"/>).</summary>
     public static List<PlacedPoint> Plan(IReadOnlyList<(float X, float Z)> ring, (float X, float Z) centre, float radius, WaveWalk walk,
         Func<float, float, bool>? inScope = null, WalkReach? reach = null)
     {
@@ -193,17 +201,16 @@ public static class WavePoints
                 if (float.IsNaN(x) || float.IsNaN(z) || float.IsInfinity(x) || float.IsInfinity(z))
                     throw new ArgumentException("point is not a number");
                 var tile = ((int)MathF.Floor(x * 2), (int)MathF.Floor(z * 2));
-                if (walk.Known.TryGetValue(tile, out var known)) return known;
+                if (walk.Blocked.Contains(tile) || walk.Grounded.TryGetValue(tile, out var g) && !g) return false;
                 if (!walk.Budget.TryTake(1)) { spent = true; return false; }
                 var free = probe.IsFree(x, z);
                 walk.Returned();
-                if (free)
-                {
-                    if (!walk.Budget.TryTake(1)) { spent = true; return false; }
-                    free = probe.IsGrounded(x, z);
-                }
-                walk.Known[tile] = free;
-                return free;
+                if (!free) { walk.Blocked.Add(tile); return false; }
+                if (walk.Grounded.TryGetValue(tile, out var known)) return known;
+                if (!walk.Budget.TryTake(1)) { spent = true; return false; }
+                var grounded = probe.IsGrounded(x, z);
+                walk.Grounded[tile] = grounded;
+                return grounded;
             }
             (float X, float Z, float Out)? best = null;                        // A7: the fallback
             try
@@ -220,7 +227,7 @@ public static class WavePoints
                     if (out_ >= r.MinDist) return (l.X, l.Z, true);
                     if (best is not { } b || out_ > b.Out) best = (l.X, l.Z, out_);
                     return null;
-                });
+                }, halfRing: reach is null);
                 if (!spent && chosen.Kind == PointKind.Unchecked && best is { } fb) chosen = new PlacedPoint(fb.X, fb.Z, PointKind.Shortened);
                 points.Add(spent ? Unchecked(p) : chosen);
             }
