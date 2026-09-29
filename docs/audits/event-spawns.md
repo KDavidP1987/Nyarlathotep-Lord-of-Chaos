@@ -5,7 +5,7 @@ one under "### Step 2 · 2026-09-29 · 9580152
 - git status: clean at 9580152 (step 1 code c5e8f33 and its post-audit)
 - compile: 0 Warning(s), 0 Error(s); tests: 2133 passed
 - preflight: PREFLIGHT OK
-- dod status: event-spawns 8/24 verified (D6, D8, D9, D11, D18, D29, D30, D32); review subagent after Review 28; amendments A1-A57
+- dod status: event-spawns 6/24 verified (D6, D8, D9, D18, D29, D30; D11 and D32 test parts pass, manual parts in Session 1); review subagent after Review 28; amendments A1-A57
 - feature doc read: docs/features/EVENT_SPAWNS.md (Status: designed, not started; Spike S2 go); plan D10, D11, D13, D16, D17, D21, D22, D31, D32, Build plan step 2
 - in-game baseline: boot of the deployed 0.6.0 DLL, no player; -LogCheck → "log check: 0 unhandled, 9 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; its warnings are Il2CppInterop's substitute signature, Beelzebub's two TUNE lines, and the owner's example-empowerment event ("pillar empowerment takes an Empower action"), all seen in earlier boots
 
@@ -41,7 +41,7 @@ one under "### Step 2 · 2026-09-29 · 9580152
 - Codex verdict: REVISE (round 5) — F1 the index side of the Secrets check skipped the tcli token rule → fixed (A56, Get-IndexSecretHits, Test-IndexSecretProbe)
 - Codex verdict: REVISE (round 6) — F1 the dataTests entry could drop EndPathTests and still pass → fixed (A57, $script:DataTestFloor, Paths/bad-datatests-floor)
 - Codex verdict: READY (round 7) — no findings; tests not run in its read-only sandbox (MSBuild temp denied), run here: 2133 passed
-- dod status: 8/24 verified (D6, D8, D9, D11, D18, D29, D30, D32; the rest wait for steps 2-4 and Sessions 1-2); --check problems 0
+- dod status: 6/24 verified (D6, D8, D9, D18, D29, D30; D11 and D32 pass their tests and wait for their Session 1 manual parts; the rest wait for steps 2-4 and Sessions 1-2); --check problems 0
 - privacy grep (7656119, kdpenland): only lines quoting the pattern (D31, the plans' "Grep for" lines, earlier audits' grep lines)
 - design notes: the tcli build log is build/tcli-build.log; fixture directories that git must not treat as dist/ or build/ are stored as dist.ignored/ and build.ignored/ and renamed by Copy-Fixture; `dataTests` is required only when the plan names it, and Paths/good-datatests exercises the run; EventScheduler's own Tick is RunPhases
 - in-game: none in step 1 (Session 1 is step 2)
