@@ -117,7 +117,7 @@ Nyar Dev, place a Castle Heart first.
 
    For each reply, is it whole (not cut off), and readable without relying on colour?
 4. Run `.nyar event list`. Expect es-bad-health and es-bad-guard marked invalid, each with its reason
-   (maxHealth's range, and "unknown behaviour type guard"). Are the reasons whole?
+   (maxHealth's range, and "unknown behaviour type Guard"). Are the reasons whole?
 5. **Modifiers (plain wave).** Stand in open ground outside your castle. Run `.nyar event start es-plain`. When the
    three Bandit Thugs appear, run `.nyar debug here 30` straight away, before you fight them. Expect three rows,
    each with lvl, hp, pp, sp, ms, as and "at x,z". Then run `.nyar event stop es-plain`.
