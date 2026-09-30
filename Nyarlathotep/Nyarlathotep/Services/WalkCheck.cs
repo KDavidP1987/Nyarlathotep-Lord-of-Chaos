@@ -82,11 +82,7 @@ internal static class WalkCheck
             catch { _polygons.Dispose(); throw; }                              // native arrays (A10)
         }
 
-        public bool IsFree(float x, float z) => IsFree(x, z, _level);
-
-        public bool IsGrounded(float x, float z) => IsGrounded(x, z, _level);
-
-        /// <summary>At a given height level (automation A13): the same calls with the level passed through.</summary>
+        /// <summary>At a given height level (automation A13): the level is passed through to both calls.</summary>
         public bool IsFree(float x, float z, byte level) =>
             !TileMapCollisionMath.CheckStaticCircle(ref _map, new float2(x, z), level, UnitRadius, MapCollisionFlags.CollideNormalMovement);
 

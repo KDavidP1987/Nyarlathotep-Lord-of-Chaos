@@ -10,8 +10,9 @@ public class SpawnPlacementTests
     sealed class LineProbe(Func<float, float, bool> blocked) : IWalkProbe
     {
         public int Calls;
-        public bool IsFree(float x, float z) { Calls++; return !blocked(x, z); }
-        public bool IsGrounded(float x, float z) { Calls++; return true; }
+        public byte Level => 10;
+        public bool IsFree(float x, float z, byte level) { Calls++; return !blocked(x, z); }
+        public bool IsGrounded(float x, float z, byte level) { Calls++; return true; }
     }
 
     static readonly (float X, float Z) Player = (0, 0);
@@ -194,6 +195,19 @@ public class SpawnPlacementTests
         var point = new WaveWalk(new LineProbe((_, _) => true), new WalkBudget());
         WavePoints.Plan(Ring(5), Centre, 10, point, null, new WalkReach(Centre.X, Centre.Z, 0));
         Assert.False(point.NoLine);
+        // A13 review F1: a Point wave whose centre stands on a prop keeps its lines from the wave's level
+        var prop = new List<UncheckedReason?>();
+        var propPoints = WavePoints.Plan(Ring(5), Centre, 10, new WaveWalk(new LineProbe((x, z) => x == Centre.X && z == Centre.Z), new WalkBudget()),
+            null, new WalkReach(Centre.X, Centre.Z, 0), prop);
+        Assert.All(propPoints, p => Assert.Equal(PointKind.Ring, p.Kind));
+        Assert.All(prop, r => Assert.Null(r));
+        // A13 review F2: every candidate out of scope walks no line and searches no level: no free spot, no survey
+        var outside = new WaveWalk(new LineProbe((_, _) => true), new WalkBudget());
+        var outsideWhy = new List<UncheckedReason?>();
+        WavePoints.Plan(Ring(5), Centre, 10, outside, (_, _) => false, Reach, outsideWhy);
+        Assert.Equal(Enumerable.Repeat<UncheckedReason?>(UncheckedReason.NoFreeSpot, 5), outsideWhy);
+        Assert.False(outside.OriginSearched);
+        Assert.False(outside.NoLine);
         // review F4d: a throwing probe keeps one reason per point, each "no check"
         var thrown = new List<UncheckedReason?>();
         var planned = WavePoints.Plan(Ring(5), Centre, 10, new WaveWalk(new ThrowingProbe(), new WalkBudget()), null, Reach, thrown);
@@ -207,8 +221,6 @@ public class SpawnPlacementTests
     {
         public int Calls;
         public byte Level => h;
-        public bool IsFree(float x, float z) => IsFree(x, z, h);
-        public bool IsGrounded(float x, float z) => IsGrounded(x, z, h);
         public bool IsFree(float x, float z, byte level) { Calls++; return blocked is null || !blocked(x, z); }
         public bool IsGrounded(float x, float z, byte level) { Calls++; return ground(x, z) == level; }
     }
@@ -276,16 +288,18 @@ public class SpawnPlacementTests
 
     sealed class ThrowingProbe : IWalkProbe
     {
-        public bool IsFree(float x, float z) => throw new InvalidOperationException("native");
-        public bool IsGrounded(float x, float z) => throw new InvalidOperationException("native");
+        public byte Level => 10;
+        public bool IsFree(float x, float z, byte level) => throw new InvalidOperationException("native");
+        public bool IsGrounded(float x, float z, byte level) => throw new InvalidOperationException("native");
     }
 
     /// <summary>A survey probe: blocked and ungrounded predicates, counting its calls.</summary>
     sealed class SurveyProbe(Func<float, float, bool> blocked, Func<float, float, bool> ungrounded) : IWalkProbe
     {
         public int Calls;
-        public bool IsFree(float x, float z) { Calls++; return !blocked(x, z); }
-        public bool IsGrounded(float x, float z) { Calls++; return !ungrounded(x, z); }
+        public byte Level => 10;
+        public bool IsFree(float x, float z, byte level) { Calls++; return !blocked(x, z); }
+        public bool IsGrounded(float x, float z, byte level) { Calls++; return !ungrounded(x, z); }
     }
 
     static string Survey(Func<float, float, bool> blocked, Func<float, float, bool> ungrounded, (float X, float Z) at, out SurveyProbe probe,
@@ -329,7 +343,12 @@ public class SpawnPlacementTests
         var own = new SurveyProbe((_, _) => false, (_, _) => false);
         WalkSurvey.Line("au-here", 1, (0, 0), new WaveWalk(own, wave));
         Assert.Equal(5, wave.Left);
-        Assert.Equal(WalkSurvey.Calls, own.Calls);
+        Assert.Equal(2 + 8 * 30 * 2, own.Calls);
+        // A13 review F4: a player one level off h on open ground is surveyed whole within the survey's budget
+        var off = new LevelProbe((_, _) => 9, 10);
+        var offLine = WalkSurvey.Line("au-here", 1, (0, 0), new WaveWalk(off, new WalkBudget(0)));
+        Assert.EndsWith("NW 30 m clear @9", offLine);
+        Assert.True(off.Calls <= WalkSurvey.Calls);
     }
 
     [Fact]
@@ -371,11 +390,17 @@ public class SpawnPlacementTests
     public void WalkLine_passes_planning_split_timed()
     {
         // A14: with TimingLog the wave line splits its planning into open, plan and survey, in invariant milliseconds
-        Assert.Equal(", open 1.5 ms, plan 230.0 ms, survey 0.0 ms", WavePoints.TimingText(15, 2300, 0, 10_000));
+        Assert.Equal(" (open 1.5 ms, plan 230.0 ms, survey 0.0 ms)", WavePoints.TimingText(15, 2300, 0, 10_000));
         var source = PushTests.WaveActionSource();
         Assert.Contains("{(Settings.TimingLog.Value ? WavePoints.TimingText(open, plan, survey, Stopwatch.Frequency) : \"\")}", source);
         Assert.True(source.IndexOf("open += t1 - t0;", StringComparison.Ordinal) < source.IndexOf("plan += t2 - t1;", StringComparison.Ordinal));
         Assert.Contains("open += Stopwatch.GetTimestamp() - t3;", source);  // the dispose counts as open
+        // A13 review F5: the game probe answers every level itself; nothing falls back to a default
+        var walkCheck = File.ReadAllText(Path.Combine(ControlCaseTests.RepoRoot(),
+            "Nyarlathotep", "Nyarlathotep", "Services", "WalkCheck.cs"));
+        Assert.Contains("public byte Level => _level;", walkCheck);
+        Assert.Contains("public bool IsFree(float x, float z, byte level) =>", walkCheck);
+        Assert.Contains("public bool IsGrounded(float x, float z, byte level)", walkCheck);
     }
 
     [Fact]

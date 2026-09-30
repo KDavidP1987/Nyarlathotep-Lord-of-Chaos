@@ -19,14 +19,16 @@ public partial class SpawningTests
         public int ThrowFrom = int.MaxValue;
         public List<(float X, float Z)> Checked { get; } = [];
 
-        public bool IsFree(float x, float z)
+        public byte Level => 10;
+
+        public bool IsFree(float x, float z, byte level)
         {
             if (++Calls >= ThrowFrom) throw new InvalidOperationException("tile world gone");
             Checked.Add((x, z));
             return !(blocked?.Invoke(x, z) ?? false);
         }
 
-        public bool IsGrounded(float x, float z)
+        public bool IsGrounded(float x, float z, byte level)
         {
             if (++Calls >= ThrowFrom) throw new InvalidOperationException("tile world gone");
             return !(floating?.Invoke(x, z) ?? false);

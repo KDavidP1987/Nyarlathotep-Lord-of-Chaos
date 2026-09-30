@@ -9,8 +9,9 @@ public partial class DependencyFailureTests
     sealed class WalkProbe(bool throws) : IWalkProbe
     {
         public int Calls;
-        public bool IsFree(float x, float z) { Calls++; return throws ? throw new InvalidOperationException("singleton: none") : true; }
-        public bool IsGrounded(float x, float z) { Calls++; return true; }
+        public byte Level => 10;
+        public bool IsFree(float x, float z, byte level) { Calls++; return throws ? throw new InvalidOperationException("singleton: none") : true; }
+        public bool IsGrounded(float x, float z, byte level) { Calls++; return true; }
     }
 
     static readonly List<(float X, float Z)> WalkRing = [(10, 0), (0, 10), (-10, 0), (0, -10)];
