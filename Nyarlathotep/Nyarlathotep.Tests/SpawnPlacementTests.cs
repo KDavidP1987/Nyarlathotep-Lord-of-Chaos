@@ -197,8 +197,10 @@ public class SpawnPlacementTests
         Assert.False(point.NoLine);
         // A13 review F1: a Point wave whose centre stands on a prop keeps its lines from the wave's level
         var prop = new List<UncheckedReason?>();
-        var propPoints = WavePoints.Plan(Ring(5), Centre, 10, new WaveWalk(new LineProbe((x, z) => x == Centre.X && z == Centre.Z), new WalkBudget()),
-            null, new WalkReach(Centre.X, Centre.Z, 0), prop);
+        var propWalk = new WaveWalk(new LineProbe((x, z) => x == Centre.X && z == Centre.Z), new WalkBudget());
+        var propPoints = WavePoints.Plan(Ring(5), Centre, 10, propWalk, null, new WalkReach(Centre.X, Centre.Z, 0), prop);
+        Assert.Null(propWalk.OriginLevel);                                  // A16: no nearby start for a wave centre
+        Assert.Null(propWalk.OriginAt);
         Assert.All(propPoints, p => Assert.Equal(PointKind.Ring, p.Kind));
         Assert.All(prop, r => Assert.Null(r));
         // round 2: a Point wave walled in around its centre gives no player's level to the wave line
@@ -273,14 +275,14 @@ public class SpawnPlacementTests
         Assert.Equal((byte?)10, walk.PlayerLevel);
         Assert.All(points, p => Assert.Equal(PointKind.Ring, p.Kind));
         Assert.All(reasons, r => Assert.Null(r));
-        Assert.Equal(5, calls[(0f, 0f)]);                                   // the spot's five levels, once a wave
+        Assert.Equal(5, calls[(0f, 0f)]);                                   // the spot's five levels
         Assert.False(walk.NoLine);
         // a rock beside the player, east of the spot and below z 0.3: lines from the player hit it, lines from the start clear it
         var rock = new WaveWalk(new LineProbe((x, z) => x * x + z * z < 0.3f || x is > 0.6f and < 1.4f && z is > -3 and < 0.3f), new WalkBudget());
         var rockPoints = WavePoints.Plan(Ring(5), Centre, 10, rock, null, Reach);
         Assert.Equal((0f, 1f), rock.OriginAt);
         Assert.All(rockPoints, p => Assert.Equal(PointKind.Ring, p.Kind));
-        // nothing walkable within 3 m: at most 5 + 24 x 5 blocked calls for the search, once
+        // nothing walkable within 3 m: at most 5 + 24 x 5 blocked calls for the search
         var near = 0;
         var boxed = new LineProbe((x, z) => { var inBox = x * x + z * z < 12.5f; if (inBox) near++; return inBox; });
         var boxedWalk = new WaveWalk(boxed, new WalkBudget());
@@ -289,9 +291,13 @@ public class SpawnPlacementTests
         Assert.Null(boxedWalk.OriginAt);
         Assert.Equal(5 * (1 + 8 * WalkOrigin.Reach), near);
         // an open field keeps the player's own spot and its calls (4.2)
-        var open = new WaveWalk(new LineProbe((_, _) => false), new WalkBudget());
+        var openCalls = new Dictionary<(float, float), int>();
+        var open = new WaveWalk(new LineProbe((x, z) => { if (x * x + z * z < 12.5f) openCalls[(x, z)] = openCalls.GetValueOrDefault((x, z)) + 1; return false; }), new WalkBudget());
         WavePoints.Plan(Ring(5), Centre, 10, open, null, Reach);
         Assert.Equal((0f, 0f), open.OriginAt);
+        Assert.Equal(1, openCalls[(0f, 0f)]);                               // one free call at h, no other level
+        // every line runs east to the ring; a nearby start (N, S, W, …) tried on open ground would probe x <= 0
+        Assert.All(openCalls.Keys, k => Assert.True(k == (0f, 0f) || k.Item1 > 0, "a nearby start tried on open ground"));
     }
 
     [Fact]
@@ -340,6 +346,9 @@ public class SpawnPlacementTests
         Assert.Equal(Enumerable.Repeat<UncheckedReason?>(UncheckedReason.NoGround, 5), reasons);
         Assert.Equal(new byte[] { 10, 9, 11, 8, 12 }, WalkLevels.Near(10));
         Assert.Equal(new byte[] { 0, 1, 2 }, WalkLevels.Near(0));
+        Assert.Equal(new byte[] { 10, 9, 11 }, WalkLevels.Spot(10));          // A16 review: spot only never h±2, at the edges too
+        Assert.Equal(new byte[] { 0, 1 }, WalkLevels.Spot(0));
+        Assert.Equal(new byte[] { 255, 254 }, WalkLevels.Spot(255));
     }
 
     [Fact]

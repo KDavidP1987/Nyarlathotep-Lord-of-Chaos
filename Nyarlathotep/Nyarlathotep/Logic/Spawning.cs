@@ -167,6 +167,13 @@ public static class WalkLevels
             if (h + d is >= 0 and <= 255) yield return (byte)(h + d);
     }
 
+    /// <summary>The spot-only levels (A16): h, h-1, h+1, within 0-255, never h±2 at the grid's edge (review round 1).</summary>
+    public static IEnumerable<byte> Spot(byte h)
+    {
+        foreach (var d in new[] { 0, -1, 1 })
+            if (h + d is >= 0 and <= 255) yield return (byte)(h + d);
+    }
+
     /// <summary>The levels one up and one down from <paramref name="level"/>, within 0-255.</summary>
     public static IEnumerable<byte> Steps(byte level)
     {
@@ -299,7 +306,8 @@ public sealed class WaveWalk(IWalkProbe? probe, WalkBudget budget)
     internal (float X, float Z)? SearchedFor { get; set; }
 
     /// <summary>The origin's level when the origin is a player (away from the wave centre), for the wave line; a Point or
-    /// Admin wave's centre is no player (review round 2).</summary>
+    /// Admin wave's centre is no player (review round 2). With a moved start (A16) it is the start's level, a metre or
+    /// three from the player's spot.</summary>
     public byte? PlayerLevel { get; internal set; }
 
     /// <summary>True once a point of this wave found no walkable line, or no ground at its origin (placed spot only or not,
@@ -407,7 +415,7 @@ public static class WavePoints
                     }
                     if (away && walk.OriginLevel is null)                           // A16: no start near the player: the spot alone
                     {
-                        foreach (var lv in WalkLevels.Near(probe.Level).Take(3))
+                        foreach (var lv in WalkLevels.Spot(probe.Level))
                             if (!spent && Walkable(x, z, lv)) { spotOnly = true; return (x, z, false); }
                         return null;
                     }
