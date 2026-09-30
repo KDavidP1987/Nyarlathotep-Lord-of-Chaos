@@ -284,7 +284,8 @@ public class SpawnPlacementTests
         Assert.Equal(0, ((SurveyProbe)failed.Probe!).Calls);
         // the wave calls it only after a line found nothing, with VerboseLogging on, before the probe's dispose
         var source = PushTests.WaveActionSource();
-        Assert.Contains("if (Settings.VerboseLogging.Value && check.Walk.NoLine && reach is { } r)", source);
+        Assert.Contains("if (Settings.VerboseLogging.Value && check.Walk.NoLine && !surveyed && reach is { } r)", source);
+        Assert.Contains("surveyed = true;", source);                        // A12: one survey a wave, 482 calls at most
         Assert.True(source.IndexOf("WalkSurvey.Line(", StringComparison.Ordinal) < source.IndexOf("check.Resource?.Dispose()", StringComparison.Ordinal));
     }
 

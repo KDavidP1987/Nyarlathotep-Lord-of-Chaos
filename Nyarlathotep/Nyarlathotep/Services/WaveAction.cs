@@ -82,6 +82,7 @@ internal static class WaveAction
         int total = 0, moved = 0, shortened = 0, unchecked_ = 0;
         var why = new List<UncheckedReason>();                                 // A11
         (bool Free, bool Grounded)? spot = null;                             // shown for one group only (review F3)
+        var surveyed = false;                                                  // one survey a wave (A12)
         byte? level = null;
         WaveRun.Run(decision, skipped => Core.Log.LogInfo($"[nyar] {skipped}"), group =>
         {
@@ -106,8 +107,9 @@ internal static class WaveAction
                     first += entry.Count;
                 }
                 spot ??= check.Walk.OriginSpot;
-                if (Settings.VerboseLogging.Value && check.Walk.NoLine && reach is { } r)   // A11, D34: before the dispose
+                if (Settings.VerboseLogging.Value && check.Walk.NoLine && !surveyed && reach is { } r)   // A11, D34: before the dispose
                 {
+                    surveyed = true;
                     try { Core.Log.LogInfo($"[nyar] {WalkSurvey.Line(id, due.Wave, (r.X, r.Z), check.Walk)}"); }
                     catch (Exception e) { check.Walk.Fail($"survey: {e.Message}"); }       // the wave is planned; the streak records it
                 }
