@@ -286,6 +286,8 @@ public class SpawnPlacementTests
         var source = PushTests.WaveActionSource();
         Assert.Contains("if (Settings.VerboseLogging.Value && check.Walk.NoLine && !surveyed && reach is { } r)", source);
         Assert.Contains("surveyed = true;", source);                        // A12: one survey a wave, 482 calls at most
+        Assert.True(source.IndexOf("var surveyed = false;", StringComparison.Ordinal) is var at and >= 0
+            && at < source.IndexOf("WaveRun.Run(", StringComparison.Ordinal));      // declared once a wave, outside the group callback (Codex round 3)
         Assert.True(source.IndexOf("WalkSurvey.Line(", StringComparison.Ordinal) < source.IndexOf("check.Resource?.Dispose()", StringComparison.Ordinal));
     }
 

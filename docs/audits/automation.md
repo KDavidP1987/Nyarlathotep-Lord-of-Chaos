@@ -74,3 +74,14 @@ under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line. S
 - /code-review round 2 (fresh subagent, on 2133e8a..fa164f4): READY, 5 advisories fixed in 3207666 (the in-scope fallback sample, a stale comment, a budget case past minDist, the scan-drain source check, a reordered TickTimer test)
 - Codex round 2 (2133e8a..fa164f4): READY, no findings; round 3 (fa164f4..3207666): READY, no findings; logs: 0 "blocked by policy"
 - in-game: Session 1d (D33, A10) follows
+
+### A11-A12 build · 2026-09-29 · e6c5e86
+- recorded first: A11 and +D34 in dbeed30 (Session 1d: rock face pass, pond and river crossing all unchecked with no reason; the planning tick's 19 ms against 58 ms showed every line failing at its first sample, not a spent budget); the survey is a log line, not a `debug` verb, since walkable-spawns D9's DebugCommands check keeps `debug` to `here`; A12 recorded with round 2's fix
+- built: UncheckedReason and WavePoints.UncheckedText (the wave line's reasons; the player's spot for one group), WaveWalk.NoLine and OriginSpot, WalkSurvey (verbose, own 482-call budget, once a wave, "no check" after a failure) (cd2f2bb, f6f44e4, e6c5e86)
+- compile: Release and Debug 0 Warning(s), 0 Error(s); tests: 2427 passed; controls checked by planting each fault (no NoCheck reason, wrong reason, no `lines` test, spot read per point, spot read at the centre, NoLine flag dropped, survey off by one, survey unbudgeted, survey on the placement budget, survey after a failure, survey reason swapped, survey coordinate, survey empty, survey flag per group): each its test failed
+- preflight: PREFLIGHT OK; -AuthSuite pass; dod-index --check automation 0 problems
+- /code-review round 1 (fresh subagent, read-only, dbeed30..cd2f2bb): REVISE — F1 blocking: the survey called a probe whose wave had failed → "no check", no calls; F2 the survey took the placement budget → its own budget; F3 the spot shown for fan-out waves → one group only; F4 four defects the reason test missed → four cases; F5 D32 wording → "no walkable line"; F6 advisory ordering check, kept
+- Codex round 1 (dbeed30..cd2f2bb): REVISE — blocking: a NoLine group with no budget left for the spot logged no survey → gated on WaveWalk.NoLine. Log: 0 "blocked by policy"
+- /code-review round 2 (cd2f2bb..f6f44e4): REVISE — F7 blocking: a survey per group outside the cap → once a wave, A12 records the bounded exception; F8 A11's wording → noted in A12. Codex round 2 (dbeed30..f6f44e4): READY, no findings, 0 blocked
+- /code-review round 3 (f6f44e4..e6c5e86): READY, F9 advisory (per wave, not per tick) → A12 wording. Codex round 3 (f6f44e4..e6c5e86): READY, advisory (the flag's declaration outside the group callback untested) → source-order assertion, its planted fault fails
+- in-game: Session 1e (D34, the A11 fallback decision, A10 and A12 confirmations) follows
