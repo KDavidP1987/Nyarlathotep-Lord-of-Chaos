@@ -258,6 +258,10 @@ public sealed class WaveWalk(IWalkProbe? probe, WalkBudget budget)
     public byte? OriginLevel { get; internal set; }
     public bool OriginSearched { get; internal set; }
 
+    /// <summary>The origin's level when the origin is a player (away from the wave centre), for the wave line; a Point or
+    /// Admin wave's centre is no player (review round 2).</summary>
+    public byte? PlayerLevel { get; internal set; }
+
     /// <summary>True once a point of this wave found no walkable line, or no ground at its origin, from a reach origin that
     /// is not the wave centre (the player of an AroundPlayer group) (A11, A13; Codex review F1).</summary>
     public bool NoLine { get; internal set; }
@@ -350,6 +354,7 @@ public static class WavePoints
                         foreach (var lv in WalkLevels.Near(probe.Level))
                             if (!spent && Walkable(r.X, r.Z, lv)) { walk.OriginLevel = lv; break; }
                         walk.OriginSearched = !spent;
+                        if (away) walk.PlayerLevel = walk.OriginLevel;
                     }
                     // a player's spot with no level gives no line; a wave centre keeps the wave's level (review F1)
                     if ((walk.OriginLevel ?? (away ? null : probe.Level)) is not { } start) return null;

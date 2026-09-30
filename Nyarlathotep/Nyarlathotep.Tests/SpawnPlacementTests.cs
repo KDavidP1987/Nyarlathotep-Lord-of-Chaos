@@ -166,13 +166,13 @@ public class SpawnPlacementTests
         Assert.Equal(Enumerable.Repeat<UncheckedReason?>(UncheckedReason.NoGround, 5), reasons);
         Assert.True(walk.OriginSearched);
         Assert.Null(walk.OriginLevel);
-        Assert.Equal(": 5 no ground at the player", WavePoints.UncheckedText(reasons.OfType<UncheckedReason>(), walk.OriginLevel));
+        Assert.Equal(": 5 no ground at the player", WavePoints.UncheckedText(reasons.OfType<UncheckedReason>(), walk.PlayerLevel));
         // the player's spot free, everything else blocked: no walkable line, with the player's level
         var fenced = new WaveWalk(new LineProbe((x, z) => x != Player.X || z != Player.Z), new WalkBudget());
         var fencedWhy = Why(Reach, fenced);
         Assert.Equal(Enumerable.Repeat<UncheckedReason?>(UncheckedReason.NoLine, 5), fencedWhy);
-        Assert.Equal((byte?)10, fenced.OriginLevel);
-        Assert.Equal(": 5 no walkable line; the player's level 10", WavePoints.UncheckedText(fencedWhy.OfType<UncheckedReason>(), fenced.OriginLevel));
+        Assert.Equal((byte?)10, fenced.PlayerLevel);
+        Assert.Equal(": 5 no walkable line; the player's level 10", WavePoints.UncheckedText(fencedWhy.OfType<UncheckedReason>(), fenced.PlayerLevel));
         // without a reach nothing free is "no free spot", and no level is searched
         var spotWalk = new WaveWalk(new LineProbe((_, _) => true), new WalkBudget());
         Assert.Equal(Enumerable.Repeat<UncheckedReason?>(UncheckedReason.NoFreeSpot, 5), Why(null, spotWalk));
@@ -201,6 +201,13 @@ public class SpawnPlacementTests
             null, new WalkReach(Centre.X, Centre.Z, 0), prop);
         Assert.All(propPoints, p => Assert.Equal(PointKind.Ring, p.Kind));
         Assert.All(prop, r => Assert.Null(r));
+        // round 2: a Point wave walled in around its centre gives no player's level to the wave line
+        var pointWall = new WaveWalk(new LineProbe((x, z) => x != Centre.X || z != Centre.Z), new WalkBudget());
+        var pointWhy = new List<UncheckedReason?>();
+        WavePoints.Plan(Ring(5), Centre, 10, pointWall, null, new WalkReach(Centre.X, Centre.Z, 0), pointWhy);
+        Assert.Equal((byte?)10, pointWall.OriginLevel);
+        Assert.Null(pointWall.PlayerLevel);
+        Assert.DoesNotContain("player", WavePoints.UncheckedText(new[] { UncheckedReason.NoLine }, pointWall.PlayerLevel));
         // A13 review F2: every candidate out of scope walks no line and searches no level: no free spot, no survey
         var outside = new WaveWalk(new LineProbe((_, _) => true), new WalkBudget());
         var outsideWhy = new List<UncheckedReason?>();
@@ -395,12 +402,14 @@ public class SpawnPlacementTests
         Assert.Contains("{(Settings.TimingLog.Value ? WavePoints.TimingText(open, plan, survey, Stopwatch.Frequency) : \"\")}", source);
         Assert.True(source.IndexOf("open += t1 - t0;", StringComparison.Ordinal) < source.IndexOf("plan += t2 - t1;", StringComparison.Ordinal));
         Assert.Contains("open += Stopwatch.GetTimestamp() - t3;", source);  // the dispose counts as open
+        Assert.Contains("playerLevel ??= check.Walk.PlayerLevel;", source);  // round 2: never a Point centre's level
         // A13 review F5: the game probe answers every level itself; nothing falls back to a default
         var walkCheck = File.ReadAllText(Path.Combine(ControlCaseTests.RepoRoot(),
             "Nyarlathotep", "Nyarlathotep", "Services", "WalkCheck.cs"));
         Assert.Contains("public byte Level => _level;", walkCheck);
         Assert.Contains("public bool IsFree(float x, float z, byte level) =>", walkCheck);
         Assert.Contains("public bool IsGrounded(float x, float z, byte level)", walkCheck);
+        Assert.All(typeof(IWalkProbe).GetMethods(), m => Assert.True(m.IsAbstract, m.Name));   // Codex round 2: no default bodies
     }
 
     [Fact]

@@ -111,7 +111,7 @@ internal static class WaveAction
                     why.AddRange(queued.Why);
                     first += entry.Count;
                 }
-                playerLevel ??= check.Walk.OriginLevel;
+                playerLevel ??= check.Walk.PlayerLevel;
                 var t2 = Stopwatch.GetTimestamp();
                 plan += t2 - t1;
                 if (Settings.VerboseLogging.Value && check.Walk.NoLine && !surveyed && reach is { } r)   // A11, D34: before the dispose
