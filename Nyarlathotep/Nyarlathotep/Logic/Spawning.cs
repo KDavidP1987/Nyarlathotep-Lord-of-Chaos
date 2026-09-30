@@ -59,18 +59,24 @@ public static class SpawnPoints
 
 /// <summary>The verbose walk survey (automation A11, D34): from a group's player, whose lines all failed, how far a unit
 /// walks in 1 m steps in eight directions (N is +z) before a sample that is blocked or not grounded at the wave's level,
-/// or clear to <see cref="Range"/> m. Every game call takes one unit of the wave's budget and is not cached; a spent
-/// budget ends the line "budget". The line holds no position.</summary>
+/// or clear to <see cref="Range"/> m. Every game call takes one unit of <paramref name="budget"/>, the survey's own
+/// (<see cref="Calls"/> by default), so a survey never takes placement's calls (review F2); calls are not cached, and a
+/// spent budget ends the line "budget". A wave whose check failed is not called again: "no check" (walkable-spawns D5;
+/// review F1). The line holds no position.</summary>
 public static class WalkSurvey
 {
     public const int Range = 30;
+
+    /// <summary>The most calls one survey makes: the spot's two, then two per sample.</summary>
+    public const int Calls = 2 + 8 * Range * 2;
     static readonly string[] Names = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 
-    public static string Line(string id, int wave, (float X, float Z) at, WaveWalk walk)
+    public static string Line(string id, int wave, (float X, float Z) at, WaveWalk walk, WalkBudget? budget = null)
     {
         var head = $"walk survey {id} wave {wave}: ";
-        if (walk.Probe is not { } probe) return head + "no check";
-        bool? Ask(Func<float, float, bool> call, float x, float z) => walk.Budget.TryTake(1) ? call(x, z) : null;
+        if (walk.Probe is not { } probe || walk.Failure is not null) return head + "no check";
+        var calls = budget ?? new WalkBudget(Calls);
+        bool? Ask(Func<float, float, bool> call, float x, float z) => calls.TryTake(1) ? call(x, z) : null;
         var free = Ask(probe.IsFree, at.X, at.Z);
         var grounded = free is null ? null : Ask(probe.IsGrounded, at.X, at.Z);
         if (free is null || grounded is null) return head + "budget";
@@ -207,6 +213,10 @@ public sealed class WaveWalk(IWalkProbe? probe, WalkBudget budget)
     /// found no walkable line (automation A11); null when no point did or the budget had no two calls left.</summary>
     public (bool Free, bool Grounded)? OriginSpot { get; internal set; }
 
+    /// <summary>True once a point of this wave found no walkable line from a reach origin that is not the wave centre (the
+    /// player of an AroundPlayer group), whether or not the spot could be read (A11; Codex review F1).</summary>
+    public bool NoLine { get; internal set; }
+
     /// <summary>The reason of the failure that opened this wave's fall-open, or null.</summary>
     public string? Failure { get; private set; }
 
@@ -293,7 +303,9 @@ public static class WavePoints
                     : chosen.Kind != PointKind.Unchecked ? null
                     : reach is not null && lines ? UncheckedReason.NoLine
                     : UncheckedReason.NoFreeSpot;
-                if (why == UncheckedReason.NoLine && walk.OriginSpot is null && reach is { } at && (at.X, at.Z) != centre && walk.Budget.TryTake(2))
+                var away = reach is { } o && (o.X, o.Z) != centre;
+                if (why == UncheckedReason.NoLine && away) walk.NoLine = true;
+                if (why == UncheckedReason.NoLine && away && walk.OriginSpot is null && reach is { } at && walk.Budget.TryTake(2))
                 {
                     walk.OriginSpot = (probe.IsFree(at.X, at.Z), probe.IsGrounded(at.X, at.Z));   // A11: a throw fails the wave
                     walk.Returned();

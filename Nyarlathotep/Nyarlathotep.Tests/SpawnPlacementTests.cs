@@ -174,7 +174,34 @@ public class SpawnPlacementTests
         Assert.Null(spotWalk.OriginSpot);
         Assert.Equal(": 1 no check, 2 budget", WavePoints.UncheckedText([UncheckedReason.Budget, UncheckedReason.NoCheck, UncheckedReason.Budget], null));
         Assert.Equal("", WavePoints.UncheckedText([], (true, true)));
-        Assert.Contains("unchecked{WavePoints.UncheckedText(why, spot)}), due in", PushTests.WaveActionSource());
+        Assert.Contains("unchecked{WavePoints.UncheckedText(why, decision.Groups.Count == 1 ? spot : null)}), due in", PushTests.WaveActionSource());
+        // review F4a: with a reach but every candidate out of scope no line is walked: no free spot
+        var scoped = new List<UncheckedReason?>();
+        WavePoints.Plan(Ring(5), Centre, 10, new WaveWalk(new LineProbe((_, _) => false), new WalkBudget()), (_, _) => false, Reach, scoped);
+        Assert.Equal(Enumerable.Repeat<UncheckedReason?>(UncheckedReason.NoFreeSpot, 5), scoped);
+        // review F4b: the spot is read once, two calls at the player's own spot
+        var atSpot = 0;
+        var spotProbe = new LineProbe((x, z) => { if (x == Player.X && z == Player.Z) atSpot++; return true; });
+        var once = new WaveWalk(spotProbe, new WalkBudget());
+        WavePoints.Plan(Ring(5), Centre, 10, once, null, Reach);
+        Assert.Equal(1, atSpot);                                            // IsFree once; IsGrounded does not use the predicate
+        Assert.True(once.NoLine);
+        // review F4c: a reach at the wave centre (a Point wave) reads no spot and raises no survey
+        var point = new WaveWalk(new LineProbe((_, _) => true), new WalkBudget());
+        WavePoints.Plan(Ring(5), Centre, 10, point, null, new WalkReach(Centre.X, Centre.Z, 0));
+        Assert.Null(point.OriginSpot);
+        Assert.False(point.NoLine);
+        // review F4d: a throwing probe keeps one reason per point, each "no check"
+        var thrown = new List<UncheckedReason?>();
+        var planned = WavePoints.Plan(Ring(5), Centre, 10, new WaveWalk(new ThrowingProbe(), new WalkBudget()), null, Reach, thrown);
+        Assert.Equal(planned.Count, thrown.Count);
+        Assert.Equal(Enumerable.Repeat<UncheckedReason?>(UncheckedReason.NoCheck, 5), thrown);
+    }
+
+    sealed class ThrowingProbe : IWalkProbe
+    {
+        public bool IsFree(float x, float z) => throw new InvalidOperationException("native");
+        public bool IsGrounded(float x, float z) => throw new InvalidOperationException("native");
     }
 
     /// <summary>A survey probe: blocked and ungrounded predicates, counting its calls.</summary>
@@ -189,7 +216,7 @@ public class SpawnPlacementTests
         int budget = WalkBudget.PerTick)
     {
         probe = new SurveyProbe(blocked, ungrounded);
-        return WalkSurvey.Line("au-here", 1, at, new WaveWalk(probe, new WalkBudget(budget)));
+        return WalkSurvey.Line("au-here", 1, at, new WaveWalk(probe, new WalkBudget(0)), new WalkBudget(budget));
     }
 
     [Fact]
@@ -221,6 +248,12 @@ public class SpawnPlacementTests
         Assert.Equal("walk survey au-here wave 1: spot free, grounded; N budget", line);
         Assert.Equal("walk survey au-here wave 1: budget", Survey((_, _) => false, (_, _) => false, (0, 0), out var none, 1));
         Assert.Equal(1, none.Calls);
+        // review F2: by default the survey has its own budget and never takes the wave's
+        var wave = new WalkBudget(5);
+        var own = new SurveyProbe((_, _) => false, (_, _) => false);
+        WalkSurvey.Line("au-here", 1, (0, 0), new WaveWalk(own, wave));
+        Assert.Equal(5, wave.Left);
+        Assert.Equal(WalkSurvey.Calls, own.Calls);
     }
 
     [Fact]
@@ -244,9 +277,14 @@ public class SpawnPlacementTests
     public void WalkSurvey_empty_no_check()
     {
         Assert.Equal("walk survey au-here wave 1: no check", WalkSurvey.Line("au-here", 1, (0, 0), new WaveWalk(null, new WalkBudget())));
+        // review F1: a wave whose check failed is not called again
+        var failed = new WaveWalk(new SurveyProbe((_, _) => false, (_, _) => false), new WalkBudget());
+        failed.Fail("native");
+        Assert.Equal("walk survey au-here wave 1: no check", WalkSurvey.Line("au-here", 1, (0, 0), failed));
+        Assert.Equal(0, ((SurveyProbe)failed.Probe!).Calls);
         // the wave calls it only after a line found nothing, with VerboseLogging on, before the probe's dispose
         var source = PushTests.WaveActionSource();
-        Assert.Contains("if (Settings.VerboseLogging.Value && check.Walk.OriginSpot is not null && reach is { } r)", source);
+        Assert.Contains("if (Settings.VerboseLogging.Value && check.Walk.NoLine && reach is { } r)", source);
         Assert.True(source.IndexOf("WalkSurvey.Line(", StringComparison.Ordinal) < source.IndexOf("check.Resource?.Dispose()", StringComparison.Ordinal));
     }
 
