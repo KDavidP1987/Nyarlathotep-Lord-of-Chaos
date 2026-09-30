@@ -96,3 +96,12 @@ under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line. S
 - /code-review round 2 (b6d7b90..fff13ad): REVISE — blocking: "the player's level" shown for Point and Admin waves → WaveWalk.PlayerLevel, set only for an origin away from the centre. Codex round 2 (b6d7b90..fff13ad): READY, advisory (the interface's defaults unpinned) → reflection check, its planted fault fails; 0 blocked
 - round 3 (fff13ad..043fa6b): /code-review READY, no findings; Codex READY, no findings, 0 blocked
 - in-game: Session 1f (D33, D34 levels, the A14 split) follows
+
+### A16 build · 2026-09-29 · d907c9d
+- recorded first: A16 (Session 1f: the player's spot blocked at every level on a bridge deck and on a strip by a pond and a cliff; owner option A in plan mode, design §9 D32) and A14's first timing data, with D32/D34 wording, before the code
+- built: WalkOrigin (the spot, then 24 spots 1-3 m away), WaveWalk.OriginAt and SearchedFor (one search per origin), PointKind.SpotOnly with WalkLevels.Spot (h, h-1, h+1), ", N spot only (no ground at the player)" on the wave line, the survey's moved start and per-level spot answers, its budget 730 (9a24ab5, d907c9d)
+- compile: Release and Debug 0 Warning(s), 0 Error(s); tests: 2435 passed; controls checked by planting each fault (no nearby start, lines from the player not the start, the search per point, no spot only, spot only unchecked, spot only at five levels, the SpotOnly kind lost, no survey for spot only, the wave line without spot only, the survey without the nearby start or measured from the player, the survey's old budget, a nearby start for a wave centre, spot levels h±2 at the grid's edge): each its test failed
+- preflight: PREFLIGHT OK; -AuthSuite pass; dod-index --check automation 0 problems
+- /code-review round 1 (fresh subagent, read-only, 702f962..9a24ab5): READY, six advisories applied in d907c9d (WalkLevels.Spot for the grid's edge, the prop case pins no nearby start, the open field pins its calls, "once" wording, "240 more calls, once per group's player", PlayerLevel's doc)
+- Codex round 1 (702f962..9a24ab5): READY, no findings; its one "blocked by policy" match is its own grep of an earlier audit line, no command blocked
+- in-game: Session 1g (the strip, the bridge deck, open ground; au-hunt at the strip) follows
