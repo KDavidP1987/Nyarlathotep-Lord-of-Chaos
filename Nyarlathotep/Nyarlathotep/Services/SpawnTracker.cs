@@ -136,10 +136,10 @@ internal static class SpawnTracker
     /// (walkable-spawns D3), a point failing <paramref name="allowed"/> (out of scope, or claimed, D17) counting as blocked;
     /// each unit carries the event's <paramref name="tuning"/> (D9), <paramref name="loot"/> (D11) and
     /// <paramref name="hunt"/> tag (D13); with <paramref name="reach"/> a point needs a walkable line from the reach origin
-    /// (automation A7, D32). The result carries the queued units' moved, shortened and unchecked counts, and each unchecked
+    /// (automation A7, D32). The result carries the queued units' moved, shortened, spot-only (A16) and unchecked counts, and each unchecked
     /// unit's reason (A11).</summary>
     [Mutating]
-    internal static (int Queued, int Moved, int Shortened, int Unchecked, List<UncheckedReason> Why) RequestWave(string prefab, string eventId, int count, UnitLifetime life,
+    internal static (int Queued, int Moved, int Shortened, int SpotOnly, int Unchecked, List<UncheckedReason> Why) RequestWave(string prefab, string eventId, int count, UnitLifetime life,
         float3 center, float radius, int first, int total, double angle, (float X, float Y, float Z)? anchor, WaveWalk walk,
         Func<float, float, bool> allowed = null, UnitTuning tuning = null, bool loot = false, HuntTag? hunt = null, WalkReach? reach = null)
     {
@@ -152,7 +152,7 @@ internal static class SpawnTracker
         var queued = points.Take(result.Queued).ToList();
         var (moved, unchecked_) = WavePoints.Counts(queued);
         var why = reasons.Take(result.Queued).OfType<UncheckedReason>().ToList();
-        return (result.Queued, moved, WavePoints.Shortened(queued), unchecked_, why);
+        return (result.Queued, moved, WavePoints.Shortened(queued), WavePoints.SpotOnly(queued), unchecked_, why);
     }
 
     /// <summary>The despawn queue's worst-case drain time at the current caps, added to every unit's LifeTime (A16, A21).</summary>

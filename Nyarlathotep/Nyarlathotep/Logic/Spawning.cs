@@ -8,7 +8,7 @@ namespace Nyarlathotep.Logic;
 /// search, the centre, or no checked point (all blocked, the budget spent, the check failed, or no height to check at).
 /// Shortened: a point of the search whose line from the reach origin was blocked, placed at the line's farthest
 /// walkable sample (automation A7, D32).</summary>
-public enum PointKind { Ring, Moved, Centre, Unchecked, Shortened }
+public enum PointKind { Ring, Moved, Centre, Unchecked, Shortened, SpotOnly }
 
 public readonly record struct PlacedPoint(float X, float Z, PointKind Kind);
 
@@ -58,7 +58,8 @@ public static class SpawnPoints
 }
 
 /// <summary>The verbose walk survey (automation A11, D34): from a group's player, whose lines all failed, the player's
-/// height level (the first of <see cref="WalkLevels.Near"/> where the spot is free and grounded, A13), then how far a unit
+/// height level (the first of <see cref="WalkLevels.Near"/> where the spot is free and grounded, A13; else the nearest
+/// walkable spot of <see cref="WalkOrigin"/>, named with the player's spot's answer at each level, A16), then how far a unit
 /// walks in 1 m steps in eight directions (N is +z) following the terrain's level as the walk line does, before a sample
 /// that is walkable at none of the current level and the levels one up and one down, or clear to <see cref="Range"/> m;
 /// each direction names the reason at its current level and the level it ended on. Every game call takes one unit of
@@ -69,10 +70,10 @@ public static class WalkSurvey
 {
     public const int Range = 30;
 
-    /// <summary>The survey's own budget (A12, confirmed by the owner; A13 adds the spot's level search): 490 calls, so an
-    /// open field is surveyed whole from any level of the search; a slope, which tries more levels, can end "budget".</summary>
-    public const int Calls = 5 * 2 + 8 * Range * 2;
-    static readonly string[] Names = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+    /// <summary>The survey's own budget (A12, confirmed by the owner; A13 and A16 add the start's search): 730 calls, the
+    /// five levels at the spot and the 24 nearby spots, then an open field whole; a slope, which tries more levels, can
+    /// end "budget".</summary>
+    public const int Calls = 5 * 2 * (1 + 8 * WalkOrigin.Reach) + 8 * Range * 2;
 
     public static string Line(string id, int wave, (float X, float Z) at, WaveWalk walk, WalkBudget? budget = null)
     {
@@ -87,16 +88,24 @@ public static class WalkSurvey
             return probe.IsGrounded(x, z, level) ? null : "not grounded";
         }
         byte? start = null;
-        string? atH = null;
-        foreach (var l in WalkLevels.Near(probe.Level))
+        var from = at;
+        var moved = "";
+        var atSpot = new List<string>();                                      // A16: the player's spot at each level
+        foreach (var c in WalkOrigin.Candidates(at, nearby: true))
         {
-            var why = Why(at.X, at.Z, l);
-            if (why == "budget") return head + "budget";
-            if (l == probe.Level) atH = why;
-            if (why is null) { start = l; break; }
+            foreach (var l in WalkLevels.Near(probe.Level))
+            {
+                var why = Why(c.X, c.Z, l);
+                if (why == "budget") return head + "budget";
+                if (why is null) { start = l; from = (c.X, c.Z); break; }
+                if (c.D == 0) atSpot.Add($"{l} {why}");
+            }
+            if (start is not null) { if (c.D > 0) moved = $" moved {c.D} m {WalkOrigin.Directions[c.Dir]},"; break; }
         }
-        var parts = new List<string> { start is { } s ? $"spot level {s}" : $"spot no level, at h {probe.Level} {atH}" };
-        for (var k = 0; k < Names.Length; k++)
+        var spot = $"(the player's spot: {string.Join(", ", atSpot)})";
+        var parts = new List<string> { start is not { } s ? $"spot no level within {WalkOrigin.Reach} m {spot}"
+            : moved != "" ? $"spot{moved} level {s} {spot}" : $"spot level {s}" };
+        for (var k = 0; k < WalkOrigin.Directions.Length; k++)
         {
             var a = k * MathF.PI / 4;
             var level = start ?? probe.Level;
@@ -104,7 +113,7 @@ public static class WalkSurvey
             var d = 1;
             for (; d <= Range && end is null; d++)
             {
-                float x = at.X + d * MathF.Sin(a), z = at.Z + d * MathF.Cos(a);
+                float x = from.X + d * MathF.Sin(a), z = from.Z + d * MathF.Cos(a);
                 end = Why(x, z, level);
                 if (end is null || end == "budget") continue;
                 foreach (var next in WalkLevels.Steps(level))
@@ -114,11 +123,35 @@ public static class WalkSurvey
                     if (w == "budget") { end = w; break; }
                 }
             }
-            if (end == "budget") { parts.Add($"{Names[k]} budget"); break; }
-            parts.Add(end is null ? $"{Names[k]} {Range} m clear @{level}" : $"{Names[k]} {d - 2} m {end} @{level}");
+            var name = WalkOrigin.Directions[k];
+            if (end == "budget") { parts.Add($"{name} budget"); break; }
+            parts.Add(end is null ? $"{name} {Range} m clear @{level}" : $"{name} {d - 2} m {end} @{level}");
         }
         walk.Returned();
         return head + string.Join("; ", parts);
+    }
+}
+
+/// <summary>Where a walk line starts (automation A16, design §9 D32): the reach origin's spot, then, for a player, the
+/// spots 1, 2 and 3 m away in eight directions (N is +z), nearest first; each is tried at every level of
+/// <see cref="WalkLevels.Near"/>. On a water's edge or a cliff's foot the unit circle at the player's own spot touches the
+/// edge, and ground a metre away is the start.</summary>
+public static class WalkOrigin
+{
+    public const int Reach = 3;
+    public static readonly string[] Directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+
+    /// <summary>The spot (D 0), then with <paramref name="nearby"/> the 24 spots around it.</summary>
+    public static IEnumerable<(float X, float Z, int D, int Dir)> Candidates((float X, float Z) at, bool nearby)
+    {
+        yield return (at.X, at.Z, 0, 0);
+        if (!nearby) yield break;
+        for (var d = 1; d <= Reach; d++)
+            for (var k = 0; k < Directions.Length; k++)
+            {
+                var a = k * MathF.PI / 4;
+                yield return (at.X + d * MathF.Sin(a), at.Z + d * MathF.Cos(a), d, k);
+            }
     }
 }
 
@@ -258,12 +291,20 @@ public sealed class WaveWalk(IWalkProbe? probe, WalkBudget budget)
     public byte? OriginLevel { get; internal set; }
     public bool OriginSearched { get; internal set; }
 
+    /// <summary>Where the lines start (A16): the origin's spot, or the nearest walkable spot within
+    /// <see cref="WalkOrigin.Reach"/> m of a player's; null before the search or when none is walkable.</summary>
+    public (float X, float Z)? OriginAt { get; internal set; }
+
+    /// <summary>The reach origin the search was made for; another origin on the same wave searches again (A16).</summary>
+    internal (float X, float Z)? SearchedFor { get; set; }
+
     /// <summary>The origin's level when the origin is a player (away from the wave centre), for the wave line; a Point or
     /// Admin wave's centre is no player (review round 2).</summary>
     public byte? PlayerLevel { get; internal set; }
 
-    /// <summary>True once a point of this wave found no walkable line, or no ground at its origin, from a reach origin that
-    /// is not the wave centre (the player of an AroundPlayer group) (A11, A13; Codex review F1).</summary>
+    /// <summary>True once a point of this wave found no walkable line, or no ground at its origin (placed spot only or not,
+    /// A16), from a reach origin that is not the wave centre (the player of an AroundPlayer group) (A11, A13; Codex review
+    /// F1).</summary>
     public bool NoLine { get; internal set; }
 
     /// <summary>The reason of the failure that opened this wave's fall-open, or null.</summary>
@@ -298,8 +339,10 @@ public static class WavePoints
     /// the origin's level (<see cref="WaveWalk.OriginLevel"/>, searched once) and each sample is walkable at the current
     /// level or one up or down (<see cref="WalkLevels"/>). The search runs at the first in-scope candidate (review F2); a
     /// player's spot walkable at no level near the wave's gives no line ("no ground at the player"), while a wave
-    /// centre's lines start at the wave's level as before A13 (review F1). The spot check without a reach stays at the
-    /// wave's level.</summary>
+    /// centre's lines start at the wave's level as before A13 (review F1). A player's spot walkable at no level starts the
+    /// lines at the nearest walkable spot of <see cref="WalkOrigin"/> instead (A16); with none, a point is placed by the
+    /// spot check alone at h, h-1 or h+1, kind SpotOnly, and "no ground at the player" is left for a point that fails
+    /// it too. The spot check without a reach stays at the wave's level.</summary>
     public static List<PlacedPoint> Plan(IReadOnlyList<(float X, float Z)> ring, (float X, float Z) centre, float radius, WaveWalk walk,
         Func<float, float, bool>? inScope = null, WalkReach? reach = null, List<UncheckedReason?>? reasons = null)
     {
@@ -341,6 +384,7 @@ public static class WavePoints
             }
             (float X, float Z, float Out)? best = null;                        // A7: the fallback
             var lines = false;                                                 // A11: a line was walked
+            var spotOnly = false;                                              // A16: no start near the player
             try
             {
                 var away = reach is { } o && (o.X, o.Z) != centre;              // the player of an AroundPlayer group
@@ -349,16 +393,28 @@ public static class WavePoints
                     if (inScope is not null && !inScope(x, z)) return null;          // before the budget (A1)
                     if (reach is not { } r) return Walkable(x, z, probe.Level) ? (x, z, false) : null;
                     lines = true;
-                    if (!walk.OriginSearched)                                       // A13: the origin's level, once a wave
+                    if (!walk.OriginSearched || walk.SearchedFor != (r.X, r.Z))     // A13, A16: the start, once an origin
                     {
-                        foreach (var lv in WalkLevels.Near(probe.Level))
-                            if (!spent && Walkable(r.X, r.Z, lv)) { walk.OriginLevel = lv; break; }
+                        if (walk.SearchedFor != (r.X, r.Z)) { walk.OriginLevel = null; walk.OriginAt = null; walk.PlayerLevel = null; walk.SearchedFor = (r.X, r.Z); }
+                        foreach (var c in WalkOrigin.Candidates((r.X, r.Z), nearby: away))
+                        {
+                            foreach (var lv in WalkLevels.Near(probe.Level))
+                                if (!spent && Walkable(c.X, c.Z, lv)) { walk.OriginLevel = lv; walk.OriginAt = (c.X, c.Z); break; }
+                            if (walk.OriginLevel is not null || spent) break;
+                        }
                         walk.OriginSearched = !spent;
                         if (away) walk.PlayerLevel = walk.OriginLevel;
                     }
-                    // a player's spot with no level gives no line; a wave centre keeps the wave's level (review F1)
-                    if ((walk.OriginLevel ?? (away ? null : probe.Level)) is not { } start) return null;
-                    var line = WalkLine.Reach((r.X, r.Z), (x, z), start, Step, inScope);   // A7, A13
+                    if (away && walk.OriginLevel is null)                           // A16: no start near the player: the spot alone
+                    {
+                        foreach (var lv in WalkLevels.Near(probe.Level).Take(3))
+                            if (!spent && Walkable(x, z, lv)) { spotOnly = true; return (x, z, false); }
+                        return null;
+                    }
+                    // a wave centre with no level keeps the wave's level (review F1)
+                    var start = walk.OriginLevel ?? probe.Level;
+                    var from = walk.OriginAt ?? (r.X, r.Z);
+                    var line = WalkLine.Reach(from, (x, z), start, Step, inScope);   // A7, A13, A16
                     if (line is not { } l) return null;
                     if (l.Whole) return (x, z, false);
                     if (inScope is not null && !inScope(l.X, l.Z)) return null;
@@ -368,12 +424,13 @@ public static class WavePoints
                     return null;
                 }, halfRing: reach is null);
                 if (!spent && chosen.Kind == PointKind.Unchecked && best is { } fb) chosen = new PlacedPoint(fb.X, fb.Z, PointKind.Shortened);
+                if (spotOnly && chosen.Kind != PointKind.Unchecked) chosen = chosen with { Kind = PointKind.SpotOnly };
                 UncheckedReason? why = spent ? UncheckedReason.Budget
                     : chosen.Kind != PointKind.Unchecked ? null
                     : lines && away && walk.OriginLevel is null ? UncheckedReason.NoGround
                     : lines ? UncheckedReason.NoLine
                     : UncheckedReason.NoFreeSpot;
-                if (why is UncheckedReason.NoLine or UncheckedReason.NoGround && away) walk.NoLine = true;
+                if (why is UncheckedReason.NoLine or UncheckedReason.NoGround && away || spotOnly) walk.NoLine = true;
                 points.Add(spent ? Unchecked(p) : chosen);
                 reasons?.Add(why);
             }
@@ -423,6 +480,12 @@ public static class WavePoints
 
     /// <summary>The shortened count of a plan, for the wave line (automation A7).</summary>
     public static int Shortened(IEnumerable<PlacedPoint> points) => points.Count(p => p.Kind == PointKind.Shortened);
+
+    /// <summary>The spot-only count of a plan (A16) and its wave-line text: "" for none, else ", 5 spot only (no ground at
+    /// the player)".</summary>
+    public static int SpotOnly(IEnumerable<PlacedPoint> points) => points.Count(p => p.Kind == PointKind.SpotOnly);
+
+    public static string SpotOnlyText(int spotOnly) => spotOnly > 0 ? $", {spotOnly} spot only (no ground at the player)" : "";
 
     /// <summary>The moved and unchecked counts of a plan, for the wave line (A2).</summary>
     public static (int Moved, int Unchecked) Counts(IEnumerable<PlacedPoint> points)

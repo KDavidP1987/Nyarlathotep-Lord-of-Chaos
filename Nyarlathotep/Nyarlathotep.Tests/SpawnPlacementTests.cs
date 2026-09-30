@@ -261,6 +261,67 @@ public class SpawnPlacementTests
     }
 
     [Fact]
+    public void WalkLine_fails_when_player_by_an_edge_not_moved()
+    {
+        // A16: the unit circle at the player's spot touches the water's edge; ground 1 m north starts the lines, whole
+        var calls = new Dictionary<(float, float), int>();
+        var probe = new LineProbe((x, z) => { calls[(x, z)] = calls.GetValueOrDefault((x, z)) + 1; return x * x + z * z < 0.3f; });
+        var walk = new WaveWalk(probe, new WalkBudget());
+        var reasons = new List<UncheckedReason?>();
+        var points = WavePoints.Plan(Ring(5), Centre, 10, walk, null, Reach, reasons);
+        Assert.Equal((0f, 1f), walk.OriginAt);
+        Assert.Equal((byte?)10, walk.PlayerLevel);
+        Assert.All(points, p => Assert.Equal(PointKind.Ring, p.Kind));
+        Assert.All(reasons, r => Assert.Null(r));
+        Assert.Equal(5, calls[(0f, 0f)]);                                   // the spot's five levels, once a wave
+        Assert.False(walk.NoLine);
+        // a rock beside the player, east of the spot and below z 0.3: lines from the player hit it, lines from the start clear it
+        var rock = new WaveWalk(new LineProbe((x, z) => x * x + z * z < 0.3f || x is > 0.6f and < 1.4f && z is > -3 and < 0.3f), new WalkBudget());
+        var rockPoints = WavePoints.Plan(Ring(5), Centre, 10, rock, null, Reach);
+        Assert.Equal((0f, 1f), rock.OriginAt);
+        Assert.All(rockPoints, p => Assert.Equal(PointKind.Ring, p.Kind));
+        // nothing walkable within 3 m: at most 5 + 24 x 5 blocked calls for the search, once
+        var near = 0;
+        var boxed = new LineProbe((x, z) => { var inBox = x * x + z * z < 12.5f; if (inBox) near++; return inBox; });
+        var boxedWalk = new WaveWalk(boxed, new WalkBudget());
+        WavePoints.Plan(Ring(5), Centre, 10, boxedWalk, null, Reach);
+        Assert.True(boxedWalk.OriginSearched);
+        Assert.Null(boxedWalk.OriginAt);
+        Assert.Equal(5 * (1 + 8 * WalkOrigin.Reach), near);
+        // an open field keeps the player's own spot and its calls (4.2)
+        var open = new WaveWalk(new LineProbe((_, _) => false), new WalkBudget());
+        WavePoints.Plan(Ring(5), Centre, 10, open, null, Reach);
+        Assert.Equal((0f, 0f), open.OriginAt);
+    }
+
+    [Fact]
+    public void WalkLine_fails_when_bridge_deck_spawns_in_water()
+    {
+        // A16: the player on a bridge deck over water to x 25: no start within 3 m, so each point is checked alone, never in the water
+        var walk = new WaveWalk(new LineProbe((x, _) => x < 25), new WalkBudget());
+        var reasons = new List<UncheckedReason?>();
+        var points = WavePoints.Plan(Ring(5), Centre, 10, walk, null, Reach, reasons);
+        Assert.Null(walk.OriginLevel);
+        Assert.All(points, p => Assert.True(p.X >= 25, $"{p.Kind} in the water"));
+        Assert.All(points, p => Assert.Equal(PointKind.SpotOnly, p.Kind));
+        Assert.All(reasons, r => Assert.Null(r));
+        Assert.True(walk.NoLine);                                           // the survey still runs
+        Assert.Equal(5, WavePoints.SpotOnly(points));
+        Assert.Equal(", 5 spot only (no ground at the player)", WavePoints.SpotOnlyText(5));
+        Assert.Equal("", WavePoints.SpotOnlyText(0));
+        Assert.Contains("({moved} moved, {shortened} shortened{WavePoints.SpotOnlyText(spotOnly)}, {unchecked_} unchecked", PushTests.WaveActionSource());
+        // a spot the check also refuses stays "no ground at the player"
+        var all = new List<UncheckedReason?>();
+        WavePoints.Plan(Ring(5), Centre, 10, new WaveWalk(new LineProbe((_, _) => true), new WalkBudget()), null, Reach, all);
+        Assert.Equal(Enumerable.Repeat<UncheckedReason?>(UncheckedReason.NoGround, 5), all);
+        // spot only uses h, h-1 or h+1 and no line: ground at level 9 beyond the deck is taken, level 12 is not
+        var low = WavePoints.Plan(Ring(5), Centre, 10, new WaveWalk(new LevelProbe((x, _) => x < 25 ? 14 : 9, 10), new WalkBudget()), null, Reach);
+        Assert.All(low, p => Assert.Equal(PointKind.SpotOnly, p.Kind));
+        var high = WavePoints.Plan(Ring(5), Centre, 10, new WaveWalk(new LevelProbe((x, _) => x < 25 ? 14 : 12, 10), new WalkBudget()), null, Reach);
+        Assert.All(high, p => Assert.Equal(PointKind.Unchecked, p.Kind));
+    }
+
+    [Fact]
     public void WalkLine_fails_when_player_off_level_not_found()
     {
         // the player stands on flat ground at level 12 while the wave's level is 10: the level is found, the ring kept
@@ -290,7 +351,8 @@ public class SpawnPlacementTests
         Assert.StartsWith("walk survey au-here wave 1: spot level 11; N 30 m clear @21; ", line);
         Assert.Contains("; S 3 m not grounded @11; ", line);
         var none = WalkSurvey.Line("au-here", 1, (0, 0), new WaveWalk(new LevelProbe((_, _) => 14, 10), new WalkBudget(0)), new WalkBudget(5000));
-        Assert.StartsWith("walk survey au-here wave 1: spot no level, at h 10 not grounded; N 0 m not grounded @10", none);
+        Assert.StartsWith("walk survey au-here wave 1: spot no level within 3 m (the player's spot: 10 not grounded, 9 not grounded, "
+            + "11 not grounded, 8 not grounded, 12 not grounded); N 0 m not grounded @10", none);
     }
 
     sealed class ThrowingProbe : IWalkProbe
@@ -331,7 +393,8 @@ public class SpawnPlacementTests
     public void WalkSurvey_fails_when_wrong_reason()
     {
         var line = Survey((_, _) => true, (_, _) => true, (0, 0), out _);
-        Assert.Contains("spot no level, at h 10 blocked; N 0 m blocked @10; NE 0 m blocked @10", line);
+        Assert.Contains("spot no level within 3 m (the player's spot: 10 blocked, 9 blocked, 11 blocked, 8 blocked, 12 blocked); "
+            + "N 0 m blocked @10; NE 0 m blocked @10", line);
         var water = Survey((_, _) => false, (x, z) => x * x + z * z > 0.25f, (0, 0), out _);
         Assert.Contains("spot level 10; N 0 m not grounded @10", water);
     }
@@ -356,6 +419,17 @@ public class SpawnPlacementTests
         var offLine = WalkSurvey.Line("au-here", 1, (0, 0), new WaveWalk(off, new WalkBudget(0)));
         Assert.EndsWith("NW 30 m clear @9", offLine);
         Assert.True(off.Calls <= WalkSurvey.Calls);
+    }
+
+    [Fact]
+    public void WalkSurvey_fails_when_moved_start_not_shown()
+    {
+        // A16: the unit circle at the player's spot touches an edge; the survey starts 1 m north and names the spot's answers
+        var line = Survey((x, z) => x * x + z * z < 0.3f, (_, _) => false, (0, 0), out _);
+        Assert.StartsWith("walk survey au-here wave 1: spot moved 1 m N, level 10 (the player's spot: 10 blocked, 9 blocked, 11 blocked, "
+            + "8 blocked, 12 blocked); N 30 m clear @10; ", line);
+        Assert.Contains("; S 0 m blocked @10; ", line);                    // from the moved start, back across the player's spot
+        Assert.True(WalkSurvey.Calls >= 5 * 2 * 25 + 8 * 30 * 2);          // the start's search and an open field
     }
 
     [Fact]
