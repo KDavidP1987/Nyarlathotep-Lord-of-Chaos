@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Nyarlathotep.Config;
 using Nyarlathotep.Logic;
@@ -81,7 +82,8 @@ internal static class WaveAction
             : (x, z) => (inScope is null || inScope(x, z)) && !claimed(x, z);
         int total = 0, moved = 0, shortened = 0, unchecked_ = 0;
         var why = new List<UncheckedReason>();                                 // A11
-        (bool Free, bool Grounded)? spot = null;                             // shown for one group only (review F3)
+        byte? playerLevel = null;                                              // shown for one group only (review F3; A13)
+        long open = 0, plan = 0, survey = 0;                                   // A14: stopwatch ticks
         var surveyed = false;                                                  // one survey a wave (A12)
         byte? level = null;
         WaveRun.Run(decision, skipped => Core.Log.LogInfo($"[nyar] {skipped}"), group =>
@@ -92,7 +94,10 @@ internal static class WaveAction
             var anchor = WavePlan.GroupAnchor(location, active.Origin);            // none for AroundPlayer (A4)
             HuntTag? hunt = action.Behaviour is { Type: BehaviourType.Hunt } b ? new HuntTag(gx, gz, b.Range) : null;   // one per group
             var first = 0;
+            var t0 = Stopwatch.GetTimestamp();
             var check = WalkCheck.OpenWave(WavePlan.WalkY(location, group.Centre, active.Origin));   // walkable-spawns D3, A13
+            var t1 = Stopwatch.GetTimestamp();
+            open += t1 - t0;
             var reach = WavePlan.Reach(location, (gx, gz), group.Index < origins.Count ? origins[group.Index] : null);   // A7
             try
             {
@@ -106,18 +111,23 @@ internal static class WaveAction
                     why.AddRange(queued.Why);
                     first += entry.Count;
                 }
-                spot ??= check.Walk.OriginSpot;
+                playerLevel ??= check.Walk.OriginLevel;
+                var t2 = Stopwatch.GetTimestamp();
+                plan += t2 - t1;
                 if (Settings.VerboseLogging.Value && check.Walk.NoLine && !surveyed && reach is { } r)   // A11, D34: before the dispose
                 {
                     surveyed = true;
                     try { Core.Log.LogInfo($"[nyar] {WalkSurvey.Line(id, due.Wave, (r.X, r.Z), check.Walk)}"); }
                     catch (Exception e) { check.Walk.Fail($"survey: {e.Message}"); }       // the wave is planned; the streak records it
+                    survey += Stopwatch.GetTimestamp() - t2;
                 }
             }
             finally
             {
+                var t3 = Stopwatch.GetTimestamp();
                 try { check.Resource?.Dispose(); }
                 catch (Exception e) { check.Walk.Fail($"dispose: {e.GetType().Name}"); }    // never stops the wave (D5; Codex F4)
+                open += Stopwatch.GetTimestamp() - t3;                         // A14: the probe's native resources, made and freed
             }
             WalkCheck.Settle(check.Walk);
             level ??= check.Level;
@@ -129,7 +139,7 @@ internal static class WaveAction
         if (decision.Outcome != WaveOutcome.Spawn) return;
         var levelText = level is { } h ? $", walk h {h}" : "";
         var where = location.Type == LocationType.AroundPlayer ? $" {WaveLines.AroundPlayers(decision.Groups.Count)}" : "";
-        Core.Log.LogInfo($"[nyar] event {id} wave {due.Wave}/{due.Waves}{where}: {total} units queued ({moved} moved, {shortened} shortened, {unchecked_} unchecked{WavePoints.UncheckedText(why, decision.Groups.Count == 1 ? spot : null)}), due in {(int)Math.Ceiling((life.DueUtc - now).TotalSeconds)}s, lifetime {life.LifetimeSeconds}s{levelText}");
+        Core.Log.LogInfo($"[nyar] event {id} wave {due.Wave}/{due.Waves}{where}: {total} units queued ({moved} moved, {shortened} shortened, {unchecked_} unchecked{WavePoints.UncheckedText(why, decision.Groups.Count == 1 ? playerLevel : null)}), due in {(int)Math.Ceiling((life.DueUtc - now).TotalSeconds)}s, lifetime {life.LifetimeSeconds}s{levelText}{(Settings.TimingLog.Value ? WavePoints.TimingText(open, plan, survey, Stopwatch.Frequency) : "")}");
     }
 
     /// <summary>The wave's AroundPlayer centres (D16; automation D5, D13): up to fanOut.maxInstances spaced players, one

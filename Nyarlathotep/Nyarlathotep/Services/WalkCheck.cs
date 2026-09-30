@@ -68,7 +68,7 @@ internal static class WalkCheck
     {
         readonly TileWorld _world;
         readonly byte _level;
-        internal byte Level => _level;
+        public byte Level => _level;
         TileMapCollisionMath.TilePolygons _polygons;
         TileMapCollisionMath.MapData _map;
         bool _disposed;
@@ -82,14 +82,19 @@ internal static class WalkCheck
             catch { _polygons.Dispose(); throw; }                              // native arrays (A10)
         }
 
-        public bool IsFree(float x, float z) =>
-            !TileMapCollisionMath.CheckStaticCircle(ref _map, new float2(x, z), _level, UnitRadius, MapCollisionFlags.CollideNormalMovement);
+        public bool IsFree(float x, float z) => IsFree(x, z, _level);
 
-        public bool IsGrounded(float x, float z)
+        public bool IsGrounded(float x, float z) => IsGrounded(x, z, _level);
+
+        /// <summary>At a given height level (automation A13): the same calls with the level passed through.</summary>
+        public bool IsFree(float x, float z, byte level) =>
+            !TileMapCollisionMath.CheckStaticCircle(ref _map, new float2(x, z), level, UnitRadius, MapCollisionFlags.CollideNormalMovement);
+
+        public bool IsGrounded(float x, float z, byte level)
         {
             int tx = TileIndex(x), tz = TileIndex(z);
             if (tx < 0 || tz < 0) throw new ArgumentOutOfRangeException(nameof(x), "off the tile grid");   // A10
-            return _world.GetIsGrounded(new int2(tx, tz), _level);
+            return _world.GetIsGrounded(new int2(tx, tz), level);
         }
 
         public void Dispose()

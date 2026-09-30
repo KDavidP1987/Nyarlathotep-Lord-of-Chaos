@@ -57,17 +57,19 @@ public static class SpawnPoints
     }
 }
 
-/// <summary>The verbose walk survey (automation A11, D34): from a group's player, whose lines all failed, how far a unit
-/// walks in 1 m steps in eight directions (N is +z) before a sample that is blocked or not grounded at the wave's level,
-/// or clear to <see cref="Range"/> m. Every game call takes one unit of <paramref name="budget"/>, the survey's own
-/// (<see cref="Calls"/> by default), so a survey never takes placement's calls (review F2); calls are not cached, and a
-/// spent budget ends the line "budget". A wave whose check failed is not called again: "no check" (walkable-spawns D5;
-/// review F1). The line holds no position.</summary>
+/// <summary>The verbose walk survey (automation A11, D34): from a group's player, whose lines all failed, the player's
+/// height level (the first of <see cref="WalkLevels.Near"/> where the spot is free and grounded, A13), then how far a unit
+/// walks in 1 m steps in eight directions (N is +z) following the terrain's level as the walk line does, before a sample
+/// that is walkable at none of the current level and the levels one up and one down, or clear to <see cref="Range"/> m;
+/// each direction names the reason at its current level and the level it ended on. Every game call takes one unit of
+/// <paramref name="budget"/>, the survey's own (<see cref="Calls"/> by default, A12), so a survey never takes placement's
+/// calls (review F2); calls are not cached, and a spent budget ends the line "budget". A wave whose check failed is not
+/// called again: "no check" (walkable-spawns D5; review F1). The line holds no position.</summary>
 public static class WalkSurvey
 {
     public const int Range = 30;
 
-    /// <summary>The most calls one survey makes: the spot's two, then two per sample.</summary>
+    /// <summary>The survey's own budget (A12, confirmed by the owner): 482 calls.</summary>
     public const int Calls = 2 + 8 * Range * 2;
     static readonly string[] Names = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 
@@ -76,37 +78,73 @@ public static class WalkSurvey
         var head = $"walk survey {id} wave {wave}: ";
         if (walk.Probe is not { } probe || walk.Failure is not null) return head + "no check";
         var calls = budget ?? new WalkBudget(Calls);
-        bool? Ask(Func<float, float, bool> call, float x, float z) => calls.TryTake(1) ? call(x, z) : null;
-        var free = Ask(probe.IsFree, at.X, at.Z);
-        var grounded = free is null ? null : Ask(probe.IsGrounded, at.X, at.Z);
-        if (free is null || grounded is null) return head + "budget";
-        var parts = new List<string> { $"spot {(free.Value ? "free" : "blocked")}, {(grounded.Value ? "grounded" : "not grounded")}" };
+        string? Why(float x, float z, byte level)                               // null: walkable at the level
+        {
+            if (!calls.TryTake(1)) return "budget";
+            if (!probe.IsFree(x, z, level)) return "blocked";
+            if (!calls.TryTake(1)) return "budget";
+            return probe.IsGrounded(x, z, level) ? null : "not grounded";
+        }
+        byte? start = null;
+        string? atH = null;
+        foreach (var l in WalkLevels.Near(probe.Level))
+        {
+            var why = Why(at.X, at.Z, l);
+            if (why == "budget") return head + "budget";
+            if (l == probe.Level) atH = why;
+            if (why is null) { start = l; break; }
+        }
+        var parts = new List<string> { start is { } s ? $"spot level {s}" : $"spot no level, at h {probe.Level} {atH}" };
         for (var k = 0; k < Names.Length; k++)
         {
             var a = k * MathF.PI / 4;
+            var level = start ?? probe.Level;
             string? end = null;
             var d = 1;
             for (; d <= Range && end is null; d++)
             {
                 float x = at.X + d * MathF.Sin(a), z = at.Z + d * MathF.Cos(a);
-                end = Ask(probe.IsFree, x, z) switch
+                end = Why(x, z, level);
+                if (end is null || end == "budget") continue;
+                foreach (var next in WalkLevels.Steps(level))
                 {
-                    null => "budget",
-                    false => "blocked",
-                    _ => Ask(probe.IsGrounded, x, z) switch { null => "budget", false => "not grounded", _ => null },
-                };
+                    var w = Why(x, z, next);
+                    if (w is null) { level = next; end = null; break; }
+                    if (w == "budget") { end = w; break; }
+                }
             }
             if (end == "budget") { parts.Add($"{Names[k]} budget"); break; }
-            parts.Add(end is null ? $"{Names[k]} {Range} m clear" : $"{Names[k]} {d - 2} m {end}");
+            parts.Add(end is null ? $"{Names[k]} {Range} m clear @{level}" : $"{Names[k]} {d - 2} m {end} @{level}");
         }
         walk.Returned();
         return head + string.Join("; ", parts);
     }
 }
 
+/// <summary>The height levels a walk line may use (automation A13, design §9 D32): the player's level is searched among
+/// the wave's level and the two levels either side of it, nearest first; along a line each sample may be one level up or
+/// down from the last, and two or more is a cliff.</summary>
+public static class WalkLevels
+{
+    /// <summary>h, h-1, h+1, h-2, h+2, within 0-255.</summary>
+    public static IEnumerable<byte> Near(byte h)
+    {
+        foreach (var d in new[] { 0, -1, 1, -2, 2 })
+            if (h + d is >= 0 and <= 255) yield return (byte)(h + d);
+    }
+
+    /// <summary>The levels one up and one down from <paramref name="level"/>, within 0-255.</summary>
+    public static IEnumerable<byte> Steps(byte level)
+    {
+        if (level < 255) yield return (byte)(level + 1);
+        if (level > 0) yield return (byte)(level - 1);
+    }
+}
+
 /// <summary>Why a planned point stayed unchecked (automation A11): the wave had no check (no probe or a failed call), the
-/// budget ran out, no line from the player reached a walkable sample, or no candidate spot was free.</summary>
-public enum UncheckedReason { NoCheck, Budget, NoLine, NoFreeSpot }
+/// budget ran out, the player's spot is walkable at no level near the wave's (A13), no line from the player reached a
+/// walkable sample, or no candidate spot was free.</summary>
+public enum UncheckedReason { NoCheck, Budget, NoGround, NoLine, NoFreeSpot }
 
 /// <summary>Where a wave's units must be able to walk from (automation A7, design §9 D31): the picked player for an
 /// AroundPlayer group, the wave centre otherwise; a shortened point lies at least <see cref="MinDist"/> from it.</summary>
@@ -130,20 +168,23 @@ public static class WalkLine
         if (n > 0) yield return to;
     }
 
-    /// <summary>The farthest place a unit reaches walking from <paramref name="from"/> to <paramref name="to"/>: the point
-    /// itself when every sample is walkable (Whole), else the last walkable sample before the first that is not; null
-    /// when the first sample is not walkable. Stops at the first walkable call that is false. A point at the origin is
-    /// its own one sample (Codex round 1 F1: a Point wave's centre fallback). With <paramref name="keep"/> a blocked line
-    /// gives its farthest walkable sample that also passes it (the scope test; review round 2 F1).</summary>
-    public static (float X, float Z, bool Whole)? Reach((float X, float Z) from, (float X, float Z) to, Func<float, float, bool> walkable,
-        Func<float, float, bool>? keep = null)
+    /// <summary>The farthest place a unit reaches walking from <paramref name="from"/> to <paramref name="to"/>, starting at
+    /// height level <paramref name="start"/>: <paramref name="step"/> gives the level a sample is walkable at from the
+    /// current one (A13: the same level or one up or down), or null. The point itself when every sample steps (Whole),
+    /// else the last sample before the first that does not; null when the first sample does not. A point at the origin
+    /// is its own one sample (Codex round 1 F1: a Point wave's centre fallback). With <paramref name="keep"/> a blocked
+    /// line gives its farthest walkable sample that also passes it (the scope test; review round 2 F1).</summary>
+    public static (float X, float Z, bool Whole)? Reach((float X, float Z) from, (float X, float Z) to, byte start,
+        Func<float, float, byte, byte?> step, Func<float, float, bool>? keep = null)
     {
-        if (!Samples(from, to).Any()) return walkable(to.X, to.Z) ? (to.X, to.Z, true) : null;
+        if (!Samples(from, to).Any()) return step(to.X, to.Z, start) is not null ? (to.X, to.Z, true) : null;
+        var level = start;
         (float X, float Z)? last = null;
         (float X, float Z)? kept = null;
         foreach (var s in Samples(from, to))
         {
-            if (!walkable(s.X, s.Z)) return kept is { } k ? (k.X, k.Z, false) : null;
+            if (step(s.X, s.Z, level) is not { } next) return kept is { } k ? (k.X, k.Z, false) : null;
+            level = next;
             last = s;
             if (keep is null || keep(s.X, s.Z)) kept = s;
         }
@@ -166,12 +207,16 @@ public static class WalkHeight
         : null;
 }
 
-/// <summary>The game's walk check at one height level (Services/WalkCheck). Either call may throw; the wave then
-/// falls open (walkable-spawns D5).</summary>
+/// <summary>The game's walk check (Services/WalkCheck) at the wave's height level <see cref="Level"/>, or at a given level
+/// (automation A13). Any call may throw; the wave then falls open (walkable-spawns D5). A probe without levels answers
+/// every level as its own.</summary>
 public interface IWalkProbe
 {
+    byte Level => 10;
     bool IsFree(float x, float z);
     bool IsGrounded(float x, float z);
+    bool IsFree(float x, float z, byte level) => IsFree(x, z);
+    bool IsGrounded(float x, float z, byte level) => IsGrounded(x, z);
 }
 
 /// <summary>Game calls per server tick for wave placement (walkable-spawns D3, A3): 2,500, reset each tick. A point past
@@ -202,19 +247,20 @@ public sealed class WaveWalk(IWalkProbe? probe, WalkBudget budget)
     public IWalkProbe? Probe { get; } = probe;
     public WalkBudget Budget { get; } = budget;
 
-    /// <summary>What this wave learned per tile (two per metre; automation A7), so its lines, which share their origin,
+    /// <summary>What this wave learned per tile (two per metre; automation A7) and height level (A13), so its lines, which share their origin,
     /// ask the game less: a tile's grounded answer holds for the whole tile; a blocked circle answer is reused only as
     /// blocked (conservative), and a free one never, since another point's circle in the tile can differ (Codex round 1
     /// F3).</summary>
-    internal Dictionary<(int, int), bool> Grounded { get; } = new();
-    internal HashSet<(int, int)> Blocked { get; } = new();
+    internal Dictionary<(int, int, byte), bool> Grounded { get; } = new();
+    internal HashSet<(int, int, byte)> Blocked { get; } = new();
 
-    /// <summary>The picked player's own spot, free and grounded at the wave's level, read once when a point of the wave
-    /// found no walkable line (automation A11); null when no point did or the budget had no two calls left.</summary>
-    public (bool Free, bool Grounded)? OriginSpot { get; internal set; }
+    /// <summary>The reach origin's height level (A13): the first of <see cref="WalkLevels.Near"/> where its spot is free
+    /// and grounded, searched once per wave; null before the search or when no level holds (<see cref="OriginSearched"/>).</summary>
+    public byte? OriginLevel { get; internal set; }
+    public bool OriginSearched { get; internal set; }
 
-    /// <summary>True once a point of this wave found no walkable line from a reach origin that is not the wave centre (the
-    /// player of an AroundPlayer group), whether or not the spot could be read (A11; Codex review F1).</summary>
+    /// <summary>True once a point of this wave found no walkable line, or no ground at its origin, from a reach origin that
+    /// is not the wave centre (the player of an AroundPlayer group) (A11, A13; Codex review F1).</summary>
     public bool NoLine { get; internal set; }
 
     /// <summary>The reason of the failure that opened this wave's fall-open, or null.</summary>
@@ -245,9 +291,10 @@ public static class WavePoints
     /// accepts nothing, the farthest in-scope walkable sample any of its lines reached is used, Shortened, even under the
     /// minimum: a unit near the player beats one behind a wall (A10). The wave keeps what it learned per tile
     /// (<see cref="WaveWalk.Grounded"/>, <see cref="WaveWalk.Blocked"/>). With <paramref name="reasons"/> each point adds
-    /// why it stayed unchecked, or null (A11); after the first "no walkable line" the reach origin's spot, when it is not the
-    /// wave centre (the player of an AroundPlayer group), is read once
-    /// (<see cref="WaveWalk.OriginSpot"/>).</summary>
+    /// why it stayed unchecked, or null (A11). A line follows the terrain's height level (A13, design §9 D32): it starts at
+    /// the origin's level (<see cref="WaveWalk.OriginLevel"/>, searched once) and each sample is walkable at the current
+    /// level or one up or down (<see cref="WalkLevels"/>); an origin walkable at no level near the wave's gives no line
+    /// ("no ground at the player"). The spot check without a reach stays at the wave's level.</summary>
     public static List<PlacedPoint> Plan(IReadOnlyList<(float X, float Z)> ring, (float X, float Z) centre, float radius, WaveWalk walk,
         Func<float, float, bool>? inScope = null, WalkReach? reach = null, List<UncheckedReason?>? reasons = null)
     {
@@ -263,33 +310,47 @@ public static class WavePoints
                 continue;
             }
             var spent = false;
-            bool Walkable(float x, float z)
+            bool Walkable(float x, float z, byte level)
             {
                 if (spent) return false;
                 if (float.IsNaN(x) || float.IsNaN(z) || float.IsInfinity(x) || float.IsInfinity(z))
                     throw new ArgumentException("point is not a number");
-                var tile = ((int)MathF.Floor(x * 2), (int)MathF.Floor(z * 2));
+                var tile = ((int)MathF.Floor(x * 2), (int)MathF.Floor(z * 2), level);
                 if (walk.Blocked.Contains(tile) || walk.Grounded.TryGetValue(tile, out var g) && !g) return false;
                 if (!walk.Budget.TryTake(1)) { spent = true; return false; }
-                var free = probe.IsFree(x, z);
+                var free = probe.IsFree(x, z, level);
                 walk.Returned();
                 if (!free) { walk.Blocked.Add(tile); return false; }
                 if (walk.Grounded.TryGetValue(tile, out var known)) return known;
                 if (!walk.Budget.TryTake(1)) { spent = true; return false; }
-                var grounded = probe.IsGrounded(x, z);
+                var grounded = probe.IsGrounded(x, z, level);
                 walk.Grounded[tile] = grounded;
                 return grounded;
+            }
+            byte? Step(float x, float z, byte level)                           // A13: this level, then one up or down
+            {
+                if (Walkable(x, z, level)) return level;
+                foreach (var next in WalkLevels.Steps(level))
+                    if (!spent && Walkable(x, z, next)) return next;
+                return null;
             }
             (float X, float Z, float Out)? best = null;                        // A7: the fallback
             var lines = false;                                                 // A11: a line was walked
             try
             {
+                if (reach is { } o0 && !walk.OriginSearched)                   // A13: the origin's level, once a wave
+                {
+                    foreach (var l in WalkLevels.Near(probe.Level))
+                        if (!spent && Walkable(o0.X, o0.Z, l)) { walk.OriginLevel = l; break; }
+                    walk.OriginSearched = !spent;
+                }
                 var chosen = SpawnPoints.Choose(p, centre, radius, (x, z) =>
                 {
                     if (inScope is not null && !inScope(x, z)) return null;          // before the budget (A1)
-                    if (reach is not { } r) return Walkable(x, z) ? (x, z, false) : null;
+                    if (reach is not { } r) return Walkable(x, z, probe.Level) ? (x, z, false) : null;
                     lines = true;
-                    var line = WalkLine.Reach((r.X, r.Z), (x, z), Walkable, inScope);   // A7
+                    if (walk.OriginLevel is not { } start) return null;              // A13: no ground at the origin
+                    var line = WalkLine.Reach((r.X, r.Z), (x, z), start, Step, inScope);   // A7, A13
                     if (line is not { } l) return null;
                     if (l.Whole) return (x, z, false);
                     if (inScope is not null && !inScope(l.X, l.Z)) return null;
@@ -301,15 +362,12 @@ public static class WavePoints
                 if (!spent && chosen.Kind == PointKind.Unchecked && best is { } fb) chosen = new PlacedPoint(fb.X, fb.Z, PointKind.Shortened);
                 UncheckedReason? why = spent ? UncheckedReason.Budget
                     : chosen.Kind != PointKind.Unchecked ? null
+                    : reach is not null && !walk.OriginSearched ? UncheckedReason.Budget
+                    : reach is not null && walk.OriginLevel is null ? UncheckedReason.NoGround
                     : reach is not null && lines ? UncheckedReason.NoLine
                     : UncheckedReason.NoFreeSpot;
                 var away = reach is { } o && (o.X, o.Z) != centre;
-                if (why == UncheckedReason.NoLine && away) walk.NoLine = true;
-                if (why == UncheckedReason.NoLine && away && walk.OriginSpot is null && reach is { } at && walk.Budget.TryTake(2))
-                {
-                    walk.OriginSpot = (probe.IsFree(at.X, at.Z), probe.IsGrounded(at.X, at.Z));   // A11: a throw fails the wave
-                    walk.Returned();
-                }
+                if (why is UncheckedReason.NoLine or UncheckedReason.NoGround && away) walk.NoLine = true;
                 points.Add(spent ? Unchecked(p) : chosen);
                 reasons?.Add(why);
             }
@@ -331,22 +389,31 @@ public static class WavePoints
         : (x, z) => scope.Names(regionOf(x, z));
 
     /// <summary>The wave line's unchecked reasons (automation A11): "" when none, else ": 3 no walkable line, 2 budget"
-    /// in the enum's order, then the player's spot when it was read. No position.</summary>
-    public static string UncheckedText(IEnumerable<UncheckedReason> reasons, (bool Free, bool Grounded)? spot)
+    /// in the enum's order, then the player's height level when it was found (A13). No position.</summary>
+    public static string UncheckedText(IEnumerable<UncheckedReason> reasons, byte? playerLevel)
     {
         var counts = reasons.GroupBy(r => r).OrderBy(g => g.Key).Select(g => $"{g.Count()} {Name(g.Key)}").ToList();
         if (counts.Count == 0) return "";
         var text = ": " + string.Join(", ", counts);
-        return spot is { } s ? $"{text}; the player's spot {(s.Free ? "free" : "blocked")}, {(s.Grounded ? "grounded" : "not grounded")}" : text;
+        return playerLevel is { } l ? $"{text}; the player's level {l}" : text;
     }
 
     static string Name(UncheckedReason r) => r switch
     {
         UncheckedReason.NoCheck => "no check",
         UncheckedReason.Budget => "budget",
+        UncheckedReason.NoGround => "no ground at the player",
         UncheckedReason.NoLine => "no walkable line",
         _ => "no free spot",
     };
+
+    /// <summary>The wave line's planning split with TimingLog (automation A14): ", open 1.2 ms, plan 3.4 ms, survey 0.0 ms"
+    /// from stopwatch ticks at <paramref name="frequency"/> per second; open counts making and freeing the probe.</summary>
+    public static string TimingText(long open, long plan, long survey, long frequency)
+    {
+        string Ms(long ticks) => (ticks * 1000.0 / frequency).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+        return $", open {Ms(open)} ms, plan {Ms(plan)} ms, survey {Ms(survey)} ms";
+    }
 
     /// <summary>The shortened count of a plan, for the wave line (automation A7).</summary>
     public static int Shortened(IEnumerable<PlacedPoint> points) => points.Count(p => p.Kind == PointKind.Shortened);
