@@ -143,6 +143,114 @@ public class SpawnPlacementTests
     }
 
     [Fact]
+    public void WalkLine_fails_when_unchecked_reason_missing_or_wrong()
+    {
+        // A11: each unchecked point names why; a checked one names nothing
+        List<UncheckedReason?> Why(WalkReach? reach, WaveWalk walk)
+        {
+            var reasons = new List<UncheckedReason?>();
+            WavePoints.Plan(Ring(5), Centre, 10, walk, null, reach, reasons);
+            return reasons;
+        }
+        var open = Why(Reach, new WaveWalk(new LineProbe((_, _) => false), new WalkBudget()));
+        Assert.Equal(5, open.Count);
+        Assert.All(open, r => Assert.Null(r));
+        Assert.Equal(Enumerable.Repeat<UncheckedReason?>(UncheckedReason.NoCheck, 5), Why(Reach, new WaveWalk(null, new WalkBudget())));
+        Assert.Equal(Enumerable.Repeat<UncheckedReason?>(UncheckedReason.Budget, 5),
+            Why(Reach, new WaveWalk(new LineProbe((_, _) => false), new WalkBudget(30))));
+        // every sample blocked, the player's spot too: no walkable line, and the spot is read once with two calls
+        var boxed = new LineProbe((_, _) => true);
+        var walk = new WaveWalk(boxed, new WalkBudget());
+        var reasons = Why(Reach, walk);
+        Assert.Equal(5, reasons.Count);
+        Assert.All(reasons, r => Assert.Equal(UncheckedReason.NoLine, r));
+        Assert.Equal((false, true), walk.OriginSpot);
+        Assert.Equal(WalkBudget.PerTick - walk.Budget.Left, boxed.Calls);
+        Assert.Equal(": 5 no walkable line; the player's spot blocked, grounded",
+            WavePoints.UncheckedText(reasons.OfType<UncheckedReason>(), walk.OriginSpot));
+        // without a reach nothing free is "no free spot", and the spot is not read
+        var spotWalk = new WaveWalk(new LineProbe((_, _) => true), new WalkBudget());
+        Assert.Equal(Enumerable.Repeat<UncheckedReason?>(UncheckedReason.NoFreeSpot, 5), Why(null, spotWalk));
+        Assert.Null(spotWalk.OriginSpot);
+        Assert.Equal(": 1 no check, 2 budget", WavePoints.UncheckedText([UncheckedReason.Budget, UncheckedReason.NoCheck, UncheckedReason.Budget], null));
+        Assert.Equal("", WavePoints.UncheckedText([], (true, true)));
+        Assert.Contains("unchecked{WavePoints.UncheckedText(why, spot)}), due in", PushTests.WaveActionSource());
+    }
+
+    /// <summary>A survey probe: blocked and ungrounded predicates, counting its calls.</summary>
+    sealed class SurveyProbe(Func<float, float, bool> blocked, Func<float, float, bool> ungrounded) : IWalkProbe
+    {
+        public int Calls;
+        public bool IsFree(float x, float z) { Calls++; return !blocked(x, z); }
+        public bool IsGrounded(float x, float z) { Calls++; return !ungrounded(x, z); }
+    }
+
+    static string Survey(Func<float, float, bool> blocked, Func<float, float, bool> ungrounded, (float X, float Z) at, out SurveyProbe probe,
+        int budget = WalkBudget.PerTick)
+    {
+        probe = new SurveyProbe(blocked, ungrounded);
+        return WalkSurvey.Line("au-here", 1, at, new WaveWalk(probe, new WalkBudget(budget)));
+    }
+
+    [Fact]
+    public void WalkSurvey_fails_when_distance_past_first_failing_sample()
+    {
+        // a wall from z 5.5 (N stops after 5 m), no ground from x 3.5 (E after 3 m; NE's fifth sample at x 3.54)
+        var line = Survey((_, z) => z >= 5.5f, (x, _) => x >= 3.5f, (0, 0), out _);
+        Assert.StartsWith("walk survey au-here wave 1: spot free, grounded; ", line);
+        Assert.Contains("; N 5 m blocked; NE 4 m not grounded; E 3 m not grounded; ", line);
+        Assert.Contains("; S 30 m clear; ", line);
+        Assert.EndsWith("; NW 7 m blocked", line);
+    }
+
+    [Fact]
+    public void WalkSurvey_fails_when_wrong_reason()
+    {
+        var line = Survey((_, _) => true, (_, _) => true, (0, 0), out _);
+        Assert.Contains("spot blocked, not grounded; N 0 m blocked; NE 0 m blocked", line);
+        var water = Survey((_, _) => false, (x, z) => x * x + z * z > 0.25f, (0, 0), out _);
+        Assert.Contains("spot free, grounded; N 0 m not grounded", water);
+    }
+
+    [Fact]
+    public void WalkSurvey_fails_when_budget_overspent()
+    {
+        // two calls for the spot, then four samples of N at two calls each: the eleventh call is refused
+        var line = Survey((_, _) => false, (_, _) => false, (0, 0), out var probe, 10);
+        Assert.Equal(10, probe.Calls);
+        Assert.Equal("walk survey au-here wave 1: spot free, grounded; N budget", line);
+        Assert.Equal("walk survey au-here wave 1: budget", Survey((_, _) => false, (_, _) => false, (0, 0), out var none, 1));
+        Assert.Equal(1, none.Calls);
+    }
+
+    [Fact]
+    public void WalkSurvey_fails_when_line_holds_a_coordinate()
+    {
+        var line = Survey((_, z) => z >= -8759.8f, (_, _) => false, (4321.7f, -8765.3f), out _);
+        Assert.DoesNotMatch(@"\d{3,}", line);                             // no coordinate, rounded or not
+        Assert.Contains("N 5 m blocked", line);
+    }
+
+    [Fact]
+    public void WalkSurvey_passes_open_field_clear()
+    {
+        var line = Survey((_, _) => false, (_, _) => false, (0, 0), out var probe);
+        Assert.Equal("walk survey au-here wave 1: spot free, grounded; " + string.Join("; ",
+            new[] { "N", "NE", "E", "SE", "S", "SW", "W", "NW" }.Select(n => $"{n} 30 m clear")), line);
+        Assert.Equal(2 + 8 * 30 * 2, probe.Calls);
+    }
+
+    [Fact]
+    public void WalkSurvey_empty_no_check()
+    {
+        Assert.Equal("walk survey au-here wave 1: no check", WalkSurvey.Line("au-here", 1, (0, 0), new WaveWalk(null, new WalkBudget())));
+        // the wave calls it only after a line found nothing, with VerboseLogging on, before the probe's dispose
+        var source = PushTests.WaveActionSource();
+        Assert.Contains("if (Settings.VerboseLogging.Value && check.Walk.OriginSpot is not null && reach is { } r)", source);
+        Assert.True(source.IndexOf("WalkSurvey.Line(", StringComparison.Ordinal) < source.IndexOf("check.Resource?.Dispose()", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void WalkLine_passes_open_field_unchanged()
     {
         var points = Plan((_, _) => false, Reach, out var probe);

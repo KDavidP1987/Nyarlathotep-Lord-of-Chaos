@@ -57,6 +57,51 @@ public static class SpawnPoints
     }
 }
 
+/// <summary>The verbose walk survey (automation A11, D34): from a group's player, whose lines all failed, how far a unit
+/// walks in 1 m steps in eight directions (N is +z) before a sample that is blocked or not grounded at the wave's level,
+/// or clear to <see cref="Range"/> m. Every game call takes one unit of the wave's budget and is not cached; a spent
+/// budget ends the line "budget". The line holds no position.</summary>
+public static class WalkSurvey
+{
+    public const int Range = 30;
+    static readonly string[] Names = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+
+    public static string Line(string id, int wave, (float X, float Z) at, WaveWalk walk)
+    {
+        var head = $"walk survey {id} wave {wave}: ";
+        if (walk.Probe is not { } probe) return head + "no check";
+        bool? Ask(Func<float, float, bool> call, float x, float z) => walk.Budget.TryTake(1) ? call(x, z) : null;
+        var free = Ask(probe.IsFree, at.X, at.Z);
+        var grounded = free is null ? null : Ask(probe.IsGrounded, at.X, at.Z);
+        if (free is null || grounded is null) return head + "budget";
+        var parts = new List<string> { $"spot {(free.Value ? "free" : "blocked")}, {(grounded.Value ? "grounded" : "not grounded")}" };
+        for (var k = 0; k < Names.Length; k++)
+        {
+            var a = k * MathF.PI / 4;
+            string? end = null;
+            var d = 1;
+            for (; d <= Range && end is null; d++)
+            {
+                float x = at.X + d * MathF.Sin(a), z = at.Z + d * MathF.Cos(a);
+                end = Ask(probe.IsFree, x, z) switch
+                {
+                    null => "budget",
+                    false => "blocked",
+                    _ => Ask(probe.IsGrounded, x, z) switch { null => "budget", false => "not grounded", _ => null },
+                };
+            }
+            if (end == "budget") { parts.Add($"{Names[k]} budget"); break; }
+            parts.Add(end is null ? $"{Names[k]} {Range} m clear" : $"{Names[k]} {d - 2} m {end}");
+        }
+        walk.Returned();
+        return head + string.Join("; ", parts);
+    }
+}
+
+/// <summary>Why a planned point stayed unchecked (automation A11): the wave had no check (no probe or a failed call), the
+/// budget ran out, no line from the player reached a walkable sample, or no candidate spot was free.</summary>
+public enum UncheckedReason { NoCheck, Budget, NoLine, NoFreeSpot }
+
 /// <summary>Where a wave's units must be able to walk from (automation A7, design §9 D31): the picked player for an
 /// AroundPlayer group, the wave centre otherwise; a shortened point lies at least <see cref="MinDist"/> from it.</summary>
 public readonly record struct WalkReach(float X, float Z, float MinDist);
@@ -158,6 +203,10 @@ public sealed class WaveWalk(IWalkProbe? probe, WalkBudget budget)
     internal Dictionary<(int, int), bool> Grounded { get; } = new();
     internal HashSet<(int, int)> Blocked { get; } = new();
 
+    /// <summary>The picked player's own spot, free and grounded at the wave's level, read once when a point of the wave
+    /// found no walkable line (automation A11); null when no point did or the budget had no two calls left.</summary>
+    public (bool Free, bool Grounded)? OriginSpot { get; internal set; }
+
     /// <summary>The reason of the failure that opened this wave's fall-open, or null.</summary>
     public string? Failure { get; private set; }
 
@@ -185,9 +234,12 @@ public static class WavePoints
     /// sample, Shortened, when that is in scope and at least the reach's minimum distance from the origin. When the search
     /// accepts nothing, the farthest in-scope walkable sample any of its lines reached is used, Shortened, even under the
     /// minimum: a unit near the player beats one behind a wall (A10). The wave keeps what it learned per tile
-    /// (<see cref="WaveWalk.Grounded"/>, <see cref="WaveWalk.Blocked"/>).</summary>
+    /// (<see cref="WaveWalk.Grounded"/>, <see cref="WaveWalk.Blocked"/>). With <paramref name="reasons"/> each point adds
+    /// why it stayed unchecked, or null (A11); after the first "no walkable line" the reach origin's spot, when it is not the
+    /// wave centre (the player of an AroundPlayer group), is read once
+    /// (<see cref="WaveWalk.OriginSpot"/>).</summary>
     public static List<PlacedPoint> Plan(IReadOnlyList<(float X, float Z)> ring, (float X, float Z) centre, float radius, WaveWalk walk,
-        Func<float, float, bool>? inScope = null, WalkReach? reach = null)
+        Func<float, float, bool>? inScope = null, WalkReach? reach = null, List<UncheckedReason?>? reasons = null)
     {
         var points = new List<PlacedPoint>(ring.Count);
         PlacedPoint Unchecked((float X, float Z) p) =>
@@ -197,6 +249,7 @@ public static class WavePoints
             if (walk.Probe is not { } probe || walk.Failure is not null)
             {
                 points.Add(Unchecked(p));
+                reasons?.Add(UncheckedReason.NoCheck);
                 continue;
             }
             var spent = false;
@@ -218,12 +271,14 @@ public static class WavePoints
                 return grounded;
             }
             (float X, float Z, float Out)? best = null;                        // A7: the fallback
+            var lines = false;                                                 // A11: a line was walked
             try
             {
                 var chosen = SpawnPoints.Choose(p, centre, radius, (x, z) =>
                 {
                     if (inScope is not null && !inScope(x, z)) return null;          // before the budget (A1)
                     if (reach is not { } r) return Walkable(x, z) ? (x, z, false) : null;
+                    lines = true;
                     var line = WalkLine.Reach((r.X, r.Z), (x, z), Walkable, inScope);   // A7
                     if (line is not { } l) return null;
                     if (l.Whole) return (x, z, false);
@@ -234,12 +289,23 @@ public static class WavePoints
                     return null;
                 }, halfRing: reach is null);
                 if (!spent && chosen.Kind == PointKind.Unchecked && best is { } fb) chosen = new PlacedPoint(fb.X, fb.Z, PointKind.Shortened);
+                UncheckedReason? why = spent ? UncheckedReason.Budget
+                    : chosen.Kind != PointKind.Unchecked ? null
+                    : reach is not null && lines ? UncheckedReason.NoLine
+                    : UncheckedReason.NoFreeSpot;
+                if (why == UncheckedReason.NoLine && walk.OriginSpot is null && reach is { } at && (at.X, at.Z) != centre && walk.Budget.TryTake(2))
+                {
+                    walk.OriginSpot = (probe.IsFree(at.X, at.Z), probe.IsGrounded(at.X, at.Z));   // A11: a throw fails the wave
+                    walk.Returned();
+                }
                 points.Add(spent ? Unchecked(p) : chosen);
+                reasons?.Add(why);
             }
             catch (Exception e)
             {
                 walk.Fail(e.Message);
                 points.Add(Unchecked(p));
+                reasons?.Add(UncheckedReason.NoCheck);
             }
         }
         return points;
@@ -251,6 +317,24 @@ public static class WavePoints
         scope.IsGlobal ? null
         : regionOf is null ? (_, _) => false
         : (x, z) => scope.Names(regionOf(x, z));
+
+    /// <summary>The wave line's unchecked reasons (automation A11): "" when none, else ": 3 no walkable line, 2 budget"
+    /// in the enum's order, then the player's spot when it was read. No position.</summary>
+    public static string UncheckedText(IEnumerable<UncheckedReason> reasons, (bool Free, bool Grounded)? spot)
+    {
+        var counts = reasons.GroupBy(r => r).OrderBy(g => g.Key).Select(g => $"{g.Count()} {Name(g.Key)}").ToList();
+        if (counts.Count == 0) return "";
+        var text = ": " + string.Join(", ", counts);
+        return spot is { } s ? $"{text}; the player's spot {(s.Free ? "free" : "blocked")}, {(s.Grounded ? "grounded" : "not grounded")}" : text;
+    }
+
+    static string Name(UncheckedReason r) => r switch
+    {
+        UncheckedReason.NoCheck => "no check",
+        UncheckedReason.Budget => "budget",
+        UncheckedReason.NoLine => "no walkable line",
+        _ => "no free spot",
+    };
 
     /// <summary>The shortened count of a plan, for the wave line (automation A7).</summary>
     public static int Shortened(IEnumerable<PlacedPoint> points) => points.Count(p => p.Kind == PointKind.Shortened);

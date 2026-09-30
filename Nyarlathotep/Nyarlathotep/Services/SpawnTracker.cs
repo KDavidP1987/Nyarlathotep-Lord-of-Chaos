@@ -136,20 +136,23 @@ internal static class SpawnTracker
     /// (walkable-spawns D3), a point failing <paramref name="allowed"/> (out of scope, or claimed, D17) counting as blocked;
     /// each unit carries the event's <paramref name="tuning"/> (D9), <paramref name="loot"/> (D11) and
     /// <paramref name="hunt"/> tag (D13); with <paramref name="reach"/> a point needs a walkable line from the reach origin
-    /// (automation A7, D32). The result carries the queued units' moved, shortened and unchecked counts.</summary>
+    /// (automation A7, D32). The result carries the queued units' moved, shortened and unchecked counts, and each unchecked
+    /// unit's reason (A11).</summary>
     [Mutating]
-    internal static (int Queued, int Moved, int Shortened, int Unchecked) RequestWave(string prefab, string eventId, int count, UnitLifetime life,
+    internal static (int Queued, int Moved, int Shortened, int Unchecked, List<UncheckedReason> Why) RequestWave(string prefab, string eventId, int count, UnitLifetime life,
         float3 center, float radius, int first, int total, double angle, (float X, float Y, float Z)? anchor, WaveWalk walk,
         Func<float, float, bool> allowed = null, UnitTuning tuning = null, bool loot = false, HuntTag? hunt = null, WalkReach? reach = null)
     {
         var ring = new List<(float X, float Z)>(Math.Max(0, count));
         for (var i = 0; i < count; i++) ring.Add(SpawnLedger.Around(center.x, center.z, radius, first + i, total, angle));
-        var points = WavePoints.Plan(ring, (center.x, center.z), radius, walk, allowed, reach);
+        var reasons = new List<UncheckedReason?>(ring.Count);
+        var points = WavePoints.Plan(ring, (center.x, center.z), radius, walk, allowed, reach, reasons);
         var result = _ledger.Request(prefab, eventId, count, life, tuning ?? UnitTuning.None, i => (points[i].X, center.y, points[i].Z), anchor, loot, hunt);
         if (result.Skipped is not null) Core.Log.LogWarning($"[nyar] event {eventId} {prefab}: {result.Skipped}");
         var queued = points.Take(result.Queued).ToList();
         var (moved, unchecked_) = WavePoints.Counts(queued);
-        return (result.Queued, moved, WavePoints.Shortened(queued), unchecked_);
+        var why = reasons.Take(result.Queued).OfType<UncheckedReason>().ToList();
+        return (result.Queued, moved, WavePoints.Shortened(queued), unchecked_, why);
     }
 
     /// <summary>The despawn queue's worst-case drain time at the current caps, added to every unit's LifeTime (A16, A21).</summary>

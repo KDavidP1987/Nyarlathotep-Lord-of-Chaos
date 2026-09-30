@@ -80,6 +80,8 @@ internal static class WaveAction
         Func<float, float, bool> allowed = map is null || action.AllowTerritory ? inScope
             : (x, z) => (inScope is null || inScope(x, z)) && !claimed(x, z);
         int total = 0, moved = 0, shortened = 0, unchecked_ = 0;
+        var why = new List<UncheckedReason>();                                 // A11
+        (bool Free, bool Grounded)? spot = null;
         byte? level = null;
         WaveRun.Run(decision, skipped => Core.Log.LogInfo($"[nyar] {skipped}"), group =>
         {
@@ -100,7 +102,14 @@ internal static class WaveAction
                     moved += queued.Moved;
                     shortened += queued.Shortened;
                     unchecked_ += queued.Unchecked;
+                    why.AddRange(queued.Why);
                     first += entry.Count;
+                }
+                spot ??= check.Walk.OriginSpot;
+                if (Settings.VerboseLogging.Value && check.Walk.OriginSpot is not null && reach is { } r)   // A11, D34: before the dispose
+                {
+                    try { Core.Log.LogInfo($"[nyar] {WalkSurvey.Line(id, due.Wave, (r.X, r.Z), check.Walk)}"); }
+                    catch (Exception e) { check.Walk.Fail($"survey: {e.Message}"); }       // the wave is planned; the streak records it
                 }
             }
             finally
@@ -118,7 +127,7 @@ internal static class WaveAction
         if (decision.Outcome != WaveOutcome.Spawn) return;
         var levelText = level is { } h ? $", walk h {h}" : "";
         var where = location.Type == LocationType.AroundPlayer ? $" {WaveLines.AroundPlayers(decision.Groups.Count)}" : "";
-        Core.Log.LogInfo($"[nyar] event {id} wave {due.Wave}/{due.Waves}{where}: {total} units queued ({moved} moved, {shortened} shortened, {unchecked_} unchecked), due in {(int)Math.Ceiling((life.DueUtc - now).TotalSeconds)}s, lifetime {life.LifetimeSeconds}s{levelText}");
+        Core.Log.LogInfo($"[nyar] event {id} wave {due.Wave}/{due.Waves}{where}: {total} units queued ({moved} moved, {shortened} shortened, {unchecked_} unchecked{WavePoints.UncheckedText(why, spot)}), due in {(int)Math.Ceiling((life.DueUtc - now).TotalSeconds)}s, lifetime {life.LifetimeSeconds}s{levelText}");
     }
 
     /// <summary>The wave's AroundPlayer centres (D16; automation D5, D13): up to fanOut.maxInstances spaced players, one
