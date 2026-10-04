@@ -868,6 +868,7 @@
         "bad-slow": "a \"slow tick:\" warning between windows 4 and 5",
         "bad-gap": "only nine windows follow the warm-up",
         "bad-notarget": "window 4 is preceded by \"hunt targets: 0\"",
+        "bad-noscans": "MinScans.txt asks for 10 player scans and the timing lines carry none (automation D21)",
         "bad-tracked": "a health line of 139 tracked inside the span",
         "bad-slowlast": "a \"slow tick:\" warning right after window 10's own timing line (Codex step 3 F1)",
         "empty": "no health line with 140 tracked: \"timing span: no span\""

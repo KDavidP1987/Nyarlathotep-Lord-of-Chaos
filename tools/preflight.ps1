@@ -76,12 +76,14 @@
                  : every category of dependencySuites.<slug>: tests rows one control at a time, check rows over their
                    fixtures and the real tree, selftests rows with their success lines; prints "dependency suite: <slug>
                    <n>/<n> (<categories>)", or "dependency suite: <slug> has no categories" (event-library D33).
-    -TimingSpan <log copy> [-MinTracked 140] [-MinTargets 1] [-Windows 10]
+    -TimingSpan <log copy> [-MinTracked 140] [-MinTargets 1] [-Windows 10] [-MinScans 0]
                  : Test-CheckTimingSpan (event-spawns D24) on a copy of a session's BepInEx/LogOutput.log: after the first
                    health line with at least MinTracked tracked, one warm-up timing window is skipped, then Windows timing
                    windows must each average under 5 ms and follow a "hunt targets: <n>" line with n >= MinTargets, with no
                    health line below MinTracked and no "slow tick:" line among them; prints "timing span: <w>/<w> windows
                    under 5 ms, tracked >= <t>, targets >= <n>, 0 slow ticks", or "timing span: no span (...)" as a failure.
+                   With -MinScans n > 0 the counted windows' ", <k> player scans" counts must sum to at least n, and the
+                   line gains ", player scans >= <n>" before ", 0 slow ticks" (automation D21, A8).
     -ListCommands admin
                  : every admin-only command of the commands walk, one per line, then "admin commands: <n>"
                    (foundation D19); Test-CheckAdminList keeps that list equal to the commands check's count.
@@ -134,6 +136,7 @@ param(
     [int]$MinTracked = 140,         # with -TimingSpan
     [int]$MinTargets = 1,           # with -TimingSpan
     [int]$Windows = 10,             # with -TimingSpan
+    [int]$MinScans = 0,             # with -TimingSpan: the counted windows' player scans must sum to at least this (automation D21)
     [ValidateSet('', 'admin')]
     [string]$ListCommands = '',     # 'admin': print every admin-only command, then "admin commands: <n>" (foundation D19)
     [string]$ServerPath = 'C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer',
@@ -3191,10 +3194,16 @@ function Test-CheckTestRuns([string]$Root) {
 # the window, so the lines right after the last timing line are read too (Codex step 3 F1).
 # → "timing span: <w>/<w> windows under 5 ms, tracked >= <t>, targets >= <n>, 0 slow ticks".
 $script:TimingSpanLog = $null
-$script:TimingSpanArgs = @{ MinTracked = 140; MinTargets = 1; Windows = 10 }
+$script:TimingSpanArgs = @{ MinTracked = 140; MinTargets = 1; Windows = 10; MinScans = 0 }
+# A fixture may hold MinScans.txt (one integer) to run with that -MinScans (automation D21's failing fixture).
 function Test-CheckTimingSpan([string]$Root) {
     $path = if (Test-IsFixture $Root) { Join-Path $Root 'LogOutput.log' } else { $script:TimingSpanLog }
-    $a = $script:TimingSpanArgs
+    $a = $script:TimingSpanArgs.Clone()
+    if (Test-IsFixture $Root) {
+        $ms = Join-Path $Root 'MinScans.txt'
+        $a.MinScans = if (Test-Path -LiteralPath $ms -PathType Leaf) { [int]([IO.File]::ReadAllText($ms).Trim()) } else { 0 }
+    }
+    if ($a.MinScans -lt 0) { return New-Result $false 'timing span: -MinScans must be 0 or more' }
     if ($a.MinTracked -lt 0 -or $a.MinTargets -lt 0 -or $a.Windows -lt 1) { return New-Result $false 'timing span: -MinTracked and -MinTargets must be 0 or more, -Windows 1 or more' }
     if (-not $path -or -not (Test-Path -LiteralPath $path -PathType Leaf)) { return New-Result $false 'timing span: no span (no log)' }
     $lines = @([IO.File]::ReadAllLines($path))
@@ -3205,7 +3214,7 @@ function Test-CheckTimingSpan([string]$Root) {
         if ($lines[$i] -match $health -and [int]$Matches[1] -ge $a.MinTracked) { $start = $i; break }
     }
     if ($start -lt 0) { return New-Result $false "timing span: no span (no health line with $($a.MinTracked) tracked)" }
-    $warm = -1; $windows = 0; $targets = -1
+    $warm = -1; $windows = 0; $targets = -1; $scans = 0
     for ($i = $start + 1; $i -lt $lines.Count -and $windows -lt $a.Windows; $i++) {
         $l = $lines[$i]
         if ($warm -lt 0) { if ($l -match $timing) { $warm = $i; $targets = -1 }; continue }
@@ -3214,6 +3223,8 @@ function Test-CheckTimingSpan([string]$Root) {
         if ($l -match $health -and [int]$Matches[1] -lt $a.MinTracked) { return New-Result $false "timing span: $($Matches[1]) tracked in the span (line $($i + 1)), below $($a.MinTracked)" }
         if ($l -match $timing) {
             $windows++
+            if ($l -match ', (\d+) player scans') { $scans += [int]$Matches[1] }
+            $null = $l -match $timing
             $avg = [double]::Parse($Matches[1], [Globalization.CultureInfo]::InvariantCulture)
             if ($avg -ge 5) { return New-Result $false "timing span: window $windows avg $($Matches[1]) ms, not under 5 ms (line $($i + 1))" }
             if ($targets -lt $a.MinTargets) {
@@ -3229,7 +3240,9 @@ function Test-CheckTimingSpan([string]$Root) {
     for (; $i -lt $lines.Count -and $lines[$i] -match '\[nyar\] slow(est)? tick: '; $i++) {
         if ($lines[$i] -match '\[nyar\] slow tick: ') { return New-Result $false "timing span: slow tick in the span (line $($i + 1))" }
     }
-    return New-Result $true "timing span: $windows/$($a.Windows) windows under 5 ms, tracked >= $($a.MinTracked), targets >= $($a.MinTargets), 0 slow ticks"
+    if ($a.MinScans -gt 0 -and $scans -lt $a.MinScans) { return New-Result $false "timing span: $scans player scans in the span, below $($a.MinScans)" }
+    $scanText = if ($a.MinScans -gt 0) { ", player scans >= $($a.MinScans)" } else { '' }
+    return New-Result $true "timing span: $windows/$($a.Windows) windows under 5 ms, tracked >= $($a.MinTracked), targets >= $($a.MinTargets)$scanText, 0 slow ticks"
 }
 
 function Get-ClassFilter([string]$Class) { "FullyQualifiedName~Nyarlathotep.Tests.$Class." }
@@ -3460,8 +3473,8 @@ if ($DeclaredOf -and -not $Paths) { Write-Host 'usage: -DeclaredOf <slug> needs 
 if (($From -or $To) -and -not $RollbackOf) { Write-Host 'usage: -From and -To go with -RollbackOf' -ForegroundColor Red; exit 2 }
 if ([bool]$From -xor [bool]$To) { Write-Host 'usage: -From and -To name a range together, or neither is given' -ForegroundColor Red; exit 2 }
 if (($Snapshot -or $Compare -or $AfterCleanup) -and -not $ServerWrites) { Write-Host 'usage: -Snapshot, -Compare and -AfterCleanup go with -ServerWrites' -ForegroundColor Red; exit 2 }
-if (@('MinTracked', 'MinTargets', 'Windows' | Where-Object { $PSBoundParameters.ContainsKey($_) }).Count -and -not $TimingSpan) { Write-Host 'usage: -MinTracked, -MinTargets and -Windows go with -TimingSpan' -ForegroundColor Red; exit 2 }
-if ($TimingSpan -and ($MinTracked -lt 0 -or $MinTargets -lt 0 -or $Windows -lt 1)) { Write-Host 'usage: -MinTracked and -MinTargets must be 0 or more, -Windows 1 or more' -ForegroundColor Red; exit 2 }
+if (@('MinTracked', 'MinTargets', 'Windows', 'MinScans' | Where-Object { $PSBoundParameters.ContainsKey($_) }).Count -and -not $TimingSpan) { Write-Host 'usage: -MinTracked, -MinTargets, -Windows and -MinScans go with -TimingSpan' -ForegroundColor Red; exit 2 }
+if ($TimingSpan -and ($MinTracked -lt 0 -or $MinTargets -lt 0 -or $MinScans -lt 0 -or $Windows -lt 1)) { Write-Host 'usage: -MinTracked, -MinTargets and -MinScans must be 0 or more, -Windows 1 or more' -ForegroundColor Red; exit 2 }
 
 if ($SelfTest) { Invoke-SelfTest }
 
@@ -3596,7 +3609,7 @@ if ($AuthSuite) {
 
 if ($TimingSpan) {
     $script:TimingSpanLog = $TimingSpan
-    $script:TimingSpanArgs = @{ MinTracked = $MinTracked; MinTargets = $MinTargets; Windows = $Windows }
+    $script:TimingSpanArgs = @{ MinTracked = $MinTracked; MinTargets = $MinTargets; Windows = $Windows; MinScans = $MinScans }
     $r = Test-CheckTimingSpan $repoRoot
     if ($r.Pass) { Write-Host $r.Line -ForegroundColor Green; exit 0 }
     Write-Host $r.Line -ForegroundColor Red
