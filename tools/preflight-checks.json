@@ -920,10 +920,10 @@
         "tools/rollback-drill.ps1",
         "-SelfTest"
       ],
-      "success": "drill selftest: 13/13",
+      "success": "drill selftest: 17/17",
       "cases": {
-        "bad": "fixtures bad (no \"marker sweep\"), pair-other (v0.3.0 disabled a definition for another reason), pair-otherkey (disabled for a key no release has, event-spawns D25), pair-otherlocation (disabled for another location reason) and the complete leftover snapshot must fail",
-        "good": "fixture good (a real N-1 boot log), pair-empower (v0.3.0 disabled the Empower definition), pair-modifiers, pair-chance and pair-aroundplayer (disabled for a 0.7.0 SpawnWaves key or location, event-spawns D25) must pass; a leftover without saved\\ or its manifest is not refused",
+        "bad": "fixtures bad (no \"marker sweep\"), pair-other (v0.3.0 disabled a definition for another reason), pair-otherkey (disabled for a key no release has, event-spawns D25), pair-otherlocation (disabled for another location reason), pair-othertrigger (disabled for a trigger type no release has, automation D23), interval-seed's state.json without a NextInterval entry and the complete leftover snapshot must fail",
+        "good": "fixture good (a real N-1 boot log), pair-empower (v0.3.0 disabled the Empower definition), pair-modifiers, pair-chance and pair-aroundplayer (disabled for a 0.7.0 SpawnWaves key or location, event-spawns D25), pair-interval and pair-fanout (disabled for a 0.8.0 trigger type or fanOut, automation D23) and interval-seed (seeding for 0.8.0, none for 0.7.0, the entry found) must pass; a leftover without saved\\ or its manifest is not refused",
         "empty": "fixture empty (no log) must fail"
       }
     },

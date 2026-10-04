@@ -36,8 +36,7 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        new(Automation, "D21", 3, "0.8.0"),
-        new(Automation, "D23", 4, "0.8.0"), new(Automation, "D24", 4, "0.8.0"), new(Automation, "D25", 4, "0.8.0"), new(Automation, "D26", 4, "0.8.0"),
+        new(Automation, "D24", 4, "0.8.0"), new(Automation, "D25", 4, "0.8.0"), new(Automation, "D26", 4, "0.8.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -430,5 +429,13 @@ public static class ControlCases
         T("D30", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit", "pending_at_release"],
             ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = Automation },
         T("D31", "StateNextInterval", "AutomationTests", ["bad_entry_drops_others", "empty_gains_key"], ["fixture_round_trip"], ["no_key"]) with { Plan = Automation },
+        C("D21", "TimingSpan", "preflight -TimingSpan -MinScans › Test-CheckTimingSpan",
+            ["tools/preflight-fixtures/TimingSpan/bad-noscans", "tools/preflight-fixtures/TimingSpan/bad-avg", "tools/preflight-fixtures/TimingSpan/bad-slow",
+             "tools/preflight-fixtures/TimingSpan/bad-tracked", "tools/preflight-fixtures/TimingSpan/bad-notarget"],
+            ["tools/preflight-fixtures/TimingSpan/good"], ["tools/preflight-fixtures/TimingSpan/empty"]) with { Plan = Automation },
+        C("D23", "RollbackDrill", "rollback-drill.ps1 -SelfTest (pairs and fixtures under tools/rollback-drill-fixtures)",
+            ["tools/rollback-drill-fixtures/pair-othertrigger", "tools/rollback-drill-fixtures/interval-seed/state-without.json"],
+            ["tools/rollback-drill-fixtures/pair-interval", "tools/rollback-drill-fixtures/pair-fanout", "tools/rollback-drill-fixtures/interval-seed/state-with.json"],
+            ["tools/rollback-drill-fixtures/empty"]) with { Plan = Automation },
     ];
 }

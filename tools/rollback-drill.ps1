@@ -13,16 +13,19 @@
       4. Saves the dev server's plugin DLL and BepInEx/config/Nyarlathotep/, then empties that folder so N writes
          its own files (raphael-api-core A9): installs N and boots the dev world (save-data-nyardev) until "Nyarlathotep
          initialized" (N seeds events.json); stops; renames one event and adds drill-mark (1 unit at a Point, Schedule
-         a few minutes out), because the mod writes state.json only on a change; boots N until drill-mark fires and
-         state.json lists its unit; stops.
+         a few minutes out), because the mod writes state.json only on a change, and for N of 0.8.0 or later
+         drill-interval (Interval, 600-600 minutes, so it waits); boots N until drill-mark fires and state.json lists
+         its unit; for N of 0.8.0 or later asserts that state.json carries a NextInterval entry for drill-interval
+         (automation D23); stops.
       5. Installs N-1, boots again and checks its log: "Nyarlathotep initialized"; for each file N wrote its load
          line with no "SchemaVersion … is newer … read-only" warning (events.json: "events: reloaded: <v> valid, <x>
          disabled" over as many definitions as N read, where every definition N-1 disabled beyond N's logs "unknown
          action type <T>", an action type added after N-1 (faction-empowerment D23), or a SpawnWaves key added after
          N-1: "unknown field action.<key>" for modifiers, loot, behaviour or allowTerritory, "unknown field
-         action.units.chance", or "action.location must be …" for an AroundPlayer location (event-spawns D25), printed
-         as "events.json: <N> '<a> valid, <b> disabled', <N-1> '<c> valid, <d> disabled' (<t> newer action types, <k>
-         newer keys)"; state.json: "(<n> listed in state.json)" with n ≥ 1; stats.json:
+         action.units.chance", "action.location must be …" for an AroundPlayer location (event-spawns D25), "unknown
+         field action.fanOut", or a trigger type added after N-1: "unknown trigger type Interval|RegionEntered|
+         FactionKills" (automation D23), printed as "events.json: <N> '<a> valid, <b> disabled', <N-1> '<c> valid, <d>
+         disabled' (<t> newer action types, <k> newer keys, <r> newer trigger types)"; state.json: "(<n> listed in state.json)" with n ≥ 1; stats.json:
          reported absent while no release writes it); and "marker sweep".
       After each boot it runs `preflight.ps1 -LogCheck` on that boot's logs and prints the "log check:" line.
       6. Always (finally): stops the server if the drill started one (a refusal never stops a running server), puts
@@ -42,7 +45,11 @@
     reason: fail), and five built from pair-empower (event-spawns D25): pair-modifiers (disabled for "unknown field
     action.modifiers": pass), pair-chance ("unknown field action.units.chance": pass) and pair-otherkey ("unknown field
     action.spawnVisual", a key no release has: fail), pair-aroundplayer (0.6.0's refusal of an AroundPlayer location:
-    pass) and pair-otherlocation ("action.location Admin needs a Manual trigger": fail) → "drill selftest: 13/13".
+    pass) and pair-otherlocation ("action.location Admin needs a Manual trigger": fail); three for automation (D23):
+    pair-interval ("unknown trigger type Interval": pass), pair-fanout ("unknown field action.fanOut": pass) and
+    pair-othertrigger ("unknown trigger type Weather", a type no release has: fail); and interval-seed (no drill-interval
+    for a newer release of 0.7.0, one for 0.8.0, and a state.json without its NextInterval entry fails) → "drill
+    selftest: 17/17".
 
     -LogsTo <dir> keeps the logs of N's drill-mark boot and N-1's boot there as N.txt and N-1.txt.
 #>
@@ -97,7 +104,10 @@ function Get-DisabledLines([string]$Text) {
 # @{ Why = $null, or the failing stage; Line = the "events.json: ..." summary }.
 # The location alternative is 0.6.0's exact refusal of a location type it does not know (AroundPlayer); a malformed
 # Point gets the same text from 0.6.0 but is disabled by N too, so it is never an extra (Codex step 4 F2).
-$script:NewerKeyReasons = '^(unknown field action\.(modifiers|loot|behaviour|allowTerritory|units\.chance)|action\.location must be \{ "type": "Point", "x": number, "z": number, optional "y": number \} or \{ "type": "Admin" \})$'
+$script:NewerKeyReasons = '^(unknown field action\.(modifiers|loot|behaviour|allowTerritory|units\.chance|fanOut)|action\.location must be \{ "type": "Point", "x": number, "z": number, optional "y": number \} or \{ "type": "Admin" \})$'
+
+# The trigger types automation added (D23): 0.7.0 refuses each with "unknown trigger type <T>".
+$script:NewerTriggerReasons = '^unknown trigger type (Interval|RegionEntered|FactionKills)$'
 
 function Test-EventsReadback([string]$LogN, [string]$LogN1, [string]$TagN, [string]$TagN1) {
     $rx = 'events: reloaded: (\d+) valid, (\d+) disabled'
@@ -115,10 +125,26 @@ function Test-EventsReadback([string]$LogN, [string]$LogN1, [string]$TagN, [stri
     if ($extra.Count -ne $d - $b) { return @{ Why = "$TagN1 logged $($extra.Count) newly disabled definitions for a difference of $($d - $b)"; Line = $line } }
     $types = @($extra | Where-Object { ($_ -split "`t", 2)[1] -match '^unknown action type \S+$' })
     $keys = @($extra | Where-Object { ($_ -split "`t", 2)[1] -match $script:NewerKeyReasons })
-    $line += " ($($types.Count) newer action types, $($keys.Count) newer keys)"
-    $other = @($extra | Where-Object { $types -notcontains $_ -and $keys -notcontains $_ })
+    $triggers = @($extra | Where-Object { ($_ -split "`t", 2)[1] -match $script:NewerTriggerReasons })
+    $line += " ($($types.Count) newer action types, $($keys.Count) newer keys, $($triggers.Count) newer trigger types)"
+    $other = @($extra | Where-Object { $types -notcontains $_ -and $keys -notcontains $_ -and $triggers -notcontains $_ })
     if ($other) { return @{ Why = "$TagN1 disabled for another reason: $(($other | ForEach-Object { $_ -replace "`t", ': ' }) -join '; ')"; Line = $line } }
     return @{ Why = $null; Line = $line }
+}
+
+# drill-interval (automation D23): a newer release of 0.8.0 or later gets an Interval definition that waits, so the
+# state.json handed to N-1 carries a NextInterval entry. Test-SeedsInterval says whether a tag gets it;
+# Test-NextIntervalEntry returns $null when the state.json text holds an entry for drill-interval, else why not.
+function Test-SeedsInterval([string]$Tag) {
+    $v = $null
+    [version]::TryParse(($Tag -replace '^v', '' -replace '-.*$', ''), [ref]$v) -and $v -ge [version]'0.8.0'
+}
+function Test-NextIntervalEntry([string]$StateText) {
+    $doc = try { $StateText | ConvertFrom-Json } catch { $null }
+    if (-not $doc) { return 'state.json unreadable' }
+    $ni = $doc.PSObject.Properties['NextInterval']
+    if (-not $ni -or -not $ni.Value -or -not $ni.Value.PSObject.Properties['drill-interval']) { return 'state.json has no NextInterval entry for drill-interval' }
+    return $null
 }
 
 # The snapshot, restore and leftover check (Get-LeftoverRefusal) are shared with tools/dev-snapshot.ps1 (D28).
@@ -159,7 +185,8 @@ if ($SelfTest) {
     # Two real log pairs (D23): N-1 disabling one Empower definition passes; disabling one for another reason fails.
     $pairs = @(@{ Name = 'pair-empower'; Pass = $true }, @{ Name = 'pair-other'; Pass = $false },
         @{ Name = 'pair-modifiers'; Pass = $true }, @{ Name = 'pair-chance'; Pass = $true }, @{ Name = 'pair-otherkey'; Pass = $false },
-        @{ Name = 'pair-aroundplayer'; Pass = $true }, @{ Name = 'pair-otherlocation'; Pass = $false })
+        @{ Name = 'pair-aroundplayer'; Pass = $true }, @{ Name = 'pair-otherlocation'; Pass = $false },
+        @{ Name = 'pair-interval'; Pass = $true }, @{ Name = 'pair-fanout'; Pass = $true }, @{ Name = 'pair-othertrigger'; Pass = $false })
     foreach ($pair in $pairs) {
         $pn = Join-Path $fx "$($pair.Name)\N.txt"; $pn1 = Join-Path $fx "$($pair.Name)\N-1.txt"
         $r = if ((Test-Path -LiteralPath $pn) -and (Test-Path -LiteralPath $pn1)) {
@@ -168,7 +195,14 @@ if ($SelfTest) {
         if ($r.Line -and ($null -eq $r.Why) -eq $pair.Pass) { $ok++ }
         else { Write-Host "  - $($pair.Name): expected $(if ($pair.Pass) { 'pass' } else { 'fail' }), got $(if ($r.Why) { "fail — $($r.Why)" } else { 'pass' })" }
     }
-    $total = $want.Count + 3 + $pairs.Count
+    # interval-seed (D23): no seeding for a newer release of 0.7.0, seeding for 0.8.0, and a state.json without the
+    # entry fails the assertion while one with it passes.
+    $seed = Join-Path $fx 'interval-seed'
+    $with = Join-Path $seed 'state-with.json'; $without = Join-Path $seed 'state-without.json'
+    $seedOk = (-not (Test-SeedsInterval 'v0.7.0')) -and (Test-SeedsInterval 'v0.8.0') -and (Test-Path -LiteralPath $with) -and (Test-Path -LiteralPath $without) -and
+        ($null -eq (Test-NextIntervalEntry (Get-Content -LiteralPath $with -Raw))) -and ($null -ne (Test-NextIntervalEntry (Get-Content -LiteralPath $without -Raw)))
+    if ($seedOk) { $ok++ } else { Write-Host '  - interval-seed: expected no seeding for v0.7.0, seeding for v0.8.0, the entry found in state-with.json and missing in state-without.json' }
+    $total = $want.Count + 3 + $pairs.Count + 1
     Write-Host "drill selftest: $ok/$total"
     exit ([int]($ok -ne $total))
 }
@@ -288,6 +322,16 @@ try {
         action = [ordered]@{ type = 'SpawnWaves'; units = @([ordered]@{ prefab = 'CHAR_Bandit_Deadeye'; count = 1 }); waves = 1; intervalSeconds = 30; radius = 6
             location = [ordered]@{ type = 'Point'; x = -1200; z = -800 } } }
     $doc.events = @($doc.events) + [pscustomobject]$mark
+    $seedsInterval = Test-SeedsInterval $From
+    if ($seedsInterval) {
+        # An Interval definition that waits ten hours: N writes its next start to state.json (automation D23).
+        $interval = [ordered]@{ id = 'drill-interval'; name = 'Rollback drill interval'; enabled = $true; pillar = 'spawns'
+            trigger = [ordered]@{ type = 'Interval'; minMinutes = 600; maxMinutes = 600 }
+            durationSeconds = 600
+            action = [ordered]@{ type = 'SpawnWaves'; units = @([ordered]@{ prefab = 'CHAR_Bandit_Deadeye'; count = 1 }); waves = 1; intervalSeconds = 30; radius = 6
+                location = [ordered]@{ type = 'Point'; x = -1200; z = -800 } } }
+        $doc.events = @($doc.events) + [pscustomobject]$interval
+    }
     [IO.File]::WriteAllText($evPath, ($doc | ConvertTo-Json -Depth 32), [Text.UTF8Encoding]::new($false))
     Write-Host "edited event $($doc.events[0].id): name ""$($doc.events[0].name)""; drill-mark scheduled at $($at.ToString('HH:mm'))"
 
@@ -310,6 +354,11 @@ try {
     if ($written -notcontains 'state.json') { Fail "boot $From did not write state.json" }
     if ($written -contains 'stats.json') { Fail 'stats.json was written, and the drill has no load line for it yet' }
     Write-Host 'stats.json: absent (no release writes it)'
+    if ($seedsInterval) {
+        $why = Test-NextIntervalEntry (Read-Shared $statePath)
+        if ($why) { Fail "boot $From (drill-mark) — $why" }
+        Write-Host "boot ${From}: state.json carries a NextInterval entry for drill-interval"
+    }
 
     # Release N-1 on N's files.
     Copy-Item -LiteralPath $dll[$To] -Destination $PluginDll -Force
