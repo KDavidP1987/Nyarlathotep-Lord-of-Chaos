@@ -2,6 +2,26 @@
 
 Public beta. Event pillars and automatic announcements default off; admins opt in per feature.
 
+## 0.8.0 (2026-10-04)
+
+- **Events that start themselves.** Three new triggers: `Interval` (again every `minMinutes`–`maxMinutes`, kept
+  across restarts), `RegionEntered` (a player walks into a region, with a per-player cooldown) and `FactionKills`
+  (a player kills enough of a faction within a time window, or all players together with `shared`). An event started
+  by a player spawns its `AroundPlayer` waves near that player.
+- **Waves for several players.** `fanOut` on an `AroundPlayer` wave spawns one group near each of up to 10 players
+  standing far enough apart. Each group gets the wave's full unit list; all groups together stay within
+  `MaxUnitsPerWave` and `MaxTrackedUnits`.
+- **Three new templates,** all off: `roaming-hunters`, `border-watch` and `bandit-reprisal`. All the new keys can be
+  set in chat with `.nyar event set`; `event info` shows when an Interval event starts next.
+- **Better ambush placement.** Wave units around a player now need a walkable line to them, so they no longer land
+  behind walls or across ravines. Known limit: on a strip of land inside a pond, units without Hunt can stand across
+  the water.
+- Raphael api 6 (new trigger names). No new cfg keys. Rolling back to 0.7.0 disables the events that use the new
+  triggers or `fanOut` until you change them.
+
+<details>
+<summary><b>Earlier releases</b> (0.1.0–0.7.0)</summary>
+
 ## 0.7.0 (2026-09-29)
 
 - **Stronger waves.** A spawn event can set its units' level (`level` 1–120, or `levelDelta` −5 to +5 around their
@@ -19,9 +39,6 @@ Public beta. Event pillars and automatic announcements default off; admins opt i
   unless the event sets `"loot": true`. All the new keys can be set in chat with `.nyar event set`, and
   `undead-rising` now ships at level +2 with ×1.2 health.
 - No new cfg keys. Rolling back to 0.6.0 disables the events that use the new keys until you remove them.
-
-<details>
-<summary><b>Earlier releases</b> (0.1.0–0.6.0)</summary>
 
 ## 0.6.0 (2026-09-28)
 

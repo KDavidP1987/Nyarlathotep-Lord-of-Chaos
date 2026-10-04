@@ -3,6 +3,87 @@
 The complete technical history. The concise, player-facing changelog that ships to Thunderstore lives at
 `Nyarlathotep/Nyarlathotep/CHANGELOG.md`. Public beta from 0.2.0; features stay experimental until validated on live servers.
 
+## [0.8.0] - 2026-10-04
+
+The `automation` child of the DoD Epic (`docs/dod/automation.md`): events start on their own, from a timer or from
+what players do, and a wave can spread over several players. Design and sessions: `docs/features/AUTOMATION.md`;
+audit: `docs/audits/automation.md`; contract: `docs/RAPHAEL_INTEGRATION_CONTRACT.md` (api 6).
+
+<details open>
+<summary><b>Definition keys</b></summary>
+
+All optional; each failure disables the event with one reason naming the field. SchemaVersion stays 1.
+
+| Key | Values | Effect |
+|---|---|---|
+| `trigger` `Interval` | `minMinutes`, `maxMinutes` 5–1440, min ≤ max; optional `scope` | The next start is drawn uniformly in whole seconds after the event was last seen inactive (its end, a refused start, an enable or reload, the boot) |
+| `trigger` `RegionEntered` | `scope` (region names, required), `playerCooldownMinutes` 0–1440 (absent 30) | A player's entry into a scope region starts the event, aimed at that player |
+| `trigger` `FactionKills` | `factions` 1–5 (catalog names, not deny-listed), `kills` 3–500, `windowSeconds` 10–3600, `shared` (absent false); optional `scope` | `kills` deaths of those factions by one player (or by all, `shared`) within the window |
+| `action.fanOut` | `{ "maxInstances": 2–10, "minSpacing": 50–500 }`, AroundPlayer only | One group per picked player, at least `minSpacing` m apart; each group rolled on its own, the groups together clamped once to the caps and the allowed units dealt round robin |
+</details>
+
+<details open>
+<summary><b>Runtime</b></summary>
+
+- **Interval.** `Logic/Schedule.cs` `IntervalClock` polls every tick (phase "interval"). The next start lives in
+  state.json `NextInterval` (pinned name, left out when empty, one bad entry drops only itself); one at or before the
+  boot is redrawn, so downtime is never replayed. A purge cooldown refuses a due start, which redraws.
+- **Player scan.** The tick phase "player triggers" reads players every 5 s through one query over `User` (A6);
+  `Logic/PlayerTriggers.cs` keeps region entries, cooldowns and kill windows in memory only. A refused start's line is
+  throttled to one per definition per minute.
+- **Kills.** `Patches/DeathEventPatch.cs` reads the killer and the victim's faction; SpawnTracker.Died, the V Blood
+  path and TriggerBus.Died each run in their own try/catch, so none can skip another death.
+- **Fan-out.** `Logic/Spawning.cs` `PlayerPick.ChooseMany` (the triggering player first) and `WaveGate.DecideGroups`;
+  each group gets its own Hunt tag; a fanned-out wave sends one push and one wave line ("around <n> players").
+- **Reachable spawn points** (A7–A16, design §9 D31–D32). A checked point needs a straight walkable line from the
+  picked player, following the terrain one level per sample; a blocked line gives its farthest reachable sample
+  ("shortened"); with no walkable spot at the player, the nearest one 1–3 m away is the start, and failing that the
+  point is placed by the spot check alone ("spot only"). With VerboseLogging, the first group without a walkable line
+  logs a walk survey of eight directions, never a coordinate.
+- **Failures.** A failing scan or kill read logs once per streak and holds `triggers: player scan failing` or
+  `triggers: kill read failing` on the health line and `.nyar status` until a read succeeds.
+- **Chat.** `.nyar event set` takes `trigger.type Interval|RegionEntered|FactionKills`, `trigger.minMinutes`,
+  `trigger.maxMinutes`, `trigger.playerCooldownMinutes`, `trigger.factions`, `trigger.kills`, `trigger.windowSeconds`,
+  `trigger.shared` and `action.fanOut none|"<max> <spacing>"`; `event info` shows the new trigger, fanOut and an
+  Interval's next start. Every reply is under 480 bytes.
+- **Templates.** `roaming-hunters` (Interval 60–90 min, fanOut 3/150), `border-watch` (RegionEntered Dunley
+  Farmlands, 30 min) and `bandit-reprisal` (FactionKills 20 bandits in 300 s), all disabled, all Hunt 45; nine in all.
+- **Wire.** api 6: the trigger values `interval`, `regionentered`, `factionkills`. No new field, push kind or command.
+- **Debug only.** `Debug.FaultInjection = phantoms:<n>` adds n phantom players at 200 m steps for fan-out tests; a
+  Release build has none.
+</details>
+
+<details>
+<summary><b>Static checks and tools</b></summary>
+
+- **`-TimingSpan -MinScans <n>`.** Sums the ", <k> player scans" field of the counted windows and fails below n.
+- **`-DependencySuite automation`.** player-scan, kill-read, state-write and release-tools, each with its control.
+- **Rollback drill.** Accepts 0.7.0's "unknown trigger type Interval|RegionEntered|FactionKills" and "unknown field
+  action.fanOut", printing "(<t> newer action types, <k> newer keys, <r> newer trigger types)"; for a newer release of
+  0.8.0 or later it adds `drill-interval` and asserts state.json carries its `NextInterval` entry; selftest 17/17.
+- **vrclient** (`tools/vrclient/`, dev only, never shipped): drives the real client for in-game scenarios, with the
+  dev plugins DevChatEcho (command replies in the log) and NyarDevTools (`.devtp`, `.devmark`).
+</details>
+
+<details>
+<summary><b>Sessions</b></summary>
+
+- **Sessions 1–1f** (with the owner): each trigger in game, the chat fields, the placement fixes A4–A16.
+- **Session 1g** (vrclient): an ambush with Hunt reached the player within 20 s at a rock ravine and on a strip inside
+  a pond; without Hunt the pond strip leaves units across the water (the known limit below).
+- **Session 2** (vrclient, Debug build, phantoms:4): three fanned-out Hunt events held "around 5 players", the
+  MaxUnitsPerWave and MaxTrackedUnits clamps and 150 tracked; ten windows averaged 0.34–0.50 ms with 12–13 player scans
+  each, 0 slow ticks; stop, natural end, purge, restart (20 found, then 0) and uninstall (0 found, 20 listed) each
+  left 0 tracked units.
+</details>
+
+- **Known limit.** A spawn point needs a straight walkable line to the player; where none exists (a strip inside a
+  pond), a wave without Hunt can stand across the water. A flood fill over the tile map is planned after Halloween.
+- **Scale.** The tick budget is measured and promised at the default caps, with fan-out, the scan and the kill feed
+  running; `MaxTrackedUnits` 151–500 stays best effort.
+- **Upgrading / rollback.** No new cfg keys. 0.7.0 loads 0.8.0's files but disables a definition using a new trigger
+  type or `fanOut`, and ignores `NextInterval` (rollback gate).
+
 ## [0.7.0] - 2026-09-29
 
 The `event-spawns` child of the DoD Epic (`docs/dod/event-spawns.md`): spawn waves gain strength, a behaviour, a
