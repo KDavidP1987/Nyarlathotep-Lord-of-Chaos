@@ -1,0 +1,11 @@
+# smoke.vrs: proves vrclient can join the dev server, run .nyar commands as admin and read the replies.
+# Needs: the dev server running with Nyarlathotep and DevChatEcho; Chaos in adminlist.txt.
+ensure
+console TPHome
+wait 3
+mark
+chat .nyar api version
+expect-reply [NYAR:
+chat .nyar status
+expect-reply tracked units
+shot full smoke-status

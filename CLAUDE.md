@@ -20,10 +20,11 @@ Everything ships **disabled**; admins opt in per pillar and per event.
 Same family as the author's other mods — **Beelzebub** (server), **Uriel** (server), **Faust** (server),
 and **Raphael** (client, formerly BloodCraftHub). Nyarlathotep mirrors the Faust/Uriel architecture.
 
-> **Status:** v0.4.0 public beta: the event engine with spawn waves (foundation), Raphael api 3
-> (raphael-api-core) and faction empowerment are released; event-library is next. Development is tracked by the
-> DoD Epic `docs/dod/nyarlathotep.md` (its child manifest and `docs/dod/README.md` give the order). Design decisions D1–D12 are settled in
-> `docs/NYARLATHOTEP_DESIGN.md` §9; new decisions go to the user in plan mode before dependent code.
+> **Status:** v0.7.0 public beta; automation (0.8.0) in progress. **Halloween track** (design §9 D33-D37, Epic
+> A35): close automation, then wave-sets (0.9.0, per-wave units and stats + per-event scoreboard), swarm, revenge,
+> apocalypse, a test weekend with the owner's players, release by 2026-10-31. Development is tracked by the DoD Epic
+> `docs/dod/nyarlathotep.md` (its child manifest and `docs/dod/README.md` give the order). New decisions go to the
+> user in plan mode before dependent code.
 
 The only buildable project lives at `Nyarlathotep/` (`Nyarlathotep.sln`). When the user says "the mod",
 "this codebase", or "our mod" they mean `Nyarlathotep/`.
@@ -100,8 +101,8 @@ dotnet build Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__  #
   `C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer\BepInEx\plugins` when that folder
   exists. **Stop the dedicated server first** — it file-locks the DLL.
 - `BuildToDist` stages the DLL + CHANGELOG under `Nyarlathotep/Nyarlathotep/dist/` for `tcli`.
-- No unit tests, no lint. Verification is **in-game on the dedicated server**: build, launch, watch the
-  BepInEx console, exercise `.nyar` commands. Record results in the feature doc.
+- Unit tests in `Nyarlathotep.Tests`; no lint. In-game verification runs through vrclient (below); record results
+  in the feature doc.
 
 ## Release & changelog discipline — SIX surfaces move together
 
@@ -162,7 +163,31 @@ Settled with the user 2026-09-23 (`docs/dod/nyarlathotep.md` S-15). The product 
 Tooling note: `~/.claude/skills/dod` is a junction; run `dod-feedback.mjs` through its real path
 (`...\SkillEra Skills and MCPs\skillera-skills\skills\dod\scripts\`) or it silently does nothing.
 
+**Halloween track (design §9 D34, owner 2026-10-04)** — for automation's close, wave-sets, swarm, revenge and
+apocalypse: one dod plan per child with **one** subagent review round (two at most); Codex cross-inspects each
+child's diff **once** (before its release), not every step; the in-game evidence is a vrclient scenario run; the
+owner tests only look and feel and anything needing a second player. Spawn & buff safety is unchanged.
+
+## In-game tests: Claude runs them itself (vrclient)
+
+Tool: `tools/vrclient/` (guide: `tools/vrclient/README.md`, ported from Beelzebub 2026-10-04). Claude plays the real
+client as the owner's character **`Chaos`** on the local dev server **127.0.0.1:9876**.
+
+- Every feature gets a scenario `tools/vrclient/scenarios/<feature>.vrs`; its `SCENARIO PASS n/n` line and results
+  JSON are the evidence that it works in game, recorded under the feature doc's `## Test results`. Every scenario
+  starts with `console TPHome`.
+- The mod writes one greppable log line per state change a test needs (`[nyar …] key=value …`). Diagnostic before
+  fix: if a failure's cause isn't proven, the next build adds the log line that names it.
+- Claude starts, stops and redeploys the dev server without asking. It always backs up `BepInEx/LogOutput.log` and
+  `logs/NyarDev.log` first, closes the client first (`python tools/vrclient/vrclient.py close`), and stops with
+  `taskkill /PID <pid>` without `/F` (force only after 60 s). Start command: `tools/vrclient/README.md` section 6.
+- Tell the owner before a run (it takes over mouse, keyboard and their Steam client). After the session, read every
+  `[Error`/`[Warning` in both logs.
+- Hand the owner only what the tool can't judge (look and feel, multiplayer, precise aim): start with "connect to
+  127.0.0.1:9876", numbered steps, exact commands with real IDs, and a one-line PASS condition each.
+
 <!-- dod:begin v1 -->
+
 ## Definition of Done plans
 dod-store: docs/dod
 Plans live in the store above (index: `README.md` there). Before building anything that has a plan there,

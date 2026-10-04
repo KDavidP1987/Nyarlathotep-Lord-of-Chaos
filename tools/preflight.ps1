@@ -687,7 +687,8 @@ $script:SecretPatterns = @(
 # allowed process read; so an import, alias or destructuring leaves a token over and fails. In every script .NET's
 # environment reads, the gh credential command (gh or gh.exe), the POSIX environment printer and the tcli token
 # variable's name fail. This comment and the patterns are written so that their own text passes the rule.
-$script:ToolsEnvAllowed = 'TEMP|TMP|USERPROFILE|LOCALAPPDATA|APPDATA|SteamAppId|NYAR_SESSION_DIR'
+# The VR_* names are tools/vrclient's dev-server settings (paths, address, character name, app id; Epic A36), none a credential.
+$script:ToolsEnvAllowed = 'TEMP|TMP|USERPROFILE|LOCALAPPDATA|APPDATA|SteamAppId|NYAR_SESSION_DIR|VR_SERVER_ROOT|VR_PLUGIN_LOG|VR_SERVER_LOG|VR_ADDR|VR_CHARACTER|VR_APPID|VR_OUT'
 $script:ToolsCredentialPatterns = @(
     '\bgh(?:\.exe)?["'']?\s+auth\s+token\b',
     '\bprint[e]nv\b',
@@ -696,7 +697,8 @@ $script:ToolsCredentialPatterns = @(
 )
 # tools/ holds PowerShell, Python and Node scripts and their data only: a file of any other type (a shell or batch
 # script, or an extensionless one run through a shebang) expands variables with no marker to count, so it fails.
-$script:ToolsAllowedExt = @('.ps1', '.psm1', '.py', '.mjs', '.js', '.json', '.txt', '.md')
+# .vrs is a vrclient scenario: plain steps read by tools/vrclient/vrclient.py, never run by a shell (Epic A36).
+$script:ToolsAllowedExt = @('.ps1', '.psm1', '.py', '.mjs', '.js', '.json', '.txt', '.md', '.vrs')
 $script:ToolsScriptExt = @('.ps1', '.psm1', '.py', '.mjs', '.js')
 # Per language: the token that reaches the environment, and the one form of it that is an allowed read.
 $script:ToolsEnvRules = @(

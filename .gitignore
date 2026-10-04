@@ -42,3 +42,6 @@ Desktop.ini
 ~$*
 __pycache__/
 *.pyc
+
+# ---- vrclient runtime ----
+__pycache__/
