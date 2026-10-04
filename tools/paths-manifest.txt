@@ -26,10 +26,12 @@ tracked: docs/img/*
 tracked: docs/dod/*.md
 tracked: docs/dod/*.html
 tracked: docs/dod/wbs.*
+tracked: docs/lessons/*.md
 # ---- tracked: tooling and its fixtures
 tracked: tools/*.ps1
 tracked: tools/*.json
 tracked: tools/*.txt
+tracked: tools/vrclient/**
 tracked: tools/preflight-fixtures/**
 tracked: tools/rollback-drill-fixtures/**
 tracked: tools/soak-report-fixtures/**

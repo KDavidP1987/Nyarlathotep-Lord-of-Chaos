@@ -1,6 +1,6 @@
 # Event spawns (Pillar D)
 
-**Status:** released in 0.7.0 (2026-09-29): steps 1-3 built, post-audited and tested in game (Sessions 1 and 2); step 4 is the release. The tick budget is promised at the default caps (150 tracked); raised caps (151-500) are best effort, watched by the slow-tick warning. Territory is read once per wave, so a castle claimed during a wave counts from the next wave. The `SpawnWaves` sketch below is the original design: the shipped keys are in the Thunderstore README › Event spawns; Zone, Guard, Ambush and spawnVisual come with later children. Depends on Foundation. Spike S2: go (2026-09-24; LifeTime needs Age; Test results). Shares the `SpawnWaves` action with
+**Status:** released in 0.7.0 (2026-09-29); 0.8.0 adds `fanOut` to the AroundPlayer location (docs/features/AUTOMATION.md): steps 1-3 built, post-audited and tested in game (Sessions 1 and 2); step 4 is the release. The tick budget is promised at the default caps (150 tracked); raised caps (151-500) are best effort, watched by the slow-tick warning. Territory is read once per wave, so a castle claimed during a wave counts from the next wave. The `SpawnWaves` sketch below is the original design: the shipped keys are in the Thunderstore README › Event spawns; Zone, Guard, Ambush and spawnVisual come with later children. Depends on Foundation. Spike S2: go (2026-09-24; LifeTime needs Age; Test results). Shares the `SpawnWaves` action with
 Pillars B and C — this doc defines it.
 
 ## Goal

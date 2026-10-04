@@ -36,7 +36,6 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        new(Automation, "D24", 4, "0.8.0"), new(Automation, "D25", 4, "0.8.0"), new(Automation, "D26", 4, "0.8.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -437,5 +436,27 @@ public static class ControlCases
             ["tools/rollback-drill-fixtures/pair-othertrigger", "tools/rollback-drill-fixtures/interval-seed/state-without.json"],
             ["tools/rollback-drill-fixtures/pair-interval", "tools/rollback-drill-fixtures/pair-fanout", "tools/rollback-drill-fixtures/interval-seed/state-with.json"],
             ["tools/rollback-drill-fixtures/empty"]) with { Plan = Automation },
+        C("D24", "Release", "preflight › Test-CheckReleaseTags and Test-CheckVersion, then release-verify.ps1 -SelfTest",
+            ["tools/preflight-fixtures/ReleaseTags/bad", "tools/preflight-fixtures/ReleaseTags/bad-2", "tools/preflight-fixtures/Version/bad",
+             "selftest missing asset", "selftest differing hash"],
+            ["tools/preflight-fixtures/ReleaseTags/good", "tools/preflight-fixtures/Version/good", "selftest hashes equal"],
+            ["tools/preflight-fixtures/ReleaseTags/empty", "tools/preflight-fixtures/Version/empty", "selftest no release"]) with { Plan = Automation },
+        C("D25", "Records", "preflight -AuditOf, -SessionsOf and -Paths -DeclaredOf › AuditSteps, SessionLogs, Paths and DataInventory",
+            ["tools/preflight-fixtures/AuditSteps/bad", "tools/preflight-fixtures/AuditSteps/bad-2", "tools/preflight-fixtures/SessionLogs/bad", "tools/preflight-fixtures/SessionLogs/bad-2",
+             "tools/preflight-fixtures/SessionLogs/bad-uncounted", "tools/preflight-fixtures/SessionLogs/bad-uncounted-2",
+             "tools/preflight-fixtures/SessionLogs/bad-uncounted-3", "tools/preflight-fixtures/SessionLogs/bad-uncounted-4",
+             "tools/preflight-fixtures/SessionLogs/bad-uncounted-5",
+             "tools/preflight-fixtures/Paths/bad-undeclared", "tools/preflight-fixtures/Paths/bad-temp", "tools/preflight-fixtures/Paths/bad-tempvar",
+             "tools/preflight-fixtures/Paths/bad-datatests", "tools/preflight-fixtures/Paths/bad-datatests-floor", "tools/preflight-fixtures/DataInventory/bad", "tools/preflight-fixtures/DataInventory/bad-2"],
+            ["tools/preflight-fixtures/AuditSteps/good", "tools/preflight-fixtures/SessionLogs/good", "tools/preflight-fixtures/Paths/good",
+             "tools/preflight-fixtures/Paths/good-datatests", "tools/preflight-fixtures/DataInventory/good"],
+            ["tools/preflight-fixtures/AuditSteps/empty", "tools/preflight-fixtures/SessionLogs/empty", "tools/preflight-fixtures/Paths/empty",
+             "tools/preflight-fixtures/Paths/empty-datatests", "tools/preflight-fixtures/DataInventory/empty"]) with { Plan = Automation },
+        C("D26", "Secrets", "preflight › Test-CheckSecrets",
+            ["tools/preflight-fixtures/Secrets/bad", "tools/preflight-fixtures/Secrets/bad-3", "tools/preflight-fixtures/Secrets/bad-envread",
+             "tools/preflight-fixtures/Secrets/bad-sentinel-zip", "tools/preflight-fixtures/Secrets/bad-sentinel-dist",
+             "tools/preflight-fixtures/Secrets/bad-sentinel-build", "tools/preflight-fixtures/Secrets/bad-sentinel-log"],
+            ["tools/preflight-fixtures/Secrets/good", "tools/preflight-fixtures/Secrets/good-sentinel"],
+            ["tools/preflight-fixtures/Secrets/empty", "tools/preflight-fixtures/Secrets/empty-sentinel"]) with { Plan = Automation },
     ];
 }

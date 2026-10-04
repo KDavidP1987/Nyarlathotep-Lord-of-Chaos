@@ -1,8 +1,7 @@
 # Automation — interval, player-action triggers and fan-out
 
-**Status:** in progress (docs/dod/automation.md, audit docs/audits/automation.md). Step 1 (schema, validation, the pure
-planners, chat fields, api 6) is built. Step 2 wires them into the services; Session 1 tests them in game. Step 3 adds
-the templates and Session 2 (fan-out, tick budget, end paths). Step 4 is the 0.8.0 release.
+**Status:** released in 0.8.0 (2026-10-04): steps 1-4 built, post-audited and tested in game (Sessions 1-1g and 2; docs/dod/automation.md, audit docs/audits/automation.md). Known limit: a
+wave without Hunt on a strip inside a pond can stand across the water (A17; a flood fill is planned after Halloween).
 
 ## Goal
 
@@ -62,7 +61,8 @@ AroundPlayer 20-40 m) and au-reprisal (FactionKills Faction_Bandits, 5 kills, Ar
 `.nyar event set <id> location "aroundplayer 20 40"`, `.nyar event set <id> action.fanOut "3 150"`; the steps first
 given without quotes got VCF's usage line, and au-border stayed on the template's Admin location, disabled ("action.
 location Admin needs a Manual trigger"), until the quoted set. Set the location before trigger.type. Both logs of both
-boots were copied to the session scratchpad before each stop; the snapshot was restored afterwards.
+boots were copied to the session scratchpad before each stop; the snapshot was restored afterwards
+("snapshot restored; hashes equal (au1, …)", the audit's session 1 snapshot line).
 
 - [x] D27, event list: the four reasons whole in chat, "au-bad-fanout invalid: action.fanOut needs an AroundPlayer
   location", "au-bad-interval invalid: trigger.minMinutes must be at most trigger.maxMinutes", "au-bad-kills invalid:
@@ -166,7 +166,10 @@ x -1880, z -1640 (Farbane Woods, outside claimed territory; the four phantoms at
 events.json: s2-fan-a/b/c (Manual, 1500 s, Thug ×3 + Hunter ×2, 3 waves at 30 s, AroundPlayer 20-40 m, fanOut 5/150,
 Hunt 60, lifetime 1500 s), s2-interval (Interval 5-6 min, one Thug at a Point), s2-fan-short (as s2-fan-a, 2 waves,
 600 s, lifetime 240 s, for the restart and the uninstall); au-border (RegionEntered) and au-reprisal (FactionKills)
-enabled throughout. Logs: %TEMP%\nyar-s2-logs (run1 the session, run2-run5 the boots after it).
+enabled throughout. Logs: %TEMP%\nyar-s2-logs (run1 the session, run2-run5 the boots after it). Snapshot: au1b, taken
+with `pwsh tools/dev-snapshot.ps1 -Save au1b` before Session 1b and held through Sessions 1c-1g and this one; after it
+`pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (au1b, %TEMP%\nyar-snap-au1b deleted)",
+then the Release build of 898d400 redeployed (hash equal) with the dev-only DevChatEcho and NyarDevTools.
 
 - [x] D7 fan-out: every wave of the three events logged "phantoms: 4 of 4 placed" and "wave k/3 around 5 players: 20 units
   queued (…)" after "clamped by MaxUnitsPerWave: 25 -> 20"; four "phantom group <i> <d> m from its phantom" lines per
