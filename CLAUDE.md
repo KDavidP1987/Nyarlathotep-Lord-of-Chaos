@@ -20,8 +20,8 @@ Everything ships **disabled**; admins opt in per pillar and per event.
 Same family as the author's other mods — **Beelzebub** (server), **Uriel** (server), **Faust** (server),
 and **Raphael** (client, formerly BloodCraftHub). Nyarlathotep mirrors the Faust/Uriel architecture.
 
-> **Status:** v0.7.0 public beta; automation (0.8.0) in progress. **Halloween track** (design §9 D33-D37, Epic
-> A35): close automation, then wave-sets (0.9.0, per-wave units and stats + per-event scoreboard), swarm, revenge,
+> **Status:** v0.8.0 public beta (automation released and closed 2026-10-04). **Halloween track** (design §9
+> D33-D37, Epic A35): next wave-sets (0.9.0, per-wave units and stats + per-event scoreboard), swarm, revenge,
 > apocalypse, a test weekend with the owner's players, release by 2026-10-31. Development is tracked by the DoD Epic
 > `docs/dod/nyarlathotep.md` (its child manifest and `docs/dod/README.md` give the order). New decisions go to the
 > user in plan mode before dependent code.

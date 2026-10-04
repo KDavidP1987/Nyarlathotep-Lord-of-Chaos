@@ -4,13 +4,13 @@ rubric: 2
 id: dod-20260929-aut1
 slug: automation
 title: Automation — interval, player-action triggers and fan-out
-status: in-progress
+status: done
 size: L
 parent: nyarlathotep
 kind: feature
 created: 2026-09-29
 baselined: 2026-09-29
-closed: none
+closed: 2026-10-04
 commit: 51b0b89
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
@@ -562,6 +562,8 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-04 · D24 · pass · cmd: pwsh tools/preflight.ps1 → PREFLIGHT OK and "release tags: 10/10" after the push of main and v0.8.0; pwsh tools/release-verify.ps1 -Tag v0.8.0 -Asset kdpen-Nyarlathotep-0.8.0.zip → "release verify: hashes equal"; GitHub pre-release https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.8.0 created once · 40e3d6a · claude
 - 2026-10-04 · D25 · pass · cmd: pwsh tools/preflight.ps1 -AuditOf automation → "audit steps: automation 4/4 pre, 4/4 post, 4/4 Codex verdicts"; -SessionsOf automation → "session logs: automation 2/2 checked; snapshots 2/2 from session 1"; -Paths -DeclaredOf automation → "paths: 1817 walked, all in manifest; declared: 135/135 in automation; plants: 15/15 fail" · 40e3d6a · claude
 - 2026-10-04 · D26 · pass · cmd: pwsh tools/preflight.ps1 → "secrets: none (1837 files scanned, 1799 index blobs)" with the sentinel-built zip, dist/, build/ and build/tcli-build.log scanned; git grep -n -E "7656119|kdpenland" before the push → one real hit, the owner's platform id in tools/vrclient/README.md (unpushed 490998a), removed and folded into that commit (now 06530c4); then only lines quoting the pattern, and `git log -p origin/main..main` held no platform-id digit run · 40e3d6a · claude
+- 2026-10-04 · note · close: the owner confirmed the defect amendments A4, A5, A6 and A15 as honestly classified
+- 2026-10-04 · status → done · close
 
 ## Baseline
 - [ ] D1 · **Interval trigger validated** Logic/Validation.cs ParseTriggerType accepts `{ "type": "Interval", "minMinutes": 5-1440, "maxMinutes": 5-1440 }` with an optional `scope`, minMinutes at most maxMinutes; a missing or out-of-range value, min above max, or any other key disables the definition with one reason naming the field: "trigger.minMinutes must be 5-1440", "trigger.maxMinutes must be 5-1440", "trigger.minMinutes must be at most trigger.maxMinutes", "unknown field trigger.<key>"; the other trigger types parse as in 0.7.0 · test: Nyarlathotep.Tests EventValidationTests IntervalTrigger (fails when: a missing or out-of-range value, min above max, or an unknown key is accepted, or a valid Interval trigger is disabled)
@@ -595,3 +597,16 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - [ ] D29 · **Phantom players for Session 2** in a Debug build only, Debug.FaultInjection = phantoms:<n> (n 1-9) adds n candidates to the AroundPlayer pick at 200 m steps along +x from the first eligible real player, at that player's height, skipping a position where PlayerPosition.Usable fails and logging "phantoms: <placed> of <n> placed" once per pick; they are never Hunt targets, never in RegionEntered scans or kill counters, and absent from a Release build (the FaultInjection check); Logic `Phantoms.Parse` and `Phantoms.Place` decide · test: Nyarlathotep.Tests AutomationTests Phantoms (fails when: a value outside 1-9 parses, the count or spacing differs, phantoms are placed with no eligible real player, an unusable position is kept, the placed count is wrong, or a phantom reaches the Hunt targets or the region scan)
 - [ ] D30 · **Controls registered** automation joins ControlCases.Plans with a row for every test and cmd control of this plan, a later step's control listed in ControlCases.Pending until its step's post-audit; AutomationTests and AutomationDependencyFailureTests join ControlCases.NewClasses; Nyarlathotep.Tests.csproj copies docs/dod/automation.md and docs/audits/automation.md; tools/preflight-checks.json childDocs maps automation to docs/features/AUTOMATION.md, and its dataTables and snapshotSessions list the plan · test: Nyarlathotep.Tests ControlCaseTests (fails when: a control of this plan has no row and no pending entry, a pending entry outlives its step's post-audit or the 0.8.0 Version, or a row names a method that does not exist)
 - [ ] D31 · **State file compatible** state.json keeps SchemaVersion 1; the key is written `NextInterval`, pinned with [JsonPropertyName("NextInterval")] as SchemaVersion is (the document otherwise writes camelCase), null and left out of the file when empty, and optional: a 0.7.0 state.json without it loads with no next starts, an entry that is not a UTC date drops only that entry (Logic/DataStore.cs NextIntervalConverter reads the object entry by entry; System.Text.Json's default dictionary reader would reject the whole file), and 0.8.0 writes it only while an Interval definition waits · test: Nyarlathotep.Tests AutomationTests StateNextInterval (fails when: a file without the key fails to load, a fixture spelled NextInterval is not read, one bad entry drops the others or the file, or a file with no waiting Interval definition gains the key, "{}" included)
+
+## Report · 2026-10-04
+Baseline items            31
+Discovered (planning gaps) 14 amendments · 18 design changes (wrong 15 · missed 3) · probes: 4.1 (A2, A7, A9, A10, A13, A16, A17), 13.1 (A8, A12, A14), 4.2 (A3), 5.2 (A1), 13.2 (A11), 14.4 (A18)
+Corrected (reversals)      0            (counts in the rate)
+Requested scope changes    0    (excluded)
+Emergent / defect / external 0 · 4 · 0  (excluded; A4, A5, A6, A15 confirmed by the owner)
+Prediction rate            31 / (31 + 18) = 63 %   target ≥ 90 %
+Completion                 vs baseline 31/31 · vs current 34/34 (D32-D34 added by A7, A11)
+Review                     subagent · READY at Review 2 after Review 1, Reviews 3-4 READY before approval; scoped re-review of A18 READY at Review 6 after Review 5; Codex READY per step (step 1 round 1, step 2 round 4, steps 3-4 together round 2, the Halloween track's one inspection)
+Timeline                   draft 09-29 · ready 09-29 · start 09-29 · done 10-04 · released 0.8.0
+Missed probes              4.1 business rules (7) dominates, and all seven are one question: where an AroundPlayer unit may stand (A7, A9, A10, A13, A16, A17 followed the walk line from a straight check to level-following, a moved start and a known limit at a pond). Every one was found in game (Sessions 1b-1g), not in review. The 13.x misses are timing evidence the scan needed (A8, A12, A14). Profile note for docs/dod/profile.md: "a feature that places units near a player plans its reachability rule against the hard terrain kinds (ravine, rock face, pond strip, bridge deck) and runs a vrclient scenario at each before approval"
+
