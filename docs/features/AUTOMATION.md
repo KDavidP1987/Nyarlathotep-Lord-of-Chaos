@@ -158,3 +158,41 @@ Setup: d907c9d deployed (unchanged since 1f); the dev-only NyarDevTools plugin (
   character; `SCENARIO PASS automation-reach 11/11`
 - not run: the bridge deck (no bridge spot was found yet; world bridges are scenery, not prefab entities to look up)
 - logs: see the audit's Session 1g log-check line
+
+### Session 2 · 2026-10-04 · D7, D21, D22 by vrclient (Debug build of ab27817, dev world nyardev, no owner)
+
+Setup: the Debug build with Debug.FaultInjection = phantoms:4, VerboseLogging and TimingLog on; Chaos invulnerable at
+x -1880, z -1640 (Farbane Woods, outside claimed territory; the four phantoms at +200 to +800 m on x). Events in the dev
+events.json: s2-fan-a/b/c (Manual, 1500 s, Thug ×3 + Hunter ×2, 3 waves at 30 s, AroundPlayer 20-40 m, fanOut 5/150,
+Hunt 60, lifetime 1500 s), s2-interval (Interval 5-6 min, one Thug at a Point), s2-fan-short (as s2-fan-a, 2 waves,
+600 s, lifetime 240 s, for the restart and the uninstall); au-border (RegionEntered) and au-reprisal (FactionKills)
+enabled throughout. Logs: %TEMP%\nyar-s2-logs (run1 the session, run2-run5 the boots after it).
+
+- [x] D7 fan-out: every wave of the three events logged "phantoms: 4 of 4 placed" and "wave k/3 around 5 players: 20 units
+  queued (…)" after "clamped by MaxUnitsPerWave: 25 -> 20"; four "phantom group <i> <d> m from its phantom" lines per
+  wave at 21-40 m; `.nyar debug here` showed the fifth group 2-8 m from Chaos; with all three running, fan-b wave 3
+  "skipped by MaxTrackedUnits: 10 of 20" and fan-c wave 3 "20 of 20"; every health line "3 events, 150 tracked"
+- [x] D21 tick budget: `pwsh tools/preflight.ps1 -TimingSpan <run1 copy at the twelfth window> -MinScans 10` → "timing
+  span: 10/10 windows under 5 ms, tracked >= 140, targets >= 1, player scans >= 10, 0 slow ticks" (windows 0.34-0.50 ms
+  average, 12-13 player scans each)
+- [x] D22 stop: "event s2-fan-a stopped: 60 units queued", despawn batches of 5 to "0 left"; `.nyar status` "tracked
+  units: 90"; no "hunt s2-fan-a" line after the stop
+- [x] D22 natural end: "event s2-fan-b ended (3 of 3 waves)", "event s2-fan-c ended (2 of 3 waves)", "<n> units due for
+  despawn" batches of 5; `.nyar status` "No active events." "tracked units: 0"; no hunt line after
+- [x] D22 purge (Epic D11, spawn part): s2-fan-short (40 units) and s2-interval live; "purge ends 2 events and despawns
+  41 units", "purge: 2 events ended, 41 units queued, 0 spawns cancelled, cooldown 240s", nine batches of at most 5;
+  `.nyar status` 0 events, 0 tracked about 6 s after the confirm; the second confirm "nothing to purge"; a manual start
+  during the cooldown "purge cooldown active (191 s left)"; s2-interval's next start 18:25:39Z, about 350 s after the
+  confirm (its 5-6 min draw lands past 240 s anyway; the refused-start redraw is the unit test's)
+- [x] D22 restart mid-wave: wave 1 of s2-fan-short spawned, AutoSave_3406, stop; boot: "event s2-fan-short cancelled by
+  restart", "boot marker sweep: 20 found, 20 queued for despawn (17 listed in state.json)", four batches to "0 left";
+  after AutoSave_3408 boot 2 "boot marker sweep: 0 found". state.json lagged by three units; the markers caught them
+- [x] D22 uninstall (Epic D12, spawn part): wave 1 of s2-fan-short spawned, AutoSave_3410, stop, Nyarlathotep.dll
+  removed; the server ran 18:37-18:46 without it ("6 plugins to load", 0 Nyarlathotep lines), stopped after
+  AutoSave_3415; DLL back, boot: "event s2-fan-short cancelled by restart", "boot marker sweep: 0 found, 0 queued for
+  despawn (20 listed in state.json)"; in game "tracked units: 0", `.nyar debug here 60` "no tracked units within 60 m"
+- observed, outside D21's span: one "slow tick: 250 ms (hunt 250 ms)" with three events live, its window 59 ticks
+  instead of 61 (a host stall during the hunt phase, not repeated in 30 windows); natural-end despawn ticks up to 120 ms
+  in the spawn queues at five units per tick (the game's destroy cost, as A70 recorded for wave starts)
+- logs: -LogCheck per boot in the audit's Session 2 line; both Unity error kinds (17 "Couldn't remap old Modification
+  Id" at load, 226 missing-prefab warnings) appear the same in the boot without Nyarlathotep
