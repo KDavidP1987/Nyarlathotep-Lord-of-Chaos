@@ -340,6 +340,8 @@ Constraints each child inherits (a child's review checks they appear verbatim or
 | 14 | Rollout & compatibility | Considered | 4/4 | Rollout › 14.1 D4 D17 D41; 14.2 D3; 14.3 D32 D11 D12; 14.4 D22 D33 |
 | 15 | Out of scope | Considered | 2/2 | Out of scope |
 Gate — acceptance & testability: passed — every Considered layer 2–14 maps to ≥ 1 D-item
+- 2026-10-04 · D11 · pass · manual: automation D22 (docs/features/AUTOMATION.md › Test results › Session 2), the spawn part: s2-fan-short (40 units, fanned out) and s2-interval live; `.nyar purge confirm` → "purge: 2 events ended, 41 units queued, 0 spawns cancelled, cooldown 240s", nine batches of at most 5, `.nyar status` 0 events and 0 tracked about 6 s after the confirm, the second confirm "nothing to purge", a start during the cooldown refused "purge cooldown active (191 s left)"; the empowerment part stays with the faction-empowerment rerun · 2995efa · claude
+- 2026-10-04 · D12 · pass · manual: automation D22 (docs/features/AUTOMATION.md › Test results › Session 2), the spawn part: wave 1 of s2-fan-short running, stop after an autosave, Nyarlathotep.dll removed and the server run 9 min without it, then reinstalled: "event s2-fan-short cancelled by restart", "boot marker sweep: 0 found, 0 queued for despawn (20 listed in state.json)", in game "tracked units: 0" · 2995efa · claude
 
 ## Baseline
 - [ ] D1 · **Public GitHub repo** repository KDavidP1987/Nyarlathotep-Lord-of-Chaos is public and its default branch is main · cmd: gh repo view KDavidP1987/Nyarlathotep-Lord-of-Chaos --json visibility,defaultBranchRef → visibility PUBLIC, defaultBranchRef.name main (fails when: the repo is private or missing, or the default branch is master)
