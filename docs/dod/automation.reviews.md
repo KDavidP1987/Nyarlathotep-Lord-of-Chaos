@@ -109,3 +109,40 @@ VERDICT: READY
 - F8 · accepted · S-7's fallback reworded after approval, meaning unchanged, with a Log note
 - F9 · accepted · Maximal stretch › Abuse names the playerCooldownMinutes 0 case and its bounds
 - F10 · accepted · States 7.3: a next still inside a changed range is kept
+
+## Review 5 · 2026-10-04 · subagent · plan uncommitted · plan 144938 B · 34 items · files 0 · e3b0c44298fc · prompt a219ee77ee7a · scope A18
+Reviewer: fresh-context Claude subagent (general-purpose), read-only
+F1 · blocking · 14.4: A18 says the manifest gains the temp names, but tools/paths-manifest.txt gained only the two tracked lines and -DeclaredOf never compares temp names with temp: globs, so the clause cannot fail. Fix: add temp: lines and a check, or reword A18 so temp names are checked against Paths walked and the leftover scan only.
+F2 · blocking · 14.4: what vrclient wrote outside the repository is undeclared: the dev server's BepInEx/plugins/NyarDevTools.dll and DevChatEcho.dll, and %TEMP%\vrclient\results and shots (cited as Session 1g's evidence); the -Paths walk sees none of them. Fix: list each with its owner and keep/remove rule, and say why each is outside the check.
+F3 · advisory · 14.4: %TEMP%\nyarpf.ps1, a scratch copy of preflight, is left over and undeclared. Fix: delete it and name it.
+F4 · advisory · 3.3: the new temp folders have no Design › Data row. Fix: add one.
+F5 · advisory · 4.5: AUTOMATION.md writes "%TEMP% nyar-s1d-logs" with a space, which the record regex misses. Fix: write %TEMP%\nyar-….
+F6 · advisory · 14.4: the review prompts %TEMP%\dod-review-*.txt are in Design › Data but not in Paths walked › Review process. Fix: add them.
+F7 · advisory · 4.5: docs/lessons/*.md, tools/vrclient/** and .gitignore* are shared globs, so declared k/k no longer separates this child's writes. Fix: name the files, or say the globs are accepted on purpose.
+F8 · advisory · 12.4: A18's fails-when has no observed run. Fix: record a planted run and the current success line.
+14/15 layers · 48/49 probes
+VERDICT: REVISE
+### Dispositions
+- F1 · accepted · option (b): A18 now says a temp name is checked against Paths walked and the leftover scan, never the manifest's temp: globs; its fails-when names the three failing cases the check has
+- F2 · accepted · Paths walked › Steps 1-4 (A18) names the two dev plugins (dev server only, kept for later vrclient sessions, outside the walk whose server: lines cover only this mod's paths) and vrclient's results and shots (the tool's own output, kept as evidence, outside the nyar-* scan); Design › Data gains the row
+- F3 · accepted · deleted; named beside tools/_pf.ps1
+- F4 · accepted · Design › Data gains "session and selftest scratch (A18)" and "vrclient outputs (A18, Epic A36)"
+- F5 · accepted · AUTOMATION.md Sessions 1d-1f writes %TEMP%\nyar-s1d-logs, -s1e-, -s1f- in full
+- F6 · accepted · Review process names %TEMP%\dod-review-*.txt
+- F7 · accepted · the shared globs are kept on purpose, said in the A18 bullet
+- F8 · accepted · Log: the plant (TestSupport.cs dropped) → "declared: 132/133 in automation, not in its Paths walked: tracked Nyarlathotep/Nyarlathotep.Tests/TestSupport.cs", PREFLIGHT FAILED; restored → "declared: 133/133 in automation"
+
+## Review 6 · 2026-10-04 · subagent · plan uncommitted · plan 147021 B · 34 items · files 0 · e3b0c44298fc · prompt b9d804dd9764 · scope A18
+Reviewer: fresh-context Claude subagent (general-purpose), read-only
+F1 · advisory · 14.4: the dry-run note's "declared: 133/133" is now 134/134 (an uncommitted change since). Fix: take D25's pass line from the release-time run.
+F2 · advisory · 14.4: the dev plugins and vrclient's results and shots are declared in prose only, outside every check; acceptable, dev-only and never shipped. Fix: none for this child.
+F3 · advisory · 4.5: the tool temp-name scan leaves out tools/vrclient/**; vrclient.py writes only %TEMP%\vrclient today. Fix: scan it or state the exclusion.
+F4 · advisory · 3.3: %TEMP%\nyar_diff.txt (2026-09-29, inside this child's build) is undeclared scratch. Fix: delete or name it.
+EARLIER: all resolved
+15/15 layers · 49/49 probes
+VERDICT: READY
+### Dispositions
+- F1 · accepted · D25's pass line is taken from the run at release
+- F2 · accepted · no change
+- F3 · accepted · the exclusion is stated in the A18 bullet
+- F4 · accepted · deleted after reading it (a step 2 review diff); named in the A18 bullet

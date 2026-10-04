@@ -688,6 +688,37 @@
       "rows": [
         "automation › refusal-line throttle and dedupe keys"
       ]
+    },
+    {
+      "artifact": "Session and selftest scratch (automation A18)",
+      "covers": [
+        "nyar-logs-*",
+        "nyar-pre1f-logs",
+        "nyar-devtools-keep",
+        "nyar-drill-*",
+        "nyar-rollback-*",
+        "nyar-secrets-index-*"
+      ],
+      "location": "%TEMP%\\nyar-logs-*, nyar-pre1f-logs, nyar-devtools-keep, nyar-drill-*, nyar-rollback-*, nyar-secrets-index-* (session log copies, the dev tools kept across a snapshot restore, the drill, rollback and secrets selftests' scratch)",
+      "owner": "Claude; tools/rollback-drill.ps1, tools/rollback-gate.ps1 and tools/preflight.ps1's secrets index check",
+      "retention": "the session or the selftest run",
+      "deletion": "deleted when done; -Paths fails on any %TEMP%\\nyar-* folder left over",
+      "singleCopy": true,
+      "rows": [
+        "automation › session and selftest scratch (A18)"
+      ]
+    },
+    {
+      "artifact": "vrclient outputs (automation A18, Epic A36)",
+      "covers": [],
+      "location": "%TEMP%\\vrclient\\results and %TEMP%\\vrclient\\shots; the dev server's BepInEx/plugins/DevChatEcho.dll and NyarDevTools.dll",
+      "owner": "tools/vrclient",
+      "retention": "results and shots as in-game test evidence; the plugins while vrclient tests run",
+      "deletion": "by the tool or Claude; the plugins live on the dev server only and never ship",
+      "singleCopy": true,
+      "rows": [
+        "automation › vrclient outputs (A18, Epic A36)"
+      ]
     }
   ]
 }

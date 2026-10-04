@@ -3201,7 +3201,11 @@ function Test-CheckTimingSpan([string]$Root) {
     $a = $script:TimingSpanArgs.Clone()
     if (Test-IsFixture $Root) {
         $ms = Join-Path $Root 'MinScans.txt'
-        $a.MinScans = if (Test-Path -LiteralPath $ms -PathType Leaf) { [int]([IO.File]::ReadAllText($ms).Trim()) } else { 0 }
+        $n = 0
+        if ((Test-Path -LiteralPath $ms -PathType Leaf) -and -not [int]::TryParse([IO.File]::ReadAllText($ms).Trim(), [ref]$n)) {
+            return New-Result $false 'timing span: MinScans.txt is not an integer'
+        }
+        $a.MinScans = $n
     }
     if ($a.MinScans -lt 0) { return New-Result $false 'timing span: -MinScans must be 0 or more' }
     if ($a.MinTracked -lt 0 -or $a.MinTargets -lt 0 -or $a.Windows -lt 1) { return New-Result $false 'timing span: -MinTracked and -MinTargets must be 0 or more, -Windows 1 or more' }

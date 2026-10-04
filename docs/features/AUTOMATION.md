@@ -13,7 +13,8 @@ where events come without anyone typing a command:
 - **RegionEntered:** a player walking into one of the event's regions starts it, with a per-player cooldown.
 - **FactionKills:** `kills` kills of the listed factions within `windowSeconds` start it, counted per player or shared.
 - **fanOut** on an AroundPlayer wave: the wave spawns one group near each of up to `maxInstances` players at least
-  `minSpacing` m apart. The whole wave still obeys MaxUnitsPerWave and MaxTrackedUnits; the units are dealt round robin.
+  `minSpacing` m apart. Each group is rolled on its own; the groups together are clamped once to MaxUnitsPerWave and
+  MaxTrackedUnits and the allowed units are dealt round robin.
 
 ## Design summary
 
@@ -132,8 +133,8 @@ logs of each boot were copied to the session scratchpad before each stop.
 
 ### Sessions 1d-1f · 2026-09-29 · A7-A16 placement (3207666, e6c5e86, 043fa6b, with the owner)
 
-Each recorded in docs/audits/automation.md with its log check; logs in %TEMP% nyar-s1d-logs, nyar-s1e-logs and
-nyar-s1f-logs. 1d: the rock face passed; the pond and a river crossing left every point unchecked (A11, A12). 1e: the
+Each recorded in docs/audits/automation.md with its log check; logs in %TEMP%\nyar-s1d-logs, %TEMP%\nyar-s1e-logs and
+%TEMP%\nyar-s1f-logs. 1d: the rock face passed; the pond and a river crossing left every point unchecked (A11, A12). 1e: the
 walk surveys read the owner's own spot as not grounded or blocked at one height level (A13, A14). 1f: on a bridge deck
 and on a strip between a pond and a cliff the player's spot read blocked at every level (A16).
 
@@ -159,7 +160,7 @@ Setup: d907c9d deployed (unchanged since 1f); the dev-only NyarDevTools plugin (
 - not run: the bridge deck (no bridge spot was found yet; world bridges are scenery, not prefab entities to look up)
 - logs: see the audit's Session 1g log-check line
 
-### Session 2 · 2026-10-04 · D7, D21, D22 by vrclient (Debug build of ab27817, dev world nyardev, no owner)
+### Session 2 · 2026-10-04 · D7, D21, D22 by vrclient (Debug build of 9e8c812, dev world nyardev, no owner)
 
 Setup: the Debug build with Debug.FaultInjection = phantoms:4, VerboseLogging and TimingLog on; Chaos invulnerable at
 x -1880, z -1640 (Farbane Woods, outside claimed territory; the four phantoms at +200 to +800 m on x). Events in the dev
@@ -169,7 +170,7 @@ Hunt 60, lifetime 1500 s), s2-interval (Interval 5-6 min, one Thug at a Point), 
 enabled throughout. Logs: %TEMP%\nyar-s2-logs (run1 the session, run2-run5 the boots after it). Snapshot: au1b, taken
 with `pwsh tools/dev-snapshot.ps1 -Save au1b` before Session 1b and held through Sessions 1c-1g and this one; after it
 `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (au1b, %TEMP%\nyar-snap-au1b deleted)",
-then the Release build of 898d400 redeployed (hash equal) with the dev-only DevChatEcho and NyarDevTools.
+then the Release build of 91ed642 redeployed (hash equal) with the dev-only DevChatEcho and NyarDevTools.
 
 - [x] D7 fan-out: every wave of the three events logged "phantoms: 4 of 4 placed" and "wave k/3 around 5 players: 20 units
   queued (…)" after "clamped by MaxUnitsPerWave: 25 -> 20"; four "phantom group <i> <d> m from its phantom" lines per

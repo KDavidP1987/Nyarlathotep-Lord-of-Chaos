@@ -24,6 +24,20 @@ under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line. S
 - feature doc read: docs/features/AUTOMATION.md Status (step 1 built) and Open questions; step 2 carries round 2 F6 (WaveAction reports each decided wave once through EventEngine.WaveDecided)
 - in-game baseline: the deployed 0.7.0 DLL (0.7.0+3aa2215) booted on the dev server: "triggers: all hooks available", "Nyarlathotep initialized … (attempt #1)"; 4 [Warning] lines, none new: ours is the shipped example-empowerment reason line, the others Il2CppInterop's substitute notice and two Beelzebub TUNE lines; 0 [Error]; -LogCheck PREFLIGHT OK; server stopped
 
+### Step 3 · 2026-10-04 · 9e8c812
+- git status, compile, tests, preflight, selftest, dod check and the baseline boot: the pre-audit line of "Sessions 1g and 2" under Post-audit (clean at 9e8c812 apart from the -MinScans work; 0 Warning(s), 0 Error(s); 2446 passed; PREFLIGHT OK; 40/40; problems 0; "templates: 9/9 valid", "boot marker sweep: 0 found")
+- dod status: D7, D18, D21, D22 open (this step), D23-D26 open (step 4)
+- feature doc read: docs/features/AUTOMATION.md Status (steps 1-2, Sessions 1-1f) and Open questions (the pond strip, A17's limit)
+
+### Step 4 · 2026-10-04 · d49b1e1
+- git status: clean at d49b1e1 apart from the six release surfaces (the drill committed as 91ed642, the records as d49b1e1)
+- compile: `dotnet build Nyarlathotep/Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__` → 0 Warning(s), 0 Error(s)
+- tests: 2446 passed
+- preflight: -Paths -DeclaredOf automation "declared: 128/128 in automation; plants: 15/15 fail"; -SessionsOf automation 2/2
+- dod status: automation 30/34 verified (D23-D26 open, all step 4); `dod-index.mjs --check automation` → problems 0 with review pending for A18 (re-review below)
+- feature doc read: docs/features/AUTOMATION.md Status (released in 0.8.0) and the known limit the surfaces name
+- in-game baseline: the Release build of 91ed642 redeployed after Session 2's snapshot restore (hash equal); the in-game part of this step is the rollback gate's drill
+
 ## Post-audit
 ### Step 1 · 2026-09-29 · 3b8613a
 - built: the schema and validation of the Interval, RegionEntered and FactionKills triggers and action.fanOut (D1, D4, D8, D10), IntervalClock (D2), Logic/PlayerTriggers.cs (RegionEntries, KillRule, KillWindows, PlayerTriggerGate, Phantoms; D9, D11, D14, D29), PlayerPick.ChooseMany and WaveGate.DecideGroups (D5, D6, D13), state.json NextInterval (D31), the chat fields and `event info` lines (D16, D27), api 6 with the contract and design §6 (D17), ControlCases rows and pending controls (D30), the registries, this record and docs/features/AUTOMATION.md
@@ -106,7 +120,28 @@ under "## Post-audit"; every post-audit entry carries a "Codex verdict:" line. S
 - Codex round 1 (702f962..9a24ab5): READY, no findings; its one "blocked by policy" match is its own grep of an earlier audit line, no command blocked
 - in-game: Session 1g (the strip, the bridge deck, open ground; au-hunt at the strip) follows
 
-### Sessions 1g and 2 · 2026-10-04 · ab27817 (vrclient, no owner)
-- pre-audit: git tree clean at ab27817 apart from the -MinScans preflight work (committed as 2d0734c during Session 2); compile Release and Debug 0 Warning(s), 0 Error(s); tests 2446 passed; PREFLIGHT OK; selftest 40/40; dod-index --check automation 0 problems; baseline boot "templates: 9/9 valid", "boot marker sweep: 0 found"
+### Sessions 1g and 2 · 2026-10-04 · 9e8c812 (vrclient, no owner)
+- pre-audit: git tree clean at 9e8c812 apart from the -MinScans preflight work (committed as 1abb949 during Session 2); compile Release and Debug 0 Warning(s), 0 Error(s); tests 2446 passed; PREFLIGHT OK; selftest 40/40; dod-index --check automation 0 problems; baseline boot "templates: 9/9 valid", "boot marker sweep: 0 found"
 - session 1g log check: "log check: 0 unhandled, 248 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; [Warning] kinds: the cap clamps and the walk survey's "no walkable line" (both recorded in docs/features/AUTOMATION.md › Session 1g); the Unity log's 17 "Couldn't remap old Modification Id" lines are the save's, before any mod initialises (see session 2)
 - session 2 log check: 0 unhandled, 1825 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons (run1, the session); run2 "0 unhandled, 31 nyar lines"; run3 "0 unhandled, 73 nyar lines"; run4 without the DLL "0 nyar lines" (as intended); run5 "0 unhandled, 48 nyar lines"; every [Warning] kind: MaxUnitsPerWave clamps, MaxTrackedUnits skips, the stop and purge lines, one "slow tick: 250 ms (hunt 250 ms)" outside D21's span, the dev config's disabled example-empowerment reason, and Beelzebub's and Il2CppInterop's boot warnings; Unity: 17 remap errors and 226 missing-prefab warnings in every boot, run4 without Nyarlathotep included, so neither is this mod's
+
+### Step 3 · 2026-10-04 · 2995efa
+- built: Resources/templates.json roaming-hunters, border-watch, bandit-reprisal, all disabled, Hunt 45 (D18, 9e8c812); tools/preflight.ps1 -TimingSpan -MinScans with the bad-noscans fixture (D21, A1, 1abb949); Sessions 1g and 2 by vrclient (D7, D21, D22, D33 recorded in docs/features/AUTOMATION.md; 2995efa)
+- compile: 0 Warning(s), 0 Error(s); tests: 2446 passed
+- preflight: PREFLIGHT OK; -TimingSpan on Session 2's log copy "timing span: 10/10 windows under 5 ms, tracked >= 140, targets >= 1, player scans >= 10, 0 slow ticks"; -SessionsOf automation 2/2
+- /code-review (fresh subagent, read-only, on 06530c4..working tree, steps 3 and 4 together, tools/vrclient/** left out): VERDICT READY, 3 advisories — F1 ControlCases' release-verify labels "selftest hashes equal" and "selftest no release" are not case names of tools/release-verify.ps1 → fixed in all five rows ("selftest matching hash", "selftest no audit records the asset"); F2 a non-integer MinScans.txt threw → fixed ("timing span: MinScans.txt is not an integer"); F3 the good fixture's 1 scan per window is unrealistic → accepted as is, bad-noscans remains the failing case
+- Codex round 1 (06530c4..working tree, the child's one cross-inspection per design §9 D34): REVISE — F1, F2 blocking: the package README and CHANGELOG said fan-out gives "more players, not more units", but WaveGate.DecideGroups rolls a full group per player and clamps only the total → fixed in both, and the root CHANGELOG and docs/features/AUTOMATION.md reworded the same way. Log: 0 "blocked by policy"
+- Codex verdict: READY (round 2, on 06530c4..working tree) — no findings; its one "blocked by policy" match is the quoted audit line of A16, no command blocked
+- in-game: Sessions 1g and 2 (entry "Sessions 1g and 2" above)
+- dod status: D7, D18, D21, D22 pass and checked
+
+### Step 4 · 2026-10-04 · d49b1e1
+- built: tools/rollback-drill.ps1 newer trigger types, fanOut and drill-interval with fixtures pair-interval, pair-fanout, pair-othertrigger and interval-seed (D23, 91ed642); the six release surfaces at 0.8.0; A18 (Paths walked, the manifest's tracked lines, Design › Data and tools/data-inventory.json rows); ControlCases D21, D23-D26 rows, nothing pending (d49b1e1)
+- compile: 0 Warning(s), 0 Error(s); tests: 2446 passed
+- preflight: PREFLIGHT OK ("data inventory: 48 entries; 54/54 globs and files, 114/114 plan rows"); -SelfTest 40/40; `pwsh tools/rollback-drill.ps1 -SelfTest` → "drill selftest: 17/17"; -Paths -DeclaredOf automation "declared: 134/134 in automation; plants: 15/15 fail"
+- /code-review and Codex: the Step 3 entry's (one review of steps 3 and 4 together)
+- Codex verdict: READY (round 2, on 06530c4..working tree, shared with step 3) — no findings
+- plan re-review of A18 (gating probe 14.4): Review 5 REVISE (2 blocking: the temp-name check's wording, the vrclient outputs undeclared) → all 8 findings fixed; Review 6 READY, 15/15 layers · 49/49 probes (docs/dod/automation.reviews.md)
+- privacy grep (7656119, kdpenland) before the push: one real hit, the owner's platform id in tools/vrclient/README.md (ported from Beelzebub in 490998a, unpushed) → the id removed and folded into that commit with an autosquash rebase onto origin/main (backup branch backup/pre-privacy-rewrite; trees equal apart from the line); the rewritten commits are 490998a→06530c4, ab27817→9e8c812, 2d0734c→1abb949, 92b89e5→2995efa, 898d400→91ed642, b7a020d→d49b1e1, and the records cite the new ones; `git log -p origin/main..HEAD` holds no platform-id digit run; afterwards only lines quoting the pattern
+- release: the tag, rollback gate, GitHub pre-release and release-verify lines follow below
+
