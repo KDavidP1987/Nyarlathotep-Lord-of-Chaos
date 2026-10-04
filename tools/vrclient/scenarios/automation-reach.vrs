@@ -1,0 +1,34 @@
+# automation-reach.vrs: automation D33 (Session 1g) — an AroundPlayer ambush at a hard spot places units the player
+# can see and that reach the player. Spot: ${SPOT} (a .devmark; "ravine" = the rock ravine by the water east of home).
+# Needs: the dev world's au-here (no Hunt) and au-hunt (Hunt 60) events; NyarDevTools; VerboseLogging on.
+ensure
+console TPHome
+wait 3
+chat .devgo ${SPOT}
+expect-log \[DEV TP\] ${SPOT}
+wait 4
+chat .devwhere
+expect-log \[DEV WHERE\]
+# 1. ambush without Hunt: placement only
+mark
+chat .nyar event start au-here
+expect-log event au-here wave 1/1 around a player: (?P<HERE>.*) timeout=260
+expect-log spawned CHAR_Bandit_.* for au-here timeout=30
+wait 6
+chat .nyar debug here 60
+expect-reply au-here
+shot full reach-here-${SPOT}
+chat .nyar event stop au-here
+expect-log event au-here stopped
+wait 5
+# 2. ambush with Hunt: the units come to the player
+mark
+chat .nyar event start au-hunt
+expect-log event au-hunt wave 1/1 around a player: (?P<HUNT>.*) timeout=260
+expect-log spawned CHAR_Bandit_.* for au-hunt timeout=30
+wait 20
+shot full reach-hunt-${SPOT}
+chat .nyar debug here 15
+expect-reply au-hunt
+chat .nyar event stop au-hunt
+expect-log event au-hunt stopped

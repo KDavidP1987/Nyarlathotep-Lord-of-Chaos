@@ -1,0 +1,22 @@
+# devtools.vrs: proves the dev-only NyarDevTools plugin reads and moves the character (.devwhere, .devtp, .devmark/.devgo).
+# Needs: NyarDevTools.dll on the dev server; Chaos is an admin.
+ensure
+console TPHome
+wait 3
+mark
+chat .devwhere
+expect-log \[DEV WHERE\] x=(?P<X>-?[0-9.]+) y=(?P<Y>-?[0-9.]+) z=(?P<Z>-?[0-9.]+)
+chat .devmark home
+expect-reply devmark home saved
+chat .nyar region here
+expect-reply you are in
+shot full devtools-home
+# teleport 40 m east and back to the mark
+chat .devtp -1963.5 -1715.0
+expect-log \[DEV TP\] to
+wait 3
+chat .devgo home
+expect-log \[DEV TP\] home
+wait 3
+chat .devwhere
+expect-log \[DEV WHERE\]

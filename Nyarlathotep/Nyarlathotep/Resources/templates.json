@@ -108,6 +108,55 @@
         "modifiers": { "levelDelta": 2, "maxHealth": 1.2 }
       },
       "announce": { "start": [ "The dead claw their way up: {event}." ], "end": [ "The dead lie still. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "roaming-hunters",
+      "name": "Roaming hunters",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Interval", "minMinutes": 60, "maxMinutes": 90 },
+      "durationSeconds": 600,
+      "action": {
+        "type": "SpawnWaves",
+        "units": [ { "prefab": "CHAR_Bandit_Thug", "count": 4 }, { "prefab": "CHAR_Bandit_Hunter", "count": 2 } ],
+        "waves": 1, "intervalSeconds": 60, "radius": 10,
+        "location": { "type": "AroundPlayer", "minDist": 20, "maxDist": 40 },
+        "fanOut": { "maxInstances": 3, "minSpacing": 150 },
+        "behaviour": { "type": "Hunt", "range": 45 }
+      },
+      "announce": { "start": [ "Hunters roam the land: {event}." ], "end": [ "The hunters scatter. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "border-watch",
+      "name": "Border watch",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "RegionEntered", "scope": [ "DunleyFarmlands" ], "playerCooldownMinutes": 30 },
+      "durationSeconds": 600,
+      "action": {
+        "type": "SpawnWaves",
+        "units": [ { "prefab": "CHAR_Militia_Light", "count": 3 }, { "prefab": "CHAR_Militia_Crossbow", "count": 2 } ],
+        "waves": 1, "intervalSeconds": 60, "radius": 10,
+        "location": { "type": "AroundPlayer", "minDist": 20, "maxDist": 40 },
+        "behaviour": { "type": "Hunt", "range": 45 }
+      },
+      "announce": { "start": [ "The border watch rides out: {event}." ], "end": [ "The watch returns to its post. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "bandit-reprisal",
+      "name": "Bandit reprisal",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "FactionKills", "factions": [ "Faction_Bandits" ], "kills": 20, "windowSeconds": 300 },
+      "durationSeconds": 600,
+      "action": {
+        "type": "SpawnWaves",
+        "units": [ { "prefab": "CHAR_Bandit_Thug", "count": 4 }, { "prefab": "CHAR_Bandit_Hunter", "count": 2 } ],
+        "waves": 1, "intervalSeconds": 60, "radius": 10,
+        "location": { "type": "AroundPlayer", "minDist": 20, "maxDist": 40 },
+        "behaviour": { "type": "Hunt", "range": 45 }
+      },
+      "announce": { "start": [ "The bandits want revenge: {event}." ], "end": [ "The bandits fall back. {event} is over." ], "warnings": false }
     }
   ]
 }

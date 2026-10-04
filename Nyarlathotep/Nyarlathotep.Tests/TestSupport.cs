@@ -4,8 +4,15 @@ namespace Nyarlathotep.Tests;
 
 /// <summary>The unit and faction catalogs of the tests. The factions are real names from Reference Data/unit_index.tsv,
 /// deny-listed ones included, so the validator's deny list is what refuses them.</summary>
-sealed class FakeUnits(params string[] known) : IUnitCatalog, IFactionCatalog
+sealed class FakeUnits(params string[] known) : IUnitCatalog, IFactionCatalog, IRegionCatalog
 {
+    /// <summary>The region index the validator reads through this catalog; none by default, so a regional scope
+    /// is "regions unavailable" unless a test sets one (TemplateLibraryTests: every region, for border-watch).</summary>
+    public IRegionCatalog Regions { get; set; } = NoRegions.Instance;
+    bool IRegionCatalog.Available => Regions.Available;
+    bool IRegionCatalog.OnMap(string region) => Regions.OnMap(region);
+    string IRegionCatalog.RegionOf(float x, float z) => Regions.RegionOf(x, z);
+
     public static readonly string[] DefaultFactions =
     [
         "Faction_Bandits", "Faction_Legion", "Faction_Undead", "Faction_Militia", "Faction_ChurchOfLum", "Faction_Gloomrot",

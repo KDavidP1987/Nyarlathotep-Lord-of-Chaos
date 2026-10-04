@@ -5,7 +5,7 @@
 
 | Plan | Title | Status | Size | Verified | Baseline items | Prediction | Parent |
 |---|---|---|---|---|---|---|---|
-| [automation](automation.md) | Automation — interval, player-action triggers and fan-out | in-progress | L | 23/34 | 31 | 66 % | nyarlathotep |
+| [automation](automation.md) | Automation — interval, player-action triggers and fan-out | in-progress | L | 25/34 | 31 | 65 % | nyarlathotep |
 | [boss-reinforcements](boss-reinforcements.md) | Boss reinforcements — adds, phases and the anti-carry burst, and release 0.8.0 | ready | L | 0/20 | 20 | n/a | nyarlathotep |
 | [event-library](event-library.md) | Event library — built-in templates and in-game authoring | done | L | 36/36 | 34 | 55 % | nyarlathotep |
 | [event-spawns](event-spawns.md) | Event spawns — modifiers, Hunt and player locations | done | L | 24/24 | 24 | 26 % | nyarlathotep |
@@ -18,7 +18,7 @@
 | [spikes](spikes.md) | Spikes S1-S3, march, restart marker, carrier buff | done ⚠ 1 | M | 20/20 | 20 | 50 % | nyarlathotep |
 | [walkable-spawns](walkable-spawns.md) | Walkable spawns — the walk probe, walkable spawn points and release 0.5.1 | done | M | 12/12 | 12 | 41 % | nyarlathotep |
 
-Most-missed layers — done plans: layer 12.4 (33), layer 14.4 (24), layer 6.2 (16), layer 6.1 (16), layer 4.1 (14); open plans (provisional): layer 4.1 (7), layer 13.1 (3), layer 6.1 (3), layer 5.2 (2), layer 14.1 (2).
+Most-missed layers — done plans: layer 12.4 (33), layer 14.4 (24), layer 6.2 (16), layer 6.1 (16), layer 4.1 (14); open plans (provisional): layer 4.1 (8), layer 13.1 (3), layer 6.1 (3), layer 5.2 (2), layer 14.1 (2).
 Miss history — done plans: 3.1 (3 of 9) · 3.3 (3 of 9) · 4.1 (5 of 9) · 4.2 (2 of 9) · 4.3 (2 of 9) · 4.4 (4 of 9) · 4.5 (5 of 9) · 5.1 (5 of 9) · 5.3 (3 of 9) · 6.1 (6 of 9) · 6.2 (6 of 9) · 7.1 (2 of 9) · 7.2 (3 of 9) · 7.3 (4 of 9) · 10.1 (2 of 9) · 11.2 (3 of 9) · 12.2 (5 of 9) · 12.3 (4 of 9) · 12.4 (7 of 9) · 13.1 (3 of 9) · 14.2 (2 of 9) · 14.3 (2 of 9) · 14.4 (5 of 9)
 Rework — done plans: 0 of 217 misses corrected an earlier amendment.
 

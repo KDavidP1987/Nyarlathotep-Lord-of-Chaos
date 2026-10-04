@@ -25,8 +25,9 @@ public class TemplateLibraryTests
 
     /// <summary>The test catalog fakes: every unit S-4 and S-5 name, and the default factions.</summary>
     internal static FakeUnits Units(params string[] extra) => new(
-        new[] { "CHAR_Bandit_Thug", "CHAR_Bandit_Hunter", "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane" }
-            .Concat(BanditVBloods).Concat(MilitiaVBloods).Concat(extra).ToArray());
+        new[] { "CHAR_Bandit_Thug", "CHAR_Bandit_Hunter", "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane",
+            "CHAR_Militia_Light", "CHAR_Militia_Crossbow" }
+            .Concat(BanditVBloods).Concat(MilitiaVBloods).Concat(extra).ToArray()) { Regions = FakeRegions.All() };
 
     internal static string RealText => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Resources", "templates.json"));
     internal static byte[] Bytes(string text) => System.Text.Encoding.UTF8.GetBytes(text);
@@ -45,10 +46,10 @@ public class TemplateLibraryTests
     {
         var c = Real();
         Assert.Null(c.Error);
-        Assert.Equal(6, c.Templates.Count);
+        Assert.Equal(9, c.Templates.Count);
         Assert.Empty(TemplateCatalog.Problems(c, DefaultIds()));
         Assert.Matches("^\\{\\s*\"SchemaVersion\": 1,", RealText);                 // the key spelled as the validator needs it
-        Assert.Equal(6, c.ValidCount);
+        Assert.Equal(9, c.ValidCount);
     }
 
     [Theory]
@@ -133,7 +134,8 @@ public class TemplateLibraryTests
     static List<string> Differences(TemplateCatalog c)
     {
         var diffs = new List<string>();
-        if (c.Templates.Count != Expected.Length) diffs.Add($"{c.Templates.Count} templates, not {Expected.Length}");
+        var total = Expected.Length + AutomationExpected.Length;                    // the six starters and automation D18's three
+        if (c.Templates.Count != total) diffs.Add($"{c.Templates.Count} templates, not {total}");
         foreach (var e in Expected)
         {
             var t = c.Find(e.Id);
@@ -231,12 +233,99 @@ public class TemplateLibraryTests
         else rising["action"]!["modifiers"]!["levelDelta"] = 6;                     // outside D6's -5..5
         var c = TemplateCatalog.Load(Bytes(root.ToJsonString()), Units(), Units());
         Assert.Contains(TemplateCatalog.Problems(c, DefaultIds()), p => p.StartsWith(problem, StringComparison.Ordinal));
-        Assert.Empty(TemplateCatalog.Problems(Real(), DefaultIds()));                // "templates: 6/6 valid", all disabled
+        Assert.Empty(TemplateCatalog.Problems(Real(), DefaultIds()));                // "templates: 9/9 valid", all disabled
     }
 
     [Fact]
     public void StarterTemplates_empty_no_templates() =>
-        Assert.Contains("0 templates, not 6", Differences(TemplateCatalog.Load(Bytes("{\"SchemaVersion\":1,\"events\":[]}"), Units(), Units())));
+        Assert.Contains("0 templates, not 9", Differences(TemplateCatalog.Load(Bytes("{\"SchemaVersion\":1,\"events\":[]}"), Units(), Units())));
+
+    // ---- automation D18: roaming-hunters, border-watch, bandit-reprisal
+
+    /// <summary>D18 as the test's own table: id → trigger, location, fan-out, Hunt range and the units of one group.</summary>
+    static readonly (string Id, string Trigger, string Location, string FanOut, int Hunt, string Units)[] AutomationExpected =
+    [
+        ("roaming-hunters", "interval 60-90 min", "AroundPlayer 20-40", "3 150", 45, "CHAR_Bandit_Thug:4,CHAR_Bandit_Hunter:2"),
+        ("border-watch", "regionentered cooldown 30 min", "AroundPlayer 20-40", "", 45, "CHAR_Militia_Light:3,CHAR_Militia_Crossbow:2"),
+        ("bandit-reprisal", "factionkills Bandits 20 in 300s", "AroundPlayer 20-40", "", 45, "CHAR_Bandit_Thug:4,CHAR_Bandit_Hunter:2"),
+    ];
+
+    static List<string> AutomationDifferences(TemplateCatalog c)
+    {
+        var diffs = new List<string>();
+        foreach (var e in AutomationExpected)
+        {
+            var t = c.Find(e.Id);
+            if (t is null) { diffs.Add($"{e.Id} missing"); continue; }
+            if (t.Invalid is { } why) diffs.Add($"{e.Id} invalid: {why}");
+            var d = t.Definition;
+            if (d.Enabled) diffs.Add($"{e.Id} enabled");
+            var a = d.Action;
+            if (a is null) { diffs.Add($"{e.Id} has no wave action"); continue; }
+            var got = (d.Id, EventLines.Trigger(d.Trigger), $"{a.Location.Type} {a.Location.MinDist}-{a.Location.MaxDist}",
+                a.FanOut is { } f ? $"{f.MaxInstances} {f.MinSpacing}" : "", a.Behaviour?.Range ?? 0,
+                string.Join(",", a.Units.Select(u => $"{u.Prefab}:{u.Count}")));
+            if (got != e) diffs.Add($"{e.Id}: {got} is not {e}");
+            var perGroup = a.Units.Sum(u => u.Count);
+            if (perGroup * (a.FanOut?.MaxInstances ?? 1) > 20) diffs.Add($"{e.Id} exceeds the default MaxUnitsPerWave of 20");
+        }
+        if (BorderWatchScope(c) is { } scope) diffs.Add(scope);
+        return diffs;
+    }
+
+    static string? BorderWatchScope(TemplateCatalog c) =>
+        c.Find("border-watch")?.Definition.Trigger.Scope.Regions is { Count: 1 } ? null : "border-watch does not watch exactly one region";
+
+    [Fact]
+    public void AutomationTemplates_passes_as_planned()
+    {
+        var c = Real();
+        Assert.Empty(AutomationDifferences(c));
+        var lines = new List<string>();
+        TemplateCatalog.Boot(Bytes(RealText), Units(), Units(), lines.Add, lines.Add);
+        Assert.Contains("templates: 9/9 valid", lines);
+    }
+
+    [Theory]
+    [InlineData("missing")]
+    [InlineData("enabled")]
+    [InlineData("invalid")]
+    [InlineData("no fan-out")]
+    [InlineData("no hunt")]
+    [InlineData("kills")]
+    [InlineData("cooldown")]
+    [InlineData("over the cap")]
+    [InlineData("two regions")]
+    public void AutomationTemplates_fails_when_a_field_differs(string mutation)
+    {
+        var root = JsonNode.Parse(RealText)!;
+        var events = (JsonArray)root["events"]!;
+        JsonObject Ev(string id) => events.OfType<JsonObject>().First(e => (string)e["id"]! == id);
+        switch (mutation)
+        {
+            case "missing": events.Remove(Ev("bandit-reprisal")); break;
+            case "enabled": Ev("border-watch")["enabled"] = true; break;
+            case "invalid": Ev("roaming-hunters")["trigger"]!["minMinutes"] = 1; break;
+            case "no fan-out": ((JsonObject)Ev("roaming-hunters")["action"]!).Remove("fanOut"); break;
+            case "no hunt": ((JsonObject)Ev("bandit-reprisal")["action"]!).Remove("behaviour"); break;
+            case "kills": Ev("bandit-reprisal")["trigger"]!["kills"] = 10; break;
+            case "cooldown": Ev("border-watch")["trigger"]!["playerCooldownMinutes"] = 5; break;
+            case "over the cap": Ev("roaming-hunters")["action"]!["units"]![0]!["count"] = 6; break;
+            default: Ev("border-watch")["trigger"]!["scope"] = new JsonArray("DunleyFarmlands", "FarbaneWoods"); break;
+        }
+        var c = TemplateCatalog.Load(Bytes(root.ToJsonString()), Units(), Units());
+        Assert.NotEmpty(AutomationDifferences(c));
+        if (mutation == "missing")
+        {
+            var lines = new List<string>();
+            TemplateCatalog.Boot(Bytes(root.ToJsonString()), Units(), Units(), lines.Add, lines.Add);
+            Assert.DoesNotContain("templates: 9/9 valid", lines);
+        }
+    }
+    [Fact]
+    public void AutomationTemplates_empty_none_in_an_empty_catalogue() =>
+        Assert.Contains("roaming-hunters missing", AutomationDifferences(TemplateCatalog.Load(Bytes("{\"SchemaVersion\":1,\"events\":[]}"), Units(), Units())));
+
 }
 
 static class JsonNodeExtensions

@@ -173,7 +173,9 @@ function Get-TreeFiles([string]$Root, [switch]$IncludeFixtures) {
         Where-Object { Test-Path -LiteralPath (Join-Path $Root $_) -PathType Leaf })
 }
 
-function Get-CsFiles([string]$Root) { @(Get-TreeFiles $Root | Where-Object { $_ -like '*.cs' }) }
+# The mod's C# sources. tools/vrclient/ holds dev-only plugins for the local test server (NyarDevTools; Epic A36), never
+# shipped and outside the mod's command, guard and mutation rules; the credential scans read them through git grep.
+function Get-CsFiles([string]$Root) { @(Get-TreeFiles $Root | Where-Object { $_ -like '*.cs' -and $_ -notlike 'tools/vrclient/*' }) }
 
 function Read-Text([string]$Root, [string]$Rel) {
     $p = Join-Path $Root $Rel
@@ -697,14 +699,16 @@ $script:ToolsCredentialPatterns = @(
 )
 # tools/ holds PowerShell, Python and Node scripts and their data only: a file of any other type (a shell or batch
 # script, or an extensionless one run through a shebang) expands variables with no marker to count, so it fails.
-# .vrs is a vrclient scenario: plain steps read by tools/vrclient/vrclient.py, never run by a shell (Epic A36).
-$script:ToolsAllowedExt = @('.ps1', '.psm1', '.py', '.mjs', '.js', '.json', '.txt', '.md', '.vrs')
-$script:ToolsScriptExt = @('.ps1', '.psm1', '.py', '.mjs', '.js')
+# .vrs is a vrclient scenario: plain steps read by tools/vrclient/vrclient.py, never run by a shell; .cs and .csproj
+# are a dev-only test-server plugin (tools/vrclient/NyarDevTools), and a .cs file may read no environment at all (Epic A36).
+$script:ToolsAllowedExt = @('.ps1', '.psm1', '.py', '.mjs', '.js', '.json', '.txt', '.md', '.vrs', '.cs', '.csproj')
+$script:ToolsScriptExt = @('.ps1', '.psm1', '.py', '.mjs', '.js', '.cs')
 # Per language: the token that reaches the environment, and the one form of it that is an allowed read.
 $script:ToolsEnvRules = @(
     @{ Ext = @('.ps1', '.psm1'); Any = '(?i)\ben[v]:'; Allowed = "(?i)\`$(?:en[v]:(?:$script:ToolsEnvAllowed)\b|\{en[v]:(?:$script:ToolsEnvAllowed)\})" },
     @{ Ext = @('.py'); Any = '\b(?:enviro[n]|gete[n]v)\b'; Allowed = "\bos\.(?:enviro[n](?:\.get\s*\(|\[)|gete[n]v\s*\()\s*[`"'](?:$script:ToolsEnvAllowed)[`"']" },
-    @{ Ext = @('.mjs', '.js'); Any = '\ben[v]\b'; Allowed = "\bprocess\.en[v]\.(?:$script:ToolsEnvAllowed)\b" }
+    @{ Ext = @('.mjs', '.js'); Any = '\ben[v]\b'; Allowed = "\bprocess\.en[v]\.(?:$script:ToolsEnvAllowed)\b" },
+    @{ Ext = @('.cs'); Any = '\bEnvironmen[t]\.'; Allowed = '(?!)' }
 )
 
 # The first credential or environment access in a tools/ script that is not allowed, or $null.

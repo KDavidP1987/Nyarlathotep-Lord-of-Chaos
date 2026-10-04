@@ -36,7 +36,7 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        new(Automation, "D18", 3, "0.8.0"), new(Automation, "D21", 3, "0.8.0"),
+        new(Automation, "D21", 3, "0.8.0"),
         new(Automation, "D23", 4, "0.8.0"), new(Automation, "D24", 4, "0.8.0"), new(Automation, "D25", 4, "0.8.0"), new(Automation, "D26", 4, "0.8.0"),
     ];
 
@@ -363,6 +363,7 @@ public static class ControlCases
              "load_keeps_next_at_or_before_boot"],
             ["draw_within_range", "tick_prunes_and_fires"], ["no_definition"]) with { Plan = Automation },
         T("D4", "FanOutKey", "EventValidationTests", ["location_not_aroundplayer", "value_bad"], ["valid_fanout"], ["fanout_object"]) with { Plan = Automation },
+        T("D18", "AutomationTemplates", "TemplateLibraryTests", ["a_field_differs"], ["as_planned"], ["none_in_an_empty_catalogue"]) with { Plan = Automation },
         T("D5", "FanOutPick", "AutomationTests", ["picks_closer_than_spacing", "ineligible_or_twice", "more_than_max", "focus_not_first"],
             ["one_centre_equals_choose", "spaced_players_in_scope_only"], ["no_players"]) with { Plan = Automation },
         T("D6", "FanOutCaps", "AutomationTests",

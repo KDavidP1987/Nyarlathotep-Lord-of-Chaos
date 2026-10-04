@@ -129,3 +129,32 @@ logs of each boot were copied to the session scratchpad before each stop.
 - warnings, all boots: ours are "event au-here stopped: 5 units queued, 0 spawns cancelled" and the example definition's
   reason; the others are Il2CppInterop's substitute notice and two Beelzebub TUNE lines. NyarDev.log: the 226
   PrefabLookupMap save-load warnings only. No [Error] line and no exception in either log
+
+### Sessions 1d-1f · 2026-09-29 · A7-A16 placement (3207666, e6c5e86, 043fa6b, with the owner)
+
+Each recorded in docs/audits/automation.md with its log check; logs in %TEMP% nyar-s1d-logs, nyar-s1e-logs and
+nyar-s1f-logs. 1d: the rock face passed; the pond and a river crossing left every point unchecked (A11, A12). 1e: the
+walk surveys read the owner's own spot as not grounded or blocked at one height level (A13, A14). 1f: on a bridge deck
+and on a strip between a pond and a cliff the player's spot read blocked at every level (A16).
+
+### Session 1g · 2026-10-04 · D33 by vrclient (d907c9d, dev world nyardev, no owner)
+
+Setup: d907c9d deployed (unchanged since 1f); the dev-only NyarDevTools plugin (tools/vrclient/NyarDevTools) for
+`.devtp`/`.devmark`; the character Chaos invulnerable (`ToggleInvulnerable`); VerboseLogging and TimingLog on. Scenario
+`tools/vrclient/scenarios/automation-reach.vrs` run once per spot: au-here (no Hunt), `debug here 60`, stop; au-hunt
+(Hunt 60), 20 s, `debug here 15`, stop. Spots: "ravine", a rock ravine by the water 40 m east of the castle, and
+"pond", a strip of land with rocks inside a pond about 140 m north-east of it (screenshots in %TEMP%\vrclient\shots).
+
+- [x] smoke and devtools scenarios: `SCENARIO PASS smoke 3/3`, `SCENARIO PASS devtools 7/7`
+- [x] ravine, au-here: "5 units queued (0 moved, 5 shortened, 0 unchecked)"; `debug here` placed all five 10-13 m from the
+  character, on the ravine floor; `SCENARIO PASS automation-reach 11/11`
+- [x] ravine, au-hunt: "5 units queued (3 moved, 2 shortened, 0 unchecked)"; after 20 s `debug here 15` listed all five
+  within 2-7 m of the character
+- [ ] pond, au-here: "5 units queued (0 moved, 0 shortened, 5 unchecked: 5 no walkable line; the player's level 10)";
+  the survey "spot moved 1 m E, level 10 … E 10 m blocked …"; the five stood about 38 m north-west, across the water.
+  The straight line from a strip inside a pond is blocked in every direction, so the units fall back to unchecked
+  points: the limit of straight lines that Session 1f foresaw (option B, a local flood fill over the tile map) → A17
+- [x] pond, au-hunt: "5 units queued (0 moved, 5 shortened, 0 unchecked)"; after 20 s all five within 1-2 m of the
+  character; `SCENARIO PASS automation-reach 11/11`
+- not run: the bridge deck (no bridge spot was found yet; world bridges are scenery, not prefab entities to look up)
+- logs: see the audit's Session 1g log-check line
