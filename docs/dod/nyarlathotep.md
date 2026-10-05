@@ -268,8 +268,8 @@ Constraints each child inherits (a child's review checks they appear verbatim or
 - raphael-api-admin · done · A27
 - regions · done · A28
 - event-spawns · done
-- automation · in-progress · A34
-- wave-sets · planned · A35
+- automation · done · A34
+- wave-sets · in-progress · A35
 - swarm · planned · A35
 - revenge · planned · A35
 - apocalypse · planned · A35
