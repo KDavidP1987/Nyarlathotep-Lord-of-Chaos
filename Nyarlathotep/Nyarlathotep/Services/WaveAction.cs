@@ -80,7 +80,7 @@ internal static class WaveAction
         // A claimed ring point counts as blocked, like an out-of-scope one, unless allowTerritory (D17).
         Func<float, float, bool> allowed = map is null || action.AllowTerritory ? inScope
             : (x, z) => (inScope is null || inScope(x, z)) && !claimed(x, z);
-        int total = 0, moved = 0, shortened = 0, spotOnly = 0, unchecked_ = 0;
+        int total = 0, queuedUnits = 0, moved = 0, shortened = 0, spotOnly = 0, unchecked_ = 0;
         var why = new List<UncheckedReason>();                                 // A11
         byte? playerLevel = null;                                              // shown for one group only (review F3; A13)
         long open = 0, plan = 0, survey = 0;                                   // A14: stopwatch ticks
@@ -105,6 +105,7 @@ internal static class WaveAction
                 {
                     var queued = SpawnTracker.RequestWave(entry.Prefab, id, entry.Count, life, new float3(gx, gy, gz), action.Radius, first,
                         groupTotal, angle, anchor, check.Walk, allowed, tuning, action.Loot, hunt, reach);
+                    queuedUnits += queued.Queued;
                     moved += queued.Moved;
                     shortened += queued.Shortened;
                     spotOnly += queued.SpotOnly;
@@ -136,7 +137,7 @@ internal static class WaveAction
 #if DEBUG
             if (location.Type == LocationType.AroundPlayer) PhantomGroupLine(id, due.Wave, group);   // never a stale pick's (review F6)
 #endif
-        }, outcome => EventRuntime.Engine.WaveDecided(id, outcome));
+        }, outcome => EventRuntime.Engine.WaveDecided(id, outcome, now, queuedUnits));
         if (decision.Outcome != WaveOutcome.Spawn) return;
         var levelText = level is { } h ? $", walk h {h}" : "";
         var where = location.Type == LocationType.AroundPlayer ? $" {WaveLines.AroundPlayers(decision.Groups.Count)}" : "";

@@ -378,6 +378,11 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
         return WaveSchedule.Due(a, utcNow, w => cleared?.Invoke(id, w) ?? false) is { } wave ? new WaveDue(a, wave, action.Waves) : null;
     }
 
+    /// <summary>The cleared read of <see cref="NextWave"/> and <see cref="Complete"/> over <paramref name="ledger"/>: each
+    /// running instance's wave, counting only units spawned since that instance started (A3).</summary>
+    public Func<string, int, bool> ClearedBy(SpawnLedger ledger) =>
+        (id, wave) => _active.TryGetValue(id, out var a) && ledger.WaveCleared(id, wave, a.Instance.StartedUtc);
+
     /// <summary>A wave of <paramref name="id"/> was queued: counted, and reported with its number in the schedule.
     /// <paramref name="at"/> is its decision time (the start when not given) and <paramref name="queued"/> its unit count
     /// (unknown: -1, taken as fought), kept for a waveList's schedule and victory (wave-sets D4, D7).</summary>
@@ -391,8 +396,9 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
 
     /// <summary>The one report of a decided wave (automation D17): a spawned wave, however many groups it fanned out to, is
     /// counted and pushed once; NoWave (blocked) is neither counted nor used, as in 0.7.0; any other outcome is a skipped
-    /// wave. A spawned wave that queued 0 units (the tracked cap full) is not fought (wave-sets D4, D7).</summary>
-    public void WaveDecided(string id, WaveOutcome outcome, DateTime? at = null, int queued = -1)
+    /// wave. A spawned wave that queued 0 units (the tracked cap full) is not fought (wave-sets D4, D7). The decision time
+    /// and the queued count are required, so the waveList schedule never takes the start for a later wave's time (review F3).</summary>
+    public void WaveDecided(string id, WaveOutcome outcome, DateTime at, int queued)
     {
         if (outcome == WaveOutcome.NoWave) return;
         if (outcome == WaveOutcome.Spawn) WaveSpawned(id, at, queued);

@@ -134,7 +134,7 @@ public class ScoreboardTests
     {
         var s = new ScoreSummary([new("Chaos", 12, 1, 1), new("Mira", 7, 0, 2), new("Lux", 1, 3, 3)], 5, 25, 6);
         Assert.Equal(
-            ["Bandit raid scoreboard: 1. Chaos 12 kills, 1 death; 2. Mira 7 kills, 0 deaths; 3. Lux 1 kill, 3 deaths",
+            ["Bandit raid scoreboard: 1. Chaos 12 kills, 1 deaths; 2. Mira 7 kills, 0 deaths; 3. Lux 1 kills, 3 deaths",
              "5 players, 25 kills, 6 deaths"],
             Messages.ScoreboardLines("Bandit raid", s));
     }
@@ -166,7 +166,7 @@ public class ScoreboardTests
         Assert.DoesNotContain("<", line);
         Assert.DoesNotContain(">", line);
         Assert.DoesNotContain(line, c => char.IsControl(c));
-        var shown = line[(line.IndexOf("1. ", StringComparison.Ordinal) + 3)..line.IndexOf(" 1 kill", StringComparison.Ordinal)];
+        var shown = line[(line.IndexOf("1. ", StringComparison.Ordinal) + 3)..line.IndexOf(" 1 kills", StringComparison.Ordinal)];
         Assert.True(shown.Length <= 20, shown);
     }
 

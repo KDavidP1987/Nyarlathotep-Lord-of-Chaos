@@ -178,15 +178,29 @@ public class WaveSetTests
         Assert.Equal(2, engine.NextWave("ws", T0.AddSeconds(65), clears.Of)!.Wave);           // decision + 60 s
     }
 
+    /// <summary>A3: the engine's cleared read counts only the running instance's units; one left by an earlier instance
+    /// (a stop and start inside the grace) does not hold wave 1.</summary>
+    [Fact]
+    public void Schedule_fails_when_an_earlier_instance_unit_holds_a_wave()
+    {
+        var ledger = new SpawnLedger(new LedgerLimits(150, 20, 10, 10));
+        ledger.Request("CHAR_Bandit_Thug", "ws-three", 1, new UnitLifetime(DateTime.MaxValue, 300), UnitTuning.None, _ => (0f, 0f, 0f), wave: 1);
+        Assert.True(ledger.Confirm(ledger.TakeSpawns().Single(), 5, T0.AddSeconds(-30)));   // the stopped instance's unit
+        var (engine, _) = Started(WsThree());
+        engine.WaveDecided("ws-three", WaveOutcome.Spawn, T0, 4);
+        Assert.Equal(2, engine.NextWave("ws-three", T0.AddSeconds(1), engine.ClearedBy(ledger))!.Wave);
+        Assert.False(engine.ClearedBy(ledger)("other", 1));                    // no running instance: never cleared
+    }
+
     [Fact]
     public void Schedule_passes_a_skipped_wave_cleared_at_its_decision()
     {
         var (engine, _) = Started(WsThree());
         var ledger = new SpawnLedger(new LedgerLimits(150, 20, 10, 10));      // a skipped wave queued nothing
-        bool Ledger(string id, int w) => ledger.WaveCleared(id, w);
-        engine.WaveDecided("ws-three", WaveOutcome.Skip, T0);
+        bool Ledger(string id, int w) => ledger.WaveCleared(id, w, T0);
+        engine.WaveDecided("ws-three", WaveOutcome.Skip, T0, 0);
         Assert.Equal(2, engine.NextWave("ws-three", T0.AddSeconds(1), Ledger)!.Wave);
-        engine.WaveDecided("ws-three", WaveOutcome.ZeroRolled, T0.AddSeconds(1));
+        engine.WaveDecided("ws-three", WaveOutcome.ZeroRolled, T0.AddSeconds(1), 0);
         Assert.Equal(3, engine.NextWave("ws-three", T0.AddSeconds(2), Ledger)!.Wave);
 
         var (capped, _) = Started(WsThree());
@@ -199,7 +213,7 @@ public class WaveSetTests
     {
         var (engine, _) = Started(WsThree());
         var clears = new Clears { Waves = { 1, 2 } };
-        engine.WaveDecided("ws-three", WaveOutcome.NoWave, T0);                 // blocked: not decided
+        engine.WaveDecided("ws-three", WaveOutcome.NoWave, T0, 0);                 // blocked: not decided
         Assert.Empty(engine.Find("ws-three")!.Decided);
         Assert.Equal(1, engine.NextWave("ws-three", T0.AddSeconds(1), clears.Of)!.Wave);   // wave 1 is still the next
     }
@@ -382,11 +396,11 @@ public class WaveSetTests
     {
         var (engine, _) = Started(WsThree());                                   // players gone: every wave skipped
         var ledger = new SpawnLedger(new LedgerLimits(150, 20, 10, 10));
-        bool Ledger(string id, int w) => ledger.WaveCleared(id, w);
+        bool Ledger(string id, int w) => ledger.WaveCleared(id, w, T0);
         var at = T0;
         while (engine.NextWave("ws-three", at, Ledger) is { } due)
         {
-            engine.WaveDecided("ws-three", WaveOutcome.Skip, at);
+            engine.WaveDecided("ws-three", WaveOutcome.Skip, at, 0);
             at = at.AddSeconds(1);
         }
         Assert.Equal(3, engine.Find("ws-three")!.WavesSkipped);
@@ -430,7 +444,7 @@ public class WaveSetTests
     {
         var (a, board) = Scored();
         var end = ScoreboardRule.End(path, a, board);
-        Assert.Equal(["Bandit raid scoreboard: 1. Chaos 1 kill, 1 death", "1 player, 1 kill, 1 death"], end.Chat);
+        Assert.Equal(["Bandit raid scoreboard: 1. Chaos 1 kills, 1 deaths", "1 players, 1 kills, 1 deaths"], end.Chat);
         Assert.Equal("event ws-three scoreboard: 1 players, 1 kills, 1 deaths", end.Log);
         Assert.Equal(0, board.Events);                                           // the rows end with the event
     }

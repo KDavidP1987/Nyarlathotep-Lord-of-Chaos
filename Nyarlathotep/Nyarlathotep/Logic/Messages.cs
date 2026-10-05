@@ -181,13 +181,11 @@ public static class Messages
     {
         var head = $"{TextSink.Clean(eventName)} scoreboard: ";
         if (summary.Top.Count == 0) return [TextSink.CutToBytes(head + "no player scored", Wire.MaxBytes)];
-        var ranks = summary.Top.Take(3).Select((r, i) => $"{i + 1}. {TextSink.Name(r.Name)} {r.Kills} {(r.Kills == 1 ? "kill" : "kills")}, " +
-            $"{r.Deaths} {(r.Deaths == 1 ? "death" : "deaths")}");
+        var ranks = summary.Top.Take(3).Select((r, i) => $"{i + 1}. {TextSink.Name(r.Name)} {r.Kills} kills, {r.Deaths} deaths");
         return
         [
             TextSink.CutToBytes(head + string.Join("; ", ranks), Wire.MaxBytes),
-            $"{summary.Players} {(summary.Players == 1 ? "player" : "players")}, {summary.Kills} {(summary.Kills == 1 ? "kill" : "kills")}, " +
-            $"{summary.Deaths} {(summary.Deaths == 1 ? "death" : "deaths")}",
+            $"{summary.Players} players, {summary.Kills} kills, {summary.Deaths} deaths",                // always plural, as D10 and D21 read
         ];
     }
 

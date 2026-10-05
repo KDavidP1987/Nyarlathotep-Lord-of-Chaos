@@ -22,7 +22,11 @@ players by kills, with their deaths, and the totals.
 - **Scoreboard** (D38, D39): kills of the event's units by players (familiars and summons credit their player),
   deaths of players to the event's units, admins left out unless `[Scoreboard] IncludeAdmins`. Shown at the natural
   end, victory and an admin stop; never on purge, restart, pillar off or a fault. Names only in those chat lines;
-  nothing is persisted.
+  nothing is persisted. At most 200 players get a row (Limits.ScoreboardPlayers, bounding memory): a further player's
+  kills and deaths add to the totals, but "<p> players" counts the rows, so it reads 200 at most. Counts are always
+  plural ("1 kills"), the form D10 and D21 give.
+- **Instances** (A3): a stop and start inside the grace leaves the earlier instance's units tracked; the running
+  instance neither waits for them to clear its waves nor credits their kills (units spawned before its start).
 - The units form is unchanged.
 
 ## Open questions

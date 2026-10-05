@@ -11,7 +11,7 @@ public partial class PushTests
     static GroupCentre[] Centres(int n) => Enumerable.Range(0, n).Select(i => new GroupCentre(i * 200f, 0, 0, false)).ToArray();
 
     /// <summary>The wave action's report of a fanned-out wave: EventEngine.WaveDecided, once per wave.</summary>
-    static void Report(EventEngine engine, FanOutDecision d, string id) => engine.WaveDecided(id, d.Outcome);
+    static void Report(EventEngine engine, FanOutDecision d, string id) => engine.WaveDecided(id, d.Outcome, T0, 1);
 
     static string Hunters => Json.Event("hunters", action: Json.ValidAction.Replace("{ \"type\": \"Point\", \"x\": -1200.5, \"z\": -800 }",
         "{ \"type\": \"AroundPlayer\", \"minDist\": 20, \"maxDist\": 40 }").TrimEnd('}') + ", \"fanOut\": { \"maxInstances\": 3, \"minSpacing\": 150 } }");
@@ -57,7 +57,7 @@ public partial class PushTests
         var calls = System.Text.RegularExpressions.Regex.Matches(source, @"\bWaveDecided\(").Count;
         if (calls != 1) problems.Add($"{calls} WaveDecided calls, not 1");
         var run = source.IndexOf("WaveRun.Run(", StringComparison.Ordinal);
-        var report = source.IndexOf("outcome => EventRuntime.Engine.WaveDecided(id, outcome));", StringComparison.Ordinal);
+        var report = source.IndexOf("outcome => EventRuntime.Engine.WaveDecided(id, outcome, now, queuedUnits));", StringComparison.Ordinal);
         if (run < 0 || report < run) problems.Add("WaveDecided is not WaveRun's report");
         return problems;
     }
@@ -89,10 +89,10 @@ public partial class PushTests
         var source = WaveActionSource();
         Assert.Empty(WaveWiringProblems(source));
         var marker = "var (gx, gy, gz) = group.Centre;";
-        Assert.Contains("2 WaveDecided calls, not 1", WaveWiringProblems(source.Replace(marker, marker + " EventRuntime.Engine.WaveDecided(id, WaveOutcome.Spawn);")));
+        Assert.Contains("2 WaveDecided calls, not 1", WaveWiringProblems(source.Replace(marker, marker + " EventRuntime.Engine.WaveDecided(id, WaveOutcome.Spawn, now, 1);")));
         Assert.Contains("reports a wave around WaveDecided", WaveWiringProblems(source + "EventRuntime.Engine.WaveSpawned(id);"));
-        Assert.Contains("WaveDecided is not WaveRun's report", WaveWiringProblems(source.Replace("outcome => EventRuntime.Engine.WaveDecided(id, outcome));",
-            "_ => { }); EventRuntime.Engine.WaveDecided(id, decision.Outcome);")));
+        Assert.Contains("WaveDecided is not WaveRun's report", WaveWiringProblems(source.Replace("outcome => EventRuntime.Engine.WaveDecided(id, outcome, now, queuedUnits));",
+            "_ => { }); EventRuntime.Engine.WaveDecided(id, decision.Outcome, now, queuedUnits);")));
     }
 
     [Fact]

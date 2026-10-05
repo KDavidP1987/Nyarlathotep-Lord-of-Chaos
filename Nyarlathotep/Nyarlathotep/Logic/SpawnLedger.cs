@@ -229,19 +229,23 @@ public sealed class SpawnLedger(LedgerLimits limits)
 
     /// <summary>True when no order (waiting or in flight) and no tracked unit of <paramref name="eventId"/>'s wave
     /// <paramref name="wave"/> remains, whatever removed them: death, despawn, lifetime, removal by the game, a failed spawn
-    /// or the event's end (wave-sets D5). Whether the wave was decided at all is the engine's to know.</summary>
-    public bool WaveCleared(string eventId, int wave)
+    /// or the event's end (wave-sets D5). Whether the wave was decided at all is the engine's to know. A unit spawned
+    /// before <paramref name="since"/> (the running instance's start) is an earlier instance's, left from a stop and start
+    /// inside the grace, and is not waited for (A3); every end cancels its waiting orders, so an order is always the
+    /// running instance's.</summary>
+    public bool WaveCleared(string eventId, int wave, DateTime since)
     {
         foreach (var o in _spawnQueue) if (o.Wave == wave && o.EventId == eventId) return false;
         foreach (var o in _inFlight.Values) if (o.Wave == wave && o.EventId == eventId) return false;
-        foreach (var u in _tracked.Values) if (u.Wave == wave && u.EventId == eventId) return false;
+        foreach (var u in _tracked.Values) if (u.Wave == wave && u.EventId == eventId && u.SpawnedUtc >= since) return false;
         return true;
     }
 
-    /// <summary>The event and wave of a tracked unit, null when the ledger does not track <paramref name="key"/> or it is
-    /// no event's (wave-sets D13).</summary>
-    public (string EventId, int Wave)? EventOf(long key) =>
-        _tracked.TryGetValue(key, out var u) && u.EventId is { } id ? (id, u.Wave) : null;
+    /// <summary>The event, wave and spawn time of a tracked unit, null when the ledger does not track
+    /// <paramref name="key"/> or it is no event's (wave-sets D13). The spawn time tells a running instance's unit from an
+    /// earlier instance's (A3).</summary>
+    public (string EventId, int Wave, DateTime SpawnedUtc)? EventOf(long key) =>
+        _tracked.TryGetValue(key, out var u) && u.EventId is { } id ? (id, u.Wave, u.SpawnedUtc) : null;
 
     /// <summary>What a purge would still take: tracked units not yet queued for despawn, plus waiting orders. Units
     /// already draining are purged already, so a second `.nyar purge confirm` finds nothing (D20).</summary>

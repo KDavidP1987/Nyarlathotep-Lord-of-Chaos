@@ -56,6 +56,12 @@ public static class EventsEditor
 
         var actionType = ev["action"] is JsonObject act && act["type"] is JsonValue tv && tv.TryGetValue<string>(out var t) ? t : null;
         if (path == "location" && value is AroundPlayerArg) path = "action.location";     // event-spawns D18
+        if (ev["action"] is JsonObject listed && listed["waveList"] is JsonArray && UnitsFormField(path))
+        {
+            // review F1: a units-form key beside waveList would only disable the event, and chat could not remove it again
+            error = Invalid(WaveListTakesWaves, Reasons.Field);
+            return null;
+        }
         if (CommandArgs.SpawnKeyFields.Contains(CommandArgs.TableName(path)) || path == CommandArgs.FanOutField)
             return SetSpawnKey(root, ev, actionType, path, value, out error);
         if (path == CommandArgs.ScoreboardField || CommandArgs.WaveListPath(path) is not null)
@@ -126,6 +132,14 @@ public static class EventsEditor
         FanOutArg f => new JsonObject { ["maxInstances"] = f.MaxInstances, ["minSpacing"] = f.MinSpacing },
         _ => null,
     };
+
+    /// <summary>A field of the units form that action.waveList replaces (wave-sets D14): action.units, action.waves,
+    /// action.intervalSeconds, an action.modifiers key or an action.units.N.chance.</summary>
+    public const string WaveListTakesWaves = EventValidator.WaveListReplaces + "; a wave list takes action.waveList.<n> fields";
+
+    static bool UnitsFormField(string path) =>
+        path is "action.units" or "action.waves" or "action.intervalSeconds"
+        || CommandArgs.ModifierFields.Contains(path) || CommandArgs.UnitChanceIndex(path) is not null;
 
     /// <summary>An event-spawns field (D18) of a SpawnWaves action, refused on any other: a unit's chance on an existing
     /// entry; a modifier into action.modifiers (created when missing; "none" removes the key, and the object once it is

@@ -97,6 +97,23 @@ public partial class CommandArgTests
         Assert.Equal(hash, lib.Hash);
     }
 
+    /// <summary>Review F1: a units-form field on a wave-list event is refused before anything is written; it would only
+    /// disable the event, and chat could not remove it again.</summary>
+    [Theory]
+    [InlineData("action.waves", "3")]
+    [InlineData("action.intervalSeconds", "60")]
+    [InlineData("action.units", "CHAR_Bandit_Thug:2")]
+    [InlineData("action.modifiers.power", "1.5")]
+    [InlineData("action.units.1.chance", "0.5")]
+    public void WaveSets_fails_when_a_units_form_field_meets_a_wave_list(string field, string value)
+    {
+        var lib = WaveLib();
+        var hash = lib.Hash;
+        Assert.Equal(EventsEditor.WaveListTakesWaves, AuthoringTests.Set(lib, "ws", field, value));
+        Assert.Equal(hash, lib.Hash);
+        Assert.True(lib.Catalog.Current.Find("ws")!.Startable);
+    }
+
     [Fact]
     public void WaveSets_passes_append_and_remove_waves()
     {

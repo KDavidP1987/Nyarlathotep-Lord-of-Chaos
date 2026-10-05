@@ -622,8 +622,9 @@ public static class EventValidator
             var prefab = Str(Required(x, "prefab", rule), rule);
             if (UnitDenyList.IsDenied(prefab) || units.IsDenied(prefab)) throw new Fail($"unit{Shown(prefab)} is deny-listed");
             if (!prefab.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(prefab)) throw new Fail($"unknown unit{Shown(prefab)}");
-            var count = Int(Required(x, "count", rule), 1, 50, $"{path}.count must be 1-50");
-            var chance = x.TryGetProperty("chance", out var ch) ? Number(ch, MinChance, 1.0, ChanceRule.Replace("action.units", path)) : 1.0;
+            var at = withModifiers ? $"{path}.{m}" : path;                                    // a wave's reason names the entry (review F6)
+            var count = Int(Required(x, "count", rule), 1, 50, $"{at}.count must be 1-50");
+            var chance = x.TryGetProperty("chance", out var ch) ? Number(ch, MinChance, 1.0, ChanceRule.Replace("action.units", at)) : 1.0;
             var modifiers = withModifiers && x.TryGetProperty("modifiers", out var mo) ? ParseModifiers(mo, $"{path}.{m}.modifiers") : null;
             list.Add(new UnitEntry(prefab, count, chance, modifiers));
         }

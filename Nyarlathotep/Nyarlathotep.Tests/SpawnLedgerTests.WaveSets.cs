@@ -15,7 +15,7 @@ public partial class SpawnLedgerTests
         var def = Json.One(Json.Event("ws"));
         var a = new ActiveEvent(new RunningInstance(def, Now, Now.AddMinutes(10)), "manual", null);
         for (var i = 0; i < decided; i++) a.Record(Now, true);
-        return WaveSchedule.Cleared(a, wave, w => l.WaveCleared("ws", w));
+        return WaveSchedule.Cleared(a, wave, w => l.WaveCleared("ws", w, Now));
     }
 
     [Fact]
@@ -23,15 +23,15 @@ public partial class SpawnLedgerTests
     {
         var l = Ledger();
         AskWave(l, "ws", 1, 2);
-        Assert.False(l.WaveCleared("ws", 1));                                    // waiting
+        Assert.False(l.WaveCleared("ws", 1, Now));                                    // waiting
         var batch = l.TakeSpawns();
-        Assert.False(l.WaveCleared("ws", 1));                                    // in flight
+        Assert.False(l.WaveCleared("ws", 1, Now));                                    // in flight
         Assert.True(l.Confirm(batch[0], 1, Now));
         l.Fail(batch[1]);                                                        // a spawn that failed
-        Assert.False(l.WaveCleared("ws", 1));                                    // one unit lives
-        Assert.Equal(("ws", 1), l.EventOf(1));
+        Assert.False(l.WaveCleared("ws", 1, Now));                                    // one unit lives
+        Assert.Equal(("ws", 1, Now), l.EventOf(1));
         Assert.True(l.Forget(1));                                                // death
-        Assert.True(l.WaveCleared("ws", 1));
+        Assert.True(l.WaveCleared("ws", 1, Now));
         Assert.Null(l.EventOf(1));
     }
 
@@ -43,9 +43,9 @@ public partial class SpawnLedgerTests
         AskWave(l, "ws", 1, 1);
         var key = SpawnAll(l).Single();
         Assert.True(l.QueueDespawn(key));
-        Assert.False(l.WaveCleared("ws", 1));                                    // queued is not gone
+        Assert.False(l.WaveCleared("ws", 1, Now));                                    // queued is not gone
         Assert.Equal([key], l.TakeDespawns());
-        Assert.True(l.WaveCleared("ws", 1));
+        Assert.True(l.WaveCleared("ws", 1, Now));
 
         // the unit lifetime
         l = Ledger();
@@ -53,13 +53,13 @@ public partial class SpawnLedgerTests
         SpawnAll(l);
         Assert.Equal(1, l.QueueDue(Now.AddSeconds(30)));
         l.TakeDespawns();
-        Assert.True(l.WaveCleared("ws", 1));
+        Assert.True(l.WaveCleared("ws", 1, Now));
 
         // removed by the game
         l = Ledger();
         AskWave(l, "ws", 1, 1);
         Assert.True(l.Forget(SpawnAll(l).Single()));
-        Assert.True(l.WaveCleared("ws", 1));
+        Assert.True(l.WaveCleared("ws", 1, Now));
 
         // the event's end: waiting orders cancelled, tracked units drained
         l = Ledger(spawnsPerTick: 1);
@@ -67,7 +67,7 @@ public partial class SpawnLedgerTests
         Assert.True(l.Confirm(l.TakeSpawns().Single(), 77, Now));
         Assert.Equal((1, 2), l.EndEvent("ws", DateTime.MaxValue));
         while (l.PendingDespawns > 0) l.TakeDespawns();
-        Assert.True(l.WaveCleared("ws", 1));
+        Assert.True(l.WaveCleared("ws", 1, Now));
     }
 
     [Fact]
@@ -78,19 +78,33 @@ public partial class SpawnLedgerTests
         AskWave(l, "other", 1, 1);
         AskWave(l, null!, 0, 1);                                                 // a .nyar spawn unit
         SpawnAll(l);
-        Assert.True(l.WaveCleared("ws", 1));
-        Assert.False(l.WaveCleared("ws", 2));
-        Assert.False(l.WaveCleared("other", 1));
+        Assert.True(l.WaveCleared("ws", 1, Now));
+        Assert.False(l.WaveCleared("ws", 2, Now));
+        Assert.False(l.WaveCleared("other", 1, Now));
     }
 
     [Fact]
     public void WaveCleared_fails_when_an_undecided_wave_reads_cleared()
     {
         var l = Ledger();
-        Assert.True(l.WaveCleared("ws", 3));                                     // the ledger alone knows no decision
+        Assert.True(l.WaveCleared("ws", 3, Now));                                     // the ledger alone knows no decision
         Assert.False(Cleared(l, 3, decided: 2));
         Assert.True(Cleared(l, 3, decided: 3));
         Assert.False(Cleared(l, 0));
+    }
+
+    /// <summary>A3: a stop and start inside the grace leaves the earlier instance's units tracked under the same event and
+    /// wave; the running instance's wave counts only units spawned since it started.</summary>
+    [Fact]
+    public void WaveCleared_fails_when_an_earlier_instance_unit_counts()
+    {
+        var l = Ledger();
+        AskWave(l, "ws", 1, 1);
+        Assert.True(l.Confirm(l.TakeSpawns().Single(), 5, Now));               // the first instance's wave-1 unit lives on
+        var restarted = Now.AddSeconds(10);
+        Assert.False(l.WaveCleared("ws", 1, Now));
+        Assert.True(l.WaveCleared("ws", 1, restarted));                         // not the new instance's to wait for
+        Assert.True(l.EventOf(5)!.Value.SpawnedUtc < restarted);                // nor its kill to credit
     }
 
     [Fact]
