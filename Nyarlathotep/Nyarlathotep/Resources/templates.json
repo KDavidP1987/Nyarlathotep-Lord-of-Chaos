@@ -157,6 +157,35 @@
         "behaviour": { "type": "Hunt", "range": 45 }
       },
       "announce": { "start": [ "The bandits want revenge: {event}." ], "end": [ "The bandits fall back. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "graveyard-waves",
+      "name": "Graveyard waves",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 900,
+      "action": {
+        "type": "SpawnWaves",
+        "waveList": [
+          { "units": [
+            { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 6, "modifiers": { "levelDelta": 1 } },
+            { "prefab": "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "count": 2, "modifiers": { "levelDelta": 1 } } ] },
+          { "units": [
+            { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 6, "modifiers": { "levelDelta": 2, "maxHealth": 1.2 } },
+            { "prefab": "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "count": 3, "modifiers": { "levelDelta": 2, "power": 1.2 } } ],
+            "afterSeconds": 120, "whenCleared": true },
+          { "units": [
+            { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 6, "modifiers": { "levelDelta": 3, "maxHealth": 1.4, "power": 1.2 } },
+            { "prefab": "CHAR_Undead_Guardian", "count": 1, "modifiers": { "level": 30, "maxHealth": 2.0, "power": 1.3 } } ],
+            "whenCleared": true }
+        ],
+        "radius": 10,
+        "location": { "type": "AroundPlayer", "minDist": 20, "maxDist": 40 },
+        "behaviour": { "type": "Hunt", "range": 45 },
+        "scoreboard": true
+      },
+      "announce": { "start": [ "The graves open: {event}." ], "end": [ "The graveyard falls silent. {event} is over." ], "warnings": false }
     }
   ]
 }

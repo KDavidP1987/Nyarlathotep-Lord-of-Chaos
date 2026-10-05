@@ -137,17 +137,18 @@ internal static class SpawnTracker
     /// each unit carries the event's <paramref name="tuning"/> (D9), <paramref name="loot"/> (D11) and
     /// <paramref name="hunt"/> tag (D13); with <paramref name="reach"/> a point needs a walkable line from the reach origin
     /// (automation A7, D32). The result carries the queued units' moved, shortened, spot-only (A16) and unchecked counts, and each unchecked
-    /// unit's reason (A11).</summary>
+    /// unit's reason (A11). <paramref name="wave"/> is the 1-based wave each order and unit carries (wave-sets D5).</summary>
     [Mutating]
     internal static (int Queued, int Moved, int Shortened, int SpotOnly, int Unchecked, List<UncheckedReason> Why) RequestWave(string prefab, string eventId, int count, UnitLifetime life,
         float3 center, float radius, int first, int total, double angle, (float X, float Y, float Z)? anchor, WaveWalk walk,
-        Func<float, float, bool> allowed = null, UnitTuning tuning = null, bool loot = false, HuntTag? hunt = null, WalkReach? reach = null)
+        Func<float, float, bool> allowed = null, UnitTuning tuning = null, bool loot = false, HuntTag? hunt = null, WalkReach? reach = null,
+        int wave = 0)
     {
         var ring = new List<(float X, float Z)>(Math.Max(0, count));
         for (var i = 0; i < count; i++) ring.Add(SpawnLedger.Around(center.x, center.z, radius, first + i, total, angle));
         var reasons = new List<UncheckedReason?>(ring.Count);
         var points = WavePoints.Plan(ring, (center.x, center.z), radius, walk, allowed, reach, reasons);
-        var result = _ledger.Request(prefab, eventId, count, life, tuning ?? UnitTuning.None, i => (points[i].X, center.y, points[i].Z), anchor, loot, hunt);
+        var result = _ledger.Request(prefab, eventId, count, life, tuning ?? UnitTuning.None, i => (points[i].X, center.y, points[i].Z), anchor, loot, hunt, wave);
         if (result.Skipped is not null) Core.Log.LogWarning($"[nyar] event {eventId} {prefab}: {result.Skipped}");
         var queued = points.Take(result.Queued).ToList();
         var (moved, unchecked_) = WavePoints.Counts(queued);
@@ -169,6 +170,10 @@ internal static class SpawnTracker
     /// ends the events and starts the cooldown.</summary>
     [Mutating]
     internal static (int Queued, int Cancelled) PurgeUnits() => _ledger.Purge();
+
+    /// <summary>The event, wave and spawn time of a tracked unit (wave-sets D13), null for anything else; read before
+    /// <see cref="Died"/> forgets it.</summary>
+    internal static OurUnit? EventOf(Entity unit) => _ledger.EventOf(KeyOf(unit));
 
     /// <summary>A unit died (Patches/DeathEventPatch). A tracked one leaves the ledger; anything else is ignored.</summary>
     internal static void Died(Entity unit)

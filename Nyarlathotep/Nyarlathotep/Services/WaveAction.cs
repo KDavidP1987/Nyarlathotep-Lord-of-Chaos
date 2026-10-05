@@ -13,7 +13,8 @@ namespace Nyarlathotep.Services;
 /// AroundPlayer, a claimed centre unless allowTerritory, the per-copy chance roll, then MaxUnitsPerWave and the free
 /// MaxTrackedUnits slots (each clamp logged). A skipped or empty wave is counted and not reported (D20). A spawned wave is
 /// queued through SpawnTracker, which spawns it within MaxSpawnsPerTick with the event's modifiers (D9), loot (D11) and
-/// Hunt tag (D13).
+/// Hunt tag (D13). A waveList wave rolls its own units and each queued unit carries its entry's tuning and its wave
+/// number (wave-sets D3, D5); its schedule reads the guarded cleared read (D4, D18).
 /// <list type="bullet">
 /// <item>A Point spawns at its stored height (event-library A20; 0 for a Point saved without one); an Admin location
 /// around the admin who started the event; an AroundPlayer location around a player Logic/PlayerPick chose once for the
@@ -40,7 +41,7 @@ internal static class WaveAction
     [Mutating]
     internal static void QueueDueWave(ActiveEvent active, DateTime now)
     {
-        if (EventRuntime.Engine.NextWave(active.Id, now) is not { } due) return;
+        if (EventRuntime.Engine.NextWave(active.Id, now, EventRuntime.Cleared) is not { } due) return;
         var id = active.Id;
         var action = active.Definition.Action!;
         var location = action.Location;
@@ -70,13 +71,12 @@ internal static class WaveAction
             centres = [new GroupCentre(cx, cy, cz, map is not null && claimed(cx, cz))];
         }
         var facts = probe with { MapFailed = mapFailed, Pick = pick };
-        var decision = WaveGate.DecideGroups(facts, centres, () => WaveRoll.Expand(action.Units, _rng), ledger.Limits.MaxPerWave,
+        var decision = WaveGate.DecideGroupEntries(facts, centres, () => WaveRoll.ExpandEntries(action.UnitsOf(due.Wave), _rng), ledger.Limits.MaxPerWave,
             ledger.Occupied, ledger.Limits.MaxTracked);
         foreach (var line in decision.CapLines) Core.Log.LogWarning($"[nyar] event {id} wave {due.Wave}: {line}");
 
         var life = SpawnLedger.Lifetime(now, active.Instance.EndsUtc, action.UnitLifetimeSeconds,
             Settings.Limit(Limits.GraceSeconds), Settings.Limit(Limits.ManualSpawnLifetimeSeconds), SpawnTracker.DrainMargin());
-        var tuning = SpawnTuning.TuningFrom(action.Modifiers);
         // A claimed ring point counts as blocked, like an out-of-scope one, unless allowTerritory (D17).
         Func<float, float, bool> allowed = map is null || action.AllowTerritory ? inScope
             : (x, z) => (inScope is null || inScope(x, z)) && !claimed(x, z);
@@ -104,7 +104,7 @@ internal static class WaveAction
                 foreach (var entry in group.Units)
                 {
                     var queued = SpawnTracker.RequestWave(entry.Prefab, id, entry.Count, life, new float3(gx, gy, gz), action.Radius, first,
-                        groupTotal, angle, anchor, check.Walk, allowed, tuning, action.Loot, hunt, reach);
+                        groupTotal, angle, anchor, check.Walk, allowed, SpawnTuning.For(action, entry), action.Loot, hunt, reach, due.Wave);
                     queuedUnits += queued.Queued;
                     moved += queued.Moved;
                     shortened += queued.Shortened;

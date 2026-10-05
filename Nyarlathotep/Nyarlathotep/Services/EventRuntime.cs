@@ -24,6 +24,22 @@ internal static class EventRuntime
 
     internal static EventEngine Engine { get; private set; } = new(EventStore.Catalog);
 
+    static readonly ClearedRead _clearedRead = new();
+
+    /// <summary>The running instances' scoreboards (wave-sets D8), in memory only; every end path ends its rows.</summary>
+    internal static Scoreboard Board { get; } = new();
+
+    /// <summary>The scoreboard's kill feed (wave-sets D13), driven by Patches/DeathEventPatch.</summary>
+    internal static ScoreFeed Feed { get; } = new();
+
+    /// <summary>The waveList schedule's cleared read (wave-sets D4, D5, D18): the ledger's WaveCleared for each running
+    /// instance's own units (A3), guarded, so a throwing read holds the wave and logs once per streak.</summary>
+    internal static Func<string, int, bool> Cleared =>
+        _clearedRead.Guard(Engine.ClearedBy(SpawnTracker.Ledger), line => Core.Log.LogWarning($"[nyar] {line}"));
+
+    /// <summary>The wave sets' health entries (HealthMonitor, `.nyar status`): a failing kill read or cleared read.</summary>
+    internal static IEnumerable<string> WaveSetHealth => Feed.Health.Concat(_clearedRead.Health);
+
     /// <summary>What `.nyar status` shows admins as degraded: pillars whose event was cancelled after its faults
     /// (D25).</summary>
     internal static IReadOnlyList<string> Degraded => _degraded;
@@ -32,6 +48,7 @@ internal static class EventRuntime
     {
         Engine = new EventEngine(EventStore.Catalog, () => Persistence.State.Document.LastStart);
         _degraded.Clear();
+        Board.Clear();                                                       // a restart shows no scoreboard (wave-sets D11)
         var doc = Persistence.State.Document;
         foreach (var instance in doc.Instances)
             Core.Log.LogInfo($"[nyar] event {instance.EventId} cancelled by restart (it was due to end {instance.EndsUtc:u})");
@@ -136,7 +153,7 @@ internal static class EventRuntime
     /// <summary>`.nyar event stop`: ends the event now and queues its units for despawn.</summary>
     [Mutating]
     internal static Outcome StopEvent(string id) =>
-        End(id, "stopped") ? AdminLines.Stopped(id) : AdminLines.NotActive(id);
+        End(id, "stopped", EndPath.Stop) ? AdminLines.Stopped(id) : AdminLines.NotActive(id);
 
     /// <summary>The kill switch (D20): ends every event, cancels every waiting spawn, queues every tracked unit and starts
     /// the PurgeCooldownSeconds window, during which nothing starts or spawns.</summary>
@@ -146,7 +163,11 @@ internal static class EventRuntime
         var cooldown = Settings.Limit(Limits.PurgeCooldownSeconds);
         var events = Engine.CancelAll(cooldown);
         var (queued, cancelled) = SpawnTracker.PurgeUnits();
-        foreach (var e in events) EndSpawnState(e.Id);                        // event-spawns D33
+        foreach (var e in events)
+        {
+            EndSpawnState(e.Id);                                             // event-spawns D33
+            ScoreboardRule.End(EndPath.Purge, e, Board);                     // its rows go, nothing shown (wave-sets D11)
+        }
         HuntAction.Clear();                                                  // seeds and kept maps go too
         TerritoryMap.Clear();
         WalkCheck.Health.Purged();                                           // every streak, `.nyar spawn`'s "manual" too (A61, A71)
@@ -185,7 +206,19 @@ internal static class EventRuntime
                 Core.Log.LogInfo($"[nyar] event {ended.Id} ended ({ended.WavesSpawned} of {ended.Definition.Action?.Waves ?? 0} waves)");
             }
             Announcer.EventEnded(ended.Definition);
+            EndScoreboard(EndPath.Natural, ended);
         }
+        // All waves defeated (wave-sets D7): a natural end now, its grace cleanup scheduled by Engine.Complete.
+        foreach (var beaten in Engine.Complete(now, Settings.Limit(Limits.GraceSeconds), Cleared))
+        {
+            RemoveInstance(beaten.Id);
+            SpawnTracker.EndEventUnits(beaten.Id, DateTime.MinValue);
+            EndSpawnState(beaten.Id);
+            Core.Log.LogInfo($"[nyar] {ScoreboardRule.VictoryLine(beaten)}");
+            Announcer.EventEnded(beaten.Definition);
+            EndScoreboard(EndPath.Victory, beaten);
+        }
+        Board.Keep(Engine.Active.Select(a => a.Id).ToHashSet());             // no row outlives its instance (D8)
         foreach (var cleanup in Engine.DueCleanups(now))
         {
             var (queued, _) = SpawnTracker.EndEventUnits(cleanup.EventId, cleanup.SpawnedBefore, cancelOrders: false);
@@ -212,7 +245,7 @@ internal static class EventRuntime
                 var limit = Engine.Fault(active.Id);
                 Core.Log.LogError($"[nyar] event {active.Id} tick failed ({active.Faults}/{EventEngine.FaultLimit}): {ex.Message}");
                 if (!limit) continue;
-                End(active.Id, $"cancelled after {EventEngine.FaultLimit} faults");
+                End(active.Id, $"cancelled after {EventEngine.FaultLimit} faults", EndPath.Fault);
                 var note = $"{active.Definition.Pillar.ToString().ToLowerInvariant()} (event {active.Id} faulted)";
                 if (!_degraded.Contains(note)) _degraded.Add(note);
             }
@@ -232,9 +265,9 @@ internal static class EventRuntime
     /// stop path and returns their ids, in ordinal order.</summary>
     internal static IReadOnlyList<string> EndPillar(Pillar pillar) =>
         Engine.Active.Where(a => a.Definition.Pillar == pillar).Select(a => a.Id).OrderBy(x => x, StringComparer.Ordinal).ToList()
-            .Where(id => End(id, "ended (pillar off)")).ToList();
+            .Where(id => End(id, "ended (pillar off)", EndPath.PillarOff)).ToList();
 
-    static bool End(string id, string why)
+    static bool End(string id, string why, EndPath path)
     {
         var ended = Engine.Cancel(id);
         if (ended is null) return false;
@@ -252,7 +285,18 @@ internal static class EventRuntime
             Core.Log.LogWarning($"[nyar] event {id} {why}: {queued} units queued, {cancelled} spawns cancelled");
         }
         Announcer.EventEnded(ended.Definition);
+        EndScoreboard(path, ended);
         return true;
+    }
+
+    /// <summary>Ends <paramref name="ended"/>'s scoreboard on <paramref name="path"/> (wave-sets D11): shown after the end
+    /// banner at the natural end, all waves defeated and an admin stop, its log line counts only; silent otherwise.</summary>
+    static void EndScoreboard(EndPath path, ActiveEvent ended)
+    {
+        var shown = ScoreboardRule.End(path, ended, Board);
+        if (shown.Log is not { } log) return;
+        Core.Log.LogInfo($"[nyar] {log}");
+        Announcer.Scoreboard(ended.Id, shown.Chat);
     }
 
     static void RemoveInstance(string id)

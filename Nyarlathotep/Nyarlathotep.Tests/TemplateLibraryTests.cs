@@ -6,7 +6,7 @@ namespace Nyarlathotep.Tests;
 /// <summary>event-library D1 (the catalogue file) and D2 (the six starter templates). The real Resources/templates.json
 /// is copied to the test output; the unit and faction names the fakes know are written out here from Reference
 /// Data/unit_index.tsv (S-4, S-5), independently of the file.</summary>
-public class TemplateLibraryTests
+public partial class TemplateLibraryTests
 {
     static readonly string[] BanditVBloods =
     [
@@ -25,7 +25,7 @@ public class TemplateLibraryTests
 
     /// <summary>The test catalog fakes: every unit S-4 and S-5 name, and the default factions.</summary>
     internal static FakeUnits Units(params string[] extra) => new(
-        new[] { "CHAR_Bandit_Thug", "CHAR_Bandit_Hunter", "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane",
+        new[] { "CHAR_Bandit_Thug", "CHAR_Bandit_Hunter", "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "CHAR_Undead_Guardian",
             "CHAR_Militia_Light", "CHAR_Militia_Crossbow" }
             .Concat(BanditVBloods).Concat(MilitiaVBloods).Concat(extra).ToArray()) { Regions = FakeRegions.All() };
 
@@ -46,10 +46,10 @@ public class TemplateLibraryTests
     {
         var c = Real();
         Assert.Null(c.Error);
-        Assert.Equal(9, c.Templates.Count);
+        Assert.Equal(10, c.Templates.Count);
         Assert.Empty(TemplateCatalog.Problems(c, DefaultIds()));
         Assert.Matches("^\\{\\s*\"SchemaVersion\": 1,", RealText);                 // the key spelled as the validator needs it
-        Assert.Equal(9, c.ValidCount);
+        Assert.Equal(10, c.ValidCount);
     }
 
     [Theory]
@@ -134,7 +134,7 @@ public class TemplateLibraryTests
     static List<string> Differences(TemplateCatalog c)
     {
         var diffs = new List<string>();
-        var total = Expected.Length + AutomationExpected.Length;                    // the six starters and automation D18's three
+        var total = Expected.Length + AutomationExpected.Length + 1;                // the six starters, automation D18's three, graveyard-waves
         if (c.Templates.Count != total) diffs.Add($"{c.Templates.Count} templates, not {total}");
         foreach (var e in Expected)
         {
@@ -233,12 +233,12 @@ public class TemplateLibraryTests
         else rising["action"]!["modifiers"]!["levelDelta"] = 6;                     // outside D6's -5..5
         var c = TemplateCatalog.Load(Bytes(root.ToJsonString()), Units(), Units());
         Assert.Contains(TemplateCatalog.Problems(c, DefaultIds()), p => p.StartsWith(problem, StringComparison.Ordinal));
-        Assert.Empty(TemplateCatalog.Problems(Real(), DefaultIds()));                // "templates: 9/9 valid", all disabled
+        Assert.Empty(TemplateCatalog.Problems(Real(), DefaultIds()));                // "templates: 10/10 valid", all disabled
     }
 
     [Fact]
     public void StarterTemplates_empty_no_templates() =>
-        Assert.Contains("0 templates, not 9", Differences(TemplateCatalog.Load(Bytes("{\"SchemaVersion\":1,\"events\":[]}"), Units(), Units())));
+        Assert.Contains("0 templates, not 10", Differences(TemplateCatalog.Load(Bytes("{\"SchemaVersion\":1,\"events\":[]}"), Units(), Units())));
 
     // ---- automation D18: roaming-hunters, border-watch, bandit-reprisal
 
@@ -283,7 +283,7 @@ public class TemplateLibraryTests
         Assert.Empty(AutomationDifferences(c));
         var lines = new List<string>();
         TemplateCatalog.Boot(Bytes(RealText), Units(), Units(), lines.Add, lines.Add);
-        Assert.Contains("templates: 9/9 valid", lines);
+        Assert.Contains("templates: 10/10 valid", lines);
     }
 
     [Theory]
@@ -319,7 +319,7 @@ public class TemplateLibraryTests
         {
             var lines = new List<string>();
             TemplateCatalog.Boot(Bytes(root.ToJsonString()), Units(), Units(), lines.Add, lines.Add);
-            Assert.DoesNotContain("templates: 9/9 valid", lines);
+            Assert.DoesNotContain("templates: 10/10 valid", lines);
         }
     }
     [Fact]

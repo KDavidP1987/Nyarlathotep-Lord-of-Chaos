@@ -244,8 +244,8 @@ public sealed class SpawnLedger(LedgerLimits limits)
     /// <summary>The event, wave and spawn time of a tracked unit, null when the ledger does not track
     /// <paramref name="key"/> or it is no event's (wave-sets D13). The spawn time tells a running instance's unit from an
     /// earlier instance's (A3).</summary>
-    public (string EventId, int Wave, DateTime SpawnedUtc)? EventOf(long key) =>
-        _tracked.TryGetValue(key, out var u) && u.EventId is { } id ? (id, u.Wave, u.SpawnedUtc) : null;
+    public OurUnit? EventOf(long key) =>
+        _tracked.TryGetValue(key, out var u) && u.EventId is { } id ? new OurUnit(id, u.Wave, u.SpawnedUtc) : null;
 
     /// <summary>What a purge would still take: tracked units not yet queued for despawn, plus waiting orders. Units
     /// already draining are purged already, so a second `.nyar purge confirm` finds nothing (D20).</summary>

@@ -29,7 +29,7 @@ public partial class SpawnLedgerTests
         Assert.True(l.Confirm(batch[0], 1, Now));
         l.Fail(batch[1]);                                                        // a spawn that failed
         Assert.False(l.WaveCleared("ws", 1, Now));                                    // one unit lives
-        Assert.Equal(("ws", 1, Now), l.EventOf(1));
+        Assert.Equal(new OurUnit("ws", 1, Now), l.EventOf(1));
         Assert.True(l.Forget(1));                                                // death
         Assert.True(l.WaveCleared("ws", 1, Now));
         Assert.Null(l.EventOf(1));

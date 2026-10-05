@@ -519,7 +519,7 @@ public class SpawnPlacementTests
         // WaveAction passes the reach of each group (A7)
         var source = PushTests.WaveActionSource();
         Assert.Contains("WavePlan.Reach(location, (gx, gz), group.Index < origins.Count ? origins[group.Index] : null)", source);
-        Assert.Contains("action.Loot, hunt, reach);", source);
+        Assert.Contains("action.Loot, hunt, reach, due.Wave);", source);
     }
 
     [Fact]

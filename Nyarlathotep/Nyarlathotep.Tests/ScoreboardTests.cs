@@ -51,6 +51,72 @@ public class ScoreboardTests
         Assert.Equal(("Renamed", 2), (b.Summary("ws").Top[0].Name, b.Summary("ws").Top[0].Kills));
     }
 
+    static readonly DateTime T0 = new(2026, 10, 4, 20, 0, 0, DateTimeKind.Utc);
+
+    /// <summary>ws (scoreboard on) and plain (off), both running since T0.</summary>
+    static EventEngine Running()
+    {
+        static string Ev(string id, bool on) => Json.Event(id, action: "\"action\": { \"type\": \"SpawnWaves\", \"waveList\": [ { \"units\": " +
+            "[ { \"prefab\": \"CHAR_Bandit_Thug\", \"count\": 2 } ] } ], \"radius\": 10, \"location\": { \"type\": \"Point\", \"x\": 0, " +
+            "\"z\": 0 }, \"scoreboard\": " + (on ? "true" : "false") + " }");
+        var catalog = new EventCatalog();
+        Assert.Null(catalog.Reload(EventValidator.Parse(Json.File(Ev("ws", true), Ev("plain", false)), FakeUnits.Default()), FileStamp.Of(T0, [1])));
+        var engine = new EventEngine(catalog);
+        foreach (var id in new[] { "ws", "plain" })
+            Assert.Null(engine.Start(id, "manual", T0, new ControlState(false, true, new HashSet<Pillar>(Enum.GetValues<Pillar>()), 0, 3)));
+        return engine;
+    }
+
+    static readonly OurUnit WsUnit = new("ws", 1, T0.AddSeconds(5));
+
+    static ScoreSummary Credit(ScoreSides sides, ScorePlayers players)
+    {
+        var engine = Running();
+        var b = new Scoreboard();
+        ScoreRule.Credit(sides, players, engine.Find, b, includeAdmins: false);
+        return b.Summary("ws");
+    }
+
+    [Fact]
+    public void Counting_fails_when_a_native_or_another_events_unit_credits()
+    {
+        Assert.Equal(0, Credit(new ScoreSides(null, null), new ScorePlayers(P("1"), null, false)).Kills);                   // a native unit
+        Assert.Equal(0, Credit(new ScoreSides(WsUnit with { EventId = "plain" }, null), new ScorePlayers(P("1"), null, false)).Kills);
+        Assert.Equal(0, Credit(new ScoreSides(WsUnit with { EventId = "gone" }, null), new ScorePlayers(P("1"), null, false)).Kills);
+        Assert.Equal(0, Credit(new ScoreSides(WsUnit, null), new ScorePlayers(null, null, false)).Kills);                   // an NPC's kill
+        Assert.Equal(0, Credit(new ScoreSides(WsUnit, WsUnit), new ScorePlayers(null, null, true)).Kills);                  // killed itself
+        Assert.Equal(0, Credit(new ScoreSides(null, null), new ScorePlayers(null, P("1"), false)).Deaths);                  // a native killer
+        Assert.Equal(0, Credit(new ScoreSides(null, WsUnit with { EventId = "plain" }), new ScorePlayers(null, P("1"), false)).Deaths);
+    }
+
+    [Fact]
+    public void Counting_fails_when_a_familiar_or_summon_kill_is_not_credited()
+    {
+        var familiar = Credit(new ScoreSides(WsUnit, null), new ScorePlayers(null, null, false, Owner: P("1")));
+        Assert.Equal(("Player1", 1), (familiar.Top.Single().Name, familiar.Kills));
+        var summon = Credit(new ScoreSides(WsUnit, null), new ScorePlayers(null, null, false, Followed: P("2")));
+        Assert.Equal(("Player2", 1), (summon.Top.Single().Name, summon.Kills));
+        var own = Credit(new ScoreSides(WsUnit, null), new ScorePlayers(P("3"), null, false, Owner: P("4")));
+        Assert.Equal("Player3", own.Top.Single().Name);                                                                     // the killer first
+    }
+
+    [Fact]
+    public void Counting_fails_when_a_death_to_a_projectile_or_summon_is_not_credited()
+    {
+        var bolt = Credit(new ScoreSides(null, null, WsUnit), new ScorePlayers(null, P("1"), false));                       // the owner is ours
+        Assert.Equal(("Player1", 1), (bolt.Top.Single().Name, bolt.Deaths));
+        Assert.Equal(1, Credit(new ScoreSides(null, WsUnit), new ScorePlayers(null, P("1"), false)).Deaths);              // the unit itself
+    }
+
+    [Fact]
+    public void Counting_fails_when_an_earlier_instance_unit_credits()
+    {
+        var old = WsUnit with { SpawnedUtc = T0.AddSeconds(-30) };                                                           // A3
+        Assert.Equal(0, Credit(new ScoreSides(old, null), new ScorePlayers(P("1"), null, false)).Kills);
+        Assert.Equal(0, Credit(new ScoreSides(null, old), new ScorePlayers(null, P("1"), false)).Deaths);
+        Assert.False(ScoreRule.Relevant(new ScoreSides(old, old), Running().Find));
+    }
+
     [Fact]
     public void Counting_fails_when_the_201st_player_gets_a_row()
     {

@@ -13,7 +13,12 @@ public enum LineKind { Info, Warning }
 /// <summary>One server-wide line waiting to leave. <see cref="EventId"/> ties a warning to its event, so the event's
 /// end takes its unsent warnings with it; a line still queued at <see cref="NotAfterUtc"/> (a warning's wave time) is
 /// dropped rather than sent late.</summary>
-public sealed record QueuedLine(string Text, LineKind Kind, string? EventId = null, DateTime? NotAfterUtc = null);
+public sealed record QueuedLine(string Text, LineKind Kind, string? EventId = null, DateTime? NotAfterUtc = null, bool Named = false)
+{
+    /// <summary>The text a log line may carry: a <see cref="Named"/> line (the scoreboard, wave-sets D12) carries player
+    /// names, so a log line shows only what it was.</summary>
+    public string LogText => Named ? "(a scoreboard line)" : Text;
+}
 
 /// <summary>Server-wide lines leave at most one per second from a queue of at most <see cref="Capacity"/>. A full queue
 /// drops its oldest informational line, or, when every line is a wave warning, its oldest warning (the newer warning
@@ -38,7 +43,7 @@ public sealed class AnnounceQueue(Action<string> log)
             if (i < 0) i = 0;
             var dropped = _lines[i];
             _lines.RemoveAt(i);
-            log($"announce: queue full ({Capacity}); dropped the oldest {(dropped.Kind == LineKind.Info ? "informational line" : "wave warning")}: {dropped.Text}");
+            log($"announce: queue full ({Capacity}); dropped the oldest {(dropped.Kind == LineKind.Info ? "informational line" : "wave warning")}: {dropped.LogText}");
         }
         _lines.Add(line);
     }

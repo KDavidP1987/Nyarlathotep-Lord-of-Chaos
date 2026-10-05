@@ -37,7 +37,7 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        new(WaveSets, "D13", 2, "0.9.0"), new(WaveSets, "D16", 2, "0.9.0"), new(WaveSets, "D18", 2, "0.9.0"), new(WaveSets, "D23", 2, "0.9.0"),
+        new(WaveSets, "D23", 2, "0.9.0"),
         new(WaveSets, "D24", 3, "0.9.0"), new(WaveSets, "D25", 3, "0.9.0"), new(WaveSets, "D26", 3, "0.9.0"), new(WaveSets, "D27", 3, "0.9.0"),
     ];
 
@@ -56,7 +56,7 @@ public static class ControlCases
         "ReadinessTests", "LibraryDependencyFailureTests", "SpawningTests", "HealthTests",
         "HumanReplyTests", "OutcomeCodeTests", "ApiTwinTests", "RateGateTests", "ApiOverloadTests", "EventAdminTests",
         "EndPathTests", "WavePrecedenceTests", "SpawnsDependencyFailureTests", "AutomationTests", "AutomationDependencyFailureTests", "SpawnPlacementTests",
-        "WaveSetTests", "ScoreboardTests",
+        "WaveSetTests", "ScoreboardTests", "WaveSetDependencyFailureTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -477,20 +477,30 @@ public static class ControlCases
             ["the_warning_time_of_each_waveList_wave", "only_the_schedule_reading_intervalSeconds"], ["scan_of_no_files"]) with { Plan = WaveSets },
         T("D7", "Victory", "WaveSetTests", ["an_earlier_wave_still_lives", "the_waves_are_not_all_decided", "a_wave_was_not_fought",
             "the_skip_cascade_ends_the_event", "a_units_form_event_ends_early"], ["the_last_wave_cleared"], ["no_active_event"]) with { Plan = WaveSets },
-        T("D8", "Counting", "ScoreboardTests", ["the_201st_player_gets_a_row", "rows_outlive_the_event"],
+        T("D8", "Counting", "ScoreboardTests", ["the_201st_player_gets_a_row", "rows_outlive_the_event", "a_native_or_another_events_unit_credits",
+            "a_familiar_or_summon_kill_is_not_credited", "a_death_to_a_projectile_or_summon_is_not_credited", "an_earlier_instance_unit_credits"],
             ["kills_and_deaths_per_event", "ties_by_fewer_deaths_then_the_earlier_credit", "the_name_at_the_latest_credit"], ["no_credit"]) with { Plan = WaveSets },
+        T("D13", "KillRead", "WaveSetDependencyFailureTests", ["a_throwing_read_skips_died_or_a_later_death", "the_entry_outlives_a_good_read",
+            "a_read_happens_with_no_scoreboard_event", "an_edit_mid_run_stops_the_counting"], ["a_kill_and_a_death_credited"], ["no_death"]) with { Plan = WaveSets },
+        T("D18", "ClearedRead", "WaveSetDependencyFailureTests", ["a_throwing_read_starts_the_wave_or_logs_twice"], ["a_good_read_clears_the_entry"],
+            ["no_wave_waits_for_a_clear"]) with { Plan = WaveSets },
+        C("D18", "DependencySuite", "preflight -DependencySuite wave-sets",
+            ["selftest DependencySuite/bad", "selftest DependencySuite/bad-2", "selftest DependencySuite/bad-floor-spawns"], ["selftest DependencySuite/good"],
+            ["selftest DependencySuite/empty"]) with { Plan = WaveSets },
         T("D9", "Admins", "ScoreboardTests", ["an_admin_counts_with_the_key_false"], ["an_admin_with_the_key_true", "the_cfg_default_false"], ["only_admins"])
             with { Plan = WaveSets },
         T("D10", "Lines", "ScoreboardTests", ["a_line_exceeds_480_bytes", "a_fourth_name_appears", "a_name_keeps_markup"], ["the_top_three_and_the_totals"],
             ["no_player_scored"]) with { Plan = WaveSets },
-        T("D11", "EndPaths", "WaveSetTests", ["a_silent_path_shows", "an_event_without_the_key_shows"], ["the_three_showing_paths"], ["no_player_scored"])
+        T("D11", "EndPaths", "WaveSetTests", ["runtime_skips_an_end_path", "a_silent_path_shows", "an_event_without_the_key_shows"], ["the_three_showing_paths"], ["no_player_scored"])
             with { Plan = WaveSets },
-        T("D12", "WaveSets", "PrivacyTests", ["a_name_reaches_a_line", "another_builder_takes_a_player_name", "state_gains_a_property"],
+        T("D12", "WaveSets", "PrivacyTests", ["a_queued_scoreboard_line_reaches_the_log", "a_name_reaches_a_line", "another_builder_takes_a_player_name", "state_gains_a_property"],
             ["the_name_only_on_the_scoreboard"], ["no_scoreboard_key"]) with { Plan = WaveSets },
         T("D14", "WaveSets", "CommandArgTests", ["a_units_form_field_meets_a_wave_list", "value_out_of_range", "field_not_settable", "a_conversion_takes_another_field", "a_start_key_breaks_a_rule",
             "a_reply_exceeds_480_bytes", "the_table_and_settable_fields_differ"],
             ["values_in_range", "conversion_of_a_units_form_event", "append_and_remove_waves", "a_unit_modifier"], ["value"]) with { Plan = WaveSets },
         T("D15", "WaveSets", "AuthoringTests", ["a_line_exceeds_480_bytes", "the_units_form_info_changes"], ["one_line_per_wave"], ["entry_without_modifiers"])
+            with { Plan = WaveSets },
+        T("D16", "WaveSets", "TemplateLibraryTests", ["the_template_differs"], ["graveyard_waves_as_planned"], ["none_in_an_empty_catalogue"])
             with { Plan = WaveSets },
         T("D17", "WaveSets", "ContractDocTests", ["contract_lacks_a_sentence", "the_victory_end_sends_more_than_one_push"], ["api_6_and_the_two_sentences"],
             ["contract"]) with { Plan = WaveSets },

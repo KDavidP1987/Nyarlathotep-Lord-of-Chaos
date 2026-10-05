@@ -1182,6 +1182,26 @@
           ]
         }
       ]
+    },
+    "wave-sets": {
+      "categories": [
+        "kill-read",
+        "cleared-read"
+      ],
+      "rows": [
+        {
+          "name": "kill-read",
+          "kind": "tests",
+          "class": "WaveSetDependencyFailureTests",
+          "control": "KillRead"
+        },
+        {
+          "name": "cleared-read",
+          "kind": "tests",
+          "class": "WaveSetDependencyFailureTests",
+          "control": "ClearedRead"
+        }
+      ]
     }
   },
   "controlSuites": {

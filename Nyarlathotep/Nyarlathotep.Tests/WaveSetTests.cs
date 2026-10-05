@@ -471,6 +471,40 @@ public class WaveSetTests
             Assert.Same(ScoreboardEnd.None, ScoreboardRule.End(path, a, board));
     }
 
+    /// <summary>The end paths of Services/EventRuntime (D7, D11): each ends the instance's scoreboard on its own path.
+    /// Structural, since the service needs the game; the rule per path is tested above.</summary>
+    internal static List<string> RuntimeScoreGaps(string source)
+    {
+        source = source.Replace("\r\n", "\n");
+        string Body(string signature) => EndPathTests.Body(source, signature);
+        var gaps = new List<string>();
+        var tick = Body("internal static void Tick(DateTime now)");
+        if (!tick.Contains("EndScoreboard(EndPath.Natural, ended)", StringComparison.Ordinal)) gaps.Add("natural");
+        if (!tick.Contains("Engine.Complete(", StringComparison.Ordinal) || !tick.Contains("EndScoreboard(EndPath.Victory, beaten)", StringComparison.Ordinal))
+            gaps.Add("victory");
+        if (!tick.Contains("EndPath.Fault)", StringComparison.Ordinal)) gaps.Add("fault");
+        if (!tick.Contains("Board.Keep(", StringComparison.Ordinal)) gaps.Add("keep");
+        if (!Body("static bool End(string id, string why, EndPath path)").Contains("EndScoreboard(path, ended)", StringComparison.Ordinal)) gaps.Add("end");
+        if (!source.Contains("End(id, \"stopped\", EndPath.Stop)", StringComparison.Ordinal)) gaps.Add("stop");
+        if (!source.Contains("EndPath.PillarOff)", StringComparison.Ordinal)) gaps.Add("pillar off");
+        if (!Body("internal static Outcome Purge()").Contains("ScoreboardRule.End(EndPath.Purge, e, Board)", StringComparison.Ordinal)) gaps.Add("purge");
+        if (!Body("internal static void Initialize()").Contains("Board.Clear()", StringComparison.Ordinal)) gaps.Add("restart");
+        return gaps;
+    }
+
+    [Fact]
+    public void EndPaths_fails_when_runtime_skips_an_end_path()
+    {
+        var source = EndPathTests.RuntimeSource().Replace("\r\n", "\n");
+        Assert.Empty(RuntimeScoreGaps(source));
+        Assert.Equal(["natural"], RuntimeScoreGaps(source.Replace("EndScoreboard(EndPath.Natural, ended);", "")));
+        Assert.Equal(["victory"], RuntimeScoreGaps(source.Replace("EndScoreboard(EndPath.Victory, beaten);", "")));
+        Assert.Equal(["stop"], RuntimeScoreGaps(source.Replace("End(id, \"stopped\", EndPath.Stop)", "End(id, \"stopped\", EndPath.Purge)")));
+        Assert.Equal(["purge"], RuntimeScoreGaps(source.Replace("ScoreboardRule.End(EndPath.Purge, e, Board);", "")));
+        Assert.Equal(["restart"], RuntimeScoreGaps(source.Replace("Board.Clear();", "")));
+        Assert.Equal(["end"], RuntimeScoreGaps(source.Replace("EndScoreboard(path, ended);", "")));
+    }
+
     [Fact]
     public void EndPaths_empty_no_player_scored()
     {

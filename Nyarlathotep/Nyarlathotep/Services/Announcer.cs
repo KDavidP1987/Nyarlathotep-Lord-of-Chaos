@@ -63,6 +63,14 @@ internal static class Announcer
         _queue.Enqueue(new QueuedLine(Messages.EndBanner(def, _random.Next()), LineKind.Info, def.Id), DateTime.UtcNow);
     }
 
+    /// <summary>EventRuntime: an event's scoreboard (wave-sets D10, D11), queued after its end banner as informational
+    /// lines whatever EventBanners says (the admin opted in per event). Its lines carry player names, so no log line shows
+    /// their text (D12).</summary>
+    internal static void Scoreboard(string eventId, IReadOnlyList<string> lines)
+    {
+        foreach (var line in lines) _queue.Enqueue(new QueuedLine(line, LineKind.Info, eventId, Named: true), DateTime.UtcNow);
+    }
+
     /// <summary>The purge ends every event without banners; unsent warnings go.</summary>
     internal static void Purged() => _queue.DropWarnings();
 
@@ -84,7 +92,7 @@ internal static class Announcer
         if (Settings.DailyBanner.Value) QueueDailyBanner(now);
         if (_queue.Next(now) is not { } line) return;
         var reached = _broadcaster.SendToAll(TextSink.CutToBytes(line.Text, Wire.MaxBytes));
-        if (Settings.VerboseLogging.Value) Core.Log.LogInfo($"[nyar] announced to {reached}: {line.Text}");
+        if (Settings.VerboseLogging.Value) Core.Log.LogInfo($"[nyar] announced to {reached}: {line.LogText}");
     }
 
     static void QueueWarnings(DateTime now)

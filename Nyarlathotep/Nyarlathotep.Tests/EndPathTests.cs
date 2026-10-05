@@ -147,7 +147,7 @@ public class EndPathTests
 
     /// <summary>The body of the member of Services/EventRuntime.cs that <paramref name="signature"/> opens, to its closing
     /// brace at four spaces; empty when the member is missing.</summary>
-    static string Body(string source, string signature)
+    internal static string Body(string source, string signature)
     {
         var at = source.IndexOf(signature, StringComparison.Ordinal);
         if (at < 0) return "";
@@ -165,12 +165,12 @@ public class EndPathTests
         var gaps = new List<string>();
         if (!Body(source, "internal static Outcome Purge()").Contains("Health.Purged()", StringComparison.Ordinal)) gaps.Add("Purge");
         if (!Body(source, "static void EndSpawnState(string id)").Contains("Health.EventEnded(id)", StringComparison.Ordinal)) gaps.Add("EndSpawnState");
-        if (!Body(source, "static bool End(string id, string why)").Contains("EndSpawnState(id)", StringComparison.Ordinal)) gaps.Add("End");
+        if (!Body(source, "static bool End(string id, string why, EndPath path)").Contains("EndSpawnState(id)", StringComparison.Ordinal)) gaps.Add("End");
         if (!Body(source, "internal static void Tick(DateTime now)").Contains("EndSpawnState(ended.Id)", StringComparison.Ordinal)) gaps.Add("Tick");
         return gaps;
     }
 
-    static string RuntimeSource()
+    internal static string RuntimeSource()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "tools", "preflight.ps1"))) dir = dir.Parent;
