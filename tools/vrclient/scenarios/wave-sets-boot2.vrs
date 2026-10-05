@@ -1,0 +1,59 @@
+# wave-sets-boot2.vrs: wave-sets D21 and D22 (Session 1, second boot). (1) With [Scoreboard] IncludeAdmins = false,
+# Chaos kills every wave and the scoreboard reads "no player scored" (D21). (2) A purge at wave 2 shows no scoreboard
+# and leaves 0 tracked (D22). The purge's cooldown ends the session's event starts, so it runs last.
+# Needs: the boot after wave-sets-prep-restart.vrs, its restart lines checked; IncludeAdmins = false.
+ensure
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+chat .nyar status
+expect-reply tracked units: 0
+# 1. admins not counted
+chat .nyar event reload
+expect-log events: reloaded
+mark
+chat .nyar event start ws-three
+expect-log event ws-three wave 1/3 timeout=30
+wait 12
+chat .devkill -1584807109 50
+wait 3
+chat .devkill -1584807109 50
+expect-log event ws-three wave 1 cleared timeout=20
+expect-log event ws-three wave 2/3 timeout=20
+wait 12
+chat .devkill -1584807109 50
+wait 3
+chat .devkill -1584807109 50
+expect-log event ws-three wave 2 cleared timeout=20
+expect-log event ws-three wave 3/3 timeout=20
+wait 12
+chat .devkill -1584807109 50
+wait 3
+chat .devkill -1584807109 50
+expect-log event ws-three ended: all waves defeated \(3 of 3 waves\) timeout=20
+expect-log event ws-three scoreboard: 0 players, 0 kills, 0 deaths
+expect-chat scoreboard: no player scored timeout=20
+shot full ws-noadmins
+wait 35
+# 2. purge at wave 2
+console ToggleInvulnerable true
+wait 2
+mark
+chat .nyar event start ws-three
+expect-log event ws-three wave 1/3 timeout=30
+wait 12
+chat .devkill -1584807109 50
+wait 3
+chat .devkill -1584807109 50
+expect-log event ws-three wave 2/3 timeout=20
+wait 12
+chat .nyar purge
+expect-reply purge confirm
+chat .nyar purge confirm
+expect-log purge: 1 events ended
+expect-no-log scoreboard: timeout=10
+wait 20
+chat .nyar status
+expect-reply tracked units: 0

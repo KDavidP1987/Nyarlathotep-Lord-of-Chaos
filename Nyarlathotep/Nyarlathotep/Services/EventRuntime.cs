@@ -208,6 +208,7 @@ internal static class EventRuntime
             Announcer.EventEnded(ended.Definition);
             EndScoreboard(EndPath.Natural, ended);
         }
+        foreach (var (id, wave) in Engine.NewlyCleared(Cleared)) Core.Log.LogInfo($"[nyar] event {id} wave {wave} cleared");   // D20
         // All waves defeated (wave-sets D7): a natural end now, its grace cleanup scheduled by Engine.Complete.
         foreach (var beaten in Engine.Complete(now, Settings.Limit(Limits.GraceSeconds), Cleared))
         {

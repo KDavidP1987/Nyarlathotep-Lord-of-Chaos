@@ -192,6 +192,25 @@ public class WaveSetTests
         Assert.False(engine.ClearedBy(ledger)("other", 1));                    // no running instance: never cleared
     }
 
+    /// <summary>D20's "wave &lt;k&gt; cleared" line: each fought wave once per instance, never a skipped or empty one.</summary>
+    [Fact]
+    public void Schedule_fails_when_a_cleared_wave_reports_twice_or_unfought()
+    {
+        var (engine, _) = Started(WsThree());
+        var clears = new Clears();
+        engine.WaveDecided("ws-three", WaveOutcome.Spawn, T0, 4);
+        Assert.Empty(engine.NewlyCleared(clears.Of));                           // wave 1 alive
+        clears.Waves.Add(1);
+        Assert.Equal([("ws-three", 1)], engine.NewlyCleared(clears.Of));
+        Assert.Empty(engine.NewlyCleared(clears.Of));                           // once
+        engine.WaveDecided("ws-three", WaveOutcome.Skip, T0.AddSeconds(5), 0);
+        clears.Waves.Add(2);
+        Assert.Empty(engine.NewlyCleared(clears.Of));                           // a skipped wave is never reported
+        var (units, _) = Started(Json.Event("raid"));
+        units.WaveDecided("raid", WaveOutcome.Spawn, T0, 2);
+        Assert.Empty(units.NewlyCleared((_, _) => true));                      // the units form has no cleared line
+    }
+
     [Fact]
     public void Schedule_passes_a_skipped_wave_cleared_at_its_decision()
     {

@@ -73,7 +73,7 @@ internal static class DeathEventPatch
                     }
                     if (wantsScore) read.Sides = feed.Before(() => ScoreReader.Sides(death.Killer, death.Died), ScoreLog);
                     return read;
-                }, death => SpawnTracker.Died(death.Died), (death, read) =>
+                }, death => SpawnTracker.Died(death.Died, death.Killer), (death, read) =>
                 {
                     // faction-empowerment D13: a V Blood kill carries VBloodConsumeSource; a gate boss with VBloodUnit alone
                     // raises nothing (DEV_REMINDERS #26). Guarded per death, so a throw never skips this death's kill feed

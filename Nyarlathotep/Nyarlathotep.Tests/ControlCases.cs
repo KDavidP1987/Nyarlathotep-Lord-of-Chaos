@@ -468,7 +468,7 @@ public static class ControlCases
         T("D2", "ScoreboardKey", "EventValidationTests", ["not_a_boolean"], ["both_forms_and_defaults_off"], ["key_absent"]) with { Plan = WaveSets },
         T("D3", "EntryTuning", "WaveSetTests", ["two_entries_of_one_prefab_merge", "a_clamp_drops_an_entry_tuning", "the_deal_drops_an_entry_tuning"],
             ["the_chance_roll_with_its_entry", "units_form_one_tuning_per_action"], ["entry_without_modifiers"]) with { Plan = WaveSets },
-        T("D4", "Schedule", "WaveSetTests", ["an_earlier_instance_unit_holds_a_wave", "a_blocked_wave_releases_its_successor", "a_wave_due_at_the_end_spawns", "the_units_form_changes"],
+        T("D4", "Schedule", "WaveSetTests", ["an_earlier_instance_unit_holds_a_wave", "a_cleared_wave_reports_twice_or_unfought", "a_blocked_wave_releases_its_successor", "a_wave_due_at_the_end_spawns", "the_units_form_changes"],
             ["the_earlier_of_after_and_cleared", "a_cleared_only_wave_only_after_the_clear", "an_after_only_wave_without_the_clear",
              "a_skipped_wave_cleared_at_its_decision"], ["no_wave_left"]) with { Plan = WaveSets },
         T("D5", "WaveCleared", "SpawnLedgerTests", ["an_earlier_instance_unit_counts", "a_pending_order_or_a_live_unit_remains", "another_event_or_wave_counts", "an_undecided_wave_reads_cleared"],

@@ -237,6 +237,8 @@ public sealed class ActiveEvent(RunningInstance instance, string trigger, (float
     /// <summary>Each used wave's decision time and whether it queued a unit, in wave order (wave-sets D4, D7).</summary>
     public IReadOnlyList<WaveRecord> Decided => _decided;
     internal void Record(DateTime at, bool fought) => _decided.Add(new WaveRecord(at, fought));
+    /// <summary>The fought waves already reported cleared (wave-sets D20's "wave &lt;k&gt; cleared" line), each once.</summary>
+    internal readonly HashSet<int> ReportedCleared = [];
 }
 
 /// <summary>A used wave: when it was decided (spawned, skipped or rolled no unit) and whether it queued at least one unit
@@ -382,6 +384,21 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
     /// running instance's wave, counting only units spawned since that instance started (A3).</summary>
     public Func<string, int, bool> ClearedBy(SpawnLedger ledger) =>
         (id, wave) => _active.TryGetValue(id, out var a) && ledger.WaveCleared(id, wave, a.Instance.StartedUtc);
+
+    /// <summary>The fought waves of the running waveList events that the cleared read now finds cleared and that were not
+    /// reported yet (wave-sets D20: "event &lt;id&gt; wave &lt;k&gt; cleared"), each once per instance. A skipped wave or one
+    /// that queued nothing was never fought and is not reported.</summary>
+    public IReadOnlyList<(string Id, int Wave)> NewlyCleared(Func<string, int, bool> cleared)
+    {
+        var found = new List<(string, int)>();
+        foreach (var a in _active.Values)
+        {
+            if (a.Definition.Action is not { WaveList: not null }) continue;
+            for (var k = 1; k <= a.Decided.Count; k++)
+                if (a.Decided[k - 1].Fought && !a.ReportedCleared.Contains(k) && cleared(a.Id, k) && a.ReportedCleared.Add(k)) found.Add((a.Id, k));
+        }
+        return found;
+    }
 
     /// <summary>A wave of <paramref name="id"/> was queued: counted, and reported with its number in the schedule.
     /// <paramref name="at"/> is its decision time (the start when not given) and <paramref name="queued"/> its unit count

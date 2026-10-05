@@ -1,0 +1,29 @@
+# wave-sets-timing.vrs: wave-sets D23 (Session 1, first boot): ws-three with its waves left alive holds 10 or more
+# tracked units for eleven timing windows, for -TimingSpan -Windows 10 -MinTracked 10. At the pond: the ravine is
+# close enough to the castle that a wave's centre can land in its territory (wave 1 skipped there).
+# ws-three runs 1800 s here with every entry CHAR_Undead_SkeletonSoldier_Armored_Farbane at level 30: the Withered
+# skeletons of the other runs decay or fall to native units within about ten minutes (a wave cleared with no kill),
+# and the span needs a health line of 10+ tracked, eleven one-minute windows and the next health line 10 minutes on.
+# Needs: what wave-sets.vrs needs; Chaos invulnerable (kept invulnerable: `ToggleInvulnerable true`, never false).
+ensure
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+chat .nyar event reload
+expect-log events: reloaded
+console ToggleInvulnerable true
+wait 2
+mark
+chat .nyar event start ws-three
+expect-log event ws-three wave 1/3 timeout=30
+expect-log wave 2(/3| of ws-three skipped) timeout=140
+wait 1500
+chat .nyar status
+expect-reply tracked units:
+chat .nyar event stop ws-three
+expect-log event ws-three stopped
+wait 40
+chat .nyar status
+expect-reply tracked units: 0

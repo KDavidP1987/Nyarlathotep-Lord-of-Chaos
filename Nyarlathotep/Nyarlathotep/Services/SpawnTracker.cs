@@ -175,13 +175,29 @@ internal static class SpawnTracker
     /// <see cref="Died"/> forgets it.</summary>
     internal static OurUnit? EventOf(Entity unit) => _ledger.EventOf(KeyOf(unit));
 
-    /// <summary>A unit died (Patches/DeathEventPatch). A tracked one leaves the ledger; anything else is ignored.</summary>
-    internal static void Died(Entity unit)
+    /// <summary>A unit died (Patches/DeathEventPatch). A tracked one leaves the ledger; anything else is ignored. With
+    /// VerboseLogging the line names <paramref name="killer"/> (wave-sets A6: units died in batches with no credit).</summary>
+    internal static void Died(Entity unit, Entity killer = default)
     {
         var key = KeyOf(unit);
         if (!_ledger.Forget(key)) return;
-        try { Left(key, "died"); }
+        try { Left(key, Settings.VerboseLogging.Value ? "died" + KillerText(killer) : "died"); }
         finally { Release(key); }
+    }
+
+    /// <summary>" (killer &lt;prefab&gt;[ player][, owner &lt;prefab&gt;[ player]])" for the died line (wave-sets A6), or
+    /// " (killer unknown)"; never a name. Never throws.</summary>
+    static string KillerText(Entity killer)
+    {
+        try
+        {
+            if (!killer.Exists()) return " (killer unknown)";
+            static string One(Entity e) => e.GetPrefabGuid().GetPrefabName() + (e.Has<PlayerCharacter>() ? " player" : "");
+            var text = " (killer " + One(killer);
+            if (killer.TryGetComponent<EntityOwner>(out var owner) && owner.Owner.Exists()) text += ", owner " + One(owner.Owner);
+            return text + ")";
+        }
+        catch { return " (killer unreadable)"; }
     }
 
     /// <summary>A66: with VerboseLogging, a tracked unit leaving the ledger outside a despawn says so. Never throws.</summary>

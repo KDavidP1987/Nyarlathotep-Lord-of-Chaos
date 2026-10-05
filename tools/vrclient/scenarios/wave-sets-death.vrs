@@ -1,0 +1,22 @@
+# wave-sets-death.vrs: wave-sets D21's death (probe 6.1): an event unit kills Chaos (.devdie, the nearest unit as the
+# killer) and the scoreboard counts 1 death. Runs last: the respawn screen is handled by hand.
+# Needs: IncludeAdmins = true, no purge cooldown; NyarDevTools (.devdie).
+ensure
+console TPHome
+wait 3
+chat .devgo ravine
+expect-log \[DEV TP\] ravine
+wait 4
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+chat .nyar event reload
+expect-log events: reloaded
+mark
+chat .nyar event start ws-three
+expect-log event ws-three wave 1/3 timeout=30
+wait 12
+chat .devdie -1584807109 40
+expect-log \[DEV DIE\] found=1
+wait 5
+shot full ws-dead
