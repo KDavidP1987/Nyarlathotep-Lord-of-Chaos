@@ -17,9 +17,9 @@
 | [regions](regions.md) | Regions — global or regional scope for triggers and actions, and release 0.6.0 | done | L | 16/16 | 16 | 31 % | nyarlathotep |
 | [spikes](spikes.md) | Spikes S1-S3, march, restart marker, carrier buff | done ⚠ 1 | M | 20/20 | 20 | 50 % | nyarlathotep |
 | [walkable-spawns](walkable-spawns.md) | Walkable spawns — the walk probe, walkable spawn points and release 0.5.1 | done | M | 12/12 | 12 | 41 % | nyarlathotep |
-| [wave-sets](wave-sets.md) | Wave sets — per-wave units and stats, waves that wait to be cleared, the event scoreboard | in-progress | L | 0/27 | 27 | 100 % | nyarlathotep |
+| [wave-sets](wave-sets.md) | Wave sets — per-wave units and stats, waves that wait to be cleared, the event scoreboard | in-progress | L | 14/27 | 27 | 77 % | nyarlathotep |
 
-Most-missed layers — done plans: layer 12.4 (33), layer 14.4 (25), layer 4.1 (21), layer 6.2 (16), layer 6.1 (16); open plans (provisional): layer 6.1 (3), layer 14.1 (2), layer 5.1 (1), layer 10.1 (1), layer 3.1 (1).
+Most-missed layers — done plans: layer 12.4 (33), layer 14.4 (25), layer 4.1 (21), layer 6.2 (16), layer 6.1 (16); open plans (provisional): layer 6.1 (3), layer 14.4 (3), layer 14.1 (2), layer 5.1 (1), layer 10.1 (1).
 Miss history — done plans: 3.1 (3 of 10) · 3.3 (3 of 10) · 4.1 (6 of 10) · 4.2 (3 of 10) · 4.3 (2 of 10) · 4.4 (4 of 10) · 4.5 (5 of 10) · 5.1 (5 of 10) · 5.2 (2 of 10) · 5.3 (3 of 10) · 6.1 (6 of 10) · 6.2 (6 of 10) · 7.1 (2 of 10) · 7.2 (3 of 10) · 7.3 (4 of 10) · 10.1 (2 of 10) · 11.2 (3 of 10) · 12.2 (5 of 10) · 12.3 (4 of 10) · 12.4 (7 of 10) · 13.1 (4 of 10) · 13.2 (2 of 10) · 14.2 (2 of 10) · 14.3 (2 of 10) · 14.4 (6 of 10)
 Rework — done plans: 0 of 231 misses corrected an earlier amendment.
 
