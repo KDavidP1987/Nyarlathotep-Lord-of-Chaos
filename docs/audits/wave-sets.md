@@ -16,6 +16,14 @@ other post-audit carries a "Codex verdict:" line pointing to it. Session log che
 - feature doc read: docs/features/WAVE_SETS.md is created by this step; docs/features/EVENT_SPAWNS.md and AUTOMATION.md read for the wave gate, the roll and the fan-out deal this child extends
 - in-game baseline: not needed (step 1 has no in-game part; Session 1 is step 2)
 
+### Step 2 · 2026-10-04 · 6e251e9
+- git status: clean at 6e251e9 (step 1 built, reviewed and post-audited)
+- compile: Release and Debug 0 Warning(s), 0 Error(s); tests: 2591 passed
+- preflight: PREFLIGHT OK
+- dod status: wave-sets 11/27 checked; `dod-index.mjs --check wave-sets` → problems 0, 1 warning (review pending, A2)
+- feature doc read: docs/features/WAVE_SETS.md Status (step 1 built) and Open questions (whether a vampire's death to an NPC's projectile raises a DeathEvent with the killer resolvable, which Session 1 answers); step 2 carries D3, D5 and D7's wiring (step 1 post-audit)
+- in-game baseline: the deployed 0.8.0 DLL (0.8.0+40e3d6a) booted on the dev server, logs first copied to %TEMP%\nyar-ws1-logs\pre-baseline: "templates: 9/9 valid", "triggers: all hooks available", "boot marker sweep: 0 found", "Nyarlathotep initialized … (attempt #1)"; 3 [Warning] lines, none new (Il2CppInterop's substitute notice, a Beelzebub TUNE line, the shipped example-empowerment reason line); 0 [Error]; -LogCheck "log check: 0 unhandled, 10 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; server stopped with taskkill (no /F) after 4 s
+
 ## Post-audit
 ### Step 1 · 2026-10-04 · aa1aece
 - built (6d7f6ad): the waveList and scoreboard schema and validation (D1, D2), per-entry tuning through the roll, the clamps and the fan-out deal (SpawnTuning.For; D3), WaveSchedule and the per-wave decision times (D4), SpawnLedger's wave on orders and units and WaveCleared (D5), the schedule readers (D6), Engine.Complete (D7), Logic/Scoreboard.cs with ScoreboardRule.End per end path (D8, D9's rule, D11's rule), Messages.ScoreboardLines (D10), the privacy boundary (D12), the `event set` wave-list fields and the conversion (D14), the `event info` wave lines (D15), the contract's two sentences (D17), the ControlCases rows and Pending entries (D19); Config/Settings.cs Scoreboard.IncludeAdmins moved here from step 2 (A2)
