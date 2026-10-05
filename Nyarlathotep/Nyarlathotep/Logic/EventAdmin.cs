@@ -37,9 +37,15 @@ public static class EventsEditor
     /// "enabled", "name", "durationSeconds", "conditions.&lt;key&gt;", "action.&lt;key&gt;" or "action.stats.&lt;stat&gt;";
     /// a missing conditions or stats object is created, a missing action is an error. A field of the other action type
     /// is refused, and so is a stat set that would leave no stat above 1.0 (faction-empowerment D12).</summary>
-    public static string? Apply(string text, string id, string path, object value, out Outcome? error)
+    public static string? Apply(string text, string id, string path, object value, out Outcome? error) =>
+        Apply(text, id, path, value, out error, out _);
+
+    /// <summary><see cref="Apply(string, string, string, object, out Outcome?)"/> with <paramref name="note"/>, the
+    /// text a wave-list conversion adds to the reply (wave-sets D14: the keys it removed).</summary>
+    public static string? Apply(string text, string id, string path, object value, out Outcome? error, out string? note)
     {
         error = null;
+        note = null;
         JsonNode? root;
         try { root = JsonNode.Parse(text, documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true }); }
         catch (JsonException) { error = FileErrors.Refusal("events.json does not parse; fix it and run .nyar event reload"); return null; }
@@ -52,6 +58,8 @@ public static class EventsEditor
         if (path == "location" && value is AroundPlayerArg) path = "action.location";     // event-spawns D18
         if (CommandArgs.SpawnKeyFields.Contains(CommandArgs.TableName(path)) || path == CommandArgs.FanOutField)
             return SetSpawnKey(root, ev, actionType, path, value, out error);
+        if (path == CommandArgs.ScoreboardField || CommandArgs.WaveListPath(path) is not null)
+            return SetWaveList(root, ev, actionType, path, value, out error, out note);
 
         if (path == "action.location" && value is PointArg && ev["action"] is JsonObject fanned && fanned["fanOut"] is not null)
         {
@@ -170,6 +178,107 @@ public static class EventsEditor
         if (value is FieldRemoval) action.Remove(key);
         else action[key] = ToNode(value);
         return root.ToJsonString(Write) + Environment.NewLine;
+    }
+
+    /// <summary>The wave-sets fields (D14) of a SpawnWaves action, refused on any other. `action.scoreboard` is set on the
+    /// action. On a units-form action only `action.waveList.1.units` is taken: it converts the action, its units becoming
+    /// wave 1 with the action's modifiers copied onto each entry, and units, waves, intervalSeconds and modifiers removed
+    /// and named in <paramref name="note"/>. On a waveList: wave n up to its length + 1 (n = length + 1 appends a wave and
+    /// takes only its units); `action.waveList.N none` removes the wave (never the last one, and a new wave 1 loses its
+    /// start keys); wave 1 takes no start key and a wave never ends with whenCleared false and no afterSeconds (D1, A1);
+    /// a unit's modifier follows SetSpawnKey's rules on that entry's modifiers.</summary>
+    static string? SetWaveList(JsonNode root, JsonObject ev, string? actionType, string path, object value, out Outcome? error, out string? note)
+    {
+        error = null;
+        note = null;
+        string Done() => root.ToJsonString(Write) + Environment.NewLine;
+        if (actionType != "SpawnWaves" || ev["action"] is not JsonObject action)
+        {
+            error = Invalid($"{CommandArgs.TableName(path)} is not {Article(actionType)} field", Reasons.Field);
+            return null;
+        }
+        if (path == CommandArgs.ScoreboardField)
+        {
+            action["scoreboard"] = ToNode(value);
+            return Done();
+        }
+        var f = CommandArgs.WaveListPath(path)!;
+        if (action["waveList"] is not JsonArray list)
+        {
+            if (f.Wave != 1 || f.Key != "units" || f.Unit is not null)
+            {
+                error = Invalid("a units-form event takes action.waveList.1.units first (it converts the event)", Reasons.Field);
+                return null;
+            }
+            var units = (JsonArray)ToNode(value)!;
+            if (action["modifiers"] is JsonObject shared)
+                foreach (var entry in units.OfType<JsonObject>()) entry["modifiers"] = JsonNode.Parse(shared.ToJsonString());
+            var dropped = EventValidator.UnitsFormKeys.Where(k => action[k] is not null).ToList();
+            foreach (var k in dropped) action.Remove(k);
+            action["waveList"] = new JsonArray(new JsonObject { ["units"] = units });
+            note = dropped.Count == 0 ? "converted to a wave list"
+                : $"converted to a wave list; removed {string.Join(", ", dropped.Select(k => "action." + k))}";
+            return Done();
+        }
+        if (f.Wave > list.Count + 1 || (f.Wave == list.Count + 1 && !(f.Key == "units" && f.Unit is null)))
+        {
+            error = Invalid($"action.waveList has {list.Count} waves; the next one is {list.Count + 1} (set its units first)", Reasons.Field);
+            return null;
+        }
+        if (f.Key is null)
+        {
+            if (list.Count == 1)
+            {
+                error = Invalid("action.waveList keeps at least one wave", Reasons.Field);
+                return null;
+            }
+            list.RemoveAt(f.Wave - 1);
+            if (list[0] is JsonObject first) { first.Remove("afterSeconds"); first.Remove("whenCleared"); }
+            return Done();
+        }
+        JsonObject wave;
+        if (f.Wave == list.Count + 1) list.Add(wave = new JsonObject());
+        else if (list[f.Wave - 1] is JsonObject w) wave = w;
+        else { error = Invalid($"action.waveList.{f.Wave} is not an object", Reasons.Field); return null; }
+        switch (f.Key)
+        {
+            case "units" when f.Unit is null:
+                wave["units"] = ToNode(value);
+                return Done();
+            case "afterSeconds" or "whenCleared":
+                if (f.Wave == 1) { error = Invalid(EventValidator.FirstWaveStart, Reasons.Field); return null; }
+                if (value is FieldRemoval) wave.Remove(f.Key);
+                else wave[f.Key] = ToNode(value);
+                if (wave["whenCleared"] is JsonValue wc && wc.TryGetValue<bool>(out var c) && !c && wave["afterSeconds"] is null)
+                {
+                    error = Invalid(EventValidator.NoStartRule(f.Wave), Reasons.Value);
+                    return null;
+                }
+                return Done();
+        }
+        if (wave["units"] is not JsonArray entries || f.Unit > entries.Count || entries[f.Unit!.Value - 1] is not JsonObject unit)
+        {
+            error = Invalid($"action.waveList.{f.Wave}.units has no entry {f.Unit}", Reasons.Field);
+            return null;
+        }
+        var mods = unit["modifiers"] as JsonObject;
+        var name = f.Modifier!;
+        if (value is FieldRemoval)
+        {
+            mods?.Remove(name);
+            if (mods is { Count: 0 }) unit.Remove("modifiers");               // an empty modifiers object is refused (D1)
+            return Done();
+        }
+        var other = name switch { "level" => "levelDelta", "levelDelta" => "level", _ => null };
+        if (other is not null && mods?[other] is not null)
+        {
+            var at = $"action.waveList.{f.Wave}.units.{f.Unit}.modifiers";
+            error = Invalid($"{EventValidator.BothLevels.Replace("action.modifiers", at)}: set {at.Replace(".modifiers", "")}.{other} none first", Reasons.Value);
+            return null;
+        }
+        if (mods is null) unit["modifiers"] = mods = new JsonObject();
+        mods[name] = ToNode(value);
+        return Done();
     }
 
     /// <summary>A new action.units list keeps the chance of each prefab the old list gave one (event-spawns D18), so
@@ -315,16 +424,25 @@ public static class EventLines
                 _ => FormattableString.Invariant($"at {a.Location.X:0.#} {a.Location.Z:0.#}") +
                      (a.Location.Y is { } h ? FormattableString.Invariant($" height {h:0.#}") : ""),
             };
-            var head = $"action: {a.Waves} waves every {a.IntervalSeconds}s, radius {a.Radius}, {where}";
             var life = a.UnitLifetimeSeconds is { } l ? $", unit lifetime {l}s" : "";
-            var units = a.Units.Select(u => $"{u.Count} {u.Prefab}").ToList();
-            var one = $"{head}, units {string.Join(", ", units)}{life}";
-            if (Encoding.UTF8.GetByteCount(one) <= Wire.MaxBytes) lines.Add(one);
+            if (a.WaveList is { } list)
+            {
+                lines.Add($"action: {a.Waves} waves, radius {a.Radius}, {where}{life}");
+                lines.AddRange(WaveLines(list));                                                 // wave-sets D15
+                lines.Add($"scoreboard: {(a.Scoreboard ? "on" : "off")}");
+            }
             else
             {
-                // Ten long prefab names overflow one chat line (event-spawns D32): the units follow on lines of their own.
-                lines.Add($"{head}{life}, units below");
-                lines.AddRange(PackList("units: ", units));
+                var head = $"action: {a.Waves} waves every {WaveSchedule.IntervalOf(a)}s, radius {a.Radius}, {where}";
+                var units = a.Units.Select(u => $"{u.Count} {u.Prefab}").ToList();
+                var one = $"{head}, units {string.Join(", ", units)}{life}";
+                if (Encoding.UTF8.GetByteCount(one) <= Wire.MaxBytes) lines.Add(one);
+                else
+                {
+                    // Ten long prefab names overflow one chat line (event-spawns D32): the units follow on lines of their own.
+                    lines.Add($"{head}{life}, units below");
+                    lines.AddRange(PackList("units: ", units));
+                }
             }
             if (SpawnKeys(a) is { } keys) lines.Add(keys);
         }
@@ -336,6 +454,41 @@ public static class EventLines
               (d.Empower is null ? $", wave {active.WavesSpawned}/{d.Action?.Waves ?? 0}" : ""));
         if (d.Trigger.Type == TriggerType.Interval && d.Enabled && NextStartLine(active is not null, nextInterval, utcNow) is { } next) lines.Add(next);
         return lines;
+    }
+
+    /// <summary>One line per waveList wave (wave-sets D15): "wave &lt;n&gt;: &lt;u&gt; units (&lt;prefab&gt; x&lt;c&gt;[ L&lt;level&gt;|L±&lt;d&gt;][ hp
+    /// x&lt;m&gt;][ pw x&lt;m&gt;][ mv x&lt;m&gt;][ as x&lt;m&gt;][ chance &lt;c&gt;], …), &lt;start rule&gt;". A wave whose line would pass
+    /// Wire.MaxBytes gets "wave &lt;n&gt;: &lt;u&gt; units, &lt;start rule&gt;, units below" and its entries packed on lines of
+    /// their own, as the units form does (event-spawns D32).</summary>
+    public static IEnumerable<string> WaveLines(IReadOnlyList<WaveSpec> list)
+    {
+        for (var n = 1; n <= list.Count; n++)
+        {
+            var w = list[n - 1];
+            var total = w.Units.Sum(u => u.Count);
+            var rule = WaveSchedule.StartRule(w, n);
+            var entries = w.Units.Select(EntryText).ToList();
+            var one = $"wave {n}: {total} units ({string.Join(", ", entries)}), {rule}";
+            if (Fits(one)) { yield return one; continue; }
+            yield return $"wave {n}: {total} units, {rule}, units below";
+            foreach (var line in PackList($"wave {n} units: ", entries)) yield return line;
+        }
+    }
+
+    /// <summary>"&lt;prefab&gt; ×&lt;count&gt;" and the entry's level ("L30", "L+3"), multipliers ("hp×1.5") and chance
+    /// (wave-sets D15).</summary>
+    public static string EntryText(UnitEntry u)
+    {
+        var b = new StringBuilder($"{u.Prefab} ×{u.Count}");
+        if (u.Modifiers is { } m)
+        {
+            if (m.Level is { } lv) b.Append(FormattableString.Invariant($" L{lv}"));
+            if (m.LevelDelta is { } d) b.Append(FormattableString.Invariant($" L{(d >= 0 ? "+" : "")}{d}"));
+            foreach (var (name, value) in new[] { ("hp", m.MaxHealth), ("pw", m.Power), ("mv", m.MoveSpeed), ("as", m.AttackSpeed) })
+                if (value != 1.0) b.Append(FormattableString.Invariant($" {name}×{value:0.##}"));
+        }
+        if (u.Chance < 1.0) b.Append(FormattableString.Invariant($" chance {u.Chance:0.######}"));
+        return b.ToString();
     }
 
     /// <summary>The Interval line of `event info` (automation D16): null while no next is drawn yet (the first poll after an
@@ -380,13 +533,15 @@ public static class EventLines
                 if (value != 1.0) mods.Add(FormattableString.Invariant($"{name} x{value:0.##}"));
             if (mods.Count > 0) parts.Add("modifiers " + string.Join(", ", mods));
         }
-        var chances = a.Units.Select((u, i) => (u.Chance, N: i + 1)).Where(u => u.Chance < 1.0)
+        // A waveList shows each entry's chance on its wave line (wave-sets D15); "#n" names action.units entries only.
+        var chances = a.WaveList is not null ? [] : a.Units.Select((u, i) => (u.Chance, N: i + 1)).Where(u => u.Chance < 1.0)
             .Select(u => FormattableString.Invariant($"#{u.N} {u.Chance:0.######}")).ToList();   // the file may hold more than 2 decimals
         if (chances.Count > 0) parts.Add("chance " + string.Join(", ", chances));      // units by entry number, as `event set` names them
         if (a.Loot) parts.Add("loot on");
         if (a.Behaviour is { Type: BehaviourType.Hunt } hunt) parts.Add($"hunt {hunt.Range} m");
         if (a.AllowTerritory) parts.Add("claimed territory allowed");
         if (a.FanOut is { } fan) parts.Add($"fanOut {fan.MaxInstances} players {fan.MinSpacing} m apart");      // automation D16
+        if (a.Scoreboard && a.WaveList is null) parts.Add("scoreboard on");      // a waveList shows its own line (wave-sets D15)
         return parts.Count == 0 ? null : "spawn: " + string.Join("; ", parts);
     }
 

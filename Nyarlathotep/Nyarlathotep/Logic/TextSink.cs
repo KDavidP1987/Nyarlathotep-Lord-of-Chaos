@@ -34,6 +34,10 @@ public static class TextSink
         return info.LengthInTextElements <= NameMax ? kept : info.SubstringByTextElements(0, NameMax);
     }
 
+    /// <summary>Text for chat, any length: '&lt;', '&gt;' and control characters removed, trimmed (wave-sets D10: the event
+    /// name on a scoreboard line).</summary>
+    public static string Clean(string? raw) => Keep(raw).Trim();
+
     /// <summary>A name for a wire value: <see cref="Name"/>, then mapped by <see cref="WireValue"/>.</summary>
     public static string WireName(string? raw) => WireValue(Name(raw));
 

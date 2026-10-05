@@ -102,6 +102,8 @@ temp: nyar-session
 temp: nyar-soak-*
 # the session log copies Claude took by hand in event-library Sessions 4 and 5 (A24); deleted the same session
 temp: nyar-s*-logs
+# the session log copies of wave-sets Session 1 (wave-sets Build plan step 2); deleted the same session
+temp: nyar-ws*-logs
 # the self-test scratch folders (event-library A14): preflight -SelfTest, preflight -DependencySuite, dev-snapshot -SelfTest
 # and rollback-drill -SelfTest create one and remove it before they exit
 temp: nyar-selftest-*

@@ -45,6 +45,9 @@ public partial class PrivacyTests
         [nameof(Messages.EndBanner)] = () => Running.SelectMany(r => Enumerable.Range(0, 3).Select(p => Messages.EndBanner(r.Definition, p))),
         [nameof(Messages.WaveWarning)] = () => Running.SelectMany(r => new[] { 300, 60, 10 }.Select(s => Messages.WaveWarning(r.Definition, 2, s, s))),
         [nameof(Messages.Pools)] = () => Messages.Pools().Values.SelectMany(p => p),
+        [nameof(Messages.ScoreboardLines)] = () =>      // wave-sets D12: the one builder that takes a player's name
+            Messages.ScoreboardLines("Bandit raid", new ScoreSummary([new ScoreRow("Chaos", 3, 1, 1)], 1, 3, 1))
+                .Concat(Messages.ScoreboardLines("Bandit raid", new ScoreSummary([], 0, 0, 0))),
         [nameof(Messages.StillLoading)] = () => [Messages.StillLoading],
         [nameof(Messages.NoActiveEvents)] = () => [Messages.NoActiveEvents],
         [nameof(Messages.EventStartPool)] = () => Messages.EventStartPool,

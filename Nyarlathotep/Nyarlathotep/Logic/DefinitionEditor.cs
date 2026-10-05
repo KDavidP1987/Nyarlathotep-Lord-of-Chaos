@@ -70,11 +70,23 @@ public sealed class DefinitionEditor(EventsFile file, IFileStore files, EventCat
         {
             // enable and disable on the state the file holds write nothing and answer changed=0 (raphael-api-admin D5)
             if (path == "enabled" && EventsEditor.Holds(text, id, (bool)value)) return EditPlan.Hold(done, id, ("changed", "0"));
-            var edited = EventsEditor.Apply(text, id, path, value, out var refusal);
+            var edited = EventsEditor.Apply(text, id, path, value, out var refusal, out var note);
             return edited is null
                 ? EditPlan.Refuse(refusal ?? EditRefused(id))
-                : new EditPlan(edited, null, done, id, fields);
+                : new EditPlan(edited, null, WaveSetReply(done, note, path, value), id, fields);
         }, units);
+    }
+
+    /// <summary>The reply of a wave-list edit (wave-sets D14): the conversion's note appended, and a units list too long
+    /// for one chat line shown as its entry count, so the reply stays within Wire.MaxBytes. Any other reply is
+    /// <paramref name="done"/>.</summary>
+    static string WaveSetReply(string done, string? note, string path, object value)
+    {
+        if (CommandArgs.WaveListPath(path) is null) return done;
+        if (note is not null) done += $"; {note}";
+        if (System.Text.Encoding.UTF8.GetByteCount(done) <= Wire.MaxBytes || value is not UnitEntry[] units) return done;
+        var head = done[..done.IndexOf(" = ", StringComparison.Ordinal)];
+        return $"{head} = {units.Length} entries, {units.Sum(u => u.Count)} units" + (note is null ? "" : $"; {note}");
     }
 
     /// <summary>Every chat write of events.json (event-library D12): reads the file, lets <paramref name="plan"/> edit its

@@ -29,17 +29,18 @@ public readonly record struct HuntTag(float X, float Z, int Range);
 
 /// <summary>One unit waiting in the spawn queue: what, for which event (null for `.nyar spawn`), where, and for how
 /// long. Its slot under MaxTrackedUnits is held from the request until it is confirmed or failed. <see cref="Loot"/> keeps
-/// the unit's drop table (event-spawns D11; off by default, Epic S-10); <see cref="Hunt"/> marks a Hunt wave's unit (D13).</summary>
+/// the unit's drop table (event-spawns D11; off by default, Epic S-10); <see cref="Hunt"/> marks a Hunt wave's unit (D13).
+/// <see cref="Wave"/> is the event's 1-based wave the order belongs to, 0 for `.nyar spawn` (wave-sets D5).</summary>
 public sealed record SpawnOrder(long Ticket, string Prefab, string? EventId, float X, float Y, float Z, int LifetimeSeconds,
-    DateTime DueUtc, UnitTuning Tuning, (float X, float Y, float Z)? Anchor = null, bool Loot = false, HuntTag? Hunt = null)
+    DateTime DueUtc, UnitTuning Tuning, (float X, float Y, float Z)? Anchor = null, bool Loot = false, HuntTag? Hunt = null, int Wave = 0)
 {
     /// <summary>True when SpawnTracker.Prepare clears the unit's DropTableBuffer: every order without loot (D11).</summary>
     public bool ClearDrops => !Loot;
 }
 
 /// <summary>A unit the ledger tracks. <see cref="Key"/> is the service's handle for the entity; at
-/// <see cref="DueUtc"/> the ledger queues it for despawn (A21).</summary>
-public sealed record TrackedUnit(long Key, string Prefab, string? EventId, DateTime SpawnedUtc, int LifetimeSeconds, DateTime DueUtc);
+/// <see cref="DueUtc"/> the ledger queues it for despawn (A21). <see cref="Wave"/> is its order's wave (wave-sets D5).</summary>
+public sealed record TrackedUnit(long Key, string Prefab, string? EventId, DateTime SpawnedUtc, int LifetimeSeconds, DateTime DueUtc, int Wave = 0);
 
 /// <summary>The limits the ledger enforces, read from the cfg (already clamped to their ceilings, D5).</summary>
 public sealed record LedgerLimits(int MaxTracked, int MaxPerWave, int SpawnsPerTick, int DespawnsPerTick);
@@ -66,7 +67,7 @@ public sealed class SpawnLedger(LedgerLimits limits)
 {
     readonly Dictionary<long, TrackedUnit> _tracked = [];
     readonly Queue<SpawnOrder> _spawnQueue = new();
-    readonly HashSet<long> _inFlight = [];
+    readonly Dictionary<long, SpawnOrder> _inFlight = [];
     readonly Queue<long> _despawnQueue = new();
     readonly HashSet<long> _queued = [];
     readonly HashSet<long> _survivors = [];
@@ -91,7 +92,8 @@ public sealed class SpawnLedger(LedgerLimits limits)
     /// <summary>Queues up to <paramref name="count"/> units, first clamped by MaxUnitsPerWave, then by the free
     /// MaxTrackedUnits slots. <paramref name="place"/> gives the position of the i-th unit.</summary>
     public SpawnRequestResult Request(string prefab, string? eventId, int count, UnitLifetime life, UnitTuning tuning,
-        Func<int, (float X, float Y, float Z)> place, (float X, float Y, float Z)? anchor = null, bool loot = false, HuntTag? hunt = null)
+        Func<int, (float X, float Y, float Z)> place, (float X, float Y, float Z)? anchor = null, bool loot = false, HuntTag? hunt = null,
+        int wave = 0)
     {
         if (count < 1) return new SpawnRequestResult(0, null);
         var n = count;
@@ -110,7 +112,7 @@ public sealed class SpawnLedger(LedgerLimits limits)
         for (var i = 0; i < n; i++)
         {
             var (x, y, z) = place(i);
-            _spawnQueue.Enqueue(new SpawnOrder(++_nextTicket, prefab, eventId, x, y, z, life.LifetimeSeconds, life.DueUtc, tuning, anchor, loot, hunt));
+            _spawnQueue.Enqueue(new SpawnOrder(++_nextTicket, prefab, eventId, x, y, z, life.LifetimeSeconds, life.DueUtc, tuning, anchor, loot, hunt, wave));
         }
         return new SpawnRequestResult(n, skipped);
     }
@@ -123,7 +125,7 @@ public sealed class SpawnLedger(LedgerLimits limits)
         while (batch.Count < limits.SpawnsPerTick && _spawnQueue.Count > 0)
         {
             var order = _spawnQueue.Dequeue();
-            _inFlight.Add(order.Ticket);
+            _inFlight[order.Ticket] = order;
             batch.Add(order);
         }
         return batch;
@@ -136,7 +138,7 @@ public sealed class SpawnLedger(LedgerLimits limits)
     {
         if (!_inFlight.Remove(order.Ticket)) return false;
         if (_tracked.ContainsKey(key)) return false;
-        _tracked.Add(key, new TrackedUnit(key, order.Prefab, order.EventId, utcNow, order.LifetimeSeconds, order.DueUtc));
+        _tracked.Add(key, new TrackedUnit(key, order.Prefab, order.EventId, utcNow, order.LifetimeSeconds, order.DueUtc, order.Wave));
         return true;
     }
 
@@ -224,6 +226,22 @@ public sealed class SpawnLedger(LedgerLimits limits)
             if (QueueDespawn(u.Key)) queued++;
         return (queued, cancelled);
     }
+
+    /// <summary>True when no order (waiting or in flight) and no tracked unit of <paramref name="eventId"/>'s wave
+    /// <paramref name="wave"/> remains, whatever removed them: death, despawn, lifetime, removal by the game, a failed spawn
+    /// or the event's end (wave-sets D5). Whether the wave was decided at all is the engine's to know.</summary>
+    public bool WaveCleared(string eventId, int wave)
+    {
+        foreach (var o in _spawnQueue) if (o.Wave == wave && o.EventId == eventId) return false;
+        foreach (var o in _inFlight.Values) if (o.Wave == wave && o.EventId == eventId) return false;
+        foreach (var u in _tracked.Values) if (u.Wave == wave && u.EventId == eventId) return false;
+        return true;
+    }
+
+    /// <summary>The event and wave of a tracked unit, null when the ledger does not track <paramref name="key"/> or it is
+    /// no event's (wave-sets D13).</summary>
+    public (string EventId, int Wave)? EventOf(long key) =>
+        _tracked.TryGetValue(key, out var u) && u.EventId is { } id ? (id, u.Wave) : null;
 
     /// <summary>What a purge would still take: tracked units not yet queued for despawn, plus waiting orders. Units
     /// already draining are purged already, so a second `.nyar purge confirm` finds nothing (D20).</summary>

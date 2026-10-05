@@ -14,7 +14,7 @@ closed: none
 recon_commit: 6caa207
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
-review: subagent
+review: pending
 ---
 
 # DoD: Wave sets — per-wave units and stats, waves that wait to be cleared, the event scoreboard
@@ -211,9 +211,12 @@ Walking the Build plan. A path created and removed inside a step is declared her
 - **Steps 1-3:** docs/audits/wave-sets.md, docs/features/WAVE_SETS.md, docs/dod/wave-sets.md, docs/dod/README.md (the regenerated index), docs/dod/nyarlathotep.md (the Epic's child status) and docs/NYARLATHOTEP_DESIGN.md (§9 D38-D41, §6).
 - **Review process:** docs/dod/wave-sets.reviews.md, docs/dod/wave-sets.review.html, docs/dod/wave-sets.html, docs/dod/dod-dashboard.html and the review prompts %TEMP%\dod-review-*.txt.
 - **Step 1:**
-  - docs/RAPHAEL_INTEGRATION_CONTRACT.md, tools/paths-manifest.txt, tools/data-inventory.json, tools/preflight-checks.json.
+  - docs/RAPHAEL_INTEGRATION_CONTRACT.md, tools/paths-manifest.txt, tools/data-inventory.json, tools/preflight-checks.json; tools/_pf.ps1 (A2: a scratch copy of preflight that lists every undeclared path, removed).
+  - Nyarlathotep/Nyarlathotep/Logic/{DefinitionEditor,TextSink}.cs and Nyarlathotep/Nyarlathotep/Config/Settings.cs (A2: the wave-list reply, the scoreboard's event name, the [Scoreboard] IncludeAdmins binding moved from step 2).
   - Nyarlathotep/Nyarlathotep/Logic/{Model,Validation,Spawning,SpawnLedger,Engine,AnnouncerCore,ApiLines,EventAdmin,CommandArgs,Authoring,Messages,Limits,Scoreboard}.cs, and Nyarlathotep/Nyarlathotep/Commands/EventCommands.cs where a usage string names the new fields.
   - Nyarlathotep/Nyarlathotep.Tests/{EventValidationTests,WaveSetTests,SpawnLedgerTests,ScoreboardTests,PrivacyTests,CommandArgTests,AuthoringTests,ContractDocTests,ControlCases,ControlCaseTests,TestSupport,FakeStores}.cs, the partials Nyarlathotep/Nyarlathotep.Tests/*.WaveSets.cs, any existing test that builds a SpawnWavesAction, UnitEntry, SpawnOrder or TrackedUnit positionally (Nyarlathotep/Nyarlathotep.Tests/*.cs), and Nyarlathotep/Nyarlathotep.Tests/Nyarlathotep.Tests.csproj.
+- **Outside the repository (A2):** %TEMP%\nyar-snap-*, %TEMP%\nyar-session, %TEMP%\nyar-soak-*, %TEMP%\nyar-rel-*, %TEMP%\nyar-secrets-index-* and the selftest scratch folders %TEMP%\nyar-{selftest,depsuite,snaptest,drilltest}-*, each written by a preflight, snapshot or selftest run and removed by it, each an existing `temp:` line of the manifest; %TEMP%\nyar-ws*-logs (Session 1, a new `temp:` line).
+- **Build outputs (A2):** Nyarlathotep/**/bin/**, Nyarlathotep/**/obj/**, *.binlog, Nyarlathotep/Nyarlathotep/dist/** and Nyarlathotep/Nyarlathotep/build/**, all existing ignored globs.
 - **Step 2:**
   - Nyarlathotep/Nyarlathotep/Services/{WaveAction,SpawnTracker,EventRuntime,Announcer,HealthMonitor,TriggerBus}.cs, Nyarlathotep/Nyarlathotep/Patches/DeathEventPatch.cs, Nyarlathotep/Nyarlathotep/Config/Settings.cs, Nyarlathotep/Nyarlathotep/Resources/templates.json.
   - Nyarlathotep/Nyarlathotep.Tests/{WaveSetDependencyFailureTests,TemplateLibraryTests,HealthTests,ControlCases}.cs, tools/preflight-checks.json (dependencySuites.wave-sets), tools/preflight-fixtures/DependencySuite/** if a floor fixture moves.
@@ -309,6 +312,8 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - [ ] D27 · **Secrets and privacy** this child adds no credential; no tracked file, built zip, dist/ or build/ file or build log holds a token or the sentinel, and no tracked line holds a platform-id digit run or the owner's mail name except lines quoting the pattern · cmd: pwsh tools/preflight.ps1 → "secrets: none (…)"; then, before each push, git grep -n -E "7656119|kdpenland" and `git log -p origin/main..main` → only lines that quote the pattern itself (fails when: a token, the sentinel, a platform id or the mail name appears in a scanned file or an unpushed commit)
 
 ## Amendments
+- A1 · 2026-10-04 · discovered · ~D1 ~D7 · layer: 4.3 · package: W1.1 · step 1 build: two combinations the plan left open. (a) A wave 2+ with `whenCleared: false` and no `afterSeconds` has no start rule (D40 names "neither key", not an explicit false): it is refused "action.waveList.<n> with whenCleared false needs afterSeconds". (b) With afterSeconds a wave can start while the one before it still stands, so "the last wave cleared" can hold with an earlier wave alive: all waves defeated needs every wave cleared, not only the last · fails when: a whenCleared-false wave without afterSeconds loads, or the event ends all waves defeated while wave 2 has a live unit and wave 3 is cleared
+- A2 · 2026-10-04 · discovered · ~D26 · layer: 14.4 · package: W1.1 · step 1 post-audit: `pwsh tools/preflight.ps1 -Paths -DeclaredOf wave-sets` read "declared: 41/61": Rollout › Paths walked missed Logic/DefinitionEditor.cs (the wave-list reply, D14) and Logic/TextSink.cs (Clean, the event name on the scoreboard line, D10) that step 1 changed, Config/Settings.cs moved from step 2 into step 1 (the [Scoreboard] IncludeAdmins binding D9's test reads), the build outputs (Nyarlathotep/**/bin, obj, dist), the tools' %TEMP% folders every preflight, snapshot and selftest run writes (nyar-snap-*, nyar-session, nyar-soak-*, nyar-rel-*, nyar-secrets-index-*, nyar-{selftest,depsuite,snaptest,drilltest}-*), and tools/_pf.ps1 (a scratch copy of preflight that lists every undeclared path, removed); Paths walked gains them, as automation A18 did · fails when: `pwsh tools/preflight.ps1 -Paths -DeclaredOf wave-sets` reports a write outside Paths walked
 
 ## Log
 - 2026-10-04 · status → draft · plan
@@ -339,3 +344,5 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-04 · note · dry-run · D27 · cmd: `pwsh tools/preflight.ps1` → "secrets: none (1840 files scanned, 1801 index blobs)"; `git grep -n -E "7656119|kdpenland"` → only lines quoting the pattern (the audits' grep records)
 - 2026-10-04 · status → ready · approve
 - 2026-10-04 · status → in-progress · start
+- 2026-10-04 · note · amendment A1 recorded before building it (discovered, layer 4.3, not a gating probe)
+- 2026-10-04 · note · amendment A2 recorded (discovered, layer 14.4, a gating probe): review pending; the re-review of A2 is owed before close

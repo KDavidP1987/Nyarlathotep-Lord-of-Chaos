@@ -49,8 +49,18 @@ public sealed record Conditions(
     GameMode Mode = GameMode.Any);
 
 /// <summary>One unit entry of a wave; each of its <see cref="Count"/> copies spawns with probability
-/// <see cref="Chance"/> (event-spawns D8), 1.0 when absent.</summary>
-public sealed record UnitEntry(string Prefab, int Count, double Chance = 1.0);
+/// <see cref="Chance"/> (event-spawns D8), 1.0 when absent. <see cref="Modifiers"/> is set only on an entry of a
+/// waveList wave (wave-sets D1, D3): that entry's own level and multipliers.</summary>
+public sealed record UnitEntry(string Prefab, int Count, double Chance = 1.0, SpawnModifiers? Modifiers = null);
+
+/// <summary>One wave of a waveList (wave-sets D1, D4): its own units, and for wave 2 onwards when it starts: after
+/// <see cref="AfterSeconds"/> from the previous wave's decision, when the previous wave is cleared
+/// (<see cref="WhenCleared"/>), whichever comes first, or when cleared with neither key set (design §9 D40).</summary>
+public sealed record WaveSpec(IReadOnlyList<UnitEntry> Units, int? AfterSeconds = null, bool WhenCleared = false)
+{
+    /// <summary>The wave starts when the previous one is cleared: whenCleared, or neither key set.</summary>
+    public bool WaitsForClear => WhenCleared || AfterSeconds is null;
+}
 
 /// <summary>Where a SpawnWaves action spawns. A Point's Y is the height (event-library A20); a Point stored without one
 /// spawns at height 0, as before. An AroundPlayer centre is <see cref="MinDist"/>..<see cref="MaxDist"/> metres from a
@@ -89,7 +99,14 @@ public sealed record SpawnWavesAction(
     bool Loot = false,
     Behaviour? Behaviour = null,
     bool AllowTerritory = false,
-    FanOut? FanOut = null);
+    FanOut? FanOut = null,
+    IReadOnlyList<WaveSpec>? WaveList = null,
+    bool Scoreboard = false)
+{
+    /// <summary>The units of wave <paramref name="wave"/> (1-based): its waveList entry's, or <see cref="Units"/> for
+    /// every wave of the units form.</summary>
+    public IReadOnlyList<UnitEntry> UnitsOf(int wave) => WaveList is { } list ? list[Math.Clamp(wave, 1, list.Count) - 1].Units : Units;
+}
 
 /// <summary>The Empower action's multipliers (faction-empowerment S-1): each 1.0–3.0 of the base value, 1.0 meaning
 /// unchanged, at least one above 1.0.</summary>

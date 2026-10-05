@@ -172,6 +172,25 @@ public static class Messages
         }
     }
 
+    /// <summary>The scoreboard of <paramref name="eventName"/> (wave-sets D10; design §9 D38): "&lt;event&gt; scoreboard: 1.
+    /// &lt;name&gt; &lt;k&gt; kills, &lt;d&gt; deaths; 2. …; 3. …" and "&lt;p&gt; players, &lt;K&gt; kills, &lt;D&gt; deaths", or the one
+    /// line "&lt;event&gt; scoreboard: no player scored". The only builder that takes a player's name (D12): each through
+    /// TextSink.Name (20 characters, no angle brackets or control characters), the event name through TextSink.Clean;
+    /// every line within Wire.MaxBytes.</summary>
+    public static IReadOnlyList<string> ScoreboardLines(string eventName, ScoreSummary summary)
+    {
+        var head = $"{TextSink.Clean(eventName)} scoreboard: ";
+        if (summary.Top.Count == 0) return [TextSink.CutToBytes(head + "no player scored", Wire.MaxBytes)];
+        var ranks = summary.Top.Take(3).Select((r, i) => $"{i + 1}. {TextSink.Name(r.Name)} {r.Kills} {(r.Kills == 1 ? "kill" : "kills")}, " +
+            $"{r.Deaths} {(r.Deaths == 1 ? "death" : "deaths")}");
+        return
+        [
+            TextSink.CutToBytes(head + string.Join("; ", ranks), Wire.MaxBytes),
+            $"{summary.Players} {(summary.Players == 1 ? "player" : "players")}, {summary.Kills} {(summary.Kills == 1 ? "kill" : "kills")}, " +
+            $"{summary.Deaths} {(summary.Deaths == 1 ? "death" : "deaths")}",
+        ];
+    }
+
     static string Choose(IReadOnlyList<string> own, IReadOnlyList<string> pool, int pick)
     {
         var list = own.Count > 0 ? own : pool;

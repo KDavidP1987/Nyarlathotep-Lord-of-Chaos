@@ -205,7 +205,7 @@ public static class WavePlan
         {
             if (left <= 0) break;
             var n = Math.Min(u.Count, left);
-            result.Add(new UnitEntry(u.Prefab, n));
+            result.Add(new UnitEntry(u.Prefab, n, 1.0, u.Modifiers));   // the entry's own tuning stays (wave-sets D3)
             left -= n;
         }
         return result;
@@ -232,6 +232,76 @@ public sealed class ActiveEvent(RunningInstance instance, string trigger, (float
     /// <summary>The waves whose time has been used, spawned or skipped: the schedule counts these (A59, A62).</summary>
     public int WavesUsed => WavesSpawned + WavesSkipped;
     public int Faults { get; internal set; }
+
+    readonly List<WaveRecord> _decided = [];
+    /// <summary>Each used wave's decision time and whether it queued a unit, in wave order (wave-sets D4, D7).</summary>
+    public IReadOnlyList<WaveRecord> Decided => _decided;
+    internal void Record(DateTime at, bool fought) => _decided.Add(new WaveRecord(at, fought));
+}
+
+/// <summary>A used wave: when it was decided (spawned, skipped or rolled no unit) and whether it queued at least one unit
+/// (wave-sets D4, D7).</summary>
+public readonly record struct WaveRecord(DateTime DecidedUtc, bool Fought);
+
+/// <summary>When a running event's next wave comes (wave-sets D4, D6; design §9 D40), the one place that reads a
+/// SpawnWavesAction's IntervalSeconds. The units form: wave k (0-based) at start + k × intervalSeconds. A waveList: wave 1
+/// at the start; wave k ≥ 2 at the earlier of wave k−1's decision + afterSeconds and the first tick wave k−1 is cleared
+/// (whenCleared, or neither key set). A wave due at or after the event's end never comes.</summary>
+public static class WaveSchedule
+{
+    /// <summary>The next wave's number when it is due at <paramref name="utcNow"/>, else null. <paramref name="cleared"/>
+    /// answers whether a decided wave (1-based) of this event has no order and no unit left; it is read only for a
+    /// waveList wave that waits for a clear.</summary>
+    public static int? Due(ActiveEvent a, DateTime utcNow, Func<int, bool> cleared)
+    {
+        if (a.Definition.Action is not { } action || a.WavesUsed >= action.Waves) return null;
+        var next = a.WavesUsed + 1;
+        if (KnownAt(a) is { } at && at <= utcNow) return at < a.Instance.EndsUtc ? next : null;
+        if (action.WaveList is { } list && next >= 2 && list[next - 1].WaitsForClear && utcNow < a.Instance.EndsUtc && Cleared(a, next - 1, cleared))
+            return next;
+        return null;
+    }
+
+    /// <summary>The next wave's time when it is known in advance, for its warnings and `event info`: the units form's
+    /// slot, a waveList's start for wave 1 or wave k−1's decision + afterSeconds; null for a wave that only waits for a
+    /// clear, or when no wave is left. The caller drops a time at or after the event's end.</summary>
+    public static DateTime? KnownAt(ActiveEvent a)
+    {
+        if (a.Definition.Action is not { } action || a.WavesUsed >= action.Waves) return null;
+        if (action.WaveList is not { } list) return a.Instance.StartedUtc.AddSeconds((double)a.WavesUsed * action.IntervalSeconds);
+        var next = a.WavesUsed + 1;
+        if (next == 1) return a.Instance.StartedUtc;
+        if (list[next - 1].AfterSeconds is not { } after || a.Decided.Count < next - 1) return null;
+        return a.Decided[next - 2].DecidedUtc.AddSeconds(after);
+    }
+
+    /// <summary>All waves defeated (wave-sets D7, A1; design §9 D41): a waveList event whose every wave was decided and
+    /// queued at least one unit, and none of whose waves has an order or a unit left.</summary>
+    public static bool Defeated(ActiveEvent a, Func<int, bool> cleared)
+    {
+        if (a.Definition.Action is not { WaveList: { } list } || a.Decided.Count < list.Count) return false;
+        for (var k = 0; k < list.Count; k++)
+            if (!a.Decided[k].Fought) return false;
+        for (var k = 1; k <= list.Count; k++)
+            if (!Cleared(a, k, cleared)) return false;
+        return true;
+    }
+
+    /// <summary>Wave <paramref name="wave"/> (1-based) of <paramref name="a"/> is cleared (wave-sets D5): it was decided
+    /// and <paramref name="ledger"/> (SpawnLedger.WaveCleared) finds no order and no unit of it. An undecided wave is
+    /// never cleared.</summary>
+    public static bool Cleared(ActiveEvent a, int wave, Func<int, bool> ledger) =>
+        wave >= 1 && a.Decided.Count >= wave && ledger(wave);
+
+    /// <summary>"every &lt;s&gt;s" for the units form, or the start rule of a waveList wave (wave-sets D15): "at start",
+    /// "after &lt;s&gt; s", "when cleared" or "after &lt;s&gt; s or when cleared".</summary>
+    public static string StartRule(WaveSpec wave, int number) =>
+        number == 1 ? "at start"
+        : wave.AfterSeconds is { } s ? (wave.WhenCleared ? $"after {s} s or when cleared" : $"after {s} s")
+        : "when cleared";
+
+    /// <summary>The units form's interval, for its own description lines (wave-sets D6: read here only).</summary>
+    public static int IntervalOf(SpawnWavesAction action) => action.IntervalSeconds;
 }
 
 /// <summary>Wave <see cref="Wave"/> (1-based) of <see cref="Event"/> is due.</summary>
@@ -299,41 +369,44 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
         return null;
     }
 
-    /// <summary>The next wave of <paramref name="id"/> when it is due: wave k (0-based) is due at start + k × interval,
-    /// and a wave due at or after the event's end never comes.</summary>
-    public WaveDue? NextWave(string id, DateTime utcNow)
+    /// <summary>The next wave of <paramref name="id"/> when it is due by <see cref="WaveSchedule.Due"/>: the units form
+    /// at start + k × interval, a waveList by its start rule; <paramref name="cleared"/> (event id, wave) is the ledger's
+    /// WaveCleared, read only for a waveList wave that waits for a clear (none: never cleared).</summary>
+    public WaveDue? NextWave(string id, DateTime utcNow, Func<string, int, bool>? cleared = null)
     {
         if (!_active.TryGetValue(id, out var a) || a.Definition.Action is not { } action) return null;
-        if (a.WavesUsed >= action.Waves) return null;
-        var at = a.Instance.StartedUtc.AddSeconds((double)a.WavesUsed * action.IntervalSeconds);
-        if (at > utcNow || at >= a.Instance.EndsUtc) return null;
-        return new WaveDue(a, a.WavesUsed + 1, action.Waves);
+        return WaveSchedule.Due(a, utcNow, w => cleared?.Invoke(id, w) ?? false) is { } wave ? new WaveDue(a, wave, action.Waves) : null;
     }
 
-    /// <summary>A wave of <paramref name="id"/> was queued: counted, and reported with its number in the schedule.</summary>
-    public void WaveSpawned(string id)
+    /// <summary>A wave of <paramref name="id"/> was queued: counted, and reported with its number in the schedule.
+    /// <paramref name="at"/> is its decision time (the start when not given) and <paramref name="queued"/> its unit count
+    /// (unknown: -1, taken as fought), kept for a waveList's schedule and victory (wave-sets D4, D7).</summary>
+    public void WaveSpawned(string id, DateTime? at = null, int queued = -1)
     {
         if (!_active.TryGetValue(id, out var a)) return;
         a.WavesSpawned++;
+        a.Record(at ?? a.Instance.StartedUtc, queued != 0);
         Push?.Wave(id, a.WavesUsed);
     }
 
     /// <summary>The one report of a decided wave (automation D17): a spawned wave, however many groups it fanned out to, is
     /// counted and pushed once; NoWave (blocked) is neither counted nor used, as in 0.7.0; any other outcome is a skipped
-    /// wave.</summary>
-    public void WaveDecided(string id, WaveOutcome outcome)
+    /// wave. A spawned wave that queued 0 units (the tracked cap full) is not fought (wave-sets D4, D7).</summary>
+    public void WaveDecided(string id, WaveOutcome outcome, DateTime? at = null, int queued = -1)
     {
         if (outcome == WaveOutcome.NoWave) return;
-        if (outcome == WaveOutcome.Spawn) WaveSpawned(id);
-        else WaveSkipped(id);
+        if (outcome == WaveOutcome.Spawn) WaveSpawned(id, at, queued);
+        else WaveSkipped(id, at);
     }
 
     /// <summary>A wave of <paramref name="id"/> was skipped or rolled no unit (event-spawns D29): its time is used, so the
     /// next wave comes at its own time, but it is not a spawned wave (the status row's `wave` stays spawned/total) and
-    /// is not reported, since nothing spawned (D20; A59, A62).</summary>
-    public void WaveSkipped(string id)
+    /// is not reported, since nothing spawned (D20; A59, A62). It is cleared at once and not fought (wave-sets D4, D7).</summary>
+    public void WaveSkipped(string id, DateTime? at = null)
     {
-        if (_active.TryGetValue(id, out var a)) a.WavesSkipped++;
+        if (!_active.TryGetValue(id, out var a)) return;
+        a.WavesSkipped++;
+        a.Record(at ?? a.Instance.StartedUtc, false);
     }
 
     /// <summary>A fault in the event's tick; true when it is the <see cref="FaultLimit"/>-th in a row, and the caller
@@ -360,6 +433,21 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
             Push?.EventEnded(a.Id, ApiLines.Region(a.Definition));
         }
         return ended;
+    }
+
+    /// <summary>All waves defeated (wave-sets D7; design §9 D41): ends now, as a natural end, every waveList event that
+    /// <see cref="WaveSchedule.Defeated"/> says is beaten, with the same grace cleanup and `event-end` push as
+    /// <see cref="Expire"/>. <paramref name="cleared"/> is the ledger's WaveCleared.</summary>
+    public IReadOnlyList<ActiveEvent> Complete(DateTime utcNow, int graceSeconds, Func<string, int, bool> cleared)
+    {
+        var beaten = _active.Values.Where(a => a.Instance.EndsUtc > utcNow && WaveSchedule.Defeated(a, w => cleared(a.Id, w))).ToList();
+        foreach (var a in beaten)
+        {
+            Remove(a.Id);
+            _cleanups.Add(new Cleanup(a.Id, DateTime.MaxValue, utcNow.AddSeconds(graceSeconds)));
+            Push?.EventEnded(a.Id, ApiLines.Region(a.Definition));
+        }
+        return beaten;
     }
 
     /// <summary>The cleanups whose time has come; each is returned once.</summary>

@@ -139,7 +139,8 @@ All live under `.nyar api …`. Paged commands take an optional 1-based `[page]`
 - `kind` ∈ `empower | waves | boss | zone | siege`.
 - `state` ∈ `scheduled | active | ending`. api 2 sends `active`, and `ending` for an event that has ended while its
   units wait out the grace (`left` = seconds until they despawn, `wave=-`).
-- `faction` is `-` for waves events; `wave` is `<spawned>/<total>`.
+- `faction` is `-` for waves events; `wave` is `<spawned>/<total>`. A wave-set event's (0.9.0, `action.waveList`) total is the number of waves in its list.
+- A wave set's scoreboard (0.9.0) is a server chat line only: player names never reach the wire, and an event that ends with all its waves defeated sends the usual `event-end`.
 - An empower row (api 3) carries `faction=<names joined by ','>`: each faction of the event without its `Faction_`
   prefix, e.g. `faction=Legion,Bandits`; its `wave` is `-`, and its admin `units` is the number of NPCs holding the
   event's empowerment. An empower event has no `ending` row.

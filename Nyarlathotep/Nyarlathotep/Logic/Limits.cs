@@ -30,6 +30,9 @@ public static class Limits
     public static readonly IntLimit ManualSpawnLifetimeSeconds = new("Limits", "ManualSpawnLifetimeSeconds", 300, 30, 3600);
     /// <summary>Carrier operations per tick, applies and removals together, removals first (faction-empowerment D5).</summary>
     public static readonly IntLimit EmpowerBatchPerTick = new("Limits", "EmpowerBatchPerTick", 200, 50, 1000);
+    /// <summary>Scoreboard rows per event (wave-sets D8): a credit for a further player adds to the totals only. The
+    /// bound of TriggerLimits.CountersPerDefinition, far beyond any server this mod targets.</summary>
+    public const int ScoreboardPlayers = 200;
     public static readonly IntLimit ShareCooldownSeconds = new("Announcements", "ShareCooldownSeconds", 300, 10, 86400);
     public static readonly IntLimit ShareMaxPerMinute = new("Announcements", "ShareMaxPerMinute", 3, 1, 20);
 

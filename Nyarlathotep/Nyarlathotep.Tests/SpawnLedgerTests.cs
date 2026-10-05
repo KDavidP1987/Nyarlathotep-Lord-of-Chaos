@@ -3,7 +3,7 @@ using Nyarlathotep.Logic;
 namespace Nyarlathotep.Tests;
 
 /// <summary>foundation D16: Logic/SpawnLedger, the registry Services/SpawnTracker drives.</summary>
-public class SpawnLedgerTests
+public partial class SpawnLedgerTests
 {
     static readonly DateTime Now = new(2026, 9, 24, 20, 0, 0, DateTimeKind.Utc);
 

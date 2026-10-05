@@ -108,15 +108,14 @@ public sealed class WarningClock(IReadOnlyList<int> offsets)
     public int Tracked => _handled.Count;
 }
 
-/// <summary>The upcoming wave of a running event, for its warnings: the next wave not yet spawned, when it is due before
-/// the event's end. Wave 1 is due at the start, so only later waves are ever warned of.</summary>
+/// <summary>The upcoming wave of a running event, for its warnings: the next wave not yet spawned, when its time is
+/// known (WaveSchedule.KnownAt) and before the event's end. Wave 1 is due at the start, so only later waves are ever
+/// warned of; a waveList wave that only waits for a clear has no time and gets no warning (wave-sets D6).</summary>
 public static class UpcomingWave
 {
     public static (int Wave, DateTime AtUtc)? Of(ActiveEvent active)
     {
-        if (active.Definition.Action is not { } action || active.WavesUsed >= action.Waves) return null;
-        var at = active.Instance.StartedUtc.AddSeconds((double)active.WavesUsed * action.IntervalSeconds);
-        if (at >= active.Instance.EndsUtc) return null;
+        if (WaveSchedule.KnownAt(active) is not { } at || at >= active.Instance.EndsUtc) return null;
         return (active.WavesUsed + 1, at);
     }
 

@@ -29,13 +29,16 @@ public static class ControlCases
     public const string Regions = "regions";
     public const string EventSpawns = "event-spawns";
     public const string Automation = "automation";
+    public const string WaveSets = "wave-sets";
 
     /// <summary>The plans whose controls the table lists; each is copied to the test output under Resources/.</summary>
-    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation];
+    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets];
 
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
+        new(WaveSets, "D13", 2, "0.9.0"), new(WaveSets, "D16", 2, "0.9.0"), new(WaveSets, "D18", 2, "0.9.0"), new(WaveSets, "D23", 2, "0.9.0"),
+        new(WaveSets, "D24", 3, "0.9.0"), new(WaveSets, "D25", 3, "0.9.0"), new(WaveSets, "D26", 3, "0.9.0"), new(WaveSets, "D27", 3, "0.9.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -53,12 +56,13 @@ public static class ControlCases
         "ReadinessTests", "LibraryDependencyFailureTests", "SpawningTests", "HealthTests",
         "HumanReplyTests", "OutcomeCodeTests", "ApiTwinTests", "RateGateTests", "ApiOverloadTests", "EventAdminTests",
         "EndPathTests", "WavePrecedenceTests", "SpawnsDependencyFailureTests", "AutomationTests", "AutomationDependencyFailureTests", "SpawnPlacementTests",
+        "WaveSetTests", "ScoreboardTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
     public static readonly string[] ExistingClasses =
         ["CommandArgTests", "ConfigChangedTests", "AuthorizationTests", "ContractDocTests", "ControlPrecedenceTests", "DependencyFailureTests",
-         "ApiLinesTests", "WireFormatTests", "PushTests", "PrivacyTests", "EventValidationTests"];
+         "ApiLinesTests", "WireFormatTests", "PushTests", "PrivacyTests", "EventValidationTests", "SpawnLedgerTests"];
 
     public static readonly IReadOnlyList<ControlRow> Table =
     [
@@ -458,5 +462,39 @@ public static class ControlCases
              "tools/preflight-fixtures/Secrets/bad-sentinel-build", "tools/preflight-fixtures/Secrets/bad-sentinel-log"],
             ["tools/preflight-fixtures/Secrets/good", "tools/preflight-fixtures/Secrets/good-sentinel"],
             ["tools/preflight-fixtures/Secrets/empty", "tools/preflight-fixtures/Secrets/empty-sentinel"]) with { Plan = Automation },
+        // ---- wave-sets
+        T("D1", "WaveList", "EventValidationTests", ["a_key_is_out_of_range", "both_forms_load_together"], ["the_bounds_and_counts_its_waves"],
+            ["no_waveList_key"]) with { Plan = WaveSets },
+        T("D2", "ScoreboardKey", "EventValidationTests", ["not_a_boolean"], ["both_forms_and_defaults_off"], ["key_absent"]) with { Plan = WaveSets },
+        T("D3", "EntryTuning", "WaveSetTests", ["two_entries_of_one_prefab_merge", "a_clamp_drops_an_entry_tuning", "the_deal_drops_an_entry_tuning"],
+            ["the_chance_roll_with_its_entry", "units_form_one_tuning_per_action"], ["entry_without_modifiers"]) with { Plan = WaveSets },
+        T("D4", "Schedule", "WaveSetTests", ["a_blocked_wave_releases_its_successor", "a_wave_due_at_the_end_spawns", "the_units_form_changes"],
+            ["the_earlier_of_after_and_cleared", "a_cleared_only_wave_only_after_the_clear", "an_after_only_wave_without_the_clear",
+             "a_skipped_wave_cleared_at_its_decision"], ["no_wave_left"]) with { Plan = WaveSets },
+        T("D5", "WaveCleared", "SpawnLedgerTests", ["a_pending_order_or_a_live_unit_remains", "another_event_or_wave_counts", "an_undecided_wave_reads_cleared"],
+            ["every_removal_path"], ["no_order_ever"]) with { Plan = WaveSets },
+        T("D6", "Readers", "WaveSetTests", ["the_units_form_changes", "a_planted_reader_is_added"],
+            ["the_warning_time_of_each_waveList_wave", "only_the_schedule_reading_intervalSeconds"], ["scan_of_no_files"]) with { Plan = WaveSets },
+        T("D7", "Victory", "WaveSetTests", ["an_earlier_wave_still_lives", "the_waves_are_not_all_decided", "a_wave_was_not_fought",
+            "the_skip_cascade_ends_the_event", "a_units_form_event_ends_early"], ["the_last_wave_cleared"], ["no_active_event"]) with { Plan = WaveSets },
+        T("D8", "Counting", "ScoreboardTests", ["the_201st_player_gets_a_row", "rows_outlive_the_event"],
+            ["kills_and_deaths_per_event", "ties_by_fewer_deaths_then_the_earlier_credit", "the_name_at_the_latest_credit"], ["no_credit"]) with { Plan = WaveSets },
+        T("D9", "Admins", "ScoreboardTests", ["an_admin_counts_with_the_key_false"], ["an_admin_with_the_key_true", "the_cfg_default_false"], ["only_admins"])
+            with { Plan = WaveSets },
+        T("D10", "Lines", "ScoreboardTests", ["a_line_exceeds_480_bytes", "a_fourth_name_appears", "a_name_keeps_markup"], ["the_top_three_and_the_totals"],
+            ["no_player_scored"]) with { Plan = WaveSets },
+        T("D11", "EndPaths", "WaveSetTests", ["a_silent_path_shows", "an_event_without_the_key_shows"], ["the_three_showing_paths"], ["no_player_scored"])
+            with { Plan = WaveSets },
+        T("D12", "WaveSets", "PrivacyTests", ["a_name_reaches_a_line", "another_builder_takes_a_player_name", "state_gains_a_property"],
+            ["the_name_only_on_the_scoreboard"], ["no_scoreboard_key"]) with { Plan = WaveSets },
+        T("D14", "WaveSets", "CommandArgTests", ["value_out_of_range", "field_not_settable", "a_conversion_takes_another_field", "a_start_key_breaks_a_rule",
+            "a_reply_exceeds_480_bytes", "the_table_and_settable_fields_differ"],
+            ["values_in_range", "conversion_of_a_units_form_event", "append_and_remove_waves", "a_unit_modifier"], ["value"]) with { Plan = WaveSets },
+        T("D15", "WaveSets", "AuthoringTests", ["a_line_exceeds_480_bytes", "the_units_form_info_changes"], ["one_line_per_wave"], ["entry_without_modifiers"])
+            with { Plan = WaveSets },
+        T("D17", "WaveSets", "ContractDocTests", ["contract_lacks_a_sentence", "the_victory_end_sends_more_than_one_push"], ["api_6_and_the_two_sentences"],
+            ["contract"]) with { Plan = WaveSets },
+        T("D19", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit", "pending_at_release"],
+            ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = WaveSets },
     ];
 }

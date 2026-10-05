@@ -81,6 +81,13 @@ public partial class CommandArgTests
         "trigger.windowSeconds" => "300",
         "trigger.shared" => "true",
         "action.fanOut" => "3 150",
+        "action.scoreboard" or "action.waveList.1.whenCleared" => "true",
+        "action.waveList.1" => "none",
+        "action.waveList.1.units" => "CHAR_Bandit_Thug:2,CHAR_Bandit_Thug:3",
+        "action.waveList.1.afterSeconds" => "120",
+        "action.waveList.1.units.1.level" => "30",
+        "action.waveList.1.units.1.levelDelta" => "3",
+        _ when field.StartsWith("action.waveList.1.units.1.", StringComparison.Ordinal) => "1.5",
         "action.factions" => "Faction_Legion",
         "action.units" => "CHAR_Bandit_Thug:2",
         "location" => "here",
@@ -100,10 +107,11 @@ public partial class CommandArgTests
     [Fact]
     public void SettableFields_passes_every_table_name()
     {
-        Assert.Equal(41, CommandArgs.SettableFields.Count);      // automation D16: 7 trigger fields and action.fanOut
+        Assert.Equal(52, CommandArgs.SettableFields.Count);      // automation D16: 7 trigger fields and action.fanOut; wave-sets D14: 11
         foreach (var (name, (family, who)) in CommandArgs.SettableFields)
         {
-            var field = name.Replace(".N.", ".1.", StringComparison.Ordinal);        // the table's unit-chance placeholder
+            var field = name.Replace(".N.", ".1.", StringComparison.Ordinal).Replace(".M.", ".1.", StringComparison.Ordinal);   // the placeholders
+            if (field == "action.waveList.N") field = "action.waveList.1";
             Assert.True(CommandArgs.SettableValue(field, ValidValue(field)).Ok, field);
             Assert.Contains(family, new[] { "definition", "trigger", "empower action", "spawn action", "location", "action" });
             Assert.Equal("admin", who);

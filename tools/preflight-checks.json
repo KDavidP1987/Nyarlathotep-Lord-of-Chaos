@@ -9,7 +9,8 @@
     "docs/dod/raphael-api-admin.md",
     "docs/dod/regions.md",
     "docs/dod/event-spawns.md",
-    "docs/dod/automation.md"
+    "docs/dod/automation.md",
+    "docs/dod/wave-sets.md"
   ],
   "sessionsUncounted": {
     "event-spawns": [1]
@@ -20,7 +21,8 @@
     "raphael-api-admin": 1,
     "regions": 1,
     "event-spawns": 1,
-    "automation": 1
+    "automation": 1,
+    "wave-sets": 1
   },
   "dataTests": {
     "event-spawns": [
@@ -62,6 +64,9 @@
     ],
     "automation": [
       "docs/features/AUTOMATION.md"
+    ],
+    "wave-sets": [
+      "docs/features/WAVE_SETS.md"
     ],
     "boss-reinforcements": [
       "docs/features/BOSS_REINFORCEMENTS.md"

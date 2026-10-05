@@ -57,7 +57,8 @@
         "raphael-api-admin › build outputs",
         "regions › build outputs",
         "event-spawns › build outputs",
-        "automation › build outputs"
+        "automation › build outputs",
+        "wave-sets › build outputs"
       ]
     },
     {
@@ -84,7 +85,9 @@
         "event-spawns › release zip",
         "event-spawns › tag and GitHub release v0.7.0",
         "automation › release zip",
-        "automation › tag and GitHub release v0.8.0"
+        "automation › tag and GitHub release v0.8.0",
+        "wave-sets › release zip",
+        "wave-sets › tag and GitHub release v0.9.0"
       ]
     },
     {
@@ -119,7 +122,8 @@
       "rows": [
         "event-library › Template catalogue",
         "event-spawns › templates.json examples",
-        "automation › templates.json examples"
+        "automation › templates.json examples",
+        "wave-sets › templates.json graveyard-waves"
       ]
     },
     {
@@ -133,7 +137,8 @@
       "deletion": "delete the file",
       "singleCopy": true,
       "rows": [
-        "event-library › Pillar switches"
+        "event-library › Pillar switches",
+        "wave-sets › cfg Scoreboard.IncludeAdmins"
       ]
     },
     {
@@ -164,7 +169,8 @@
         "automation › events.json new trigger types and fanOut",
         "automation › state.json NextInterval",
         "automation › events.json.bak",
-        "automation › events.json.tmp, state.json.tmp"
+        "automation › events.json.tmp, state.json.tmp",
+        "wave-sets › events.json waveList and scoreboard"
       ]
     },
     {
@@ -355,7 +361,8 @@
         "raphael-api-admin › snapshot",
         "regions › snapshot",
         "event-spawns › snapshot",
-        "automation › snapshot"
+        "automation › snapshot",
+        "wave-sets › snapshot"
       ],
       "location": "%TEMP%\\nyar-snap-* (saved\\manifest.json plus the copies)",
       "owner": "tools/dev-snapshot.ps1",
@@ -463,9 +470,10 @@
     {
       "artifact": "Session log copies",
       "covers": [
-        "nyar-s*-logs"
+        "nyar-s*-logs",
+        "nyar-ws*-logs"
       ],
-      "location": "%TEMP%\\nyar-s<n>-logs (copies of LogOutput.log and NyarDev.log taken by hand during event-library Sessions 4 and 5)",
+      "location": "%TEMP%\\nyar-s<n>-logs (copies of LogOutput.log and NyarDev.log taken by hand during event-library Sessions 4 and 5); %TEMP%\\nyar-ws<n>-logs (wave-sets Session 1)",
       "owner": "Claude during a server session",
       "retention": "the session that made them",
       "deletion": "deleted once the session is recorded; later sessions copy to nyar-soak-* instead; a leftover fails -Paths",
@@ -476,7 +484,8 @@
         "raphael-api-admin › session log copies",
         "regions › session log copies",
         "event-spawns › session log copies",
-        "automation › session log copies"
+        "automation › session log copies",
+        "wave-sets › session log copies"
       ]
     },
     {
@@ -541,7 +550,9 @@
         "event-spawns › review prompts",
         "event-spawns › Claude's scratchpad (Codex prompts and outputs, drafts)",
         "automation › review prompts",
-        "automation › Claude's scratchpad (Codex prompts and outputs, drafts)"
+        "automation › Claude's scratchpad (Codex prompts and outputs, drafts)",
+        "wave-sets › review prompts",
+        "wave-sets › Claude's scratchpad (Codex prompts and outputs, drafts)"
       ]
     },
     {
@@ -717,7 +728,32 @@
       "deletion": "by the tool or Claude; the plugins live on the dev server only and never ship",
       "singleCopy": true,
       "rows": [
-        "automation › vrclient outputs (A18, Epic A36)"
+        "automation › vrclient outputs (A18, Epic A36)",
+        "wave-sets › vrclient outputs"
+      ]
+    },
+    {
+      "artifact": "Scoreboard rows",
+      "covers": [],
+      "location": "memory (Logic/Scoreboard.cs), in the server process",
+      "owner": "EventRuntime",
+      "retention": "per running instance, at most 200 players (Limits.ScoreboardPlayers)",
+      "deletion": "at every end path of the instance, and on restart (wave-sets D8, D12)",
+      "singleCopy": false,
+      "rows": [
+        "wave-sets › scoreboard rows"
+      ]
+    },
+    {
+      "artifact": "Wave decision times and unit wave numbers",
+      "covers": [],
+      "location": "memory (ActiveEvent.Decided, SpawnLedger orders and tracked units), in the server process",
+      "owner": "Engine, SpawnTracker",
+      "retention": "the instance / the unit",
+      "deletion": "with the instance / the unit, and on restart (wave-sets D4, D5)",
+      "singleCopy": false,
+      "rows": [
+        "wave-sets › wave decision times and the wave number per unit"
       ]
     }
   ]

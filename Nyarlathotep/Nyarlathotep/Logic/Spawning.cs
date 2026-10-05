@@ -639,14 +639,33 @@ public static class WaveRoll
         return result;
     }
 
-    /// <summary>The rolled prefabs as entries, one per run of the same prefab, for WavePlan.Split's clamps (D8).</summary>
-    public static List<UnitEntry> Group(IReadOnlyList<string> prefabs)
+    /// <summary>The roll of <see cref="Expand"/> as picks that keep their entry's modifiers (wave-sets D3): one entry of
+    /// count 1 per kept copy, in entry order, drawing the same random numbers as Expand.</summary>
+    public static List<UnitEntry> ExpandEntries(IReadOnlyList<UnitEntry> units, IRandom rng)
     {
         var result = new List<UnitEntry>();
-        foreach (var p in prefabs)
+        foreach (var u in units)
+            for (var i = 0; i < u.Count; i++)
+                if (u.Chance >= 1.0 || rng.NextDouble() < u.Chance) result.Add(new UnitEntry(u.Prefab, 1, 1.0, u.Modifiers));
+        return result;
+    }
+
+    /// <summary>Prefabs as picks without modifiers.</summary>
+    public static List<UnitEntry> Picks(IReadOnlyList<string> prefabs) => prefabs.Select(p => new UnitEntry(p, 1)).ToList();
+
+    /// <summary>The rolled prefabs as entries, one per run of the same prefab, for WavePlan.Split's clamps (D8).</summary>
+    public static List<UnitEntry> Group(IReadOnlyList<string> prefabs) => GroupPicks(Picks(prefabs));
+
+    /// <summary>The picks as entries, one per run of the same prefab with the same modifiers, so two entries of one prefab
+    /// with different modifiers stay apart (wave-sets D3).</summary>
+    public static List<UnitEntry> GroupPicks(IReadOnlyList<UnitEntry> picks)
+    {
+        var result = new List<UnitEntry>();
+        foreach (var p in picks)
         {
-            if (result.Count > 0 && result[^1].Prefab == p) result[^1] = result[^1] with { Count = result[^1].Count + 1 };
-            else result.Add(new UnitEntry(p, 1));
+            if (result.Count > 0 && result[^1].Prefab == p.Prefab && Equals(result[^1].Modifiers, p.Modifiers))
+                result[^1] = result[^1] with { Count = result[^1].Count + 1 };
+            else result.Add(new UnitEntry(p.Prefab, 1, 1.0, p.Modifiers));
         }
         return result;
     }
@@ -662,6 +681,11 @@ public static class SpawnTuning
         modifiers is null ? UnitTuning.None
         : TuningFrom(modifiers.Level is { } l ? new LevelArg(false, l) : modifiers.LevelDelta is { } d ? new LevelArg(true, d) : null,
             modifiers.MaxHealth, modifiers.Power, modifiers.MoveSpeed, modifiers.AttackSpeed);
+
+    /// <summary>The tuning of one queued unit of <paramref name="action"/> (wave-sets D3): its own entry's modifiers for a
+    /// waveList, the action's for the units form (one tuning per action, as 0.8.0).</summary>
+    public static UnitTuning For(SpawnWavesAction action, UnitEntry entry) =>
+        TuningFrom(action.WaveList is null ? action.Modifiers : entry.Modifiers);
 
     /// <summary>maxHealth → MaxHealth; power → PhysicalPower and SpellPower; moveSpeed → MovementSpeed; attackSpeed →
     /// PrimaryAttackSpeed and AbilityAttackSpeed; a multiplier of 1.0 gives no entry.</summary>
@@ -1032,7 +1056,11 @@ public sealed record WaveFacts(
 /// the outcome and decides nothing itself.</summary>
 public static class WaveGate
 {
-    public static WaveDecision Decide(WaveFacts f, Func<IReadOnlyList<string>> roll, int maxPerWave, int occupied, int maxTracked)
+    public static WaveDecision Decide(WaveFacts f, Func<IReadOnlyList<string>> roll, int maxPerWave, int occupied, int maxTracked) =>
+        DecideEntries(f, () => WaveRoll.Picks(roll()), maxPerWave, occupied, maxTracked);
+
+    /// <summary><see cref="Decide"/> over picks that keep their entry's modifiers (wave-sets D3).</summary>
+    public static WaveDecision DecideEntries(WaveFacts f, Func<IReadOnlyList<UnitEntry>> roll, int maxPerWave, int occupied, int maxTracked)
     {
         if (f.Blocked) return new(WaveOutcome.NoWave, null, [], []);
         if (f.MapFailed && f.NeedsMap) return new(WaveOutcome.Skip, WaveLines.TerritoryUnknown(f.Wave, f.EventId), [], []);
@@ -1042,7 +1070,7 @@ public static class WaveGate
         var rolled = roll();
         if (rolled.Count == 0) return new(WaveOutcome.ZeroRolled, WaveLines.ZeroRolled(f.Wave, f.EventId), [], []);
         var caps = new List<string>();
-        var units = WavePlan.Split(WaveRoll.Group(rolled), maxPerWave, occupied, maxTracked, caps);
+        var units = WavePlan.Split(WaveRoll.GroupPicks(rolled), maxPerWave, occupied, maxTracked, caps);
         return new(WaveOutcome.Spawn, null, units, caps);
     }
 
@@ -1053,18 +1081,24 @@ public static class WaveGate
     /// units in entry order; a group dealt 0 is dropped. The wave is spawned when a group spawns; when every group rolled 0
     /// it is ZeroRolled; otherwise skipped with the first group's reason. One centre decides exactly as Decide.</summary>
     public static FanOutDecision DecideGroups(WaveFacts facts, IReadOnlyList<GroupCentre> centres, Func<IReadOnlyList<string>> roll,
+        int maxPerWave, int occupied, int maxTracked) =>
+        DecideGroupEntries(facts, centres, () => WaveRoll.Picks(roll()), maxPerWave, occupied, maxTracked);
+
+    /// <summary><see cref="DecideGroups"/> over picks that keep their entry's modifiers (wave-sets D3): the clamp and the
+    /// round-robin deal move whole picks, so every dealt unit keeps its own entry's tuning.</summary>
+    public static FanOutDecision DecideGroupEntries(WaveFacts facts, IReadOnlyList<GroupCentre> centres, Func<IReadOnlyList<UnitEntry>> roll,
         int maxPerWave, int occupied, int maxTracked)
     {
         if (facts.Pick == PickOutcome.Picked && centres.Count == 0) facts = facts with { Pick = PickOutcome.NoEligible };   // no centre, no group
         if (facts.Blocked || facts.MapFailed && facts.NeedsMap || facts.Pick is PickOutcome.NoEligible or PickOutcome.QueryFailed || centres.Count <= 1)
         {
             var centre = centres.Count > 0 ? centres[0] : default;
-            var one = Decide(facts with { CentreClaimed = centres.Count > 0 && centre.Claimed }, roll, maxPerWave, occupied, maxTracked);
+            var one = DecideEntries(facts with { CentreClaimed = centres.Count > 0 && centre.Claimed }, roll, maxPerWave, occupied, maxTracked);
             IReadOnlyList<WaveGroup> groups = one.Outcome == WaveOutcome.Spawn ? [new WaveGroup(0, (centre.X, centre.Y, centre.Z), one.Units)] : [];
             return new(one.Outcome, one.Line, groups, one.CapLines);
         }
 
-        var rolled = new List<(int Index, List<string> Units)>();
+        var rolled = new List<(int Index, List<UnitEntry> Units)>();
         string? firstReason = null;
         for (var i = 0; i < centres.Count; i++)
         {
@@ -1084,7 +1118,7 @@ public static class WaveGate
 
         var caps = new List<string>();
         var allowed = Precedence.WaveSize(rolled.Sum(g => g.Units.Count), maxPerWave, occupied, maxTracked, caps);
-        var dealt = rolled.Select(_ => new List<string>()).ToList();
+        var dealt = rolled.Select(_ => new List<UnitEntry>()).ToList();
         for (var round = 0; allowed > 0; round++)
         {
             var any = false;
@@ -1098,7 +1132,7 @@ public static class WaveGate
             if (!any) break;
         }
         var result = rolled.Select((g, k) => (g.Index, Units: dealt[k])).Where(g => g.Units.Count > 0)
-            .Select(g => new WaveGroup(g.Index, (centres[g.Index].X, centres[g.Index].Y, centres[g.Index].Z), WaveRoll.Group(g.Units)))
+            .Select(g => new WaveGroup(g.Index, (centres[g.Index].X, centres[g.Index].Y, centres[g.Index].Z), WaveRoll.GroupPicks(g.Units)))
             .ToList();
         return result.Count > 0
             ? new(WaveOutcome.Spawn, null, result, caps)

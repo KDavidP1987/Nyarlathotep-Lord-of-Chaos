@@ -122,9 +122,43 @@ public static class CommandArgs
             ? i : null;
     }
 
-    /// <summary>The table name of <paramref name="field"/>: `action.units.N.chance` for a unit's chance, else the
-    /// field itself.</summary>
-    public static string TableName(string field) => UnitChanceIndex(field) is null ? field : UnitChanceField;
+    /// <summary>The table name of <paramref name="field"/>: `action.units.N.chance` for a unit's chance, the
+    /// `action.waveList.N…` name of a wave-list field (wave-sets D14), else the field itself.</summary>
+    public static string TableName(string field) =>
+        UnitChanceIndex(field) is not null ? UnitChanceField
+        : WaveListPath(field) is { } w ? w.Table
+        : field;
+
+    /// <summary>`action.scoreboard` (wave-sets D2, D14): true or false.</summary>
+    public const string ScoreboardField = "action.scoreboard";
+
+    /// <summary>The wave-list fields (wave-sets D14) by table name: a wave's removal, its units, its two start keys and
+    /// one modifier per unit entry, N and M 1-10.</summary>
+    public static readonly IReadOnlyList<string> WaveListFields =
+        new[] { "action.waveList.N", "action.waveList.N.units", "action.waveList.N.afterSeconds", "action.waveList.N.whenCleared" }
+            .Concat(new[] { "level", "levelDelta" }.Concat(EventValidator.ModifierKeys).Select(k => "action.waveList.N.units.M." + k))
+            .ToList();
+
+    static readonly string[] WaveModifierKeys = ["level", "levelDelta", "maxHealth", "power", "moveSpeed", "attackSpeed"];
+
+    /// <summary>A wave-list field split into its wave <c>N</c>, its key (null: the wave itself), its unit entry <c>M</c>
+    /// and modifier, with its table name; null for any other name. N and M are 1-10 without a leading zero.</summary>
+    public static WaveListField? WaveListPath(string field)
+    {
+        const string head = "action.waveList.";
+        if (!field.StartsWith(head, StringComparison.Ordinal)) return null;
+        var parts = field[head.Length..].Split('.');
+        if (Index(parts[0]) is not { } n) return null;
+        if (parts.Length == 1) return new WaveListField(n, null, null, null, "action.waveList.N");
+        if (parts.Length == 2 && parts[1] is "units" or "afterSeconds" or "whenCleared")
+            return new WaveListField(n, parts[1], null, null, $"action.waveList.N.{parts[1]}");
+        if (parts.Length == 4 && parts[1] == "units" && Index(parts[2]) is { } m && Array.IndexOf(WaveModifierKeys, parts[3]) >= 0)
+            return new WaveListField(n, "units", m, parts[3], $"action.waveList.N.units.M.{parts[3]}");
+        return null;
+
+        static int? Index(string t) =>
+            t.Length is 1 or 2 && t[0] != '0' && int.TryParse(t, NumberStyles.None, CultureInfo.InvariantCulture, out var i) && i is >= 1 and <= 10 ? i : null;
+    }
 
     /// <summary>A stat multiplier: 1.0–3.0 with at most two decimals, '.' as the separator (invariant culture). The value
     /// is a decimal, so 1.3 is written to events.json as 1.3.</summary>
@@ -157,6 +191,8 @@ public static class CommandArgs
         d["trigger.scope"] = ("trigger", "admin");                  // regions D9, A28: every trigger type
         d["action.scope"] = ("action", "admin");                    // either action type
         d[FanOutField] = ("spawn action", "admin");                 // automation D16
+        d[ScoreboardField] = ("spawn action", "admin");             // wave-sets D14
+        foreach (var f in WaveListFields) d[f] = ("spawn action", "admin");
         return d;
     }
 
@@ -358,7 +394,9 @@ public static class CommandArgs
 
     /// <summary>True when `event set` takes <paramref name="field"/>: a name of the table, or a unit's chance
     /// `action.units.N.chance` with n 1-10 (the table's placeholder itself is no field).</summary>
-    public static bool IsSettable(string field) => field != UnitChanceField && SettableFields.ContainsKey(TableName(field));
+    public static bool IsSettable(string field) =>
+        field != UnitChanceField && !(field.StartsWith("action.waveList.", StringComparison.Ordinal) && field.Contains(".N", StringComparison.Ordinal))
+        && SettableFields.ContainsKey(TableName(field));
 
     /// <summary>`location here` or `location aroundplayer &lt;minDist&gt; &lt;maxDist&gt;` (event-library D11, event-spawns
     /// D18), each distance in D6's range and minDist below maxDist.</summary>
@@ -428,6 +466,65 @@ public static class CommandArgs
         }
     }
 
+    /// <summary>A wave-list field's value (wave-sets D14), each in D1's range and with the validator's own reason:
+    /// `action.waveList.N none`; units as action.units' entries, a prefab allowed twice (two entries of one prefab may
+    /// carry different modifiers); afterSeconds 10-3600 or none; whenCleared true or false; a unit's modifier in D6's range
+    /// or none.</summary>
+    static Arg<object> WaveListValue(string field, WaveListField w, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return Arg<object>.Bad(ValueRequired);
+        var path = $"action.waveList.{w.Wave}";
+        switch (w.Key)
+        {
+            case null:
+                return value == "none" ? Arg<object>.Of(FieldRemoval.Instance) : Arg<object>.Bad($"{path} takes none (removes the wave)");
+            case "afterSeconds":
+                if (value == "none") return Arg<object>.Of(FieldRemoval.Instance);
+                return int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var after)
+                       && after >= EventValidator.MinAfterSeconds && after <= EventValidator.MaxAfterSeconds
+                    ? Arg<object>.Of(after) : Arg<object>.Bad(EventValidator.AfterSecondsRule(w.Wave));
+            case "whenCleared":
+                return value switch { "true" => Arg<object>.Of(true), "false" => Arg<object>.Of(false), _ => Arg<object>.Bad(EventValidator.WhenClearedRule(w.Wave)) };
+        }
+        if (w.Modifier is null) return WaveUnits(field, value);
+        var at = $"{path}.units.{w.Unit}.modifiers";
+        if (value == "none") return Arg<object>.Of(FieldRemoval.Instance);
+        switch (w.Modifier)
+        {
+            case "level":
+                return int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var level) && level is >= 1 and <= 120
+                    ? Arg<object>.Of(level) : Arg<object>.Bad(EventValidator.LevelRule.Replace("action.modifiers", at));
+            case "levelDelta":
+                return value is { Length: <= 2 } && int.TryParse(value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var delta)
+                       && Math.Abs(delta) <= EventValidator.MaxLevelDelta
+                    ? Arg<object>.Of(delta) : Arg<object>.Bad(EventValidator.LevelDeltaRule.Replace("action.modifiers", at));
+            default:
+                return Decimal2(value, (decimal)EventValidator.MinModifier, (decimal)EventValidator.MaxModifier) is { } m
+                    ? Arg<object>.Of(m) : Arg<object>.Bad(EventValidator.ModifierRule(w.Modifier).Replace("action.modifiers", at));
+        }
+    }
+
+    /// <summary>A wave's units: 1-10 entries CHAR_&lt;name&gt;[:&lt;count&gt;], count 1-50 (default 1), a prefab allowed in
+    /// more than one entry (wave-sets D3).</summary>
+    static Arg<object> WaveUnits(string field, string value)
+    {
+        var rule = $"{field} must be 1-10 entries CHAR_name or CHAR_name:count, count 1-50, comma separated";
+        var parts = CommaList(value, 10);
+        if (parts is null) return Arg<object>.Bad(rule);
+        var entries = new List<UnitEntry>();
+        foreach (var part in parts)
+        {
+            var colon = part.IndexOf(':');
+            var name = colon < 0 ? part : part[..colon];
+            var count = 1;
+            if (colon >= 0 && !(int.TryParse(part.AsSpan(colon + 1), NumberStyles.None, CultureInfo.InvariantCulture, out count) && count is >= 1 and <= 50))
+                return Arg<object>.Bad(rule);
+            if (!IsNameValue(name, "CHAR_")) return Arg<object>.Bad(NameRule(field));
+            entries.Add(new UnitEntry(name, count));
+        }
+        return Arg<object>.Of(entries.ToArray());
+    }
+
     /// <summary>`event set` whitelist (foundation S-10, event-library D9, D10, D11): field → validator of the new value.
     /// Only the character set and shape are checked here, before any write; name knowledge is the validator's, on
     /// reload. Whether the field fits the event's trigger or action type is checked on the file by EventsEditor.</summary>
@@ -437,6 +534,9 @@ public static class CommandArgs
         if ((SpawnKeyFields.Contains(TableName(field)) || field is "location" or FanOutField) && string.IsNullOrWhiteSpace(value))
             return Arg<object>.Bad(ValueRequired);                   // event-spawns D18's empty input
         if (field == FanOutField) return FanOutValue(value);
+        if (field == ScoreboardField)
+            return value switch { "true" => Arg<object>.Of(true), "false" => Arg<object>.Of(false), _ => Arg<object>.Bad(EventValidator.ScoreboardRule) };
+        if (WaveListPath(field) is { } wave) return WaveListValue(field, wave, value);
         if (SpawnKeyFields.Contains(TableName(field))) return SpawnKeyValue(field, value);
         if (StatFields.Contains(field)) return Stat(field, value);
         if (TriggerFields.Contains(field)) return TriggerValue(field, value);
@@ -465,6 +565,11 @@ public static class CommandArgs
         };
     }
 }
+
+/// <summary>A wave-list field (wave-sets D14): wave <see cref="Wave"/>, its <see cref="Key"/> (units, afterSeconds,
+/// whenCleared; null for the wave itself), and for a unit's modifier the entry <see cref="Unit"/> and the
+/// <see cref="Modifier"/>; <see cref="Table"/> is its name in the field table.</summary>
+public sealed record WaveListField(int Wave, string? Key, int? Unit, string? Modifier, string Table);
 
 /// <summary>The value "none" of an event-spawns field (event-spawns D18): the key is removed from the action, and a
 /// modifiers object left empty goes with it.</summary>

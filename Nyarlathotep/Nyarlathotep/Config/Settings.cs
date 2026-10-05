@@ -41,6 +41,9 @@ internal static class Settings
     /// <summary>Announcements.DailyBannerTime as loaded, server-local.</summary>
     public static System.TimeOnly DailyBannerTime { get; private set; } = new(20, 0);
 
+    // ---- Scoreboard (wave-sets D9, design §9 D38) ----
+    public static ConfigEntry<bool> ScoreboardIncludeAdmins { get; private set; }
+
     // ---- Debug ----
     public static ConfigEntry<bool> VerboseLogging { get; private set; }
     public static ConfigEntry<bool> TimingLog { get; private set; }
@@ -111,6 +114,9 @@ internal static class Settings
             "Seconds a player waits between two shares.");
         BindLimit(config, Limits.ShareMaxPerMinute,
             "Most player shares the whole server passes in any minute.");
+
+        ScoreboardIncludeAdmins = config.Bind("Scoreboard", "IncludeAdmins", false,
+            "Count admins on an event's scoreboard (events.json action.scoreboard true). Off: an admin's kills and deaths are left out.");
 
         VerboseLogging = config.Bind("Debug", "VerboseLogging", false,
             "Log each unit spawned and despawned, and each announcement sent.");

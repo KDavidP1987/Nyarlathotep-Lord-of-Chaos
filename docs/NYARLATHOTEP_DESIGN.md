@@ -151,7 +151,7 @@ Business rules 11.
 ### Settable fields
 
 Every field `.nyar event set` takes (event-library D20). A trigger field needs its trigger type, and an action field needs its
-action type, except `trigger.scope` and `action.scope` (regions D9), which fit every type; `trigger.type` replaces the trigger with that type's default. The event-spawns fields (event-spawns D18) take `none` to remove a modifier or the behaviour; `action.units.N.chance` names unit entry N (1-10); `location` also takes `aroundplayer <minDist> <maxDist>`. The automation fields (automation D16) belong to the Interval (`trigger.minMinutes`, `trigger.maxMinutes`), RegionEntered (`trigger.playerCooldownMinutes`) and FactionKills (`trigger.factions`, `trigger.kills`, `trigger.windowSeconds`, `trigger.shared`) triggers; `action.fanOut` takes `none` or `<maxInstances> <minSpacing>` and needs an AroundPlayer location. Values are checked before any write, and names on reload.
+action type, except `trigger.scope` and `action.scope` (regions D9), which fit every type; `trigger.type` replaces the trigger with that type's default. The event-spawns fields (event-spawns D18) take `none` to remove a modifier or the behaviour; `action.units.N.chance` names unit entry N (1-10); `location` also takes `aroundplayer <minDist> <maxDist>`. The automation fields (automation D16) belong to the Interval (`trigger.minMinutes`, `trigger.maxMinutes`), RegionEntered (`trigger.playerCooldownMinutes`) and FactionKills (`trigger.factions`, `trigger.kills`, `trigger.windowSeconds`, `trigger.shared`) triggers; `action.fanOut` takes `none` or `<maxInstances> <minSpacing>` and needs an AroundPlayer location. The wave-sets fields (wave-sets D14) belong to a SpawnWaves action: `action.scoreboard` takes `true` or `false`; `action.waveList.N.units` takes the units as `action.units` does (a prefab may appear twice), and on a units-form event only N = 1 is taken and converts it (its units become wave 1 with the action's modifiers on each entry; units, waves, intervalSeconds and modifiers are removed and named in the reply); N up to the list's length + 1 appends a wave; `action.waveList.N.afterSeconds` takes 10-3600 or `none`, `action.waveList.N.whenCleared` `true` or `false` (neither on wave 1); `action.waveList.N.units.M.<modifier>` sets entry M's level, levelDelta or multiplier, or `none`; `action.waveList.N none` removes wave N, never the last one. Values are checked before any write, and names on reload.
 
 | Field | Family | Who |
 |---|---|---|
@@ -194,6 +194,17 @@ action type, except `trigger.scope` and `action.scope` (regions D9), which fit e
 | `action.behaviour` | spawn action | admin |
 | `action.units.N.chance` | spawn action | admin |
 | `action.fanOut` | spawn action | admin |
+| `action.scoreboard` | spawn action | admin |
+| `action.waveList.N` | spawn action | admin |
+| `action.waveList.N.units` | spawn action | admin |
+| `action.waveList.N.afterSeconds` | spawn action | admin |
+| `action.waveList.N.whenCleared` | spawn action | admin |
+| `action.waveList.N.units.M.level` | spawn action | admin |
+| `action.waveList.N.units.M.levelDelta` | spawn action | admin |
+| `action.waveList.N.units.M.maxHealth` | spawn action | admin |
+| `action.waveList.N.units.M.power` | spawn action | admin |
+| `action.waveList.N.units.M.moveSpeed` | spawn action | admin |
+| `action.waveList.N.units.M.attackSpeed` | spawn action | admin |
 | `location` | location | admin |
 | `action.scope` | action | admin |
 

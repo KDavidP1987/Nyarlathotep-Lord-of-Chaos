@@ -526,25 +526,30 @@ public static class EventValidator
     static SpawnWavesAction ParseSpawnWaves(JsonElement a, Trigger trigger, IUnitCatalog units, IRegionCatalog regions)
     {
         OnlyKeys(a, "action", "type", "units", "waves", "intervalSeconds", "radius", "location", "unitLifetimeSeconds", "scope",
-            "modifiers", "loot", "behaviour", "allowTerritory", "fanOut");
+            "modifiers", "loot", "behaviour", "allowTerritory", "fanOut", "waveList", "scoreboard");
 
-        const string unitsRule = "action.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-50 }";
-        var u = Required(a, "units", unitsRule);
-        if (u.ValueKind != JsonValueKind.Array || u.GetArrayLength() is < 1 or > 10) throw new Fail(unitsRule);
-        var list = new List<UnitEntry>();
-        foreach (var x in u.EnumerateArray())
+        IReadOnlyList<UnitEntry> list;
+        IReadOnlyList<WaveSpec>? waveList = null;
+        int waves, interval;
+        SpawnModifiers? modifiers = null;
+        if (a.TryGetProperty("waveList", out var wl))
         {
-            if (x.ValueKind != JsonValueKind.Object) throw new Fail(unitsRule);
-            OnlyKeys(x, "action.units", "prefab", "count", "chance");
-            var prefab = Str(Required(x, "prefab", unitsRule), unitsRule);
-            if (UnitDenyList.IsDenied(prefab) || units.IsDenied(prefab)) throw new Fail($"unit{Shown(prefab)} is deny-listed");
-            if (!prefab.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(prefab)) throw new Fail($"unknown unit{Shown(prefab)}");
-            var count = Int(Required(x, "count", unitsRule), 1, 50, "action.units.count must be 1-50");
-            var chance = x.TryGetProperty("chance", out var ch) ? Number(ch, MinChance, 1.0, ChanceRule) : 1.0;
-            list.Add(new UnitEntry(prefab, count, chance));
+            // wave-sets D1: the waveList form replaces the units form's four keys.
+            foreach (var key in UnitsFormKeys)
+                if (a.TryGetProperty(key, out _)) throw new Fail(WaveListReplaces);
+            waveList = ParseWaveList(wl, units);
+            list = waveList.SelectMany(w => w.Units).ToList();
+            waves = waveList.Count;
+            interval = 0;   // read only through WaveSchedule, which never reads it for a waveList (D6)
         }
-        var waves = Int(Required(a, "waves", "action.waves must be 1-10"), 1, 10, "action.waves must be 1-10");
-        var interval = Int(Required(a, "intervalSeconds", "action.intervalSeconds must be 10-600"), 10, 600, "action.intervalSeconds must be 10-600");
+        else
+        {
+            const string unitsRule = "action.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-50 }";
+            list = ParseEntries(Required(a, "units", unitsRule), "action.units", unitsRule, units, withModifiers: false);
+            waves = Int(Required(a, "waves", "action.waves must be 1-10"), 1, 10, "action.waves must be 1-10");
+            interval = Int(Required(a, "intervalSeconds", "action.intervalSeconds must be 10-600"), 10, 600, "action.intervalSeconds must be 10-600");
+            modifiers = a.TryGetProperty("modifiers", out var mo) ? ParseModifiers(mo) : null;
+        }
         var radius = Int(Required(a, "radius", "action.radius must be 2-30"), 2, 30, "action.radius must be 2-30");
         var location = ParseLocation(Required(a, "location", "action.location is required"), trigger);
         int? lifetime = a.TryGetProperty("unitLifetimeSeconds", out var lt) ? Int(lt, 30, 7200, "action.unitLifetimeSeconds must be 30-7200") : null;
@@ -552,14 +557,77 @@ public static class EventValidator
         // regions D6: a Point outside the scope is refused here; an Admin origin is checked at the start (ScopeGate).
         if (!scope.IsGlobal && location.Type == LocationType.Point && !scope.Names(regions.RegionOf(location.X, location.Z)))
             throw new Fail("action.location is outside action.scope");
-        var modifiers = a.TryGetProperty("modifiers", out var mo) ? ParseModifiers(mo) : null;
         var loot = a.TryGetProperty("loot", out var lo) && Bool(lo, "action.loot must be true or false");
         var behaviour = a.TryGetProperty("behaviour", out var be) ? ParseBehaviour(be) : null;
         var allowTerritory = a.TryGetProperty("allowTerritory", out var at) && Bool(at, "action.allowTerritory must be true or false");
         if (behaviour is { Type: BehaviourType.Hunt } hunt && location.Type == LocationType.AroundPlayer && location.MaxDist > hunt.Range)
             throw new Fail(MaxDistOverRange);
         var fanOut = a.TryGetProperty("fanOut", out var fo) ? ParseFanOut(fo, location) : null;
-        return new SpawnWavesAction(list, waves, interval, radius, location, lifetime, scope, modifiers, loot, behaviour, allowTerritory, fanOut);
+        var scoreboard = a.TryGetProperty("scoreboard", out var sb) && Bool(sb, ScoreboardRule);
+        return new SpawnWavesAction(list, waves, interval, radius, location, lifetime, scope, modifiers, loot, behaviour, allowTerritory, fanOut,
+            waveList, scoreboard);
+    }
+
+    /// <summary>The units form's keys a waveList replaces (wave-sets D1).</summary>
+    public static readonly IReadOnlyList<string> UnitsFormKeys = ["units", "waves", "intervalSeconds", "modifiers"];
+    public const int MaxWaveListWaves = 10;
+    public const int MinAfterSeconds = 10;
+    public const int MaxAfterSeconds = 3600;
+    public const string WaveListReplaces = "action.waveList replaces action.units, waves, intervalSeconds and modifiers";
+    public const string WaveListRule = "action.waveList needs 1-10 waves";
+    public const string ScoreboardRule = "action.scoreboard must be true or false";
+    public const string FirstWaveStart = "action.waveList.1 starts with the event";
+    public static string WaveRule(int n) => $"action.waveList.{n} must be an object {{ units, afterSeconds, whenCleared }}";
+    public static string AfterSecondsRule(int n) => $"action.waveList.{n}.afterSeconds must be {MinAfterSeconds}-{MaxAfterSeconds}";
+    public static string WhenClearedRule(int n) => $"action.waveList.{n}.whenCleared must be true or false";
+    public static string NoStartRule(int n) => $"action.waveList.{n} with whenCleared false needs afterSeconds";
+
+    /// <summary>`waveList` (wave-sets D1): 1-10 waves of { units, afterSeconds 10-3600, whenCleared }, wave 1 without a
+    /// start key, each unit entry with an optional `modifiers` object under ParseModifiers' rules.</summary>
+    static IReadOnlyList<WaveSpec> ParseWaveList(JsonElement wl, IUnitCatalog units)
+    {
+        if (wl.ValueKind != JsonValueKind.Array || wl.GetArrayLength() is < 1 or > MaxWaveListWaves) throw new Fail(WaveListRule);
+        var result = new List<WaveSpec>();
+        var n = 0;
+        foreach (var w in wl.EnumerateArray())
+        {
+            n++;
+            var path = $"action.waveList.{n}";
+            if (w.ValueKind != JsonValueKind.Object) throw new Fail(WaveRule(n));
+            OnlyKeys(w, path, "units", "afterSeconds", "whenCleared");
+            var unitsRule = $"{path}.units must be 1-10 entries {{ \"prefab\": CHAR_ name, \"count\": 1-50 }}";
+            var entries = ParseEntries(Required(w, "units", unitsRule), $"{path}.units", unitsRule, units, withModifiers: true);
+            int? after = w.TryGetProperty("afterSeconds", out var af) ? Int(af, MinAfterSeconds, MaxAfterSeconds, AfterSecondsRule(n)) : null;
+            bool? cleared = w.TryGetProperty("whenCleared", out var wc) ? Bool(wc, WhenClearedRule(n)) : null;
+            if (n == 1 && (after is not null || cleared is not null)) throw new Fail(FirstWaveStart);
+            if (cleared == false && after is null) throw new Fail(NoStartRule(n));
+            result.Add(new WaveSpec(entries, after, cleared ?? false));
+        }
+        return result;
+    }
+
+    /// <summary>1-10 unit entries { prefab, count 1-50, chance 0.05-1.0 } at <paramref name="path"/>, and with
+    /// <paramref name="withModifiers"/> an optional per-entry `modifiers` (wave-sets D1).</summary>
+    static List<UnitEntry> ParseEntries(JsonElement u, string path, string rule, IUnitCatalog units, bool withModifiers)
+    {
+        if (u.ValueKind != JsonValueKind.Array || u.GetArrayLength() is < 1 or > 10) throw new Fail(rule);
+        var list = new List<UnitEntry>();
+        var m = 0;
+        foreach (var x in u.EnumerateArray())
+        {
+            m++;
+            if (x.ValueKind != JsonValueKind.Object) throw new Fail(rule);
+            if (withModifiers) OnlyKeys(x, $"{path}.{m}", "prefab", "count", "chance", "modifiers");
+            else OnlyKeys(x, path, "prefab", "count", "chance");
+            var prefab = Str(Required(x, "prefab", rule), rule);
+            if (UnitDenyList.IsDenied(prefab) || units.IsDenied(prefab)) throw new Fail($"unit{Shown(prefab)} is deny-listed");
+            if (!prefab.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(prefab)) throw new Fail($"unknown unit{Shown(prefab)}");
+            var count = Int(Required(x, "count", rule), 1, 50, $"{path}.count must be 1-50");
+            var chance = x.TryGetProperty("chance", out var ch) ? Number(ch, MinChance, 1.0, ChanceRule.Replace("action.units", path)) : 1.0;
+            var modifiers = withModifiers && x.TryGetProperty("modifiers", out var mo) ? ParseModifiers(mo, $"{path}.{m}.modifiers") : null;
+            list.Add(new UnitEntry(prefab, count, chance, modifiers));
+        }
+        return list;
     }
 
     public const int MinFanOutInstances = 2;
@@ -610,9 +678,11 @@ public static class EventValidator
 
     /// <summary>`modifiers` (D6): level 1-120 or levelDelta -5..5, never both, and multipliers 0.5-3.0 with at most two
     /// decimals; an empty object is refused.</summary>
-    static SpawnModifiers ParseModifiers(JsonElement m)
+    static SpawnModifiers ParseModifiers(JsonElement m, string path = "action.modifiers")
     {
-        if (m.ValueKind != JsonValueKind.Object) throw new Fail("action.modifiers must be an object");
+        // A per-unit modifiers of a waveList (wave-sets D1) names its own path in every reason.
+        string At(string rule) => rule.Replace("action.modifiers", path);
+        if (m.ValueKind != JsonValueKind.Object) throw new Fail(At("action.modifiers must be an object"));
         var r = new SpawnModifiers();
         var any = false;
         foreach (var p in m.EnumerateObject())
@@ -620,26 +690,26 @@ public static class EventValidator
             any = true;
             r = p.Name switch
             {
-                "level" => r with { Level = Int(p.Value, 1, 120, LevelRule) },
-                "levelDelta" => r with { LevelDelta = Int(p.Value, -MaxLevelDelta, MaxLevelDelta, LevelDeltaRule) },
-                "maxHealth" => r with { MaxHealth = Multiplier(p.Value, p.Name) },
-                "power" => r with { Power = Multiplier(p.Value, p.Name) },
-                "moveSpeed" => r with { MoveSpeed = Multiplier(p.Value, p.Name) },
-                "attackSpeed" => r with { AttackSpeed = Multiplier(p.Value, p.Name) },
-                _ => throw new Fail(UnknownField("action.modifiers", p.Name)),
+                "level" => r with { Level = Int(p.Value, 1, 120, At(LevelRule)) },
+                "levelDelta" => r with { LevelDelta = Int(p.Value, -MaxLevelDelta, MaxLevelDelta, At(LevelDeltaRule)) },
+                "maxHealth" => r with { MaxHealth = Multiplier(p.Value, p.Name, path) },
+                "power" => r with { Power = Multiplier(p.Value, p.Name, path) },
+                "moveSpeed" => r with { MoveSpeed = Multiplier(p.Value, p.Name, path) },
+                "attackSpeed" => r with { AttackSpeed = Multiplier(p.Value, p.Name, path) },
+                _ => throw new Fail(UnknownField(path, p.Name)),
             };
         }
-        if (!any) throw new Fail(EmptyModifiers);
-        if (r.Level is not null && r.LevelDelta is not null) throw new Fail(BothLevels);
+        if (!any) throw new Fail(At(EmptyModifiers));
+        if (r.Level is not null && r.LevelDelta is not null) throw new Fail(At(BothLevels));
         return r;
     }
 
     /// <summary>A multiplier of `modifiers`: a JSON number 0.5-3.0 with at most two decimals (S-8).</summary>
-    static double Multiplier(JsonElement v, string key)
+    static double Multiplier(JsonElement v, string key, string path)
     {
         if (v.ValueKind != JsonValueKind.Number || !v.TryGetDecimal(out var d) || d < (decimal)MinModifier || d > (decimal)MaxModifier
             || decimal.Round(d, 2) != d)
-            throw new Fail(ModifierRule(key));
+            throw new Fail(ModifierRule(key).Replace("action.modifiers", path));
         return (double)d;
     }
 
