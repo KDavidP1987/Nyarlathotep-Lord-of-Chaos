@@ -215,4 +215,5 @@ project, use the `dod` skill to plan it first unless they decline.
 ## Session start
 
 Work `docs/PREFLIGHT.md` (a `SessionStart` hook reminds you). Short form: git status → reference paths are
-read-only → open the feature doc → spawn/buff safety → stop the server before deploying.
+read-only → open the feature doc → spawn/buff safety → stop the server before deploying. Then read
+`docs/SESSION_HANDOFF.md` (where the last session stopped and what's next) and overwrite it at session end.
