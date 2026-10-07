@@ -38,3 +38,9 @@ other post-audit carries a "Codex verdict:" line pointing to it. Session log che
 - in-game: none in step 1 (Session 1 is step 2)
 - dod status: D1, D2, D4, D6, D8, D10, D12, D14, D15, D17, D19 pass at aa1aece and are checked; D3, D5, D7 wait for step 2's WaveAction and EventRuntime, which wire the tested logic; D9 and D11 for step 2 (the binding's read and the end-path calls); --check problems 0, 1 warning (review pending: the A2 re-review is owed before close)
 - privacy grep (7656119, kdpenland): none in the step 1 diffs
+
+### Step 2 · open (as of 2026-10-06, 1c25ab0)
+- built: 33063d9 (services, template), c6deb38 (Session 1 tooling); Session 1 in docs/features/WAVE_SETS.md › Test results
+- in-game: D20, D21, D22 pass; D23 fail (176.8 ms hunt-phase tick, A7); A6 (uncredited batch deaths) still unexplained
+- not yet run: A7 diagnostic and D23 rerun, /code-review on c5c8848..HEAD, planted faults, dod status, privacy grep
+- handoff: docs/SESSION_HANDOFF.md

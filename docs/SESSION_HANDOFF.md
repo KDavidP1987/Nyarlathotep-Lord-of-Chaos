@@ -21,6 +21,9 @@ into them.
 - **World note:** it was rolled back to AutoSave_3527 after a `.devkill` killed 232 world entities. Chaos lost the
   items in hotbar slots 5-6 at the pond.
 
+- **dod skill:** the junction now resolves to dod **0.3.5**. The open plans were written under 0.3.2. Before the next
+  plan step, ask the owner whether the update is ready and whether open plans should migrate.
+
 ## Next, in order
 
 1. **A7 diagnostic:** on a slow tick, log the timing of each part of the hunt phase as one `[nyar …]` line. Build,
