@@ -205,10 +205,10 @@ project, use the `dod` skill to plan it first unless they decline.
   release commits `chore(release): vX.Y.Z`.
 - `gh` CLI is authenticated as `KDavidP1987`. GitHub is the public home until Thunderstore publication.
 
-## Shell notes (this Windows / OneDrive environment)
+## Shell notes (this Windows environment)
 
 - `robocopy` exit codes 1–7 are success; check `$LASTEXITCODE -lt 8`.
-- OneDrive can transiently lock files during move/delete — re-inspect and retry, don't assume data loss.
+- Files could transiently lock during move/delete while the repo lived in OneDrive (before 2026-10-07) — re-inspect and retry, don't assume data loss.
 - Run `Remove-Item` as its own minimal command (the sandbox false-positives when it's combined with regex
   or other path operations).
 
