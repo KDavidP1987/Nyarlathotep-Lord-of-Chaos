@@ -5,7 +5,7 @@ profile: full
 id: dod-20261011-swm1
 slug: swarm
 title: Swarm — a contained arena of growing spider waves with a kill-to-death winner
-status: ready
+status: in-progress
 size: L
 parent: nyarlathotep
 kind: feature
@@ -359,3 +359,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-11 · note · dry-run · D24 · test: `dotnet test Nyarlathotep.Tests -c Release --no-build --filter "FullyQualifiedName~EventValidationTests&FullyQualifiedName~Growth"` → No test matches the given testcase filter (the Growth cases are new in this child, step 2)
 - 2026-10-11 · note · dry-run · D25 · test: `dotnet test Nyarlathotep.Tests -c Release --no-build --filter "FullyQualifiedName~SwarmTests"` → No test matches the given testcase filter (SwarmTests Growth is new in this child, step 2)
 - 2026-10-11 · status → ready · approve
+- 2026-10-11 · status → in-progress · start
