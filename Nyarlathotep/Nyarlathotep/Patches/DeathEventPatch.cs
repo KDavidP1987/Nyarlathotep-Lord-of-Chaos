@@ -53,14 +53,8 @@ internal static class DeathEventPatch
                     if (KillFaults.Fail()) Core.Log.LogError($"[nyar] faction kills: death skipped: {ex.Message}");
                 }
                 var feed = EventRuntime.Feed;
-                bool wantsScore;
-                try { wantsScore = Logic.Scoreboard.Wants(EventRuntime.Engine.Active); }   // the running instances, never the catalog
-                catch (Exception ex)
-                {
-                    wantsScore = false;
-                    feed.Before(() => throw ex, ScoreLog);                                  // logged once per streak
-                }
-                if (!wantsScore) feed.Idle();
+                // The running instances, never the catalog; a throw holds the streak (step 3 Codex F1).
+                var wantsScore = feed.Wants(() => Logic.Scoreboard.Wants(EventRuntime.Engine.Active), ScoreLog);
                 var includeAdmins = wantsScore && Settings.ScoreboardIncludeAdmins.Value;
                 Logic.DeathPass.Run(deaths.ToArray(), death =>
                 {

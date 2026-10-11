@@ -77,6 +77,21 @@ public class WaveSetDependencyFailureTests
     }
 
     [Fact]
+    public void KillRead_fails_when_a_throwing_wants_read_ends_its_streak()
+    {
+        var feed = new ScoreFeed();
+        var log = new LogLines();
+        for (var frame = 0; frame < 3; frame++)
+            Assert.False(feed.Wants(() => throw new InvalidOperationException("instances gone"), log.Add));   // three frames
+        Assert.Equal(["scoreboard: death skipped: instances gone"], log.Lines);                     // once per streak
+        Assert.Equal([ScoreFeed.ReadFailing], feed.Health);                                         // held, not cleared
+        Assert.True(feed.Wants(() => true, log.Add));
+        Assert.Equal([ScoreFeed.ReadFailing], feed.Health);                                         // only a good death read ends it
+        Assert.False(feed.Wants(() => false, log.Add));                                             // no counting instance: idle
+        Assert.Empty(feed.Health);
+    }
+
+    [Fact]
     public void KillRead_fails_when_a_read_happens_with_no_scoreboard_event()
     {
         var (engine, _) = Started(WaveSet("ws", scoreboard: false));

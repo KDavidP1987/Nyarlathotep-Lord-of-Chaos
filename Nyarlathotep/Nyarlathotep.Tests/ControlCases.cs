@@ -479,7 +479,7 @@ public static class ControlCases
         T("D8", "Counting", "ScoreboardTests", ["the_201st_player_gets_a_row", "rows_outlive_the_event", "a_native_or_another_events_unit_credits",
             "a_familiar_or_summon_kill_is_not_credited", "a_death_to_a_projectile_or_summon_is_not_credited", "an_earlier_instance_unit_credits"],
             ["kills_and_deaths_per_event", "ties_by_fewer_deaths_then_the_earlier_credit", "the_name_at_the_latest_credit"], ["no_credit"]) with { Plan = WaveSets },
-        T("D13", "KillRead", "WaveSetDependencyFailureTests", ["a_throwing_read_skips_died_or_a_later_death", "the_entry_outlives_a_good_read",
+        T("D13", "KillRead", "WaveSetDependencyFailureTests", ["a_throwing_read_skips_died_or_a_later_death", "the_entry_outlives_a_good_read", "a_throwing_wants_read_ends_its_streak",
             "a_read_happens_with_no_scoreboard_event", "an_edit_mid_run_stops_the_counting"], ["a_kill_and_a_death_credited"], ["no_death"]) with { Plan = WaveSets },
         T("D18", "ClearedRead", "WaveSetDependencyFailureTests", ["a_throwing_read_starts_the_wave_or_logs_twice"], ["a_good_read_clears_the_entry"],
             ["no_wave_waits_for_a_clear"]) with { Plan = WaveSets },

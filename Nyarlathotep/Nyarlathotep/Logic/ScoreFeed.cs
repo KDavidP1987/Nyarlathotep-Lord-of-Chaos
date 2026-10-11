@@ -92,6 +92,18 @@ public sealed class ScoreFeed
     /// <summary>No counting instance runs: the streak and its entry end, nothing is read (D13).</summary>
     public void Idle() => _streak.Ok();
 
+    /// <summary>Whether a running instance counts (<paramref name="read"/>, Scoreboard.Wants over the running
+    /// instances). False ends the streak as <see cref="Idle"/> does; a throwing read counts as a failed read (logged once
+    /// per streak, the entry held) and reads as false without ending it (step 3 Codex F1).</summary>
+    public bool Wants(Func<bool> read, Action<string> log)
+    {
+        bool wants;
+        try { wants = read(); }
+        catch (Exception e) { Failed(e, log); return false; }
+        if (!wants) Idle();
+        return wants;
+    }
+
     void Failed(Exception e, Action<string> log)
     {
         if (_streak.Fail()) log($"scoreboard: death skipped: {e.Message}");
