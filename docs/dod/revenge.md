@@ -335,3 +335,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-11 · note · review 1 (subagent) REVISE: F1 (D46) and F2 (D47) by owner decision, F3-F9 and UF1-UF2 accepted and applied
 - 2026-10-11 · note · the dry runs above (D1-D27) ran on an isolated copy of e4f0594 and predate recon_commit 8b80ba2; each re-runs at step 1 (review 2 F4)
 - 2026-10-11 · note · review 2 (subagent) READY: F1-F4 accepted and applied (D6 and step 1, D8, D10, this Log), F5 a stated assumption
+- 2026-10-11 · note · round cap · after Review 2 · owner: Allow a 3rd round (Recommended) — one more fresh-subagent review on the current text, past the Halloween track's two (design §9 D34), then approve on READY

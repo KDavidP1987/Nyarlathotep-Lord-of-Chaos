@@ -369,3 +369,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-11 · note · owner decisions: S-14 validated (D44), S-15 validated (D44), S-16 validated (D45), S-17 validated (D45)
 - 2026-10-11 · note · coverage updated for the owner's decisions (D44-D45)
 - 2026-10-11 · note · review 1 (subagent) REVISE: F1-F10 accepted and applied (F2 option A: template sized to the default cap)
+- 2026-10-11 · note · round cap · after Review 2 · owner: Allow a 3rd round (Recommended) — one more fresh-subagent review on the current text, past the Halloween track's two (design §9 D34), then approve on READY
