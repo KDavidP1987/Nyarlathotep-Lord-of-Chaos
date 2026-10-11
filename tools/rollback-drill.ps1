@@ -48,8 +48,10 @@
     pass) and pair-otherlocation ("action.location Admin needs a Manual trigger": fail); three for automation (D23):
     pair-interval ("unknown trigger type Interval": pass), pair-fanout ("unknown field action.fanOut": pass) and
     pair-othertrigger ("unknown trigger type Weather", a type no release has: fail); and interval-seed (no drill-interval
-    for a newer release of 0.7.0, one for 0.8.0, and a state.json without its NextInterval entry fails) → "drill
-    selftest: 17/17".
+    for a newer release of 0.7.0, one for 0.8.0, and a state.json without its NextInterval entry fails); three for
+    wave-sets (D24): pair-wavelist ("unknown field action.waveList": pass), pair-scoreboard ("unknown field
+    action.scoreboard": pass) and pair-colourkey ("unknown field action.colour", a key no release has: fail) → "drill
+    selftest: 20/20".
 
     -LogsTo <dir> keeps the logs of N's drill-mark boot and N-1's boot there as N.txt and N-1.txt.
 #>
@@ -104,7 +106,7 @@ function Get-DisabledLines([string]$Text) {
 # @{ Why = $null, or the failing stage; Line = the "events.json: ..." summary }.
 # The location alternative is 0.6.0's exact refusal of a location type it does not know (AroundPlayer); a malformed
 # Point gets the same text from 0.6.0 but is disabled by N too, so it is never an extra (Codex step 4 F2).
-$script:NewerKeyReasons = '^(unknown field action\.(modifiers|loot|behaviour|allowTerritory|units\.chance|fanOut)|action\.location must be \{ "type": "Point", "x": number, "z": number, optional "y": number \} or \{ "type": "Admin" \})$'
+$script:NewerKeyReasons = '^(unknown field action\.(modifiers|loot|behaviour|allowTerritory|units\.chance|fanOut|waveList|scoreboard)|action\.location must be \{ "type": "Point", "x": number, "z": number, optional "y": number \} or \{ "type": "Admin" \})$'
 
 # The trigger types automation added (D23): 0.7.0 refuses each with "unknown trigger type <T>".
 $script:NewerTriggerReasons = '^unknown trigger type (Interval|RegionEntered|FactionKills)$'
@@ -186,7 +188,8 @@ if ($SelfTest) {
     $pairs = @(@{ Name = 'pair-empower'; Pass = $true }, @{ Name = 'pair-other'; Pass = $false },
         @{ Name = 'pair-modifiers'; Pass = $true }, @{ Name = 'pair-chance'; Pass = $true }, @{ Name = 'pair-otherkey'; Pass = $false },
         @{ Name = 'pair-aroundplayer'; Pass = $true }, @{ Name = 'pair-otherlocation'; Pass = $false },
-        @{ Name = 'pair-interval'; Pass = $true }, @{ Name = 'pair-fanout'; Pass = $true }, @{ Name = 'pair-othertrigger'; Pass = $false })
+        @{ Name = 'pair-interval'; Pass = $true }, @{ Name = 'pair-fanout'; Pass = $true }, @{ Name = 'pair-othertrigger'; Pass = $false },
+        @{ Name = 'pair-wavelist'; Pass = $true }, @{ Name = 'pair-scoreboard'; Pass = $true }, @{ Name = 'pair-colourkey'; Pass = $false })
     foreach ($pair in $pairs) {
         $pn = Join-Path $fx "$($pair.Name)\N.txt"; $pn1 = Join-Path $fx "$($pair.Name)\N-1.txt"
         $r = if ((Test-Path -LiteralPath $pn) -and (Test-Path -LiteralPath $pn1)) {
