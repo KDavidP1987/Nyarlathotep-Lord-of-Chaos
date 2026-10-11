@@ -1,0 +1,315 @@
+---
+dod: 2
+rubric: 3
+profile: full
+id: dod-20261011-swm1
+slug: swarm
+title: Swarm — a contained arena of growing spider waves with a kill-to-death winner
+status: draft
+size: L
+parent: nyarlathotep
+kind: feature
+created: 2026-10-11
+baselined: none
+closed: none
+recon_commit: e4f0594
+coverage_author: 14/15 layers · 49/50 probes
+coverage_reviewer: pending
+review: pending
+---
+
+# DoD: Swarm — a contained arena of growing spider waves with a kill-to-death winner
+
+**Size:** L. A schema change (two optional keys, `action.arena` and `action.winner`, in events.json) across several modules:
+- **Logic:** Model, Validation, Scoreboard, Messages, CommandArgs, DefinitionEditor, Authoring, EventAdmin, and a new Logic/Arena.cs (the containment rule).
+- **Services:** EventScheduler (one tick phase), SpawnTracker (positions of an event's units and the return), HealthMonitor (one entry), EventRuntime (the winner at the showing end paths).
+- **Resources:** templates.json. **Tools:** tools/rollback-drill.ps1, tools/preflight-checks.json, tools/vrclient/scenarios/swarm*.vrs.
+No new external dependency, no new cfg key, no new command.
+**Planned:** interactively, as a draft for the owner's decisions (Assumptions S-12 is open). The Halloween track's process applies (design §9 D34): one review round, two at most; Codex once on the child's diff before release; a vrclient scenario as the in-game evidence; the owner judges only look and feel (D18).
+**Request:** Epic Child constraints › Halloween track: "**swarm** — a contained area event (Point plus radius) whose waves grow, with kills and deaths per player and the best kill-to-death ratio named as the winner." Epic A35, the players testing with the owner: "spider spawning within a region". Design §9 D33: "a contained spider swarm with a K/D winner".
+
+**North Star:** a server admin gets a spider swarm that stays inside its arena, grows wave by wave and names the player with the best kill-to-death ratio, built on 0.9.0's wave sets and scoreboard with no parallel machinery, released as 0.10.0 well before 2026-10-31 (aim 2026-10-18); finished when D1-D23 have evidence.
+
+## Definition of Done
+- [ ] D1 · **Arena schema** a SpawnWaves action, in the units form or the waveList form, may carry `arena`, `{ "radius": 15-60 }`, the circle its units are kept in (absent: no containment, 0.9.0's behaviour byte-for-byte); it is refused, the definition disabled with one reason that names the field and fits 120 bytes, when the location is AroundPlayer ("action.arena needs a Point location or an Admin location"), action.radius exceeds arena.radius ("action.radius must be at most action.arena.radius"), a Hunt behaviour's range exceeds arena.radius ("action.behaviour.range must be at most action.arena.radius"), the radius is outside 15-60 or not an integer ("action.arena.radius must be 15-60"), the value is not an object ("action.arena must be an object"), or it carries another key ("unknown field action.arena.<key>") · test: Nyarlathotep.Tests EventValidationTests Arena (fails when: a bound is off by one, an AroundPlayer arena loads, a spawn radius or Hunt range wider than the arena loads, an unknown key is accepted or named without its path, a reason exceeds 120 bytes, or an event without the key parses differently)
+- [ ] D2 · **Winner key** `action.winner` is optional on SpawnWaves in either form, its one value "KillDeath" (absent: no winner line); any other value is refused "action.winner must be KillDeath", and the key on an action without `scoreboard: true` is refused "action.winner needs action.scoreboard true" · test: Nyarlathotep.Tests EventValidationTests WinnerKey (fails when: another value loads, the key loads without the scoreboard, or an event without the key gets a winner)
+- [ ] D3 · **Kept inside** at each arena check, every 5 s while an arena event runs, each live tracked unit of that running instance standing more than arena.radius + 10 m (on x and z) from the arena's centre, which is the Point location's x and z or, for an Admin location, the starting admin's position captured at the start, is returned to a spot within action.radius of the centre; a unit at or inside arena.radius + 10 m is left alone; units of another event, of an earlier instance of the same event (spawned before its start, wave-sets A3), of `.nyar spawn` and of an event without `arena` are never moved; a check that returned one or more units logs "[nyar] arena <id>: returned <n>, farthest <d> m", never a name or a player's position · test: Nyarlathotep.Tests SwarmTests Containment (fails when: a unit at radius + 10.5 m stays, one at radius + 9.5 m moves, a returned unit lands outside action.radius, another event's, an earlier instance's or a `.nyar spawn` unit is moved, the centre of an Admin location is read from anything but the start's origin, or the log line names a player or a position)
+- [ ] D4 · **Arena check guarded** a throwing position read or return write for one unit skips that unit and the rest of the check still runs; a failing check logs "[nyar] arena <id>: check failed: <message>" once per streak and holds "arena: check failing" on the health line and `.nyar status` until a check succeeds; no later tick phase, despawn batch or event end is skipped because of it, and the event's duration still ends the event · test: Nyarlathotep.Tests SwarmDependencyFailureTests (fails when: one throwing unit stops the check for the others, the error line repeats within a streak, the health entry outlives a good check, or a throw skips a later tick phase, the despawn batch or the event's end)
+- [ ] D5 · **Winner rule** (S-6) for an event with `winner: KillDeath` the winner is chosen over every scoreboard row, not only the top 3: among players with at least one kill, the highest kills ÷ max(1, deaths), then more kills, then fewer deaths, then the earlier first credit; an admin dropped while Scoreboard.IncludeAdmins is false (wave-sets D9) is never the winner; a credit past the 200-row cap (Limits.ScoreboardPlayers) adds to the totals and never makes a winner; with no player holding a kill there is no winner · test: Nyarlathotep.Tests ScoreboardTests Winner (fails when: a player fourth by kills with the best ratio is not chosen, 0 deaths divides by zero or outranks a higher ratio, a tie breaks the wrong way, a dropped admin or a player without a kill wins, or the 201st player wins)
+- [ ] D6 · **Winner line** Logic/Messages.cs ScoreboardLines renders, for an event with `winner: KillDeath` and at least one participant, one line after the wave-sets lines: "<event name> winner: <name>, K/D <r> (<k> kills, <d> deaths)" with r to two decimals in the invariant culture (3.00, never 3,00), or "<event name> winner: none" when no participant has a kill; with no participant only the "no player scored" line; the name through TextSink.Name, the event name through TextSink.Clean, the line within Wire.MaxBytes (480); an event without the key renders exactly 0.9.0's lines · test: Nyarlathotep.Tests ScoreboardTests WinnerLines (fails when: the line exceeds 480 bytes with a 20-character name and a 64-byte event name, a name keeps "<" or a control character, the ratio prints a comma or a third decimal, the empty case prints a winner line, or a keyless event's lines change)
+- [ ] D7 · **When the winner shows** the winner line is queued with the scoreboard lines at wave-sets D11's three showing paths (natural end, all waves defeated, an admin's `.nyar event stop`) and at none of its four silent ones (purge, restart, pillar switched off, fault cancel); for an event with the key the scoreboard log line ends ", winner K/D <r>" or ", no winner", never a name · test: Nyarlathotep.Tests SwarmTests EndPaths (fails when: a showing path omits the winner line, a silent path queues one, the log line carries a name, or a keyless event's log line changes)
+- [ ] D8 · **Names only on the scoreboard** the winner's name appears in the winner chat line and nowhere else: no log line, push, wire line, reply, state.json field or health entry carries a name, a platform id or a position because of this child; ScoreboardLines stays the only builder that takes a player name; the state.json property list of PrivacyTests.Automation_fails_when_state_gains_a_per_player_field is unchanged · test: Nyarlathotep.Tests PrivacyTests Swarm (fails when: the planted name or platform id reaches a log line, push, reply or state.json, a builder other than ScoreboardLines takes a player name, or state.json gains a property)
+- [ ] D9 · **Chat fields** `.nyar event set <id> action.arena <15-60|none>` and `.nyar event set <id> action.winner <killdeath|none>` take exactly what the validator takes and refuse with its reason (D1, D2), naming the field; `action.scoreboard false` on an event with a winner and `action.location aroundplayer …` on an arena event are refused with the validator's reason; every reply fits 480 bytes; docs/NYARLATHOTEP_DESIGN.md §6 lists both fields · test: Nyarlathotep.Tests CommandArgTests Swarm (fails when: a field accepts a value the validator refuses, an arena is set on an AroundPlayer event, a winner on an event without the scoreboard, the scoreboard is switched off under a winner, a reply exceeds 480 bytes, or the §6 table and SettableFields differ); then pwsh tools/preflight.ps1 -AuthSuite → "auth suite: pass (tests, commands, …)", its command inventory holding `event set` (fails when: `event set` loses adminOnly)
+- [ ] D10 · **Event info for arenas** `.nyar event info <id>` for an event with `arena` shows "arena: <r> m around the spot" or "arena: <r> m around the starting admin", and its scoreboard line reads "scoreboard: on, winner K/D" when the winner is set; every line fits 480 bytes; an event without either key shows 0.9.0's lines unchanged · test: Nyarlathotep.Tests AuthoringTests Swarm (fails when: the arena or winner is missing from the lines, a line exceeds 480 bytes, or a keyless event's info changes)
+- [ ] D11 · **Spider swarm template** Resources/templates.json gains `spider-swarm`, disabled, named "Spider swarm": an Admin location (the admin starts it where it should be, or pins it with `.nyar event set spider-swarm location here`), arena 40, radius 12, Hunt 40, scoreboard true, winner KillDeath, duration 1200 s; a waveList of 5 waves of Faction_Spiders units only (no V Blood, no `_Summon` prefab, no Baneling, whose self-detonation credits nobody), each wave holding more units than the one before and none more than 20 (the default MaxUnitsPerWave), waves 2-5 whenCleared with afterSeconds 120, levels rising per wave, the last wave led by one CHAR_Spider_Broodmother with maxHealth 2.0; eleven templates in all, each valid · twins: Point location D3 · test: Nyarlathotep.Tests TemplateLibraryTests Swarm (fails when: the template is enabled or invalid, uses a prefab outside Faction_Spiders or a V Blood, Summon or Baneling prefab, a wave is not larger than the one before or exceeds 20 units, it lacks arena, scoreboard or winner, or the library count is not 11)
+- [ ] D12 · **Wire unchanged** Wire.Api stays 6; no push kind, tag or field is added; docs/RAPHAEL_INTEGRATION_CONTRACT.md says that an event's arena and winner never reach the wire and that names never do · test: Nyarlathotep.Tests ContractDocTests Swarm (fails when: Wire.Api changes, a push kind is added, or the contract lacks the sentence)
+- [ ] D13 · **Dependency suite** tools/preflight-checks.json dependencySuites gains `swarm` with the category arena-read (D4) and its control · cmd: pwsh tools/preflight.ps1 -DependencySuite swarm → "dependency suite: swarm 1/1 (arena-read)" (fails when: the category's test is missing or passes with its fault planted)
+- [ ] D14 · **Controls registered** swarm joins ControlCases.Plans with a row for every test and cmd control of this plan, a later step's control listed in ControlCases.Pending until its step's post-audit; SwarmTests and SwarmDependencyFailureTests join ControlCases.NewClasses; Nyarlathotep.Tests.csproj copies docs/dod/swarm.md and docs/audits/swarm.md; tools/preflight-checks.json childDocs maps swarm to docs/features/SWARM.md, and its dataTables and snapshotSessions list the plan · test: Nyarlathotep.Tests ControlCaseTests (fails when: a control of this plan has no row and no pending entry, a pending entry outlives its step's post-audit or the 0.10.0 Version, or a row names a method that does not exist)
+- [ ] D15 · **Kept inside in game** on the dev server sw-arena (a Point location set with `.nyar event set sw-arena location here` at a spot with no native units, arena 25, radius 8, Hunt 25, one wave of 8 CHAR_Spider_Forest, scoreboard and winner on), started by `.nyar event start sw-arena` with Chaos at the spot, spawns its units within 8 m of it; Chaos moves to 60 m from the spot and stays 30 s; from 10 s after the move every unit is within 35 m of the spot: the count `.nyar debug here 35` lists at the spot equals the event's tracked units, either because the game's own leash held them or after a "[nyar] arena sw-arena: returned <n>" line; Chaos back at 10 m from the spot is in combat with them within 10 s · twins: Admin location D16 · manual: tools/vrclient/scenarios/swarm.vrs (SCENARIO PASS n/n), the log lines and the `.nyar debug here` output, recorded under docs/features/SWARM.md › Test results › Session 1
+- [ ] D16 · **Waves and winner in game** in the same session, with Scoreboard.IncludeAdmins true in the dev cfg, `.nyar template use spider-swarm`, `.nyar event enable spider-swarm` and `.nyar event start spider-swarm` with Chaos where it should be (an Admin location) spawn its 5 waves, each wave line "event spider-swarm wave <k>/5 …" naming more units than the one before; Chaos kills every unit (`.devkill`), the log reads "event spider-swarm ended: all waves defeated (5 of 5 waves)", and the chat shows the scoreboard and "Spider swarm winner: Chaos, K/D <r> (<k> kills, <d> deaths)", seen rendered in a vrclient screenshot; a run with one `.devdie` death shows deaths 1 and r equal to kills ÷ 1; with IncludeAdmins false the same run shows "no player scored" and no winner line · twins: Point location D15 · manual: tools/vrclient/scenarios/swarm.vrs, the log lines and the screenshots, docs/features/SWARM.md › Session 1
+- [ ] D17 · **End paths leave nothing** in the same session: `.nyar event stop` at wave 2 of spider-swarm shows the scoreboard with its winner line and leaves "tracked units: 0" after the grace; `.nyar purge confirm` at wave 2 shows neither and leaves 0; a restart at wave 2 logs "cancelled by restart", the boot sweep finds the units, shows neither and leaves 0; no "[nyar] arena" line follows an event's end · manual: docs/features/SWARM.md › Session 1, each path's lines and `.nyar status`
+- [ ] D18 · **Look and feel** the owner, connected to 127.0.0.1:9876, watches one spider-swarm run and judges that the spiders read as a swarm held in its arena (a return does not look broken, the waves visibly grow) and that the winner line reads well in chat · manual: waiting on the owner or their delegate; judge: the owner, against one live spider-swarm run on the dev server and D16's screenshot; the verdict recorded under docs/features/SWARM.md › Test results
+- [ ] D19 · **Tick budget** in its own run of sw-timing (arena 30, radius 10, two waves of 12 CHAR_Spider_Forest left alive, Hunt 30, scoreboard on, Chaos invulnerable inside the arena) with Debug.TimingLog on, -TimingSpan over ten windows holds the average under 5 ms; MinTracked 10 is automation D21's threshold · cmd: pwsh tools/preflight.ps1 -TimingSpan <the Session 1 log copy> -Windows 10 -MinTracked 10 → "timing span: 10/10 windows under 5 ms, tracked >= 10, …" (fails when: a window averages 5 ms or more, or fewer than ten windows with 10 tracked are found)
+- [ ] D20 · **Rollback drill across swarm** tools/rollback-drill.ps1 accepts that 0.9.0 disables definitions 0.10.0 understands only when every extra disabled definition's reason is "unknown field action.arena" or "unknown field action.winner", counted among "newer keys"; its selftest gains pair-arena and pair-winner (pass), wave-sets' pair-otherkey still failing → "drill selftest: 22/22" · cmd: pwsh tools/rollback-drill.ps1 -SelfTest → "drill selftest: 22/22"; then pwsh tools/rollback-gate.ps1 -From v0.9.0 -To v0.10.0 -Plan swarm → "rollback gate: 4/4" (fails when: a definition disabled for another reason passes, pair-otherkey passes, or the N-1 boot fails on 0.10.0's files)
+- [ ] D21 · **Release 0.10.0** csproj Version and thunderstore.toml versionNumber are 0.10.0; both changelogs and both READMEs describe the arena, the winner line, the spider-swarm template and the two chat fields in the project's plain style with collapsible sections; the annotated tag v0.10.0 is pushed and the GitHub pre-release carries the tcli zip built with the token sentinel; after a failed or ambiguous create, `gh release view v0.10.0` runs before any retry · cmd: pwsh tools/preflight.ps1 → PREFLIGHT OK and "release tags: <n>/<n>"; then pwsh tools/release-verify.ps1 -Tag v0.10.0 -Asset kdpen-Nyarlathotep-0.10.0.zip → "release verify: hashes equal" (fails when: a surface disagrees on the version, a changelog lacks the 0.10.0 entry, the tag is local only, or the asset's hash differs from the audit's)
+- [ ] D22 · **Sessions, records, paths and data** every server session is "### Session <n> · <date>" under docs/features/SWARM.md › Test results, with its log-check line in docs/audits/swarm.md from -LogCheck before the next restart and "snapshot restored; hashes equal" from tools/dev-snapshot.ps1; the audit has a pre-audit and a post-audit per Build plan step and a "Codex verdict:" line in step 3's post-audit (the child's one cross-inspection, design §9 D34); every path this child writes is in tools/paths-manifest.txt and declared by Rollout › Paths walked; every Design › Data row is in tools/data-inventory.json · cmd: pwsh tools/preflight.ps1 -AuditOf swarm → "audit steps: swarm 3/3 pre, 3/3 post, …"; pwsh tools/preflight.ps1 -SessionsOf swarm → "session logs: swarm <n>/<n> checked; snapshots <m>/<m> from session 1"; pwsh tools/preflight.ps1 -Paths -DeclaredOf swarm → "paths: <n> walked, all in manifest; declared: <k>/<k> in swarm" (fails when: a step lacks an audit entry, a session lacks its log check or snapshot line, or a written path is undeclared or outside the manifest)
+- [ ] D23 · **Secrets and privacy** this child adds no credential; no tracked file, built zip, dist/ or build/ file or build log holds a token or the sentinel, and no tracked line holds a platform-id digit run or the owner's mail name except lines quoting the pattern · cmd: pwsh tools/preflight.ps1 → "secrets: none (…)"; then, before each push, git grep -n -E "7656119|kdpenland" and `git log -p origin/main..main` → only lines that quote the pattern itself (fails when: a token, the sentinel, a platform id or the mail name appears in a scanned file or an unpushed commit)
+
+## Components
+- C1 · **Contained arena** an event's units stay inside a circle around a fixed spot, and a broken check never breaks the event · D1 D3 D4 D13 D15 D18
+- C2 · **Growing spider waves** a ready-made spider swarm whose waves get bigger, using 0.9.0's wave list · D11 D16 D18
+- C3 · **Kill-to-death winner** the best ratio named at the end, beside the existing kills ranking, with names nowhere else · D2 D5 D6 D7 D8 D16
+- C4 · **Admin control** the two keys set and read from chat · D9 D10
+- C5 · **Safe to ship** nothing left behind, the wire and the tick budget unchanged, a drilled rollback, a recorded release · D12 D14 D17 D19 D20 D21 D22 D23
+
+## Purpose & typical use
+A server admin wants a Halloween fight the players can find: "put a spider swarm in the woods by the old mill for Saturday night, and tell us who did best". The players asked for spiders spawning in one area; the owner set the shape (design §9 D33): a contained swarm whose waves grow, with a kill-to-death winner.
+
+Today an admin can already build growing waves with 0.9.0's waveList and get a kills scoreboard, but the units chase players across the map and the scoreboard rewards whoever kills most, not whoever fights best. The job: keep the swarm in its arena (D3), ship a spider-swarm template whose waves grow (D11), and name the best kill-to-death ratio (D5, D6). It extends SpawnWaves and the wave-sets scoreboard and coexists with every 0.9.0 event, which runs unchanged without the two new keys.
+
+## Use cases
+### Typical
+The admin stands in a clearing and runs `.nyar template use spider-swarm`, `.nyar event enable spider-swarm` and `.nyar event start spider-swarm`. Six small spiders appear around them; players fight inside the 40 m arena. Each wave comes when the last is cleared (or after 120 s), bigger each time, and wave 5 brings a Broodmother. A player who runs out of the arena is not followed past its edge (D3). When the Broodmother dies the event ends "all waves defeated" and chat shows the top 3 by kills and "Spider swarm winner: <name>, K/D 7.50 (15 kills, 2 deaths)" (D6).
+
+### Minimal stretch
+- An arena on a units-form event with one wave of one unit: it spawns, is kept inside, and the event ends at its duration (D1, D3).
+- `scoreboard: true` with no `winner`: 0.9.0's lines exactly (D6).
+- `winner` set, nobody kills anything: "no player scored" only (D6).
+- Used once: the template stays disabled, the rows die with the event, nothing is written to disk (D8, D11).
+
+### Maximal stretch
+- Volume: an arena event at the default caps tracks at most 150 units; the arena check reads each live unit's position once per 5 s (D3, D19). Five arena events at once stay under MaxConcurrentEvents (default 3) as today.
+- Abuse: a player can stand outside the arena and shoot in; their kills count wherever they stand (D39, S-9) and the units do not follow them out (D3). A player can farm a perfect ratio with one kill and no death; the ratio of a player who kills more and dies once beats it as soon as it is higher (D5, S-6). A unit stuck outside (a wall, a cliff) is returned on every check; the event's duration bounds it (D3, D4).
+- Repeated use: one instance per definition, as 0.8.0 (Epic Business rules 8); an event stopped and restarted inside its grace never moves or credits the old instance's units (D3, wave-sets A3).
+
+## Business rules
+1. **Arena** (D1, D3): a circle of arena.radius (15-60 m) around the centre: the Point location's x and z, or the starting admin's position for an Admin location. AroundPlayer has no fixed centre and takes no arena. The spawn radius and a Hunt range fit inside it, so units spawn inside and hunt only players inside (HuntPlan.Targets reads the range from the centre).
+2. **Kept inside** (D3, S-5): every 5 s (HuntPlan.IntervalSeconds, the existing behaviour cadence) a unit of the running instance farther than arena.radius + 10 m from the centre is returned to within action.radius of it. The 10 m slack (S-13) lets a unit finish a swing at the edge without being moved.
+3. **Winner** (D5, S-6): over every row, players with at least one kill, highest kills ÷ max(1, deaths), then more kills, fewer deaths, earlier first credit. Admins and the 201st player follow wave-sets D8 and D9.
+4. **Showing** (D7): the winner line rides with the scoreboard: wave-sets D11's three showing paths, none of its four silent ones.
+5. **Growth** (D11, S-12, waiting on the owner): waves grow because the template's waveList is written that way; the swarm adds no growth key.
+6. **Precedence** (4.4): the caps (MaxUnitsPerWave, MaxTrackedUnits, MaxConcurrentEvents) beat the wave list and the arena; the kill switch beats everything (a purge ends the event with no scoreboard and no winner, D7, D17); validation beats chat (D9); the arena never moves a unit it did not spawn for this instance (D3). The owner decides an exception, through design §9.
+7. **"Every" sets** (4.5): "every unit of the running instance" is SpawnTracker's ledger filtered by event id and instance start (the boundary wave-sets A3 drew), so `.nyar spawn` units and an earlier instance's units are outside it (D3); "every end path" is wave-sets D11's seven (D7, D17); "every name output" is the outputs PrivacyTests enumerates (D8); "every reader of the two keys" is Validation, CommandArgs, DefinitionEditor, Authoring and EventAdmin's info lines, the arena phase and ScoreboardLines, each with an item (D1, D2, D9, D10, D3, D6).
+- whole: none — the winner is one row picked from the scoreboard; no list of parts here adds up to a total (wave-sets D8 owns the totals)
+- siblings: Point location, Admin location
+
+## Interfaces
+### Internal — reads / writes / changes (paths or symbols)
+- **Reads (5.1):** SpawnTracker's ledger (Ledger.Units, the instance start) and the units' Translation for the arena check; ActiveEvent.Origin (the starting admin's position) and Instance.StartedUtc; Logic/Scoreboard.cs rows for the winner; Engine.Active for the running instances' own definitions (an edit mid-run changes nothing until the next start, as wave-sets D13).
+- **Writes or changes (5.2):** Logic/Model.cs SpawnWavesAction gains `Arena` (an `Arena(int Radius)` record or null) and `Winner` (an enum, None or KillDeath); Logic/Validation.cs ParseSpawnWaves; new Logic/Arena.cs (the stray rule and the return spot, D3); Logic/Scoreboard.cs (the winner over every row, D5); Logic/Messages.cs ScoreboardLines (D6) and ScoreboardRule.LogLine (D7); Logic/CommandArgs.cs, DefinitionEditor.cs, Authoring.cs, EventAdmin.cs (D9, D10); Services/EventScheduler.cs (the arena phase), Services/SpawnTracker.cs (the event's units and their return: Translation and LastTranslation on our own units only, and their AggroConsumer.PreCombatPosition, as the regroup does), Services/HealthMonitor.cs (the check entry), Services/EventRuntime.cs (the winner flag reaching ScoreboardRule). What breaks if wrong: a unit we did not spawn moved (D3), the units form's or a keyless event's behaviour changed (D1, D6, D10), a name in a log (D8).
+- **Contracts (5.3):** events.json keys `action.arena{radius}` and `action.winner`, enumerated against ParseSpawnWaves's OnlyKeys list (D1, D2); the chat fields of D9 against CommandArgs.SettableFields and design §6 (ContractDocTests); the wire is unchanged (D12). No platform callback is added: the arena runs inside the existing scheduler tick, the kill feed is wave-sets' DeathEventPatch unchanged.
+
+### External — dependencies and their failure behaviour
+- **6.1 The game:** a unit's Translation and LastTranslation (the move the regroup already makes, event-spawns A23); AggroConsumer.PreCombatPosition and MaxDistanceFromPreCombatPosition, the game's own leash, whose behaviour on our units is not yet observed (the spikes found that a Return override leaves units Idle, docs/features/SIEGES.md variant 3), so D15 is the in-game test that confirms the outcome whichever mechanism the builder uses (profile probe 6.1); DeathEvent rows as wave-sets reads them; VCF 0.10.* for the chat fields.
+- **6.2 Failure:** a throwing position read or write: D4's streak, health entry, the unit skipped, the event untouched; a unit that cannot be moved (it keeps returning): it stays tracked, its lifetime and the event's end still remove it; the scoreboard path's failures are wave-sets D13's; the announce queue full: the oldest Info line goes as today (AnnounceQueue, capacity 20), the log line keeps the counts and the ratio. Sibling plugins share the death system and are untouched.
+- **6.3 Test mode:** none new; Debug.FaultInjection is not extended. The dev cfg sets Scoreboard.IncludeAdmins true for Session 1 and restores false after (D16, D22); the dev-only NyarDevTools (`.devkill`, `.devdie`, `.devtp`, wave-sets A5) is never shipped.
+
+## Design
+### Data
+| Artifact | Where | Owner | Kept | Deleted |
+|---|---|---|---|---|
+| events.json arena and winner | BepInEx/config/Nyarlathotep/events.json | the admin | until edited | by the admin; 0.9.0 disables such a definition with its reason (D20) |
+| templates.json spider-swarm | embedded in the DLL | the mod | per release | with the DLL |
+| the winner | memory, computed from the scoreboard rows at an end | Logic/Scoreboard.cs | the end's chat line | with the instance's rows (wave-sets D8) |
+| arena check streak and health entry | memory | the arena phase, HealthMonitor | while failing | at the next good check, an event end or a restart |
+| session log copies | %TEMP%\nyar-sw*-logs | Claude | the session | deleted in the same session (D22) |
+| snapshot | %TEMP%\nyar-snap-* | tools/dev-snapshot.ps1 | the session | on restore (D22) |
+| vrclient outputs | %TEMP%\vrclient\results, %TEMP%\vrclient\shots | tools/vrclient | as test evidence | by the tool or Claude |
+| review prompts | %TEMP%\dod-review-*.txt | the dod skill | until the next prompt of the plan | replaced by the next build; never committed |
+| Claude's scratchpad (Codex prompts and outputs) | Claude Code's per-session scratchpad, outside the repository | Claude | the session | removed with the session; never committed |
+| build outputs | Nyarlathotep/**/bin, obj, *.binlog (git-ignored) | Claude | until the next build | overwritten; never shipped |
+| release zip | Nyarlathotep/Nyarlathotep/build/*.zip, dist/, build/tcli-build.log (git-ignored) | Claude | until the next release | replaced by the next tcli build; its SHA-256 kept in the audit |
+| tag and GitHub release v0.10.0 | origin | the owner | for ever (exist only once) | never deleted; a bad one is retitled (Epic S-19) |
+
+Nothing new is persisted: state.json is unchanged (D8) and every running swarm ends on boot (Epic S-11). Migration (3.4): none; both keys are optional and absent means 0.9.0's behaviour (D1, D2).
+
+### States
+- **7.1** Empty: a winner event nobody scored in shows "no player scored" only (D6); first run: the first wave spawns inside the arena (D15); partial: a clamped wave is still kept inside (D3); error: a refused definition is disabled with its reason (D1, D2), a failing check holds its health entry (D4).
+- **7.2** Concurrent use: two arena events keep their own units (D3 moves only its instance's); two admins editing one definition race through the event library's single writer, as today; an event restarted inside its grace never moves the old instance's units (D3). Claude and the build tooling act on the dev server only between sessions, wrapped by the snapshot (D22).
+- **7.3** Cancel and re-entry: stop shows the scoreboard and winner, purge and restart show neither (D7, D17); no arena check runs for an ended event (D17); a restart cancels the instance and the boot sweep removes its units (D17); an edit of `arena` or `winner` while the event runs applies at the next start.
+
+### Permissions
+- **2.1** Admins: start, stop, purge and `event set` the two fields (D9, admin-only). Players: no new command; they are kept out of nothing and counted on the scoreboard. The server operator: no new cfg key. Unauthenticated users: none.
+- **2.2** A player running `.nyar event set` gets the existing admin-only refusal (Epic D3, AuthSuite in D9); nothing is logged as an admin action.
+- **2.3** Ownership: a definition belongs to the server; any admin edits it; a running instance keeps its definition when another admin edits it (7.3, D9). An Admin-location arena belongs to the start, not to the admin who started it: it stays where it began if that admin leaves (D3).
+
+### UX
+- **11.1** Discovery: `.nyar event templates` lists spider-swarm (D11); `event info` shows the arena and the winner (D10); the README's Swarm section (D21).
+- **11.2** Feedback: refusals name the field (D1, D9); the winner line in the product's plain chat voice (D6), rendered in real chat in Session 1 (D16).
+- **11.3** Accessibility: plain text within 480 bytes (D6, D10); no colour carries meaning; the ratio uses a dot in every locale (D6).
+- **11.4** Activation: the arena acts only for a definition with `arena` while it runs (D3), the winner only for `winner: KillDeath` at a showing end (D7); a swarm starts by any existing trigger. It must not act for an event without the keys, after an event ends, or on a purge (D1, D7, D17).
+- **11.5** Design bar: the spiders look like a swarm held in an arena and the winner line reads well; a qualitative bar judged by the owner on the dev server (D18).
+
+## Security
+- **10.1** Authorization: the two fields go through `.nyar event set`, admin-only (Epic D3, AuthSuite, D9); no new command, wire command or cfg key (D12).
+- **10.2** Injection: the winner's name reaches chat only through TextSink.Name (D6); the field values are parsed as integers or one keyword, never evaluated (D1, D2, D9); prefabs in the template are checked against the catalog (D11).
+- **10.3** Secrets: none added; the release keeps the token sentinel and the privacy grep (D23).
+- **10.4** Personal data: the winner's character name appears only in the winner chat line (D8); no log, push or file carries a name, platform id or player position; the arena log line carries counts and a distance only (D3); admins stay out by default (wave-sets D9).
+
+## Failure & observability
+- **12.1** What the admin sees: a refused definition's reason in `.nyar event list` and the log (D1, D2); "arena: check failing" in `.nyar status` (D4). What they do next: fix the key, or stop the event; the kill switch always works.
+- **12.2** Logged: "[nyar] arena <id>: returned <n>, farthest <d> m" when a check moved units (D3); "[nyar] arena <id>: check failed: <message>" once per streak (D4); the scoreboard log line with ", winner K/D <r>" or ", no winner" (D7); wave-sets' wave and cleared lines unchanged.
+- **12.3** Knowing it is broken: the health line's entry (D4), -LogCheck after every session (D22), the vrclient scenario (D15-D17).
+- **12.4** Failing cases: every test and cmd item names its fails-when and has a ControlCases row (D14); each new test's planted fault is run in its step and recorded in the audit; the dry runs are in the Log. Empty inputs: an arena object without radius (refused, D1), a winner event with no participant ("no player scored", D6), an arena event with no live unit (the check does nothing and logs nothing, D3), a -TimingSpan log with no windows (fails, D19), a -DependencySuite with no category (fails, D13). Thresholds cite their source: the 10 m slack (S-13), 5 s (HuntPlan.IntervalSeconds), 15-60 m (S-13), 5 ms (automation D21).
+
+## Performance
+- **13.1** Budget: the existing tick budget, 5 ms average at the default caps (automation D21). Recon measurement: wave-sets Session 1's timing span (docs/dod/wave-sets.md Log, 2026-10-05) held nine windows under 5 ms with 20 tracked, Hunt on, and one window at 8.524 ms from a 176.8 ms hunt-phase tick (wave-sets A7, its cause still under diagnosis). The arena's hot path is one position read per live unit of an arena event every 5 s, at most MaxTrackedUnits; D19 measures it.
+- **13.2** Bounds: arena.radius 15-60 (S-13: the game drops a target beyond about 86 m, RESEARCH_NOTES › AggroConsumer, and Hunt's range is 10-60; the excluded case is an arena wider than 60 m, which Hunt could not cover); the template's waves at most 20 units each (D11) so the default MaxUnitsPerWave never clamps it; the scoreboard's 200 rows (wave-sets D8).
+
+## Build plan
+1. **Logic: keys, arena rule, winner, chat.** · advances C1 C3 C4 C5 · satisfies D1, D2, D3, D5, D6, D7, D8, D9, D10, D12, D14
+   - Starts after wave-sets is closed and tagged v0.9.0 (its D25); pre-audit per CLAUDE.md into docs/audits/swarm.md (template docs/audits/README.md), with `git status` clean; create docs/features/SWARM.md with Status, Design summary, Open questions and `## Test results`.
+   - Logic/Model.cs `Arena(int Radius)`, `WinnerRule { None, KillDeath }`, SpawnWavesAction.Arena and .Winner as trailing optional parameters (positional callers keep compiling); Logic/Validation.cs ParseSpawnWaves: "arena" and "winner" added to the OnlyKeys list, the D1 and D2 reasons as public constants.
+   - New Logic/Arena.cs: the centre (Location, ActiveEvent.Origin), the stray test (distance > radius + 10 on x and z), the return spot within action.radius, the instance filter (event id and units spawned at or after Instance.StartedUtc), the log line (D3).
+   - Logic/Scoreboard.cs: the winner over every row (D5); Logic/Messages.cs ScoreboardLines takes the rule and adds the winner line (D6); ScoreboardRule.LogLine's suffix (D7).
+   - Logic/CommandArgs.cs, DefinitionEditor.cs (the two fields and the two refusals of D9), Authoring.cs and EventAdmin.cs (D10); docs/NYARLATHOTEP_DESIGN.md §6 rows; docs/RAPHAEL_INTEGRATION_CONTRACT.md's sentence (D12).
+   - Tests: EventValidationTests Arena and WinnerKey, new SwarmTests (Containment, EndPaths), ScoreboardTests Winner and WinnerLines, PrivacyTests Swarm, CommandArgTests Swarm, AuthoringTests Swarm, ContractDocTests Swarm.
+   - ControlCases: swarm in Plans, rows for this step's controls, Pending for steps 2-3 (D4, D11, D13, D19, D20, D21, D22, D23); SwarmTests and SwarmDependencyFailureTests in NewClasses; Nyarlathotep.Tests.csproj copies docs/dod/swarm.md and docs/audits/swarm.md; tools/preflight-checks.json childDocs, dataTables and snapshotSessions; tools/data-inventory.json rows for Design › Data; tools/paths-manifest.txt for new paths.
+   - Each new test's planted fault is run once in this step and logged `note · planted · D<n> · …`.
+   - `dotnet build Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__` and `dotnet test Nyarlathotep/Nyarlathotep.Tests`; post-audit (compile, preflight, /code-review, `dod status swarm`).
+2. **Services, template and Session 1 (vrclient).** · advances C1 C2 C3 C5 · satisfies D4, D11, D13, D15, D16, D17, D18, D19
+   - Services/EventScheduler.cs: the arena phase, every 5 s while an arena event runs, timed in the TickTimer like the hunt phase; Services/SpawnTracker.cs: the instance's live units with their positions and the return (Translation, LastTranslation, AggroConsumer.PreCombatPosition set to the return spot; optionally MaxDistanceFromPreCombatPosition at spawn so the game's own leash does most of the work, decided by the first in-game probe of Session 1); Services/HealthMonitor.cs the "arena: check failing" entry; Services/EventRuntime.cs passes the winner rule to the showing end paths.
+   - New SwarmDependencyFailureTests (D4); tools/preflight-checks.json dependencySuites.swarm with arena-read (D13).
+   - Resources/templates.json spider-swarm with the levels of S-10; TemplateLibraryTests Swarm and the count 11 in its existing checks (the wave-sets count of 10 moves to 11) (D11).
+   - New tools/vrclient/scenarios/swarm.vrs (starts with `console TPHome`; sw-arena, the template run, the death run, the end paths), and swarm-timing.vrs (sw-timing), each at a spot without native units (wave-sets A5: natives killed the test units at the pond); the dev cfg with Scoreboard.IncludeAdmins true and Debug.TimingLog on, restored after.
+   - Session 1 by vrclient on a Release build (D15, D16, D17, D19): announce the run to the owner; snapshot before and restore after (`pwsh tools/dev-snapshot.ps1 -Save sw1`, `-Restore`); close the client and back up BepInEx/LogOutput.log and logs/NyarDev.log to %TEMP%\nyar-sw1-logs before each restart; stop with `taskkill /PID <pid>` without /F; -LogCheck per boot and every [Error and [Warning read in both logs.
+   - D18 goes to the owner as numbered steps beginning "connect to 127.0.0.1:9876", with the exact commands and a one-line PASS condition.
+3. **Release 0.10.0.** · advances C5 · satisfies D20, D21, D22, D23
+   - tools/rollback-drill.ps1: "unknown field action.arena" and "unknown field action.winner" among the newer-key reasons; fixtures tools/rollback-drill-fixtures/{pair-arena,pair-winner}/{N.txt,N-1.txt}; tools/preflight-checks.json externalSelfTests success "drill selftest: 22/22"; the ControlCases D20 row.
+   - The single Codex cross-inspection of the child's diff (v0.9.0..HEAD plus the surfaces, tools/vrclient/** left out; `codex exec -s read-only -c features.experimental_windows_sandbox=true`, prompt by stdin) and the /code-review; their verdict lines in step 3's post-audit (D22).
+   - The six surfaces (plain style, collapsible detail; README and changelog say the scoreboard opt-out still waits for the stats child) and docs/features/SWARM.md Status; CLAUDE.md's status line; `dotnet build -c Release --no-incremental`; `tcli build` with the token sentinel and build/tcli-build.log; the "zip sha256:" audit line; tag v0.10.0; `pwsh tools/rollback-gate.ps1 -From v0.9.0 -To v0.10.0 -Plan swarm` (4/4).
+   - Privacy grep over the tree and `git log -p origin/main..main`; push main and the tag with the owner's OK; confirm `git rev-parse HEAD` equals `git ls-remote origin main`; GitHub pre-release with the zip; release-verify (D21, D23).
+   - -AuditOf, -SessionsOf and -Paths -DeclaredOf swarm (D22); tools/paths-manifest.txt `remote-tag: v0.10.0` and `remote-release: v0.10.0`.
+   - `dod close swarm` (D18 may close partial while it waits on the owner). The owner publishes.
+
+## Work breakdown
+- W1 · **Swarm (0.10.0)**
+- W1.1 · **Keys, arena rule, winner, chat** · items: D1 D2 D3 D5 D6 D7 D8 D9 D10 D12 D14 · steps: 1
+- W1.2 · **Services, template and Session 1** · items: D4 D11 D13 D15 D16 D17 D18 D19 · steps: 2
+- W2 · **Release 0.10.0**
+- W2.1 · **Drill, release and records** · items: D20 D21 D22 D23 · steps: 3
+
+## Rollout
+### Shipping
+One release, 0.10.0 (steps 1-3), a GitHub pre-release; the owner publishes to Thunderstore. 0.9.0 (wave-sets) is its starting point and must be tagged first.
+
+Everything still ships off: no existing definition uses arena or winner and the new template is disabled (Epic D4). Who turns it off:
+- any admin, with `.nyar event disable`, `.nyar event stop`, `.nyar event set <id> action.arena none`, `.nyar pillar spawns off` or `.nyar purge confirm`;
+- the operator, by removing the DLL (Epic D12).
+
+### Compatibility
+- events.json and state.json stay SchemaVersion 1; both keys are optional and absent means 0.9.0's behaviour (D1, D2); state.json gains nothing (D8).
+- No cfg key is added or renamed.
+- The wire stays api 6 (D12).
+
+### Rollback
+- **In the repository:** `git revert --no-edit v0.9.0..v0.10.0` for the whole child, drilled by the rollback gate with -Plan (D20); commits in the range that are not this child's are re-applied with `git cherry-pick`, listed from `git log v0.9.0..v0.10.0` minus the commits touching this child's exclusive paths.
+- **On the dev server during the build:** every session is wrapped by tools/dev-snapshot.ps1 (D22).
+- **On a server:** install the 0.9.0 DLL. A definition using arena or winner is disabled with "unknown field action.arena" or "unknown field action.winner", every other definition runs; this is the drill's accepted difference (D20). Nothing is written that 0.9.0 cannot read, so this stays possible after any amount of use. A returned unit is one of our own and is despawned like any other at the event's end or by the boot sweep.
+- **Published release:** tags and releases are never deleted; a bad release is retitled, and versions move forward only (Epic S-19).
+- **Commit range:** v0.9.0..v0.10.0
+
+### Paths walked
+Walking the Build plan. A path created and removed inside a step is declared here and checked by -DeclaredOf against the manifest whether or not it still exists (automation S-5).
+- **Steps 1-3:** docs/audits/swarm.md, docs/features/SWARM.md, docs/dod/swarm.md, docs/dod/README.md (the regenerated index), docs/dod/nyarlathotep.md (the Epic's child status) and docs/NYARLATHOTEP_DESIGN.md (§9 for the owner's answers, §6).
+- **Review process:** docs/dod/swarm.reviews.md, docs/dod/swarm.review.html, docs/dod/swarm.html, docs/dod/dod-dashboard.html and the review prompts %TEMP%\dod-review-*.txt.
+- **Step 1:**
+  - docs/RAPHAEL_INTEGRATION_CONTRACT.md, tools/paths-manifest.txt, tools/data-inventory.json, tools/preflight-checks.json.
+  - Nyarlathotep/Nyarlathotep/Logic/{Model,Validation,Arena,Scoreboard,Messages,CommandArgs,DefinitionEditor,Authoring,EventAdmin,TextSink}.cs and Nyarlathotep/Nyarlathotep/Commands/EventCommands.cs where a usage string names the new fields.
+  - Nyarlathotep/Nyarlathotep.Tests/{EventValidationTests,SwarmTests,ScoreboardTests,PrivacyTests,CommandArgTests,AuthoringTests,ContractDocTests,ControlCases,ControlCaseTests,TestSupport,FakeStores}.cs, partials Nyarlathotep/Nyarlathotep.Tests/*.Swarm.cs, any existing test that builds a SpawnWavesAction positionally, and Nyarlathotep/Nyarlathotep.Tests/Nyarlathotep.Tests.csproj.
+- **Outside the repository:** %TEMP%\nyar-snap-*, %TEMP%\nyar-session, %TEMP%\nyar-soak-*, %TEMP%\nyar-rel-*, %TEMP%\nyar-secrets-index-* and %TEMP%\nyar-{selftest,depsuite,snaptest,drilltest}-*, each written and removed by a preflight, snapshot or selftest run, each an existing `temp:` line of the manifest; %TEMP%\nyar-sw*-logs (Session 1, a new `temp:` line).
+- **Build outputs:** Nyarlathotep/**/bin/**, Nyarlathotep/**/obj/**, *.binlog, Nyarlathotep/Nyarlathotep/dist/** and Nyarlathotep/Nyarlathotep/build/**, all existing ignored globs.
+- **Step 2:**
+  - Nyarlathotep/Nyarlathotep/Services/{EventScheduler,SpawnTracker,HealthMonitor,EventRuntime}.cs, Nyarlathotep/Nyarlathotep/Resources/templates.json.
+  - Nyarlathotep/Nyarlathotep.Tests/{SwarmDependencyFailureTests,TemplateLibraryTests,HealthTests,ControlCases}.cs; tools/preflight-checks.json (dependencySuites.swarm); tools/preflight-fixtures/DependencySuite/** if a floor fixture moves.
+  - tools/vrclient/scenarios/swarm.vrs and tools/vrclient/scenarios/swarm-timing.vrs; on the dev server BepInEx/config/Nyarlathotep/events.json (sw-arena, sw-timing, spider-swarm), BepInEx/config/Nyarlathotep/state.json and save-data-nyardev/** (written by every boot), BepInEx/config/kdpen.Nyarlathotep.cfg (IncludeAdmins, TimingLog), the deployed DLL, BepInEx/LogOutput.log and logs/NyarDev.log; %TEMP%\nyar-sw1-logs, %TEMP%\nyar-snap-sw1, %TEMP%\vrclient\results and %TEMP%\vrclient\shots; the dev server's BepInEx/plugins/NyarDevTools.dll (read, unchanged).
+- **Step 3:**
+  - tools/rollback-drill.ps1 and tools/rollback-drill-fixtures/{pair-arena,pair-winner}/**; tools/preflight-checks.json (externalSelfTests) and Nyarlathotep/Nyarlathotep.Tests/ControlCases.cs (the D20 row).
+  - The six release surfaces: Nyarlathotep/Nyarlathotep/Nyarlathotep.csproj, Nyarlathotep/Nyarlathotep/thunderstore.toml, CHANGELOG.md, Nyarlathotep/Nyarlathotep/CHANGELOG.md, README.md and Nyarlathotep/Nyarlathotep/README.md; CLAUDE.md's status line.
+  - Nyarlathotep/Nyarlathotep/build/kdpen-Nyarlathotep-0.10.0.zip, build/tcli-build.log and dist/ (git-ignored); the drill's %TEMP%\nyar-drill-* and %TEMP%\nyar-rollback-* scratch folders.
+  - tools/paths-manifest.txt (`remote-tag: v0.10.0`, `remote-release: v0.10.0`) and tools/data-inventory.json (the release rows); the remote tag v0.10.0 and the GitHub release v0.10.0.
+
+## Out of scope
+- **Considered and excluded (15.1):**
+  - Containment to a world region's outline (a polygon) instead of a circle: Epic Child constraints say "Point plus radius"; a region swarm is a Point inside the region with `action.scope` naming it (regions D5, the wave centre must lie in the scope), which 0.9.0 already does (S-8).
+  - An arena that moves with a player (AroundPlayer): no fixed centre to contain to (D1).
+  - Keeping players in, or out, of the arena: only our own units are moved (CLAUDE.md › Spawn & buff safety).
+  - A `growth` key that generates waves from a base wave, or endless growth until the duration: S-12 recommends the template's waveList instead; the owner decides.
+  - Item rewards for the winner: design §9 D35, scoreboard only.
+  - A push or wire field for the arena or the winner: the wire stays api 6 (D12).
+  - Spider Banelings in the template: a self-detonation credits nobody (wave-sets D8), which would skew the ratio (D11).
+- **Deferred (15.2):**
+  - The player opt-out `.nyar stats hide` and lifetime stats: child `stats` (Epic D16, D40).
+  - Revenge and apocalypse: children `revenge` and `apocalypse` (Epic A35).
+  - The 500-unit budget run: Epic D24 at the Epic's close.
+
+## Also considered
+- **Compliance:** the winner's name is public in chat like the scoreboard's; admins stay out by default (wave-sets D9); the opt-out comes with stats and the README says so (D21).
+- **Localisation:** English only; the ratio is written with a dot in every server locale (D6).
+- **Running cost:** tick time only (D19).
+- **Operational ownership:** the server admin; the runbook is the README's kill switch and uninstall sections.
+- **Documentation and changelog:** the six surfaces of 0.10.0 (D21), docs/features/SWARM.md with the code, the contract sentence (D12), design §6 (D9).
+- **Analytics:** the winner is per event only; lifetime stats are the stats child's.
+- **Decommissioning:** nothing is replaced.
+- **Support tooling:** `.nyar event info` (arena and winner), `.nyar status` (the check entry), `.nyar debug here` (the units inside the arena).
+
+## Assumptions
+- S-1 · validated · Scope is a contained area event (a Point plus radius) whose waves grow, with kills and deaths per player and the best kill-to-death ratio named as the winner; scoreboard only, no item grants · source: Epic docs/dod/nyarlathotep.md Child constraints › Halloween track and A35; design §9 D33, D35
+- S-2 · validated · Process: one dod plan, one review round (two at most), Codex once on the child's diff, a vrclient scenario as the in-game evidence, the owner judging look and feel only; spawn and buff safety unchanged · source: design §9 D34; CLAUDE.md › Development procedure › Halloween track
+- S-3 · validated · Counting is wave-sets' unchanged: a kill is an event unit killed by a player or the player's familiar or summon, a death is a player killed by an event unit, admins out unless Scoreboard.IncludeAdmins, top 3 by kills · source: design §9 D38, D39; docs/dod/wave-sets.md D8, D9, D10
+- S-4 · reversible · The swarm ships as 0.10.0 after wave-sets' v0.9.0 and its rollback range is v0.9.0..v0.10.0 · fallback: renumber the six surfaces and the drill's -From/-To if the owner wants another number
+- S-5 · reversible · A stray is returned to within action.radius of the centre, keeping the unit and its wave alive · fallback: despawn the stray through the despawn queue instead (it then counts as removed and its wave can clear), one branch in Logic/Arena.cs and D3's test
+- S-6 · reversible · The ratio is kills ÷ max(1, deaths) among players with at least one kill; ties by more kills, then fewer deaths, then the earlier first credit · fallback: a minimum-kills threshold (for example 5) as one constant in the winner rule and D5's test
+- S-7 · reversible · The winner is one extra chat line after the unchanged wave-sets lines; the top 3 stay ranked by kills (design §9 D38) · fallback: rank the top 3 by ratio when the winner is set, one ordering in Scoreboard.Summary and D6's test
+- S-8 · reversible · An arena is a circle around a Point or Admin location; a region swarm is a Point inside the region with action.scope naming it · fallback: a later child contains to the region outline using Logic/Regions.cs's point-in-region read
+- S-9 · reversible · Kills count wherever the player stands, also from outside the arena (design §9 D39 sets no place) · fallback: count only kills by a player within arena.radius + 10 m, one condition in Logic/ScoreFeed.cs and D5's test
+- S-10 · reversible · The template's levels: wave 1 at level 30 rising by about 3 per wave, the Broodmother at 45 with maxHealth 2.0, using Spider_Forestling, Spider_Forest, Spider_Melee and Spider_Range · fallback: change the numbers in templates.json; D11's test reads the shape, not the values
+- S-11 · validated · The profile notes apply: in-game claims have a session item (6.1: D15 for the leash or return, D16 for the vampire death), every end path is named (7.3: D7, D17), every chat text is rendered before release (11.2: D16), every control has a test seam in Logic/ (12.4: Logic/Arena.cs, D14), the release plan copies the earlier release-step amendments (14.3: release-verify with the "zip sha256:" line, the rollback gate with -Plan, the privacy grep over unpushed commits, the unpushed-tag check, the token sentinel; wave-sets A5's dev kill tools) · source: docs/dod/profile.md; docs/dod/wave-sets.md Build plan step 3 and A5
+- S-12 · decision-required · How the waves grow (probe 4.1): recommended, the spider-swarm template's waveList is written with growing waves and no schema key is added; the alternatives are an `action.growth` key that generates waves from a base wave (count and level steps), or growth that repeats until the duration ends; the owner decides before step 1
+- S-13 · reversible · The arena radius is 15-60 m and a unit counts as a stray past arena.radius + 10 m: Hunt's range is 10-60 (Logic/Validation.cs MinHuntRange, MaxHuntRange) and the game drops a target beyond about 86 m (docs/RESEARCH_NOTES.md › AggroConsumer); 10 m lets a unit finish a fight at the edge · fallback: change the bounds or the slack, constants in Logic/Validation.cs and Logic/Arena.cs with D1's and D3's tests
+
+## Coverage
+| # | Layer | Status | Probes | Pointer / reason |
+|---|---|---|---|---|
+| 1 | Purpose & typical use | Considered | 3/3 | Purpose & typical use |
+| 2 | Actors & permissions | Considered | 3/3 | Design › Permissions › 2.1 D9; 2.2 D9; 2.3 D9 D3 D17 |
+| 3 | Inputs, outputs & data | Considered | 4/4 | Design › Data › 3.1 D1 D2 D9; 3.2 D6 D7 D12; 3.3 D8 D22 D5; 3.4 D1 D20 |
+| 4 | Business rules & invariants | Gap | 4/5 | 4.1 open: the growth rule waits on the owner (S-12); answered: 4.2 D3 D5, 4.3 D3 D7, 4.4 D3 D7 D9, 4.5 D3 D7 D8 |
+| 5 | Internal interfaces | Considered | 3/3 | Interfaces › 5.1 D3 D4 D5; 5.2 D3 D7 D11; 5.3 D1 D2 D9 D12 |
+| 6 | External dependencies & contracts | Considered | 3/3 | Interfaces › 6.1 D15 D4; 6.2 D4 D13; 6.3 D16 D22 |
+| 7 | States & lifecycle | Considered | 3/3 | Design › States › 7.1 D6 D3 D1; 7.2 D3 D5 D22; 7.3 D7 D17 |
+| 8 | Minimal stretch | Considered | 2/2 | Use cases › Minimal stretch › 8.1 D1 D6 D3; 8.2 D8 D11 |
+| 9 | Maximal stretch | Considered | 3/3 | Use cases › Maximal stretch › 9.1 D3 D19; 9.2 D5 D3 D4; 9.3 D3 D7 D17 |
+| 10 | Security & privacy | Considered | 4/4 | Security › 10.1 D9; 10.2 D6 D1 D9; 10.3 D23; 10.4 D8 D3 |
+| 11 | Design & UX | Considered | 5/5 | Design › UX › 11.1 D11 D10 D21; 11.2 D9 D6 D16; 11.3 D6 D10; 11.4 D3 D7 D1; 11.5 D18 |
+| 12 | Failure handling & observability | Considered | 4/4 | Failure & observability › 12.1 D1 D4; 12.2 D3 D4 D7; 12.3 D4 D22; 12.4 D14 D13 D19 D20 D1 D6 |
+| 13 | Performance & scale | Considered | 2/2 | Performance › 13.1 D19; 13.2 D1 D11 D5 |
+| 14 | Rollout & compatibility | Considered | 4/4 | Rollout › 14.1 D21; 14.2 D1 D12 D20; 14.3 D20 D22; 14.4 D22 D23 |
+| 15 | Out of scope | Considered | 2/2 | Out of scope |
+Gate — acceptance & testability: passed — every Considered layer 2–14 maps to ≥ 1 D-item
+
+## Baseline
+
+## Amendments
+
+## Log
+- 2026-10-11 · status → draft · plan
+- 2026-10-11 · note · dry-run · D1 · test: `dotnet test Nyarlathotep.Tests -c Release --no-build --filter "FullyQualifiedName~EventValidationTests|FullyQualifiedName~ScoreboardTests|FullyQualifiedName~PrivacyTests|FullyQualifiedName~CommandArgTests|FullyQualifiedName~AuthoringTests|FullyQualifiedName~TemplateLibraryTests|FullyQualifiedName~ContractDocTests|FullyQualifiedName~ControlCaseTests|FullyQualifiedName~WaveSetTests"` → 921 passed, 1 failed (ControlCaseTests: "pending wave-sets D23 outlived step 2's post-audit", a wave-sets matter); the new methods are not written yet
+- 2026-10-11 · note · dry-run · D2 · test: `dotnet test Nyarlathotep.Tests -c Release --no-build --filter "FullyQualifiedName~EventValidationTests|…"` → (the same nine-class run as D1) 921 passed, 1 failed (ControlCaseTests, wave-sets D23 pending); WinnerKey is not written yet
+- 2026-10-11 · note · dry-run · D3 · test: `dotnet test Nyarlathotep.Tests -c Release --no-build --filter "FullyQualifiedName~SwarmTests"` → No test matches the given testcase filter (the class is new in this child)
+- 2026-10-11 · note · dry-run · D4 · test: `dotnet test Nyarlathotep.Tests -c Release --no-build --filter "FullyQualifiedName~SwarmTests"` → No test matches the given testcase filter (SwarmDependencyFailureTests is new in this child, step 2)
+- 2026-10-11 · note · dry-run · D5 · test: `dotnet test Nyarlathotep.Tests -c Release --no-build --filter "FullyQualifiedName~EventValidationTests|…"` → (the nine-class run, ScoreboardTests among them) 921 passed, 1 failed (ControlCaseTests, wave-sets D23 pending); Winner is not written yet
+- 2026-10-11 · note · dry-run · D6 · test: `dotnet test Nyarlathotep.Tests -c Release --no-build --filter "FullyQualifiedName~EventValidationTests|…"` → (the nine-class run, ScoreboardTests among them) 921 passed, 1 failed (ControlCaseTests, wave-sets D23 pending); WinnerLines is not written yet
+- 2026-10-11 · note · dry-run · D7 · test: `dotnet test Nyarlathotep.Tests -c Release --no-build --filter "FullyQualifiedName~SwarmTests"` → No test matches the given testcase filter (the class is new in this child)
+- 2026-10-11 · note · dry-run · D8 · test: `dotnet test Nyarlathotep.Tests -c Release --no-build --filter "FullyQualifiedName~EventValidationTests|…"` → (the nine-class run, PrivacyTests among them) 921 passed, 1 failed (ControlCaseTests, wave-sets D23 pending); Swarm is not written yet
+- 2026-10-11 · note · dry-run · D9 · test: `dotnet test Nyarlathotep.Tests -c Release --no-build --filter "FullyQualifiedName~EventValidationTests|…"` → (the nine-class run, CommandArgTests among them) 921 passed, 1 failed (ControlCaseTests, wave-sets D23 pending); the -AuthSuite half was not run on the draft
+- 2026-10-11 · note · dry-run · D10 · test: `dotnet test Nyarlathotep.Tests -c Release --no-build --filter "FullyQualifiedName~EventValidationTests|…"` → (the nine-class run, AuthoringTests among them) 921 passed, 1 failed (ControlCaseTests, wave-sets D23 pending); Swarm is not written yet
+- 2026-10-11 · note · dry-run · D11 · test: `dotnet test Nyarlathotep.Tests -c Release --no-build --filter "FullyQualifiedName~EventValidationTests|…"` → (the nine-class run, TemplateLibraryTests among them) 921 passed, 1 failed (ControlCaseTests, wave-sets D23 pending); Swarm is not written yet
+- 2026-10-11 · note · dry-run · D12 · test: `dotnet test Nyarlathotep.Tests -c Release --no-build --filter "FullyQualifiedName~EventValidationTests|…"` → (the nine-class run, ContractDocTests among them) 921 passed, 1 failed (ControlCaseTests, wave-sets D23 pending); Swarm is not written yet
+- 2026-10-11 · note · dry-run · D13 · cmd: `pwsh tools/preflight.ps1 -DependencySuite swarm` → "dependency suite: swarm has no categories" and PREFLIGHT FAILED (the suite is added in step 2)
+- 2026-10-11 · note · dry-run · D14 · test: `dotnet test Nyarlathotep.Tests -c Release --no-build --filter "FullyQualifiedName~EventValidationTests|…"` → (the nine-class run) ControlCaseTests fails today: "pending wave-sets D23 outlived step 2's post-audit" (wave-sets must clear it before this child starts); swarm has no rows yet
+- 2026-10-11 · note · dry-run · D19 · cmd: `pwsh tools/preflight.ps1 -TimingSpan nonexistent.log -Windows 10 -MinTracked 10` → "timing span: no span (no log)" (the Session 1 log does not exist yet; the empty input fails as D19 says)
+- 2026-10-11 · note · dry-run · D20 · cmd: `pwsh tools/rollback-drill.ps1 -SelfTest` → "drill selftest: 17/17" (wave-sets step 3 brings it to 20, this child's step 3 to 22)
+- 2026-10-11 · note · dry-run · D21 · cmd: `pwsh tools/preflight.ps1` → "secrets: none (1862 files scanned, 1824 index blobs)", "release tags: 10/10" and "PREFLIGHT OK"; release-verify for v0.10.0 n/a until the tag exists
+- 2026-10-11 · note · dry-run · D22 · cmd: `pwsh tools/preflight.ps1 -AuditOf swarm` → "audit steps: docs/audits/swarm.md not found"; -SessionsOf swarm → "session logs: docs/features/SWARM.md not found"; -Paths -DeclaredOf swarm → "paths: leftover temp nyar-ws2-logs; declared: the created or changed paths of swarm are unreadable (audit Step 1 base or git)" (the audit is created in step 1; the leftover folder is wave-sets' Session 2 copy)
+- 2026-10-11 · note · dry-run · D23 · cmd: `pwsh tools/preflight.ps1` → "secrets: none (1862 files scanned, 1824 index blobs)"; `git grep -n -E "7656119|kdpenland"` → 54 lines, none with a 17-digit id (`git grep -n -E "7656119[0-9]{10}"` → 0), all quoting the pattern
