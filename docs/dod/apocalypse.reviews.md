@@ -66,3 +66,63 @@ VERDICT: REVISE
 - F8 · accepted · D22 gains the `state-write` category: "dependency suite: apocalypse 5/5 (native-read, spread-read, march-read, resume-read, state-write)"
 - F9 · accepted · Build plan step 2: every step-2 and step-3 item stays in ControlCases.Pending until its planted fault is recorded in its step's post-audit
 - F10 · accepted · D9 and its EndPaths test: a purge or pillar off during the resume's drain wait leaves no record and rebuilds nothing
+
+## Review 2 · 2026-10-11 · subagent · plan commit 092ef38 · plan 89030 B · 35 items · files 0 · e3b0c44298fc · prompt fa7245104125
+Review 2 of plan `dod-20261011-apc1` (apocalypse), rubric 3. I checked the plan's code claims against the repository: `Logic/Limits.cs:23-24` (MaxTrackedUnits 150, ceiling 500; MaxUnitsPerWave 20, ceiling 50), `Limits.cs:35` (ScoreboardPlayers 200) and `Logic/Validation.cs:750-751` (an Admin location needs a Manual trigger and resolves to (0,0)). All of them hold.
+
+**Probes that blocked in Review 1**
+- **3.3: now answered.** The Design › Data table names every artifact and by-product with its owner, how long it is kept and how it is deleted, and marks which exist only once. D11 now stores the resolved goal `{x,y,z}` as a map location fixed at the start. D12 resumes from it, and its test fails on a missing goal or a march to (0,0).
+- **5.3: now answered.** The `Apocalypse{…}` contract in Interfaces includes `goal{x,y,z}`. D19's allowed fields and PrivacyTests follow. The events.json contract is checked against the parser's OnlyKeys lists. The functions the game calls are counted: the existing DeathEventListenerSystem postfix and the scheduler coroutine, with no new Harmony patch.
+
+**Layers**
+- L1 · Considered · no finding
+- L2 · Considered · no finding
+- L3 · Considered · no finding
+- L4 · Considered · F3
+- L5 · Considered · no finding
+- L6 · Considered · no finding
+- L7 · Considered · F4
+- L8 · Considered · no finding
+- L9 · Considered · F4
+- L10 · Considered · no finding
+- L11 · Considered · no finding
+- L12 · Considered · F1, F2
+- L13 · Considered · no finding
+- L14 · Considered · no finding
+- L15 · Considered · no finding
+
+**Findings**
+
+**F1 · advisory.** D30 cannot pass as written.
+- **Problem:** D30 asks for a 3 h `zombie-apocalypse` run on the dev server with no player near the hordes. Under D6, horde 1 then marches unopposed at 2 m/s. Under D8, the run ends **lost** as soon as horde 1 reaches the Admin goal, roughly 10 min plus the march time. So the run cannot last 3 h, and "every horde rise on time" cannot be observed for hordes 2-4.
+- **Fix:** run D30 on a dev variant whose goal can't be reached in 3 h (a far Point goal, or marchSpeed 0.5 with a goal more than 6 km away), or have Chaos hold each front. Record the variant as an amendment before Session 3.
+- **Why advisory:** the product behaves correctly; only the test rig needs changing, and that needs no decision.
+
+**F2 · advisory.** D26's "survived" run and D28's "horde 2 marching at the restart" have the same problem with apo-test.
+- **Problem:** apo-test puts the Point goal 200 m out at marchSpeed 3.0, so an unheld horde reaches it in about 70 s and the run ends lost. A 30-min "survived" run, or a restart while horde 2 is still marching, only works if Chaos holds the front within 60 m without killing it. Neither item says this.
+- **Fix:** in D26 and D28, state the hold (Chaos stays within 60 m of the front, invulnerable and not attacking) or use a farther goal. Build that into `apocalypse.vrs` and `apocalypse-prep-restart.vrs`.
+
+**F3 · advisory.** D18's worst-case arithmetic is wrong, though D18 still passes.
+- **Problem:** D18 says "30 roamers + a 20-unit horde = 50, the earlier hordes dead or not". If the earlier hordes are still alive, the worst case is 30 + 8 + 12 + 16 + 20 = 86. That is still under MaxTrackedUnits 150, so the check passes.
+- **Fix:** restate D18's worst case as 86 tracked (all four hordes alive plus 30 roamers), still under 150 and with no horde over 20.
+
+**F4 · advisory.** D12 does not say how missed hordes affect the roamer top-up.
+- **Problem:** each horde missed while the server was down rises once at the resume, in order. D3 also tops roamers up "at each horde rise". The plan does not say whether several catch-up rises cause several top-ups or one, or how they interact with the rebuild count D12's test checks ("rebuilds more units than recorded").
+- **Fix:** one sentence in D12 (for example, "catch-up rises top up roamers once, after the rebuild"), reflected in its test.
+
+**Earlier findings and summary lines**
+
+EARLIER: all resolved
+- F1 (goal in the record) and F2 (template sized to the default cap, S-18) are fixed in D11, D12, D19 and D18.
+- F3 to F10 are applied as their dispositions state: Rollout matches D9, the hold no longer applies within goal.radius + 60 m, spread roamers join the nearest hotspot, missed hordes rise once in order with proceed-on-timeout, D1 refuses a last horde past the duration, the suite has a state-write category, ControlCases.Pending is kept until each planted fault is recorded, and D9 covers a purge during the drain wait.
+
+missing components: none
+undeclared families: none
+15/15 layers · 50/50 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · D30 runs on a dev variant of zombie-apocalypse whose goal cannot be reached in 3 h (a Point goal more than 6 km from every hotspot and marchSpeed 0.5, in the dev events.json), specified in D30 now rather than as a Session 3 amendment
+- F2 · accepted · D26's survived run and D28's restart state that Chaos holds each marching front within 60 m, invulnerable and not attacking (D6), built into apocalypse.vrs and apocalypse-prep-restart.vrs
+- F3 · accepted · D18's worst case is restated as 86 tracked (30 roamers + all four hordes alive, 8 + 12 + 16 + 20), under MaxTrackedUnits 150, with no horde over MaxUnitsPerWave 20
+- F4 · accepted · D12: catch-up rises top up roamers once, after the rebuild, not once per rise; D12's Resume test fails when they top up more than once or before the rebuild
