@@ -4,17 +4,17 @@ rubric: 2
 id: dod-20261004-wvs1
 slug: wave-sets
 title: Wave sets — per-wave units and stats, waves that wait to be cleared, the event scoreboard
-status: in-progress
+status: done
 size: L
 parent: nyarlathotep
 kind: feature
 created: 2026-10-04
 baselined: 2026-10-04
-closed: none
+closed: 2026-10-11
 recon_commit: 6caa207
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
-review: pending
+review: subagent
 ---
 
 # DoD: Wave sets — per-wave units and stats, waves that wait to be cleared, the event scoreboard
@@ -411,3 +411,23 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-11 · D26 · pass · cmd: `pwsh tools/preflight.ps1 -SessionsOf wave-sets` → "session logs: wave-sets 2/2 checked; snapshots 2/2 from session 1 (hand restore: session 2)" · 8af73f6 · claude
 - 2026-10-11 · D25 · pass · cmd: `pwsh tools/release-verify.ps1 -Tag v0.9.0 -Asset kdpen-Nyarlathotep-0.9.0.zip` → "release verify: hashes equal" · 9cc68df · claude
 - 2026-10-11 · D25 · pass · cmd: `pwsh tools/preflight.ps1` → "release tags: 11/11" · 9cc68df · claude
+- 2026-10-11 · note · re-review A2 A4 A5 A6 A7 A8 A9 A10 A11 A12 · Review 3 READY
+- 2026-10-11 · note · deferred · Review 3 F1 · the commits after v0.9.0 (A12's tooling and fixtures, the ControlCases rows, ec2c94f's manifest and inventory lines, the records) are dev tooling and records: they stay on a rollback of the child's code range v0.8.0..v0.9.0
+- 2026-10-11 · note · deferred · Review 3 F2 · A12's paths belong to step 3 (W1.3), though Paths walked lists them under Step 2; -DeclaredOf does not read the step
+- 2026-10-11 · note · deferred · Review 3 F3 · the snapshotHandRestored rule proves the hand-restore record exists; comparing its hash pairs is deferred to the next touch of Test-CheckSessionLogs
+- 2026-10-11 · note · deferred · Review 3 F4 · ec2c94f's tools/data-inventory.json row for NyarDevTools.dll belongs with A12 (declared under Step 1)
+- 2026-10-11 · note · close: status in full by dod-index --check → verified 27/27, every pass line after its last fail and amendment; the excluded amendments are emergent A6 (6.2, the batch deaths) and A7 (9.1, the 176.8 ms hunt tick), shown for the owner's confirmation (close step 4), not yet confirmed; unconfirmed, each becomes discovered and the rate reads 27 / (27 + 15) = 64 %
+- 2026-10-11 · status → done · close
+
+## Report · 2026-10-11
+Baseline items            27
+Discovered (planning gaps) 10 amendments · 13 design changes (wrong 13 · missed 0) · probes: 14.4 (A2, A4, A5, A8, A9, A10, A11, A12), 4.3 (A1), 7.2 (A3)
+Corrected (reversals)      0            (counts in the rate)
+Requested scope changes    0    (excluded)
+Emergent / defect / external 2 · 0 · 0  (excluded; A6, A7 await the owner's confirmation — unconfirmed, the rate reads 27 / (27 + 15) = 64 %)
+Prediction rate            27 / (27 + 13) = 68 %   target ≥ 90 %
+Rework                     0 of 10 misses corrected an earlier amendment
+Completion                 vs baseline 27/27 · vs current 27/27 (D24's negative fixture is pair-colourkey, A9, not pair-otherkey)
+Review                     subagent · Review 1 READY before approval; scoped re-review of A2, A4-A12: Review 2 REVISE (F1 blocking, answered by A12), Review 3 READY (F1-F4 advisory, deferred to the Log); Codex once on the child's diff (step 3, round 6, READY, no findings)
+Timeline                   draft 10-04 · ready 10-04 · start 10-04 · done 10-11 · released 0.9.0
+Missed probes              14.4 rollout and paths (8 of 10) dominates, and all eight are one question: which paths the child writes and how D26 proves its sessions (Paths walked missed build outputs, tool temp folders, dev-server files, NyarDevTools, the Halloween drafts and their reviews; Session 2 had no dev-snapshot, so -SessionsOf needed the hand-restore rule, A10, A12). Every one was found by -DeclaredOf or -SessionsOf, not in review. Profile note for docs/dod/profile.md: "a child that runs server sessions or writes sibling drafts plans Paths walked from the previous child's declared list plus a dry run of -Paths -DeclaredOf and -SessionsOf before approval, and every session saves a dev-snapshot"

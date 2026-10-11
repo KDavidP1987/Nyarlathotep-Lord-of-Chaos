@@ -84,3 +84,61 @@ VERDICT: REVISE
 - F6 · accepted · a Log note restates A7's fails-when as built: a hunt phase of 20 ms or more logs one breakdown, at most once a minute
 - F7 · accepted · deferred to the Log: A6's died-line diagnostic stays an open question in docs/features/WAVE_SETS.md; the swarm child's first session, where units die to players, exercises it
 - F8 · accepted · a Log note and the close report point D24's negative to pair-colourkey (A9)
+
+## Review 3 · 2026-10-11 · subagent · plan commit bec06ff · plan 87654 B · 27 items · files 0 · e3b0c44298fc · prompt 75c40e699bd1 · scope A2,A4,A5,A6,A7,A8,A9,A10,A11,A12
+
+Review 3 · scoped re-review of A2 and A4-A12 · docs/dod/wave-sets.md · read-only, checked against HEAD bec06ff
+
+**What I checked in the repository**
+- `pwsh tools/preflight.ps1 -SessionsOf wave-sets` printed "session logs: wave-sets 2/2 checked; snapshots 2/2 from session 1 (hand restore: session 2)". That is the exact string A12's fails-when asks for.
+- `pwsh tools/preflight.ps1 -Paths -DeclaredOf wave-sets` printed "paths: 1862 walked, all in manifest; declared: 126/126 in wave-sets; plants: 15/15 fail". This covers A2, A4, A5, A8, A9 and A11.
+- `pwsh tools/preflight.ps1 -SelfTest` printed "selftest: 40/40 checks, 7/7 external selftests (… 235 extra bad fixtures …)". `tools/preflight-checks.json` lists `bad-handrestore` (missing line: fail) and `good-handrestore` (pass), and both fixture trees exist under `tools/preflight-fixtures/SessionLogs/`.
+- `tools/preflight-checks.json` has `snapshotHandRestored: { "wave-sets": [2] }`. In `tools/preflight.ps1` (lines about 2997-3010), `Test-CheckSessionLogs` does three things:
+  - it marks a listed session that does not exist as unwrapped;
+  - it requires `hand restore \(A\d+\)…hashes equal` in that session's block;
+  - it still requires the tool's save and restore lines for every other session.
+- The audit has "- session 1 log check: 0 unhandled, 1869 nyar lines, …" (line 26) and "- session 2 log check: 0 unhandled, 508 nyar lines, …" (line 54). `docs/features/WAVE_SETS.md` line 91 carries "Hand restore (A10): … hashes equal".
+- `tools/paths-manifest.txt` line 75 reads `server: BepInEx/plugins/NyarDevTools.dll` (A12, Review 2 F3).
+- `ControlCases.Pending` is empty, and the wave-sets rows include D25-D27 (A12).
+
+**Re-scored coverage:** all 15 layers are Considered and none is N/A. The amendments answer:
+- 14.4 with stated paths: A2, A4, A5, A8, A9, A11, A12;
+- 6.2 with a diagnostic decision: A6;
+- 9.1 with a diagnostic decision: A7;
+- D26's evidence route for a session restored by hand: A10 and A12.
+
+Each of these has a fails-when that can be checked, and I ran each check above.
+
+**Earlier findings (Review 2 F1-F8)**
+- F1: resolved by A12. The command now passes and the selftest covers the missing-line case.
+- F2: resolved. A12 accepts the state.json and save-data drift as belonging to the dev world.
+- F3: resolved. The manifest line exists.
+- F4, F6 and F8: corrected through Log notes.
+- F5 and F7: deferred with named triggers in the Log.
+
+F1 · advisory · 14.3 (frozen Rollout text, but the condition comes from A12)
+- Problem: Rollout › Commit range is `v0.8.0..v0.9.0`, but A12's tooling, fixtures and ControlCases rows were committed after the tag (9cc68df, plus ec2c94f's manifest and inventory lines). Reverting the stated range would leave `snapshotHandRestored` wave-sets [2] and the D25-D27 rows pointing at a removed child.
+- Fix: add one line to Rollback that names `v0.9.0..<close commit>` as the post-release record and tooling range, reverted together with the child. Or state that those commits are dev tooling and stay.
+
+F2 · advisory · 14.4 (A12 placement)
+- Problem: A12's paths are filed under the **Step 2** heading of Paths walked, but A12 is a step 3 change (package W1.3, after the release). The check passes because `-DeclaredOf` does not care which step a path is listed under, but a reader walking step 3 misses them.
+- Fix: move the "(A12)" bullet under **Step 3**.
+
+F3 · advisory · 4.5 / 12.4 (A12's check)
+- Problem: `snapshotHandRestored` accepts any block line that matches "hand restore (A<n>) … hashes equal". It proves the record exists, not that the hash pairs are equal (the two hashes are not compared).
+- Fix: optionally have the rule require two equal hex runs on that line ("<h> = <h>"). This is work, not a decision.
+
+F4 · advisory · 14.4 (A12 wording)
+- Problem: A12 names `tools/paths-manifest.txt` for the NyarDevTools.dll line. ec2c94f also added a `tools/data-inventory.json` row for it ("data inventory covers NyarDevTools.dll"), which A12 does not mention. It is already declared under Step 1, so the check passes.
+- Fix: add one clause to A12 or the Log naming the inventory row.
+
+EARLIER: all resolved
+15/15 layers · 49/49 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · deferred to the Log: the commits after v0.9.0 (A12's tooling and fixtures, the ControlCases rows, ec2c94f's manifest and inventory lines, the records) are dev tooling and records; they stay on a rollback of the child's code range v0.8.0..v0.9.0
+- F2 · accepted · deferred to the Log: A12's paths belong to step 3 (W1.3); noted in the Log, Paths walked is not rewritten
+- F3 · accepted · deferred to the Log: the hand-restore rule proves the record exists; comparing the hash pairs is deferred to the next touch of Test-CheckSessionLogs
+- F4 · accepted · deferred to the Log: ec2c94f's tools/data-inventory.json row for NyarDevTools.dll belongs with A12; noted in the Log, A12 is not rewritten
+- F5 · accepted · not a Review 3 finding: the reviewer's line "- F5 and F7: deferred with named triggers in the Log" restates Review 2 F5 and F7, already deferred in the Log (note · deferred · Review 2 F5, F7)
