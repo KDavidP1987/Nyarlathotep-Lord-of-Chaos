@@ -25,3 +25,62 @@ VERDICT: READY
 - F8 · accepted · D8: the death-side killer is resolved through EntityOwner (as KillReader resolves the kill side) before the tracked-unit lookup; D21 confirms the entity in game
 - F9 · accepted · S-9 re-tagged validated (the 100 ms scheduler cadence is the existing EventRuntime tick); D27's planted-fault run (a planted platform-id-shaped line in an untracked scratch file found by `git grep --untracked`, then the file removed) is recorded in step 3's post-audit
 - F10 · accepted · D14's evidence adds `pwsh tools/preflight.ps1 -AuthSuite` → "auth suite: pass (tests, commands, …)", whose command inventory holds `event set`
+
+## Review 2 · 2026-10-11 · subagent · plan commit 8af73f6 · plan 84401 B · 27 items · files 0 · e3b0c44298fc · prompt 1c5a50497f7d · scope A2,A4,A5,A6,A7,A8,A9,A10,A11
+
+The rest of the plan is frozen context, so findings about it are advisory. I checked the amendments' claims against the repository at HEAD 8af73f6. These hold:
+- `tools/_pf.ps1` is gone (A2).
+- `pair-otherkey` still says "unknown field action.spawnVisual", and `pair-colourkey` says "unknown field action.colour". The drill lists `pair-colourkey` with `Pass = $false`, and `preflight-checks.json` expects "drill selftest: 20/20" (A9).
+- `SpawnTracker.KillerText` prints only prefab names and " player", never a name (A6).
+- `HuntTimingLog` is in `Logic/Spawning.cs` and is wired from `Services/EventScheduler.cs`. `HuntAction.cs` was changed in e8c35d3 and 603f958 (A7, A8).
+- The three child drafts and their `.reviews.md` files exist (A8, A11).
+- All five `wave-sets*.vrs` scenarios exist (A5).
+- The step 3 audit has the Session 2 hand-restore line with both hash pairs equal (A10).
+
+**Re-scored coverage:** all 15 layers Considered, as the frozen review scored them. The amendments answer 14.4 (A2, A4, A5, A8, A9, A11), 6.2 (A6) and 9.1 (A7) with stated decisions. No N/A layers.
+
+F1 · blocking · 14.4 / D26 (an item checked whose evidence command fails), within A10's scope. A10 says D26's "snapshot restored; hashes equal" holds for Session 2 through the hand restore. But D26's own evidence command, `pwsh tools/preflight.ps1 -SessionsOf wave-sets`, cannot pass on the tree as it is, for two reasons:
+- `snapshotSessions` lists `"wave-sets": 1`, so `Test-CheckSessionLogs` needs a `dev-snapshot.ps1 -Save <label>` line and a "snapshot restored; hashes equal (<label>" line in every session block from 1 on. The `### Session 2` block in `docs/features/WAVE_SETS.md` has neither.
+- The audit has no line shaped `- session 2 log check: …`. Session 2's counts sit inside "- session 2 in-game: … -LogCheck 0 unhandled …", which the check's pattern does not match.
+
+So a stranger running D26's cmd gets session 2 reported as missing and unwrapped. The Log records pass lines for `-AuditOf` and `-Paths -DeclaredOf` but none for `-SessionsOf`, yet D26 is `[x]`.
+Fix: amend D26/A10 to say how `-SessionsOf` accepts a hand restore, for example a named exemption in `preflight-checks.json` like `sessionsUncounted`, or `snapshotSessions` narrowed to session 1 with A10 cited. Write a proper `- session 2 log check: 0 unhandled, <s> nyar lines, 0 orphan errors, 0 unity errors` line in the audit. Run `-SessionsOf wave-sets` and record its pass line before D26 stays checked.
+
+F2 · advisory · A10, 3.3/7.3. The hand restore put back only the cfg and `events.json`. A4 says every boot also writes `BepInEx/config/Nyarlathotep/state.json` and `save-data-nyardev/**`, and those kept Session 2's writes. A10 should say whether that drift is accepted (dev world only) or restored.
+Fix: one clause in A10 naming the files left unrestored and why that is acceptable.
+
+F3 · advisory · A5, 14.4/D26. Paths walked declares the dev server's `BepInEx/plugins/NyarDevTools.dll`, but `tools/paths-manifest.txt` has no `server:` line for it. Only `BepInEx/plugins/Nyarlathotep.dll` is listed. D26 says every written path is in the manifest; the 116/116 reading passes because `-Paths` does not walk the server's plugins folder.
+Fix: add `server: BepInEx/plugins/NyarDevTools.dll`, or state that dev-only tools are outside D26's manifest rule.
+
+F4 · advisory · A5 wording. The amendment says "Session 1 runs in four scenario files" and then names five (wave-sets, -timing, -death, -prep-restart, -boot2).
+Fix: change "four" to "five".
+
+F5 · advisory · A5, 9.2. The first `.devkill` killed 232 world entities before it was narrowed to one prefab within a radius. The narrowing is the only safeguard, and no test or scenario step proves `.devkill` with a non-matching prefab kills nothing. It is a dev-only, unshipped tool.
+Fix: a negative step in a scenario (`.devkill` of an absent prefab → `[DEV KILL] n=0`) when NyarDevTools is next touched.
+
+F6 · advisory · A7. The fails-when promises a breakdown for any hunt-phase tick over the threshold. The build logs at 20 ms or more but at most once a minute, so a second slow tick inside a minute logs no breakdown, which contradicts the fails-when as written. A Log note records the change instead of an amendment.
+Fix: restate A7's fails-when with the 20 ms threshold and the once-a-minute limit.
+
+F7 · advisory · A6. The diagnostic is built, but its fails-when ("a ws-three unit's verbose died line names no killer while the DeathEvent carries one") has no recorded run, because no unit died in Session 2. The cause of the batch deaths is still unproven and is carried as an open question.
+Fix: keep it in `docs/features/WAVE_SETS.md` Open questions (already done) and name the child or session that will exercise it.
+
+F8 · advisory · A9 against the live text. D24's text and Build plan step 3 still name `pair-otherkey` for the "action.colour" negative. A reader checking D24's fails-when ("pair-otherkey passes") without reading A9 would test the wrong fixture.
+Fix: the Report or close notes should point D24's negative to `pair-colourkey` (A9).
+
+Hunt (scenarios not handled):
+- (a) Concurrent use, 7.2: a mid-session restart with no snapshot (Session 2's pattern) leaves `state.json` and the save drifted for the next child's baseline boot (F2).
+- (b) Misuse, 9.2: `.devkill` with a broad radius near the castle still kills native units of the named prefab with Chaos as the killer. On a run with a scoreboard event this would credit nothing (native units count nothing under D8), but it would change the world (F5).
+- (c) Volume, 9.1: repeated hunt spikes within a minute go unlogged (F6).
+
+15/15 layers · 49/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · amendment A12: Test-CheckSessionLogs gains snapshotHandRestored (fixtures good-handrestore, bad-handrestore; planted fault caught), wave-sets lists session 2, the audit gains canonical session 1 and 2 log-check lines; `-SessionsOf wave-sets` → "session logs: wave-sets 2/2 checked; snapshots 2/2 from session 1 (hand restore: session 2)", its D26 pass line recorded
+- F2 · accepted · A12 names the drift: state.json and save-data-nyardev/** keep Session 2's writes, accepted as the dev world's
+- F3 · accepted · tools/paths-manifest.txt gains `server: BepInEx/plugins/NyarDevTools.dll` (A12)
+- F4 · accepted · a Log note corrects A5's count (five scenario files); A5 is not rewritten
+- F5 · accepted · deferred to the Log: a negative `.devkill` step (an absent prefab → n=0) when NyarDevTools is next touched (swarm's or revenge's first session)
+- F6 · accepted · a Log note restates A7's fails-when as built: a hunt phase of 20 ms or more logs one breakdown, at most once a minute
+- F7 · accepted · deferred to the Log: A6's died-line diagnostic stays an open question in docs/features/WAVE_SETS.md; the swarm child's first session, where units die to players, exercises it
+- F8 · accepted · a Log note and the close report point D24's negative to pair-colourkey (A9)

@@ -71,6 +71,8 @@ server: BepInEx/config/Nyarlathotep/*.json
 server: BepInEx/config/Nyarlathotep/*.bak
 server: BepInEx/config/Nyarlathotep/*.tmp
 server: BepInEx/config/Nyarlathotep/*.corrupt
+# ---- server: the dev-only test plugin tools/vrclient/NyarDevTools deploys (never shipped; wave-sets A5, A12)
+server: BepInEx/plugins/NyarDevTools.dll
 # ---- server: the development world for in-game tests (docs/dod/foundation.md A1; kept across children)
 server: save-data-nyardev/**
 server: logs/NyarDev.log

@@ -45,8 +45,8 @@ players by kills, with their deaths, and the totals.
 
 ### Session 1 · 2026-10-04 · wave-sets step 2, into 10-05 (33063d9 + c6deb38, dev world nyardev, Claude via vrclient)
 
-Setup: the step 2 Release build deployed with NyarDevTools (`.devkill`, `.devdie`; A5); `pwsh tools/dev-snapshot.ps1
--Save ws1`; the dev events.json gained ws-three (Manual, 900 s; wave 1 CHAR_Undead_SkeletonSoldier_Withered ×6 at
+Setup: the step 2 Release build deployed with NyarDevTools (`.devkill`, `.devdie`; A5);
+`pwsh tools/dev-snapshot.ps1 -Save ws1`; the dev events.json gained ws-three (Manual, 900 s; wave 1 CHAR_Undead_SkeletonSoldier_Withered ×6 at
 level 30 and ×6 at levelDelta +3 maxHealth 1.5; waves 2 and 3 ×8, wave 2 afterSeconds 120 whenCleared, wave 3
 whenCleared; AroundPlayer 10-20 m, radius 5, Hunt 30, scoreboard true); the cfg gained `[Scoreboard] IncludeAdmins =
 true`, with TimingLog on. Three boots, both logs copied before each stop to %TEMP%\nyar-ws1-logs; afterwards
@@ -87,7 +87,9 @@ true`, with TimingLog on. Three boots, both logs copied before each stop to %TEM
 Setup: the dev events.json regained ws-three (it had gone with the ws1 snapshot restore) in D23's shape: Manual, 1800 s,
 every entry CHAR_Undead_SkeletonSoldier_Armored_Farbane at level 30 (wave 1 6 + 6, waves 2 and 3 8 each; wave 2
 afterSeconds 120 whenCleared, wave 3 whenCleared), AroundPlayer 10-20 m, radius 5, Hunt 30, scoreboard on; TimingLog and
-VerboseLogging on. One boot; logs copied before and after.
+VerboseLogging on. One boot; logs copied before and after. No dev-snapshot: the cfg and events.json were copied aside.
+Hand restore (A10): after the stop, both files put back from those copies; hashes equal (cfg 606a6b83111401c6 = 606a6b83111401c6,
+events.json 9c619b1a7ee19927 = 9c619b1a7ee19927).
 
 - [x] D23, tick budget: `pwsh tools/preflight.ps1 -TimingSpan <session 2 LogOutput copy> -Windows 10 -MinTracked 10` →
   "timing span: 10/10 windows under 5 ms, tracked >= 10, targets >= 1, 0 slow ticks"; windows averaged 0.149-0.186 ms,

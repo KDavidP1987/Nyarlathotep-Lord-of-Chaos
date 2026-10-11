@@ -37,7 +37,6 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        new(WaveSets, "D25", 3, "0.9.0"), new(WaveSets, "D26", 3, "0.9.0"), new(WaveSets, "D27", 3, "0.9.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -500,6 +499,21 @@ public static class ControlCases
             ["tools/rollback-drill-fixtures/pair-colourkey"],
             ["tools/rollback-drill-fixtures/pair-wavelist", "tools/rollback-drill-fixtures/pair-scoreboard"],
             ["tools/rollback-drill-fixtures/empty"]) with { Plan = WaveSets },
+        C("D25", "Release", "preflight › Test-CheckReleaseTags and Test-CheckVersion, then release-verify.ps1 -SelfTest",
+            ["tools/preflight-fixtures/ReleaseTags/bad", "tools/preflight-fixtures/ReleaseTags/bad-2", "tools/preflight-fixtures/Version/bad",
+             "selftest missing asset", "selftest differing hash"],
+            ["tools/preflight-fixtures/ReleaseTags/good", "tools/preflight-fixtures/Version/good", "selftest matching hash"],
+            ["tools/preflight-fixtures/ReleaseTags/empty", "tools/preflight-fixtures/Version/empty", "selftest no audit records the asset"]) with { Plan = WaveSets },
+        C("D26", "Records", "preflight -AuditOf, -SessionsOf and -Paths -DeclaredOf › AuditSteps, SessionLogs and Paths",
+            ["tools/preflight-fixtures/AuditSteps/bad", "tools/preflight-fixtures/SessionLogs/bad", "tools/preflight-fixtures/SessionLogs/bad-17",
+             "tools/preflight-fixtures/SessionLogs/bad-handrestore", "tools/preflight-fixtures/Paths/bad-undeclared"],
+            ["tools/preflight-fixtures/AuditSteps/good", "tools/preflight-fixtures/SessionLogs/good", "tools/preflight-fixtures/SessionLogs/good-handrestore",
+             "tools/preflight-fixtures/Paths/good"],
+            ["tools/preflight-fixtures/AuditSteps/empty", "tools/preflight-fixtures/SessionLogs/empty", "tools/preflight-fixtures/Paths/empty"]) with { Plan = WaveSets },
+        C("D27", "Secrets", "preflight › Test-CheckSecrets",
+            ["tools/preflight-fixtures/Secrets/bad", "tools/preflight-fixtures/Secrets/bad-sentinel-zip", "tools/preflight-fixtures/Secrets/bad-sentinel-log"],
+            ["tools/preflight-fixtures/Secrets/good", "tools/preflight-fixtures/Secrets/good-sentinel"],
+            ["tools/preflight-fixtures/Secrets/empty", "tools/preflight-fixtures/Secrets/empty-sentinel"]) with { Plan = WaveSets },
         T("D12", "WaveSets", "PrivacyTests", ["a_queued_scoreboard_line_reaches_the_log", "a_name_reaches_a_line", "another_builder_takes_a_player_name", "state_gains_a_property"],
             ["the_name_only_on_the_scoreboard"], ["no_scoreboard_key"]) with { Plan = WaveSets },
         T("D14", "WaveSets", "CommandArgTests", ["a_units_form_field_meets_a_wave_list", "value_out_of_range", "field_not_settable", "a_conversion_takes_another_field", "a_start_key_breaks_a_rule",

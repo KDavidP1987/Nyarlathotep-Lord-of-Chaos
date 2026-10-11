@@ -2908,7 +2908,10 @@ function Test-CheckDebugCommands([string]$Root) {
 # ours citing the amendment that records it (A13).
 # A plan listed in tools/preflight-checks.json snapshotSessions (slug: first session) also needs, in each of those
 # sessions' blocks, the save "dev-snapshot.ps1 -Save <label>" and the restore "snapshot restored; hashes equal (<label>"
-# with the same label (event-library D30, A19); the listed first session must exist.
+# with the same label (event-library D30, A19); the listed first session must exist. A session tools/preflight-checks.json
+# snapshotHandRestored lists for the slug (run without the tool, its files put back by hand) carries instead a line
+# "hand restore (A<n>) … hashes equal" in its block, A<n> the amendment recording it; a listed session that is no
+# session fails (wave-sets A12).
 # A session tools/preflight-checks.json sessionsUncounted lists for the slug (its log copies gone before a count line
 # was written) carries instead exactly one line "- session <n> log check: uncounted (<reason>)" and is left out of the
 # count; a listed session with a count line, without its one uncounted line, without its "### Session <n>" block, or
@@ -2991,10 +2994,17 @@ function Test-CheckSessionLogs([string]$Root) {
     $dupes = @($dupes | Sort-Object -Unique)
     $unattributed = @($unattributed | Sort-Object -Unique)
     $snapFrom = if ($mj -and $mj.snapshotSessions) { $mj.snapshotSessions.PSObject.Properties[$slug] } else { $null }
+    $handFrom = if ($mj -and $mj.snapshotHandRestored) { $mj.snapshotHandRestored.PSObject.Properties[$slug] } else { $null }
+    $hand = if ($handFrom) { @($handFrom.Value | ForEach-Object { [int]$_ }) } else { @() }
     $unwrapped = @()
     if ($snapFrom) {
         if ($allSessions -notcontains [int]$snapFrom.Value) { $unwrapped += [int]$snapFrom.Value }
+        $unwrapped += @($hand | Where-Object { $allSessions -notcontains $_ })
         foreach ($n in @($allSessions | Where-Object { $_ -ge [int]$snapFrom.Value })) {
+            if ($hand -contains $n) {
+                if ("$($blocks[$n])" -notmatch '(?mi)hand restore \(A\d+\)[^\r\n]*hashes equal') { $unwrapped += $n }
+                continue
+            }
             $save = [regex]::Match("$($blocks[$n])", 'dev-snapshot\.ps1 -Save ([\w-]+)')
             if (-not $save.Success -or $blocks[$n] -notmatch ('snapshot restored; hashes equal \(' + [regex]::Escape($save.Groups[1].Value) + '[,)]')) { $unwrapped += $n }
         }
@@ -3022,7 +3032,8 @@ function Test-CheckSessionLogs([string]$Root) {
         return New-Result $false "session logs: $slug $ok/$($post.Count) checked$after$preNote ($($why -join '; '))"
     }
     # The snapshot count shows an entry dropped from snapshotSessions (Review 16 F2): the line then has no "snapshots".
-    $snapNote = if ($snapFrom) { $w = @($allSessions | Where-Object { $_ -ge [int]$snapFrom.Value }).Count; "; snapshots $w/$w from session $($snapFrom.Value)" } else { '' }
+    $handNote = if ($hand.Count) { " (hand restore: session $($hand -join ', '))" } else { '' }
+    $snapNote = if ($snapFrom) { $w = @($allSessions | Where-Object { $_ -ge [int]$snapFrom.Value }).Count; "; snapshots $w/$w from session $($snapFrom.Value)$handNote" } else { '' }
     $probeNote = if ($probeFrom) { '; probe records 1/1' } else { '' }
     return New-Result $true "session logs: $slug $ok/$($post.Count) checked$after$preNote$uncNote$snapNote$probeNote"
 }
