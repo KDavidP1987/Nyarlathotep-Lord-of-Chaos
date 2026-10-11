@@ -10,7 +10,8 @@
     "docs/dod/regions.md",
     "docs/dod/event-spawns.md",
     "docs/dod/automation.md",
-    "docs/dod/wave-sets.md"
+    "docs/dod/wave-sets.md",
+    "docs/dod/swarm.md"
   ],
   "sessionsUncounted": {
     "event-spawns": [1]
@@ -27,7 +28,8 @@
     "regions": 1,
     "event-spawns": 1,
     "automation": 1,
-    "wave-sets": 1
+    "wave-sets": 1,
+    "swarm": 1
   },
   "dataTests": {
     "event-spawns": [
@@ -72,6 +74,9 @@
     ],
     "wave-sets": [
       "docs/features/WAVE_SETS.md"
+    ],
+    "swarm": [
+      "docs/features/SWARM.md"
     ],
     "boss-reinforcements": [
       "docs/features/BOSS_REINFORCEMENTS.md"

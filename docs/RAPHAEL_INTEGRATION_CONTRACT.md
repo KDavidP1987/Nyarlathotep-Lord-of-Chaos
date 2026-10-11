@@ -141,6 +141,7 @@ All live under `.nyar api …`. Paged commands take an optional 1-based `[page]`
   units wait out the grace (`left` = seconds until they despawn, `wave=-`).
 - `faction` is `-` for waves events; `wave` is `<spawned>/<total>`. A wave-set event's (0.9.0, `action.waveList`) total is the number of waves in its list.
 - A wave set's scoreboard (0.9.0) is a server chat line only: player names never reach the wire, and an event that ends with all its waves defeated sends the usual `event-end`.
+- A swarm (0.10.0, `action.arena`, `action.winner`, `action.growth`) adds nothing to the wire: an event's arena and winner never reach the wire, and names never do. A growth event's `wave` total is its `action.waves`.
 - An empower row (api 3) carries `faction=<names joined by ','>`: each faction of the event without its `Faction_`
   prefix, e.g. `faction=Legion,Bandits`; its `wave` is `-`, and its admin `units` is the number of NPCs holding the
   event's empowerment. An empower event has no `ending` row.

@@ -193,7 +193,45 @@ public static class CommandArgs
         d[FanOutField] = ("spawn action", "admin");                 // automation D16
         d[ScoreboardField] = ("spawn action", "admin");             // wave-sets D14
         foreach (var f in WaveListFields) d[f] = ("spawn action", "admin");
+        foreach (var f in SwarmFields) d[f] = ("spawn action", "admin");      // swarm D9
         return d;
+    }
+
+    /// <summary>`action.arena` (swarm D9): 15-60 or none.</summary>
+    public const string ArenaField = "action.arena";
+    /// <summary>`action.winner` (swarm D9): killdeath (any case, written KillDeath) or none.</summary>
+    public const string WinnerField = "action.winner";
+    /// <summary>`action.growth` (swarm D9): none only, which removes the growth and leaves the units form as it was.</summary>
+    public const string GrowthField = "action.growth";
+    public const string GrowthNoneRule = "action.growth takes none (it removes the growth)";
+
+    /// <summary>The growth keys (swarm D9): a field on an event without growth creates the object.</summary>
+    public static readonly IReadOnlyList<string> GrowthFields = ["action.growth.addUnits", "action.growth.addLevels", "action.growth.whenCleared"];
+
+    /// <summary>The six swarm fields (swarm D9).</summary>
+    public static readonly IReadOnlyList<string> SwarmFields = [ArenaField, WinnerField, GrowthField, .. GrowthFields];
+
+    /// <summary>A swarm field's value (swarm D9), each refused with the validator's own reason (D1, D2, D24).</summary>
+    static Arg<object> SwarmValue(string field, string value)
+    {
+        static Arg<object> IntIn(string v, int min, int max, string rule) =>
+            int.TryParse(v, NumberStyles.None, CultureInfo.InvariantCulture, out var i) && i >= min && i <= max ? Arg<object>.Of(i) : Arg<object>.Bad(rule);
+        if (value == "none" && field is ArenaField or WinnerField or GrowthField) return Arg<object>.Of(FieldRemoval.Instance);
+        return field switch
+        {
+            ArenaField => IntIn(value, Arena.MinRadius, Arena.MaxRadius, EventValidator.ArenaRadiusRule),
+            WinnerField => string.Equals(value, nameof(WinnerRule.KillDeath), StringComparison.OrdinalIgnoreCase)
+                ? Arg<object>.Of(nameof(WinnerRule.KillDeath)) : Arg<object>.Bad(EventValidator.WinnerValue),
+            GrowthField => Arg<object>.Bad(GrowthNoneRule),
+            "action.growth.addUnits" => IntIn(value, 0, EventValidator.MaxGrowthUnits, EventValidator.GrowthAddUnitsRule),
+            "action.growth.addLevels" => IntIn(value, 0, EventValidator.MaxGrowthLevels, EventValidator.GrowthAddLevelsRule),
+            _ => value switch
+            {
+                "true" => Arg<object>.Of(true),
+                "false" => Arg<object>.Of(false),
+                _ => Arg<object>.Bad(EventValidator.GrowthWhenClearedRule),
+            },
+        };
     }
 
     /// <summary>The trigger fields (event-library D9); each but trigger.type needs its trigger type.</summary>
@@ -533,6 +571,7 @@ public static class CommandArgs
         if (!IsSettable(field)) return Arg<object>.Bad($"field {field} is not settable; edit events.json and reload");
         if ((SpawnKeyFields.Contains(TableName(field)) || field is "location" or FanOutField) && string.IsNullOrWhiteSpace(value))
             return Arg<object>.Bad(ValueRequired);                   // event-spawns D18's empty input
+        if (SwarmFields.Contains(field)) return string.IsNullOrWhiteSpace(value) ? Arg<object>.Bad(ValueRequired) : SwarmValue(field, value);
         if (field == FanOutField) return FanOutValue(value);
         if (field == ScoreboardField)
             return value switch { "true" => Arg<object>.Of(true), "false" => Arg<object>.Of(false), _ => Arg<object>.Bad(EventValidator.ScoreboardRule) };

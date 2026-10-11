@@ -177,16 +177,25 @@ public static class Messages
     /// line "&lt;event&gt; scoreboard: no player scored". The only builder that takes a player's name (D12): each through
     /// TextSink.Name (20 characters, no angle brackets or control characters), the event name through TextSink.Clean;
     /// every line within Wire.MaxBytes.</summary>
-    public static IReadOnlyList<string> ScoreboardLines(string eventName, ScoreSummary summary)
+    /// <remarks>For a `winner: KillDeath` event with at least one participant (swarm D6) one line follows: "&lt;event&gt;
+    /// winner: &lt;name&gt;, K/D &lt;r&gt; (&lt;k&gt; kills, &lt;d&gt; deaths)", r to two decimals in the invariant culture, or
+    /// "&lt;event&gt; winner: none" when no participant has a kill. With no participant only the "no player scored" line.</remarks>
+    public static IReadOnlyList<string> ScoreboardLines(string eventName, ScoreSummary summary, WinnerRule winner = WinnerRule.None)
     {
-        var head = $"{TextSink.Clean(eventName)} scoreboard: ";
+        var name = TextSink.Clean(eventName);
+        var head = $"{name} scoreboard: ";
         if (summary.Top.Count == 0) return [TextSink.CutToBytes(head + "no player scored", Wire.MaxBytes)];
         var ranks = summary.Top.Take(3).Select((r, i) => $"{i + 1}. {TextSink.Name(r.Name)} {r.Kills} kills, {r.Deaths} deaths");
-        return
-        [
+        var lines = new List<string>
+        {
             TextSink.CutToBytes(head + string.Join("; ", ranks), Wire.MaxBytes),
             $"{summary.Players} players, {summary.Kills} kills, {summary.Deaths} deaths",                // always plural, as D10 and D21 read
-        ];
+        };
+        if (winner == WinnerRule.KillDeath)
+            lines.Add(TextSink.CutToBytes(summary.Winner is { } w
+                ? FormattableString.Invariant($"{name} winner: {TextSink.Name(w.Name)}, K/D {Scoreboard.Ratio(w):0.00} ({w.Kills} kills, {w.Deaths} deaths)")
+                : $"{name} winner: none", Wire.MaxBytes));
+        return lines;
     }
 
     static string Choose(IReadOnlyList<string> own, IReadOnlyList<string> pool, int pick)

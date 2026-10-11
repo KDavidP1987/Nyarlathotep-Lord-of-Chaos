@@ -526,7 +526,7 @@ public static class EventValidator
     static SpawnWavesAction ParseSpawnWaves(JsonElement a, Trigger trigger, IUnitCatalog units, IRegionCatalog regions)
     {
         OnlyKeys(a, "action", "type", "units", "waves", "intervalSeconds", "radius", "location", "unitLifetimeSeconds", "scope",
-            "modifiers", "loot", "behaviour", "allowTerritory", "fanOut", "waveList", "scoreboard");
+            "modifiers", "loot", "behaviour", "allowTerritory", "fanOut", "waveList", "scoreboard", "arena", "winner", "growth");
 
         IReadOnlyList<UnitEntry> list;
         IReadOnlyList<WaveSpec>? waveList = null;
@@ -564,8 +564,80 @@ public static class EventValidator
             throw new Fail(MaxDistOverRange);
         var fanOut = a.TryGetProperty("fanOut", out var fo) ? ParseFanOut(fo, location) : null;
         var scoreboard = a.TryGetProperty("scoreboard", out var sb) && Bool(sb, ScoreboardRule);
+        var arena = a.TryGetProperty("arena", out var ar) ? ParseArena(ar, location, radius, behaviour) : null;
+        var winner = a.TryGetProperty("winner", out var wi) ? ParseWinner(wi, scoreboard) : WinnerRule.None;
+        Growth? growth = null;
+        if (a.TryGetProperty("growth", out var gr))
+        {
+            // swarm D24, D25: the units form's base wave grows into a generated list that everything after the parser reads.
+            growth = ParseGrowth(gr, waveList is not null, list, waves);
+            waveList = Growth.Generate(list, modifiers, waves, interval, growth);
+        }
         return new SpawnWavesAction(list, waves, interval, radius, location, lifetime, scope, modifiers, loot, behaviour, allowTerritory, fanOut,
-            waveList, scoreboard);
+            waveList, scoreboard, arena, winner, growth);
+    }
+
+    public const string ArenaObject = "action.arena must be an object";
+    public const string ArenaRadiusRule = "action.arena.radius must be 15-60";
+    public const string ArenaLocation = "action.arena needs a Point location or an Admin location";
+    public const string ArenaSpawnRadius = "action.radius must be at most action.arena.radius";
+    public const string ArenaHuntRange = "action.behaviour.range must be at most action.arena.radius";
+    public const string WinnerValue = "action.winner must be KillDeath";
+    public const string WinnerScoreboard = "action.winner needs action.scoreboard true";
+    public const int MaxGrowthUnits = 10;
+    public const int MaxGrowthLevels = 5;
+    public const string GrowthObject = "action.growth must be an object";
+    public const string GrowthUnitsForm = "action.growth needs the units form, not action.waveList";
+    public const string GrowthWaves = "action.growth needs action.waves 2-10";
+    public const string GrowthAdds = "action.growth must add units or levels";
+    public const string GrowthAddUnitsRule = "action.growth.addUnits must be 0-10";
+    public const string GrowthAddLevelsRule = "action.growth.addLevels must be 0-5";
+    public const string GrowthWhenClearedRule = "action.growth.whenCleared must be true or false";
+    public const string GrowthLastWave = "action.growth grows the last wave past 50 units";
+
+    /// <summary>Every reason swarm D1, D2 and D24 give, for the 120-byte check.</summary>
+    public static readonly IReadOnlyList<string> SwarmReasons =
+    [
+        ArenaObject, ArenaRadiusRule, ArenaLocation, ArenaSpawnRadius, ArenaHuntRange, WinnerValue, WinnerScoreboard, GrowthObject,
+        GrowthUnitsForm, GrowthWaves, GrowthAdds, GrowthAddUnitsRule, GrowthAddLevelsRule, GrowthWhenClearedRule, GrowthLastWave,
+    ];
+
+    /// <summary>`arena` (swarm D1): { "radius": 15-60 } with a Point or Admin location, the spawn radius and a Hunt range
+    /// within it.</summary>
+    static Arena ParseArena(JsonElement v, Location location, int radius, Behaviour? behaviour)
+    {
+        if (v.ValueKind != JsonValueKind.Object) throw new Fail(ArenaObject);
+        OnlyKeys(v, "action.arena", "radius");
+        var arena = new Arena(Int(Required(v, "radius", ArenaRadiusRule), Arena.MinRadius, Arena.MaxRadius, ArenaRadiusRule));
+        if (location.Type == LocationType.AroundPlayer) throw new Fail(ArenaLocation);
+        if (radius > arena.Radius) throw new Fail(ArenaSpawnRadius);
+        if (behaviour is { Type: BehaviourType.Hunt } hunt && hunt.Range > arena.Radius) throw new Fail(ArenaHuntRange);
+        return arena;
+    }
+
+    /// <summary>`winner` (swarm D2): "KillDeath", spelled as the other enum values of events.json are, on an action with
+    /// `scoreboard: true`.</summary>
+    static WinnerRule ParseWinner(JsonElement v, bool scoreboard)
+    {
+        if (v.ValueKind != JsonValueKind.String || v.GetString() != nameof(WinnerRule.KillDeath)) throw new Fail(WinnerValue);
+        if (!scoreboard) throw new Fail(WinnerScoreboard);
+        return WinnerRule.KillDeath;
+    }
+
+    /// <summary>`growth` (swarm D24): { "addUnits": 0-10, "addLevels": 0-5, "whenCleared": bool } (absent 0, 0, false) on a
+    /// units-form action of 2-10 waves, adding units or levels, its last wave at most Limits.MaxUnitsPerWave's ceiling.</summary>
+    static Growth ParseGrowth(JsonElement v, bool waveList, IReadOnlyList<UnitEntry> baseWave, int waves)
+    {
+        if (v.ValueKind != JsonValueKind.Object) throw new Fail(GrowthObject);
+        if (waveList) throw new Fail(GrowthUnitsForm);
+        OnlyKeys(v, "action.growth", "addUnits", "addLevels", "whenCleared");
+        var units = v.TryGetProperty("addUnits", out var au) ? Int(au, 0, MaxGrowthUnits, GrowthAddUnitsRule) : 0;
+        var levels = v.TryGetProperty("addLevels", out var al) ? Int(al, 0, MaxGrowthLevels, GrowthAddLevelsRule) : 0;
+        var cleared = v.TryGetProperty("whenCleared", out var wc) && Bool(wc, GrowthWhenClearedRule);
+        if (waves < 2) throw new Fail(GrowthWaves);
+        if (units == 0 && levels == 0) throw new Fail(GrowthAdds);
+        if (Growth.LastWaveUnits(baseWave, waves, units) > Limits.MaxUnitsPerWave.Max) throw new Fail(GrowthLastWave);
+        return new Growth(units, levels, cleared);
     }
 
     /// <summary>The units form's keys a waveList replaces (wave-sets D1).</summary>

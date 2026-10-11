@@ -87,6 +87,24 @@ public sealed record Behaviour(BehaviourType Type, int Range);
 /// <see cref="MinSpacing"/> metres from the others (automation D4, D5).</summary>
 public sealed record FanOut(int MaxInstances, int MinSpacing);
 
+/// <summary>The circle a SpawnWaves action's units are kept in (swarm D1, D3): <see cref="Radius"/> 15-60 m around the
+/// Point location's x and z, or the starting admin's position for an Admin location. The rule is Logic/Arena.cs.</summary>
+public sealed partial record Arena(int Radius);
+
+/// <summary>Who an event with a scoreboard names as its winner (swarm D2, D5): nobody, or the best kill-to-death ratio.</summary>
+public enum WinnerRule { None, KillDeath }
+
+/// <summary>How a units-form action's waves grow from its one base wave (swarm D24, D25; design §9 D42): each later wave
+/// adds <see cref="AddUnits"/> to every entry's count and <see cref="AddLevels"/> to its level, and starts after
+/// intervalSeconds or, with <see cref="WhenCleared"/>, when the previous wave is cleared as well. The generator is
+/// Logic/Growth.cs.</summary>
+public sealed partial record Growth(int AddUnits, int AddLevels, bool WhenCleared);
+
+/// <summary>A SpawnWaves action. <see cref="WaveList"/> is the waveList form's list (wave-sets D1) or, for a units-form
+/// action with <see cref="Growth"/>, the list Growth.Generate made from the base wave (swarm D25): <see cref="Units"/>,
+/// <see cref="Waves"/>, <see cref="IntervalSeconds"/> and <see cref="Modifiers"/> then stay the base the file holds, and
+/// everything after the parser reads the generated list. <see cref="Arena"/> and <see cref="Winner"/> are swarm D1 and
+/// D2.</summary>
 public sealed record SpawnWavesAction(
     IReadOnlyList<UnitEntry> Units,
     int Waves,
@@ -101,7 +119,10 @@ public sealed record SpawnWavesAction(
     bool AllowTerritory = false,
     FanOut? FanOut = null,
     IReadOnlyList<WaveSpec>? WaveList = null,
-    bool Scoreboard = false)
+    bool Scoreboard = false,
+    Arena? Arena = null,
+    WinnerRule Winner = WinnerRule.None,
+    Growth? Growth = null)
 {
     /// <summary>The units of wave <paramref name="wave"/> (1-based): its waveList entry's, or <see cref="Units"/> for
     /// every wave of the units form.</summary>

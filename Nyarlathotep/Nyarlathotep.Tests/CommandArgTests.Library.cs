@@ -101,13 +101,18 @@ public partial class CommandArgTests
         _ when field.StartsWith("action.stats.", StringComparison.Ordinal) => "1.5",
         "conditions.chancePercent" => "50",
         "action.waves" or "action.radius" => "3",
+        "action.arena" => "25",
+        "action.winner" => "killdeath",
+        "action.growth" => "none",
+        "action.growth.addUnits" or "action.growth.addLevels" => "2",
+        "action.growth.whenCleared" => "true",
         _ => "60",
     };
 
     [Fact]
     public void SettableFields_passes_every_table_name()
     {
-        Assert.Equal(52, CommandArgs.SettableFields.Count);      // automation D16: 7 trigger fields and action.fanOut; wave-sets D14: 11
+        Assert.Equal(58, CommandArgs.SettableFields.Count);      // automation D16: 7 trigger fields and action.fanOut; wave-sets D14: 11; swarm D9: 6
         foreach (var (name, (family, who)) in CommandArgs.SettableFields)
         {
             var field = name.Replace(".N.", ".1.", StringComparison.Ordinal).Replace(".M.", ".1.", StringComparison.Ordinal);   // the placeholders

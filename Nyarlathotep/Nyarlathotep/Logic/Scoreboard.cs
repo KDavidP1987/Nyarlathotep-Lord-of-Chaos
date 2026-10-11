@@ -13,8 +13,9 @@ public sealed record ScoreRow(string Name, int Kills, int Deaths, long First);
 
 /// <summary>An event's scoreboard as shown (wave-sets D10, D11): the top participants in rank order and the totals.
 /// <see cref="Players"/> counts the rows; a credit beyond <see cref="Limits.ScoreboardPlayers"/> players adds to the
-/// totals only.</summary>
-public sealed record ScoreSummary(IReadOnlyList<ScoreRow> Top, int Players, int Kills, int Deaths);
+/// totals only. <see cref="Winner"/> is the best kill-to-death ratio over every row (swarm D5), null when no row holds a
+/// kill; only a `winner: KillDeath` event shows it.</summary>
+public sealed record ScoreSummary(IReadOnlyList<ScoreRow> Top, int Players, int Kills, int Deaths, ScoreRow? Winner = null);
 
 /// <summary>
 /// The per-event scoreboard (wave-sets D8, D9; design §9 D38, D39). In memory only: rows end with the event (every end
@@ -70,8 +71,32 @@ public sealed class Scoreboard
     {
         if (!_byEvent.TryGetValue(eventId, out var score)) return new ScoreSummary([], 0, 0, 0);
         var ranked = score.Rows.Values.OrderByDescending(r => r.Kills).ThenBy(r => r.Deaths).ThenBy(r => r.First).Take(top).ToList();
-        return new ScoreSummary(ranked, score.Rows.Count, score.Kills, score.Deaths);
+        return new ScoreSummary(ranked, score.Rows.Count, score.Kills, score.Deaths, Winner(score.Rows.Values));
     }
+
+    /// <summary>The winner of <paramref name="rows"/> (swarm D5, S-6), chosen over every row, not only the top 3: among the
+    /// rows with at least one kill, the highest kills ÷ max(1, deaths), then more kills, then fewer deaths, then the earlier
+    /// first credit; null when no row holds a kill. A dropped admin (wave-sets D9) and a player past the 200-row cap have
+    /// no row, so neither can win. The ratios are compared as exact cross products, never as floating point.</summary>
+    public static ScoreRow? Winner(IEnumerable<ScoreRow> rows)
+    {
+        ScoreRow? best = null;
+        foreach (var r in rows)
+            if (r.Kills > 0 && (best is null || Better(r, best))) best = r;
+        return best;
+    }
+
+    static bool Better(ScoreRow a, ScoreRow b)
+    {
+        var ratio = ((long)a.Kills * Math.Max(1, b.Deaths)).CompareTo((long)b.Kills * Math.Max(1, a.Deaths));
+        if (ratio != 0) return ratio > 0;
+        if (a.Kills != b.Kills) return a.Kills > b.Kills;
+        if (a.Deaths != b.Deaths) return a.Deaths < b.Deaths;
+        return a.First < b.First;
+    }
+
+    /// <summary>The ratio a winner line and the log show: kills ÷ max(1, deaths).</summary>
+    public static double Ratio(ScoreRow r) => (double)r.Kills / Math.Max(1, r.Deaths);
 
     /// <summary>Ends <paramref name="eventId"/>'s rows and returns its summary (every end path, shown or not).</summary>
     public ScoreSummary End(string eventId, int top = 3)
@@ -107,18 +132,22 @@ public static class ScoreboardRule
         Scoreboard.Counts(ended) && path is EndPath.Natural or EndPath.Victory or EndPath.Stop;
 
     /// <summary>The end of <paramref name="ended"/> by <paramref name="path"/> (D11): its rows end on every path; when
-    /// <see cref="Shows"/>, the chat lines to queue as Info lines and the log line, else none.</summary>
+    /// <see cref="Shows"/>, the chat lines to queue as Info lines and the log line, else none. The winner rule is the
+    /// running instance's own definition's (swarm D7), so an edit mid-run changes nothing until the next start.</summary>
     public static ScoreboardEnd End(EndPath path, ActiveEvent ended, Scoreboard board)
     {
         var summary = board.End(ended.Id);
+        var winner = ended.Definition.Action?.Winner ?? WinnerRule.None;
         return Shows(path, ended)
-            ? new ScoreboardEnd(Messages.ScoreboardLines(ended.Definition.Name, summary), LogLine(ended.Id, summary))
+            ? new ScoreboardEnd(Messages.ScoreboardLines(ended.Definition.Name, summary, winner), LogLine(ended.Id, summary, winner))
             : ScoreboardEnd.None;
     }
 
-    /// <summary>"event &lt;id&gt; scoreboard: &lt;p&gt; players, &lt;K&gt; kills, &lt;D&gt; deaths": counts only, never a name (D12).</summary>
-    public static string LogLine(string eventId, ScoreSummary s) =>
-        $"event {eventId} scoreboard: {s.Players} players, {s.Kills} kills, {s.Deaths} deaths";
+    /// <summary>"event &lt;id&gt; scoreboard: &lt;p&gt; players, &lt;K&gt; kills, &lt;D&gt; deaths": counts only, never a name (D12);
+    /// for a `winner: KillDeath` event ", winner K/D &lt;r&gt;" or ", no winner" follows (swarm D7), the ratio only.</summary>
+    public static string LogLine(string eventId, ScoreSummary s, WinnerRule winner = WinnerRule.None) =>
+        $"event {eventId} scoreboard: {s.Players} players, {s.Kills} kills, {s.Deaths} deaths" + (winner != WinnerRule.KillDeath ? ""
+            : s.Winner is { } w ? FormattableString.Invariant($", winner K/D {Scoreboard.Ratio(w):0.00}") : ", no winner");
 
     /// <summary>"event &lt;id&gt; ended: all waves defeated (&lt;s&gt; of &lt;n&gt; waves)" (wave-sets D7).</summary>
     public static string VictoryLine(ActiveEvent ended) =>

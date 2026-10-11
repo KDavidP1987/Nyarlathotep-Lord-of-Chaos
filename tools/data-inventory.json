@@ -58,7 +58,8 @@
         "regions › build outputs",
         "event-spawns › build outputs",
         "automation › build outputs",
-        "wave-sets › build outputs"
+        "wave-sets › build outputs",
+        "swarm › build outputs"
       ]
     },
     {
@@ -87,7 +88,9 @@
         "automation › release zip",
         "automation › tag and GitHub release v0.8.0",
         "wave-sets › release zip",
-        "wave-sets › tag and GitHub release v0.9.0"
+        "wave-sets › tag and GitHub release v0.9.0",
+        "swarm › release zip",
+        "swarm › tag and GitHub release v0.10.0"
       ]
     },
     {
@@ -123,7 +126,8 @@
         "event-library › Template catalogue",
         "event-spawns › templates.json examples",
         "automation › templates.json examples",
-        "wave-sets › templates.json graveyard-waves"
+        "wave-sets › templates.json graveyard-waves",
+        "swarm › templates.json spider-swarm"
       ]
     },
     {
@@ -170,7 +174,8 @@
         "automation › state.json NextInterval",
         "automation › events.json.bak",
         "automation › events.json.tmp, state.json.tmp",
-        "wave-sets › events.json waveList and scoreboard"
+        "wave-sets › events.json waveList and scoreboard",
+        "swarm › events.json arena, winner and growth"
       ]
     },
     {
@@ -362,7 +367,8 @@
         "regions › snapshot",
         "event-spawns › snapshot",
         "automation › snapshot",
-        "wave-sets › snapshot"
+        "wave-sets › snapshot",
+        "swarm › snapshot"
       ],
       "location": "%TEMP%\\nyar-snap-* (saved\\manifest.json plus the copies)",
       "owner": "tools/dev-snapshot.ps1",
@@ -471,9 +477,10 @@
       "artifact": "Session log copies",
       "covers": [
         "nyar-s*-logs",
-        "nyar-ws*-logs"
+        "nyar-ws*-logs",
+        "nyar-sw*-logs"
       ],
-      "location": "%TEMP%\\nyar-s<n>-logs (copies of LogOutput.log and NyarDev.log taken by hand during event-library Sessions 4 and 5); %TEMP%\\nyar-ws<n>-logs (wave-sets Session 1)",
+      "location": "%TEMP%\\nyar-s<n>-logs (copies of LogOutput.log and NyarDev.log taken by hand during event-library Sessions 4 and 5); %TEMP%\\nyar-ws<n>-logs (wave-sets Session 1); %TEMP%\\nyar-sw<n>-logs (swarm Session 1)",
       "owner": "Claude during a server session",
       "retention": "the session that made them",
       "deletion": "deleted once the session is recorded; later sessions copy to nyar-soak-* instead; a leftover fails -Paths",
@@ -485,7 +492,8 @@
         "regions › session log copies",
         "event-spawns › session log copies",
         "automation › session log copies",
-        "wave-sets › session log copies"
+        "wave-sets › session log copies",
+        "swarm › session log copies"
       ]
     },
     {
@@ -552,7 +560,9 @@
         "automation › review prompts",
         "automation › Claude's scratchpad (Codex prompts and outputs, drafts)",
         "wave-sets › review prompts",
-        "wave-sets › Claude's scratchpad (Codex prompts and outputs, drafts)"
+        "wave-sets › Claude's scratchpad (Codex prompts and outputs, drafts)",
+        "swarm › review prompts",
+        "swarm › Claude's scratchpad (Codex prompts and outputs)"
       ]
     },
     {
@@ -637,7 +647,8 @@
       "singleCopy": false,
       "rows": [
         "event-spawns › health and failure-streak state",
-        "automation › health and failure-streak state"
+        "automation › health and failure-streak state",
+        "swarm › arena check streak and health entry"
       ]
     },
     {
@@ -731,7 +742,8 @@
       "singleCopy": true,
       "rows": [
         "automation › vrclient outputs (A18, Epic A36)",
-        "wave-sets › vrclient outputs"
+        "wave-sets › vrclient outputs",
+        "swarm › vrclient outputs"
       ]
     },
     {
@@ -743,7 +755,8 @@
       "deletion": "at every end path of the instance, and on restart (wave-sets D8, D12)",
       "singleCopy": false,
       "rows": [
-        "wave-sets › scoreboard rows"
+        "wave-sets › scoreboard rows",
+        "swarm › the winner"
       ]
     },
     {
@@ -756,6 +769,18 @@
       "singleCopy": false,
       "rows": [
         "wave-sets › wave decision times and the wave number per unit"
+      ]
+    },
+    {
+      "artifact": "Generated growth waves",
+      "covers": [],
+      "location": "memory (the parsed SpawnWavesAction.WaveList of a growth event), in the server process",
+      "owner": "Logic/Growth.cs",
+      "retention": "while the definition is loaded",
+      "deletion": "rebuilt at every load; never written back to events.json (swarm D25)",
+      "singleCopy": false,
+      "rows": [
+        "swarm › the generated waves"
       ]
     }
   ]

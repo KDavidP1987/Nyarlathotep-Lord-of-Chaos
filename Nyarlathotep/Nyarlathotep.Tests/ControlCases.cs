@@ -30,13 +30,16 @@ public static class ControlCases
     public const string EventSpawns = "event-spawns";
     public const string Automation = "automation";
     public const string WaveSets = "wave-sets";
+    public const string Swarm = "swarm";
 
     /// <summary>The plans whose controls the table lists; each is copied to the test output under Resources/.</summary>
-    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets];
+    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm];
 
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
+        new(Swarm, "D4", 2, "0.10.0"), new(Swarm, "D11", 2, "0.10.0"), new(Swarm, "D13", 2, "0.10.0"), new(Swarm, "D19", 2, "0.10.0"),
+        new(Swarm, "D20", 3, "0.10.0"), new(Swarm, "D21", 3, "0.10.0"), new(Swarm, "D22", 3, "0.10.0"), new(Swarm, "D23", 3, "0.10.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -54,7 +57,7 @@ public static class ControlCases
         "ReadinessTests", "LibraryDependencyFailureTests", "SpawningTests", "HealthTests",
         "HumanReplyTests", "OutcomeCodeTests", "ApiTwinTests", "RateGateTests", "ApiOverloadTests", "EventAdminTests",
         "EndPathTests", "WavePrecedenceTests", "SpawnsDependencyFailureTests", "AutomationTests", "AutomationDependencyFailureTests", "SpawnPlacementTests",
-        "WaveSetTests", "ScoreboardTests", "WaveSetDependencyFailureTests",
+        "WaveSetTests", "ScoreboardTests", "WaveSetDependencyFailureTests", "SwarmTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -527,5 +530,32 @@ public static class ControlCases
             ["contract"]) with { Plan = WaveSets },
         T("D19", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit", "pending_at_release"],
             ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = WaveSets },
+        // ---- swarm
+        T("D1", "Arena", "EventValidationTests", ["a_key_is_out_of_range", "a_reason_exceeds_120_bytes"], ["the_bounds_in_both_forms"], ["no_arena_key"])
+            with { Plan = Swarm },
+        T("D2", "WinnerKey", "EventValidationTests", ["another_value_or_no_scoreboard"], ["both_forms_with_the_scoreboard"], ["key_absent"]) with { Plan = Swarm },
+        T("D3", "Containment", "SwarmTests", ["a_stray_stays_or_an_inner_unit_moves", "a_return_lands_outside_action_radius", "the_height_is_not_walkable",
+            "a_target_outside_is_kept", "a_form_is_missed", "another_units_move", "the_admin_centre_is_not_the_origin", "the_log_line_names_a_player"],
+            ["check_every_behaviour_tick"], ["no_stray"]) with { Plan = Swarm },
+        T("D5", "Winner", "ScoreboardTests", ["the_best_ratio_fourth_by_kills_is_not_chosen", "zero_deaths_divides_by_zero_or_outranks", "a_tie_breaks_the_wrong_way",
+            "a_dropped_admin_or_a_player_without_a_kill_wins", "the_201st_player_wins"], ["the_winner_through_end"], ["no_kill"]) with { Plan = Swarm },
+        T("D6", "WinnerLines", "ScoreboardTests", ["the_ratio_prints_a_comma_or_a_third_decimal", "a_line_exceeds_480_bytes", "a_name_keeps_markup",
+            "the_empty_case_prints_a_winner_line", "a_keyless_events_lines_change"], ["the_line_after_the_wave_sets_lines"], ["no_participant"]) with { Plan = Swarm },
+        T("D7", "EndPaths", "SwarmTests", ["a_silent_path_queues_a_winner", "the_log_line_carries_a_name", "a_keyless_log_line_changes"],
+            ["the_winner_on_the_three_showing_paths"], ["no_player_scored"]) with { Plan = Swarm },
+        T("D8", "Swarm", "PrivacyTests", ["a_name_reaches_a_line", "another_builder_takes_a_player_name", "state_gains_a_property"],
+            ["the_winner_name_only_in_its_chat_line"], ["no_winner_key"]) with { Plan = Swarm },
+        T("D9", "Swarm", "CommandArgTests", ["value_out_of_range", "an_arena_meets_an_around_player_location", "a_spawn_radius_or_hunt_range_widens_past_the_arena",
+            "a_winner_lacks_the_scoreboard", "growth_meets_a_wave_list_or_one_wave", "a_reply_exceeds_480_bytes", "the_table_and_settable_fields_differ"],
+            ["values_in_range", "growth_created_and_removed"], ["value"]) with { Plan = Swarm },
+        T("D10", "Swarm", "AuthoringTests", ["a_line_exceeds_480_bytes", "a_keyless_events_info_changes"], ["arena_winner_and_growth_lines"], ["no_swarm_keys"])
+            with { Plan = Swarm },
+        T("D12", "Swarm", "ContractDocTests", ["the_wire_or_the_contract_changes"], ["api_6_and_the_sentence"], ["contract"]) with { Plan = Swarm },
+        T("D14", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit", "pending_at_release"],
+            ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = Swarm },
+        T("D24", "Growth", "EventValidationTests", ["a_key_is_out_of_range"], ["the_bounds_and_keeps_the_base"], ["no_growth_key"]) with { Plan = Swarm },
+        T("D25", "Growth", "SwarmTests", ["a_generated_list_differs_from_its_hand_written_twin", "wave_one_differs_from_the_base_wave", "a_step_is_off_by_one_wave",
+            "a_level_passes_120", "a_grown_level_delta_resolves_outside_1_120", "a_generated_wave_skips_the_clamp"], ["the_last_wave_count"], ["no_growth"])
+            with { Plan = Swarm },
     ];
 }

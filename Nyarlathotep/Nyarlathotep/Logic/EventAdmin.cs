@@ -42,7 +42,23 @@ public static class EventsEditor
 
     /// <summary><see cref="Apply(string, string, string, object, out Outcome?)"/> with <paramref name="note"/>, the
     /// text a wave-list conversion adds to the reply (wave-sets D14: the keys it removed).</summary>
+    /// <remarks>Swarm D9 and deferred Review 2 F1: an edit that would give the event a new arena, winner or growth conflict
+    /// (an AroundPlayer location or a spawn radius or Hunt range wider than its arena, a winner without the scoreboard,
+    /// growth beside a waveList, with waves 1, adding nothing or growing the last wave past 50 units) is refused with the
+    /// validator's own reason before anything is written. A conflict the file already held is not the edit's, so an
+    /// unrelated edit of an already disabled event still goes through.</remarks>
     public static string? Apply(string text, string id, string path, object value, out Outcome? error, out string? note)
+    {
+        var edited = ApplyCore(text, id, path, value, out error, out note);
+        if (edited is null) return null;
+        var after = SwarmConflict(edited, id);
+        if (after is null || after == SwarmConflict(text, id)) return edited;
+        error = Invalid(after, Reasons.Field);
+        note = null;
+        return null;
+    }
+
+    static string? ApplyCore(string text, string id, string path, object value, out Outcome? error, out string? note)
     {
         error = null;
         note = null;
@@ -62,6 +78,12 @@ public static class EventsEditor
             error = Invalid(WaveListTakesWaves, Reasons.Field);
             return null;
         }
+        if (CommandArgs.WaveListPath(path) is not null && ev["action"] is JsonObject grown && grown["growth"] is not null)
+        {
+            error = Invalid($"{EventValidator.GrowthUnitsForm}: set action.growth none first", Reasons.Field);   // swarm D9: never a conversion
+            return null;
+        }
+        if (CommandArgs.SwarmFields.Contains(path)) return SetSwarm(root, ev, actionType, path, value, out error);
         if (CommandArgs.SpawnKeyFields.Contains(CommandArgs.TableName(path)) || path == CommandArgs.FanOutField)
             return SetSpawnKey(root, ev, actionType, path, value, out error);
         if (path == CommandArgs.ScoreboardField || CommandArgs.WaveListPath(path) is not null)
@@ -295,6 +317,70 @@ public static class EventsEditor
         return Done();
     }
 
+    /// <summary>The swarm fields (swarm D9) of a SpawnWaves action, refused on any other: `action.arena` as { "radius": r },
+    /// `action.winner` as "KillDeath", `action.growth none` removing the growth (the units form stays as it was), and a
+    /// growth key creating the object when missing; a growth key on a waveList event is refused with D24's reason. Whether
+    /// the result conflicts with the action's other keys is <see cref="SwarmConflict"/>'s.</summary>
+    static string? SetSwarm(JsonNode root, JsonObject ev, string? actionType, string path, object value, out Outcome? error)
+    {
+        error = null;
+        if (actionType != "SpawnWaves" || ev["action"] is not JsonObject action)
+        {
+            error = Invalid($"{path} is not {Article(actionType)} field", Reasons.Field);
+            return null;
+        }
+        var key = path["action.".Length..];
+        if (key.StartsWith("growth.", StringComparison.Ordinal))
+        {
+            if (action["waveList"] is not null) { error = Invalid(EventValidator.GrowthUnitsForm, Reasons.Field); return null; }
+            if (action["growth"] is not JsonObject growth) action["growth"] = growth = new JsonObject();
+            growth[key["growth.".Length..]] = ToNode(value);
+        }
+        else if (value is FieldRemoval) action.Remove(key);
+        else action[key] = key == "arena" ? new JsonObject { ["radius"] = ToNode(value) } : ToNode(value);
+        return root.ToJsonString(Write) + Environment.NewLine;
+    }
+
+    /// <summary>The validator's reason for the first conflict among the swarm keys of event <paramref name="id"/>'s action
+    /// in <paramref name="text"/> (swarm D1, D2, D24), or null: what the reload would disable it for. Values of the wrong
+    /// type are left to the validator.</summary>
+    public static string? SwarmConflict(string text, string id)
+    {
+        JsonNode? root;
+        try { root = JsonNode.Parse(text, documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true }); }
+        catch (JsonException) { return null; }
+        var ev = (root?["events"] as JsonArray)?.OfType<JsonObject>().FirstOrDefault(e => e["id"] is JsonValue v && v.TryGetValue<string>(out var s) && s == id);
+        return ev?["action"] is JsonObject action ? ActionConflict(action) : null;
+    }
+
+    static string? ActionConflict(JsonObject action)
+    {
+        static int? IntOf(JsonNode? n) => n is JsonValue v && v.TryGetValue<int>(out var i) ? i : null;
+        if (action["arena"] is JsonObject arena)
+        {
+            if (action["location"] is JsonObject loc && loc["type"] is JsonValue lt && lt.TryGetValue<string>(out var type) && type == "AroundPlayer")
+                return EventValidator.ArenaLocation;
+            if (IntOf(arena["radius"]) is { } r)
+            {
+                if (IntOf(action["radius"]) > r) return EventValidator.ArenaSpawnRadius;
+                if (action["behaviour"] is JsonObject b && IntOf(b["range"]) > r) return EventValidator.ArenaHuntRange;
+            }
+        }
+        if (action["winner"] is not null && !(action["scoreboard"] is JsonValue sb && sb.TryGetValue<bool>(out var on) && on))
+            return EventValidator.WinnerScoreboard;
+        if (action["growth"] is not JsonObject growth) return null;
+        if (action["waveList"] is not null) return EventValidator.GrowthUnitsForm;
+        var waves = IntOf(action["waves"]);
+        if (waves == 1) return EventValidator.GrowthWaves;
+        var addUnits = IntOf(growth["addUnits"]) ?? 0;
+        if (addUnits == 0 && (IntOf(growth["addLevels"]) ?? 0) == 0) return EventValidator.GrowthAdds;
+        var counts = (action["units"] as JsonArray)?.Select(u => IntOf(u?["count"])).ToList();
+        if (waves is { } n && counts is { Count: > 0 } && counts.All(c => c is not null)
+            && counts.Sum(c => c!.Value + (n - 1) * addUnits) > Limits.MaxUnitsPerWave.Max)
+            return EventValidator.GrowthLastWave;
+        return null;
+    }
+
     /// <summary>A new action.units list keeps the chance of each prefab the old list gave one (event-spawns D18), so
     /// resetting the units does not silently drop a chance.</summary>
     static void KeepChances(JsonArray? old, JsonArray now)
@@ -442,8 +528,9 @@ public static class EventLines
             if (a.WaveList is { } list)
             {
                 lines.Add($"action: {a.Waves} waves, radius {a.Radius}, {where}{life}");
+                if (a.Growth is { } g) lines.Add(GrowthLine(g, WaveSchedule.IntervalOf(a)));   // swarm D10: then every generated wave
                 lines.AddRange(WaveLines(list));                                                 // wave-sets D15
-                lines.Add($"scoreboard: {(a.Scoreboard ? "on" : "off")}");
+                lines.Add(ScoreboardLine(a));
             }
             else
             {
@@ -459,6 +546,8 @@ public static class EventLines
                 }
             }
             if (SpawnKeys(a) is { } keys) lines.Add(keys);
+            if (a.WaveList is null && a.Winner != WinnerRule.None) lines.Add(ScoreboardLine(a));   // swarm D10: the units form's winner
+            if (a.Arena is { } arena) lines.Add(ArenaLine(arena, a.Location.Type));
         }
         lines.Add($"trigger scope: {d.Trigger.Scope}");                 // regions D9
         lines.Add($"action scope: {d.Action?.Scope ?? d.Empower?.Scope ?? Scope.Global}");
@@ -469,6 +558,18 @@ public static class EventLines
         if (d.Trigger.Type == TriggerType.Interval && d.Enabled && NextStartLine(active is not null, nextInterval, utcNow) is { } next) lines.Add(next);
         return lines;
     }
+
+    /// <summary>"scoreboard: on" or "scoreboard: off" (wave-sets D15), "scoreboard: on, winner K/D" with a winner (swarm D10).</summary>
+    public static string ScoreboardLine(SpawnWavesAction a) =>
+        $"scoreboard: {(a.Scoreboard ? "on" : "off")}{(a.Winner == WinnerRule.KillDeath ? ", winner K/D" : "")}";
+
+    /// <summary>"arena: &lt;r&gt; m around the spot" for a Point location, "… around the starting admin" for an Admin one (swarm D10).</summary>
+    public static string ArenaLine(Arena arena, LocationType location) =>
+        $"arena: {arena.Radius} m around {(location == LocationType.Admin ? "the starting admin" : "the spot")}";
+
+    /// <summary>"growth: +&lt;u&gt; units per entry and +&lt;l&gt; levels per wave, every &lt;s&gt;s[ or when cleared]" (swarm D10).</summary>
+    public static string GrowthLine(Growth g, int intervalSeconds) =>
+        $"growth: +{g.AddUnits} units per entry and +{g.AddLevels} levels per wave, every {intervalSeconds}s{(g.WhenCleared ? " or when cleared" : "")}";
 
     /// <summary>One line per waveList wave (wave-sets D15): "wave &lt;n&gt;: &lt;u&gt; units (&lt;prefab&gt; x&lt;c&gt;[ L&lt;level&gt;|L±&lt;d&gt;][ hp
     /// x&lt;m&gt;][ pw x&lt;m&gt;][ mv x&lt;m&gt;][ as x&lt;m&gt;][ chance &lt;c&gt;], …), &lt;start rule&gt;". A wave whose line would pass
@@ -538,7 +639,7 @@ public static class EventLines
     public static string? SpawnKeys(SpawnWavesAction a)
     {
         var parts = new List<string>();
-        if (a.Modifiers is { } m)
+        if (a.Modifiers is { } m && a.Growth is null)                      // a growth event shows them on each generated wave (swarm D10)
         {
             var mods = new List<string>();
             if (m.Level is { } lv) mods.Add(FormattableString.Invariant($"level {lv}"));
@@ -555,7 +656,7 @@ public static class EventLines
         if (a.Behaviour is { Type: BehaviourType.Hunt } hunt) parts.Add($"hunt {hunt.Range} m");
         if (a.AllowTerritory) parts.Add("claimed territory allowed");
         if (a.FanOut is { } fan) parts.Add($"fanOut {fan.MaxInstances} players {fan.MinSpacing} m apart");      // automation D16
-        if (a.Scoreboard && a.WaveList is null) parts.Add("scoreboard on");      // a waveList shows its own line (wave-sets D15)
+        if (a.Scoreboard && a.WaveList is null && a.Winner == WinnerRule.None) parts.Add("scoreboard on");   // else its own line (wave-sets D15, swarm D10)
         return parts.Count == 0 ? null : "spawn: " + string.Join("; ", parts);
     }
 

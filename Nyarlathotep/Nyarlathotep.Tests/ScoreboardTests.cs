@@ -6,7 +6,7 @@ namespace Nyarlathotep.Tests;
 /// <summary>wave-sets D8, D9 and D10 (design §9 D38, D39): what the scoreboard counts, admins left out, and its chat
 /// lines. The kill and death sides resolve their player before they credit (KillReader's rule, D13); these cases give the
 /// resolved player.</summary>
-public class ScoreboardTests
+public partial class ScoreboardTests
 {
     static Scorer P(string id, string name = "", bool admin = false) => new(id, name == "" ? "Player" + id : name, admin);
 
