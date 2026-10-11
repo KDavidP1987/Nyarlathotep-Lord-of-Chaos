@@ -69,11 +69,11 @@ public class ScoreboardTests
 
     static readonly OurUnit WsUnit = new("ws", 1, T0.AddSeconds(5));
 
-    static ScoreSummary Credit(ScoreSides sides, ScorePlayers players)
+    static ScoreSummary Credit(ScoreSides sides, ScorePlayers players, bool includeAdmins = false)
     {
         var engine = Running();
         var b = new Scoreboard();
-        ScoreRule.Credit(sides, players, engine.Find, b, includeAdmins: false);
+        ScoreRule.Credit(sides, players, engine.Find, b, includeAdmins);
         return b.Summary("ws");
     }
 
@@ -85,6 +85,7 @@ public class ScoreboardTests
         Assert.Equal(0, Credit(new ScoreSides(WsUnit with { EventId = "gone" }, null), new ScorePlayers(P("1"), null, false)).Kills);
         Assert.Equal(0, Credit(new ScoreSides(WsUnit, null), new ScorePlayers(null, null, false)).Kills);                   // an NPC's kill
         Assert.Equal(0, Credit(new ScoreSides(WsUnit, WsUnit), new ScorePlayers(null, null, true)).Kills);                  // killed itself
+        Assert.Equal(0, Credit(new ScoreSides(WsUnit, WsUnit), new ScorePlayers(null, null, true, Owner: P("1"))).Kills);   // even with a player owner
         Assert.Equal(0, Credit(new ScoreSides(null, null), new ScorePlayers(null, P("1"), false)).Deaths);                  // a native killer
         Assert.Equal(0, Credit(new ScoreSides(null, WsUnit with { EventId = "plain" }), new ScorePlayers(null, P("1"), false)).Deaths);
     }
@@ -165,6 +166,9 @@ public class ScoreboardTests
         var s = b.Summary("ws");
         Assert.Equal((1, 1, 0), (s.Players, s.Kills, s.Deaths));                  // neither a row nor the totals
         Assert.DoesNotContain(s.Top, r => r.Name == "Admin");
+        var admin = P("a", "Admin", admin: true);                                 // the rule passes the key through
+        Assert.Equal(0, Credit(new ScoreSides(WsUnit, null), new ScorePlayers(admin, null, false)).Kills);
+        Assert.Equal(0, Credit(new ScoreSides(null, WsUnit), new ScorePlayers(null, admin, false)).Deaths);
     }
 
     [Fact]
@@ -173,6 +177,9 @@ public class ScoreboardTests
         var b = new Scoreboard();
         b.Kill("ws", P("a", "Admin", admin: true), includeAdmins: true);
         Assert.Equal(("Admin", 1), (b.Summary("ws").Top[0].Name, b.Summary("ws").Kills));
+        var admin = P("a", "Admin", admin: true);
+        Assert.Equal(1, Credit(new ScoreSides(WsUnit, null), new ScorePlayers(admin, null, false), includeAdmins: true).Kills);
+        Assert.Equal(1, Credit(new ScoreSides(null, WsUnit), new ScorePlayers(null, admin, false), includeAdmins: true).Deaths);
     }
 
     [Fact]
