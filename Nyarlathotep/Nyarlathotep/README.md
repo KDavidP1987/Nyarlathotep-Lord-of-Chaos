@@ -6,7 +6,7 @@ A **server-side** event layer for V Rising. Admins stage NPC events the base gam
 and empowered factions on a schedule, at nightfall or after a V Blood falls, with warnings and banners for
 players, and in later releases castle sieges, defended zones and boss-fight adds.
 
-> **Public beta (0.8.0).** Every pillar and automatic announcement is off by default; no event runs until an
+> **Public beta (0.9.0).** Every pillar and automatic announcement is off by default; no event runs until an
 > admin turns on its pillar and enables it.
 
 ## What it does
@@ -89,6 +89,45 @@ walk to the player anyway.
 </details>
 
 <details>
+<summary><b>Wave sets and the event scoreboard</b> · <i>0.9.0</i></summary>
+
+`waveList` replaces a spawn event's `units`, `waves`, `intervalSeconds` and `modifiers` with a list of up to 10
+waves, each with its own units:
+
+| Wave key | Values | Effect |
+|---|---|---|
+| `units` | 1–10 entries: `prefab`, `count`, optional `chance` and `modifiers` | The wave's units; each entry keeps its own level and stats |
+| `afterSeconds` | 10–3600 (waves 2+) | Starts this long after the wave before it started |
+| `whenCleared` | `true` / `false` (waves 2+) | Starts as soon as every unit of the wave before it is gone; with `afterSeconds`, whichever comes first |
+
+A wave with neither key starts when the one before it is cleared. When the last wave is cleared and every wave was
+fought, the event ends at once ("all waves defeated"). The caps still apply to every wave.
+
+`"scoreboard": true` (on either form) counts, while the event runs, each kill of its units by a player (a familiar's
+or summon's kill counts for its player) and each player killed by them. At the natural end, after "all waves
+defeated" or on `event stop`, chat shows the top 3 by kills (ties go to fewer deaths) and the totals; a purge, a
+restart, a fault or a pillar switched off shows nothing. Admins are left out unless `[Scoreboard] IncludeAdmins` is
+`true`. Names appear only in those chat lines; nothing is saved. A player opt-out comes with the stats release.
+
+```json
+{ "id": "graveyard-waves", "name": "Graveyard waves", "enabled": false, "pillar": "spawns",
+  "trigger": { "type": "Manual" }, "durationSeconds": 900,
+  "action": { "type": "SpawnWaves", "radius": 10, "scoreboard": true,
+    "location": { "type": "AroundPlayer", "minDist": 20, "maxDist": 40 }, "behaviour": { "type": "Hunt", "range": 45 },
+    "waveList": [
+      { "units": [ { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 6, "modifiers": { "levelDelta": 1 } },
+                   { "prefab": "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "count": 2, "modifiers": { "levelDelta": 1 } } ] },
+      { "units": [ { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 6, "modifiers": { "levelDelta": 2, "maxHealth": 1.2 } },
+                   { "prefab": "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "count": 3, "modifiers": { "levelDelta": 2, "power": 1.2 } } ],
+        "afterSeconds": 120, "whenCleared": true },
+      { "units": [ { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 6, "modifiers": { "levelDelta": 3, "maxHealth": 1.4, "power": 1.2 } },
+                   { "prefab": "CHAR_Undead_Guardian", "count": 1, "modifiers": { "level": 30, "maxHealth": 2.0, "power": 1.3 } } ],
+        "whenCleared": true } ] } }
+```
+This is the shipped `graveyard-waves` template (its announce lines left out); `.nyar template use graveyard-waves` copies it.
+</details>
+
+<details>
 <summary><b>Announcements</b> · <i>0.2.0</i></summary>
 
 Wave warnings before each wave (by default 5 min, 1 min and 10 s ahead), start and end banners with your own
@@ -137,9 +176,9 @@ Optional action keys: `includeUnits` / `excludeUnits` (unit names such as `CHAR_
 </details>
 
 <details>
-<summary><b>Event templates and chat authoring</b> · <i>0.5.0; three automatic templates 0.8.0</i></summary>
+<summary><b>Event templates and chat authoring</b> · <i>0.5.0; three automatic templates 0.8.0; a wave set 0.9.0</i></summary>
 
-Nine ready-made events ship inside the mod. `.nyar template use <id>` copies one into your `events.json`,
+Ten ready-made events ship inside the mod. `.nyar template use <id>` copies one into your `events.json`,
 disabled, ready to adjust and enable.
 
 | Template | What it does | Starts |
@@ -153,6 +192,7 @@ disabled, ready to adjust and enable.
 | `roaming-hunters` | 4 thugs and 2 hunters near up to 3 players 150 m apart, hunting (0.8.0) | Every 60–90 min |
 | `border-watch` | 3 militia and 2 crossbowmen near the player, hunting (0.8.0) | A player enters Dunley Farmlands (30 min per player) |
 | `bandit-reprisal` | 4 thugs and 2 hunters near the player, hunting (0.8.0) | A player kills 20 bandits within 5 min |
+| `graveyard-waves` | 3 growing undead waves near a player, the last with a Guardian, hunting, with the scoreboard (0.9.0) | By command |
 
 You can build and change events without touching the file. Use `.nyar event new <id> <pillar>`,
 `.nyar event copy <id> <newId>` and `.nyar event delete <id>` (then `confirm`). `.nyar event set` also changes
@@ -287,6 +327,7 @@ V Rising offers no screen reader for it, a limitation of the game.
 | `.nyar event set <id> <field> <value>` | Change `name`, `durationSeconds`, `conditions.minPlayers`, `conditions.cooldownMinutes`, `conditions.chancePercent`, `trigger.type`, `trigger.days`, `trigger.times`, `trigger.phase`, `trigger.bosses`, `action.factions`, `action.units` (`CHAR_<name>[:<count>]`), `action.waves`, `action.intervalSeconds`, `action.radius`, `trigger.scope`, `action.scope` (`Global` or `Name,Name`) or `location here`; on an empowerment, `action.stats.<stat>` (1.0-3.0) |
 | `.nyar event set <id> <field> <value>` (0.7.0) | On a wave event: `action.modifiers.<level\|levelDelta\|maxHealth\|power\|moveSpeed\|attackSpeed>` (a value or `none`), `action.loot`, `action.allowTerritory` (`true\|false`), `action.behaviour` (`none` or `"hunt <range>"`), `action.units.<n>.chance`, `location "aroundplayer <min> <max>"` |
 | `.nyar event set <id> <field> <value>` (0.8.0) | `trigger.type Interval\|RegionEntered\|FactionKills`, `trigger.minMinutes`, `trigger.maxMinutes`, `trigger.playerCooldownMinutes`, `trigger.factions` (`Name,Name`), `trigger.kills`, `trigger.windowSeconds`, `trigger.shared` (`true\|false`), `action.fanOut` (`none` or `"<maxInstances> <minSpacing>"`). `event info` shows an Interval event's next start |
+| `.nyar event set <id> <field> <value>` (0.9.0) | `action.scoreboard` (`true\|false`), `action.waveList.<n>.units` (`CHAR_<name>[:<count>][,…]`; n up to one past the last wave appends one; on a units-form event `waveList.1.units` converts it), `action.waveList.<n>.afterSeconds` (10-3600 or `none`), `action.waveList.<n>.whenCleared` (`true\|false`), `action.waveList.<n>.units.<m>.<level\|levelDelta\|maxHealth\|power\|moveSpeed\|attackSpeed>` (a value or `none`), `action.waveList.<n> none` (removes the wave). `event info` shows one line per wave |
 | `.nyar event reload` | Re-read `events.json` |
 | `.nyar region list` / `region here` | The map's regions with their event counts / the region you stand in (0.6.0) |
 | `.nyar spawn <unit> [count] [level\|+n\|-n] [hp] [power]` | One-off test spawn beside you, removed after `ManualSpawnLifetimeSeconds` |
@@ -343,6 +384,7 @@ slowest part, at most once a minute.
 | Announcements | WarningOffsets | `300,60,10` | Seconds before a wave at which warnings fire (1-5 values, each 5-3600) |
 | Announcements | DailyBannerTime | `20:00` | Server-local time of the daily banner |
 | Announcements | LoginStats · PlayerShare · ShareCooldownSeconds · ShareMaxPerMinute | `false` · `false` · `300` · `3` | Reserved for stats (later release); cooldown 10-86400, per minute 1-20 |
+| Scoreboard | IncludeAdmins | `false` | Whether admins appear on an event's scoreboard (0.9.0) |
 | Debug | VerboseLogging · TimingLog | `false` | Log every spawn, removal and announcement · the scheduler's tick time |
 
 **Upgrading from 0.1.0:** `General.AnnounceEvents` is retired and ignored; use the `[Announcements]` switches.
@@ -356,7 +398,8 @@ Faction empowerment above.
 Stop the server and delete `Nyarlathotep.dll`. The mod's units carry a timer and expire on their own, and so
 do empowerment buffs. To downgrade to 0.3.0, run `.nyar purge confirm` first: 0.3.0 does not remove the buffs,
 which otherwise stay until their event's time runs out. An older release disables an event using a key it does not
-know until you remove the key: 0.7.0 the 0.8.0 triggers (`Interval`, `RegionEntered`, `FactionKills`) and `fanOut`
+know until you remove the key: 0.8.0 the 0.9.0 keys `waveList` and `scoreboard` (it ignores `[Scoreboard]
+IncludeAdmins`), 0.7.0 the 0.8.0 triggers (`Interval`, `RegionEntered`, `FactionKills`) and `fanOut`
 (it ignores the next starts kept in `state.json`), 0.6.0 the 0.7.0 wave keys (`chance`, `modifiers`, `loot`, `behaviour`,
 `allowTerritory`) and the `AroundPlayer` location, 0.5.x `scope` and `{region}`. To
 remove its data too, delete `BepInEx/config/kdpen.Nyarlathotep.cfg` and the `BepInEx/config/Nyarlathotep/`

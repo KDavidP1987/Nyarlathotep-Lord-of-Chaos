@@ -1,7 +1,7 @@
 # Wave sets — per-wave units and stats, cleared waves, the event scoreboard
 
-**Status:** step 1 done; step 2 built and Session 1 run (D20-D22 pass, D23 open on A7, the hunt-phase tick). Next: the A7
-diagnostic, the D23 rerun and the step 2 post-audit (docs/dod/wave-sets.md, audit docs/audits/wave-sets.md). Ships in 0.9.0.
+**Status:** shipped in 0.9.0 (2026-10-11). Steps 1 and 2 done (Sessions 1 and 2, D20-D23 pass); step 3 is the release
+(docs/dod/wave-sets.md, audit docs/audits/wave-sets.md).
 
 ## Goal
 

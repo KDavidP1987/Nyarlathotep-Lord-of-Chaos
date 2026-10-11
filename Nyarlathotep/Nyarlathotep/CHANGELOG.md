@@ -2,6 +2,22 @@
 
 Public beta. Event pillars and automatic announcements default off; admins opt in per feature.
 
+## 0.9.0 (2026-10-11)
+
+- **Wave sets.** A spawn event can list its waves one by one with `waveList`: each wave has its own units (up to 10
+  entries), each entry its own level or `levelDelta` and stat multipliers, and each wave after the first starts after
+  `afterSeconds`, when the wave before it is cleared (`whenCleared`), or whichever comes first. When every wave has
+  been fought and the last one is beaten, the event ends at once: "all waves defeated".
+- **Event scoreboard.** `"scoreboard": true` counts kills of the event's units (a familiar's or summon's kill counts
+  for its player) and players' deaths to them, then names the top 3 by kills with the totals at the end. It shows at
+  the natural end, after "all waves defeated" and on an admin stop, never on a purge or restart. Admins are left out
+  unless `[Scoreboard] IncludeAdmins = true`. Nothing is saved; an opt-out comes with the stats release.
+- **New template** `graveyard-waves` (off): three growing undead waves around a player, hunting, with the
+  scoreboard. Every new key can be set in chat (`.nyar event set <id> action.waveList.<n>…`), and `event info` shows
+  one line per wave.
+- No Raphael change (api 6). Rolling back to 0.8.0 disables the events that use `waveList` or `scoreboard` until you
+  change them.
+
 ## 0.8.0 (2026-10-04)
 
 - **Events that start themselves.** Three new triggers: `Interval` (again every `minMinutes`–`maxMinutes`, kept

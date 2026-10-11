@@ -26,6 +26,15 @@ other post-audit carries a "Codex verdict:" line pointing to it. Session log che
 - session 1 log check: boot 1 (the step 2 build + c6deb38's tools) "log check: 0 unhandled, 449 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; boot 2 "0 unhandled, 487 nyar lines, 0 orphan errors, 0 unity errors"; boot 3 (A6's diagnostic) "0 unhandled, 933 nyar lines, 0 orphan errors, 0 unity errors"; every [Warning] read: Il2CppInterop's substitute notice, Beelzebub's TUNE line, example-empowerment's reason, and the stop and purge lines (warnings by design); 0 [Error]; each stop by taskkill without /F within 4 s; an aborted first attempt (A5's .devkill, 232 world entities) was rolled back to AutoSave_3527, its post-kill AutoSave_3528 moved aside
 - session 1 snapshot: "snapshot restored; hashes equal (ws1, …)"
 
+### Step 3 · 2026-10-11 · 0802476
+- git status: clean at 0802476 apart from the step's six release surfaces, CLAUDE.md's status line and WAVE_SETS.md's Status, being written (the step's own build); steps 1 and 2 post-audited (603f958), D24's drill built (0c6daa3)
+- compile: `dotnet build Nyarlathotep/Nyarlathotep.sln -c Release --no-incremental -p:VRisingServerPath=C:\__nodeploy__` → 0 Warning(s), 0 Error(s); tests: 2619 passed
+- preflight: PREFLIGHT OK; `pwsh tools/rollback-drill.ps1 -SelfTest` → "drill selftest: 20/20"
+- dod status: wave-sets 23/27 checked (D24-D27 are this step's); `dod-index.mjs --check wave-sets` → problems 0, warnings 2 (D26 named by 5 amendments; review pending until the amendment re-review)
+- feature doc read: docs/features/WAVE_SETS.md Status (step 2 done) and Open questions (A6 not exercised, A7 a likely one-time warm-up), carried into the release notes as stated
+- in-game baseline: not needed (step 3 has no in-game part); the dev server from Session 2 stopped by taskkill without /F within 4 s after both logs were copied (scratchpad ws2-logs LogOutput.final.log, NyarDev.final.log): 0 [Error], [Warning] lines the known four (Il2CppInterop's substitute notice, Beelzebub's TUNE line, example-empowerment's reason ×2, the ws-three stop line)
+- session 2 restore (A10): cfg and events.json put back from the pre-session copies; SHA-256 equal (cfg 606a6b83111401c6… = 606a6b83111401c6…, events.json 9c619b1a7ee19927… = 9c619b1a7ee19927…)
+
 ## Post-audit
 ### Step 1 · 2026-10-04 · aa1aece
 - built (6d7f6ad): the waveList and scoreboard schema and validation (D1, D2), per-entry tuning through the roll, the clamps and the fan-out deal (SpawnTuning.For; D3), WaveSchedule and the per-wave decision times (D4), SpawnLedger's wave on orders and units and WaveCleared (D5), the schedule readers (D6), Engine.Complete (D7), Logic/Scoreboard.cs with ScoreboardRule.End per end path (D8, D9's rule, D11's rule), Messages.ScoreboardLines (D10), the privacy boundary (D12), the `event set` wave-list fields and the conversion (D14), the `event info` wave lines (D15), the contract's two sentences (D17), the ControlCases rows and Pending entries (D19); Config/Settings.cs Scoreboard.IncludeAdmins moved here from step 2 (A2)
@@ -54,3 +63,18 @@ other post-audit carries a "Codex verdict:" line pointing to it. Session log che
 - privacy grep (7656119, kdpenland) over c5c8848..HEAD: none
 - Codex verdict: deferred to step 3 (the child's single cross-inspection, design §9 D34)
 - dod status: D3 D5 D7 D8 D9 D11 D13 D16 D18 D23 pass and checked; D24-D27 are step 3's
+
+### Step 3 · 2026-10-11 · 6df0afe
+- built: 0c6daa3 (D24's drill: newer keys waveList and scoreboard, fixtures pair-wavelist, pair-scoreboard and pair-colourkey per A9, selftest 20/20); the six surfaces, CLAUDE.md's status and WAVE_SETS.md's Status (D25); 02ebc62 and 6df0afe (review fixes, below)
+- found while building: A10 (Session 2 had no dev-snapshot; config restored by hand, hashes equal), recorded before this audit
+- Codex round 1 (v0.8.0..working tree, tools/vrclient/** left out; the child's one cross-inspection, design §9 D34): REVISE — F1 blocking: a throwing Scoreboard.Wants read opened the kill-read streak and the next feed.Idle() cleared it, so the health entry never held and every frame logged again → fixed in 02ebc62 (ScoreFeed.Wants; WaveSetDependencyFailureTests.KillRead_fails_when_a_throwing_wants_read_ends_its_streak, its planted fault CAUGHT). Log: 2 "blocked by policy" matches, both its own grep of earlier audit lines, no command blocked
+- Codex round 2: REVISE — F1 blocking: the root README said "Nine built-in templates" → Ten, plus a wave-sets sentence; F1 of round 1 confirmed; 0 blocked
+- /code-review (fresh subagent, read-only, 8b80ba2..working tree): REVISE — F1 blocking: the package README gave `CHAR_<name> <count>` for `waveList.<n>.units`, the parser takes `CHAR_<name>[:<count>]` → fixed; F2 advisory whenCleared's value → `(true|false)`; F3 advisory the package CHANGELOG's victory needs every wave fought → reworded; F4 advisory the drill's case text in tools/preflight-checks.json → the three pairs added; drill and 02ebc62 confirmed
+- Codex round 3: REVISE — F1 blocking: the root README's "0.8.x is a public beta" → 0.9.x; the package README's Uninstall gains 0.8.0's rollback sentence; 0 blocked
+- Codex round 4: REVISE — F1 blocking: the csproj <Description> named 0.4.0 → rewritten without a version; 0 blocked
+- Codex round 5: REVISE — F1 blocking: SpawnLedger.TakeDespawns dropped a unit's record before DestroySafe; a failed destroy requeued it as a survivor without event and wave, so a unit with its own lifetime could leave its wave reading cleared (or "all waves defeated") while alive → fixed in 6df0afe (SpawnLedger.RetryDespawn; SpawnLedgerTests.WaveCleared_fails_when_a_failed_destroy_reads_cleared, its planted fault CAUGHT); 0 blocked
+- Codex verdict: READY (round 6, v0.8.0..working tree at 6df0afe) — no findings; 0 "blocked by policy"
+- compile: `dotnet build -c Release --no-incremental` 0 Warning(s), 0 Error(s); tests: 2621 passed
+- preflight: PREFLIGHT OK; drill selftest 20/20
+- privacy grep (7656119, kdpenland) over the tree and `git log -p origin/main..main`: only lines quoting the pattern (plans' D-items and dry-run notes, earlier audits' grep lines)
+- in-game: none in step 3 (D20-D23 passed in Sessions 1 and 2)

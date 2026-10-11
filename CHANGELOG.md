@@ -3,6 +3,78 @@
 The complete technical history. The concise, player-facing changelog that ships to Thunderstore lives at
 `Nyarlathotep/Nyarlathotep/CHANGELOG.md`. Public beta from 0.2.0; features stay experimental until validated on live servers.
 
+## [0.9.0] - 2026-10-11
+
+The `wave-sets` child of the DoD Epic (`docs/dod/wave-sets.md`): a spawn event's waves can each have their own units,
+levels and stats, start on a timer or when the wave before is cleared, end the event when the last one is beaten, and
+end with a scoreboard. Design and sessions: `docs/features/WAVE_SETS.md`; audit: `docs/audits/wave-sets.md`; design §9
+D38–D41. No wire change (api 6); state.json unchanged.
+
+<details open>
+<summary><b>Definition keys</b></summary>
+
+All optional; each failure disables the event with one reason naming the field. SchemaVersion stays 1.
+
+| Key | Values | Effect |
+|---|---|---|
+| `action.waveList` | 1–10 waves; each `units` 1–10 entries (`prefab`, `count`, `chance`, optional `modifiers`) | Replaces `units`, `waves`, `intervalSeconds` and `modifiers` (both forms together are refused); each entry keeps its own level or `levelDelta` and stat multipliers |
+| `waveList[n].afterSeconds` | 10–3600, waves 2+ | Starts that long after the previous wave's decision |
+| `waveList[n].whenCleared` | `true`/`false`, waves 2+ | Starts when the previous wave is cleared; with `afterSeconds`, the earlier of the two; neither key means cleared |
+| `action.scoreboard` | `true`/`false`, either form | Counts kills of the event's units and players' deaths to them; the top 3 at the end |
+| cfg `[Scoreboard] IncludeAdmins` | `false` | Admins appear on the scoreboard only when true |
+</details>
+
+<details open>
+<summary><b>Runtime</b></summary>
+
+- **Per-entry tuning.** `Logic/Spawning.cs` `WaveRoll.ExpandEntries` gives each rolled copy its entry index; the clamps
+  and the fan-out deal keep it, so every queued unit carries its own entry's tuning. The units form is byte-for-byte
+  0.8.0.
+- **Schedule** (design §9 D40). `Logic/Engine.cs` decides each wave at the earlier of the previous decision +
+  `afterSeconds` and the previous wave cleared. Cleared = decided, with no pending order and no tracked unit of that
+  wave (`SpawnLedger` keeps each unit's wave and instance start). A skipped, zero-rolled or zero-queued wave is
+  cleared at its decision. The log line is "event <id> wave <n> cleared".
+- **Victory** (D41). The last wave cleared after every wave was fought ends the event as a natural end: "event <id>
+  ended: all waves defeated (<k> of <k> waves)", with the usual grace cleanup.
+- **Scoreboard** (D38, D39). `Logic/Scoreboard.cs` keeps rows in memory (at most `Limits.ScoreboardPlayers` 200; a
+  further player adds to the totals only). `Logic/ScoreFeed.cs`, fed by `Patches/DeathEventPatch.cs`, credits a
+  familiar's or summon's kill to its player and counts a player's death to an event unit. Only units spawned since
+  that instance started count, so a stop-and-start inside the grace credits nothing from the earlier one (A3). Shown
+  at the natural end, victory and `event stop`: "<event> scoreboard: 1. <name> <k> kills, <d> deaths …" and "<p>
+  players, <k> kills, <d> deaths", or "no player scored". Never on a purge, restart, pillar off or fault. Names appear
+  only in those chat lines.
+- **Failures.** A failing kill read or cleared read logs once per streak and holds `scoreboard: kill read failing` or
+  `wave sets: cleared read failing` on the health line and `.nyar status` until a read succeeds.
+- **Chat.** `.nyar event set` takes `action.scoreboard`, `action.waveList.<n>.units`, `.afterSeconds`, `.whenCleared`,
+  `.units.<m>.<level|levelDelta|maxHealth|power|moveSpeed|attackSpeed>` and `action.waveList.<n> none`. On a
+  units-form event, `waveList.1.units` converts it. `event info` shows one line per wave. Every reply is under 480
+  bytes.
+- **Template.** `graveyard-waves`: three growing armored Farbane waves around a player, the last with a level-30
+  Guardian; Hunt 45, scoreboard, 900 s, Manual, disabled. Ten templates in all.
+- **Timing** (A7). With TimingLog, a hunt phase over 20 ms logs "hunt parts: <ms> (sweep, players, seed of which
+  buffer, verbose, outside parts; gc net <n> il2cpp <n|n/a>; units, events)", at most once a minute.
+</details>
+
+<details>
+<summary><b>Static checks and tools</b></summary>
+
+- **Rollback drill.** Accepts 0.8.0's "unknown field action.waveList" and "unknown field action.scoreboard" among the
+  newer keys; fixtures pair-wavelist and pair-scoreboard pass and pair-colourkey (a key no release has) fails;
+  selftest 20/20.
+- **`-DependencySuite wave-sets`.** kill-read and cleared-read, each with its control.
+- **vrclient** (dev only): scenarios wave-sets, wave-sets-prep-restart, wave-sets-boot2, wave-sets-death and
+  wave-sets-timing; NyarDevTools gains `.devkill <prefab guid>` and `.devdie`.
+</details>
+
+<details>
+<summary><b>Sessions</b></summary>
+
+- **Session 1** (vrclient): waves cleared and left alive on their timer, all waves defeated with a 28-kill scoreboard,
+  a death counted, admins off, then stop, restart and purge at wave 2, each leaving 0 tracked units.
+- **Session 2** (vrclient): 20 tracked level-30 units hunting for ten windows, "timing span: 10/10 windows under 5
+  ms, 0 slow ticks"; the one hunt-parts line was the first hunt tick (29.9 ms).
+</details>
+
 ## [0.8.0] - 2026-10-04
 
 The `automation` child of the DoD Epic (`docs/dod/automation.md`): events start on their own, from a timer or from
