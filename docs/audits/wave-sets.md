@@ -78,3 +78,6 @@ other post-audit carries a "Codex verdict:" line pointing to it. Session log che
 - preflight: PREFLIGHT OK; drill selftest 20/20
 - privacy grep (7656119, kdpenland) over the tree and `git log -p origin/main..main`: only lines quoting the pattern (plans' D-items and dry-run notes, earlier audits' grep lines)
 - in-game: none in step 3 (D20-D23 passed in Sessions 1 and 2)
+- tcli build: kdpen-Nyarlathotep-0.9.0.zip (428817 bytes), built at the release commit f65736b with a clean tree (`dotnet build -c Release --no-incremental`, 0 warnings, 0 errors; the DLL also deployed to the stopped dev server) with the tcli token variable set to a sentinel, log build/tcli-build.log; icon.png, README.md, manifest.json, BepInEx/plugins/Nyarlathotep.dll (717312 bytes), CHANGELOG.md, LICENSE; preflight "secrets: none (1878 files scanned, 1836 index blobs)" with the zip, dist/, build/ and the log in the scan
+- zip sha256: kdpen-Nyarlathotep-0.9.0.zip 4AC0498BE8AFE4AC3EA7450353CA5554111CF2CB613D76A215E2CE5A82D7C7CB
+- tag: v0.9.0 (annotated) at f65736b, local; `pwsh tools/rollback-gate.ps1 -From v0.8.0 -To v0.9.0 -Plan wave-sets` → "rollback gate: 4/4" (routes 5/5 after the Rollout line was reworded to the gate's phrase, a Log note)
