@@ -12,7 +12,7 @@ created: 2026-10-11
 baselined: none
 closed: none
 recon_commit: e4f0594
-coverage_author: 12/15 layers · 47/50 probes
+coverage_author: 15/15 layers · 50/50 probes
 coverage_reviewer: pending
 review: pending
 profile: full
@@ -25,7 +25,7 @@ profile: full
 - **Services:** TriggerBus (the heat feed and the 5 s scan), WaveAction (the focus-only pick), EventRuntime (the end paths, the admin start's target), Announcer (the faction alert and the private lines), HealthMonitor; Patches/DeathEventPatch.cs reads one more fact (the V Blood flag) inside its existing guard.
 - **Resources:** templates.json. **Tools:** tools/rollback-drill.ps1, tools/preflight-checks.json, tools/vrclient/scenarios/revenge*.vrs.
 No new external dependency and no new cfg key.
-**Planned:** interactively, drafted by a planning agent on 2026-10-11 for the owner's decisions; three decisions wait on the owner (S-12 tier model, S-13 concurrency, S-14 alert wording), and the plan is written with the recommended option of each. The Halloween track's process applies (design §9 D34: one review round, two at most; Codex once on the child's diff; vrclient scenarios as the in-game evidence; the owner tests look and feel and anything needing a second player).
+**Planned:** interactively, drafted by a planning agent on 2026-10-11; the owner settled the tier model, concurrency and the alert wording on 2026-10-11 (design §9 D43: the tiers are the revenge's own waves, one revenge per definition and per player at a time, the alert names the faction only, heat in memory). The Halloween track's process applies (design §9 D34: one review round, two at most; Codex once on the child's diff; vrclient scenarios as the in-game evidence; the owner tests look and feel and anything needing a second player).
 **Request:** Epic Child constraints › Halloween track: "**revenge** — per-player heat per faction from kills and V Blood kills within a window, private warnings to that player at rising thresholds, a faction alert when revenge starts, and growing ambush tiers around the player only, never in claimed territory (D36)." Design §9 D36: "Ambush near the player only: growing hunt squads around the player, never in claimed territory. A raid party on the player's castle belongs to sieges." D35: scoreboard only.
 
 ## Definition of Done
@@ -91,10 +91,10 @@ The admin uses `bandit-revenge`, enables it and turns the spawns pillar on. A pl
 1. **Heat** (D3): per definition and player, the sum of the points of counted kills within the last windowSeconds; a counted kill gives 1 point, a V Blood kill vbloodHeat; a point leaves windowSeconds after its kill (the decay, S-9); nothing is added during the cooldown.
 2. **Warnings** (D4): warning k when the heat rises to or past warnAt[k]; once per climb, the highest only when one kill passes two; re-armed below the threshold.
 3. **Due and start** (D5, D13): heat at or past `heat` makes the player due; a due player starts when eligible and when neither the definition nor the player is busy; the start resets the heat and starts the cooldown; a conditions refusal resets the heat only. An admin start targets the admin and touches no heat.
-4. **Tiers** (D6; S-12, the owner's decision): the tiers are the waves of the revenge's own SpawnWaves action: a waveList grows them per wave and starts each when the previous is cleared or after its afterSeconds (design §9 D40); the instance ends at all waves defeated (D41) or its duration.
+4. **Tiers** (D6; design §9 D43): the tiers are the waves of the revenge's own SpawnWaves action: a waveList grows them per wave and starts each when the previous is cleared or after its afterSeconds (design §9 D40); the instance ends at all waves defeated (D41) or its duration.
 5. **Where** (D6, D36): every tier around the target only; a tier waits while the target is not eligible; never a centre, ring point or hunt target in claimed territory.
-6. **Who hears what** (D4, D7, D8; S-14): the target alone gets the warnings, the start line and the end line; the server gets the alert, which names no player and no place (Epic D16); the scoreboard follows wave-sets D38.
-7. **Precedence** (4.4): the kill switch beats everything (a purge ends the instance, empties all heat, and sends no line, D8); the caps beat revenge (a clamped tier is still one tier); one instance per definition beats a second target (held "busy", D5, S-13); claimed territory beats the ambush (held, D6); validation beats chat (D11). The owner decides an exception, through design §9.
+6. **Who hears what** (D4, D7, D8; design §9 D43): the target alone gets the warnings, the start line and the end line; the server gets the alert, which names no player and no place (Epic D16); the scoreboard follows wave-sets D38.
+7. **Precedence** (4.4): the kill switch beats everything (a purge ends the instance, empties all heat, and sends no line, D8); the caps beat revenge (a clamped tier is still one tier); one instance per definition beats a second target (held "busy", D5, design §9 D43); claimed territory beats the ambush (held, D6); validation beats chat (D11). The owner decides an exception, through design §9.
 8. **Memory only** (D9; S-11): heat, due players, warning states and cooldowns are lost on every boot; the running instance is cancelled at boot as every event (Epic S-11).
 9. **"Every" sets** (4.5): "every death read" is the one DeathEvent postfix (Patches/DeathEventPatch.cs), whose FactionKills read the heat shares (D10); "every player-facing revenge line" is the four builders of D9 (RevengeWarning, RevengeStart, RevengeEnd, RevengeAlertPool), enumerated by PrivacyTests' reflection over Logic/Messages; "every end path" of a revenge instance is the six of D8; "every wave pick" is Services/WaveAction.cs Pick through Logic PlayerPick (the only AroundPlayer pick); "every reader of a trigger type's fields" is the files that switch on TriggerType (recon: Logic/Validation.cs, CommandArgs.cs, EventAdmin.cs, ApiLines.cs, Hooks.cs, Engine.cs TriggerRouter, PlayerTriggers.cs), and a new type without a branch falls to their default, which D1, D11, D12 and D15's tests catch.
 - whole: none — heat is a per-player count compared with thresholds; nothing it holds adds up to a total a user reconciles (the scoreboard's totals are wave-sets D8's)
@@ -151,7 +151,7 @@ Nothing new is persisted: state.json and the cfg are unchanged (D9). Migration (
 - **10.1** Authorization: the new trigger is set through `.nyar event set` and started by `.nyar event start`, both admin-only (Epic D3, AuthSuite in D11, D13); the scan's starts run as System through the gateway (automation D14); no new command, no new wire command (D15).
 - **10.2** Injection: faction names come from the validated trigger list, never from a player (D1); {faction} is the only placeholder the revenge lines fill, from Logic's short names (D4, D7); field paths are parsed, never evaluated (D11).
 - **10.3** Secrets: no credential is added; the release keeps the token sentinel and the privacy grep (D27).
-- **10.4** Personal data: platform ids live in memory only, keyed rows bounded and dropped (D3, D9); the alert names no player and no place (D7; S-14); private lines go only to their target (D4, D7, D8); logs and the admin counts carry no name, id or position (D9, D12); a scoreboard, when the definition sets it, names players under wave-sets D38's rules.
+- **10.4** Personal data: platform ids live in memory only, keyed rows bounded and dropped (D3, D9); the alert names no player and no place (D7, design §9 D43); private lines go only to their target (D4, D7, D8); logs and the admin counts carry no name, id or position (D9, D12); a scoreboard, when the definition sets it, names players under wave-sets D38's rules.
 
 ## Failure & observability
 - **12.1** What the admin sees: a refused definition's reason in `.nyar event list` and the log (D1, D2); "revenge: kill read failing" in `.nyar status` (D10); the counts in `event info` (D12). What they do next: fix the key, stop the event, or `.nyar purge confirm` (D8); the kill switch always works.
@@ -218,7 +218,7 @@ Everything still ships off: no existing definition uses the Revenge trigger, the
 
 ### Paths walked
 Walking the Build plan. A path created and removed inside a step is declared here and checked by -DeclaredOf against the manifest whether or not it still exists (automation S-5, design §9 D18).
-- **Steps 1-3:** docs/audits/revenge.md, docs/features/REVENGE.md, docs/dod/revenge.md, docs/dod/README.md (the regenerated index), docs/dod/nyarlathotep.md (the Epic's child status), docs/NYARLATHOTEP_DESIGN.md (§6, §9 for the owner's answers to S-12 to S-14), docs/SESSION_HANDOFF.md.
+- **Steps 1-3:** docs/audits/revenge.md, docs/features/REVENGE.md, docs/dod/revenge.md, docs/dod/README.md (the regenerated index), docs/dod/nyarlathotep.md (the Epic's child status), docs/NYARLATHOTEP_DESIGN.md (§6, and §9 for any new owner decision), docs/SESSION_HANDOFF.md.
 - **Review process:** docs/dod/revenge.reviews.md, docs/dod/revenge.review.html, docs/dod/revenge.html, docs/dod/dod-dashboard.html and the review prompts %TEMP%\dod-review-*.txt.
 - **Step 1:**
   - docs/RAPHAEL_INTEGRATION_CONTRACT.md, tools/paths-manifest.txt, tools/data-inventory.json, tools/preflight-checks.json.
@@ -243,12 +243,12 @@ Walking the Build plan. A path created and removed inside a step is declared her
   - Item rewards for beating a revenge: design §9 D35, scoreboard only.
   - Heat that survives a boot: memory only (D9, S-11); a later plan can persist it with a privacy decision.
   - Heat shared by a group or clan: each player's kills count alone (S-8).
-  - Escalation across repeated revenges on one player (a bigger tier set the next time): S-12 option B, deferred.
-  - Naming the target in the alert: Epic D16 (S-14).
+  - Escalation across repeated revenges on one player (a bigger tier set the next time): not chosen; the tiers are the waves of the one revenge (design §9 D43).
+  - Naming the target in the alert: the alert names the faction only (Epic D16, design §9 D43).
   - A new cfg key for revenge: none needed; the caps and switches that exist govern it.
   - Converting a FactionKills definition to Revenge in place keeping its counters: `trigger.type Revenge` starts fresh (D11).
 - **Deferred (15.2):**
-  - Per-player concurrent instances of one definition (S-13 option B): an engine change, after Halloween if asked.
+  - Per-player concurrent instances of one definition: an engine change, after Halloween if asked (design §9 D43 keeps one revenge per definition).
   - Lifetime revenge stats: child `stats` (Epic D16, D40).
   - The 500-unit budget run: Epic D24 at the Epic's close.
 
@@ -274,9 +274,9 @@ Walking the Build plan. A path created and removed inside a step is declared her
 - S-9 · reversible · Heat decays by the window: each point leaves windowSeconds after its kill (FactionKills' rule), so there is no separate decay rate · fallback: a linear decay of `decayPerMinute` points a minute, one optional trigger key with D1 and D3's tests extended
 - S-10 · reversible · The cooldown is per definition and player, counted from the revenge's start, default 30 minutes, and nothing is added to the heat while it runs · fallback: count from the instance's end instead, one timestamp in Revenge and D5's test
 - S-11 · reversible · Heat, due players, warning states and cooldowns are memory only and lost on every boot; the strong reason against persisting them is the privacy line state.json holds (no per-player field, PrivacyTests) and the short windows (at most an hour) · fallback: persist heat rows in state.json keyed by a salted hash with an owner privacy decision, a new Design › Data row and D9 changed
-- S-12 · decision-required · Tier model: (A, recommended) the tiers are the waves of the revenge's own SpawnWaves action (a waveList grows them, each starting when the previous is cleared or after afterSeconds), so wave-sets' schedule, victory and scoreboard are reused unchanged; (B) each repeated revenge on the same player within a memory period uses the next, bigger tier set, which needs per-player tier memory and a tier list in the trigger · this plan is written with A
-- S-13 · decision-required · Concurrent ambushes: (A, recommended) one running revenge per definition and one per player, others held while their heat lasts, all under MaxConcurrentEvents and MaxTrackedUnits, so a server wanting two factions' revenges at once makes two definitions; (B) per-player instances of one definition up to a new cap, an engine change across the ledger, cleanup, scoreboard and push keyed by definition id · this plan is written with A
-- S-14 · decision-required · The faction alert: (A, recommended) it names the faction and no player and no place, as Epic D16 requires ("The Bandits swear revenge on a vampire."); (B) it names the target, an exception to Epic D16 the owner records in design §9 · this plan is written with A
+- S-12 · validated · Tier model: (A, recommended) the tiers are the waves of the revenge's own SpawnWaves action (a waveList grows them, each starting when the previous is cleared or after afterSeconds), so wave-sets' schedule, victory and scoreboard are reused unchanged; (B) each repeated revenge on the same player within a memory period uses the next, bigger tier set, which needs per-player tier memory and a tier list in the trigger · this plan is written with A · source: owner 2026-10-11, design §9 D43 (the recommended option)
+- S-13 · validated · Concurrent ambushes: (A, recommended) one running revenge per definition and one per player, others held while their heat lasts, all under MaxConcurrentEvents and MaxTrackedUnits, so a server wanting two factions' revenges at once makes two definitions; (B) per-player instances of one definition up to a new cap, an engine change across the ledger, cleanup, scoreboard and push keyed by definition id · this plan is written with A · source: owner 2026-10-11, design §9 D43 (the recommended option)
+- S-14 · validated · The faction alert: (A, recommended) it names the faction and no player and no place, as Epic D16 requires ("The Bandits swear revenge on a vampire."); (B) it names the target, an exception to Epic D16 the owner records in design §9 · this plan is written with A · source: owner 2026-10-11, design §9 D43 (the recommended option)
 - S-15 · reversible · The release before this child is swarm's 0.10.0 with Wire.Api 6, so revenge ships 0.11.0 with api 7 and its rollback range is v0.10.0..v0.11.0 · fallback: if swarm has not released when step 3 starts, revenge takes the next free version and api integer by an amendment of D15, D24 and D25 before step 3
 - S-16 · reversible · A Revenge definition's faction alert replaces its start banner and shows whatever EventBanners says, because the definition itself is the opt-in (as wave-sets' scoreboard) · fallback: gate the alert on EventBanners too, one condition in Announcer and D7's test
 - S-17 · reversible · A conditions refusal (cooldownMinutes, chance, minPlayers, window, mode) resets the player's heat without a cooldown, so a chance condition is rolled once per climb, not every 5 s while held · fallback: keep the player due and re-roll at each scan, one branch in Revenge and D5's test
@@ -288,13 +288,13 @@ Walking the Build plan. A path created and removed inside a step is declared her
 | 1 | Purpose & typical use | Considered | 3/3 | Purpose & typical use |
 | 2 | Actors & permissions | Considered | 3/3 | Design › Permissions › 2.1 D11 D13 D5; 2.2 D11 D13; 2.3 D6 D13 D5 |
 | 3 | Inputs, outputs & data | Considered | 4/4 | Design › Data › 3.1 D1 D2 D11; 3.2 D4 D7 D8 D15; 3.3 D9 D3 D26; 3.4 D1 D24 |
-| 4 | Business rules & invariants | Gap | 4/5 | 4.1 waits on the owner (S-12 tier model, decision-required; Business rules is written with option A); answered: 4.2 D3 D5; 4.3 D3 D5; 4.4 D8 D5 D6; 4.5 D9 D8 D6 |
+| 4 | Business rules & invariants | Considered | 5/5 | Business rules › 4.1 D3 D5 D6 (S-12); 4.2 D3 D5; 4.3 D3 D5; 4.4 D8 D5 D6; 4.5 D9 D8 D6 |
 | 5 | Internal interfaces | Considered | 3/3 | Interfaces › 5.1 D3 D6 D10; 5.2 D6 D10 D3; 5.3 D1 D11 D15 |
 | 6 | External dependencies & contracts | Considered | 3/3 | Interfaces › 6.1 D18 D20 D3; 6.2 D10 D16; 6.3 D18 D26 |
 | 7 | States & lifecycle | Considered | 3/3 | Design › States › 7.1 D5 D12 D10; 7.2 D5 D6; 7.3 D8 D21 |
 | 8 | Minimal stretch | Considered | 2/2 | Use cases › Minimal stretch › 8.1 D1 D4 D5; 8.2 D9 D14 |
-| 9 | Maximal stretch | Gap | 2/3 | 9.3 waits on the owner (S-13 concurrency, decision-required; Use cases is written with option A); answered: 9.1 D3 D23; 9.2 D3 D6 D5 |
-| 10 | Security & privacy | Gap | 3/4 | 10.4 waits on the owner (S-14 alert wording, decision-required; Security is written with option A); answered: 10.1 D11 D13; 10.2 D7 D1; 10.3 D27 |
+| 9 | Maximal stretch | Considered | 3/3 | Use cases › Maximal stretch › 9.1 D3 D23; 9.2 D3 D6 D5; 9.3 D5 D13 (S-13) |
+| 10 | Security & privacy | Considered | 4/4 | Security › 10.1 D11 D13; 10.2 D7 D1; 10.3 D27; 10.4 D7 D9 D4 (S-14) |
 | 11 | Design & UX | Considered | 5/5 | Design › UX › 11.1 D12 D14 D25; 11.2 D4 D7 D18; 11.3 D4 D7 D12; 11.4 D5 D13 D3; 11.5 D22 |
 | 12 | Failure handling & observability | Considered | 4/4 | Failure & observability › 12.1 D12 D10; 12.2 D4 D5 D8 D10; 12.3 D10 D26; 12.4 D17 D1 D16 D23 D24 |
 | 13 | Performance & scale | Considered | 2/2 | Performance › 13.1 D23; 13.2 D3 D1 |
@@ -330,3 +330,5 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-11 · note · dry-run · D26 · cmd: `pwsh tools/preflight.ps1 -AuditOf revenge` → "audit steps: docs/audits/revenge.md not found"; -SessionsOf revenge → "session logs: docs/features/REVENGE.md not found"; -Paths -DeclaredOf revenge → "paths: leftover temp nyar-ws2-logs; declared: the created or changed paths of revenge are unreadable (audit Step 1 base or git)" (no audit yet; the leftover folder is wave-sets' live session)
 - 2026-10-11 · note · dry-run · D25 · cmd: `pwsh tools/preflight.ps1` → "release tags: 10/10", PREFLIGHT OK
 - 2026-10-11 · note · dry-run · D27 · cmd: `pwsh tools/preflight.ps1` → "secrets: none (1862 files scanned, 1824 index blobs)"; the platform-id and mail-name grep → only lines quoting the pattern
+- 2026-10-11 · note · owner decisions: S-12 validated (D43), S-13 validated (D43), S-14 validated (D43)
+- 2026-10-11 · note · coverage updated for the owner's decisions (D43)

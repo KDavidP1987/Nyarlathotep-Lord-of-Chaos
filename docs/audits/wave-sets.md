@@ -39,7 +39,7 @@ other post-audit carries a "Codex verdict:" line pointing to it. Session log che
 - dod status: D1, D2, D4, D6, D8, D10, D12, D14, D15, D17, D19 pass at aa1aece and are checked; D3, D5, D7 wait for step 2's WaveAction and EventRuntime, which wire the tested logic; D9 and D11 for step 2 (the binding's read and the end-path calls); --check problems 0, 1 warning (review pending: the A2 re-review is owed before close)
 - privacy grep (7656119, kdpenland): none in the step 1 diffs
 
-### Step 2 · open (as of 2026-10-06, 1c25ab0)
+### Step 2 · 2026-10-11 · 603f958
 - session 2 pre-audit (2026-10-11, e4f0594, the first session after the move to C:\dev\projects): git clean and equal to GitHub; compile 0 Warning(s), 0 Error(s); tests 2614 passed, 1 failed (ControlCases "pending wave-sets D23 outlived step 2's post-audit", expected until D23 passes); preflight PREFLIGHT OK; Reference Data and Learning Mods resolve in the new tree
 - session 2 build: e8c35d3 (A7's hunt-parts line, D23's control row); tests 2618 passed; deployed by a Release build
 - session 2 in-game: D23 pass (10/10 windows under 5 ms); wave-sets-timing.vrs PASS 8/8; -LogCheck 0 unhandled, 0 orphan errors, 0 unity errors; every [Warning] read, 0 [Error]
@@ -48,3 +48,9 @@ other post-audit carries a "Codex verdict:" line pointing to it. Session log che
 - in-game: D20, D21, D22 pass; D23 fail (176.8 ms hunt-phase tick, A7); A6 (uncredited batch deaths) still unexplained
 - not yet run: A7 diagnostic and D23 rerun, /code-review on c5c8848..HEAD, planted faults, dod status, privacy grep
 - handoff: docs/SESSION_HANDOFF.md
+- planted faults (scratchpad driver: each fault planted, its filter run, the source restored and rebuilt): D3, D5, NewlyCleared, D7, D11, D13, D16 CAUGHT; D8 (a self-kill with a player owner credited) and D9 (ScoreRule ignoring IncludeAdmins) MISSED: test gaps, closed in 659179a (ScoreboardTests: the self-kill case with Owner, the admin cases through ScoreRule.Credit), then both CAUGHT: 9/9
+- /code-review (fresh subagent, read-only, on c5c8848..HEAD): VERDICT READY, 4 advisory: F1 two failed IL2CPP GC reads logged "il2cpp 0" (a false no-collection) → fixed, "n/a" (603f958, EngineTests.HuntParts_fails_when_an_unreadable_count_reads_as_zero); F2 the breakdown took the last phase as the hunt's → fixed, by name (603f958); F3 `feed.Before(() => throw ex, …)` reads like a bug → accepted (style, behaviour correct); F4 the guarded cleared read is rebuilt per access → accepted (negligible at the caps)
+- compile: 0 Warning(s), 0 Error(s); tests: 2619 passed; preflight PREFLIGHT OK; -Paths -DeclaredOf wave-sets 99/99
+- privacy grep (7656119, kdpenland) over c5c8848..HEAD: none
+- Codex verdict: deferred to step 3 (the child's single cross-inspection, design §9 D34)
+- dod status: D3 D5 D7 D8 D9 D11 D13 D16 D18 D23 pass and checked; D24-D27 are step 3's

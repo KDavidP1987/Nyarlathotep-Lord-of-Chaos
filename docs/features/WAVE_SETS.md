@@ -37,7 +37,8 @@ players by kills, with their deaths, and the totals.
 - Why ws-three's units left the ledger in batches with no credit in D23's first runs (A6): the verbose died line now
   names the killer; no unit died in the run that had it on.
 - The hunt phase's 176.8 ms tick in D23's first run (A7): not seen again. Session 2's breakdown named only the first
-  hunt tick (29.9 ms, seed 21.7 ms of which the AggroBuffer reads 1.0 ms, no garbage collection): a one-time warm-up of
+  hunt tick (29.9 ms, seed 21.7 ms of which the AggroBuffer reads 1.0 ms, no .NET collection; the game runtime's
+  "il2cpp 0" could also mean an unreadable count, fixed in 603f958 to read "n/a", step 2 review F1): a one-time warm-up of
   the interop paths is the likely cause, not proven. The `hunt parts:` line stays and names the parts if it recurs.
 
 ## Test results
