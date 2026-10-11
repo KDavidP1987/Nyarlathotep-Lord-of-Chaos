@@ -721,7 +721,9 @@
     },
     {
       "artifact": "vrclient outputs (automation A18, Epic A36)",
-      "covers": [],
+      "covers": [
+        "BepInEx/plugins/NyarDevTools.dll"
+      ],
       "location": "%TEMP%\\vrclient\\results and %TEMP%\\vrclient\\shots; the dev server's BepInEx/plugins/DevChatEcho.dll and NyarDevTools.dll",
       "owner": "tools/vrclient",
       "retention": "results and shots as in-game test evidence; the plugins while vrclient tests run",
