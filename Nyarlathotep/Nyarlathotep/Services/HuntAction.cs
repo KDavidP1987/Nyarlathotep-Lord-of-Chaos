@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using Il2CppInterop.Runtime;
@@ -41,6 +42,20 @@ internal static class HuntAction
     internal static int LastTargets { get; private set; }
     static readonly HashSet<long> _tickTargets = new();
 
+    /// <summary>The parts of the latest tick that ran (wave-sets A7), taken once by the scheduler; null when the tick did
+    /// not run (no unit, or inside the 5 s interval).</summary>
+    static HuntParts? _parts;
+    static long _bufferTicks;
+
+    internal static HuntParts? TakeParts()
+    {
+        var p = _parts;
+        _parts = null;
+        return p;
+    }
+
+    static double Ms(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
+
     /// <summary>At IsReady: a restart keeps no seed (D33).</summary>
     internal static void Initialize()
     {
@@ -48,6 +63,7 @@ internal static class HuntAction
         _units.Clear();
         _next = default;
         LastTargets = 0;
+        _parts = null;
     }
 
     /// <summary>SpawnTracker confirmed a unit of a Hunt wave.</summary>
@@ -86,6 +102,11 @@ internal static class HuntAction
         _next = now.AddSeconds(HuntPlan.IntervalSeconds);
         _tickTargets.Clear();
         LastTargets = 0;                                                     // a throw past the per-event catch reads 0 (Review 35 F4)
+        _parts = null;
+        var netGcs = GC.CollectionCount(0);
+        var il2cppGcs = Il2CppGcCount();
+        long t0 = Stopwatch.GetTimestamp(), sweepEnd = t0, playersEnd = t0, verbose = 0;
+        _bufferTicks = 0;
 
         // The sweep and the player read fail every event's tick alike, never the scheduler's (D21; A61).
         List<IGrouping<string, KeyValuePair<long, (Entity Unit, string EventId, HuntTag Tag)>>> byEvent;
@@ -95,7 +116,9 @@ internal static class HuntAction
             foreach (var gone in _units.Where(u => !u.Value.Unit.Exists()).Select(u => u.Key).ToList()) Forget(gone);
             byEvent = _units.GroupBy(u => u.Value.EventId).ToList();
             if (byEvent.Count == 0) { LastTargets = 0; return; }
+            sweepEnd = Stopwatch.GetTimestamp();
             players = PlayerQuery.Read();
+            playersEnd = Stopwatch.GetTimestamp();
         }
         catch (Exception ex)
         {
@@ -122,6 +145,7 @@ internal static class HuntAction
                 WalkCheck.Health.Recovered(SpawnFailure.HuntSeed, g.Key);
                 if (Settings.VerboseLogging.Value)
                 {
+                    var verboseStart = Stopwatch.GetTimestamp();
                     // Why whom (A66), at the first unit's wave centre: counts only (Security › Personal data). A failed
                     // diagnostic never reads as a failed seed.
                     string why;
@@ -133,6 +157,7 @@ internal static class HuntAction
                     }
                     catch { why = "counts unreadable"; }
                     Core.Log.LogInfo($"[nyar] hunt {g.Key}: {kept} seeds kept, {left} left to the game; at the first unit's centre: {why}");
+                    verbose += Stopwatch.GetTimestamp() - verboseStart;
                 }
             }
             catch (Exception ex)
@@ -141,6 +166,16 @@ internal static class HuntAction
             }
         }
         LastTargets = _tickTargets.Count;
+        var seed = Stopwatch.GetTimestamp() - playersEnd - verbose;
+        _parts = new HuntParts(Ms(sweepEnd - t0), Ms(playersEnd - sweepEnd), Ms(seed), Ms(_bufferTicks), Ms(verbose),
+            _units.Count, byEvent.Count, GC.CollectionCount(0) - netGcs, Il2CppGcCount() - il2cppGcs);
+    }
+
+    /// <summary>The game runtime's own collections (A7); -1 when it cannot be read, so a delta of 0 is never claimed.</summary>
+    static int Il2CppGcCount()
+    {
+        try { return Il2CppSystem.GC.CollectionCount(0); }
+        catch { return -1; }
     }
 
     static void Failed(string eventId, Exception ex)
@@ -154,8 +189,10 @@ internal static class HuntAction
     static (int Kept, int Left) SeedUnit(long key, Entity unit, string eventId, HuntTag tag, List<PlayerRow> players,
         IReadOnlySet<(int X, int Z)> map, HashSet<long> held)
     {
-        if (!Core.EntityManager.HasBuffer<AggroBuffer>(unit)) { _seeds.ForgetUnit(key); return (0, 0); }
+        var bufferStart = Stopwatch.GetTimestamp();                          // HasBuffer/GetBuffer may wait on a job (A7)
+        if (!Core.EntityManager.HasBuffer<AggroBuffer>(unit)) { _bufferTicks += Stopwatch.GetTimestamp() - bufferStart; _seeds.ForgetUnit(key); return (0, 0); }
         var buffer = Core.EntityManager.GetBuffer<AggroBuffer>(unit);
+        _bufferTicks += Stopwatch.GetTimestamp() - bufferStart;
         var inBuffer = BufferSeeds(buffer);
         var (kept, left) = _seeds.Reconcile(key, inBuffer);
 

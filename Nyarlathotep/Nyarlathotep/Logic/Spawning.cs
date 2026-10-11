@@ -938,6 +938,41 @@ public static class HuntPlan
     static double Distance(float x, float z, (float X, float Z) c) => Math.Sqrt((x - c.X) * (double)(x - c.X) + (z - c.Z) * (double)(z - c.Z));
 }
 
+/// <summary>One Hunt tick's parts (wave-sets A7): where its time went and how many garbage collections ran inside it, so
+/// a stall is placed on our work, a job sync point (the buffer reads) or a collection. Counts and times only.</summary>
+public readonly record struct HuntParts(double SweepMs, double PlayersMs, double SeedMs, double BufferMs, double VerboseMs,
+    int Units, int Events, int NetGcs, int Il2CppGcs);
+
+/// <summary>The hunt-phase breakdown line (wave-sets A7): a hunt phase of <see cref="ThresholdMs"/> or more returns
+/// "hunt parts: &lt;t&gt; ms (sweep a, players b, seed c of which buffer d, verbose e, outside parts r; gc net n il2cpp m;
+/// units u, events e)", at most one line per <see cref="Quiet"/>; the next carries the count held back. The threshold is
+/// below the slow-tick warning's 250 ms because D23's 176.8 ms hunt tick would not have reached it.</summary>
+public sealed class HuntTimingLog
+{
+    public const double ThresholdMs = 20;
+    public static readonly TimeSpan Quiet = TimeSpan.FromMinutes(1);
+
+    DateTime? _last;
+    int _held;
+
+    public string? Add(double huntMs, HuntParts p, DateTime utcNow)
+    {
+        if (!(huntMs >= ThresholdMs)) return null;
+        if (_last is { } last && utcNow >= last && utcNow - last < Quiet)
+        {
+            _held++;
+            return null;
+        }
+        _last = utcNow;
+        var outside = Math.Max(0, huntMs - p.SweepMs - p.PlayersMs - p.SeedMs - p.VerboseMs);
+        var line = FormattableString.Invariant(
+            $"hunt parts: {huntMs:0.0} ms (sweep {p.SweepMs:0.0}, players {p.PlayersMs:0.0}, seed {p.SeedMs:0.0} of which buffer {p.BufferMs:0.0}, verbose {p.VerboseMs:0.0}, outside parts {outside:0.0}; gc net {p.NetGcs} il2cpp {p.Il2CppGcs}; units {p.Units}, events {p.Events})");
+        if (_held > 0) line += $"; {_held} more since the last line";
+        _held = 0;
+        return line;
+    }
+}
+
 /// <summary>HuntAction's seed record, keyed by unit and target (event-spawns D13, A6, A12): the record, not the
 /// AggroBuffer, says which entries are HuntAction's. An entry is never adopted from the buffer. The game rewrites an
 /// entry's DamageValue and Weight as soon as the unit takes the aggro (Session 1, A67), so a recorded player's single

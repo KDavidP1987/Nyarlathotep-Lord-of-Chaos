@@ -37,7 +37,6 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        new(WaveSets, "D23", 2, "0.9.0"),
         new(WaveSets, "D24", 3, "0.9.0"), new(WaveSets, "D25", 3, "0.9.0"), new(WaveSets, "D26", 3, "0.9.0"), new(WaveSets, "D27", 3, "0.9.0"),
     ];
 
@@ -493,6 +492,10 @@ public static class ControlCases
             ["no_player_scored"]) with { Plan = WaveSets },
         T("D11", "EndPaths", "WaveSetTests", ["runtime_skips_an_end_path", "a_silent_path_shows", "an_event_without_the_key_shows"], ["the_three_showing_paths"], ["no_player_scored"])
             with { Plan = WaveSets },
+        C("D23", "TimingSpan", "preflight -TimingSpan -Windows 10 -MinTracked 10 › Test-CheckTimingSpan",
+            ["tools/preflight-fixtures/TimingSpan/bad-avg", "tools/preflight-fixtures/TimingSpan/bad-slow", "tools/preflight-fixtures/TimingSpan/bad-tracked",
+             "tools/preflight-fixtures/TimingSpan/bad-notarget"],
+            ["tools/preflight-fixtures/TimingSpan/good"], ["tools/preflight-fixtures/TimingSpan/empty"]) with { Plan = WaveSets },
         T("D12", "WaveSets", "PrivacyTests", ["a_queued_scoreboard_line_reaches_the_log", "a_name_reaches_a_line", "another_builder_takes_a_player_name", "state_gains_a_property"],
             ["the_name_only_on_the_scoreboard"], ["no_scoreboard_key"]) with { Plan = WaveSets },
         T("D14", "WaveSets", "CommandArgTests", ["a_units_form_field_meets_a_wave_list", "value_out_of_range", "field_not_settable", "a_conversion_takes_another_field", "a_start_key_breaks_a_rule",

@@ -479,6 +479,36 @@ public partial class EngineTests
         Assert.NotNull(s.Add(300, SlowPhases, T0.AddHours(-1)));        // the clock stepped back: not silenced for an hour
     }
 
+    // ---- hunt-phase breakdown (wave-sets A7)
+
+    static readonly HuntParts Parts = new(0.4, 1.2, 170.1, 168.9, 3.0, 20, 1, 0, 1);
+
+    [Fact]
+    public void HuntParts_fails_when_hunt_phase_reaches_20ms()
+    {
+        var h = new HuntTimingLog();
+        Assert.Equal("hunt parts: 176.8 ms (sweep 0.4, players 1.2, seed 170.1 of which buffer 168.9, verbose 3.0, outside parts 2.1; gc net 0 il2cpp 1; units 20, events 1)",
+            h.Add(176.8, Parts, T0));
+    }
+
+    [Fact]
+    public void HuntParts_passes_phases_under_20ms()
+    {
+        var h = new HuntTimingLog();
+        Assert.Null(h.Add(19.99, Parts, T0));
+        Assert.Null(h.Add(double.NaN, Parts, T0));
+    }
+
+    [Fact]
+    public void HuntParts_fails_when_lines_repeat_within_a_minute()
+    {
+        var h = new HuntTimingLog();
+        Assert.NotNull(h.Add(30, Parts, T0));
+        Assert.Null(h.Add(30, Parts, T0.AddSeconds(5)));
+        Assert.EndsWith("; 1 more since the last line", h.Add(30, Parts, T0.AddSeconds(60)));
+        Assert.NotNull(h.Add(30, Parts, T0.AddHours(-1)));
+    }
+
     // ---- events.json editor (event set / enable / disable)
 
     [Fact]

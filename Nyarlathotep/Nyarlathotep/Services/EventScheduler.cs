@@ -21,6 +21,7 @@ internal static class EventScheduler
     static Coroutine _tick;
     static readonly TickTimer _timer = new();
     static readonly SlowTickLog _slow = new();
+    static readonly HuntTimingLog _hunt = new();
     static readonly List<(string Phase, double Ms)> _phases = new();
     static readonly Dictionary<string, FailureStreak> _faults = new();
 
@@ -57,6 +58,12 @@ internal static class EventScheduler
         Phase("player triggers", () => TriggerBus.ScanPlayers(now));        // automation D9
         Phase("events", () => EventRuntime.Tick(now));
         Phase("hunt", () => HuntAction.Tick(now));                         // event-spawns D13, every 5 s; its own phase (A70)
+        try
+        {
+            // wave-sets A7: a hunt phase of 20 ms or more names its parts
+            if (HuntAction.TakeParts() is { } parts && _hunt.Add(_phases[^1].Ms, parts, now) is { } huntLine) Core.Log.LogInfo($"[nyar] {huntLine}");
+        }
+        catch { /* a diagnostic never breaks the tick */ }
         Phase("announcements", () => Announcer.Tick(now));
         Phase("push", () => Pusher.Tick(now));
         Phase("health", () => HealthMonitor.Beat(now));
