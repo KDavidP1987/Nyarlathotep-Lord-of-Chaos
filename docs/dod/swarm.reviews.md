@@ -71,3 +71,75 @@ VERDICT: READY
 - F8 · accepted · Maximal stretch reworded: "A fourth arena event is refused by MaxConcurrentEvents (default 3), as today."
 - F9 · accepted · `pwsh tools/preflight.ps1 -AuthSuite` run from the repo root → "auth suite: pass (tests, commands, admin list, gateway, entity writes, vcf)", recorded as a D9 dry-run note in the Log
 - UF1 · accepted · D3 covers the family (units form, waveList form, growth form): its statement runs the check the same for each form and its fails-when names a missed stray of each; Business rules 7 lists them as "every arena event"
+
+## Review 2 · 2026-10-11 · subagent · plan commit 02ebc62 · plan 71655 B · 25 items · files 0 · e3b0c44298fc · prompt dea4003b26f9
+L1 · Considered · no finding
+L2 · Considered · no finding
+L3 · Considered · F5
+L4 · Considered · F1
+L5 · Considered · F2
+L6 · Considered · no finding
+L7 · Considered · F5
+L8 · Considered · no finding
+L9 · Considered · F1
+L10 · Considered · no finding
+L11 · Considered · F1
+L12 · Considered · F3, F5
+L13 · Considered · no finding
+L14 · Considered · F2, F4
+L15 · Considered · no finding
+
+**Code claims checked and found true:**
+- `Limits.MaxUnitsPerWave` has a default of 20 and a ceiling of 50.
+- `ScoreboardPlayers` is 200.
+- `MaxLevelDelta` is 5.
+- The Hunt range is 10-60.
+- `HuntPlan.Targets` measures the range from the wave centre.
+- `ActiveEvent.Origin` is the starting admin's position.
+- An Admin location cannot start without an admin (Engine.cs:357), so an arena's centre is always defined.
+- `TrackedUnit.SpawnedUtc` exists, so the instance filter can be built.
+- `ScoreRow.First` exists, so the tie-break can be built.
+- `SpawnTuning.For` takes each entry's modifiers when there is a waveList, which matches D25's "the action's modifiers on each entry".
+- `intervalSeconds` (10-600) fits inside `afterSeconds` (10-3600), so generated waves are valid waveList waves.
+- `DefinitionEditor` edits the events.json text, not a serialized model, so a generated waveList cannot be written back.
+- There are 10 templates today.
+- CHAR_Spider_Forestling, CHAR_Spider_Forest and CHAR_Spider_Range are all Faction_Spiders and none is a V Blood.
+- The template's numbers work out: 6, 9, 12, 15 and 18 units at levels 30-42, with wave 3 at level 36.
+- Wave-sets Session 2 records the A7 figures exactly as D19 quotes them: 29.9 ms on the first hunt tick, and no repeat of the 176.8 ms stall.
+
+**Findings:**
+
+F1 · advisory · probe 4.4 / 9.2 — D9 refuses two edits that would break an arena or winner rule (`action.scoreboard false` under a winner, `action.location aroundplayer` under an arena). It says nothing about `action.radius` or `action.behaviour.range` being widened past `arena.radius` from chat. Those edits go through `DefinitionEditor.Write`, and the reload then disables the definition with "now disabled: <reason>". The admin is told, but the behaviour differs from the two refused edits.
+Fix: either refuse those two edits the same way in D9, or add one line to D9 saying they are applied and then disabled by the reload (the existing behaviour). Add a fails-when for whichever is chosen.
+
+F2 · advisory · probe 14.4 / 5.2 — Paths walked misses files the build plan will probably touch:
+- `Logic/Engine.cs`: `TickTimer` lives there (Engine.cs:519), and step 2 adds an arena phase "timed in the TickTimer like the hunt phase".
+- `Services/HuntAction.cs`: D3 says the unit's target on a player outside the arena is dropped.
+- `Services/UnitSetup.cs` or `Services/WaveAction.cs`: needed if the optional `MaxDistanceFromPreCombatPosition` is set at spawn.
+- `tools/preflight.ps1`: needed if the timing line gains an arena field that `-TimingSpan` parses.
+
+Fix: list them in Step 1 and Step 2 of Paths walked. If they are left out, `-DeclaredOf` will catch them at build time as a `discovered` amendment.
+
+F3 · advisory · probe 12.4 — D4 only fails when the health entry outlives a good check. The Data table says the entry also clears at an event end or a restart, and no fails-when covers that.
+Fix: add "or the health entry outlives its event's end" to D4's fails-when.
+
+F4 · advisory · probe 14.1 — A swarm event with growth also gets the units-form `chance` line suppressed in `event info`. The reason: `EventAdmin.cs:551` and `:558` check `WaveList is not null`, and a generated list sets it.
+Fix: D10's keyless-unchanged clause does not cover a growth event. Add "a growth event's base-entry chances are shown in its generated wave lines" (or accept the wave-sets D15 rendering) to D10.
+
+F5 · advisory · probe 7.2 / 3.3 — The scoreboard is keyed by event id, not by instance (`Scoreboard._byEvent`). A stop followed by a restart inside the grace period could credit an old-instance unit's kill to the new instance's winner. The plan says "never ... credits the old instance's units" (Maximal stretch › Repeated use, citing wave-sets A3), but no D-item in this child fails on it.
+Fix: if wave-sets already owns this boundary, cite that wave-sets item by number. Otherwise add "an earlier instance's kill reaches the winner" to D5's fails-when.
+
+**Summary lines:**
+
+missing components: none
+undeclared families: action location aroundplayer, action scoreboard false, action radius, action behaviour range
+15/15 layers · 50/50 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · deferred to the Log (advice on a READY review, D9 not edited): `note · deferred · Review 2 F1`, the builder chooses refuse-at-chat or apply-then-disable for `action.radius` and `action.behaviour.range` widened past arena.radius, with a fails-when for the choice, recorded as an amendment if it changes a promise
+- F2 · accepted · deferred to the Log: `note · deferred · Review 2 F2`, Engine.cs, HuntAction.cs, UnitSetup.cs/WaveAction.cs and tools/preflight.ps1 are declared by amendment when `pwsh tools/preflight.ps1 -Paths -DeclaredOf swarm` finds them touched
+- F3 · accepted · deferred to the Log: `note · deferred · Review 2 F3`, D4's health entry clearing at an event's end and at a restart (Data table) is checked at build in SwarmDependencyFailureTests
+- F4 · accepted · deferred to the Log: `note · deferred · Review 2 F4`, a growth event's `event info` renders its generated waveList by wave-sets D15, base-entry chances shown in the wave lines
+- F5 · accepted · deferred to the Log: `note · deferred · Review 2 F5`, wave-sets A3 already bounds the credit: Logic/ScoreFeed.cs ScoreRule.Counting credits a unit only when `u.SpawnedUtc >= a.Instance.StartedUtc`, ScoreboardTests `Counting_fails_when_an_earlier_instance_unit_credits` fails on it, and Scoreboard.End removes the event's rows at every end path, so a restart starts empty
+- UF1 · rejected · (the reviewer wrote the names with dots, `action.location aroundplayer, action.scoreboard false, action.radius, action.behaviour.range`; the checker's name grammar allows no dot, so the line above spells them with spaces) not edited after the READY (review.md, freeze): D9 already refuses `action.scoreboard false` under a winner and `action.location aroundplayer` on an arena; `action.radius` and `action.behaviour.range` past arena.radius are refused by D1's validator, which disables the definition on reload; whether D9 refuses them at the chat command too is the builder's choice under Log note Review 2 F1, an amendment if it changes a promise
