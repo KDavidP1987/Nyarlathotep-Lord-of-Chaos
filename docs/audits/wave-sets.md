@@ -40,6 +40,10 @@ other post-audit carries a "Codex verdict:" line pointing to it. Session log che
 - privacy grep (7656119, kdpenland): none in the step 1 diffs
 
 ### Step 2 · open (as of 2026-10-06, 1c25ab0)
+- session 2 pre-audit (2026-10-11, e4f0594, the first session after the move to C:\dev\projects): git clean and equal to GitHub; compile 0 Warning(s), 0 Error(s); tests 2614 passed, 1 failed (ControlCases "pending wave-sets D23 outlived step 2's post-audit", expected until D23 passes); preflight PREFLIGHT OK; Reference Data and Learning Mods resolve in the new tree
+- session 2 build: e8c35d3 (A7's hunt-parts line, D23's control row); tests 2618 passed; deployed by a Release build
+- session 2 in-game: D23 pass (10/10 windows under 5 ms); wave-sets-timing.vrs PASS 8/8; -LogCheck 0 unhandled, 0 orphan errors, 0 unity errors; every [Warning] read, 0 [Error]
+- session 2 paths: -Paths -DeclaredOf wave-sets read 93/100 before A8, 99/99 after; the session's log folders moved out of %TEMP%\nyar-* (leftover temp)
 - built: 33063d9 (services, template), c6deb38 (Session 1 tooling); Session 1 in docs/features/WAVE_SETS.md › Test results
 - in-game: D20, D21, D22 pass; D23 fail (176.8 ms hunt-phase tick, A7); A6 (uncredited batch deaths) still unexplained
 - not yet run: A7 diagnostic and D23 rerun, /code-review on c5c8848..HEAD, planted faults, dod status, privacy grep

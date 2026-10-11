@@ -36,7 +36,9 @@ players by kills, with their deaths, and the totals.
   ("1 players, 0 kills, 1 deaths"), though the game's death screen says "Killed by: Unknown".
 - Why ws-three's units left the ledger in batches with no credit in D23's first runs (A6): the verbose died line now
   names the killer; no unit died in the run that had it on.
-- The hunt phase's 176.8 ms tick in D23's run (A7): the cause is not yet named.
+- The hunt phase's 176.8 ms tick in D23's first run (A7): not seen again. Session 2's breakdown named only the first
+  hunt tick (29.9 ms, seed 21.7 ms of which the AggroBuffer reads 1.0 ms, no garbage collection): a one-time warm-up of
+  the interop paths is the likely cause, not proven. The `hunt parts:` line stays and names the parts if it recurs.
 
 ## Test results
 
@@ -79,3 +81,21 @@ true`, with TimingLog on. Three boots, both logs copied before each stop to %TEM
   1800 s. `ToggleInvulnerable` takes a Boolean; the owner keeps Chaos invulnerable. Chaos's death dropped two hotbar
   items (slots 5 and 6) at the pond. vrclient's expect-chat can resend the last chat line (a few extra `.devkill`s)
 
+### Session 2 · 2026-10-11 · wave-sets step 2, D23 rerun (e8c35d3, dev world nyardev, Claude via vrclient)
+
+Setup: the dev events.json regained ws-three (it had gone with the ws1 snapshot restore) in D23's shape: Manual, 1800 s,
+every entry CHAR_Undead_SkeletonSoldier_Armored_Farbane at level 30 (wave 1 6 + 6, waves 2 and 3 8 each; wave 2
+afterSeconds 120 whenCleared, wave 3 whenCleared), AroundPlayer 10-20 m, radius 5, Hunt 30, scoreboard on; TimingLog and
+VerboseLogging on. One boot; logs copied before and after.
+
+- [x] D23, tick budget: `pwsh tools/preflight.ps1 -TimingSpan <session 2 LogOutput copy> -Windows 10 -MinTracked 10` →
+  "timing span: 10/10 windows under 5 ms, tracked >= 10, targets >= 1, 0 slow ticks"; windows averaged 0.149-0.186 ms,
+  the slowest tick 1.9 ms (hunt), 20 tracked from wave 2 to the stop
+- A7: one `hunt parts:` line in the whole run, the first hunt tick: "29.9 ms (sweep 4.8, players 0.0, seed 21.7 of which
+  buffer 1.0, verbose 3.1, outside parts 0.3; gc net 0 il2cpp 0; units 10, events 1)"; every later hunt phase under 2 ms
+- A6: no unit died in the run (Chaos invulnerable, no native units reached the skeletons), so the died line was not
+  exercised
+- Scenario: wave-sets-timing.vrs SCENARIO PASS 8/8 (results wave-sets-timing-20261011-165938.json)
+- Logs: -LogCheck "0 unhandled, 508 nyar lines, 0 orphan errors, 0 unity errors"; [Warning] lines: Il2CppInterop's
+  substitute notice, Beelzebub's TUNE line, example-empowerment's reason, the stop line; 0 [Error]; the server log's 226
+  "PrefabGUID 428176881 is in an unknown state" warnings are the world load's, the same count as the previous boot
