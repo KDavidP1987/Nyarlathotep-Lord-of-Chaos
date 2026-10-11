@@ -64,11 +64,11 @@ public partial class PrivacyTests
     [Fact]
     public void Swarm_fails_when_a_name_reaches_a_line()
     {
-        var leaked = $"event sw scoreboard: 1 players, 2 kills, 0 deaths, winner {PlantedName} ({PlantedId}) K/D 2.00";
-        Assert.All(new[] { PlantedName, PlantedId.ToString() }, m => Assert.Contains(m, leaked, StringComparison.Ordinal));
-        Assert.DoesNotContain(leaked, SwarmLines(out _));
-        Assert.DoesNotContain(PlantedName, ScoreboardRule.LogLine("sw", new ScoreSummary([], 1, 1, 0, new ScoreRow(PlantedName, 1, 0, 1)), WinnerRule.KillDeath),
-            StringComparison.Ordinal);
+        // code review F3: the planted marks swept over every line, not one made-up leak
+        foreach (var line in SwarmLines(out _))
+            foreach (var mark in SwarmMarks) Assert.DoesNotContain(mark, line, StringComparison.Ordinal);
+        var log = ScoreboardRule.LogLine("sw", new ScoreSummary([], 1, 1, 0, new ScoreRow(PlantedName, 1, 0, 1)), WinnerRule.KillDeath);
+        Assert.DoesNotContain(PlantedName, log, StringComparison.Ordinal);
     }
 
     /// <summary>The members of the Logic assembly that take a scoreboard type stay wave-sets' four: the winner adds no

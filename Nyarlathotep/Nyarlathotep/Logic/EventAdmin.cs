@@ -51,9 +51,10 @@ public static class EventsEditor
     {
         var edited = ApplyCore(text, id, path, value, out error, out note);
         if (edited is null) return null;
-        var after = SwarmConflict(edited, id);
-        if (after is null || after == SwarmConflict(text, id)) return edited;
-        error = Invalid(after, Reasons.Field);
+        var before = SwarmConflicts(text, id);
+        var added = SwarmConflicts(edited, id).FirstOrDefault(r => !before.Contains(r));     // code review F1: the set, not the first
+        if (added is null) return edited;
+        error = Invalid(added, Reasons.Field);
         note = null;
         return null;
     }
@@ -344,41 +345,44 @@ public static class EventsEditor
     /// <summary>The validator's reason for the first conflict among the swarm keys of event <paramref name="id"/>'s action
     /// in <paramref name="text"/> (swarm D1, D2, D24), or null: what the reload would disable it for. Values of the wrong
     /// type are left to the validator.</summary>
-    public static string? SwarmConflict(string text, string id)
+    public static string? SwarmConflict(string text, string id) => SwarmConflicts(text, id).FirstOrDefault();
+
+    /// <summary>Every conflict among the swarm keys of event <paramref name="id"/>'s action, in the validator's order; an
+    /// edit is refused only for a reason the file did not already hold (code review F1).</summary>
+    public static IReadOnlyList<string> SwarmConflicts(string text, string id)
     {
         JsonNode? root;
         try { root = JsonNode.Parse(text, documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true }); }
-        catch (JsonException) { return null; }
+        catch (JsonException) { return Array.Empty<string>(); }
         var ev = (root?["events"] as JsonArray)?.OfType<JsonObject>().FirstOrDefault(e => e["id"] is JsonValue v && v.TryGetValue<string>(out var s) && s == id);
-        return ev?["action"] is JsonObject action ? ActionConflict(action) : null;
+        return ev?["action"] is JsonObject action ? ActionConflicts(action).ToList() : Array.Empty<string>();
     }
 
-    static string? ActionConflict(JsonObject action)
+    static IEnumerable<string> ActionConflicts(JsonObject action)
     {
         static int? IntOf(JsonNode? n) => n is JsonValue v && v.TryGetValue<int>(out var i) ? i : null;
         if (action["arena"] is JsonObject arena)
         {
             if (action["location"] is JsonObject loc && loc["type"] is JsonValue lt && lt.TryGetValue<string>(out var type) && type == "AroundPlayer")
-                return EventValidator.ArenaLocation;
+                yield return EventValidator.ArenaLocation;
             if (IntOf(arena["radius"]) is { } r)
             {
-                if (IntOf(action["radius"]) > r) return EventValidator.ArenaSpawnRadius;
-                if (action["behaviour"] is JsonObject b && IntOf(b["range"]) > r) return EventValidator.ArenaHuntRange;
+                if (IntOf(action["radius"]) > r) yield return EventValidator.ArenaSpawnRadius;
+                if (action["behaviour"] is JsonObject b && IntOf(b["range"]) > r) yield return EventValidator.ArenaHuntRange;
             }
         }
         if (action["winner"] is not null && !(action["scoreboard"] is JsonValue sb && sb.TryGetValue<bool>(out var on) && on))
-            return EventValidator.WinnerScoreboard;
-        if (action["growth"] is not JsonObject growth) return null;
-        if (action["waveList"] is not null) return EventValidator.GrowthUnitsForm;
+            yield return EventValidator.WinnerScoreboard;
+        if (action["growth"] is not JsonObject growth) yield break;
+        if (action["waveList"] is not null) yield return EventValidator.GrowthUnitsForm;
         var waves = IntOf(action["waves"]);
-        if (waves == 1) return EventValidator.GrowthWaves;
+        if (waves == 1) yield return EventValidator.GrowthWaves;
         var addUnits = IntOf(growth["addUnits"]) ?? 0;
-        if (addUnits == 0 && (IntOf(growth["addLevels"]) ?? 0) == 0) return EventValidator.GrowthAdds;
+        if (addUnits == 0 && (IntOf(growth["addLevels"]) ?? 0) == 0) yield return EventValidator.GrowthAdds;
         var counts = (action["units"] as JsonArray)?.Select(u => IntOf(u?["count"])).ToList();
         if (waves is { } n && counts is { Count: > 0 } && counts.All(c => c is not null)
             && counts.Sum(c => c!.Value + (n - 1) * addUnits) > Limits.MaxUnitsPerWave.Max)
-            return EventValidator.GrowthLastWave;
-        return null;
+            yield return EventValidator.GrowthLastWave;
     }
 
     /// <summary>A new action.units list keeps the chance of each prefab the old list gave one (event-spawns D18), so

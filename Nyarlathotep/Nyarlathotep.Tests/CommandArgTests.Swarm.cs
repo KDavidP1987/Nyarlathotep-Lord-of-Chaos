@@ -160,6 +160,24 @@ public partial class CommandArgTests
         Assert.Null(Loaded(lib, "raid").Action!.WaveList);
     }
 
+    /// <summary>Code review F1: a file already holding two swarm conflicts takes an edit that removes one (the other is
+    /// not the edit's) and refuses an edit that adds a third, whichever conflict the validator names first.</summary>
+    [Fact]
+    public void Swarm_fails_when_an_old_conflict_blocks_a_fix_or_hides_a_new_one()
+    {
+        var lib = AuthoringTests.Lib(Json.Event("both", action: Json.ValidAction
+            .Replace(SwarmPoint, "{ \"type\": \"AroundPlayer\", \"minDist\": 10, \"maxDist\": 20 }")
+            .TrimEnd().TrimEnd('}') + ", \"arena\": { \"radius\": 25 }, \"winner\": \"KillDeath\" }"));
+        Assert.Equal(2, EventsEditor.SwarmConflicts(lib.Text, "both").Count);
+        Assert.StartsWith("event both action.arena = none", AuthoringTests.Set(lib, "both", "action.arena", "none"));
+        Assert.Equal([EventValidator.WinnerScoreboard], EventsEditor.SwarmConflicts(lib.Text, "both"));
+        var hash = lib.Hash;
+        Assert.Equal(EventValidator.GrowthAdds, AuthoringTests.Set(lib, "both", "action.growth.whenCleared", "true"));
+        Assert.Equal(hash, lib.Hash);
+    }
+
+    /// <summary>Code review F4: none of the six swarm fields can make a long reply today (each echoes a short value or a
+    /// fixed reason); the cap is checked so a later, longer reply is caught.</summary>
     [Fact]
     public void Swarm_fails_when_a_reply_exceeds_480_bytes()
     {

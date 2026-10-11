@@ -546,7 +546,8 @@ public static class ControlCases
         T("D8", "Swarm", "PrivacyTests", ["a_name_reaches_a_line", "another_builder_takes_a_player_name", "state_gains_a_property"],
             ["the_winner_name_only_in_its_chat_line"], ["no_winner_key"]) with { Plan = Swarm },
         T("D9", "Swarm", "CommandArgTests", ["value_out_of_range", "an_arena_meets_an_around_player_location", "a_spawn_radius_or_hunt_range_widens_past_the_arena",
-            "a_winner_lacks_the_scoreboard", "growth_meets_a_wave_list_or_one_wave", "a_reply_exceeds_480_bytes", "the_table_and_settable_fields_differ"],
+            "a_winner_lacks_the_scoreboard", "growth_meets_a_wave_list_or_one_wave", "an_old_conflict_blocks_a_fix_or_hides_a_new_one", "a_reply_exceeds_480_bytes",
+            "the_table_and_settable_fields_differ"],
             ["values_in_range", "growth_created_and_removed"], ["value"]) with { Plan = Swarm },
         T("D10", "Swarm", "AuthoringTests", ["a_line_exceeds_480_bytes", "a_keyless_events_info_changes"], ["arena_winner_and_growth_lines"], ["no_swarm_keys"])
             with { Plan = Swarm },
