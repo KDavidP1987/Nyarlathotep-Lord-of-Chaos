@@ -126,3 +126,66 @@ VERDICT: READY
 - F2 · accepted · D26's survived run and D28's restart state that Chaos holds each marching front within 60 m, invulnerable and not attacking (D6), built into apocalypse.vrs and apocalypse-prep-restart.vrs
 - F3 · accepted · D18's worst case is restated as 86 tracked (30 roamers + all four hordes alive, 8 + 12 + 16 + 20), under MaxTrackedUnits 150, with no horde over MaxUnitsPerWave 20
 - F4 · accepted · D12: catch-up rises top up roamers once, after the rebuild, not once per rise; D12's Resume test fails when they top up more than once or before the rebuild
+
+## Review 3 · 2026-10-11 · subagent · plan commit bec06ff · plan 89904 B · 35 items · files 0 · e3b0c44298fc · prompt fbb68f8fb733
+L1 · Considered · no finding
+L2 · Considered · no finding
+L3 · Considered · F3
+L4 · Considered · F4
+L5 · Considered · no finding
+L6 · Considered · no finding
+L7 · Considered · F1, F2
+L8 · Considered · no finding
+L9 · Considered · F1
+L10 · Considered · no finding
+L11 · Considered · no finding
+L12 · Considered · F5
+L13 · Considered · no finding
+L14 · Considered · no finding
+L15 · Considered · no finding
+
+Review 3 · fresh subagent · read-only · scope: the current text of docs/dod/apocalypse.md. I compared it with Reviews 1 and 2, the decisions in design §9 (D44, D45) and the code: `Logic/Limits.cs` lines 23-35 (MaxTrackedUnits 150/500, MaxUnitsPerWave 20/50, ScoreboardPlayers 200), `Logic/Validation.cs:748` (Admin location), `Logic/DataStore.cs` StateDocument, and `Core.cs:81` BootSweep. The dispositions of every Review 1 and Review 2 finding are in the text. None of them is raised again here.
+
+**F1 · advisory** (7.2, 9.3, concurrent path). The plan does not say whether a resume waiting for the boot sweep to drain already holds the "one apocalypse at a time" slot (D14), or the definition's single instance. `Core.cs:81` runs BootSweep and then the scheduler starts. During the wait of up to 5 min, a Schedule or Interval trigger could start a fresh run of the same apocalypse or of another one. The resume would then hit "an apocalypse is already running", and D12 lists no reason for that case. The obvious answer is a builder's choice and needs no owner decision: the pending resume holds the slot from boot until it rebuilds or is refused.
+Fix: D12 and D14 state that a pending resume counts as the running apocalypse (and as its instance) from boot. D12's Resume test fails when a trigger firing during the drain wait starts a second run.
+
+**F2 · advisory** (7.3, crash path). D11 writes the record at most every 60 s, or every 30 s during a march. If the server crashes (as opposed to a clean stop) up to that long after the last write, it loses scoreboard credits, the spread window and front progress since that write. Likewise, a horde defeated after the last write is rebuilt at resume, because the record still lists it. Nothing in the plan says this loss is accepted.
+Fix: one sentence in D12 or §7.3: "a crash loses at most the last write interval (≤ 60 s) of credits and progress; a horde defeated inside that interval is rebuilt". D28 can stay a clean restart.
+
+**F3 · advisory** (3.3 / 4.5 `whole:`). D15's tally ("the run's queued units", the plan's `whole:`) lives in SpawnTracker's ledger, which is in memory. The record (D11) carries no tally counts. After a restart, the units queued before it are removed by the boot marker sweep, outside the run's ledger. So D15's test "after … a resume" either covers only the units since boot or needs counts that were never saved. The plan does not say which.
+Fix: D15 states either that the tally is per boot (it restarts at the resume, and the pre-restart units are accounted by the boot sweep line) or that the record carries the counts. D15's fails-when then matches that choice.
+
+**F4 · advisory** (4.5 siblings). D1 refuses an Admin goal "with a Schedule trigger". The rule is "an Admin goal needs a Manual trigger", so every trigger kind other than Manual (Schedule, Interval, and the event-driven kinds 11.4 names with "…") should be refused. The test plants only Schedule. That is a family checked on one member, and the plan declares no `siblings:` line for it.
+Fix: D1's fails-when says "an Admin goal loads with any trigger other than Manual" and the test plants each trigger kind. Alternatively, add a `twins:` or `siblings:` line naming the trigger kinds.
+
+**F5 · advisory** (12.4). This repeats Review 1 F9 for the record only. Most step-2 dry runs (D2-D15, D21) print "No test matches", which is the class missing, not a failing input run against a real check. Step 2's rule (kept Pending until the planted fault is recorded) is the accepted remedy under rubric 3. No action beyond what is already planned.
+
+Hunt (three scenarios the plan does not handle in full):
+1. A scheduled trigger fires during the resume's drain wait (F1; probes 7.2 and 9.3).
+2. A crash just before a record write: lost credits and a rebuilt defeated horde (F2; probe 7.3).
+3. The D15 tally across a restart, where the ledger's whole resets (F3; probes 4.5 and 3.3).
+
+Test the tests: every D-item has an evidence type and a fails-when, or a manual record location. Every Build-plan step cites its items. Every layer 2-14 maps to at least one item (2: D16/D17/D14; 10: D16/D17/D35/D19; 12: D21/D22/D15; 14: D32/D33/D34). The commands behind the controls:
+- 2.1 and 10.1: `preflight.ps1 -AuthSuite`.
+- 3.3: ApocalypseStateTests Record and PrivacyTests Apocalypse.
+- 4.4: ApocalypseTests Outcomes and EndPaths.
+- 6.2: ApocalypseDependencyFailureTests and `-DependencySuite apocalypse`.
+- 10.3: preflight secrets and the privacy grep.
+- 14.3: `rollback-drill.ps1 -SelfTest` and `rollback-gate.ps1 -Plan apocalypse`.
+- 14.4: `-Paths -DeclaredOf apocalypse`.
+- 12.4: ControlCaseTests.
+
+No finding carries `blocks:`. Each fix above is wording or work that the builder can record as an amendment.
+
+missing components: none
+undeclared families: Manual, Schedule, Interval, event triggers
+15/15 layers · 50/50 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 3 F1`, a pending resume holds the one-apocalypse slot (D14) and its definition's single instance from boot until it rebuilds or is refused, so a Schedule or Interval trigger firing during the drain wait starts no second run; D12's Resume test fails when one does; recorded as an amendment if it changes a promise
+- F2 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 3 F2`, docs/features/APOCALYPSE.md (§7.3) states that a crash loses at most the last record-write interval (60 s, 30 s during a march) of scoreboard credits, spread window and front progress, and that a horde defeated inside it is rebuilt at the resume; D28 stays a clean restart
+- F3 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 3 F3`, the builder settles whether D15's tally is per boot (it restarts at the resume and the pre-restart units are accounted by the boot sweep line) or the record (D11) carries the counts, and D15's fails-when matches the choice; recorded as an amendment if it changes a promise
+- F4 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 3 F4`, D1's test plants an Admin goal with each trigger kind other than Manual (Schedule, Interval and each event-driven kind), each refused, so the rule "an Admin goal needs a Manual trigger" is checked across the family (UF1)
+- F5 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 3 F5`, no action beyond the plan: Build plan step 2 keeps every step-2 and step-3 item in ControlCases.Pending until its planted fault is recorded in its step's post-audit (Review 1 F9)
+- UF1 · rejected · not edited after the READY (review.md, freeze): D1's rule is "an Admin goal needs a Manual trigger", so every other trigger kind is refused by the same check; the builder plants each kind (Schedule, Interval and each event-driven kind) in D1's test under Log note Review 3 F4, an amendment if it changes a promise

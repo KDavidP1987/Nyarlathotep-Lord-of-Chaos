@@ -134,3 +134,37 @@ VERDICT: READY
 - F3 · accepted · D10: a throw in the shared FactionKills read is owned by the existing KillFaults streak line "[nyar] faction kills: death skipped" (Patches/DeathEventPatch.cs:53,104), so one throwing read prints one line; "revenge: kill skipped" is the heat update's own streak; the "revenge: kill read failing" health entry appears only while a Revenge definition is startable; D10's fails-when gains both
 - F4 · accepted · Log note: the dry runs ran on an isolated copy of e4f0594, predate recon_commit 8b80ba2, and re-run at step 1
 - F5 · accepted · a stated assumption, no change; Failure & observability 12.4 already schedules the step 1 `note · planted` lines
+
+## Review 3 · 2026-10-11 · subagent · plan commit bec06ff · plan 82030 B · 27 items · files 0 · e3b0c44298fc · prompt 26f75055d861
+F1 · advisory · L12, probe 12.4. The new test classes (D1-D15, D17) were not failed for real before approval. The Log shows only "existing class passes" or "No test matches". The scoring note counts a failing case that was never run as a Gap. This does not block anything: the controls exist as fails-when clauses, and their planted-fault runs are set for step 1.
+Fix: keep the step-1 `note · planted · D<n>` lines as stated, and have dod status show each one before step 1's post-audit closes.
+
+F2 · advisory · probe 13.1. The recon measurement (wave-sets Log, 2026-10-05) is older than recon_commit 8b80ba2 and includes the open 176.8 ms hunt-phase spike (A7). Revenge adds more Hunt squads.
+Fix: none needed before approval, because D23 gates the release. Record a fresh -TimingSpan baseline in step 2's pre-audit so that a D23 failure can be blamed on revenge or on A7.
+
+F3 · advisory · probes 3.3 and 9.1. D3 drops the least recently updated heat row once the bound is reached. The plan does not say whether a player's cooldown (D5) and warning state live in that row. If they do, evicting the row would let a player gather heat again during the cooldown. A due player waiting in their castle could also lose their row the same way.
+Fix: in Logic/Revenge.cs, either keep cooldowns outside the evictable rows or record the eviction rule as an amendment. This is builder work, not a decision.
+
+F4 · advisory · probe 7.2. D13 does not cover an admin start on an admin who is already the focus of another running revenge. D5's "target busy" check covers only System starts. It also does not say whether an admin start sets a cooldown for the admin.
+Fix: one sentence in D13, for example "an admin start skips the target-busy check and sets no cooldown", tested in AdminStart.
+
+F5 · advisory · probe 7.3 against D6. HuntPlan.Targets only seeds players within `range` of the wave centre (Spawning.cs:909). If the focus moves more than range metres from a squad that has already spawned, the squad has nobody to hunt. The plan says nothing about whether that is accepted.
+Fix: say in REVENGE.md that it is accepted (the squad idles or leashes until the event ends or the wave is cleared), or note it as a look-and-feel point for D22.
+
+F6 · advisory · probe 4.3. Business rule 7.3 says an edited definition keeps its heat rows "under the new trigger's window from the reload". It does not say what happens to rows built from factions the edit removed, or when the edit lowers `heat` below a row's current total (the player becomes due at the next scan without a new kill).
+Fix: state that a heat or factions edit keeps the existing points and only changes what new kills add, and that the next scan applies the new `heat`. Add one case to RevengeTests Heat.
+
+Code claims checked: HuntCandidate at Spawning.cs:860 (`long Key`); HuntPlan.Targets excludes players in territory or PvP combat and takes the nearest 5; TriggerLimits.CountersPerDefinition/CountersInAll are 200 and 2000; WaveOutcome.NoWave is neither counted nor used (Engine.cs:420); EventEngine keeps the definition an instance started with across a reload (Engine.cs ~317); DeathRule.IsVBloodKill reads the consume source only; KillFaults prints "faction kills: death skipped" at DeathEventPatch.cs:53/98; Announcer.SendPrivate exists; PlayerTriggerFeed.WantsKills exists. All match the plan. Design §9 D42-D47 match how the plan uses them, and no finding repeats one.
+
+missing components: none
+undeclared families: none
+14/15 layers · 49/50 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 3 F1`, the step-1 `note · planted · D<n>` lines for the new test classes' failing cases (D1-D15, D17) run as Failure & observability 12.4 states, and `dod status revenge` shows each one before step 1's post-audit closes
+- F2 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 3 F2`, step 2's pre-audit records a fresh `pwsh tools/preflight.ps1 -TimingSpan` baseline, so a D23 failure can be laid on revenge or on wave-sets A7; D23 still gates the release
+- F3 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 3 F3`, Logic/Revenge.cs keeps a player's cooldown (D5) and warning state outside the evictable heat rows (D3), so an eviction never lets a player gather heat during the cooldown or drops a due player's row; any other eviction rule is recorded as an amendment before it is built
+- F4 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 3 F4`, an admin start (D13) skips the target-busy check and sets no cooldown for the admin, checked in RevengeTests AdminStart; recorded as an amendment if it changes a promise
+- F5 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 3 F5`, docs/features/REVENGE.md states that a spawned squad whose focus moved more than `range` from its wave centre idles or leashes until the event ends or the wave is cleared (accepted, HuntPlan.Targets seeds only players within range), and D22's owner look check notes it
+- F6 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 3 F6`, a heat or factions edit keeps a row's existing points and changes only what new kills add, and the next scan applies the new `heat` (a player at or above it becomes due without a new kill); one case in RevengeTests Heat; recorded as an amendment if it changes a promise
