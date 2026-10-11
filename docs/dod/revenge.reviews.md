@@ -63,3 +63,74 @@ VERDICT: REVISE
 - F9 · accepted · D18: a second definition rv-test0 (playerCooldownMinutes 0) enabled after D19 with rv-test disabled; the scenario order is D18, D19, D20, D21; D20 and D21 run on rv-test0; step 2 adds rv-test0 to the dev events.json
 - UF1 · accepted · D9 (the four builders checked together for 480 bytes, no name, no "<")
 - UF2 · accepted · D5 (every ineligibility reason in its fails-when, unusable position added; D6's held-wave fails-when names all six)
+
+## Review 2 · 2026-10-11 · subagent · plan commit d8cdade · plan 80149 B · 27 items · files 0 · e3b0c44298fc · prompt 808d01aab200
+
+**Probes that blocked in Review 1:**
+- **4.5 (Review 1 F1): answered.** Design §9 D46 is now in force. D6 says a Revenge instance's Hunt seeds only its focus player. Its fails-when includes "a non-focus player within Hunt range is among a Revenge instance's hunt targets". Business rule 5 and the "every wave pick" set in Business rule 9 now name `HuntPlan.Targets` (`Logic/Spawning.cs:909`, which today seeds up to 5 of the nearest players). Interfaces 5.2 and Build step 1 name the focus-only Targets. D22 checks that a second player who stands in range without attacking is not hunted.
+- **10.4 (Review 1 F2): answered.** Design §9 D47 records the exception. C4, Business rule 6, Security 10.4, D7 and D9 say the target stays anonymous while the revenge runs, and that the end-of-event scoreboard (D38) is the recorded exception. D7's fails-when covers the alert, the start line and the warnings naming or locating the target.
+
+**Earlier advisories F3–F9 (and UF1, UF2), checked against the text:**
+- Review 1 F3: S-15 now gives api 7, 8 or 9 and says it is read from v0.10.0's `Wire.cs`. Today `Wire.Api` is 6.
+- Review 1 F4: D5 has the `controls` hold reason. It keeps the player due with the heat untouched, and its fails-when covers it.
+- Review 1 F5: section 12.4 says the step 1 planted-fault notes are where the failing cases run.
+- Review 1 F6 and UF1: D9 checks the four builders as one family, for 480 bytes, no name and no "<".
+- Review 1 F7: D3 and 13.2 say "a separate bound with the same constants" (`TriggerLimits` 200 / 2000, `Limits.cs:98-99`), and D3's fails-when covers eviction across the two.
+- Review 1 F8: `recon_commit` is now 8b80ba2, and 13.1 notes that the measurement predates it.
+- Review 1 F9: D18 adds rv-test0, with the order D18, D19, D20, D21.
+- Review 1 UF2: D5 and D6 list all six ineligibility reasons.
+
+**Layers:**
+- L1 · Considered · no finding
+- L2 · Considered · no finding
+- L3 · Considered · no finding
+- L4 · Considered · F2
+- L5 · Considered · F1
+- L6 · Considered · F3
+- L7 · Considered · F4
+- L8 · Considered · no finding
+- L9 · Considered · no finding
+- L10 · Considered · no finding
+- L11 · Considered · no finding
+- L12 · Gap · F5
+- L13 · Considered · no finding
+- L14 · Considered · no finding
+- L15 · Considered · no finding
+
+**Findings:**
+
+**F1 · advisory.** Focus-only Hunt (D6, D46) needs a way to match the focus to a Hunt candidate. `HuntCandidate.Key` is a `long` entity handle (`Spawning.cs:860`), but `ActiveEvent.Focus` is a platform-id string (`PlayerPick.ChooseMany`'s `focus`). No plan item names how the two are joined. This is builder work, and D6's FocusOnly test already fails if the join is wrong.
+Fix: in step 1, have the Hunt tick resolve the focus's platform id to its candidate key. Record it as an amendment if it needs a new `HuntCandidate` field.
+
+**F2 · advisory.** The "every end path" set in Business rule 9 (six paths, D8) does not cover `.nyar event disable`, or an edit that makes the running definition invalid. Neither is said to stop the instance, and if one does, the plan does not say whether it sends the private end line. That depends on what EventRuntime does today. It is not a new policy.
+Fix: in D8, say that a disable that stops a running instance takes the "admin stop" path (line and log), or that it leaves the instance running until its end.
+
+**F3 · advisory.** D10 gives revenge its own failure line ("revenge: kill skipped") and health entry. The heat, however, rides the shared FactionKills read, which already logs "[nyar] faction kills: death skipped" once per `KillFaults` streak (`DeathEventPatch.cs:53,104`). The plan does not say whether one throwing read prints one line or both.
+Fix: in D10, name the streak that owns the shared read's failure (for example, the KillFaults line, plus the revenge health entry only while a Revenge definition is startable).
+
+**F4 · advisory.** The dry-run notes in the Log were run on an isolated copy of e4f0594, while `recon_commit` is now 8b80ba2. Nothing fails, because every one of those checks re-runs at step 1.
+Fix: say in the next Log note that the dry runs predate 8b80ba2, or re-run them there.
+
+**F5 · advisory (L12 Gap on 12.4; no product outcome fails).** As in Review 1, D1–D15 and D17 have not had a real failing run before approval. Section 12.4 states this and schedules the step 1 `note · planted` lines. This is not blocking in either round, so it stands as a stated assumption.
+Fix: none beyond the planned planted-fault notes.
+
+**Scenarios hunted** (all handled or advisory):
+- **Minimal:** the focus logs out during tier 1. The waves are held until the duration ends (D6), and no end line is sent while the player is offline (D8, "when online").
+- **Concurrent:** a FactionKills instance and a Revenge instance focus the same player at once. The plan only forbids two Revenge instances on one player (D5), and nothing promises more.
+- **Unauthorized:** a player runs `event start`. The admin-only refusal applies (D13, Epic D3, AuthSuite in D11).
+
+**Summary:**
+missing components: none
+undeclared families: none
+- Earlier findings: all resolved
+
+14/15 layers · 49/50 probes
+
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · D6 and Build plan step 1: the Hunt tick resolves the focus's platform id (ActiveEvent.Focus) to its HuntCandidate key (Logic/Spawning.cs:860); a new HuntCandidate field the join needs is recorded as an amendment before it is built
+- F2 · accepted · checked against today's code: `.nyar event disable` is an events.json edit and a reload (Logic/AdminFlows.cs Enable → OpEdit), and a reload, valid or invalidating, never stops a running instance, which keeps the definition it started with (Logic/EventCatalog.cs, Logic/Engine.cs:319, foundation D6); D8 now says a disable or an invalidating reload is not an end path: the instance runs on to one of the six paths, with no line or log of its own, and D8's fails-when gains "a disable or an invalidating reload ends a running instance"
+- F3 · accepted · D10: a throw in the shared FactionKills read is owned by the existing KillFaults streak line "[nyar] faction kills: death skipped" (Patches/DeathEventPatch.cs:53,104), so one throwing read prints one line; "revenge: kill skipped" is the heat update's own streak; the "revenge: kill read failing" health entry appears only while a Revenge definition is startable; D10's fails-when gains both
+- F4 · accepted · Log note: the dry runs ran on an isolated copy of e4f0594, predate recon_commit 8b80ba2, and re-run at step 1
+- F5 · accepted · a stated assumption, no change; Failure & observability 12.4 already schedules the step 1 `note · planted` lines
