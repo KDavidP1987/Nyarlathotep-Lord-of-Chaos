@@ -945,7 +945,7 @@ public readonly record struct HuntParts(double SweepMs, double PlayersMs, double
 
 /// <summary>The hunt-phase breakdown line (wave-sets A7): a hunt phase of <see cref="ThresholdMs"/> or more returns
 /// "hunt parts: &lt;t&gt; ms (sweep a, players b, seed c of which buffer d, verbose e, outside parts r; gc net n il2cpp m;
-/// units u, events e)", at most one line per <see cref="Quiet"/>; the next carries the count held back. The threshold is
+/// units u, events e)" (m is "n/a" when the game runtime's count could not be read), at most one line per <see cref="Quiet"/>; the next carries the count held back. The threshold is
 /// below the slow-tick warning's 250 ms because D23's 176.8 ms hunt tick would not have reached it.</summary>
 public sealed class HuntTimingLog
 {
@@ -966,7 +966,7 @@ public sealed class HuntTimingLog
         _last = utcNow;
         var outside = Math.Max(0, huntMs - p.SweepMs - p.PlayersMs - p.SeedMs - p.VerboseMs);
         var line = FormattableString.Invariant(
-            $"hunt parts: {huntMs:0.0} ms (sweep {p.SweepMs:0.0}, players {p.PlayersMs:0.0}, seed {p.SeedMs:0.0} of which buffer {p.BufferMs:0.0}, verbose {p.VerboseMs:0.0}, outside parts {outside:0.0}; gc net {p.NetGcs} il2cpp {p.Il2CppGcs}; units {p.Units}, events {p.Events})");
+            $"hunt parts: {huntMs:0.0} ms (sweep {p.SweepMs:0.0}, players {p.PlayersMs:0.0}, seed {p.SeedMs:0.0} of which buffer {p.BufferMs:0.0}, verbose {p.VerboseMs:0.0}, outside parts {outside:0.0}; gc net {p.NetGcs} il2cpp {(p.Il2CppGcs < 0 ? "n/a" : p.Il2CppGcs.ToString(System.Globalization.CultureInfo.InvariantCulture))}; units {p.Units}, events {p.Events})");
         if (_held > 0) line += $"; {_held} more since the last line";
         _held = 0;
         return line;

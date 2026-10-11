@@ -61,7 +61,8 @@ internal static class EventScheduler
         try
         {
             // wave-sets A7: a hunt phase of 20 ms or more names its parts
-            if (HuntAction.TakeParts() is { } parts && _hunt.Add(_phases[^1].Ms, parts, now) is { } huntLine) Core.Log.LogInfo($"[nyar] {huntLine}");
+            if (HuntAction.TakeParts() is { } parts && _hunt.Add(_phases.Find(p => p.Phase == "hunt").Ms, parts, now) is { } huntLine)
+                Core.Log.LogInfo($"[nyar] {huntLine}");                     // by name, whatever phase comes after it (review F2)
         }
         catch { /* a diagnostic never breaks the tick */ }
         Phase("announcements", () => Announcer.Tick(now));

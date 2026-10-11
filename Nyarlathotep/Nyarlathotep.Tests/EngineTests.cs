@@ -492,6 +492,10 @@ public partial class EngineTests
     }
 
     [Fact]
+    public void HuntParts_fails_when_an_unreadable_count_reads_as_zero() =>
+        Assert.Contains("gc net 0 il2cpp n/a;", new HuntTimingLog().Add(30, Parts with { Il2CppGcs = -1 }, T0));
+
+    [Fact]
     public void HuntParts_passes_phases_under_20ms()
     {
         var h = new HuntTimingLog();
