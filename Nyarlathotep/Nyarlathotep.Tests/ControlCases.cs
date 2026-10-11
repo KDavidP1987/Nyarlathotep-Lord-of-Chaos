@@ -470,7 +470,7 @@ public static class ControlCases
         T("D4", "Schedule", "WaveSetTests", ["an_earlier_instance_unit_holds_a_wave", "a_cleared_wave_reports_twice_or_unfought", "a_blocked_wave_releases_its_successor", "a_wave_due_at_the_end_spawns", "the_units_form_changes"],
             ["the_earlier_of_after_and_cleared", "a_cleared_only_wave_only_after_the_clear", "an_after_only_wave_without_the_clear",
              "a_skipped_wave_cleared_at_its_decision"], ["no_wave_left"]) with { Plan = WaveSets },
-        T("D5", "WaveCleared", "SpawnLedgerTests", ["an_earlier_instance_unit_counts", "a_pending_order_or_a_live_unit_remains", "another_event_or_wave_counts", "an_undecided_wave_reads_cleared"],
+        T("D5", "WaveCleared", "SpawnLedgerTests", ["an_earlier_instance_unit_counts", "a_pending_order_or_a_live_unit_remains", "a_failed_destroy_reads_cleared", "another_event_or_wave_counts", "an_undecided_wave_reads_cleared"],
             ["every_removal_path"], ["no_order_ever"]) with { Plan = WaveSets },
         T("D6", "Readers", "WaveSetTests", ["the_units_form_changes", "a_planted_reader_is_added"],
             ["the_warning_time_of_each_waveList_wave", "only_the_schedule_reading_intervalSeconds"], ["scan_of_no_files"]) with { Plan = WaveSets },

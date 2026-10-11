@@ -36,6 +36,27 @@ public partial class SpawnLedgerTests
     }
 
     [Fact]
+    public void WaveCleared_fails_when_a_failed_destroy_reads_cleared()
+    {
+        var l = Ledger();
+        AskWave(l, "ws", 1, 1);
+        var key = SpawnAll(l).Single();
+        Assert.True(l.QueueDespawn(key));
+        Assert.Equal([key], l.TakeDespawns());
+        Assert.True(l.RetryDespawn(key));                                        // its destroy failed: it lives
+        Assert.False(l.WaveCleared("ws", 1, Now));
+        Assert.Equal(new OurUnit("ws", 1, Now), l.EventOf(key));
+        Assert.Equal(1, l.Occupied);                                             // one slot, not two
+        Assert.Equal([key], l.TakeDespawns());                                   // the retry
+        Assert.True(l.WaveCleared("ws", 1, Now));                                // destroyed this time
+        Assert.True(l.QueueDespawn(99));                                         // a survivor stays one
+        Assert.Equal([99L], l.TakeDespawns());
+        Assert.True(l.RetryDespawn(99));
+        Assert.Null(l.EventOf(99));
+        Assert.Equal(1, l.Occupied);
+    }
+
+    [Fact]
     public void WaveCleared_passes_every_removal_path()
     {
         // despawn through the budget

@@ -71,6 +71,9 @@ public sealed class SpawnLedger(LedgerLimits limits)
     readonly Queue<long> _despawnQueue = new();
     readonly HashSet<long> _queued = [];
     readonly HashSet<long> _survivors = [];
+    /// <summary>The tracked records of the last <see cref="TakeDespawns"/> batch, so <see cref="RetryDespawn"/> can put a
+    /// unit whose destroy failed back with its event and wave (step 3 Codex F1).</summary>
+    readonly Dictionary<long, TrackedUnit> _taken = [];
     long _nextTicket;
 
     public LedgerLimits Limits => limits;
@@ -170,15 +173,25 @@ public sealed class SpawnLedger(LedgerLimits limits)
     public IReadOnlyList<long> TakeDespawns()
     {
         var batch = new List<long>();
+        _taken.Clear();
         while (batch.Count < limits.DespawnsPerTick && _despawnQueue.Count > 0)
         {
             var key = _despawnQueue.Dequeue();
             _queued.Remove(key);
-            _tracked.Remove(key);
+            if (_tracked.Remove(key, out var unit)) _taken[key] = unit;
             _survivors.Remove(key);
             batch.Add(key);
         }
         return batch;
+    }
+
+    /// <summary>A unit of the last <see cref="TakeDespawns"/> batch whose destroy failed: back in the queue for a later
+    /// tick, holding its MaxTrackedUnits slot, and still tracked with its event and wave when it was, so its wave does not
+    /// read cleared while it lives (wave-sets D5; step 3 Codex F1). A survivor goes back as a survivor.</summary>
+    public bool RetryDespawn(long key)
+    {
+        if (_taken.Remove(key, out var unit)) _tracked[key] = unit;
+        return QueueDespawn(key);
     }
 
     /// <summary>A tracked unit or queued survivor the game removed (died, expired, disabled): it leaves the ledger and

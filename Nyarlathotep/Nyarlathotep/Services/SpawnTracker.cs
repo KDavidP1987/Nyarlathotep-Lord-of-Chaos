@@ -292,7 +292,7 @@ internal static class SpawnTracker
             else
             {
                 // Still alive: back in the queue for a later tick, holding its MaxTrackedUnits slot, never dropped.
-                _ledger.QueueDespawn(key);
+                _ledger.RetryDespawn(key);                                            // keeps its event and wave
                 retried++;
             }
         }
