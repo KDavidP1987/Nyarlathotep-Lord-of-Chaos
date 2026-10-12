@@ -273,6 +273,11 @@ public sealed class WalkBudget(int perTick = WalkBudget.PerTick)
     public const int PerTick = 2500;
     readonly int _perTick = perTick;
     int _left = perTick;
+    readonly WalkBudget? _parent;
+
+    /// <summary>A budget of <paramref name="perTick"/> calls that also takes each call from <paramref name="parent"/>
+    /// (hunting-grounds A3: the hunt's 200 a check inside the tick's 2,500).</summary>
+    public WalkBudget(int perTick, WalkBudget parent) : this(perTick) => _parent = parent;
 
     public int Left => _left;
     public void Reset() => _left = _perTick;
@@ -281,6 +286,7 @@ public sealed class WalkBudget(int perTick = WalkBudget.PerTick)
     public bool TryTake(int calls)
     {
         if (_left < calls) return false;
+        if (_parent is not null && !_parent.TryTake(calls)) return false;
         _left -= calls;
         return true;
     }

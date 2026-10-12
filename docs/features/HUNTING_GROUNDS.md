@@ -1,7 +1,8 @@
 # Hunting grounds — wave events bound to map regions
 
-**Status:** in progress for 0.11.0 (docs/dod/hunting-grounds.md, audit docs/audits/hunting-grounds.md). Step 1, the
-mover spike, passed with hidden jumps (Test results › Spike); step 2, the logic, is next.
+**Status:** in progress for 0.11.0 (docs/dod/hunting-grounds.md, audit docs/audits/hunting-grounds.md). Steps 1-3 are
+built: the mover spike passed with hidden jumps, and the logic and services passed their Session 2 scenarios (Test
+results). The owner's live checks (D26, D27) and the release (step 4) are next.
 
 ## Goal
 
@@ -33,8 +34,8 @@ and the hunt. No log line names or locates a player.
 ## Open questions
 
 - A target behind a concave border (or across two scope regions) can leave a group waiting, because every landing on
-  the straight line must be inside a scope region (Review 1 F5). If a session sees a stuck group, a sidestep landing
-  becomes an amendment.
+  the straight line must be inside a scope region (Review 1 F5). Session 2 saw no group stuck at a border; the units
+  that waited stood above or beside ground a step cannot reach (A1 hillsides, A2 a ravine), both now handled.
 - Real pathing for apocalypse hordes in busy areas, where hidden jumps cannot happen, is studied at apocalypse's start
   (design §9 D50).
 
@@ -85,3 +86,37 @@ and asked `.nyar region here` at each point:
   -1300), 300 m apart inside Farbane; hg-far (-1680, -1080) in Dunley.
 - Log check: "0 unhandled, 68 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons". The warnings were only
   the known three; NyarDev.log had only the 226 missing-prefab lines.
+
+### Session 2 · 2026-10-12 · the step 3 build
+
+The plan's D-items call this run "Session 1"; this child's Session 1 was the border scan above. The step 3 Release DLL
+ran with NyarDevTools and DevChatEcho, wrapped by `dev-snapshot -Save hg2`. The dev events.json held hg-roam, hg-lock
+(Point -1680, -1215), hg-ambush, hg-point and hg-timing, all scoped to FarbaneWoods, and `[Debug] VerboseLogging = true`.
+hg-point first stood at (-1680, -1600), with Chaos at (-1680, -1300). Native bandits there killed the arriving units, so
+hg-point moved to the pond (-1880, -1640) and Chaos to hg-b (-1580, -1640), the spike's line.
+
+| Item | Scenario | Result |
+|---|---|---|
+| D21 roam | `hunting-grounds.vrs` | **PASS 8/8** (`hunting-grounds-20261012-105140.json`). Wave 1 had 2 groups at (-1757.8, -1554.5) and (-1388.7, -1510.7), about 370 m apart. Wave 2 had 2 groups at (-1237.2, -1804.5) and (-998.1, -1853), about 244 m apart. All spots were at h 10-11. A visit run (session scratchpad, PASS 15/15) found each spot in FarbaneWoods with its group listed by `debug here 15`. |
+| D22 lock | `hunting-grounds-lock.vrs` | **PASS 19/19** (`-105922`). "region lock hg-lock: returned 6, farthest 77 m out"; the 6 were back at hg-in, in FarbaneWoods. |
+| D23 ambush | `hunting-grounds-ambush.vrs` | **PASS 12/12** (`-110124`). At the pond (inside): "around a player: 4 units queued". From DunleyFarmlands: "wave 1 of hg-ambush skipped: no eligible player". |
+| D24 hunt | `hunting-grounds-hunt.vrs` | First run 15/17: two arrivals were killed by bandits at the old hg-b, so the line moved. **PASS 17/17** on the new line (`-113113`): jumps 267 → 239 → … → 55 m, "no tracked units within 49 m" right after the final jump, the 6 listed within 60 m, and no jump after Chaos crossed into Dunley. Rerun on the A1 build: **PASS 17/17** (`-121504`). |
+| D25 ends | `hunting-grounds-ends.vrs` | **PASS 18/18** (`-113622`). Stop and pillar-off each left 0 tracked, with no region line after the end. Restart: "event hg-point cancelled by restart …" and "boot marker sweep: 6 found, 6 queued for despawn". Purge: at the end of the timing run, "purge: 1 events ended, 20 units queued", then 0 tracked and no region line. |
+| D28 tick | `hunting-grounds-timing.vrs` | First run 11/12: the scenario expected 12 units in wave 2, but one of its three groups found no spot and was skipped, as D4 says. The expectation was fixed. On the A1 build: **PASS 12/12** (`-124725`); `preflight -TimingSpan … -Windows 10 -MinTracked 10`: "timing span: 10/10 windows under 5 ms, tracked >= 10, targets >= 1, 0 slow ticks" (windows averaged about 0.4 ms). |
+
+What the runs found, each fixed and amended before release:
+
+- **Hillsides (A1).** In the first timing run, 12 of 24 units waited the whole event. A verbose diagnostic listed every
+  landing "not walkable", with the units at h 13, y 15, over ground two or three levels down. A jump now also tries two
+  and three levels from the unit, and a unit that found no landing plans last, so it cannot spend the walk budget of
+  units that can jump. Afterwards, 4 of 24 still waited.
+- **A ravine (A2).** The units still waiting stood at the rim of a ravine east of the pond, about 35-45 m wide and 15 m
+  deep: y 0 at x -1493, -14 at -1515 and 0 again at -1540 (z -1675), with cliff walls. "region walk: 683 checks, 647 not
+  grounded, 22 not free". A jump now tries 35, 45 and 55 m crossings, but only after every landing of 25 m or less
+  failed, and never ending within 100 m of the target. A 150 s rerun took the waiting units from 7-10 down to 0-4, and
+  units in reach up to 17.
+- **The hand-over.** After the final jump the units stood about 53 m from Chaos. They were seeded within one hunt
+  interval ("hunt targets: 1"), went into Combat, then into Return. Chaos is invulnerable, so the real fight with a
+  vulnerable player is D26's.
+- **Log checks.** Every boot: 0 unhandled, 0 orphan errors, 0 unity errors, regions 10 polygons. The only warnings were
+  the known three, plus the stop and purge lines. NyarDev.log had only the 226 missing-prefab lines.

@@ -39,7 +39,7 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        new(HuntingGrounds, "D28", 3, "0.11.0"), new(HuntingGrounds, "D29", 4, "0.11.0"), new(HuntingGrounds, "D30", 4, "0.11.0"),
+        new(HuntingGrounds, "D29", 4, "0.11.0"), new(HuntingGrounds, "D30", 4, "0.11.0"),
         new(HuntingGrounds, "D31", 4, "0.11.0"), new(HuntingGrounds, "D32", 4, "0.11.0"),
     ];
 
@@ -609,7 +609,8 @@ public static class ControlCases
             ["no_player_inside"]) with { Plan = HuntingGrounds },
         T("D8", "Jumps", "HuntingGroundsTests", ["a_player_at_99_m_is_ignored", "a_free_unit_does_not_jump", "a_step_passes_25_m", "a_final_lands_outside_50_60_m",
             "a_landing_breaks_a_rule", "more_than_20_jump", "another_units_move", "the_line_names_or_locates",
-            "a_hillside_unit_waits", "a_stuck_unit_spends_the_budget", "a_capped_unit_is_marked_stuck", "a_ravine_strands_a_unit"], ["closing_in_unseen", "wait_tally_names_each_reason"], ["no_target"])
+            "a_hillside_unit_waits", "a_stuck_unit_spends_the_budget", "a_capped_unit_is_marked_stuck", "a_ravine_strands_a_unit",
+            "a_stuck_unit_does_not_rejoin", "a_check_passes_the_walk_cap"], ["closing_in_unseen", "wait_tally_names_each_reason"], ["no_target"])
             with { Plan = HuntingGrounds },
         T("D10", "Ambush", "HuntingGroundsTests", ["a_player_outside_is_picked", "no_player_inside_spawns_a_unit"], ["a_player_inside"], ["no_player"])
             with { Plan = HuntingGrounds },
@@ -637,5 +638,9 @@ public static class ControlCases
         C("D18", "DependencySuite", "preflight -DependencySuite hunting-grounds",
             ["selftest DependencySuite/bad", "selftest DependencySuite/bad-2", "selftest DependencySuite/bad-floor-spawns"], ["selftest DependencySuite/good"],
             ["selftest DependencySuite/empty"]) with { Plan = HuntingGrounds },
+        C("D28", "TimingSpan", "preflight -TimingSpan -Windows 10 -MinTracked 10 › Test-CheckTimingSpan",
+            ["tools/preflight-fixtures/TimingSpan/bad-avg", "tools/preflight-fixtures/TimingSpan/bad-slow", "tools/preflight-fixtures/TimingSpan/bad-tracked",
+             "tools/preflight-fixtures/TimingSpan/bad-notarget"],
+            ["tools/preflight-fixtures/TimingSpan/good"], ["tools/preflight-fixtures/TimingSpan/empty"]) with { Plan = HuntingGrounds },
     ];
 }

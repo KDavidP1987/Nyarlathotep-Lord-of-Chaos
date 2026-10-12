@@ -814,6 +814,64 @@ public class HuntingGroundsTests
     }
 
     [Fact]
+    public void Jumps_fails_when_a_stuck_unit_does_not_rejoin()
+    {
+        var a = Hunting();
+        var w = new World { Walk = (x, _, _) => x > 400 };
+        w.Add(1, 100, 100);                                                           // no landing near x 100, ever
+        w.Add(2, 600, 100);                                                           // nearer (500, 900) and free
+        w.People.Add(Player(9, 500, 900));
+        var phase = new HuntPhase();
+        for (var check = 1; check <= 2; check++)
+        {
+            var c = Assert.Single(phase.Tick([a], w, _ => { }, _ => { }));
+            Assert.DoesNotContain(c.Jumps, j => j.Key == 1);                          // one or two checks stuck: waits
+        }
+        var third = Assert.Single(phase.Tick([a], w, _ => { }, _ => { }));
+        var landed = Assert.Single(third.Jumps, j => j.Key == 2);
+        var rejoin = Assert.Single(third.Jumps, j => j.Key == 1);                    // A3: the third check rejoins unit 2
+        Assert.InRange(HuntingGrounds.Distance(rejoin.X, rejoin.Z, landed.X, landed.Z), 2.99f, 3.01f);
+        Assert.Equal(1, phase.AllRecords);                                            // the group's target; the streak is gone
+
+        var far = new World { Walk = (x, _, _) => x > 400 };                          // the only free unit is farther from the target
+        far.Add(1, 100, 100);
+        far.Add(2, 600, 100);
+        far.People.Add(Player(9, 100, 900));
+        var farPhase = new HuntPhase();
+        for (var check = 1; check <= 4; check++)
+            Assert.DoesNotContain(Assert.Single(farPhase.Tick([a], far, _ => { }, _ => { })).Jumps, j => j.Key == 1);
+
+        var anchors = new List<(float X, float Z, byte Level)> { (500, 300, 10) };
+        var stuck = Unit(500, 100);
+        var watched = JumpRule.Rejoin(stuck, (500, 800), anchors, [Player(1, 500, 800), Player(2, 560, 120)], (_, _) => true,
+            (_, _, _) => true, Height, new WalkBudget());
+        Assert.Null(watched);                                                         // a player within 100 m of the stuck unit
+        var crowded = JumpRule.Rejoin(stuck, (500, 800), anchors, [Player(1, 500, 800), Player(2, 500, 340)], (_, _) => true,
+            (_, _, _) => true, Height, new WalkBudget());
+        Assert.Null(crowded);                                                         // every landing within 50 m of a player
+        var ok = JumpRule.Rejoin(stuck, (500, 800), anchors, [Player(1, 500, 800)], (_, _) => true, (_, _, _) => true, Height, new WalkBudget());
+        Assert.Equal(503f, ok!.Value.X, 3);
+        Assert.Equal(300f, ok.Value.Z, 3);
+    }
+
+    [Fact]
+    public void Jumps_fails_when_a_check_passes_the_walk_cap()
+    {
+        var a = Hunting("a");
+        var b = Hunting("b");
+        var w = new World { Walk = (_, _, _) => false };                              // nothing lands: every plan spends its all
+        for (var i = 0; i < 15; i++) w.Add(i, 100 + 20 * i, 100, eventId: "a");
+        for (var i = 0; i < 15; i++) w.Add(100 + i, 100 + 20 * i, 120, eventId: "b");
+        w.People.Add(Player(1, 500, 900));
+        new HuntPhase().Tick([a, b], w, _ => { }, _ => { });
+        Assert.Equal(HuntingGrounds.WalkCap, 1_000_000 - w.Budget.Left);             // A3: 200 across both events, no more
+        var shared = new WalkBudget(50);
+        var capped = new WalkBudget(HuntingGrounds.WalkCap, shared);
+        Assert.False(capped.TryTake(52));                                             // the tick's shared budget still binds
+        Assert.Equal(HuntingGrounds.WalkCap, capped.Left);
+    }
+
+    [Fact]
     public void Jumps_fails_when_a_capped_unit_is_marked_stuck()
     {
         var a = Hunting();
