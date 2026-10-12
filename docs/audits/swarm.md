@@ -15,3 +15,16 @@ Rollback base: v0.9.0.
 - dod status: swarm 0/25 verified (just started); `dod-index.mjs --check swarm` → problems 0, warnings 1 (prose: MaxConcurrentEvents named in Use cases without an item, an existing cap this child does not change)
 - feature doc read: docs/features/SWARM.md is created by this step; docs/features/WAVE_SETS.md read for the wave list, the clear, the victory and the scoreboard this child extends
 - in-game baseline: not needed (step 1 has no in-game part; Session 1 is step 2)
+
+## Post-audit
+### Step 1 · 2026-10-11 · 2309b9b
+- built (9e62092, one builder subagent; the orchestrator reviewed, tested and committed): Model's Arena, WinnerRule and Growth as trailing optional parameters; ParseSpawnWaves's three keys and the D1, D2, D24 reasons as constants; Logic/Growth.cs Generate (D25); Logic/Arena.cs, the pure containment rule (D3); Scoreboard's winner over every row (D5); ScoreboardLines' winner line (D6) and ScoreboardRule.LogLine's suffix (D7); the six `event set` fields, their refusals and the info lines (D9, D10); design §6 rows; the contract's D12 sentence; ControlCases rows and Pending entries; csproj copies; preflight-checks childDocs, dataTables, snapshotSessions; data-inventory rows; paths-manifest `temp: nyar-sw*-logs`
+- found while building: CommandArgTests.Library.cs missing from Paths walked (added); Review 2 F1 decided as a refusal at set time and F4 built as the deferred note says; ScoreboardRule.End reads the instance's own definition; all logged as notes in the plan (they change no item)
+- compile: Release (--no-incremental) and Debug 0 Warning(s), 0 Error(s); tests: 2744 passed (2621 before the step)
+- preflight: PREFLIGHT OK, "secrets: none (1897 files scanned, 1855 index blobs)"; -AuthSuite → "auth suite: pass (tests, commands, admin list, gateway, entity writes, vcf)"
+- planted faults: 24 planted, 24 CAUGHT (the builder's 23: D1, D2, D3 ×3, D5 ×2, D6 ×2, D7 ×2, D8, D9 ×2, D10 ×2, D12, D14, D24 ×2, D25 ×3; the orchestrator's one for review F1: Apply comparing only the first conflict); each file backed up to the scratchpad and restored by copy, rebuilt, suite green after
+- /code-review (fresh subagent, read-only, on f80e02f..9e62092): VERDICT READY, 0 blocker, 0 major; F1/F2 minor (Apply compared only the first conflict, so a fix could be refused and a new conflict could pass) → fixed in 2309b9b (EventsEditor.SwarmConflicts, the set; CommandArgTests Swarm_fails_when_an_old_conflict_blocks_a_fix_or_hides_a_new_one, planted fault caught); F3 advisory (a vacuous made-up-leak assertion) → replaced by the mark sweep over every line; F4 advisory (no long accepted reply to measure) → documented on the test
+- Codex verdict: deferred to step 3 (the child's single cross-inspection, design §9 D34)
+- in-game: none in step 1 (Session 1 is step 2)
+- dod status: D1, D2, D5, D6, D8, D9, D10, D12, D14, D24, D25 pass at 2309b9b and are checked; D3 and D7 wait for step 2's arena phase and end-path wiring, which use the tested logic
+- privacy grep (7656119, kdpenland): none in the step 1 diffs
