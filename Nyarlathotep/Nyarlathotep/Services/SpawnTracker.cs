@@ -379,6 +379,10 @@ internal static class SpawnTracker
         public void Return(ArenaReturn r, (float X, float Z) centre, int arenaRadius, (float X, float Y, float Z)? anchor)
         {
             if (!_entities.TryGetValue(r.Key, out var unit) || !unit.Exists()) return;
+            // Targets first (Codex step 3 F3): a throw here leaves the unit outside, so the next check retries the whole
+            // return instead of leaving a moved unit still set on a player outside.
+            // Every entry on a player outside the arena goes, whatever the current target (code review F1); entries inside stay.
+            DropTargets(r.Key, unit, centre, arenaRadius);
             var to = new float3(r.X, r.Y, r.Z);
             unit.Write(new Translation { Value = to });
             if (unit.Has<LastTranslation>()) unit.Write(new LastTranslation { Value = to });
@@ -389,15 +393,14 @@ internal static class SpawnTracker
                 aggro.PreCombatPosition = to;
                 unit.Write(aggro);
             }
-            // Every entry on someone outside the arena goes, whatever the current target (code review F1); entries inside stay.
-            DropTargets(r.Key, unit, centre, arenaRadius);
             // The game snaps the unit to a terrain level near the anchor's height; one on another level is moved to the
             // anchor by the existing regroup check (A23). A Point stored without a height has no anchor and no regroup.
             if (anchor is { } a) _regroup.Add((r.Key, a, 0));
         }
 
-        /// <summary>Removes the returned unit's AggroBuffer entries on anyone outside the arena (or unreadable), so it does
-        /// not walk straight back out; entries on someone inside stay. A removed entry HuntAction seeded leaves its seed
+        /// <summary>Removes the returned unit's AggroBuffer entries on players outside the arena, so it does not walk
+        /// straight back out (swarm D3); entries on players inside, on NPCs and on unreadable entities stay, for the game
+        /// to keep or clear (Codex step 3 F2). A removed entry HuntAction seeded leaves its seed
         /// record too, keeping the record consistent with the buffer (HuntSeeds.Removed). Our own unit only.</summary>
         static void DropTargets(long key, Entity unit, (float X, float Z) centre, int arenaRadius)
         {
@@ -406,7 +409,8 @@ internal static class SpawnTracker
             for (var i = buffer.Length - 1; i >= 0; i--)
             {
                 var e = buffer[i].Entity;
-                (float X, float Z)? at = e.Exists() && e.TryGetComponent<Translation>(out var t) ? (t.Value.x, t.Value.z) : null;
+                if (!e.Exists() || !e.Has<PlayerCharacter>() || !e.TryGetComponent<Translation>(out var t)) continue;
+                (float X, float Z)? at = (t.Value.x, t.Value.z);
                 if (!Arena.DropsEntry(centre, arenaRadius, at)) continue;
                 buffer.RemoveAt(i);
                 HuntAction.Seeds.Removed(key, KeyOf(e));
