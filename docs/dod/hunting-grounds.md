@@ -5,7 +5,7 @@ profile: full
 id: dod-20261012-hgr1
 slug: hunting-grounds
 title: Hunting grounds — region-bound spawns, a region lock and a region hunt by hidden jumps
-status: ready
+status: in-progress
 size: L
 parent: nyarlathotep
 kind: feature
@@ -388,3 +388,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-12 · note · deferred · Review 1 F4 · the region hunt log line carries a counts-only "landed <d> m" value that D24's scenario reads, in place of a late `debug here 49`
 - 2026-10-12 · note · deferred · Review 1 F5 · a target behind a concave border can leave a group waiting; an Open question in docs/features/HUNTING_GROUNDS.md, and a sidestep landing is an amendment if a session sees it
 - 2026-10-12 · status → ready · approve
+- 2026-10-12 · status → in-progress · start
+- 2026-10-12 · note · method · the mover's jump writes Translation, LastTranslation, PreCombatPosition and SpawnTransform.Position and empties PathBuffer and Velocity; moving Translation alone sends units home, and without clearing the path they keep walking it (Session 0, runs 1-4 in docs/features/HUNTING_GROUNDS.md › Spike); the landing height comes from the walk check (transient negative y seen mid-run)
+- 2026-10-12 · note · method · D20's spike used `.devjump` (25 m toward a mark, path cleared) beside the plan's `.devhop`; `.devhop` runs 1-2 are recorded as the reason
+- 2026-10-12 · note · D20 · ready for the owner's acceptance: hunting-grounds-jump.vrs SCENARIO PASS 35/35 (CLEARPATH=true), alive 12/12, within 15 m 12/12, heights 11/12, debug here 60 12/12, no errors, "mover verdict: go — hidden jumps" (docs/features/HUNTING_GROUNDS.md › Test results › Spike)

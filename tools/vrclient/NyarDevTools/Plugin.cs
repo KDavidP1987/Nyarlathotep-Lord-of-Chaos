@@ -4,6 +4,7 @@ using BepInEx;
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP;
 using ProjectM;
+using ProjectM.Behaviours;
 using ProjectM.Network;
 using Stunlock.Core;
 using Unity.Collections;
@@ -25,6 +26,19 @@ namespace NyarDevTools;
 //                          The prefab is required: an open query also killed castle and world units (Session 1).
 //   .devdie <prefabGuid> [radius]  the sender is killed by the nearest living unit of that prefab within radius, so a
 //                          kill feed reads that unit as the killer; log [DEV DIE] found=<0|1> distance=<m>
+//   .devhop <prefabGuid> <dx> <dz> [radius] [mark] [home]  move the living units of that prefab within radius (default 30) of
+//                          the sender, or of the named mark, by dx and dz (Translation, LastTranslation, PreCombatPosition;
+//                          height kept for the game to snap; home true also moves SpawnTransform.Position, the spot an
+//                          idle unit walks back to); with a mark, the mark moves along so the next hop follows
+//                          the units while the sender stays away (hunting-grounds D20, Review 1 F1); log [DEV HOP] moved=<n>
+//   .devjump <prefabGuid> <targetMark> [step] [stopAt] [radius] [clearPath]  every living unit of that prefab within radius (default
+//                          400) of the target mark jumps step metres (default 25) straight toward it, never closer than
+//                          stopAt (default 55); Translation, LastTranslation, PreCombatPosition and SpawnTransform (clearPath true also
+//                          empties the unit's PathBuffer and zeroes its Velocity); log
+//                          [DEV JUMP] jumped=<n> arrived=<k> (arrived: within stopAt + 5 m) farthest=<m>
+//   .devunits <prefabGuid> [radius] [mark]  log each living unit of that prefab within radius (default 60) of the sender
+//                          or the mark: [DEV UNIT] x y z state=<BehaviourTreeState> target=<0|1> pre=<PreCombatPosition>
+//                          home=<SpawnTransform.Position>
 // Positions are logged on purpose: this plugin runs only on the local dev server and is never shipped.
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 [BepInDependency("gg.deca.VampireCommandFramework")]
@@ -37,7 +51,7 @@ public class Plugin : BasePlugin
         if (Application.productName != "VRisingServer") return;
         Logger = Log;
         CommandRegistry.RegisterAll();
-        Log.LogInfo("NyarDevTools loaded: .devwhere .devtp .devmark .devgo .devmarks .devkill .devdie");
+        Log.LogInfo("NyarDevTools loaded: .devwhere .devtp .devmark .devgo .devmarks .devkill .devdie .devhop .devjump .devunits");
     }
 
     public override bool Unload() { CommandRegistry.UnregisterAssembly(); return true; }
@@ -181,5 +195,147 @@ static class DevCommands
         finally { units.Dispose(); query.Dispose(); }
         Plugin.Logger.LogInfo($"[DEV KILL] n={n} prefab={prefab} radius={F(radius)}");
         ctx.Reply($"devkill n={n}");
+    }
+
+    [Command("devhop", adminOnly: true)]
+    public static void DevHop(ChatCommandContext ctx, int prefab, float dx, float dz, float radius = 30f, string mark = "", bool home = false)
+    {
+        float3 from;
+        Dictionary<string, float[]> marks = null;
+        if (mark.Length > 0)
+        {
+            marks = LoadMarks();
+            if (!marks.TryGetValue(mark, out var m) || m.Length != 3) { ctx.Reply($"devhop: no mark {mark}"); return; }
+            from = new float3(m[0], m[1], m[2]);
+        }
+        else
+        {
+            var p = Where(ctx);
+            if (p is null) { ctx.Reply("devhop: no position"); return; }
+            from = p.Value;
+        }
+        var em = Em;
+        var query = LivingUnits(em);
+        var units = query.ToEntityArray(Allocator.Temp);
+        var n = 0;
+        try
+        {
+            foreach (var u in units)
+            {
+                if (em.GetComponentData<PrefabGUID>(u).GuidHash != prefab || em.GetComponentData<Health>(u).IsDead) continue;
+                var at = em.GetComponentData<Translation>(u).Value;
+                if (math.distance(at.xz, from.xz) > radius) continue;
+                var to = new float3(at.x + dx, at.y, at.z + dz);
+                em.SetComponentData(u, new Translation { Value = to });
+                if (em.HasComponent<LastTranslation>(u)) em.SetComponentData(u, new LastTranslation { Value = to });
+                if (em.HasComponent<AggroConsumer>(u))
+                {
+                    var a = em.GetComponentData<AggroConsumer>(u);
+                    a.PreCombatPosition = to;
+                    em.SetComponentData(u, a);
+                }
+                if (home && em.HasComponent<SpawnTransform>(u))
+                {
+                    var st = em.GetComponentData<SpawnTransform>(u);
+                    st.Position = to;
+                    em.SetComponentData(u, st);
+                }
+                n++;
+            }
+        }
+        finally { units.Dispose(); query.Dispose(); }
+        if (marks is not null)
+        {
+            marks[mark] = new[] { from.x + dx, from.y, from.z + dz };
+            File.WriteAllText(MarksPath, JsonSerializer.Serialize(marks, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        Plugin.Logger.LogInfo($"[DEV HOP] moved={n} prefab={prefab} dx={F(dx)} dz={F(dz)} from={(mark.Length > 0 ? mark : "sender")} x={F(from.x + dx)} z={F(from.z + dz)}");
+        ctx.Reply($"devhop moved={n}");
+    }
+
+    [Command("devunits", adminOnly: true)]
+    public static void DevUnits(ChatCommandContext ctx, int prefab, float radius = 60f, string mark = "")
+    {
+        float3 from;
+        if (mark.Length > 0)
+        {
+            if (!LoadMarks().TryGetValue(mark, out var m) || m.Length != 3) { ctx.Reply($"devunits: no mark {mark}"); return; }
+            from = new float3(m[0], m[1], m[2]);
+        }
+        else
+        {
+            var p = Where(ctx);
+            if (p is null) { ctx.Reply("devunits: no position"); return; }
+            from = p.Value;
+        }
+        var em = Em;
+        var query = LivingUnits(em);
+        var units = query.ToEntityArray(Allocator.Temp);
+        var n = 0;
+        try
+        {
+            foreach (var u in units)
+            {
+                if (em.GetComponentData<PrefabGUID>(u).GuidHash != prefab || em.GetComponentData<Health>(u).IsDead) continue;
+                var at = em.GetComponentData<Translation>(u).Value;
+                if (math.distance(at.xz, from.xz) > radius) continue;
+                var state = em.HasComponent<BehaviourTreeState>(u) ? em.GetComponentData<BehaviourTreeState>(u).Value.ToString() : "-";
+                var target = 0;
+                var pre = "-";
+                if (em.HasComponent<AggroConsumer>(u))
+                {
+                    var a = em.GetComponentData<AggroConsumer>(u);
+                    target = a.AggroTarget._Entity != Entity.Null ? 1 : 0;
+                    pre = $"{F(a.PreCombatPosition.x)},{F(a.PreCombatPosition.z)}";
+                }
+                var home = "-";
+                if (em.HasComponent<SpawnTransform>(u)) { var st = em.GetComponentData<SpawnTransform>(u).Position; home = $"{F(st.x)},{F(st.z)}"; }
+                Plugin.Logger.LogInfo($"[DEV UNIT] {n} x={F(at.x)} y={F(at.y)} z={F(at.z)} state={state} target={target} pre={pre} home={home}");
+                n++;
+            }
+        }
+        finally { units.Dispose(); query.Dispose(); }
+        Plugin.Logger.LogInfo($"[DEV UNITS] n={n} prefab={prefab} radius={F(radius)}");
+        ctx.Reply($"devunits n={n}");
+    }
+
+    [Command("devjump", adminOnly: true)]
+    public static void DevJump(ChatCommandContext ctx, int prefab, string targetMark, float step = 25f, float stopAt = 55f, float radius = 400f, bool clearPath = false)
+    {
+        if (!LoadMarks().TryGetValue(targetMark, out var m) || m.Length != 3) { ctx.Reply($"devjump: no mark {targetMark}"); return; }
+        var target = new float3(m[0], m[1], m[2]);
+        var em = Em;
+        var query = LivingUnits(em);
+        var units = query.ToEntityArray(Allocator.Temp);
+        int jumped = 0, arrived = 0;
+        var farthest = 0f;
+        try
+        {
+            foreach (var u in units)
+            {
+                if (em.GetComponentData<PrefabGUID>(u).GuidHash != prefab || em.GetComponentData<Health>(u).IsDead) continue;
+                var at = em.GetComponentData<Translation>(u).Value;
+                var d = math.distance(at.xz, target.xz);
+                if (d > radius) continue;
+                farthest = math.max(farthest, d);
+                if (d <= stopAt + 5f) { arrived++; continue; }
+                var dir = math.normalize(target.xz - at.xz);
+                var move = math.min(step, d - stopAt);
+                var to = new float3(at.x + dir.x * move, at.y, at.z + dir.y * move);
+                em.SetComponentData(u, new Translation { Value = to });
+                if (em.HasComponent<LastTranslation>(u)) em.SetComponentData(u, new LastTranslation { Value = to });
+                if (em.HasComponent<AggroConsumer>(u)) { var a = em.GetComponentData<AggroConsumer>(u); a.PreCombatPosition = to; em.SetComponentData(u, a); }
+                if (em.HasComponent<SpawnTransform>(u)) { var st = em.GetComponentData<SpawnTransform>(u); st.Position = to; em.SetComponentData(u, st); }
+                if (clearPath)
+                {
+                    if (em.HasBuffer<ProjectM.Pathfinding.PathBuffer>(u)) em.GetBuffer<ProjectM.Pathfinding.PathBuffer>(u).Clear();
+                    if (em.HasComponent<Velocity>(u)) em.SetComponentData(u, new Velocity());
+                }
+                jumped++;
+            }
+        }
+        finally { units.Dispose(); query.Dispose(); }
+        Plugin.Logger.LogInfo($"[DEV JUMP] jumped={jumped} arrived={arrived} farthest={F(farthest)} target={targetMark}");
+        ctx.Reply($"devjump jumped={jumped} arrived={arrived}");
     }
 }

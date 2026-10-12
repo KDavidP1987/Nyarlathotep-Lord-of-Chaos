@@ -1,0 +1,117 @@
+# hunting-grounds-jump.vrs: hunting-grounds D20, the mover spike, second form (Session 0). The real mover's rule on 12
+# tracked spiders: every 5 s each unit jumps 25 m straight toward the target mark hg-t (280 m east of the pond), never
+# closer than 55 m (`.devjump`, which also moves SpawnTransform, the spot an idle unit walks back to). Chaos waits
+# 200 m off the line, so no player is within 100 m of a jump. `.devunits` after every other jump logs each unit.
+# Then Chaos goes to hg-t: `.devunits` and `.nyar debug here 60` there, and whether any unit engages.
+#
+# Run with --var CLEARPATH=false or true (true also empties each unit's PathBuffer and zeroes its Velocity).
+# Needs: NyarDevTools with .devjump and .devunits, DevChatEcho; Chaos invulnerable (`ToggleInvulnerable true`, never false).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devtp -1600 -1640
+expect-log \[DEV TP\] to
+wait 4
+chat .devmark hg-t
+expect-log \[DEV MARK\] hg-t
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar spawn CHAR_Spider_Forest 12
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 5
+chat .devtp -1730 -1440
+expect-log \[DEV TP\] to
+wait 5
+chat .devunits -581295882 400 hg-t
+expect-log \[DEV UNITS\] n=12
+chat .devjump -581295882 hg-t 25 55 400 ${CLEARPATH}
+expect-log \[DEV JUMP\]
+wait 5
+chat .devjump -581295882 hg-t 25 55 400 ${CLEARPATH}
+expect-log \[DEV JUMP\]
+wait 4
+chat .devunits -581295882 400 hg-t
+expect-log \[DEV UNITS\]
+wait 1
+chat .devjump -581295882 hg-t 25 55 400 ${CLEARPATH}
+expect-log \[DEV JUMP\]
+wait 5
+chat .devjump -581295882 hg-t 25 55 400 ${CLEARPATH}
+expect-log \[DEV JUMP\]
+wait 4
+chat .devunits -581295882 400 hg-t
+expect-log \[DEV UNITS\]
+wait 1
+chat .devjump -581295882 hg-t 25 55 400 ${CLEARPATH}
+expect-log \[DEV JUMP\]
+wait 5
+chat .devjump -581295882 hg-t 25 55 400 ${CLEARPATH}
+expect-log \[DEV JUMP\]
+wait 4
+chat .devunits -581295882 400 hg-t
+expect-log \[DEV UNITS\]
+wait 1
+chat .devjump -581295882 hg-t 25 55 400 ${CLEARPATH}
+expect-log \[DEV JUMP\]
+wait 5
+chat .devjump -581295882 hg-t 25 55 400 ${CLEARPATH}
+expect-log \[DEV JUMP\]
+wait 4
+chat .devunits -581295882 400 hg-t
+expect-log \[DEV UNITS\]
+wait 1
+chat .devjump -581295882 hg-t 25 55 400 ${CLEARPATH}
+expect-log \[DEV JUMP\]
+wait 5
+chat .devjump -581295882 hg-t 25 55 400 ${CLEARPATH}
+expect-log \[DEV JUMP\]
+wait 4
+chat .devunits -581295882 400 hg-t
+expect-log \[DEV UNITS\]
+wait 1
+chat .devjump -581295882 hg-t 25 55 400 ${CLEARPATH}
+expect-log \[DEV JUMP\]
+wait 5
+chat .devjump -581295882 hg-t 25 55 400 ${CLEARPATH}
+expect-log \[DEV JUMP\]
+wait 4
+chat .devunits -581295882 400 hg-t
+expect-log \[DEV UNITS\]
+wait 1
+chat .devjump -581295882 hg-t 25 55 400 ${CLEARPATH}
+expect-log \[DEV JUMP\]
+wait 5
+chat .devjump -581295882 hg-t 25 55 400 ${CLEARPATH}
+expect-log \[DEV JUMP\]
+wait 4
+chat .devunits -581295882 400 hg-t
+expect-log \[DEV UNITS\]
+wait 1
+wait 5
+chat .devunits -581295882 400 hg-t
+expect-log \[DEV UNITS\] n=12
+chat .nyar status
+expect-reply tracked units: 12
+# the approach: Chaos at the target
+chat .devgo hg-t
+expect-log \[DEV TP\] hg-t
+wait 3
+chat .nyar debug here 60
+expect-reply CHAR_Spider_Forest
+shot full jump-target
+wait 12
+chat .devunits -581295882 100 hg-t
+expect-log \[DEV UNITS\]
+shot full jump-target-15s
+chat .nyar purge
+wait 2
+chat .nyar purge confirm
+expect-log purge
+wait 20
+chat .nyar status
+expect-reply tracked units: 0 timeout=40

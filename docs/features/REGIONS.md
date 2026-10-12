@@ -5,6 +5,8 @@ regions unavailable) built at e512382; step 2 (scope enforced in triggers, empow
 scope in `event info|list|set`; `{region}`; api 5) built and post-audited at a85852e (Codex READY at round 4). Its baseline boot read the dev
 world's index: 10 polygons, one per region. Step 3: Session 1 passed (A39), 0.6.0 tagged at 85f6080 and pre-released on GitHub.
 
+Keeping an event's units inside its regions and hunting the players there: docs/features/HUNTING_GROUNDS.md.
+
 ## Goal
 
 An event can be limited to named regions of the map, the game's own world regions (Farbane Woods, Dunley Farmlands,

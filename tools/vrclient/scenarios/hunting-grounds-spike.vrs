@@ -1,0 +1,117 @@
+# hunting-grounds-spike.vrs: hunting-grounds D20, the mover spike (Session 0). 12 tracked spiders spawned at the pond
+# are moved by NyarDevTools' `.devhop` 25 m east every 5 s, ten times, anchored on the mark hg-s0 (which moves with
+# them), while Chaos stands about 150 m north of the line, so no player is within 100 m of any hop (Review 1 F1).
+# Then Chaos goes to the end point: where Chaos stands ([DEV WHERE], its height), and `.nyar debug here 15` / `60`
+# list the units there. The checklist (alive, within 15 m, heights, crashes) is read from the log afterwards.
+#
+# `.devunits` after every hop logs each unit's x, y, z, AI state, target and PreCombatPosition (diagnostic: the
+# first run lost 6 of 12 from the hop radius after the second hop).
+# Run with --var MOVEHOME=false (Translation only) or --var MOVEHOME=true (SpawnTransform moved too).
+# Needs: NyarDevTools with .devhop and .devunits, DevChatEcho; Chaos invulnerable (`ToggleInvulnerable true`, never false).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .devmark hg-s0
+expect-log \[DEV MARK\] hg-s0
+chat .nyar spawn CHAR_Spider_Forest 12
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 5
+chat .nyar debug here 15
+expect-reply CHAR_Spider_Forest
+shot full spike-spawn
+# away: about 150 m north of the middle of the line (pond x -1880 .. -1630, z -1640)
+chat .devtp -1755 -1490
+expect-log \[DEV TP\] to
+wait 5
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .devunits -581295882 300
+expect-log \[DEV UNITS\] n=12
+chat .devhop -581295882 25 0 20 hg-s0 ${MOVEHOME}
+expect-log \[DEV HOP\] moved=12
+wait 4
+chat .devunits -581295882 300
+expect-log \[DEV UNITS\]
+wait 1
+chat .devhop -581295882 25 0 20 hg-s0 ${MOVEHOME}
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devunits -581295882 300
+expect-log \[DEV UNITS\]
+wait 1
+chat .devhop -581295882 25 0 20 hg-s0 ${MOVEHOME}
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devunits -581295882 300
+expect-log \[DEV UNITS\]
+wait 1
+chat .devhop -581295882 25 0 20 hg-s0 ${MOVEHOME}
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devunits -581295882 300
+expect-log \[DEV UNITS\]
+wait 1
+chat .devhop -581295882 25 0 20 hg-s0 ${MOVEHOME}
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devunits -581295882 300
+expect-log \[DEV UNITS\]
+wait 1
+chat .devhop -581295882 25 0 20 hg-s0 ${MOVEHOME}
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devunits -581295882 300
+expect-log \[DEV UNITS\]
+wait 1
+chat .devhop -581295882 25 0 20 hg-s0 ${MOVEHOME}
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devunits -581295882 300
+expect-log \[DEV UNITS\]
+wait 1
+chat .devhop -581295882 25 0 20 hg-s0 ${MOVEHOME}
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devunits -581295882 300
+expect-log \[DEV UNITS\]
+wait 1
+chat .devhop -581295882 25 0 20 hg-s0 ${MOVEHOME}
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devunits -581295882 300
+expect-log \[DEV UNITS\]
+wait 1
+chat .devhop -581295882 25 0 20 hg-s0 ${MOVEHOME}
+expect-log \[DEV HOP\] moved=
+wait 10
+chat .nyar status
+expect-reply tracked units:
+# the approach: Chaos at the end point (pond + 250 m east)
+chat .devgo hg-s0
+expect-log \[DEV TP\] hg-s0
+wait 4
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .devunits -581295882 300
+expect-log \[DEV UNITS\]
+chat .nyar debug here 15
+chat .nyar debug here 60
+expect-reply CHAR_Spider_Forest
+shot full spike-end
+wait 10
+chat .nyar debug here 15
+shot full spike-end-10s
+chat .nyar purge
+wait 2
+chat .nyar purge confirm
+expect-log purge
+wait 20
+chat .nyar status
+expect-reply tracked units: 0 timeout=40

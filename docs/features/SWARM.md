@@ -4,6 +4,8 @@
 The owner's Session 3 passed the arena return and the look and feel. Region-bound placement, which the owner asked
 for after that run, is the next child, hunting-grounds (design §9 D48).
 
+Region-bound modes (a region lock, a Region location, a region hunt) are docs/features/HUNTING_GROUNDS.md.
+
 ## Goal
 
 A spawn event can be held in one place and can grow by itself. Three optional keys on a SpawnWaves action:
