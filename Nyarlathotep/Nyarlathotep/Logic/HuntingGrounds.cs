@@ -411,12 +411,13 @@ public sealed class WaitTally
 {
     public int Watched, NearPlayer, NotAllowed, NotWalkable, Budget, Candidates;
 
-    /// <summary>The first few waiting units' walk-check level and height (our own units, never a player).</summary>
+    /// <summary>The first few waiting units' walk-check level, height and spot (our own units, as D21's spot line; never a
+    /// player).</summary>
     public readonly List<string> Units = new();
 
     public void Waited(RegionUnit u)
     {
-        if (Units.Count < 3) Units.Add(string.Create(CultureInfo.InvariantCulture, $"h {u.Level} y {u.Y:0.#}"));
+        if (Units.Count < 3) Units.Add(string.Create(CultureInfo.InvariantCulture, $"h {u.Level} y {u.Y:0.#} at {u.X:0} {u.Z:0}"));
     }
 
     /// <summary>"region hunt &lt;id&gt;: waiting &lt;n&gt;: …" (the service adds "[nyar] "), counts only.</summary>
@@ -429,8 +430,8 @@ public sealed class WaitTally
 /// only while no online player, eligible or not, stands within 100 m of it: at most 25 m along the line (or a little to its
 /// side), and a jump that would end within 100 m of the target lands instead 50-60 m from the target. A landing lies inside
 /// a scope region, outside claimed territory, at least 50 m from every online player, and is free and grounded at the
-/// unit's height level or a neighbouring one, else (A1) two or three levels from it on its first five open landings, or
-/// the unit waits. Between 60 and 100 m nothing moves it (the target itself is an online player within 100 m).
+/// unit's height level or a neighbouring one, else (A1) two or three levels from it on its first five open landings,
+/// else (A2) a crossing of 35-55 m over ground no step can cross, or the unit waits. Between 60 and 100 m nothing moves it (the target itself is an online player within 100 m).
 /// </summary>
 public static class JumpRule
 {
@@ -523,11 +524,44 @@ public static class JumpRule
                 if (!budget.TryTake(2)) { if (tally is not null) tally.Budget++; return (JumpKind.Waiting, null); }
                 if (walkable(x, z, level)) return (JumpKind.Jump, new RegionJump(u.Key, x, heightOf(level), z, level, clearance));
             }
+        // A2: ground no step can cross (Session 2: a ravine 35-45 m wide east of the pond, its walls never grounded) is
+        // crossed by a longer jump along the line, never one ending within 100 m of the target (the final ring's job).
+        foreach (var (x, z) in Crossings((u.X, u.Z), target))
+        {
+            var clearance = Nearest(online, x, z) ?? float.MaxValue;
+            if (clearance < HuntingGrounds.LandingDistance || !allowed(x, z)) continue;
+            foreach (var level in WalkLevels.Spot(u.Level))
+            {
+                if (!budget.TryTake(2)) { if (tally is not null) tally.Budget++; return (JumpKind.Waiting, null); }
+                if (walkable(x, z, level)) return (JumpKind.Jump, new RegionJump(u.Key, x, heightOf(level), z, level, clearance));
+            }
+        }
         return (JumpKind.Waiting, null);
     }
 
     /// <summary>How many open landings the wide pass tries again (A1): at most 5 × 4 levels × 2 calls a unit.</summary>
     public const int WideCandidates = 5;
+
+    static readonly float[] CrossLengths = [35f, 45f, 55f];
+    static readonly double[] CrossTurns = [0, 15, -15];
+
+    /// <summary>The crossing landings of a unit at <paramref name="u"/> hunting <paramref name="target"/> (A2), tried only
+    /// after every landing of 25 m or less failed: 35, 45 and 55 m along the line and 15° to either side, each only when
+    /// it ends more than 100 m from the target; none while the final ring applies.</summary>
+    public static IEnumerable<(float X, float Z)> Crossings((float X, float Z) u, (float X, float Z) target)
+    {
+        var d = HuntingGrounds.Distance(u.X, u.Z, target.X, target.Z);
+        if (d - HuntingGrounds.Step <= HuntingGrounds.WatchRange) yield break;
+        var ux = (target.X - u.X) / d;
+        var uz = (target.Z - u.Z) / d;
+        foreach (var len in CrossLengths)
+            foreach (var turn in CrossTurns)
+            {
+                var (rx, rz) = Turn(ux, uz, turn);
+                var (x, z) = (u.X + rx * len, u.Z + rz * len);
+                if (HuntingGrounds.Distance(x, z, target.X, target.Z) > HuntingGrounds.WatchRange) yield return (x, z);
+            }
+    }
 
     /// <summary>"region hunt &lt;id&gt;: &lt;j&gt; jumped, &lt;w&gt; waiting, &lt;r&gt; in reach, landed &lt;d&gt; m" (the service
     /// adds "[nyar] "); d is the smallest distance between a landing and an online player (Review 1 F4). Counts and one
@@ -763,34 +797,41 @@ public sealed class HuntPhase
             var waitedBefore = _waited.TryGetValue(a.Id, out var w) ? w : [];
             var waitedNow = new HashSet<long>();
             bool Allowed(float x, float z) => HuntingGrounds.Inside(scope, world.RegionOf, x, z) && !world.IsClaimed(a.Id, x, z);
+            var plans = new List<(RegionUnit Unit, (float X, float Z) Target)>();
             foreach (var group in HuntRule.Groups(units))
             {
-                // a unit that found no landing at the last check plans after the others, so units that cannot jump never
-                // spend the walk budget of those that can (A1)
-                var members = group.OrderBy(u => waitedBefore.Contains(u.Key)).ThenBy(u => u.Key).ToList();
-                if (HuntRule.Target(eligible, HuntRule.Mean(members)) is not { } target) continue;   // no target: no jump, no seed
+                if (HuntRule.Target(eligible, HuntRule.Mean(group.OrderBy(u => u.Key).ToList())) is not { } target) continue;   // no target: no jump, no seed
                 targets[group.Key] = target.Key;
-                foreach (var u in members)
+                foreach (var u in group) plans.Add((u, (target.X, target.Z)));
+            }
+            // a unit that found no landing at the last check plans after every other unit of the instance, so units that
+            // cannot jump never spend the walk budget of those that can (A1; step 3 review F1)
+            foreach (var (u, target) in plans.OrderBy(p => waitedBefore.Contains(p.Unit.Key)).ThenBy(p => p.Unit.Key))
+            {
+                try
                 {
-                    try
+                    if (jumps.Left == 0 && HuntingGrounds.Distance(u.X, u.Z, target.X, target.Z) > HuntingGrounds.Reach)
                     {
-                        var spent = tally.Budget;
-                        var (kind, jump) = JumpRule.Plan(u, (target.X, target.Z), players, Allowed, world.Walkable, world.HeightOf, world.Budget, tally);
-                        if (kind == JumpKind.InReach) inReach++;
-                        else if (kind == JumpKind.Jump && jump is { } j && jumps.Take())
-                        {
-                            world.Jump(j);
-                            written.Add(j);
-                        }
-                        else
-                        {
-                            waiting++;
-                            if (tally.Budget == spent) waitedNow.Add(u.Key);   // found no landing; one cut off by the budget keeps its turn
-                            tally.Waited(u);
-                        }
+                        waiting++;                                              // the tick's 20 jumps are spent: no plan, no mark (F2)
+                        tally.Waited(u);
+                        continue;
                     }
-                    catch (Exception e) { fault ??= e.Message; }
+                    var spent = tally.Budget;
+                    var (kind, jump) = JumpRule.Plan(u, target, players, Allowed, world.Walkable, world.HeightOf, world.Budget, tally);
+                    if (kind == JumpKind.InReach) inReach++;
+                    else if (kind == JumpKind.Jump && jump is { } j && jumps.Take())
+                    {
+                        world.Jump(j);
+                        written.Add(j);
+                    }
+                    else
+                    {
+                        waiting++;
+                        if (kind == JumpKind.Waiting && tally.Budget == spent) waitedNow.Add(u.Key);   // found no landing; one cut off by the budget keeps its turn
+                        tally.Waited(u);
+                    }
                 }
+                catch (Exception e) { fault ??= e.Message; }
             }
             _targets[a.Id] = targets;
             _waited[a.Id] = waitedNow;

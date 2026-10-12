@@ -769,25 +769,63 @@ public class HuntingGroundsTests
             budget: new WalkBudget(90)).Kind);                                        // the neighbouring pass spends it: waits
     }
 
-    [Fact]
-    public void Jumps_fails_when_a_stuck_unit_spends_the_budget()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]                                                                   // review F1: across groups too
+    public void Jumps_fails_when_a_stuck_unit_spends_the_budget(int freeGroup)
     {
         var a = Hunting();
         var w = new World { Walk = (x, _, _) => x > 400 };
-        w.Add(1, 100, 100);                                                           // no landing near x 100: 130 calls each
-        w.Add(2, 120, 100);
-        w.Add(3, 600, 100);
+        w.Add(1, 100, 100);                                                           // no landing near x 100: 184 calls each
+        w.Add(2, 120, 100);                                                           // (15 × 6 + A1's 5 × 8 + A2's 9 × 6)
+        w.Add(3, 600, 100, group: freeGroup);
         w.People.Add(Player(9, 500, 900));
         var phase = new HuntPhase();
-        w.Budget = new WalkBudget(260);
+        w.Budget = new WalkBudget(368);
         var first = Assert.Single(phase.Tick([a], w, _ => { }, _ => { }));
         Assert.Empty(first.Jumps);                                                    // 1 and 2 spent it, 3 cut off
-        w.Budget = new WalkBudget(260);
+        w.Budget = new WalkBudget(368);
         var second = Assert.Single(phase.Tick([a], w, _ => { }, _ => { }));
         Assert.Equal([3L], second.Jumps.Select(j => j.Key));                          // the stuck units plan last
         Assert.Equal(2, second.Waiting);
         phase.EventEnded("hg");
         Assert.Equal(0, phase.AllRecords);
+    }
+
+    [Fact]
+    public void Jumps_fails_when_a_ravine_strands_a_unit()
+    {
+        var online = new[] { Player(1, 500, 800) };
+        bool Ravine(float gap, float z) => z < 205 || z > 200 + gap;                  // no ground from 5 m ahead to the far rim
+        var (kind, jump) = Plan(Unit(500, 200), (500, 800), online, walkable: (_, z, _) => Ravine(32, z));
+        Assert.Equal(JumpKind.Jump, kind);                                            // A2: crossed at 35 m, straight on
+        Assert.Equal(500f, jump!.Value.X, 3);
+        Assert.Equal(235f, jump.Value.Z, 3);
+        var wide = Plan(Unit(500, 200), (500, 800), online, walkable: (_, z, _) => Ravine(50, z));
+        Assert.Equal(55f, HuntingGrounds.Distance(500, 200, wide.Jump!.Value.X, wide.Jump.Value.Z), 2);
+        Assert.Equal(JumpKind.Waiting, Plan(Unit(500, 200), (500, 800), online, walkable: (_, z, _) => Ravine(60, z)).Kind);   // past 55 m: waits
+        var step = Plan(Unit(500, 200), (500, 800), online, walkable: (x, z, _) => Ravine(32, z) || Math.Abs(x - 500) > 1);
+        Assert.True(HuntingGrounds.Distance(500, 200, step.Jump!.Value.X, step.Jump.Value.Z) <= HuntingGrounds.Step + 0.01f);   // a step passes: no crossing
+        var near = Plan(Unit(500, 200), (500, 340), [Player(1, 500, 340)], walkable: (_, z, _) => Ravine(32, z));
+        Assert.Equal(JumpKind.Jump, near.Kind);                                       // 140 m: 35 m ends at 105 m, 45 m would end at 95 m
+        Assert.Equal(235f, near.Jump!.Value.Z, 3);
+        Assert.All(JumpRule.Crossings((500, 200), (500, 340)), c => Assert.True(HuntingGrounds.Distance(c.X, c.Z, 500, 340) > HuntingGrounds.WatchRange));
+        Assert.Empty(JumpRule.Crossings((500, 200), (500, 320)));                     // the final ring's range: no crossing
+    }
+
+    [Fact]
+    public void Jumps_fails_when_a_capped_unit_is_marked_stuck()
+    {
+        var a = Hunting();
+        var w = new World();
+        for (var i = 0; i < 25; i++) w.Add(i, 100 + 20 * i, 100);                     // 25 free units, one group
+        w.People.Add(Player(9, 500, 900));
+        var phase = new HuntPhase();
+        var check = Assert.Single(phase.Tick([a], w, _ => { }, _ => { }));
+        Assert.Equal(20, check.Jumps.Count);
+        Assert.Equal(5, check.Waiting);
+        Assert.Equal(1_000_000 - 20 * 2, w.Budget.Left);                              // review F2: no plan once the 20 are spent
+        Assert.Equal(1, phase.AllRecords);                                            // the group's target only: nobody marked stuck
     }
 
     [Fact]

@@ -436,6 +436,7 @@ internal static class SpawnTracker
 
     static readonly Dictionary<long, UnitMeta> _meta = new();
     static readonly Dictionary<(string EventId, int Wave, float X, float Z), int> _groups = new();
+    static int _lastGroup;                                                   // only grows, so a number is never handed out twice
 
     /// <summary>The group number of an order (S-14): one per event, wave and hunt centre (WaveAction gives every group of a
     /// Hunt or RegionHunt wave its own centre); 0 for an order without a hunt tag.</summary>
@@ -443,7 +444,7 @@ internal static class SpawnTracker
     {
         if (order.Hunt is not { } tag) return 0;
         var key = (eventId, order.Wave, tag.X, tag.Z);
-        if (!_groups.TryGetValue(key, out var group)) _groups[key] = group = _groups.Count + 1;
+        if (!_groups.TryGetValue(key, out var group)) _groups[key] = group = ++_lastGroup;
         return group;
     }
 
@@ -479,6 +480,7 @@ internal static class SpawnTracker
             _region.Hunt.Detail = Settings.VerboseLogging.Value ? line => Core.Log.LogInfo($"[nyar] {line}") : null;   // why units wait
             _region.Tick(now, EventRuntime.Engine.Active, _regionWorld, _random.NextDouble,
                 line => Core.Log.LogInfo($"[nyar] {line}"), line => Core.Log.LogError($"[nyar] {line}"));
+            if (Settings.VerboseLogging.Value && _regionWorld.WalkLine() is { } walk) Core.Log.LogInfo($"[nyar] {walk}");   // why landings fail
         }
         finally { _regionWorld.End(); }
     }
@@ -519,6 +521,7 @@ internal static class SpawnTracker
     sealed class RegionWorld : IRegionWorld
     {
         WalkCheck.WaveCheck? _check;
+        int _walkCalls, _noProbe, _notGrounded, _notFree;
         List<HuntCandidate> _players;
         string _playersFault;
         bool _playersRead;
@@ -527,6 +530,7 @@ internal static class SpawnTracker
         internal void Begin()
         {
             _check = null;
+            _walkCalls = _noProbe = _notGrounded = _notFree = 0;
             _players = null;
             _playersFault = null;
             _playersRead = false;
@@ -566,9 +570,17 @@ internal static class SpawnTracker
         public bool Walkable(float x, float z, byte level)
         {
             _check ??= WalkCheck.OpenSpots();
-            if (_check.Value.Walk.Probe is not { } probe) return false;
-            return probe.IsGrounded(x, z, level) && probe.IsFree(x, z, level);
+            _walkCalls++;
+            if (_check.Value.Walk.Probe is not { } probe) { _noProbe++; return false; }
+            if (!probe.IsGrounded(x, z, level)) { _notGrounded++; return false; }
+            if (!probe.IsFree(x, z, level)) { _notFree++; return false; }
+            return true;
         }
+
+        /// <summary>The tick's walk checks (Debug.VerboseLogging): "region walk: &lt;n&gt; checks, &lt;g&gt; not grounded,
+        /// &lt;f&gt; not free, &lt;p&gt; without a probe", counts only; null when none ran.</summary>
+        internal string WalkLine() => _walkCalls == 0 ? null
+            : $"region walk: {_walkCalls} checks, {_notGrounded} not grounded, {_notFree} not free, {_noProbe} without a probe";
 
         public float HeightOf(byte level) => WalkCheck.HeightOf(level);
 
