@@ -24,6 +24,15 @@ Rollback base: v0.9.0.
 - feature doc read: docs/features/SWARM.md Status (step 1) and Open questions (whether the game's own leash holds our units, Session 1's first probe)
 - in-game baseline: the deployed 0.9.0 DLL (f65736b) booted on the dev server, logs first copied to %TEMP%\nyar-sw1-logs\pre-baseline: "templates: 10/10 valid", "triggers: all hooks available", "boot marker sweep: 0 found", "Nyarlathotep initialized … (attempt #1)"; 3 [Warning] lines, none new (Il2CppInterop's substitute notice, Beelzebub's TUNE line, example-empowerment's reason); 0 [Error]; -LogCheck "log check: 0 unhandled, 10 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; stopped by taskkill without /F in 6 s
 
+### Step 3 · 2026-10-11 · 53222e8
+- git status: clean at 53222e8 (step 2 post-audited, pushed and verified: HEAD = origin/main)
+- compile: Release 0 Warning(s), 0 Error(s); tests: 2768 passed
+- preflight: PREFLIGHT OK, "secrets: none (1908 files scanned, 1863 index blobs)"; -SessionsOf swarm → "session logs: swarm 2/2 checked; snapshots 2/2 from session 1"
+- dod status: swarm 17/25 checked; `dod-index.mjs --check swarm` → problems 0, 1 warning (prose: MaxConcurrentEvents, an existing cap)
+- feature doc read: docs/features/SWARM.md Status and Open questions (the in-game return, waiting on the owner's D18 run)
+- in-game baseline: not needed (step 3 has no in-game part; the dev server stopped after Session 2 and restored, "snapshot restored; hashes equal (sw2, …)")
+- written after the step began: the build of D20 (one builder subagent) started right after these checks ran at 53222e8; this entry records them
+
 ## Post-audit
 ### Step 1 · 2026-10-11 · 2309b9b
 - built (9e62092, one builder subagent; the orchestrator reviewed, tested and committed): Model's Arena, WinnerRule and Growth as trailing optional parameters; ParseSpawnWaves's three keys and the D1, D2, D24 reasons as constants; Logic/Growth.cs Generate (D25); Logic/Arena.cs, the pure containment rule (D3); Scoreboard's winner over every row (D5); ScoreboardLines' winner line (D6) and ScoreboardRule.LogLine's suffix (D7); the six `event set` fields, their refusals and the info lines (D9, D10); design §6 rows; the contract's D12 sentence; ControlCases rows and Pending entries; csproj copies; preflight-checks childDocs, dataTables, snapshotSessions; data-inventory rows; paths-manifest `temp: nyar-sw*-logs`
