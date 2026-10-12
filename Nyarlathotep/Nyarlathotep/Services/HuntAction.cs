@@ -177,10 +177,10 @@ internal static class HuntAction
 
     /// <summary>The collections between two reads; -1 (logged "n/a") when either read failed, so an unreadable count
     /// never reads as 0 (step 2 review F1).</summary>
-    static int Il2CppGcDelta(int start, int end) => start < 0 || end < 0 ? -1 : end - start;
+    internal static int Il2CppGcDelta(int start, int end) => start < 0 || end < 0 ? -1 : end - start;
 
     /// <summary>The game runtime's own collections (A7); -1 when it cannot be read.</summary>
-    static int Il2CppGcCount()
+    internal static int Il2CppGcCount()
     {
         try { return Il2CppSystem.GC.CollectionCount(0); }
         catch { return -1; }

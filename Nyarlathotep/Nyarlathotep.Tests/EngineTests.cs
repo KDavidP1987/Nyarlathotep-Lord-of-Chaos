@@ -513,6 +513,20 @@ public partial class EngineTests
         Assert.NotNull(h.Add(30, Parts, T0.AddHours(-1)));
     }
 
+    static readonly RegionParts Region = new(0.5, 18.0, 0.3, 2.2, 1.0, 45, 12, 0, 1);
+
+    [Fact]
+    public void RegionParts_fails_when_a_slow_region_tick_is_not_named()
+    {
+        var r = new RegionTimingLog();
+        Assert.Equal("region parts: 273.0 ms (open 0.5, walk 18.0 in 45 checks, players 0.3, claimed 2.2, moves 1.0 in 12, outside parts 251.0; gc net 0 il2cpp 1)",
+            r.Add(273, Region, T0));
+        Assert.Contains("il2cpp n/a)", new RegionTimingLog().Add(150, Region with { Il2CppGcs = -1 }, T0));
+        Assert.Null(new RegionTimingLog().Add(99.99, Region, T0));                   // the hunt's cap is about 80 ms
+        Assert.Null(r.Add(273, Region, T0.AddSeconds(5)));                            // one line a minute
+        Assert.EndsWith("; 1 more since the last line", r.Add(273, Region, T0.AddSeconds(60)));
+    }
+
     // ---- events.json editor (event set / enable / disable)
 
     [Fact]

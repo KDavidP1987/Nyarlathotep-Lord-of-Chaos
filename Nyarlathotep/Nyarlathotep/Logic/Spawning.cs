@@ -993,6 +993,41 @@ public sealed class HuntTimingLog
     }
 }
 
+/// <summary>One region tick's parts (hunting-grounds Session 2): where its time went, the walk checks and moves it made
+/// and the collections inside it. Counts and times only.</summary>
+public readonly record struct RegionParts(double OpenMs, double WalkMs, double PlayersMs, double ClaimedMs, double MoveMs,
+    int WalkChecks, int Moves, int NetGcs, int Il2CppGcs);
+
+/// <summary>The region-phase breakdown line (hunting-grounds Session 2: a 273 ms region tick with 45 walk checks): a region
+/// phase of <see cref="ThresholdMs"/> or more returns "region parts: &lt;t&gt; ms (open a, walk b in n checks, players c,
+/// claimed d, moves e in m, outside parts r; gc net g il2cpp i)", at most one line per <see cref="Quiet"/>; the next
+/// carries the count held back. The threshold sits above the hunt's 200-walk-check cap (about 80 ms).</summary>
+public sealed class RegionTimingLog
+{
+    public const double ThresholdMs = 100;
+    public static readonly TimeSpan Quiet = TimeSpan.FromMinutes(1);
+
+    DateTime? _last;
+    int _held;
+
+    public string? Add(double regionMs, RegionParts p, DateTime utcNow)
+    {
+        if (!(regionMs >= ThresholdMs)) return null;
+        if (_last is { } last && utcNow >= last && utcNow - last < Quiet)
+        {
+            _held++;
+            return null;
+        }
+        _last = utcNow;
+        var outside = Math.Max(0, regionMs - p.OpenMs - p.WalkMs - p.PlayersMs - p.ClaimedMs - p.MoveMs);
+        var line = FormattableString.Invariant(
+            $"region parts: {regionMs:0.0} ms (open {p.OpenMs:0.0}, walk {p.WalkMs:0.0} in {p.WalkChecks} checks, players {p.PlayersMs:0.0}, claimed {p.ClaimedMs:0.0}, moves {p.MoveMs:0.0} in {p.Moves}, outside parts {outside:0.0}; gc net {p.NetGcs} il2cpp {(p.Il2CppGcs < 0 ? "n/a" : p.Il2CppGcs.ToString(System.Globalization.CultureInfo.InvariantCulture))})");
+        if (_held > 0) line += $"; {_held} more since the last line";
+        _held = 0;
+        return line;
+    }
+}
+
 /// <summary>HuntAction's seed record, keyed by unit and target (event-spawns D13, A6, A12): the record, not the
 /// AggroBuffer, says which entries are HuntAction's. An entry is never adopted from the buffer. The game rewrites an
 /// entry's DamageValue and Weight as soon as the unit takes the aggro (Session 1, A67), so a recorded player's single

@@ -23,6 +23,7 @@ internal static class EventScheduler
     static readonly TickTimer _timer = new();
     static readonly SlowTickLog _slow = new();
     static readonly HuntTimingLog _hunt = new();
+    static readonly RegionTimingLog _regionParts = new();
     static readonly List<(string Phase, double Ms)> _phases = new();
     static readonly Dictionary<string, FailureStreak> _faults = new();
 
@@ -68,6 +69,13 @@ internal static class EventScheduler
         catch { /* a diagnostic never breaks the tick */ }
         Phase("arena", () => SpawnTracker.ArenaTick(now));                 // swarm D3, every 5 s while an arena event runs; its own phase (D4)
         Phase("region", () => SpawnTracker.RegionTick(now));               // hunting-grounds D5, D8, every 5 s while a locked or RegionHunt event runs (D6, D9)
+        try
+        {
+            // hunting-grounds Session 2: a region phase of 100 ms or more names its parts
+            if (SpawnTracker.TakeRegionParts() is { } rp && _regionParts.Add(_phases.Find(p => p.Phase == "region").Ms, rp, now) is { } regionLine)
+                Core.Log.LogInfo($"[nyar] {regionLine}");
+        }
+        catch { /* a diagnostic never breaks the tick */ }
         Phase("announcements", () => Announcer.Tick(now));
         Phase("push", () => Pusher.Tick(now));
         Phase("health", () => HealthMonitor.Beat(now));

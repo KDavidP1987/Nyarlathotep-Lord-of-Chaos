@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics;
 using Il2CppInterop.Runtime;
 using Nyarlathotep.Config;
 using Nyarlathotep.Logic;
@@ -471,10 +472,21 @@ internal static class SpawnTracker
     /// HuntingGrounds.CheckSeconds while a locked or RegionHunt instance runs, the lock returns that instance's own strays,
     /// then the hunt jumps its own far units toward their targets. The logic and its guards are Logic/RegionPhase, which
     /// never throws; the tick's walk probe is disposed here whatever happens.</summary>
+    static RegionParts? _regionParts;
+
+    /// <summary>The last region tick's parts, once (Session 2 diagnostic); null when no tick ran since.</summary>
+    internal static RegionParts? TakeRegionParts()
+    {
+        var p = _regionParts;
+        _regionParts = null;
+        return p;
+    }
+
     [Mutating]
     internal static void RegionTick(DateTime now)
     {
         _regionWorld.Begin();
+        var (netGcs, il2cppGcs) = (GC.CollectionCount(0), HuntAction.Il2CppGcCount());
         try
         {
             _region.Hunt.Detail = Settings.VerboseLogging.Value ? line => Core.Log.LogInfo($"[nyar] {line}") : null;   // why units wait
@@ -482,7 +494,12 @@ internal static class SpawnTracker
                 line => Core.Log.LogInfo($"[nyar] {line}"), line => Core.Log.LogError($"[nyar] {line}"));
             if (Settings.VerboseLogging.Value && _regionWorld.WalkLine() is { } walk) Core.Log.LogInfo($"[nyar] {walk}");   // why landings fail
         }
-        finally { _regionWorld.End(); }
+        finally
+        {
+            try { _regionParts = _regionWorld.Parts(GC.CollectionCount(0) - netGcs, HuntAction.Il2CppGcDelta(il2cppGcs, HuntAction.Il2CppGcCount())); }
+            catch { /* a diagnostic never breaks the tick */ }
+            _regionWorld.End();
+        }
     }
 
     /// <summary>A unit's height level: the game's own once it has snapped the unit (Height.ServerHeightLevel above 0,
@@ -521,7 +538,14 @@ internal static class SpawnTracker
     sealed class RegionWorld : IRegionWorld
     {
         WalkCheck.WaveCheck? _check;
-        int _walkCalls, _noProbe, _notGrounded, _notFree;
+        int _walkCalls, _noProbe, _notGrounded, _notFree, _moves;
+        long _openTicks, _walkTicks, _playersTicks, _claimedTicks, _moveTicks;   // the Session 2 diagnostic's parts
+
+        static double Ms(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
+
+        /// <summary>This tick's parts so far (RegionTimingLog).</summary>
+        internal RegionParts Parts(int netGcs, int il2cppGcs) =>
+            new(Ms(_openTicks), Ms(_walkTicks), Ms(_playersTicks), Ms(_claimedTicks), Ms(_moveTicks), _walkCalls, _moves, netGcs, il2cppGcs);
         List<HuntCandidate> _players;
         string _playersFault;
         bool _playersRead;
@@ -530,7 +554,8 @@ internal static class SpawnTracker
         internal void Begin()
         {
             _check = null;
-            _walkCalls = _noProbe = _notGrounded = _notFree = 0;
+            _walkCalls = _noProbe = _notGrounded = _notFree = _moves = 0;
+            _openTicks = _walkTicks = _playersTicks = _claimedTicks = _moveTicks = 0;
             _players = null;
             _playersFault = null;
             _playersRead = false;
@@ -561,20 +586,34 @@ internal static class SpawnTracker
 
         /// <summary>Claimed by the event's kept map (TerritoryMaps.ForHunt); with no map, or after its latest build failed,
         /// every point counts as claimed, so no unit lands there (fail closed, as Hunt's seeds).</summary>
-        public bool IsClaimed(string eventId, float x, float z) =>
-            TerritoryMap.Maps.ForHunt(eventId) is not { } map || Territory.IsClaimed(map, x, z);
+        public bool IsClaimed(string eventId, float x, float z)
+        {
+            var t0 = Stopwatch.GetTimestamp();
+            try { return TerritoryMap.Maps.ForHunt(eventId) is not { } map || Territory.IsClaimed(map, x, z); }
+            finally { _claimedTicks += Stopwatch.GetTimestamp() - t0; }
+        }
 
         /// <summary>Free and grounded at <paramref name="level"/> by the tick's walk probe; false when no probe opens (the
         /// tile world is unavailable), so a stray goes back to its last inside spot and no unit jumps. A throwing call
         /// throws, which the phase counts against that unit.</summary>
         public bool Walkable(float x, float z, byte level)
         {
-            _check ??= WalkCheck.OpenSpots();
+            if (_check is null)
+            {
+                var o = Stopwatch.GetTimestamp();
+                try { _check = WalkCheck.OpenSpots(); }
+                finally { _openTicks += Stopwatch.GetTimestamp() - o; }
+            }
             _walkCalls++;
-            if (_check.Value.Walk.Probe is not { } probe) { _noProbe++; return false; }
-            if (!probe.IsGrounded(x, z, level)) { _notGrounded++; return false; }
-            if (!probe.IsFree(x, z, level)) { _notFree++; return false; }
-            return true;
+            var t0 = Stopwatch.GetTimestamp();
+            try
+            {
+                if (_check.Value.Walk.Probe is not { } probe) { _noProbe++; return false; }
+                if (!probe.IsGrounded(x, z, level)) { _notGrounded++; return false; }
+                if (!probe.IsFree(x, z, level)) { _notFree++; return false; }
+                return true;
+            }
+            finally { _walkTicks += Stopwatch.GetTimestamp() - t0; }
         }
 
         /// <summary>The tick's walk checks (Debug.VerboseLogging): "region walk: &lt;n&gt; checks, &lt;g&gt; not grounded,
@@ -594,6 +633,7 @@ internal static class SpawnTracker
             if (!_playersRead)
             {
                 _playersRead = true;
+                var t0 = Stopwatch.GetTimestamp();
                 try
                 {
                     var rows = PlayerQuery.Read();
@@ -603,6 +643,7 @@ internal static class SpawnTracker
                         unknown || maps.Any(m => Territory.IsClaimed(m, p.X, p.Z)), p.InPvpCombat)).ToList();
                 }
                 catch (Exception e) { _playersFault = e.Message; }
+                finally { _playersTicks += Stopwatch.GetTimestamp() - t0; }
             }
             if (_playersFault is not null) throw new InvalidOperationException(_playersFault);
             return _players;
@@ -611,15 +652,27 @@ internal static class SpawnTracker
         public void Return(RegionReturn r, Scope scope)
         {
             if (!_entities.TryGetValue(r.Key, out var unit) || !unit.Exists()) return;
-            // Targets first, as the arena (Codex swarm step 3 F3): a throw here leaves the unit outside for the next check.
-            DropTargets(r.Key, unit, scope);
-            Move(unit, new float3(r.X, r.Y, r.Z));
+            var t0 = Stopwatch.GetTimestamp();
+            try
+            {
+                // Targets first, as the arena (Codex swarm step 3 F3): a throw here leaves the unit outside for the next check.
+                DropTargets(r.Key, unit, scope);
+                Move(unit, new float3(r.X, r.Y, r.Z));
+                _moves++;
+            }
+            finally { _moveTicks += Stopwatch.GetTimestamp() - t0; }
         }
 
         public void Jump(RegionJump j)
         {
             if (!_entities.TryGetValue(j.Key, out var unit) || !unit.Exists()) return;
-            Move(unit, new float3(j.X, j.Y, j.Z));
+            var t0 = Stopwatch.GetTimestamp();
+            try
+            {
+                Move(unit, new float3(j.X, j.Y, j.Z));
+                _moves++;
+            }
+            finally { _moveTicks += Stopwatch.GetTimestamp() - t0; }
         }
 
         /// <summary>Removes the returned unit's AggroBuffer entries on players standing in no scope region (D5,
