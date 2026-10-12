@@ -15,9 +15,9 @@ public partial class ApiLinesTests
     {
         var catalog = Catalogue();
         var lines = ApiLines.Templates(catalog, "", "");
-        Assert.Equal(catalog.Templates.Count + 1, lines.Count);
+        Assert.Equal(Math.Min(catalog.Templates.Count, Paging.PageSize) + 1, lines.Count);              // page 1 (eleven templates since swarm D11)
         Assert.All(lines.SkipLast(1), l => Assert.Equal(TplKeys, Keys(l)));
-        Assert.Equal($"[NYAR:end] cmd=templates page=1/1 count={catalog.Templates.Count}", lines[^1]);
+        Assert.Equal($"[NYAR:end] cmd=templates page=1/{Paging.Pages(catalog.Templates.Count)} count={catalog.Templates.Count}", lines[^1]);
         var first = catalog.Templates[0];
         Assert.Equal(Wire.Tpl(first.Id, PillarNames.Name(first.Definition.Pillar), ApiLines.Trigger(first.Definition.Trigger.Type),
             first.Definition.DurationSeconds, first.Definition.Name), lines[0]);
@@ -79,7 +79,7 @@ public partial class ApiLinesTests
         Assert.Equal(["[NYAR:err] cmd=templates code=notfound arg=pillar"], ApiLines.Templates(catalog, "nope", ""));
         Assert.Equal(["[NYAR:err] cmd=templates code=notfound arg=pillar"], ApiLines.Templates(catalog, "nope", "1"));
         Assert.Equal(["[NYAR:err] cmd=templates code=badarg arg=page"], ApiLines.Templates(catalog, "spawns", "0"));
-        Assert.Equal([$"[NYAR:end] cmd=templates page=9/1 count={catalog.Templates.Count}"], ApiLines.Templates(catalog, "9", ""));
+        Assert.Equal([$"[NYAR:end] cmd=templates page=9/{Paging.Pages(catalog.Templates.Count)} count={catalog.Templates.Count}"], ApiLines.Templates(catalog, "9", ""));
         Assert.Equal(["[NYAR:err] cmd=template code=notfound arg=template"], ApiLines.TemplateInfo(catalog, "ghost"));
         Assert.Equal(["[NYAR:err] cmd=template code=badarg arg=template"], ApiLines.TemplateInfo(catalog, ""));
     }

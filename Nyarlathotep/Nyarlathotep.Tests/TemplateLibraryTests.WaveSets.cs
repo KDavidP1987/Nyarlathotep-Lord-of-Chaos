@@ -5,13 +5,13 @@ namespace Nyarlathotep.Tests;
 
 /// <summary>wave-sets D16: graveyard-waves, disabled and valid: three waves of undead (wave 1 at the start, wave 2 when
 /// cleared or after 120 s, wave 3 when cleared), levels and stats rising per wave, a boss-like last entry with maxHealth
-/// 2.0, AroundPlayer 20-40 m with Hunt 45, the scoreboard on; ten templates in all.</summary>
+/// 2.0, AroundPlayer 20-40 m with Hunt 45, the scoreboard on; eleven templates in all since swarm D11.</summary>
 public partial class TemplateLibraryTests
 {
     static List<string> WaveSetDifferences(TemplateCatalog c)
     {
         var diffs = new List<string>();
-        if (c.Templates.Count != 10) diffs.Add($"{c.Templates.Count} templates, not 10");
+        if (c.Templates.Count != 11) diffs.Add($"{c.Templates.Count} templates, not 11");
         var t = c.Find("graveyard-waves");
         if (t is null) { diffs.Add("graveyard-waves missing"); return diffs; }
         if (t.Invalid is { } why) diffs.Add($"invalid: {why}");

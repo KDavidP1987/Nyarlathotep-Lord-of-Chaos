@@ -254,12 +254,14 @@ internal static class EventRuntime
     }
 
     /// <summary>An event's spawn state beyond its units (event-spawns D13, D30, D33): its hunt seeds, its kept territory
-    /// map and its open failure streaks go with the event.</summary>
+    /// map and its open failure streaks, the arena check's included (swarm D4), go with the event. Every end path but a
+    /// restart runs it; a restart starts with none (SpawnTracker.Initialize).</summary>
     static void EndSpawnState(string id)
     {
         HuntAction.EndEvent(id);
         TerritoryMap.Forget(id);
         WalkCheck.Health.EventEnded(id);                                    // A71
+        SpawnTracker.ArenaEnded(id);                                        // swarm D4: no arena streak outlives its event
     }
 
     /// <summary>`.nyar pillar &lt;name&gt; off` (event-library D14, S-7): ends every running event of that pillar through the

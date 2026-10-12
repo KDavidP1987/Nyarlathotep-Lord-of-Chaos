@@ -10,8 +10,8 @@ namespace Nyarlathotep.Services;
 /// <summary>
 /// The one-second tick (foundation D24, D25; Design › Startup: last in Core.TryInitialize, replacing step 4's temporary
 /// tick). Each tick runs its phases in order: the spawn and despawn queues, the triggers, the Interval clock and the
-/// player triggers (every 5 s; automation D2, D9), the events, the Hunt seeds, the
-/// announcement queue, the push lines, the health line, then the state.json flush. Every phase has its own try/catch, logged once per failure streak, so a fault in one never stops the others,
+/// player triggers (every 5 s; automation D2, D9), the events, the Hunt seeds, the arena check (every 5 s
+/// while an arena event runs; swarm D3), the announcement queue, the push lines, the health line, then the state.json flush. Every phase has its own try/catch, logged once per failure streak, so a fault in one never stops the others,
 /// and an event's own fault is counted inside EventRuntime (D25). Nothing ticks before Core.IsReady (D28). With
 /// Debug.TimingLog the tick's average and maximum are logged once a minute (D24); a tick of 250 ms or more logs one
 /// warning naming its slowest phases, at most once a minute, whatever TimingLog says (event-library D36).
@@ -65,6 +65,7 @@ internal static class EventScheduler
                 Core.Log.LogInfo($"[nyar] {huntLine}");                     // by name, whatever phase comes after it (review F2)
         }
         catch { /* a diagnostic never breaks the tick */ }
+        Phase("arena", () => SpawnTracker.ArenaTick(now));                 // swarm D3, every 5 s while an arena event runs; its own phase (D4)
         Phase("announcements", () => Announcer.Tick(now));
         Phase("push", () => Pusher.Tick(now));
         Phase("health", () => HealthMonitor.Beat(now));

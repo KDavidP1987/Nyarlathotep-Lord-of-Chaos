@@ -144,6 +144,31 @@ public class SwarmTests
     }
 
     [Fact]
+    public void Containment_fails_when_a_point_without_height_returns_to_0()
+    {
+        // The service's walkable height (step 2): a Point saved without a height has no anchor, so the instance's own
+        // grounded units inside the arena give it, never the 0 the Point spawns at.
+        var a = ArenaEvent();
+        ArenaUnit Y(long key, float z, float y, string id = "sw") => At(key, 100, z, id) with { Y = y };
+        Assert.Equal(13f, Arena.ReturnHeight(a, [Y(1, 205, 12), Y(2, 210, 13), Y(3, 215, 14), Y(4, 260, 50), Y(5, 260, 51), Y(6, 210, 99, "other")]));
+        Assert.Equal(50f, Arena.ReturnHeight(a, [Y(4, 260, 50), Y(5, 270, 51)]));   // every unit strays: theirs, not 0
+        Assert.Equal(0f, Arena.ReturnHeight(a, []));                               // no unit: nothing strays either
+        var saved = Running(Def("sw", UnitsForm("\"arena\": { \"radius\": 25 }", location: "{ \"type\": \"Point\", \"x\": 100, \"z\": 200, \"y\": 7 }")));
+        Assert.Equal(7f, Arena.ReturnHeight(saved, [Y(1, 205, 12)]));             // the anchor the wave spawned and regroups at
+        var admin = Running(Def("sw", UnitsForm("\"arena\": { \"radius\": 25 }", location: Admin)), origin: (-500f, 9f, 700f));
+        Assert.Equal(9f, Arena.ReturnHeight(admin, [Y(1, 205, 12)]));             // the starting admin's height
+    }
+
+    [Fact]
+    public void Containment_fails_when_a_target_inside_is_dropped()
+    {
+        Assert.True(Arena.DropsEntry((100, 200), 25, (100, 226)));                 // a player outside the arena
+        Assert.False(Arena.DropsEntry((100, 200), 25, (100, 225)));                // on the edge: kept
+        Assert.False(Arena.DropsEntry((100, 200), 25, (110, 210)));                // inside: the unit keeps fighting
+        Assert.True(Arena.DropsEntry((100, 200), 25, null));                       // unreadable: dropped
+    }
+
+    [Fact]
     public void Containment_passes_check_every_behaviour_tick() => Assert.Equal(5, Arena.CheckSeconds);
 
     [Fact]

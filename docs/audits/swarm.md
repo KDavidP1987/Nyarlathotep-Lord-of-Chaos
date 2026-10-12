@@ -16,6 +16,14 @@ Rollback base: v0.9.0.
 - feature doc read: docs/features/SWARM.md is created by this step; docs/features/WAVE_SETS.md read for the wave list, the clear, the victory and the scoreboard this child extends
 - in-game baseline: not needed (step 1 has no in-game part; Session 1 is step 2)
 
+### Step 2 · 2026-10-11 · 0b05cc9
+- git status: clean at 0b05cc9 (step 1 built, reviewed and post-audited, pushed and verified)
+- compile: Release 0 Warning(s), 0 Error(s); tests: 2744 passed
+- preflight: PREFLIGHT OK; -Paths -DeclaredOf swarm → "declared: 52/52 in swarm"
+- dod status: swarm 11/25 checked; `dod-index.mjs --check swarm` → problems 0, 1 warning (prose: MaxConcurrentEvents, an existing cap)
+- feature doc read: docs/features/SWARM.md Status (step 1) and Open questions (whether the game's own leash holds our units, Session 1's first probe)
+- in-game baseline: the deployed 0.9.0 DLL (f65736b) booted on the dev server, logs first copied to %TEMP%\nyar-sw1-logs\pre-baseline: "templates: 10/10 valid", "triggers: all hooks available", "boot marker sweep: 0 found", "Nyarlathotep initialized … (attempt #1)"; 3 [Warning] lines, none new (Il2CppInterop's substitute notice, Beelzebub's TUNE line, example-empowerment's reason); 0 [Error]; -LogCheck "log check: 0 unhandled, 10 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; stopped by taskkill without /F in 6 s
+
 ## Post-audit
 ### Step 1 · 2026-10-11 · 2309b9b
 - built (9e62092, one builder subagent; the orchestrator reviewed, tested and committed): Model's Arena, WinnerRule and Growth as trailing optional parameters; ParseSpawnWaves's three keys and the D1, D2, D24 reasons as constants; Logic/Growth.cs Generate (D25); Logic/Arena.cs, the pure containment rule (D3); Scoreboard's winner over every row (D5); ScoreboardLines' winner line (D6) and ScoreboardRule.LogLine's suffix (D7); the six `event set` fields, their refusals and the info lines (D9, D10); design §6 rows; the contract's D12 sentence; ControlCases rows and Pending entries; csproj copies; preflight-checks childDocs, dataTables, snapshotSessions; data-inventory rows; paths-manifest `temp: nyar-sw*-logs`

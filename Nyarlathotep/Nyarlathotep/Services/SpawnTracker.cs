@@ -71,7 +71,8 @@ internal static class SpawnTracker
         _entities.Clear();
         _stateUnits.Clear();
         _regroup.Clear();
-        HuntAction.Initialize();                                             // event-spawns D33: a restart keeps no seed
+        _arena.Clear();                                                      // swarm D4: a restart keeps no arena streak
+        HuntAction.Initialize();                                            // event-spawns D33: a restart keeps no seed
         TerritoryMap.Initialize();                                           // and no kept map
     }
 
@@ -335,6 +336,79 @@ internal static class SpawnTracker
             catch (Exception ex)
             {
                 Core.Log.LogWarning($"[nyar] regroup check failed: {ex.Message}");
+            }
+        }
+    }
+
+    // ---- the arena phase (swarm D3, D4) ----
+
+    static readonly ArenaPhase _arena = new();
+    static readonly ArenaWorld _arenaWorld = new();
+
+    /// <summary>The arena check's health entry ("arena: check failing", swarm D4), for HealthMonitor and `.nyar status`.</summary>
+    internal static IReadOnlyList<string> ArenaHealth => _arena.Health;
+
+    /// <summary>An end path of <paramref name="eventId"/>: its arena streak ends with it (swarm D4, Review 2 F3).</summary>
+    internal static void ArenaEnded(string eventId) => _arena.EventEnded(eventId);
+
+    /// <summary>The scheduler's arena phase (swarm D3): every Arena.CheckSeconds while a running instance has an arena,
+    /// that instance's own strays are returned; the logic and its guards are Logic/ArenaPhase, which never throws.</summary>
+    [Mutating]
+    internal static void ArenaTick(DateTime now) =>
+        _arena.Tick(now, EventRuntime.Engine.Active, _arenaWorld, _random.NextDouble,
+            line => Core.Log.LogInfo($"[nyar] {line}"), line => Core.Log.LogError($"[nyar] {line}"));
+
+    /// <summary>The game side of the arena check. Reads only the ledger's own units; writes only units in
+    /// <see cref="_entities"/> (CLAUDE.md › Spawn &amp; buff safety), which Logic/ArenaPhase has already filtered to the
+    /// running instance's own (Arena.Ours).</summary>
+    sealed class ArenaWorld : IArenaWorld
+    {
+        public IEnumerable<TrackedUnit> Units => _ledger.Units;
+
+        public ArenaUnit? Read(TrackedUnit t)
+        {
+            if (!_entities.TryGetValue(t.Key, out var unit) || !unit.Exists() || !unit.TryGetComponent<Translation>(out var pos)) return null;
+            (float X, float Z)? target = null;
+            // The game's current aggro target, when it has one with a position: a cheap read of one component.
+            if (unit.TryGetComponent<AggroConsumer>(out var aggro) && aggro.AggroTarget._Entity is var e && e.Exists()
+                && e.TryGetComponent<Translation>(out var tp))
+                target = (tp.Value.x, tp.Value.z);
+            return new ArenaUnit(t.Key, t.EventId, t.SpawnedUtc, pos.Value.x, pos.Value.y, pos.Value.z, target);
+        }
+
+        public void Return(ArenaReturn r, (float X, float Z) centre, int arenaRadius, (float X, float Y, float Z)? anchor)
+        {
+            if (!_entities.TryGetValue(r.Key, out var unit) || !unit.Exists()) return;
+            var to = new float3(r.X, r.Y, r.Z);
+            unit.Write(new Translation { Value = to });
+            if (unit.Has<LastTranslation>()) unit.Write(new LastTranslation { Value = to });
+            // The spot the AI walks back to after a fight, as the regroup and Bloodcraft's familiar return set it, so the
+            // unit does not path back out to where it stood.
+            if (unit.TryGetComponent<AggroConsumer>(out var aggro))
+            {
+                aggro.PreCombatPosition = to;
+                unit.Write(aggro);
+            }
+            if (r.DropTarget) DropTargets(r.Key, unit, centre, arenaRadius);
+            // The game snaps the unit to a terrain level near the anchor's height; one on another level is moved to the
+            // anchor by the existing regroup check (A23). A Point stored without a height has no anchor and no regroup.
+            if (anchor is { } a) _regroup.Add((r.Key, a, 0));
+        }
+
+        /// <summary>Removes the returned unit's AggroBuffer entries on anyone outside the arena (or unreadable), so it does
+        /// not walk straight back out; entries on someone inside stay. A removed entry HuntAction seeded leaves its seed
+        /// record too, keeping the record consistent with the buffer (HuntSeeds.Removed). Our own unit only.</summary>
+        static void DropTargets(long key, Entity unit, (float X, float Z) centre, int arenaRadius)
+        {
+            if (!Core.EntityManager.HasBuffer<AggroBuffer>(unit)) return;
+            var buffer = Core.EntityManager.GetBuffer<AggroBuffer>(unit);
+            for (var i = buffer.Length - 1; i >= 0; i--)
+            {
+                var e = buffer[i].Entity;
+                (float X, float Z)? at = e.Exists() && e.TryGetComponent<Translation>(out var t) ? (t.Value.x, t.Value.z) : null;
+                if (!Arena.DropsEntry(centre, arenaRadius, at)) continue;
+                buffer.RemoveAt(i);
+                HuntAction.Seeds.Removed(key, KeyOf(e));
             }
         }
     }

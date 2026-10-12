@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 
 namespace Nyarlathotep.Logic;
 
@@ -105,4 +106,147 @@ public sealed partial record Arena
     /// distance only, never a name or a position.</summary>
     public static string LogLine(string eventId, int returned, float farthest) =>
         string.Create(CultureInfo.InvariantCulture, $"arena {eventId}: returned {returned}, farthest {farthest:0} m");
+
+    /// <summary>The walkable height a return lands at (swarm D3, step 2): the spawn path's own anchor height (the starting
+    /// admin's position for an Admin location, a Point's stored height: the height WavePlan.WalkY checks the wave at and the
+    /// regroup moves to); for a Point stored without a height, which has no anchor and spawns at 0 for the game to ground,
+    /// the median height of the instance's units standing inside the arena (radius + <see cref="Slack"/>), which the game
+    /// has grounded, else of all its units; never 0 while any unit of the instance is known. 0 with no unit (then nothing
+    /// strays and nothing is returned).</summary>
+    public static float ReturnHeight(ActiveEvent a, IReadOnlyList<ArenaUnit> units)
+    {
+        if (a.Definition.Action is not { } action) return 0f;
+        if (WavePlan.GroupAnchor(action.Location, a.Origin) is { } anchor) return anchor.Y;
+        var ours = units.Where(u => Ours(u, a)).ToList();
+        if (ours.Count == 0) return 0f;
+        var inside = Centre(a) is { } c && action.Arena is { } arena
+            ? ours.Where(u => !Strays(c, arena.Radius, u.X, u.Z)).ToList()
+            : [];
+        var from = inside.Count > 0 ? inside : ours;
+        var ys = from.Select(u => u.Y).OrderBy(y => y).ToList();
+        return ys[(ys.Count - 1) / 2];                                       // the lower median
+    }
+
+    /// <summary>Whether a returned unit's AggroBuffer entry is dropped (swarm D3, the target drop): its entity stands
+    /// outside the arena (farther than arena.radius from the centre on x and z) or its position cannot be read. An entry
+    /// on someone inside the arena stays, so a returned unit keeps fighting the players in it.</summary>
+    public static bool DropsEntry((float X, float Z) centre, int arenaRadius, (float X, float Z)? at) =>
+        at is not { } p || Distance(centre, p.X, p.Z) > arenaRadius;
+}
+
+/// <summary>The game side of one arena check (swarm D3, D4), implemented by Services/SpawnTracker over its ledger and
+/// entities: every member may throw, which the check takes as a failure of that read or write only.</summary>
+public interface IArenaWorld
+{
+    /// <summary>The ledger's tracked units (key, event, spawn time).</summary>
+    IEnumerable<TrackedUnit> Units { get; }
+
+    /// <summary>One unit's position and target; null when the unit is gone (died, despawned) since the ledger listed it.</summary>
+    ArenaUnit? Read(TrackedUnit unit);
+
+    /// <summary>Moves one of our units to <paramref name="r"/>'s spot, drops its targets outside the arena when
+    /// <paramref name="r"/>.DropTarget, and hands it to the regroup check at <paramref name="anchor"/> when the location has
+    /// one. A unit no longer there is left alone.</summary>
+    void Return(ArenaReturn r, (float X, float Z) centre, int arenaRadius, (float X, float Y, float Z)? anchor);
+}
+
+/// <summary>
+/// The arena phase (swarm D3, D4): every <see cref="Arena.CheckSeconds"/> s while a running instance has an arena, each such
+/// instance's own live units (SpawnTracker's ledger, filtered by event id and instance start) are read, checked with
+/// <see cref="Arena.Check"/> and the strays returned. Guarded per unit and per event: a throwing read or write skips that
+/// unit and the rest of the check runs; a check that met any throw is a failing check, logged
+/// "arena &lt;id&gt;: check failed: &lt;message&gt;" once per streak, holding <see cref="Failing"/> on the health line and in
+/// `.nyar status` until one of that event's checks runs clean, the event ends or the server restarts. <see cref="Run"/>
+/// never throws, so no later tick phase, despawn batch or event end is skipped because of it.
+/// </summary>
+public sealed class ArenaPhase
+{
+    public const string Failing = "arena: check failing";
+
+    readonly SortedSet<string> _failing = new(StringComparer.Ordinal);
+    DateTime _next;
+
+    /// <summary>The health entry: one while any arena event's check is failing.</summary>
+    public IReadOnlyList<string> Health => _failing.Count > 0 ? [Failing] : [];
+
+    public static string FailedLine(string eventId, string message) => $"arena {eventId}: check failed: {message}";
+
+    /// <summary>An end path of <paramref name="eventId"/> (natural, all waves defeated, stop, pillar off, fault, purge): its
+    /// streak and health entry end with it.</summary>
+    public void EventEnded(string eventId) => _failing.Remove(eventId);
+
+    /// <summary>A restart (Core's initialization) or a purge: no streak, no entry, the next check on the next tick.</summary>
+    public void Clear()
+    {
+        _failing.Clear();
+        _next = default;
+    }
+
+    /// <summary>The arena events among <paramref name="active"/>.</summary>
+    public static bool HasArena(ActiveEvent a) => a.Definition.Action is { Arena: not null };
+
+    /// <summary>One scheduler tick: nothing unless an arena event runs and <see cref="Arena.CheckSeconds"/> have passed since
+    /// the last check; then one check per arena event. Streaks of events no longer running are dropped first. Returns the
+    /// checks that ran (for the tests); never throws.</summary>
+    public IReadOnlyList<ArenaCheck> Tick(DateTime now, IReadOnlyCollection<ActiveEvent> active, IArenaWorld world, Func<double> random,
+        Action<string> info, Action<string> error)
+    {
+        var checks = new List<ArenaCheck>();
+        try
+        {
+            _failing.RemoveWhere(id => !active.Any(a => a.Id == id && HasArena(a)));
+            var arenas = active.Where(HasArena).ToList();
+            if (arenas.Count == 0 || now < _next) return checks;
+            _next = now.AddSeconds(Arena.CheckSeconds);
+            foreach (var a in arenas)
+                if (Run(a, world, random, info, error) is { } c) checks.Add(c);
+        }
+        catch (Exception) { /* the phase never throws (D4); every per-event fault is caught in Run */ }
+        return checks;
+    }
+
+    /// <summary>One check of <paramref name="a"/>. Returns the returns that were written (null when the check could not
+    /// run); never throws.</summary>
+    public ArenaCheck? Run(ActiveEvent a, IArenaWorld world, Func<double> random, Action<string> info, Action<string> error)
+    {
+        string? fault = null;
+        ArenaCheck? done = null;
+        try
+        {
+            var units = new List<ArenaUnit>();
+            foreach (var t in world.Units.Where(t => t.EventId == a.Id && t.SpawnedUtc >= a.Instance.StartedUtc).ToList())
+            {
+                try { if (world.Read(t) is { } u) units.Add(u); }
+                catch (Exception e) { fault ??= e.Message; }
+            }
+            var height = Arena.ReturnHeight(a, units);
+            if (Arena.Check(a, units, (_, _) => height, random) is { } check && Arena.Centre(a) is { } centre
+                && a.Definition.Action is { Arena: { } arena } action)
+            {
+                var anchor = WavePlan.GroupAnchor(action.Location, a.Origin);
+                var written = new List<ArenaReturn>();
+                foreach (var r in check.Returns)
+                {
+                    try
+                    {
+                        world.Return(r, centre, arena.Radius, anchor);
+                        written.Add(r);
+                    }
+                    catch (Exception e) { fault ??= e.Message; }
+                }
+                done = new ArenaCheck(a.Id, written, written.Count == 0 ? 0f : written.Max(r => r.Distance));
+                if (done.LogLine is { } line) Safe(info, line);
+            }
+        }
+        catch (Exception e) { fault ??= e.Message; }
+        if (fault is null) _failing.Remove(a.Id);
+        else if (_failing.Add(a.Id)) Safe(error, FailedLine(a.Id, fault));
+        return done;
+    }
+
+    static void Safe(Action<string> log, string line)
+    {
+        try { log(line); }
+        catch (Exception) { /* a log line never breaks the check */ }
+    }
 }

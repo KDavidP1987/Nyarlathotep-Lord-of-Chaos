@@ -38,7 +38,7 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        new(Swarm, "D4", 2, "0.10.0"), new(Swarm, "D11", 2, "0.10.0"), new(Swarm, "D13", 2, "0.10.0"), new(Swarm, "D19", 2, "0.10.0"),
+        new(Swarm, "D19", 2, "0.10.0"),
         new(Swarm, "D20", 3, "0.10.0"), new(Swarm, "D21", 3, "0.10.0"), new(Swarm, "D22", 3, "0.10.0"), new(Swarm, "D23", 3, "0.10.0"),
     ];
 
@@ -57,7 +57,7 @@ public static class ControlCases
         "ReadinessTests", "LibraryDependencyFailureTests", "SpawningTests", "HealthTests",
         "HumanReplyTests", "OutcomeCodeTests", "ApiTwinTests", "RateGateTests", "ApiOverloadTests", "EventAdminTests",
         "EndPathTests", "WavePrecedenceTests", "SpawnsDependencyFailureTests", "AutomationTests", "AutomationDependencyFailureTests", "SpawnPlacementTests",
-        "WaveSetTests", "ScoreboardTests", "WaveSetDependencyFailureTests", "SwarmTests",
+        "WaveSetTests", "ScoreboardTests", "WaveSetDependencyFailureTests", "SwarmTests", "SwarmDependencyFailureTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -535,8 +535,17 @@ public static class ControlCases
             with { Plan = Swarm },
         T("D2", "WinnerKey", "EventValidationTests", ["another_value_or_no_scoreboard"], ["both_forms_with_the_scoreboard"], ["key_absent"]) with { Plan = Swarm },
         T("D3", "Containment", "SwarmTests", ["a_stray_stays_or_an_inner_unit_moves", "a_return_lands_outside_action_radius", "the_height_is_not_walkable",
-            "a_target_outside_is_kept", "a_form_is_missed", "another_units_move", "the_admin_centre_is_not_the_origin", "the_log_line_names_a_player"],
+            "a_target_outside_is_kept", "a_form_is_missed", "another_units_move", "the_admin_centre_is_not_the_origin", "the_log_line_names_a_player",
+            "a_point_without_height_returns_to_0", "a_target_inside_is_dropped"],
             ["check_every_behaviour_tick"], ["no_stray"]) with { Plan = Swarm },
+        T("D4", "ArenaRead", "SwarmDependencyFailureTests", ["one_throwing_unit_stops_the_others", "the_error_line_repeats_within_a_streak",
+            "the_entry_outlives_a_good_check", "a_throw_skips_a_later_phase_the_despawn_or_the_end"], ["a_clean_check_returns_and_clears"],
+            ["no_arena_event"]) with { Plan = Swarm },
+        T("D11", "Swarm", "TemplateLibraryTests", ["the_template_differs"], ["spider_swarm_as_planned"], ["none_in_an_empty_catalogue"])
+            with { Plan = Swarm },
+        C("D13", "DependencySuite", "preflight -DependencySuite swarm",
+            ["selftest DependencySuite/bad", "selftest DependencySuite/bad-2", "selftest DependencySuite/bad-floor-spawns"], ["selftest DependencySuite/good"],
+            ["selftest DependencySuite/empty"]) with { Plan = Swarm },
         T("D5", "Winner", "ScoreboardTests", ["the_best_ratio_fourth_by_kills_is_not_chosen", "zero_deaths_divides_by_zero_or_outranks", "a_tie_breaks_the_wrong_way",
             "a_dropped_admin_or_a_player_without_a_kill_wins", "the_201st_player_wins"], ["the_winner_through_end"], ["no_kill"]) with { Plan = Swarm },
         T("D6", "WinnerLines", "ScoreboardTests", ["the_ratio_prints_a_comma_or_a_third_decimal", "a_line_exceeds_480_bytes", "a_name_keeps_markup",

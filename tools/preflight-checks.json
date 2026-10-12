@@ -1215,6 +1215,19 @@
           "control": "ClearedRead"
         }
       ]
+    },
+    "swarm": {
+      "categories": [
+        "arena-read"
+      ],
+      "rows": [
+        {
+          "name": "arena-read",
+          "kind": "tests",
+          "class": "SwarmDependencyFailureTests",
+          "control": "ArenaRead"
+        }
+      ]
     }
   },
   "controlSuites": {

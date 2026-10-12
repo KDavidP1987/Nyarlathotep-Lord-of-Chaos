@@ -186,6 +186,31 @@
         "scoreboard": true
       },
       "announce": { "start": [ "The graves open: {event}." ], "end": [ "The graveyard falls silent. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "spider-swarm",
+      "name": "Spider swarm",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1200,
+      "action": {
+        "type": "SpawnWaves",
+        "units": [
+          { "prefab": "CHAR_Spider_Forest", "count": 2 },
+          { "prefab": "CHAR_Spider_Melee", "count": 2 },
+          { "prefab": "CHAR_Spider_Range", "count": 2 }
+        ],
+        "waves": 5, "intervalSeconds": 120, "radius": 12,
+        "location": { "type": "Admin" },
+        "modifiers": { "level": 30 },
+        "growth": { "addUnits": 1, "addLevels": 3, "whenCleared": true },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath"
+      },
+      "announce": { "start": [ "The webs stir: {event}." ], "end": [ "The swarm withdraws. {event} is over." ], "warnings": false }
     }
   ]
 }

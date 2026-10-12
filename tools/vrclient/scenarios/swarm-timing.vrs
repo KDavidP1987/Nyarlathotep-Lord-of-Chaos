@@ -1,0 +1,46 @@
+# swarm-timing.vrs: swarm D18 (Session 1): sw-timing holds 24 tracked units inside a 30 m arena for eleven timing
+# windows while Chaos stands at the spot, so the 5 s arena check runs over every unit each time; the tick budget is
+# read afterwards with -TimingSpan -Windows 10 -MinTracked 10 on the logs, as wave-sets-timing did (the "arena" phase
+# is one more phase in the same tick). No "[nyar] arena sw-timing: check failed" line and no "arena: check failing"
+# health entry may appear.
+#
+# Needs: what swarm.vrs needs; [Debug] TimingLog = true in the dev cfg; Chaos invulnerable (`ToggleInvulnerable true`,
+# never false). The location is set at the pond by `.nyar event set sw-timing location here` below.
+# The dev server's events.json entry (paste it into the "events" array):
+#   { "id": "sw-timing", "name": "Arena timing", "enabled": true, "pillar": "spawns", "trigger": { "type": "Manual" },
+#     "durationSeconds": 1800,
+#     "action": { "type": "SpawnWaves", "units": [ { "prefab": "CHAR_Spider_Forest", "count": 12 } ], "waves": 2,
+#       "intervalSeconds": 60, "radius": 10, "location": { "type": "Point", "x": 0, "z": 0 },
+#       "arena": { "radius": 30 }, "behaviour": { "type": "Hunt", "range": 30 }, "scoreboard": true } }
+ensure
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar event reload
+expect-log events: reloaded
+chat .nyar event set sw-timing location here
+expect-reply sw-timing
+mark
+chat .nyar event start sw-timing
+expect-log event sw-timing started by
+expect-log event sw-timing wave 1/2: 12 units queued timeout=30
+expect-log event sw-timing wave 2/2: 12 units queued timeout=90
+wait 30
+chat .nyar status
+expect-reply tracked units: 24
+shot full sw-timing-24
+wait 1500
+# drains every line of the 25 minutes: no failed check and no health line naming the arena entry
+expect-no-log arena( sw-timing: check failed|: check failing) timeout=3
+chat .nyar status
+expect-reply tracked units:
+chat .nyar event stop sw-timing
+expect-log event sw-timing stopped
+expect-no-log arena sw-timing: timeout=15
+wait 25
+chat .nyar status
+expect-reply tracked units: 0

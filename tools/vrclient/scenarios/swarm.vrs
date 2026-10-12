@@ -1,0 +1,207 @@
+# swarm.vrs: swarm D15, D16 and D17 (Session 1). (1) sw-arena: a Point arena set at the pond keeps its units inside
+# while Chaos stands 60 m away (D15). (2) spider-swarm from the template: five generated waves, each larger than the
+# one before, wave 3 at level 36, all killed: "all waves defeated (5 of 5 waves)", the scoreboard and the winner line in
+# chat (D16). (3) spider-swarm stopped at wave 2 shows the scoreboard with its winner line and leaves 0 tracked; then
+# purged at wave 2, which shows neither and leaves 0 (D17). The purge runs last: its cooldown blocks starts for 60 s.
+# The restart path is swarm-prep-restart.vrs, the death run swarm-death.vrs, the IncludeAdmins-false run
+# swarm-noadmins.vrs, the tick budget swarm-timing.vrs.
+#
+# Needs: NyarDevTools (.devkill, .devgo, .devtp, .devwhere, .devmark), DevChatEcho; [Scoreboard] IncludeAdmins = true;
+# Chaos invulnerable (`ToggleInvulnerable true`, a Boolean, never false); no purge cooldown; spider-swarm not yet in
+# events.json (`.nyar template use` refuses an id that exists: `.nyar event delete spider-swarm` and confirm first).
+# Two dev marks, saved once by hand at the pond's own x/z (from `.devgo pond` then `.devwhere`):
+#   sw-far  = 60 m east of the pond: `.devtp <pondX+60> <pondZ>`, then `.devmark sw-far`
+#   sw-near = 10 m east of the pond: `.devtp <pondX+10> <pondZ>`, then `.devmark sw-near`
+# The pond had native units in wave-sets (A5); if natives kill the test units there, use another spot and its marks.
+#
+# The dev server's events.json entry (paste it into the "events" array; the location is overwritten by
+# `.nyar event set sw-arena location here` below):
+#   { "id": "sw-arena", "name": "Arena test", "enabled": true, "pillar": "spawns", "trigger": { "type": "Manual" },
+#     "durationSeconds": 600,
+#     "action": { "type": "SpawnWaves", "units": [ { "prefab": "CHAR_Spider_Forest", "count": 8 } ], "waves": 1,
+#       "intervalSeconds": 60, "radius": 8, "location": { "type": "Point", "x": 0, "z": 0 },
+#       "arena": { "radius": 25 }, "behaviour": { "type": "Hunt", "range": 25 }, "scoreboard": true, "winner": "KillDeath" } }
+#
+# Spider prefab guids for .devkill: CHAR_Spider_Forest -581295882, CHAR_Spider_Melee 2136899683, CHAR_Spider_Range 2103131615.
+ensure
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar event reload
+expect-log events: reloaded
+#
+# 1. D15: sw-arena kept inside its arena
+chat .nyar event set sw-arena location here
+expect-reply sw-arena
+mark
+chat .nyar event start sw-arena
+expect-log event sw-arena started by
+expect-log event sw-arena wave 1/1: 8 units queued timeout=30
+wait 8
+chat .nyar debug here 8
+expect-reply CHAR_Spider_Forest sw-arena
+shot full sw-arena-spawn
+chat .devgo sw-far
+expect-log \[DEV TP\] sw-far
+wait 10
+# from 10 s after the move, no unit has followed Chaos to within 25 m of it (they are all within 35 m of the spot);
+# a "[nyar] arena sw-arena: returned <n>, farthest <d> m" line is either there (a return) or not (the game's leash held)
+chat .nyar debug here 25
+expect-reply no tracked units within 25 m
+wait 20
+chat .nyar debug here 25
+expect-reply no tracked units within 25 m
+shot full sw-arena-far
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 1
+chat .nyar debug here 35
+expect-reply CHAR_Spider_Forest sw-arena
+chat .nyar status
+expect-reply tracked units: 8
+# back at 10 m from the spot: in combat with them within 10 s (judged on the screenshots)
+chat .devgo sw-near
+expect-log \[DEV TP\] sw-near
+wait 5
+shot full sw-arena-near-5s
+wait 5
+shot full sw-arena-near-10s
+chat .nyar event stop sw-arena
+expect-log event sw-arena stopped
+expect-log event sw-arena scoreboard: .*(winner K/D|no winner)
+expect-no-log arena sw-arena: timeout=15
+wait 25
+chat .nyar status
+expect-reply tracked units: 0
+#
+# 2. D16: spider-swarm from the template, five growing waves, all killed, the winner line
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+chat .nyar template use spider-swarm
+expect-reply spider-swarm
+chat .nyar event enable spider-swarm
+expect-reply spider-swarm
+chat .nyar event info spider-swarm
+expect-reply growth: +1 units per entry and +3 levels per wave
+mark
+chat .nyar event start spider-swarm
+expect-log event spider-swarm started by
+expect-log event spider-swarm wave 1/5: 6 units queued timeout=30
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log \[DEV KILL\] n=
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 1 cleared timeout=20
+expect-log event spider-swarm wave 2/5: 9 units queued timeout=20
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 2 cleared timeout=20
+expect-log event spider-swarm wave 3/5: 12 units queued timeout=20
+wait 10
+chat .nyar debug here 40
+expect-reply lvl 36
+shot full sw-wave3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 3 cleared timeout=20
+expect-log event spider-swarm wave 4/5: 15 units queued timeout=20
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 4 cleared timeout=20
+expect-log event spider-swarm wave 5/5: 18 units queued timeout=20
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 5 cleared timeout=20
+expect-log event spider-swarm ended: all waves defeated \(5 of 5 waves\) timeout=20
+expect-log event spider-swarm scoreboard: 1 players, (?P<K>[0-9]+) kills, 0 deaths, winner K/D [0-9]+\.[0-9]{2}
+expect-chat Spider swarm scoreboard: 1. Chaos timeout=20
+expect-chat Spider swarm winner: Chaos, K/D timeout=20
+shot full sw-winner
+shot chat sw-winner-chat
+expect-no-log arena spider-swarm: timeout=15
+wait 25
+chat .nyar status
+expect-reply tracked units: 0
+#
+# 3. D17: stop at wave 2 (scoreboard and winner line, 0 tracked after the grace)
+mark
+chat .nyar event start spider-swarm
+expect-log event spider-swarm wave 1/5: 6 units queued timeout=30
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 2/5: 9 units queued timeout=20
+wait 10
+chat .nyar event stop spider-swarm
+expect-log event spider-swarm stopped: [0-9]+ units queued
+expect-log event spider-swarm scoreboard: 1 players, [0-9]+ kills, 0 deaths, winner K/D
+expect-chat Spider swarm winner: Chaos, K/D timeout=20
+shot full sw-stop
+expect-no-log arena spider-swarm: timeout=15
+wait 25
+chat .nyar status
+expect-reply tracked units: 0
+#
+# 3b. D17: purge at wave 2 (no scoreboard, no winner, 0 tracked); last, for its cooldown
+mark
+chat .nyar event start spider-swarm
+expect-log event spider-swarm wave 1/5: 6 units queued timeout=30
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 2/5: 9 units queued timeout=20
+wait 10
+chat .nyar purge
+wait 2
+chat .nyar purge confirm
+expect-log purge: 1 events ended, [0-9]+ units queued
+expect-no-log scoreboard: timeout=10
+expect-no-log winner timeout=3
+expect-no-log arena spider-swarm: timeout=10
+shot full sw-purge
+wait 20
+chat .nyar status
+expect-reply tracked units: 0
