@@ -211,6 +211,30 @@
         "winner": "KillDeath"
       },
       "announce": { "start": [ "The webs stir: {event}." ], "end": [ "The swarm withdraws. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "spider-hunting-grounds",
+      "name": "Spider hunting grounds",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "units": [
+          { "prefab": "CHAR_Spider_Forestling", "count": 2 },
+          { "prefab": "CHAR_Spider_Forest", "count": 2 },
+          { "prefab": "CHAR_Spider_Range", "count": 2 }
+        ],
+        "waves": 3, "intervalSeconds": 300, "radius": 8,
+        "location": { "type": "Region" },
+        "scope": [ "DunleyFarmlands" ],
+        "regionLock": true,
+        "modifiers": { "level": 30 },
+        "behaviour": { "type": "RegionHunt" },
+        "scoreboard": true
+      },
+      "announce": { "start": [ "Dunley Farmlands crawls with spiders: {event}." ], "end": [ "The spiders retreat to their webs. {event} is over." ], "warnings": false }
     }
   ]
 }

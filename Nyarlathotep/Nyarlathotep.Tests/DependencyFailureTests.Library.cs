@@ -187,14 +187,14 @@ public class LibraryDependencyFailureTests
     {
         var log = new LogLines();
         var c = TemplateCatalog.Boot(TemplateLibraryTests.Bytes(TemplateLibraryTests.RealText), TemplateLibraryTests.Units(), TemplateLibraryTests.Units(), log.Add, log.Add);
-        Assert.Equal(["templates: 11/11 valid"], log.Lines);
+        Assert.Equal(["templates: 12/12 valid"], log.Lines);
         Assert.Null(c.Error);
 
         var units = TemplateLibraryTests.Units();
         units.Factions.Remove("Faction_Legion");
         log.Lines.Clear();
         TemplateCatalog.Boot(TemplateLibraryTests.Bytes(TemplateLibraryTests.RealText), units, units, log.Add, log.Add);
-        Assert.Equal(["template legion-weekend-surge invalid: unknown faction Faction_Legion", "templates: 10/11 valid"], log.Lines);
+        Assert.Equal(["template legion-weekend-surge invalid: unknown faction Faction_Legion", "templates: 11/12 valid"], log.Lines);
     }
 
     [Fact]

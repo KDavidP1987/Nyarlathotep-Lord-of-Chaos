@@ -169,6 +169,7 @@ internal static class EventRuntime
             ScoreboardRule.End(EndPath.Purge, e, Board);                     // its rows go, nothing shown (wave-sets D11)
         }
         HuntAction.Clear();                                                  // seeds and kept maps go too
+        SpawnTracker.RegionPurged();                                         // hunting-grounds D12: every lock and hunt record
         TerritoryMap.Clear();
         WalkCheck.Health.Purged();                                           // every streak, `.nyar spawn`'s "manual" too (A61, A71)
         EmpowerAction.StopAllCarriers();
@@ -254,14 +255,16 @@ internal static class EventRuntime
     }
 
     /// <summary>An event's spawn state beyond its units (event-spawns D13, D30, D33): its hunt seeds, its kept territory
-    /// map and its open failure streaks, the arena check's included (swarm D4), go with the event. Every end path but a
-    /// restart runs it; a restart starts with none (SpawnTracker.Initialize).</summary>
+    /// map and its open failure streaks, the arena check's included (swarm D4), go with the event, and so do its region
+    /// lock and hunt records and streaks (hunting-grounds D12). Every end path but a restart runs it; a restart starts with
+    /// none (SpawnTracker.Initialize).</summary>
     static void EndSpawnState(string id)
     {
         HuntAction.EndEvent(id);
         TerritoryMap.Forget(id);
         WalkCheck.Health.EventEnded(id);                                    // A71
         SpawnTracker.ArenaEnded(id);                                        // swarm D4: no arena streak outlives its event
+        SpawnTracker.RegionEnded(id);                                       // hunting-grounds D12: nor a last inside spot, target or streak
     }
 
     /// <summary>`.nyar pillar &lt;name&gt; off` (event-library D14, S-7): ends every running event of that pillar through the

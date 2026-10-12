@@ -4,7 +4,9 @@ using Il2CppInterop.Runtime;
 using Nyarlathotep.Config;
 using Nyarlathotep.Logic;
 using ProjectM;
+using ProjectM.Pathfinding;
 using ProjectM.Shared;
+using ProjectM.Tiles;
 using Stunlock.Core;
 using Unity.Collections;
 using Unity.Entities;
@@ -72,6 +74,9 @@ internal static class SpawnTracker
         _stateUnits.Clear();
         _regroup.Clear();
         _arena.Clear();                                                      // swarm D4: a restart keeps no arena streak
+        _region.Clear();                                                     // hunting-grounds D12: nor a last inside spot, target or streak
+        _meta.Clear();
+        _groups.Clear();
         HuntAction.Initialize();                                            // event-spawns D33: a restart keeps no seed
         TerritoryMap.Initialize();                                           // and no kept map
     }
@@ -244,6 +249,7 @@ internal static class SpawnTracker
             }
             _entities[key] = unit;
             if (order.Hunt is { } hunt && order.EventId is { } huntEvent) HuntAction.Track(key, unit, huntEvent, hunt);
+            if (order.EventId is { } ev) _meta[key] = new UnitMeta(order.Wave, GroupOf(ev, order), (order.X, order.Y, order.Z));   // S-14
             var stateUnit = new StateUnit(order.EventId ?? "manual", order.Prefab, order.X, order.Z, now);
             _stateUnits[key] = stateUnit;
             Persistence.State.Document.Units.Add(stateUnit);
@@ -418,6 +424,210 @@ internal static class SpawnTracker
         }
     }
 
+    // ---- the region phase: the lock and the hunt (hunting-grounds D5-D9, D12) ----
+
+    static readonly RegionPhase _region = new();
+    static readonly RegionWorld _regionWorld = new();
+
+    /// <summary>What a tracked unit of an event carries for the lock and the hunt (S-14): its group within the instance,
+    /// told apart by the group's hunt centre (one per Point or Admin wave, one per AroundPlayer group, one per Region
+    /// spot; 0 without a hunt), and its spawn point, the lock's first inside spot. Memory only; it leaves with the unit.</summary>
+    readonly record struct UnitMeta(int Wave, int Group, (float X, float Y, float Z) Spawn);
+
+    static readonly Dictionary<long, UnitMeta> _meta = new();
+    static readonly Dictionary<(string EventId, int Wave, float X, float Z), int> _groups = new();
+
+    /// <summary>The group number of an order (S-14): one per event, wave and hunt centre (WaveAction gives every group of a
+    /// Hunt or RegionHunt wave its own centre); 0 for an order without a hunt tag.</summary>
+    static int GroupOf(string eventId, SpawnOrder order)
+    {
+        if (order.Hunt is not { } tag) return 0;
+        var key = (eventId, order.Wave, tag.X, tag.Z);
+        if (!_groups.TryGetValue(key, out var group)) _groups[key] = group = _groups.Count + 1;
+        return group;
+    }
+
+    /// <summary>The two health entries ("region lock: check failing", "region hunt: move failing"; hunting-grounds D6, D9),
+    /// each while failing, for HealthMonitor and `.nyar status`.</summary>
+    internal static IReadOnlyList<string> RegionHealth => _region.Health;
+
+    /// <summary>An end path of <paramref name="eventId"/> (D12): its last inside spots, targets, group numbers and streaks
+    /// go with it, and its health entries clear.</summary>
+    internal static void RegionEnded(string eventId)
+    {
+        _region.EventEnded(eventId);
+        foreach (var key in _groups.Keys.Where(k => k.EventId == eventId).ToList()) _groups.Remove(key);
+    }
+
+    /// <summary>`purge confirm` (D12): every record of the region phase goes.</summary>
+    internal static void RegionPurged()
+    {
+        _region.Clear();
+        _groups.Clear();
+    }
+
+    /// <summary>The scheduler's region phase (hunting-grounds D5, D7, D8), right after the arena: every
+    /// HuntingGrounds.CheckSeconds while a locked or RegionHunt instance runs, the lock returns that instance's own strays,
+    /// then the hunt jumps its own far units toward their targets. The logic and its guards are Logic/RegionPhase, which
+    /// never throws; the tick's walk probe is disposed here whatever happens.</summary>
+    [Mutating]
+    internal static void RegionTick(DateTime now)
+    {
+        _regionWorld.Begin();
+        try
+        {
+            _region.Tick(now, EventRuntime.Engine.Active, _regionWorld, _random.NextDouble,
+                line => Core.Log.LogInfo($"[nyar] {line}"), line => Core.Log.LogError($"[nyar] {line}"));
+        }
+        finally { _regionWorld.End(); }
+    }
+
+    /// <summary>A unit's height level: the game's own once it has snapped the unit (Height.ServerHeightLevel above 0,
+    /// WavePlan.Step), else the level of its height; 0 for a height outside the map's range.</summary>
+    static byte LevelOf(Entity unit, float y) =>
+        unit.TryGetComponent<Height>(out var h) && h.ServerHeightLevel > 0 ? (byte)Math.Clamp((int)h.ServerHeightLevel, 0, 255)
+        : WalkHeight.Problem(y) is null ? TileLayerUtility.GetHeightLevel(y)
+        : (byte)0;
+
+    /// <summary>Moves one of our units at once, without a walk (hunting-grounds Session 0, the mover's method): Translation
+    /// and LastTranslation, AggroConsumer.PreCombatPosition (the spot the AI returns to after a fight) and
+    /// SpawnTransform.Position (without it the unit walks home), its PathBuffer emptied and its Velocity zeroed (without
+    /// that it keeps walking its old path). Only a unit in <see cref="_entities"/> reaches here.</summary>
+    static void Move(Entity unit, float3 to)
+    {
+        unit.Write(new Translation { Value = to });
+        if (unit.Has<LastTranslation>()) unit.Write(new LastTranslation { Value = to });
+        if (unit.TryGetComponent<AggroConsumer>(out var aggro))
+        {
+            aggro.PreCombatPosition = to;
+            unit.Write(aggro);
+        }
+        if (unit.TryGetComponent<SpawnTransform>(out var home))
+        {
+            home.Position = to;
+            unit.Write(home);
+        }
+        if (Core.EntityManager.HasBuffer<PathBuffer>(unit)) Core.EntityManager.GetBuffer<PathBuffer>(unit).Clear();
+        if (unit.Has<Velocity>()) unit.Write(new Velocity());
+    }
+
+    /// <summary>The game side of the lock and the hunt. Reads only the ledger's own units and writes only units in
+    /// <see cref="_entities"/> (CLAUDE.md › Spawn &amp; buff safety), which Logic/LockPhase and HuntPhase have already
+    /// filtered to the running instance's own (HuntingGrounds.Ours). The players are read once per tick and the walk
+    /// probe is opened once per tick, at its first use, and disposed by <see cref="End"/>; nothing is kept past the tick.</summary>
+    sealed class RegionWorld : IRegionWorld
+    {
+        WalkCheck.WaveCheck? _check;
+        List<HuntCandidate> _players;
+        string _playersFault;
+        bool _playersRead;
+
+        /// <summary>The start of a region tick: nothing of the last tick is reused.</summary>
+        internal void Begin()
+        {
+            _check = null;
+            _players = null;
+            _playersFault = null;
+            _playersRead = false;
+        }
+
+        /// <summary>The end of a region tick: the walk probe's native resources are freed and the players forgotten.</summary>
+        internal void End()
+        {
+            var check = _check;
+            Begin();
+            try { check?.Resource?.Dispose(); }
+            catch (Exception) { /* a failed dispose never breaks the tick (WaveAction does the same) */ }
+        }
+
+        public IEnumerable<TrackedUnit> Units => _ledger.Units;
+
+        public RegionUnit? Read(TrackedUnit t)
+        {
+            if (!_entities.TryGetValue(t.Key, out var unit) || !unit.Exists() || !unit.TryGetComponent<Translation>(out var pos)) return null;
+            var p = pos.Value;
+            var known = _meta.TryGetValue(t.Key, out var meta);
+            return new RegionUnit(t.Key, t.EventId, t.SpawnedUtc, p.x, p.y, p.z, LevelOf(unit, p.y), t.Wave, known ? meta.Group : 0,
+                known ? meta.Spawn : null);
+        }
+
+        public string RegionOf(float x, float z) =>
+            RegionMap.State.Available ? RegionMap.State.Index.RegionOf(x, z) : throw new InvalidOperationException("regions unavailable");
+
+        /// <summary>Claimed by the event's kept map (TerritoryMaps.ForHunt); with no map, or after its latest build failed,
+        /// every point counts as claimed, so no unit lands there (fail closed, as Hunt's seeds).</summary>
+        public bool IsClaimed(string eventId, float x, float z) =>
+            TerritoryMap.Maps.ForHunt(eventId) is not { } map || Territory.IsClaimed(map, x, z);
+
+        /// <summary>Free and grounded at <paramref name="level"/> by the tick's walk probe; false when no probe opens (the
+        /// tile world is unavailable), so a stray goes back to its last inside spot and no unit jumps. A throwing call
+        /// throws, which the phase counts against that unit.</summary>
+        public bool Walkable(float x, float z, byte level)
+        {
+            _check ??= WalkCheck.OpenSpots();
+            if (_check.Value.Walk.Probe is not { } probe) return false;
+            return probe.IsGrounded(x, z, level) && probe.IsFree(x, z, level);
+        }
+
+        public float HeightOf(byte level) => WalkCheck.HeightOf(level);
+
+        public WalkBudget Budget => WalkCheck.Budget;
+
+        /// <summary>Every connected character (PlayerQuery.Read), read once per tick, memory only. A player stands in
+        /// claimed territory by the running RegionHunt events' kept maps; while any of them has no map, every player
+        /// does, so nobody is targeted (fail closed). A failed read throws for every event of the tick (D9).</summary>
+        public IReadOnlyList<HuntCandidate> Players()
+        {
+            if (!_playersRead)
+            {
+                _playersRead = true;
+                try
+                {
+                    var rows = PlayerQuery.Read();
+                    var maps = EventRuntime.Engine.Active.Where(HuntingGrounds.Hunts).Select(a => TerritoryMap.Maps.ForHunt(a.Id)).ToList();
+                    var unknown = maps.Count == 0 || maps.Any(m => m is null);
+                    _players = rows.Select(p => new HuntCandidate(p.Key, p.X, p.Z, true, p.Alive,
+                        unknown || maps.Any(m => Territory.IsClaimed(m, p.X, p.Z)), p.InPvpCombat)).ToList();
+                }
+                catch (Exception e) { _playersFault = e.Message; }
+            }
+            if (_playersFault is not null) throw new InvalidOperationException(_playersFault);
+            return _players;
+        }
+
+        public void Return(RegionReturn r, Scope scope)
+        {
+            if (!_entities.TryGetValue(r.Key, out var unit) || !unit.Exists()) return;
+            // Targets first, as the arena (Codex swarm step 3 F3): a throw here leaves the unit outside for the next check.
+            DropTargets(r.Key, unit, scope);
+            Move(unit, new float3(r.X, r.Y, r.Z));
+        }
+
+        public void Jump(RegionJump j)
+        {
+            if (!_entities.TryGetValue(j.Key, out var unit) || !unit.Exists()) return;
+            Move(unit, new float3(j.X, j.Y, j.Z));
+        }
+
+        /// <summary>Removes the returned unit's AggroBuffer entries on players standing in no scope region (D5,
+        /// LockRule.DropsEntry), so it does not walk straight back out; entries on players inside, on NPCs and on unreadable
+        /// entities stay, as the arena's (Codex swarm step 3 F2). A removed entry HuntAction seeded leaves its seed record
+        /// too (HuntSeeds.Removed). Our own unit only.</summary>
+        void DropTargets(long key, Entity unit, Scope scope)
+        {
+            if (!Core.EntityManager.HasBuffer<AggroBuffer>(unit)) return;
+            var buffer = Core.EntityManager.GetBuffer<AggroBuffer>(unit);
+            for (var i = buffer.Length - 1; i >= 0; i--)
+            {
+                var e = buffer[i].Entity;
+                if (!e.Exists() || !e.Has<PlayerCharacter>() || !e.TryGetComponent<Translation>(out var t)) continue;
+                if (!LockRule.DropsEntry(scope, RegionOf, (t.Value.x, t.Value.z))) continue;
+                buffer.RemoveAt(i);
+                HuntAction.Seeds.Removed(key, KeyOf(e));
+            }
+        }
+    }
+
     /// <summary>`.nyar debug here`: one line per tracked unit within <paramref name="radius"/> m of
     /// <paramref name="at"/>, nearest first.</summary>
     internal static IReadOnlyList<string> DebugHere(float3 at, int radius)
@@ -454,6 +664,7 @@ internal static class SpawnTracker
     static void Release(long key)
     {
         _entities.Remove(key);
+        _meta.Remove(key);
         HuntAction.Forget(key);
         if (_stateUnits.Remove(key, out var stateUnit))
         {

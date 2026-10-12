@@ -15,7 +15,7 @@ public partial class ApiLinesTests
     {
         var catalog = Catalogue();
         var lines = ApiLines.Templates(catalog, "", "");
-        Assert.Equal(Math.Min(catalog.Templates.Count, Paging.PageSize) + 1, lines.Count);              // page 1 (eleven templates since swarm D11)
+        Assert.Equal(Math.Min(catalog.Templates.Count, Paging.PageSize) + 1, lines.Count);              // page 1 (twelve templates since hunting-grounds D16)
         Assert.All(lines.SkipLast(1), l => Assert.Equal(TplKeys, Keys(l)));
         Assert.Equal($"[NYAR:end] cmd=templates page=1/{Paging.Pages(catalog.Templates.Count)} count={catalog.Templates.Count}", lines[^1]);
         var first = catalog.Templates[0];

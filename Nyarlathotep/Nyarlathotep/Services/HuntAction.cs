@@ -23,6 +23,9 @@ namespace Nyarlathotep.Services;
 /// already holds is never seeded. The territory flag comes from the event's latest successful map
 /// (TerritoryMap.Maps.ForHunt); while its latest build failed every seed goes and none is added (fail closed). A throw is
 /// caught per event and logged "hunt &lt;id&gt;: seed failed" once per streak; the wave keeps its units (D21).
+/// Hunting grounds (hunting-grounds D5, D7, S-9): while an event's region lock holds, no Hunt or RegionHunt seed goes to a
+/// player standing in no scope region (Logic LockRule.SeedPool); a RegionHunt unit is seeded from its own position, on the
+/// eligible players inside the scope regions within 60 m (Logic HuntRule.SeedTargets), not from its group's centre.
 /// </summary>
 internal static class HuntAction
 {
@@ -132,12 +135,13 @@ internal static class HuntAction
             try
             {
                 var map = TerritoryMap.Maps.ForHunt(g.Key);
+                var targeting = Targeting(g.Key, players, map);
                 int kept = 0, left = 0;
                 var held = new HashSet<long>();
                 foreach (var (key, (unit, _, tag)) in g.ToList())
                 {
                     if (!unit.Exists()) { Forget(key); continue; }
-                    var (k, l) = SeedUnit(key, unit, g.Key, tag, players, map, held);
+                    var (k, l) = SeedUnit(key, unit, g.Key, tag, players, targeting, held);
                     kept += k;
                     left += l;
                 }
@@ -187,11 +191,44 @@ internal static class HuntAction
         if (WalkCheck.Health.Failing(SpawnFailure.HuntSeed, eventId)) Core.Log.LogWarning($"[nyar] hunt {eventId}: seed failed: {ex.Message}");
     }
 
+    /// <summary>Whom one event's units may target this tick: null without a territory map (fail closed: every seed goes,
+    /// D13); else the players as Hunt candidates, narrowed while the event's region lock holds to those inside its scope
+    /// regions (hunting-grounds D5, S-9; none while the region index is unavailable), with the scope and region lookup a
+    /// RegionHunt unit seeds by (hunting-grounds D7). Read from the running instance's own definition.</summary>
+    static EventTargeting Targeting(string eventId, List<PlayerRow> players, IReadOnlySet<(int X, int Z)> map)
+    {
+        if (map is null) return null;
+        var candidates = players.Select(p => Candidate(p, map));
+        var action = EventRuntime.Engine.Active.FirstOrDefault(a => a.Id == eventId)?.Definition.Action;
+        if (action is null) return new EventTargeting(candidates.ToList(), null, null);
+        Func<float, float, string> regionOf = RegionMap.State.Available ? RegionMap.State.Index.RegionOf : null;
+        var pool = LockRule.SeedPool(action, candidates, regionOf).ToList();
+        return action.Behaviour is { Type: BehaviourType.RegionHunt } && regionOf is not null
+            ? new EventTargeting(pool, action.Scope, regionOf)
+            : new EventTargeting(pool, null, null);
+    }
+
+    /// <summary>One event's targeting for a tick (see <see cref="Targeting"/>): the candidate pool, and for RegionHunt the
+    /// scope and the region lookup its units are seeded by from their own positions.</summary>
+    sealed record EventTargeting(List<HuntCandidate> Pool, Scope? RegionHuntScope, Func<float, float, string> RegionOf);
+
+    /// <summary>The players to seed for one unit: a Hunt unit's within its range of its wave's centre (HuntPlan.Targets); a
+    /// RegionHunt unit's within 60 m of its own position among the eligible players inside the scope regions
+    /// (HuntRule.SeedTargets), none while its position cannot be read; none without a targeting (no territory map).</summary>
+    static List<long> TargetsOf(Entity unit, HuntTag tag, EventTargeting targeting)
+    {
+        if (targeting is null) return new List<long>();
+        if (targeting.RegionHuntScope is not { } scope) return HuntPlan.Targets(targeting.Pool, (tag.X, tag.Z), tag.Range);
+        return unit.TryGetComponent<Translation>(out var at)
+            ? HuntRule.SeedTargets(targeting.Pool, scope, targeting.RegionOf, (at.Value.x, at.Value.z))
+            : new List<long>();
+    }
+
     /// <summary>One unit's tick: reconcile the record with the buffer, then remove the seeds of players no longer targets
     /// and add the new targets'. Adds to <paramref name="held"/> each target the buffer holds afterwards (already there
     /// and kept, or written now). Returns the seeds kept and those left to the game.</summary>
     static (int Kept, int Left) SeedUnit(long key, Entity unit, string eventId, HuntTag tag, List<PlayerRow> players,
-        IReadOnlySet<(int X, int Z)> map, HashSet<long> held)
+        EventTargeting targeting, HashSet<long> held)
     {
         var bufferStart = Stopwatch.GetTimestamp();                          // HasBuffer/GetBuffer may wait on a job (A7)
         if (!Core.EntityManager.HasBuffer<AggroBuffer>(unit)) { _bufferTicks += Stopwatch.GetTimestamp() - bufferStart; _seeds.ForgetUnit(key); return (0, 0); }
@@ -201,8 +238,7 @@ internal static class HuntAction
         var (kept, left) = _seeds.Reconcile(key, inBuffer);
 
         // No map (its latest build failed): no target, so every seed goes (fail closed, D13).
-        var targets = map is null ? new List<long>()
-            : HuntPlan.Targets(players.Select(p => Candidate(p, map)), (tag.X, tag.Z), tag.Range);
+        var targets = TargetsOf(unit, tag, targeting);
         var (adds, removes) = _seeds.Plan(key, targets, inBuffer.Keys.ToList());
 
         // A seed is the player's only entry, whatever values the game gave it (A67); a shared player keeps every entry.

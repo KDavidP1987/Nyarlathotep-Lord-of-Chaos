@@ -15,7 +15,8 @@ namespace Nyarlathotep.Services;
 /// world metres (the source Session 1 found go, A8, A12), and whether the point's tile is grounded at the wave centre's
 /// height level (A13). Only a created live singleton is read, and grounded only where the tile index is not negative: a
 /// default TileWorld or a negative index could fault in native code, where no managed catch helps (A10). Step 1's
-/// temporary `.nyar debug walk` probe was removed in step 2 (D9).
+/// temporary `.nyar debug walk` probe was removed in step 2 (D9). Hunting grounds reads it too, at a Region spot's scanned
+/// levels and at the lock's and the hunt's landings (hunting-grounds D4, D5, D8), always within the tick's budget.
 /// </summary>
 internal static class WalkCheck
 {
@@ -50,6 +51,44 @@ internal static class WalkCheck
             return new WaveCheck(failed, null, null);
         }
         return new WaveCheck(new WaveWalk(probe, Budget), probe, probe.Level);
+    }
+
+    /// <summary>The walk check of a Region wave's spot draw and of the region phase's landings (hunting-grounds D4, D5, D8):
+    /// opened at height 0, since the level is passed with every call. Dispose the result after use.</summary>
+    internal static WaveCheck OpenSpots() => OpenWave(0f);
+
+    /// <summary>The height of a walk-check level (the game's TileLayerUtility.GetHeightForLevel): a Region spot's and a
+    /// landing's height (hunting-grounds D4, D8).</summary>
+    internal static float HeightOf(byte level) => TileLayerUtility.GetHeightForLevel(level);
+
+    /// <summary>The lowest and highest heights a Region spot is looked for at, and the most levels scanned per try
+    /// (hunting-grounds D4, S-12): two game calls a level, so a try costs at most 2 × <see cref="SpotLevelCap"/> calls of
+    /// the tick's budget.</summary>
+    internal const float SpotLowY = -20f, SpotHighY = 60f;
+    internal const int SpotLevelCap = 24;
+
+    static List<byte>? _spotLevels;
+
+    /// <summary>The height levels a Region spot is scanned at, nearest the ground level of height 0 first (the level the
+    /// map's lowlands stand on, walkable-spawns Session 2 "walk h 10" at y 0), then alternately up and down to
+    /// <see cref="SpotHighY"/> and <see cref="SpotLowY"/>, each level once, at most <see cref="SpotLevelCap"/>. Built once
+    /// from the game's own height-to-level mapping.</summary>
+    internal static IReadOnlyList<byte> SpotLevels => _spotLevels ??= BuildSpotLevels();
+
+    static List<byte> BuildSpotLevels()
+    {
+        var levels = new List<byte>();
+        for (var d = 0f; d <= Math.Max(SpotHighY, -SpotLowY) && levels.Count < SpotLevelCap; d += 0.5f)
+        {
+            if (d <= SpotHighY) Add(TileLayerUtility.GetHeightLevel(d));
+            if (d > 0 && -d >= SpotLowY) Add(TileLayerUtility.GetHeightLevel(-d));
+        }
+        return levels;
+
+        void Add(byte level)
+        {
+            if (levels.Count < SpotLevelCap && !levels.Contains(level)) levels.Add(level);
+        }
     }
 
     /// <summary>A wave's walk state, the probe's native resources to dispose after planning, and the height level read

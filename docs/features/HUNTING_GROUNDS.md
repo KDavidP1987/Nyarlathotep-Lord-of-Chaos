@@ -70,3 +70,18 @@ Method: a jump writes Translation, LastTranslation, PreCombatPosition and SpawnT
 buffer (ProjectM.Pathfinding.PathBuffer) and Velocity. Without the path clear a unit keeps walking its old path; without
 SpawnTransform it walks home. Engagement with a vulnerable player is read from swarm Session 3 and confirmed by D26.
 vrclient's first cold launch fails at "could not find 'Online Play'"; a second run works.
+
+### Session 1 · 2026-10-12 · the border scan
+
+The 0.10.0 DLL, wrapped by `dev-snapshot -Save hg1` (restored afterwards, hashes equal). `hunting-grounds-borders.vrs`
+(51/53; the two misses were a doubled reply) and `hunting-grounds-borders2.vrs` (PASS 39/39) moved Chaos with `.devtp`
+and asked `.nyar region here` at each point:
+
+- The pond (-1880, -1640) is in **FarbaneWoods**. Going west, the map's regions end between x -2180 and -2280; going
+  south, between z -1940 and -2040.
+- To the north, Farbane Woods meets **DunleyFarmlands** between z -1140 and -1120 at x -1880 (a ravine, y -30), and
+  between z -1200 and -1160 at x -1680 (y 0). At x -2080 it meets **SilverlightHills** between z -1160 and -1120.
+- So the marks are on x -1680: hg-in (-1680, -1215), 15 m or more inside Farbane; hg-a (-1680, -1600) and hg-b (-1680,
+  -1300), 300 m apart inside Farbane; hg-far (-1680, -1080) in Dunley.
+- Log check: "0 unhandled, 68 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons". The warnings were only
+  the known three; NyarDev.log had only the 226 missing-prefab lines.

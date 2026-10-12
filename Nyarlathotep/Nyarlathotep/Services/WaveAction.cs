@@ -21,6 +21,11 @@ namespace Nyarlathotep.Services;
 /// wave, at the player's height (D16), never named or located in any line. A player-action start's focus player is
 /// tried first (automation D13); with action.fanOut the wave picks up to maxInstances spaced players and spawns one group
 /// around each, each with its own Hunt tag, the whole wave clamped once (automation D5, D6).</item>
+/// <item>A Region location (hunting-grounds D4) reads no player: the whole wave is clamped once, split into groups of at
+/// most 5, each at its own spot drawn over the scope regions (Logic/SpotDraw) and walk-checked at the spot's height
+/// level, which is the group's anchor; a wave with no spot is skipped "no walkable spot in the regions"; its line names
+/// "in &lt;g&gt; groups over &lt;regions&gt;" and, with VerboseLogging, one line per group gives our units' spot. A RegionHunt
+/// group's units carry the group's centre as their hunt tag, which names their group (S-14).</item>
 /// <item>Every decided wave is reported once through EventEngine.WaveDecided, however many groups it spawned (automation
 /// D17).</item>
 /// <item>The territory map is built once per wave when the wave needs it (D17): a claimed ring point is blocked like an
@@ -55,24 +60,36 @@ internal static class WaveAction
         var mapFailed = probe.NeedsMap && map is null;
         Func<float, float, bool> claimed = map is null ? (_, _) => false : (x, z) => Territory.IsClaimed(map, x, z);
 
-        PickOutcome? pick = null;
-        IReadOnlyList<GroupCentre> centres;
         IReadOnlyList<(float X, float Z)> origins = [];                 // AroundPlayer: each group's picked player (A7)
-        if (location.Type == LocationType.AroundPlayer && !mapFailed)
+        var spots = new List<RegionSpot>();                             // Region: each group's spot, in group order (hunting-grounds D4)
+        Func<IReadOnlyList<UnitEntry>> roll = () => WaveRoll.ExpandEntries(action.UnitsOf(due.Wave), _rng);
+        FanOutDecision decision;
+        if (location.Type == LocationType.Region)
         {
-            var result = Pick(id, location, action.FanOut, active.Focus, claimed, inScope);
-            pick = result.Outcome;
-            centres = result.Centres.Select(c => new GroupCentre(c.X, c.Y, c.Z, map is not null && claimed(c.X, c.Z))).ToList();
-            origins = result.Origins;
+            // hunting-grounds D4: the whole wave clamped once, split into groups of at most 5, each at its own spot drawn
+            // over the scope regions; no player position is read.
+            decision = RegionWave.Decide(probe with { MapFailed = mapFailed }, roll, ledger.Limits.MaxPerWave, ledger.Occupied, ledger.Limits.MaxTracked,
+                groups => DrawSpots(groups, action, regionOf, map is null || action.AllowTerritory ? null : claimed, spots));
         }
         else
         {
-            var (cx, cy, cz) = WavePlan.Center(location, active.Origin);
-            centres = [new GroupCentre(cx, cy, cz, map is not null && claimed(cx, cz))];
+            PickOutcome? pick = null;
+            IReadOnlyList<GroupCentre> centres;
+            if (location.Type == LocationType.AroundPlayer && !mapFailed)
+            {
+                var result = Pick(id, location, action.FanOut, active.Focus, claimed, inScope);
+                pick = result.Outcome;
+                centres = result.Centres.Select(c => new GroupCentre(c.X, c.Y, c.Z, map is not null && claimed(c.X, c.Z))).ToList();
+                origins = result.Origins;
+            }
+            else
+            {
+                var (cx, cy, cz) = WavePlan.Center(location, active.Origin);
+                centres = [new GroupCentre(cx, cy, cz, map is not null && claimed(cx, cz))];
+            }
+            var facts = probe with { MapFailed = mapFailed, Pick = pick };
+            decision = WaveGate.DecideGroupEntries(facts, centres, roll, ledger.Limits.MaxPerWave, ledger.Occupied, ledger.Limits.MaxTracked);
         }
-        var facts = probe with { MapFailed = mapFailed, Pick = pick };
-        var decision = WaveGate.DecideGroupEntries(facts, centres, () => WaveRoll.ExpandEntries(action.UnitsOf(due.Wave), _rng), ledger.Limits.MaxPerWave,
-            ledger.Occupied, ledger.Limits.MaxTracked);
         foreach (var line in decision.CapLines) Core.Log.LogWarning($"[nyar] event {id} wave {due.Wave}: {line}");
 
         var life = SpawnLedger.Lifetime(now, active.Instance.EndsUtc, action.UnitLifetimeSeconds,
@@ -92,7 +109,17 @@ internal static class WaveAction
             var groupTotal = group.Units.Sum(u => u.Count);
             var angle = _random.NextDouble() * 2 * Math.PI;
             var anchor = WavePlan.GroupAnchor(location, active.Origin);            // none for AroundPlayer (A4)
-            HuntTag? hunt = action.Behaviour is { Type: BehaviourType.Hunt } b ? new HuntTag(gx, gz, b.Range) : null;   // one per group
+            if (location.Type == LocationType.Region) anchor = WavePlan.GroupAnchor(location, active.Origin, group.Centre);   // its spot (hunting-grounds D4)
+            // One per group; a RegionHunt group's centre names its group for the hunt (hunting-grounds S-14), its units seeded
+            // from their own positions (HuntAction).
+            HuntTag? hunt = action.Behaviour switch
+            {
+                { Type: BehaviourType.Hunt } b => new HuntTag(gx, gz, b.Range),
+                { Type: BehaviourType.RegionHunt } => new HuntTag(gx, gz, HuntingGrounds.Reach),
+                _ => null,
+            };
+            if (Settings.VerboseLogging.Value && location.Type == LocationType.Region && group.Index < spots.Count)
+                Core.Log.LogInfo($"[nyar] {RegionWave.SpotLine(id, due.Wave, group.Index + 1, spots[group.Index])}");   // D21: our units' spot only
             var first = 0;
             var t0 = Stopwatch.GetTimestamp();
             var check = WalkCheck.OpenWave(WavePlan.WalkY(location, group.Centre, active.Origin));   // walkable-spawns D3, A13
@@ -140,8 +167,37 @@ internal static class WaveAction
         }, outcome => EventRuntime.Engine.WaveDecided(id, outcome, now, queuedUnits));
         if (decision.Outcome != WaveOutcome.Spawn) return;
         var levelText = level is { } h ? $", walk h {h}" : "";
-        var where = location.Type == LocationType.AroundPlayer ? $" {WaveLines.AroundPlayers(decision.Groups.Count)}" : "";
+        var where = location.Type switch
+        {
+            LocationType.AroundPlayer => $" {WaveLines.AroundPlayers(decision.Groups.Count)}",
+            LocationType.Region => $" {RegionWave.Where(decision.Groups.Count, action.Scope)}",    // hunting-grounds D4
+            _ => "",
+        };
         Core.Log.LogInfo($"[nyar] event {id} wave {due.Wave}/{due.Waves}{where}: {total} units queued ({moved} moved, {shortened} shortened{WavePoints.SpotOnlyText(spotOnly)}, {unchecked_} unchecked{WavePoints.UncheckedText(why, decision.Groups.Count == 1 ? playerLevel : null)}), due in {(int)Math.Ceiling((life.DueUtc - now).TotalSeconds)}s, lifetime {life.LifetimeSeconds}s{levelText}{(Settings.TimingLog.Value ? WavePoints.TimingText(open, plan, survey, Stopwatch.Frequency) : "")}");
+    }
+
+    /// <summary>The spots of a Region wave (hunting-grounds D4, S-12): SpotDraw over the scope regions' polygons with one
+    /// walk check for the draw, the levels of WalkCheck.SpotLevels scanned at each candidate within the tick's budget,
+    /// claimed territory refused unless allowTerritory (<paramref name="claimed"/> null). The found spots are also kept in
+    /// <paramref name="into"/> for the verbose spot lines. No spot without the region index or a walk check: the wave is
+    /// then skipped "no walkable spot in the regions", never placed unchecked.</summary>
+    static IReadOnlyList<RegionSpot> DrawSpots(int groups, SpawnWavesAction action, Func<float, float, string> regionOf,
+        Func<float, float, bool> claimed, List<RegionSpot> into)
+    {
+        if (regionOf is null) return into;                                   // regions unavailable (D1 disables such a definition)
+        var check = WalkCheck.OpenSpots();
+        try
+        {
+            var world = new SpotWorld(RegionMap.Polygons, action.Scope, regionOf, claimed, check.Walk, WalkCheck.SpotLevels, WalkCheck.HeightOf);
+            into.AddRange(SpotDraw.Draw(groups, world, _rng));
+        }
+        finally
+        {
+            try { check.Resource?.Dispose(); }
+            catch (Exception e) { check.Walk.Fail($"dispose: {e.GetType().Name}"); }
+        }
+        WalkCheck.Settle(check.Walk);
+        return into;
     }
 
     /// <summary>The wave's AroundPlayer centres (D16; automation D5, D13): up to fanOut.maxInstances spaced players, one

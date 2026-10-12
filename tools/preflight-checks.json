@@ -1233,6 +1233,26 @@
           "control": "ArenaRead"
         }
       ]
+    },
+    "hunting-grounds": {
+      "categories": [
+        "region-lock",
+        "region-hunt"
+      ],
+      "rows": [
+        {
+          "name": "region-lock",
+          "kind": "tests",
+          "class": "HuntingGroundsDependencyFailureTests",
+          "control": "Lock"
+        },
+        {
+          "name": "region-hunt",
+          "kind": "tests",
+          "class": "HuntingGroundsDependencyFailureTests",
+          "control": "Hunt"
+        }
+      ]
     }
   },
   "controlSuites": {

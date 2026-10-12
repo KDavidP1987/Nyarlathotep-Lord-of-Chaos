@@ -39,9 +39,8 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        new(HuntingGrounds, "D6", 3, "0.11.0"), new(HuntingGrounds, "D9", 3, "0.11.0"), new(HuntingGrounds, "D16", 3, "0.11.0"),
-        new(HuntingGrounds, "D18", 3, "0.11.0"), new(HuntingGrounds, "D28", 3, "0.11.0"), new(HuntingGrounds, "D29", 4, "0.11.0"),
-        new(HuntingGrounds, "D30", 4, "0.11.0"), new(HuntingGrounds, "D31", 4, "0.11.0"), new(HuntingGrounds, "D32", 4, "0.11.0"),
+        new(HuntingGrounds, "D28", 3, "0.11.0"), new(HuntingGrounds, "D29", 4, "0.11.0"), new(HuntingGrounds, "D30", 4, "0.11.0"),
+        new(HuntingGrounds, "D31", 4, "0.11.0"), new(HuntingGrounds, "D32", 4, "0.11.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -60,7 +59,7 @@ public static class ControlCases
         "HumanReplyTests", "OutcomeCodeTests", "ApiTwinTests", "RateGateTests", "ApiOverloadTests", "EventAdminTests",
         "EndPathTests", "WavePrecedenceTests", "SpawnsDependencyFailureTests", "AutomationTests", "AutomationDependencyFailureTests", "SpawnPlacementTests",
         "WaveSetTests", "ScoreboardTests", "WaveSetDependencyFailureTests", "SwarmTests", "SwarmDependencyFailureTests",
-        "HuntingGroundsTests",
+        "HuntingGroundsTests", "HuntingGroundsDependencyFailureTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -626,5 +625,16 @@ public static class ControlCases
             with { Plan = HuntingGrounds },
         T("D19", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit", "pending_at_release"],
             ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = HuntingGrounds },
+        T("D6", "Lock", "HuntingGroundsDependencyFailureTests", ["one_throwing_unit_stops_the_others", "the_error_line_repeats_within_a_streak",
+            "the_entry_outlives_a_clean_check_or_the_end", "a_throw_skips_a_later_phase_the_despawn_or_the_end", "a_phase_fault_is_silent"],
+            ["a_clean_check_returns_and_clears"], ["no_locked_event"]) with { Plan = HuntingGrounds },
+        T("D9", "Hunt", "HuntingGroundsDependencyFailureTests", ["a_failed_player_read_moves_or_seeds_a_unit", "one_throwing_unit_stops_the_others",
+            "the_error_line_repeats_within_a_streak", "the_entry_outlives_a_clean_check_or_the_end", "a_throw_skips_a_later_phase_the_despawn_or_the_end",
+            "a_phase_fault_is_silent"], ["a_clean_check_jumps_and_clears"], ["no_region_hunt_event"]) with { Plan = HuntingGrounds },
+        T("D16", "HuntingGrounds", "TemplateLibraryTests", ["the_template_differs"], ["spider_hunting_grounds_as_planned"], ["none_in_an_empty_catalogue"])
+            with { Plan = HuntingGrounds },
+        C("D18", "DependencySuite", "preflight -DependencySuite hunting-grounds",
+            ["selftest DependencySuite/bad", "selftest DependencySuite/bad-2", "selftest DependencySuite/bad-floor-spawns"], ["selftest DependencySuite/good"],
+            ["selftest DependencySuite/empty"]) with { Plan = HuntingGrounds },
     ];
 }

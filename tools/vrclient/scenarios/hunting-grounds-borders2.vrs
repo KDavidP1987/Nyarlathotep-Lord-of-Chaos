@@ -1,0 +1,101 @@
+# hunting-grounds-borders2.vrs: the Farbane Woods → Dunley Farmlands border north of the pond, every 20 m on two lines (see borders.vrs).
+# for the marks hg-in, hg-a, hg-b and hg-far (Build plan step 3): Chaos is moved by `.devtp` every 100 m out to 600 m
+# along four lines from the pond, and `.nyar region here` names the region at each point. The points and the replies
+# are read from the log ([DEV TP] to … then [CHAT> Chaos] you are …).
+# Needs: NyarDevTools (.devtp, .devgo), DevChatEcho; Chaos invulnerable (`ToggleInvulnerable true`, never false).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 3
+console ToggleInvulnerable true
+wait 1
+chat .nyar region here
+expect-reply you are
+chat .devtp -1680 -1240
+expect-log \[DEV TP\] to
+wait 2
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .nyar region here
+expect-reply you are
+chat .devtp -1680 -1200
+expect-log \[DEV TP\] to
+wait 2
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .nyar region here
+expect-reply you are
+chat .devtp -1680 -1160
+expect-log \[DEV TP\] to
+wait 2
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .nyar region here
+expect-reply you are
+chat .devtp -1680 -1120
+expect-log \[DEV TP\] to
+wait 2
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .nyar region here
+expect-reply you are
+chat .devtp -1680 -1080
+expect-log \[DEV TP\] to
+wait 2
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .nyar region here
+expect-reply you are
+chat .devtp -1680 -1040
+expect-log \[DEV TP\] to
+wait 2
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .nyar region here
+expect-reply you are
+chat .devtp -2080 -1240
+expect-log \[DEV TP\] to
+wait 2
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .nyar region here
+expect-reply you are
+chat .devtp -2080 -1200
+expect-log \[DEV TP\] to
+wait 2
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .nyar region here
+expect-reply you are
+chat .devtp -2080 -1160
+expect-log \[DEV TP\] to
+wait 2
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .nyar region here
+expect-reply you are
+chat .devtp -2080 -1120
+expect-log \[DEV TP\] to
+wait 2
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .nyar region here
+expect-reply you are
+chat .devtp -2080 -1080
+expect-log \[DEV TP\] to
+wait 2
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .nyar region here
+expect-reply you are
+chat .devtp -2080 -1040
+expect-log \[DEV TP\] to
+wait 2
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .nyar region here
+expect-reply you are
