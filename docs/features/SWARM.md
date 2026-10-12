@@ -43,8 +43,8 @@ Scoreboard.IncludeAdmins true (false for boot 3) and Debug.TimingLog on; the dev
 sw-timing (the entries in swarm.vrs and swarm-timing.vrs); dev marks pond (-1880, -1640), sw-near (+10 m east),
 sw-far (+60 m east) and sw-far2 (60 m west). Chaos invulnerable throughout (`ToggleInvulnerable true`). Three boots;
 both logs copied to %TEMP%
-yar-sw1-logsoot<n> before each stop. Restored after: "snapshot restored; hashes equal
-(sw1, …)".
+yar-sw1-logsoot<n> before each stop.
+Restored after: "snapshot restored; hashes equal (sw1, …)".
 
 - D15, kept inside (partly): sw-arena at the pond spawned its 8 CHAR_Spider_Forest at the spot (`.nyar debug here 8`:
   all at -1880,-1640). With Chaos teleported 60 m east and then 60 m west, `.nyar debug here 25` read "no tracked

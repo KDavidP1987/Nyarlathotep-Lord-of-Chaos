@@ -36,3 +36,20 @@ Rollback base: v0.9.0.
 - in-game: none in step 1 (Session 1 is step 2)
 - dod status: D1, D2, D5, D6, D8, D9, D10, D12, D14, D24, D25 pass at 2309b9b and are checked; D3 and D7 wait for step 2's arena phase and end-path wiring, which use the tested logic
 - privacy grep (7656119, kdpenland): none in the step 1 diffs
+
+### Step 2 · 2026-10-11 · 8329cb9
+- built (cc095a8, one builder subagent; the orchestrator reviewed, tested and committed): the arena phase (EventScheduler "arena", SpawnTracker.ArenaTick/ArenaWorld, Logic ArenaPhase), the "arena: check failing" health entry, EventRuntime's ArenaEnded at every end, the spider-swarm template, SwarmDependencyFailureTests, TemplateLibraryTests Swarm, dependencySuites.swarm, the swarm.vrs and swarm-timing.vrs scenarios; review fixes 0865d32; Sessions 1-2 records, the D19 control row and the session scenarios 8329cb9
+- found while building: four test files of the template count and tools/preflight.ps1 (ArenaTick as a mutating entry point) were not in Paths walked; the Sessions 1-2 tooling (vrclient.py's launch wait, five scenarios and swarm-chase.vrs, NyarDevTools rebuilt and redeployed, marks.json). All declared in Paths walked and logged as notes (they change no item)
+- compile: Release 0 Warning(s), 0 Error(s); tests: 2768 passed (2744 before the step)
+- preflight: PREFLIGHT OK, "secrets: none (1908 files scanned, 1863 index blobs)"; -DependencySuite swarm → "dependency suite: swarm 1/1 (arena-read)"; -Paths -DeclaredOf swarm → every changed path declared, the only remaining problem being "leftover temp nyar-sw1-logs; leftover temp nyar-sw2-logs" (the session copies, kept as evidence until step 3)
+- planted faults: ArenaRead_fails_when_a_phase_fault_is_silent (review F5) planted and caught; the builder's step 2 tests each run once against their fault (logged in the build)
+- /code-review (fresh subagent, read-only, on 0b05cc9..cc095a8): VERDICT READY; F1, F2, F5, F7 fixed in 0865d32; F3, F4, F6 advisory, logged as deferred notes
+- Codex verdict: deferred to step 3 (the child's single cross-inspection, design §9 D34)
+- session 1 log check: 0 unhandled, 586 nyar lines, 0 orphan errors, 0 unity errors (the three boots together): boot 1 "log check: 0 unhandled, 214 nyar lines, 0 orphan errors, 0 unity errors", boot 2 "0 unhandled, 171 nyar lines, 0 orphan errors, 0 unity errors", boot 3 "0 unhandled, 201 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"
+- session 1 snapshot: "snapshot restored; hashes equal (sw1, …)"
+- session 2 log check: 0 unhandled, 182 nyar lines, 0 orphan errors, 0 unity errors
+- session 2 snapshot: "snapshot restored; hashes equal (sw2, …)"
+- in-game: Session 1 (three boots) and Session 2 (the D15 chase probe), docs/features/SWARM.md › Test results; every [Error]/[Warning] line read in both logs of every boot: 0 [Error], the known warnings only
+- dod status: D3, D4, D7, D11, D13, D19 pass and are checked (17/25); D16 and D17 have their Session 1 evidence logged for the owner's acceptance (rubric 3); D15's chase, return and combat parts and D18 wait on the owner's run
+- privacy grep (7656119[0-9]{10}): none in the tree or in the unpushed commits
+
