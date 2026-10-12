@@ -1,0 +1,75 @@
+# swarm-chase.vrs: swarm D15 probe (Session 2). Session 1's sw-arena units never left the spawn spot: Chaos moved by
+# teleport, so nothing chased and the arena return was never needed. Here Chaos WALKS out of the arena (held keys), so
+# the spiders that engaged Chaos follow it and either the game's leash turns them back or a
+# "[nyar] arena sw-arena: returned <n>, farthest <d> m" line follows. Each stop logs Chaos's position ([DEV WHERE]) and
+# the units' positions (`.nyar debug here`), read from the log afterwards. Neither outcome fails the scenario; the
+# checks are the spawn, the 8 tracked units at the end, the combat at 10 m and the clean stop.
+#
+# Needs: NyarDevTools, DevChatEcho; Chaos invulnerable (`ToggleInvulnerable true`, a Boolean, never false); the
+# sw-arena entry of swarm.vrs in the dev events.json.
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar event reload
+expect-log events: reloaded
+chat .nyar event set sw-arena location here
+expect-reply sw-arena
+mark
+chat .nyar event start sw-arena
+expect-log event sw-arena started by
+expect-log event sw-arena wave 1/1: 8 units queued timeout=30
+wait 10
+chat .nyar debug here 10
+expect-reply CHAR_Spider_Forest sw-arena
+shot full chase-spawn
+# walk east in three legs; after each, Chaos's position and every tracked unit within 70 m
+hold d 2
+wait 2
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .nyar debug here 70
+shot full chase-leg1
+hold d 3
+wait 2
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .nyar debug here 70
+shot full chase-leg2
+hold d 4
+wait 2
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .nyar debug here 70
+shot full chase-leg3
+# stay out 30 s: two arena checks at least; then where everything is
+wait 30
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .nyar debug here 80
+shot full chase-out30
+# back to 10 m from the spot: are the units there and fighting
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 1
+chat .nyar debug here 35
+expect-reply CHAR_Spider_Forest sw-arena
+chat .nyar status
+expect-reply tracked units: 8
+hold d 1
+wait 4
+shot full chase-near
+wait 6
+shot full chase-near-10s
+chat .nyar event stop sw-arena
+expect-log event sw-arena stopped
+expect-log event sw-arena scoreboard:
+expect-no-log arena sw-arena: timeout=15
+chat .nyar status
+expect-reply tracked units: 0

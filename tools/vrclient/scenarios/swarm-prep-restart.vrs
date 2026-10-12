@@ -3,6 +3,9 @@
 # finds the units and no scoreboard or winner line is shown (checked in the logs after the boot).
 # Needs: what swarm.vrs needs; spider-swarm enabled.
 ensure
+# the home spot is in sun by day, and a death resets invulnerability: set it before TPHome (Session 1, 2026-10-11)
+console ToggleInvulnerable true
+wait 2
 console TPHome
 wait 3
 chat .devgo pond

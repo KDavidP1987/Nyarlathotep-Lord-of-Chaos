@@ -1,0 +1,117 @@
+# swarm-waves.vrs: swarm D16 and D17's stop path (Session 1, boot 2): parts 2 and 3 of swarm.vrs, after its first run
+# found the deployed NyarDevTools without .devkill (an old build restored by the wave-sets snapshot). spider-swarm is
+# already in events.json and enabled (swarm.vrs added it from the template). The purge path runs at the session's end.
+# Needs: what swarm.vrs needs.
+ensure
+# the home spot is in sun by day, and a death resets invulnerability: set it before TPHome (Session 1, 2026-10-11)
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar status
+expect-reply tracked units: 0
+# 2. D16: spider-swarm from the template, five growing waves, all killed, the winner line
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+chat .nyar event info spider-swarm
+expect-reply growth: +1 units per entry and +3 levels per wave
+mark
+chat .nyar event start spider-swarm
+expect-log event spider-swarm started by
+expect-log event spider-swarm wave 1/5: 6 units queued timeout=30
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log \[DEV KILL\] n=
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 1 cleared timeout=20
+expect-log event spider-swarm wave 2/5: 9 units queued timeout=20
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 2 cleared timeout=20
+expect-log event spider-swarm wave 3/5: 12 units queued timeout=20
+wait 10
+chat .nyar debug here 40
+# the reply lists the swarm units with their levels; "lvl 36" alone can match a native, so the swarm lines are read
+# from the results JSON (wave 3 = 30 + 2 x 3)
+expect-reply spider-swarm left
+shot full sw-wave3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 3 cleared timeout=20
+expect-log event spider-swarm wave 4/5: 15 units queued timeout=20
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 4 cleared timeout=20
+expect-log event spider-swarm wave 5/5: 18 units queued timeout=20
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 5 cleared timeout=20
+expect-log event spider-swarm ended: all waves defeated \(5 of 5 waves\) timeout=20
+expect-log event spider-swarm scoreboard: 1 players, (?P<K>[0-9]+) kills, 0 deaths, winner K/D [0-9]+\.[0-9]{2}
+expect-chat Spider swarm scoreboard: 1. Chaos timeout=20
+expect-chat Spider swarm winner: Chaos, K/D timeout=20
+shot full sw-winner
+shot chat sw-winner-chat
+expect-no-log arena spider-swarm: timeout=15
+wait 25
+chat .nyar status
+expect-reply tracked units: 0
+#
+# 3. D17: stop at wave 2 (scoreboard and winner line, 0 tracked after the grace)
+mark
+chat .nyar event start spider-swarm
+expect-log event spider-swarm wave 1/5: 6 units queued timeout=30
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 2/5: 9 units queued timeout=20
+wait 10
+chat .nyar event stop spider-swarm
+expect-log event spider-swarm stopped: [0-9]+ units queued
+expect-log event spider-swarm scoreboard: 1 players, [0-9]+ kills, 0 deaths, winner K/D
+expect-chat Spider swarm winner: Chaos, K/D timeout=20
+shot full sw-stop
+expect-no-log arena spider-swarm: timeout=15
+wait 25
+chat .nyar status
+expect-reply tracked units: 0
+#

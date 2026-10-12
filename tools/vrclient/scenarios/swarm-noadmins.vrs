@@ -3,6 +3,9 @@
 # path's 0 tracked units first.
 # Needs: the boot after swarm-prep-restart.vrs, its restart lines checked; IncludeAdmins = false; spider-swarm enabled.
 ensure
+# the home spot is in sun by day, and a death resets invulnerability: set it before TPHome (Session 1, 2026-10-11)
+console ToggleInvulnerable true
+wait 2
 console TPHome
 wait 3
 chat .devgo pond

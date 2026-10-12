@@ -25,6 +25,9 @@
 #
 # Spider prefab guids for .devkill: CHAR_Spider_Forest -581295882, CHAR_Spider_Melee 2136899683, CHAR_Spider_Range 2103131615.
 ensure
+# the home spot is in sun by day, and a death resets invulnerability: set it before TPHome (Session 1, 2026-10-11)
+console ToggleInvulnerable true
+wait 2
 console TPHome
 wait 3
 chat .devgo pond

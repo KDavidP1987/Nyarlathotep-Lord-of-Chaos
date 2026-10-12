@@ -38,7 +38,6 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        new(Swarm, "D19", 2, "0.10.0"),
         new(Swarm, "D20", 3, "0.10.0"), new(Swarm, "D21", 3, "0.10.0"), new(Swarm, "D22", 3, "0.10.0"), new(Swarm, "D23", 3, "0.10.0"),
     ];
 
@@ -543,6 +542,10 @@ public static class ControlCases
             ["no_arena_event"]) with { Plan = Swarm },
         T("D11", "Swarm", "TemplateLibraryTests", ["the_template_differs"], ["spider_swarm_as_planned"], ["none_in_an_empty_catalogue"])
             with { Plan = Swarm },
+        C("D19", "TimingSpan", "preflight -TimingSpan -Windows 10 -MinTracked 10 › Test-CheckTimingSpan",
+            ["tools/preflight-fixtures/TimingSpan/bad-avg", "tools/preflight-fixtures/TimingSpan/bad-slow", "tools/preflight-fixtures/TimingSpan/bad-tracked",
+             "tools/preflight-fixtures/TimingSpan/bad-notarget"],
+            ["tools/preflight-fixtures/TimingSpan/good"], ["tools/preflight-fixtures/TimingSpan/empty"]) with { Plan = Swarm },
         C("D13", "DependencySuite", "preflight -DependencySuite swarm",
             ["selftest DependencySuite/bad", "selftest DependencySuite/bad-2", "selftest DependencySuite/bad-floor-spawns"], ["selftest DependencySuite/good"],
             ["selftest DependencySuite/empty"]) with { Plan = Swarm },

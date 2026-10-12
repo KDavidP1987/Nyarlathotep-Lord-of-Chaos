@@ -395,12 +395,17 @@ def client_running() -> bool:
 
 
 def launch(timeout: float = 120) -> bool:
-    if not client_running():
+    started = not client_running()
+    if started:
         log("launch: starting the client through Steam")
         os.startfile(f"steam://rungameid/{CONFIG['appid']}")
     end = time.time() + timeout
     while time.time() < end:
         if client_running() and (find_text("PLAY") or in_world()):
+            # A fresh client's menu still animates when PLAY first reads: a click then can land on CONTINUE, which
+            # times out on a local server (swarm Session 1, 2026-10-11). Let it settle first.
+            if started:
+                time.sleep(10)
             return True
         time.sleep(3)
     return False

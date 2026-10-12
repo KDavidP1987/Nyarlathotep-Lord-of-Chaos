@@ -4,6 +4,9 @@
 # the death drops inventory items at the spot and the respawn is a held space.
 # Needs: IncludeAdmins = true; no purge cooldown (wait 60 s after swarm.vrs's purge); NyarDevTools (.devdie).
 ensure
+# the home spot is in sun by day, and a death resets invulnerability: set it before TPHome (Session 1, 2026-10-11)
+console ToggleInvulnerable true
+wait 2
 console TPHome
 wait 3
 chat .devgo pond

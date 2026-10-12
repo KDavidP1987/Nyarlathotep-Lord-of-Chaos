@@ -1,0 +1,39 @@
+# swarm-purge.vrs: swarm D17's purge path, last in Session 1 (its cooldown blocks starts): spider-swarm purged at
+# wave 2 shows no scoreboard and no winner line and leaves 0 tracked.
+# Needs: what swarm.vrs needs; no purge cooldown.
+ensure
+# the home spot is in sun by day, and a death resets invulnerability: set it before TPHome (Session 1, 2026-10-11)
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+# 3b. D17: purge at wave 2 (no scoreboard, no winner, 0 tracked); last, for its cooldown
+mark
+chat .nyar event start spider-swarm
+expect-log event spider-swarm wave 1/5: 6 units queued timeout=30
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 2/5: 9 units queued timeout=20
+wait 10
+chat .nyar purge
+wait 2
+chat .nyar purge confirm
+expect-log purge: 1 events ended, [0-9]+ units queued
+expect-no-log scoreboard: timeout=10
+expect-no-log winner timeout=3
+expect-no-log arena spider-swarm: timeout=10
+shot full sw-purge
+wait 20
+chat .nyar status
+expect-reply tracked units: 0
