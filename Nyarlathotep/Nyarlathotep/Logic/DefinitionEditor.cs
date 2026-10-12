@@ -54,7 +54,7 @@ public sealed class DefinitionEditor(EventsFile file, IFileStore files, EventCat
 
     public Outcome Edit(string id, string path, object value, IUnitCatalog units)
     {
-        if (value is PointArg or AroundPlayerArg) path = "action.location";      // one field name for every location form (A50)
+        if (value is PointArg or AroundPlayerArg or RegionArg) path = "action.location";      // one field name for every location form (A50; hunting-grounds D14)
         var shown = value switch
         {
             string[] list => string.Join(",", list),

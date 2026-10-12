@@ -16,7 +16,9 @@ public enum DayPhase { Day, Night }
 
 public enum GameMode { Any, Pve, Pvp }
 
-public enum LocationType { Point, Admin, AroundPlayer }
+/// <summary>Region (hunting-grounds D1, D4) spreads each wave over the action's scope regions; Logic/HuntingGrounds.cs
+/// draws its spots.</summary>
+public enum LocationType { Point, Admin, AroundPlayer, Region }
 
 /// <summary>A trigger. Each type reads only its own fields: Interval <see cref="MinMinutes"/>..<see cref="MaxMinutes"/>;
 /// RegionEntered <see cref="PlayerCooldownMinutes"/> and its <see cref="Scope"/>; FactionKills <see cref="Factions"/>,
@@ -77,10 +79,11 @@ public sealed record SpawnModifiers(
     double MoveSpeed = 1.0,
     double AttackSpeed = 1.0);
 
-public enum BehaviourType { Hunt }
+public enum BehaviourType { Hunt, RegionHunt }
 
 /// <summary>A wave's behaviour (event-spawns D13): Hunt seeds aggro on players within <see cref="Range"/> metres of the
-/// wave centre.</summary>
+/// wave centre. RegionHunt (hunting-grounds D3, D7, D8) carries no range: each group goes after the nearest eligible
+/// player inside the scope regions (Logic/HuntingGrounds.cs); its <see cref="Range"/> is 0.</summary>
 public sealed record Behaviour(BehaviourType Type, int Range);
 
 /// <summary>An AroundPlayer wave spread over up to <see cref="MaxInstances"/> players, each at least
@@ -104,7 +107,8 @@ public sealed partial record Growth(int AddUnits, int AddLevels, bool WhenCleare
 /// action with <see cref="Growth"/>, the list Growth.Generate made from the base wave (swarm D25): <see cref="Units"/>,
 /// <see cref="Waves"/>, <see cref="IntervalSeconds"/> and <see cref="Modifiers"/> then stay the base the file holds, and
 /// everything after the parser reads the generated list. <see cref="Arena"/> and <see cref="Winner"/> are swarm D1 and
-/// D2.</summary>
+/// D2. <see cref="RegionLock"/> keeps the units inside the scope regions (hunting-grounds D2, D5); false is 0.10.0's
+/// behaviour.</summary>
 public sealed record SpawnWavesAction(
     IReadOnlyList<UnitEntry> Units,
     int Waves,
@@ -122,7 +126,8 @@ public sealed record SpawnWavesAction(
     bool Scoreboard = false,
     Arena? Arena = null,
     WinnerRule Winner = WinnerRule.None,
-    Growth? Growth = null)
+    Growth? Growth = null,
+    bool RegionLock = false)
 {
     /// <summary>The units of wave <paramref name="wave"/> (1-based): its waveList entry's, or <see cref="Units"/> for
     /// every wave of the units form.</summary>

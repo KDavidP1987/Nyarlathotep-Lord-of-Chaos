@@ -108,6 +108,8 @@ temp: nyar-s*-logs
 temp: nyar-ws*-logs
 # the session log copies of swarm Session 1 (swarm Build plan step 2); deleted the same session
 temp: nyar-sw*-logs
+# the session log copies of hunting-grounds Sessions 1-2 (hunting-grounds Build plan step 3); deleted the same session
+temp: nyar-hg*-logs
 # the self-test scratch folders (event-library A14): preflight -SelfTest, preflight -DependencySuite, dev-snapshot -SelfTest
 # and rollback-drill -SelfTest create one and remove it before they exit
 temp: nyar-selftest-*

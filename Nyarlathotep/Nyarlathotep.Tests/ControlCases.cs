@@ -31,13 +31,17 @@ public static class ControlCases
     public const string Automation = "automation";
     public const string WaveSets = "wave-sets";
     public const string Swarm = "swarm";
+    public const string HuntingGrounds = "hunting-grounds";
 
     /// <summary>The plans whose controls the table lists; each is copied to the test output under Resources/.</summary>
-    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm];
+    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm, HuntingGrounds];
 
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
+        new(HuntingGrounds, "D6", 3, "0.11.0"), new(HuntingGrounds, "D9", 3, "0.11.0"), new(HuntingGrounds, "D16", 3, "0.11.0"),
+        new(HuntingGrounds, "D18", 3, "0.11.0"), new(HuntingGrounds, "D28", 3, "0.11.0"), new(HuntingGrounds, "D29", 4, "0.11.0"),
+        new(HuntingGrounds, "D30", 4, "0.11.0"), new(HuntingGrounds, "D31", 4, "0.11.0"), new(HuntingGrounds, "D32", 4, "0.11.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -56,6 +60,7 @@ public static class ControlCases
         "HumanReplyTests", "OutcomeCodeTests", "ApiTwinTests", "RateGateTests", "ApiOverloadTests", "EventAdminTests",
         "EndPathTests", "WavePrecedenceTests", "SpawnsDependencyFailureTests", "AutomationTests", "AutomationDependencyFailureTests", "SpawnPlacementTests",
         "WaveSetTests", "ScoreboardTests", "WaveSetDependencyFailureTests", "SwarmTests", "SwarmDependencyFailureTests",
+        "HuntingGroundsTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -588,5 +593,38 @@ public static class ControlCases
         T("D25", "Growth", "SwarmTests", ["a_generated_list_differs_from_its_hand_written_twin", "wave_one_differs_from_the_base_wave", "a_step_is_off_by_one_wave",
             "a_level_passes_120", "a_grown_level_delta_resolves_outside_1_120", "a_generated_wave_skips_the_clamp"], ["the_last_wave_count"], ["no_growth"])
             with { Plan = Swarm },
+        // ---- hunting-grounds
+        T("D1", "RegionLocation", "EventValidationTests", ["a_key_is_refused", "the_region_index_is_unavailable", "a_reason_exceeds_120_bytes",
+            "a_keyless_definition_parses_differently"], ["every_form_and_trigger"], ["no_scope_index"]) with { Plan = HuntingGrounds },
+        T("D2", "RegionLock", "EventValidationTests", ["a_value_or_place_is_refused", "the_region_index_is_unavailable", "false_parses_differently_from_absent"],
+            ["on_all_four_locations"], ["key_absent"]) with { Plan = HuntingGrounds },
+        T("D3", "RegionHunt", "EventValidationTests", ["a_key_is_refused", "hunt_changes_or_an_unknown_type_loads"], ["under_the_lock"], ["no_behaviour"])
+            with { Plan = HuntingGrounds },
+        T("D4", "Spread", "HuntingGroundsTests", ["a_spot_leaves_the_scope_or_enters_territory", "area_does_not_weight_the_draw",
+            "two_spots_stand_closer_than_30_m", "a_group_exceeds_5_units", "a_spot_has_no_free_grounded_tile", "a_wave_without_a_spot_spawns_or_is_not_skipped",
+            "the_clamp_runs_per_group", "a_player_position_is_read"], ["groups_over_the_regions"], ["no_unit_rolled"]) with { Plan = HuntingGrounds },
+        T("D5", "Lock", "HuntingGroundsTests", ["the_slack_is_off", "a_return_lands_outside_or_far", "an_entry_outside_is_kept", "a_seed_goes_outside",
+            "a_location_is_missed", "another_units_move", "the_line_names_or_locates"], ["check_every_5_s"], ["no_live_unit"]) with { Plan = HuntingGrounds },
+        T("D7", "HuntTargets", "HuntingGroundsTests", ["an_ineligible_player_is_targeted_or_seeded", "a_farther_player_wins", "a_tie_breaks_other_than_by_key",
+            "a_group_without_a_player_moves", "a_target_is_kept_past_its_check", "a_group_is_split_or_merged"], ["each_group_its_nearest"],
+            ["no_player_inside"]) with { Plan = HuntingGrounds },
+        T("D8", "Jumps", "HuntingGroundsTests", ["a_player_at_99_m_is_ignored", "a_free_unit_does_not_jump", "a_step_passes_25_m", "a_final_lands_outside_50_60_m",
+            "a_landing_breaks_a_rule", "more_than_20_jump", "another_units_move", "the_line_names_or_locates"], ["closing_in_unseen"], ["no_target"])
+            with { Plan = HuntingGrounds },
+        T("D10", "Ambush", "HuntingGroundsTests", ["a_player_outside_is_picked", "no_player_inside_spawns_a_unit"], ["a_player_inside"], ["no_player"])
+            with { Plan = HuntingGrounds },
+        T("D12", "EndPaths", "HuntingGroundsTests", ["an_end_path_leaves_a_record", "an_ended_event_moves_or_logs"], ["a_running_event_keeps_its_records"],
+            ["no_event"]) with { Plan = HuntingGrounds },
+        T("D13", "HuntingGrounds", "PrivacyTests", ["a_name_or_position_reaches_a_line", "state_gains_a_property"], ["counts_and_distances_only"],
+            ["no_hunting_grounds_keys"]) with { Plan = HuntingGrounds },
+        T("D14", "HuntingGrounds", "CommandArgTests", ["value_out_of_range", "a_scope_goes_global_under_a_region_or_lock", "an_arena_is_set_on_a_locked_event",
+            "the_lock_is_removed_under_region_hunt", "fan_out_meets_a_region_location", "a_reply_exceeds_480_bytes", "the_table_and_settable_fields_differ"],
+            ["values_the_validator_loads", "location_replaced_as_today"], ["value"]) with { Plan = HuntingGrounds },
+        T("D15", "HuntingGrounds", "AuthoringTests", ["a_line_exceeds_480_bytes", "a_keyless_events_info_changes"], ["location_lock_and_hunt_lines"],
+            ["no_hunting_grounds_keys"]) with { Plan = HuntingGrounds },
+        T("D17", "HuntingGrounds", "ContractDocTests", ["the_wire_or_the_contract_changes"], ["api_6_and_the_sentence"], ["contract"])
+            with { Plan = HuntingGrounds },
+        T("D19", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit", "pending_at_release"],
+            ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = HuntingGrounds },
     ];
 }

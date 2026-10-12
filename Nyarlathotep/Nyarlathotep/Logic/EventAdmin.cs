@@ -46,7 +46,9 @@ public static class EventsEditor
     /// (an AroundPlayer location or a spawn radius or Hunt range wider than its arena, a winner without the scoreboard,
     /// growth beside a waveList, with waves 1, adding nothing or growing the last wave past 50 units) is refused with the
     /// validator's own reason before anything is written. A conflict the file already held is not the edit's, so an
-    /// unrelated edit of an already disabled event still goes through.</remarks>
+    /// unrelated edit of an already disabled event still goes through. Hunting-grounds D14 adds its conflicts to the same
+    /// set: a Region location or a lock without a regional scope, a lock beside an arena, RegionHunt without the lock and an
+    /// arena beside a Region location.</remarks>
     public static string? Apply(string text, string id, string path, object value, out Outcome? error, out string? note)
     {
         var edited = ApplyCore(text, id, path, value, out error, out note);
@@ -72,7 +74,7 @@ public static class EventsEditor
         if (ev is null) { error = AdminLines.UnknownEvent(id); return null; }
 
         var actionType = ev["action"] is JsonObject act && act["type"] is JsonValue tv && tv.TryGetValue<string>(out var t) ? t : null;
-        if (path == "location" && value is AroundPlayerArg) path = "action.location";     // event-spawns D18
+        if (path == "location" && value is AroundPlayerArg or RegionArg) path = "action.location";     // event-spawns D18, hunting-grounds D14
         if (ev["action"] is JsonObject listed && listed["waveList"] is JsonArray && UnitsFormField(path))
         {
             // review F1: a units-form key beside waveList would only disable the event, and chat could not remove it again
@@ -85,12 +87,12 @@ public static class EventsEditor
             return null;
         }
         if (CommandArgs.SwarmFields.Contains(path)) return SetSwarm(root, ev, actionType, path, value, out error);
-        if (CommandArgs.SpawnKeyFields.Contains(CommandArgs.TableName(path)) || path == CommandArgs.FanOutField)
+        if (CommandArgs.SpawnKeyFields.Contains(CommandArgs.TableName(path)) || path is CommandArgs.FanOutField or CommandArgs.RegionLockField)
             return SetSpawnKey(root, ev, actionType, path, value, out error);
         if (path == CommandArgs.ScoreboardField || CommandArgs.WaveListPath(path) is not null)
             return SetWaveList(root, ev, actionType, path, value, out error, out note);
 
-        if (path == "action.location" && value is PointArg && ev["action"] is JsonObject fanned && fanned["fanOut"] is not null)
+        if (path == "action.location" && value is PointArg or RegionArg && ev["action"] is JsonObject fanned && fanned["fanOut"] is not null)
         {
             error = Invalid($"{EventValidator.FanOutLocation}: set action.fanOut none first", Reasons.Field);   // automation D16
             return null;
@@ -152,6 +154,8 @@ public static class EventsEditor
         PointArg p => new JsonObject { ["type"] = "Point", ["x"] = p.X, ["y"] = p.Y, ["z"] = p.Z },
         AroundPlayerArg a => new JsonObject { ["type"] = "AroundPlayer", ["minDist"] = a.MinDist, ["maxDist"] = a.MaxDist },
         BehaviourArg b => new JsonObject { ["type"] = "Hunt", ["range"] = b.Range },
+        RegionArg => new JsonObject { ["type"] = "Region" },                                  // hunting-grounds D14
+        RegionHuntArg => new JsonObject { ["type"] = "RegionHunt" },
         FanOutArg f => new JsonObject { ["maxInstances"] = f.MaxInstances, ["minSpacing"] = f.MinSpacing },
         _ => null,
     };
@@ -361,10 +365,13 @@ public static class EventsEditor
     static IEnumerable<string> ActionConflicts(JsonObject action)
     {
         static int? IntOf(JsonNode? n) => n is JsonValue v && v.TryGetValue<int>(out var i) ? i : null;
+        static string? TypeOf(JsonNode? n) => n is JsonObject o && o["type"] is JsonValue t && t.TryGetValue<string>(out var s) ? s : null;
+        var regional = action["scope"] is JsonArray { Count: > 0 };
+        var locationType = TypeOf(action["location"]);
+        if (locationType == "Region" && !regional) yield return EventValidator.RegionLocationScope;    // hunting-grounds D1
         if (action["arena"] is JsonObject arena)
         {
-            if (action["location"] is JsonObject loc && loc["type"] is JsonValue lt && lt.TryGetValue<string>(out var type) && type == "AroundPlayer")
-                yield return EventValidator.ArenaLocation;
+            if (locationType is "AroundPlayer" or "Region") yield return EventValidator.ArenaLocation;
             if (IntOf(arena["radius"]) is { } r)
             {
                 if (IntOf(action["radius"]) > r) yield return EventValidator.ArenaSpawnRadius;
@@ -373,6 +380,10 @@ public static class EventsEditor
         }
         if (action["winner"] is not null && !(action["scoreboard"] is JsonValue sb && sb.TryGetValue<bool>(out var on) && on))
             yield return EventValidator.WinnerScoreboard;
+        var locked = action["regionLock"] is JsonValue rl && rl.TryGetValue<bool>(out var l) && l;     // hunting-grounds D2, D3
+        if (locked && !regional) yield return EventValidator.RegionLockScope;
+        else if (locked && action["arena"] is not null) yield return EventValidator.RegionLockArena;
+        if (TypeOf(action["behaviour"]) == nameof(BehaviourType.RegionHunt) && !locked) yield return EventValidator.RegionHuntLock;
         if (action["growth"] is not JsonObject growth) yield break;
         if (action["waveList"] is not null) yield return EventValidator.GrowthUnitsForm;
         var waves = IntOf(action["waves"]);
@@ -524,6 +535,7 @@ public static class EventLines
             var where = a.Location.Type switch
             {
                 LocationType.Admin => "at the admin",
+                LocationType.Region => "in the scope regions",                                                     // hunting-grounds D15
                 LocationType.AroundPlayer => $"around a player {a.Location.MinDist}-{a.Location.MaxDist} m",     // event-spawns D16
                 _ => FormattableString.Invariant($"at {a.Location.X:0.#} {a.Location.Z:0.#}") +
                      (a.Location.Y is { } h ? FormattableString.Invariant($" height {h:0.#}") : ""),
@@ -552,6 +564,7 @@ public static class EventLines
             if (SpawnKeys(a) is { } keys) lines.Add(keys);
             if (a.WaveList is null && a.Winner != WinnerRule.None) lines.Add(ScoreboardLine(a));   // swarm D10: the units form's winner
             if (a.Arena is { } arena) lines.Add(ArenaLine(arena, a.Location.Type));
+            lines.AddRange(HuntingGroundsLines(a));
         }
         lines.Add($"trigger scope: {d.Trigger.Scope}");                 // regions D9
         lines.Add($"action scope: {d.Action?.Scope ?? d.Empower?.Scope ?? Scope.Global}");
@@ -561,6 +574,19 @@ public static class EventLines
               (d.Empower is null ? $", wave {active.WavesSpawned}/{d.Action?.Waves ?? 0}" : ""));
         if (d.Trigger.Type == TriggerType.Interval && d.Enabled && NextStartLine(active is not null, nextInterval, utcNow) is { } next) lines.Add(next);
         return lines;
+    }
+
+    public const string RegionLocationLine = "location: anywhere in the scope regions";
+    public const string RegionLockLine = "region lock: on";
+    public const string RegionHuntLine = "behaviour: hunts the nearest player in the regions, hidden jumps beyond 60 m";
+
+    /// <summary>The hunting-grounds lines of `event info` (D15): the Region location, the lock and RegionHunt, each only
+    /// when the action has it, so an event without the keys shows 0.10.0's lines.</summary>
+    public static IEnumerable<string> HuntingGroundsLines(SpawnWavesAction a)
+    {
+        if (a.Location.Type == LocationType.Region) yield return RegionLocationLine;
+        if (a.RegionLock) yield return RegionLockLine;
+        if (a.Behaviour is { Type: BehaviourType.RegionHunt }) yield return RegionHuntLine;
     }
 
     /// <summary>"scoreboard: on" or "scoreboard: off" (wave-sets D15), "scoreboard: on, winner K/D" with a winner (swarm D10).</summary>

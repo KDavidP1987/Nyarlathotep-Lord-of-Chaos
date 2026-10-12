@@ -38,7 +38,7 @@ public partial class CommandArgTests
     [InlineData("location", "aroundplayer 30 30", EventValidator.DistOrder)]
     [InlineData("location", "aroundplayer 61 70", EventValidator.MinDistRule)]
     [InlineData("location", "aroundplayer 20 14", EventValidator.MaxDistRule)]
-    [InlineData("location", "aroundplayer 20", "location takes here or aroundplayer MIN MAX")]
+    [InlineData("location", "aroundplayer 20", "location takes here, aroundplayer MIN MAX or region")]
     public void Spawns_fails_when_value_out_of_range(string field, string value, string error)
     {
         var arg = CommandArgs.SettableValue(field, value);

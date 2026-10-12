@@ -11,7 +11,8 @@
     "docs/dod/event-spawns.md",
     "docs/dod/automation.md",
     "docs/dod/wave-sets.md",
-    "docs/dod/swarm.md"
+    "docs/dod/swarm.md",
+    "docs/dod/hunting-grounds.md"
   ],
   "sessionsUncounted": {
     "event-spawns": [1]
@@ -29,7 +30,8 @@
     "event-spawns": 1,
     "automation": 1,
     "wave-sets": 1,
-    "swarm": 1
+    "swarm": 1,
+    "hunting-grounds": 0
   },
   "dataTests": {
     "event-spawns": [
@@ -77,6 +79,9 @@
     ],
     "swarm": [
       "docs/features/SWARM.md"
+    ],
+    "hunting-grounds": [
+      "docs/features/HUNTING_GROUNDS.md"
     ],
     "boss-reinforcements": [
       "docs/features/BOSS_REINFORCEMENTS.md"

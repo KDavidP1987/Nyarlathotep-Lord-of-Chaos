@@ -155,13 +155,19 @@ public static class WavePlan
     /// <summary>A group's regroup anchor (design §9 D30, automation A4): none for an AroundPlayer group, whose ring point
     /// takes the player's height and not its own ground's level, so its units stay where the game grounds them;
     /// <see cref="Anchor"/> otherwise.</summary>
-    public static (float X, float Y, float Z)? GroupAnchor(Location location, (float X, float Y, float Z)? origin) =>
-        location.Type == LocationType.AroundPlayer ? null : Anchor(location, origin);
+    /// <remarks>A Region group's anchor is its own spot (hunting-grounds D4), the <paramref name="centre"/> WaveAction
+    /// gives it, at the height of the walk-check level found there.</remarks>
+    public static (float X, float Y, float Z)? GroupAnchor(Location location, (float X, float Y, float Z)? origin,
+        (float X, float Y, float Z)? centre = null) =>
+        location.Type == LocationType.AroundPlayer ? null
+        : location.Type == LocationType.Region ? centre
+        : Anchor(location, origin);
 
     /// <summary>The height a group's walk check reads at (walkable-spawns D3): the player's height, which the group's
     /// centre carries, for an AroundPlayer group; the anchor's otherwise (none: nothing is checked).</summary>
+    /// <remarks>A Region group's centre is its spot, at its found level's height (hunting-grounds D4).</remarks>
     public static float? WalkY(Location location, (float X, float Y, float Z) centre, (float X, float Y, float Z)? origin) =>
-        location.Type == LocationType.AroundPlayer ? centre.Y : Anchor(location, origin)?.Y;
+        location.Type is LocationType.AroundPlayer or LocationType.Region ? centre.Y : Anchor(location, origin)?.Y;
 
     /// <summary>Where a group's units must walk from (automation A7, design §9 D31): the picked player of an AroundPlayer
     /// group, a shortened point at least minDist from it; no reach for an AroundPlayer group without its player (nothing

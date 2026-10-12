@@ -526,7 +526,7 @@ public static class EventValidator
     static SpawnWavesAction ParseSpawnWaves(JsonElement a, Trigger trigger, IUnitCatalog units, IRegionCatalog regions)
     {
         OnlyKeys(a, "action", "type", "units", "waves", "intervalSeconds", "radius", "location", "unitLifetimeSeconds", "scope",
-            "modifiers", "loot", "behaviour", "allowTerritory", "fanOut", "waveList", "scoreboard", "arena", "winner", "growth");
+            "modifiers", "loot", "behaviour", "allowTerritory", "fanOut", "waveList", "scoreboard", "arena", "winner", "growth", "regionLock");
 
         IReadOnlyList<UnitEntry> list;
         IReadOnlyList<WaveSpec>? waveList = null;
@@ -557,6 +557,8 @@ public static class EventValidator
         // regions D6: a Point outside the scope is refused here; an Admin origin is checked at the start (ScopeGate).
         if (!scope.IsGlobal && location.Type == LocationType.Point && !scope.Names(regions.RegionOf(location.X, location.Z)))
             throw new Fail("action.location is outside action.scope");
+        // hunting-grounds D1: a Region location spreads over the scope regions, so it needs some.
+        if (location.Type == LocationType.Region && scope.IsGlobal) throw new Fail(RegionLocationScope);
         var loot = a.TryGetProperty("loot", out var lo) && Bool(lo, "action.loot must be true or false");
         var behaviour = a.TryGetProperty("behaviour", out var be) ? ParseBehaviour(be) : null;
         var allowTerritory = a.TryGetProperty("allowTerritory", out var at) && Bool(at, "action.allowTerritory must be true or false");
@@ -566,6 +568,8 @@ public static class EventValidator
         var scoreboard = a.TryGetProperty("scoreboard", out var sb) && Bool(sb, ScoreboardRule);
         var arena = a.TryGetProperty("arena", out var ar) ? ParseArena(ar, location, radius, behaviour) : null;
         var winner = a.TryGetProperty("winner", out var wi) ? ParseWinner(wi, scoreboard) : WinnerRule.None;
+        var regionLock = a.TryGetProperty("regionLock", out var rl) && ParseRegionLock(rl, scope, arena);
+        if (behaviour is { Type: BehaviourType.RegionHunt } && !regionLock) throw new Fail(RegionHuntLock);
         Growth? growth = null;
         if (a.TryGetProperty("growth", out var gr))
         {
@@ -574,7 +578,29 @@ public static class EventValidator
             waveList = Growth.Generate(list, modifiers, waves, interval, growth);
         }
         return new SpawnWavesAction(list, waves, interval, radius, location, lifetime, scope, modifiers, loot, behaviour, allowTerritory, fanOut,
-            waveList, scoreboard, arena, winner, growth);
+            waveList, scoreboard, arena, winner, growth, regionLock);
+    }
+
+    public const string RegionLocationScope = "action.location Region needs action.scope regions";
+    public const string RegionLockRule = "action.regionLock must be true or false";
+    public const string RegionLockScope = "action.regionLock needs action.scope regions";
+    public const string RegionLockArena = "action.regionLock and action.arena cannot both be set";
+    public const string RegionHuntLock = "action.behaviour RegionHunt needs action.regionLock true";
+
+    /// <summary>Every reason hunting-grounds D1, D2 and D3 add, for the 120-byte check (the unknown-field and
+    /// unknown-type reasons are the existing builders').</summary>
+    public static readonly IReadOnlyList<string> HuntingGroundsReasons =
+        [RegionLocationScope, RegionLockRule, RegionLockScope, RegionLockArena, RegionHuntLock];
+
+    /// <summary>`regionLock` (hunting-grounds D2): a boolean, absent meaning false; true needs a regional scope and no
+    /// arena (swarm's circle and the region lock never combine, Business rules 5).</summary>
+    static bool ParseRegionLock(JsonElement v, Scope scope, Arena? arena)
+    {
+        var locked = Bool(v, RegionLockRule);
+        if (!locked) return false;
+        if (scope.IsGlobal) throw new Fail(RegionLockScope);
+        if (arena is not null) throw new Fail(RegionLockArena);
+        return true;
     }
 
     public const string ArenaObject = "action.arena must be an object";
@@ -609,7 +635,7 @@ public static class EventValidator
         if (v.ValueKind != JsonValueKind.Object) throw new Fail(ArenaObject);
         OnlyKeys(v, "action.arena", "radius");
         var arena = new Arena(Int(Required(v, "radius", ArenaRadiusRule), Arena.MinRadius, Arena.MaxRadius, ArenaRadiusRule));
-        if (location.Type == LocationType.AroundPlayer) throw new Fail(ArenaLocation);
+        if (location.Type is not (LocationType.Point or LocationType.Admin)) throw new Fail(ArenaLocation);
         if (radius > arena.Radius) throw new Fail(ArenaSpawnRadius);
         if (behaviour is { Type: BehaviourType.Hunt } hunt && hunt.Range > arena.Radius) throw new Fail(ArenaHuntRange);
         return arena;
@@ -786,12 +812,17 @@ public static class EventValidator
         return (double)d;
     }
 
-    /// <summary>`behaviour` (D6): { "type": "Hunt", "range": 10-60 }; any other type, Guard and Ambush included until
-    /// child spawn-extras, is unknown.</summary>
+    /// <summary>`behaviour` (D6): { "type": "Hunt", "range": 10-60 } or { "type": "RegionHunt" } (hunting-grounds D3, its
+    /// lock checked by the caller); any other type, Guard and Ambush included until child spawn-extras, is unknown.</summary>
     static Behaviour ParseBehaviour(JsonElement b)
     {
         if (b.ValueKind != JsonValueKind.Object) throw new Fail("action.behaviour must be { \"type\": \"Hunt\", \"range\": 10-60 }");
         var type = b.TryGetProperty("type", out var ty) && ty.ValueKind == JsonValueKind.String ? ty.GetString()! : "";
+        if (type == nameof(BehaviourType.RegionHunt))
+        {
+            OnlyKeys(b, "action.behaviour", "type");
+            return new Behaviour(BehaviourType.RegionHunt, 0);
+        }
         if (type != "Hunt") throw new Fail(UnknownBehaviour(type));
         OnlyKeys(b, "action.behaviour", "type", "range");
         return new Behaviour(BehaviourType.Hunt, Int(Required(b, "range", HuntRangeRule), MinHuntRange, MaxHuntRange, HuntRangeRule));
@@ -806,9 +837,12 @@ public static class EventValidator
         return d;
     }
 
+    /// <summary>The location rule, naming the four types (hunting-grounds D1).</summary>
+    public const string LocationRule = "action.location must be { \"type\": \"Point\", \"x\": number, \"z\": number, optional \"y\": number }, { \"type\": \"Admin\" }, { \"type\": \"AroundPlayer\", \"minDist\": 10-60, \"maxDist\": 15-80 } or { \"type\": \"Region\" }";
+
     static Location ParseLocation(JsonElement l, Trigger trigger)
     {
-        const string rule = "action.location must be { \"type\": \"Point\", \"x\": number, \"z\": number, optional \"y\": number }, { \"type\": \"Admin\" } or { \"type\": \"AroundPlayer\", \"minDist\": 10-60, \"maxDist\": 15-80 }";
+        const string rule = LocationRule;
         if (l.ValueKind != JsonValueKind.Object) throw new Fail(rule);
         var type = l.TryGetProperty("type", out var ty) && ty.ValueKind == JsonValueKind.String ? ty.GetString() : null;
         switch (type)
@@ -829,6 +863,9 @@ public static class EventValidator
                 if (min >= max) throw new Fail(DistOrder);
                 return new Location(LocationType.AroundPlayer, 0, 0, null, min, max);   // allowed with every trigger (D6)
             }
+            case "Region":
+                OnlyKeys(l, "action.location", "type");                 // hunting-grounds D1: its scope is checked by the caller
+                return new Location(LocationType.Region, 0, 0);
             default:
                 throw new Fail(rule);
         }

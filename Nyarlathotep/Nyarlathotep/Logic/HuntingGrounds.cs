@@ -1,0 +1,815 @@
+#nullable enable
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+
+namespace Nyarlathotep.Logic;
+
+// Hunting grounds (docs/dod/hunting-grounds.md): a Region location spreads a wave over its scope regions (D4), a region lock
+// brings an event's own units back inside them (D5) and a region hunt sends each group after the nearest eligible player
+// inside them, by hidden jumps beyond the game's reach (D7, D8). Everything here is pure: Services implement IRegionWorld
+// over SpawnTracker's own entities, as swarm's IArenaWorld (Logic/Arena.cs).
+
+/// <summary>The numbers of hunting grounds, each with its source (docs/dod/hunting-grounds.md › Assumptions).</summary>
+public static class HuntingGrounds
+{
+    /// <summary>A Region wave's group holds at most this many units (S-12).</summary>
+    public const int GroupUnits = 5;
+    /// <summary>Two spots of one wave stand at least this far apart on x and z (S-12).</summary>
+    public const float SpotSpacing = 30f;
+    /// <summary>Candidate spots a group tries before it is not spawned (S-12).</summary>
+    public const int SpotTries = 8;
+    /// <summary>Bounding-box draws for one point inside a polygon; a draw that finds none is a used try.</summary>
+    public const int PolygonDraws = 32;
+    /// <summary>The slack past a unit's last inside spot before it counts as a stray, and the return's reach (S-8).</summary>
+    public const float Slack = 10f;
+    /// <summary>Candidate return spots around the last inside spot before the spot itself is used (D5).</summary>
+    public const int ReturnTries = 8;
+    /// <summary>The longest jump but the final one (S-10).</summary>
+    public const float Step = 25f;
+    /// <summary>A final jump lands this far from the target, inside Hunt's reach (S-10).</summary>
+    public const float FinalMin = 50f;
+    public const float FinalMax = 60f;
+    /// <summary>Every landing stands at least this far from every online player (S-10).</summary>
+    public const float LandingDistance = 50f;
+    /// <summary>No unit jumps while an online player stands within this distance of it (design §9 D50).</summary>
+    public const float WatchRange = 100f;
+    /// <summary>Hunt's reach (Validation MaxHuntRange, SIEGES.md › S1): within it the game's own pathing and aggro take over.</summary>
+    public const int Reach = EventValidator.MaxHuntRange;
+    /// <summary>Units that jump in one check across all events (S-11).</summary>
+    public const int MaxJumps = 20;
+    /// <summary>How often the lock and the hunt run: the existing behaviour cadence (HuntPlan.IntervalSeconds).</summary>
+    public const int CheckSeconds = HuntPlan.IntervalSeconds;
+
+    /// <summary>The distance on x and z.</summary>
+    public static float Distance(float ax, float az, float bx, float bz)
+    {
+        var dx = ax - bx;
+        var dz = az - bz;
+        return (float)Math.Sqrt(dx * (double)dx + dz * (double)dz);
+    }
+
+    /// <summary>The point stands in one of <paramref name="scope"/>'s regions.</summary>
+    public static bool Inside(Scope scope, Func<float, float, string> regionOf, float x, float z) => !scope.IsGlobal && scope.Names(regionOf(x, z));
+
+    /// <summary>A running instance whose definition carries `regionLock: true` (D2, D5).</summary>
+    public static bool Locked(ActiveEvent a) => a.Definition.Action is { RegionLock: true, Scope.IsGlobal: false };
+
+    /// <summary>A running instance whose definition hunts by RegionHunt, which validation allows only under the lock (D3, D7).</summary>
+    public static bool Hunts(ActiveEvent a) => Locked(a) && a.Definition.Action is { Behaviour.Type: BehaviourType.RegionHunt };
+
+    /// <summary>The tracked unit belongs to the running instance <paramref name="a"/>: its event id, spawned at or after the
+    /// instance's start (wave-sets A3). `.nyar spawn` units (no event) and an earlier instance's units never do.</summary>
+    public static bool Ours(TrackedUnit t, ActiveEvent a) => t.EventId == a.Id && t.SpawnedUtc >= a.Instance.StartedUtc;
+}
+
+/// <summary>A spot of a Region wave (D4): x and z inside a scope region, the walk-check height level found there and its
+/// height, which are the group's centre, walk height and regroup anchor.</summary>
+public readonly record struct RegionSpot(float X, float Y, float Z, byte Level, string Region);
+
+/// <summary>What one Region wave's spot draw reads (D4): the scope regions' polygons, the region index, the claimed-territory
+/// test (null when allowTerritory or no map is needed), the wave's walk check, the height levels to scan at a spot, nearest
+/// first, and each level's height.</summary>
+public sealed record SpotWorld(
+    IReadOnlyList<RegionPolygon> Polygons,
+    Scope Scope,
+    Func<float, float, string> RegionOf,
+    Func<float, float, bool>? Claimed,
+    WaveWalk Walk,
+    IReadOnlyList<byte> Levels,
+    Func<byte, float> HeightOf);
+
+/// <summary>
+/// The spot draw of a Region location (D4, Business rules 1, S-12). A spot is drawn uniformly by area over the scope
+/// regions' polygons (a polygon picked by its area, then a uniform point inside it), and kept when it lies inside a scope
+/// region by the index, outside claimed territory unless allowTerritory, at least <see cref="HuntingGrounds.SpotSpacing"/>
+/// m from every spot already kept for the wave, and on a free, grounded walk-check tile at one of the scanned height
+/// levels. Each group gets up to <see cref="HuntingGrounds.SpotTries"/> tries; a group without a spot is not spawned. The
+/// walk check's calls come out of the tick's WalkBudget; once it is spent, or the check fails, no further spot is drawn.
+/// No player position is read.
+/// </summary>
+public static class SpotDraw
+{
+    /// <summary>A polygon's area on x and z (the shoelace formula).</summary>
+    public static double Area(RegionPolygon p)
+    {
+        double sum = 0;
+        var v = p.Vertices;
+        for (int i = 0, j = v.Count - 1; i < v.Count; j = i++) sum += (v[j].X + (double)v[i].X) * (v[j].Z - (double)v[i].Z);
+        return Math.Abs(sum) / 2;
+    }
+
+    /// <summary>The even-odd test of RegionIndex on one polygon.</summary>
+    public static bool Contains(RegionPolygon p, float x, float z)
+    {
+        var v = p.Vertices;
+        var inside = false;
+        for (int i = 0, j = v.Count - 1; i < v.Count; j = i++)
+        {
+            if ((v[i].Z > z) == (v[j].Z > z)) continue;
+            var crossX = (v[j].X - v[i].X) * (z - v[i].Z) / (v[j].Z - v[i].Z) + v[i].X;
+            if (x < crossX) inside = !inside;
+        }
+        return inside;
+    }
+
+    /// <summary>The scope regions' polygons with a positive area, in their order.</summary>
+    public static List<RegionPolygon> InScope(IEnumerable<RegionPolygon> polygons, Scope scope) =>
+        polygons.Where(p => scope.Names(p.Region) && p.Vertices.Count >= 3 && Area(p) > 0).ToList();
+
+    /// <summary>One point drawn uniformly by area over <paramref name="polygons"/>: a polygon by its share of the total area,
+    /// then a point of its box until one falls inside it; null when <see cref="HuntingGrounds.PolygonDraws"/> draws miss.</summary>
+    public static (float X, float Z)? Point(IReadOnlyList<RegionPolygon> polygons, IReadOnlyList<double> areas, IRandom rng)
+    {
+        if (polygons.Count == 0) return null;
+        var total = areas.Sum();
+        if (!(total > 0)) return null;
+        var pick = rng.NextDouble() * total;
+        var k = 0;
+        for (; k < polygons.Count - 1; k++)
+        {
+            if (pick < areas[k]) break;
+            pick -= areas[k];
+        }
+        var p = polygons[k];
+        for (var i = 0; i < HuntingGrounds.PolygonDraws; i++)
+        {
+            var x = (float)(p.MinX + rng.NextDouble() * (p.MaxX - p.MinX));
+            var z = (float)(p.MinZ + rng.NextDouble() * (p.MaxZ - p.MinZ));
+            if (Contains(p, x, z)) return (x, z);
+        }
+        return null;
+    }
+
+    /// <summary>Why a level scan stopped without a level.</summary>
+    public enum ScanStop { None, Budget, Failed }
+
+    /// <summary>The first of <paramref name="levels"/> at which (<paramref name="x"/>, <paramref name="z"/>) is grounded and
+    /// free, two walk-check calls a level from the budget; null with the reason when the budget runs out or a call throws
+    /// (the failure is recorded on the wave's walk), or with <see cref="ScanStop.None"/> when no level holds.</summary>
+    public static byte? Level(float x, float z, WaveWalk walk, IReadOnlyList<byte> levels, out ScanStop stop)
+    {
+        stop = ScanStop.None;
+        if (walk.Probe is not { } probe || walk.Failure is not null)
+        {
+            stop = ScanStop.Failed;
+            return null;
+        }
+        foreach (var level in levels)
+        {
+            if (!walk.Budget.TryTake(2))
+            {
+                stop = ScanStop.Budget;
+                return null;
+            }
+            try
+            {
+                if (probe.IsGrounded(x, z, level) && probe.IsFree(x, z, level)) return level;
+            }
+            catch (Exception e)
+            {
+                walk.Fail($"spot: {e.Message}");
+                stop = ScanStop.Failed;
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>The spots of one Region wave: up to <paramref name="groups"/>, one per group that found one within its
+    /// tries, in group order. Fewer spots than groups means the last groups found none (or the walk check stopped).</summary>
+    public static List<RegionSpot> Draw(int groups, SpotWorld w, IRandom rng)
+    {
+        var spots = new List<RegionSpot>();
+        var polygons = InScope(w.Polygons, w.Scope);
+        var areas = polygons.Select(Area).ToList();
+        for (var g = 0; g < groups; g++)
+        {
+            for (var t = 0; t < HuntingGrounds.SpotTries; t++)
+            {
+                if (Point(polygons, areas, rng) is not { } at) continue;
+                var region = w.RegionOf(at.X, at.Z);
+                if (!w.Scope.Names(region)) continue;
+                if (w.Claimed is { } claimed && claimed(at.X, at.Z)) continue;
+                if (spots.Any(s => HuntingGrounds.Distance(s.X, s.Z, at.X, at.Z) < HuntingGrounds.SpotSpacing)) continue;
+                var level = Level(at.X, at.Z, w.Walk, w.Levels, out var stop);
+                if (stop != ScanStop.None) return spots;                       // no game calls left this tick, or a failed check
+                if (level is not { } l) continue;
+                spots.Add(new RegionSpot(at.X, w.HeightOf(l), at.Z, l, region));
+                break;
+            }
+        }
+        return spots;
+    }
+}
+
+/// <summary>
+/// A Region location's wave decision (D4, Business rules 1): WaveGate's rules in their order (an ended event, territory
+/// unknown, the chance roll), the whole wave clamped once by MaxUnitsPerWave and the free MaxTrackedUnits slots, then the
+/// allowed units split into ⌈n/5⌉ groups of at most <see cref="HuntingGrounds.GroupUnits"/>, dealt one at a time in roll
+/// order, each group placed at its own spot. A group without a spot is not spawned and its units are not queued; a wave
+/// without any spot is skipped "no walkable spot in the regions". No player is picked.
+/// </summary>
+public static class RegionWave
+{
+    /// <summary>The clamped wave's units split into groups of at most 5, dealt round robin so each group mixes the wave's
+    /// entries, each group's picks grouped back into entries (their modifiers kept, wave-sets D3).</summary>
+    public static List<List<UnitEntry>> Split(IReadOnlyList<UnitEntry> units)
+    {
+        var picks = units.SelectMany(u => Enumerable.Repeat(new UnitEntry(u.Prefab, 1, 1.0, u.Modifiers), u.Count)).ToList();
+        var count = (picks.Count + HuntingGrounds.GroupUnits - 1) / HuntingGrounds.GroupUnits;
+        var groups = Enumerable.Range(0, count).Select(_ => new List<UnitEntry>()).ToList();
+        for (var i = 0; i < picks.Count; i++) groups[i % count].Add(picks[i]);
+        return groups.Select(g => WaveRoll.GroupPicks(g)).ToList();
+    }
+
+    /// <summary>The decision of one Region wave. <paramref name="draw"/> gets the group count and returns the spots found,
+    /// in group order; it is called only for a wave that spawns.</summary>
+    public static FanOutDecision Decide(WaveFacts facts, Func<IReadOnlyList<UnitEntry>> roll, int maxPerWave, int occupied, int maxTracked,
+        Func<int, IReadOnlyList<RegionSpot>> draw)
+    {
+        var one = WaveGate.DecideEntries(facts with { Pick = null, CentreClaimed = false }, roll, maxPerWave, occupied, maxTracked);
+        if (one.Outcome != WaveOutcome.Spawn) return new FanOutDecision(one.Outcome, one.Line, [], one.CapLines);
+        var groups = Split(one.Units);
+        var spots = draw(groups.Count);
+        if (spots.Count == 0) return new FanOutDecision(WaveOutcome.Skip, WaveLines.NoRegionSpot(facts.Wave, facts.EventId), [], one.CapLines);
+        var result = spots.Take(groups.Count).Select((s, i) => new WaveGroup(i, (s.X, s.Y, s.Z), groups[i])).ToList();
+        return new FanOutDecision(WaveOutcome.Spawn, null, result, one.CapLines);
+    }
+
+    /// <summary>"in &lt;g&gt; groups over &lt;regions&gt;" of a Region wave's spawn line (D4).</summary>
+    public static string Where(int groups, Scope scope) => WaveLines.OverRegions(groups, string.Join(", ", scope.Regions));
+
+    /// <summary>The verbose line of one Region group (D21): our units' spot, its height level and region, never a
+    /// player's position (the service adds "[nyar] ").</summary>
+    public static string SpotLine(string id, int wave, int group, RegionSpot spot) =>
+        string.Create(CultureInfo.InvariantCulture, $"event {id} wave {wave} group {group}: spot {spot.X:0.#} {spot.Z:0.#} h {spot.Level} in {spot.Region}");
+}
+
+/// <summary>A live tracked unit as the lock and the hunt read it: its ledger key, event, spawn time, position, the game's
+/// height level (0 until snapped), its wave and group within the instance (the hunt's group, S-14), and where it spawned.</summary>
+public readonly record struct RegionUnit(long Key, string? EventId, DateTime SpawnedUtc, float X, float Y, float Z, byte Level,
+    int Wave = 0, int Group = 0, (float X, float Y, float Z)? Spawn = null);
+
+/// <summary>A unit's last spot inside a scope region (D5): recorded at each lock check, its spawn point at first.</summary>
+public readonly record struct InsideSpot(float X, float Y, float Z, byte Level);
+
+/// <summary>Where one stray goes (D5): a walkable spot inside a scope region within 10 m of its last inside spot (the spot
+/// itself when none is found), and how far from that spot it stood.</summary>
+public readonly record struct RegionReturn(long Key, float X, float Y, float Z, float Distance);
+
+/// <summary>One lock check of one running instance (D5): the returns written and the farthest; no line without a return.</summary>
+public sealed record LockCheck(string EventId, IReadOnlyList<RegionReturn> Returns, float Farthest)
+{
+    public string? LogLine => Returns.Count == 0 ? null : LockRule.LogLine(EventId, Returns.Count, Farthest);
+}
+
+/// <summary>One jump of one unit (D8): the landing, its height and level, and its distance from the nearest online player.</summary>
+public readonly record struct RegionJump(long Key, float X, float Y, float Z, byte Level, float Clearance);
+
+/// <summary>One hunt check of one running instance (D7, D8): the jumps written, the units waiting and in reach; a line only
+/// when a unit jumped.</summary>
+public sealed record HuntCheck(string EventId, IReadOnlyList<RegionJump> Jumps, int Waiting, int InReach)
+{
+    public string? LogLine => Jumps.Count == 0 ? null : JumpRule.LogLine(EventId, Jumps.Count, Waiting, InReach, Jumps.Min(j => j.Clearance));
+}
+
+/// <summary>
+/// The game side of the lock and the hunt (D5-D9), implemented by Services over SpawnTracker's ledger and its own entities.
+/// Every member may throw, which the phases take as a failure of that read or write only.
+/// </summary>
+public interface IRegionWorld
+{
+    /// <summary>The ledger's tracked units (key, event, spawn time, wave).</summary>
+    IEnumerable<TrackedUnit> Units { get; }
+
+    /// <summary>One unit's position, level, group and spawn point; null when it is gone since the ledger listed it.</summary>
+    RegionUnit? Read(TrackedUnit unit);
+
+    /// <summary>The region at a point (RegionIndex.RegionOf).</summary>
+    string RegionOf(float x, float z);
+
+    /// <summary>The point lies in claimed territory by the event's kept map (TerritoryMaps.ForHunt); false without one.</summary>
+    bool IsClaimed(string eventId, float x, float z);
+
+    /// <summary>The walk check at a point and level: free and grounded (two game calls).</summary>
+    bool Walkable(float x, float z, byte level);
+
+    /// <summary>The height a unit stands at on a walk-check level.</summary>
+    float HeightOf(byte level);
+
+    /// <summary>The tick's walk-check budget (WalkBudget.PerTick).</summary>
+    WalkBudget Budget { get; }
+
+    /// <summary>Every connected character as Hunt sees it (PlayerQuery.Read): read once per hunt check, memory only.</summary>
+    IReadOnlyList<HuntCandidate> Players();
+
+    /// <summary>Moves one of our units to <paramref name="r"/>'s spot, its PreCombatPosition with it, and drops its
+    /// AggroBuffer entries (with their seed records) on players standing in no region of <paramref name="scope"/>
+    /// (<see cref="LockRule.DropsEntry"/>). A unit no longer there is left alone.</summary>
+    void Return(RegionReturn r, Scope scope);
+
+    /// <summary>Moves one of our units to <paramref name="j"/>'s landing, its PreCombatPosition with it.</summary>
+    void Jump(RegionJump j);
+}
+
+/// <summary>
+/// The lock rule (D5, Business rules 2, S-8, S-9): a unit of the running instance standing in no scope region and more than
+/// <see cref="HuntingGrounds.Slack"/> m on x and z from its last inside spot is a stray, returned to a walkable spot inside a
+/// scope region within 10 m of that spot (the spot itself when none is found), dropping its entries on players outside the
+/// regions. While the lock holds no Hunt or RegionHunt seed is written on a player outside the regions.
+/// </summary>
+public static class LockRule
+{
+    /// <summary>A unit at (<paramref name="x"/>, <paramref name="z"/>), <paramref name="inside"/> or not, strays from
+    /// <paramref name="last"/>: outside and more than the slack away. Inside, or out by 10 m or less, it is left alone.</summary>
+    public static bool Strays(bool inside, float x, float z, InsideSpot last) =>
+        !inside && HuntingGrounds.Distance(x, z, last.X, last.Z) > HuntingGrounds.Slack;
+
+    /// <summary>The return spot near <paramref name="last"/>: up to <see cref="HuntingGrounds.ReturnTries"/> points within
+    /// 10 m (uniform over the disc), the first inside a scope region and walkable at the spot's level while the budget
+    /// lasts; else the last inside spot itself.</summary>
+    public static (float X, float Y, float Z) ReturnSpot(InsideSpot last, Func<float, float, bool> inside, Func<float, float, byte, bool> walkable,
+        WalkBudget budget, Func<double> random)
+    {
+        for (var i = 0; i < HuntingGrounds.ReturnTries; i++)
+        {
+            var angle = random() * 2 * Math.PI;
+            var r = HuntingGrounds.Slack * Math.Sqrt(Math.Clamp(random(), 0, 1));
+            var x = (float)(last.X + r * Math.Cos(angle));
+            var z = (float)(last.Z + r * Math.Sin(angle));
+            if (!inside(x, z)) continue;
+            if (!budget.TryTake(2)) break;
+            if (walkable(x, z, last.Level)) return (x, last.Y, z);
+        }
+        return (last.X, last.Y, last.Z);
+    }
+
+    /// <summary>Whether a returned unit's AggroBuffer entry is dropped (D5): its entity stands in no scope region, or its
+    /// position cannot be read. An entry on a player inside the regions stays.</summary>
+    public static bool DropsEntry(Scope scope, Func<float, float, string> regionOf, (float X, float Z)? at) =>
+        at is not { } p || !HuntingGrounds.Inside(scope, regionOf, p.X, p.Z);
+
+    /// <summary>The players a Hunt or RegionHunt seed may go to (D5, S-9): every player for an event without the lock, only
+    /// the players inside a scope region for a locked one (none when the region lookup is unavailable).</summary>
+    public static IEnumerable<HuntCandidate> SeedPool(SpawnWavesAction action, IEnumerable<HuntCandidate> players, Func<float, float, string>? regionOf) =>
+        !action.RegionLock ? players
+        : regionOf is null ? []
+        : players.Where(p => HuntingGrounds.Inside(action.Scope, regionOf, p.X, p.Z));
+
+    /// <summary>"region lock &lt;id&gt;: returned &lt;n&gt;, farthest &lt;d&gt; m out" (the service adds "[nyar] "): counts and a
+    /// distance only, never a name or a position.</summary>
+    public static string LogLine(string eventId, int returned, float farthest) =>
+        string.Create(CultureInfo.InvariantCulture, $"region lock {eventId}: returned {returned}, farthest {farthest:0} m out");
+
+    public static string FailedLine(string eventId, string message) => $"region lock {eventId}: check failed: {message}";
+}
+
+/// <summary>
+/// The hunt target rule (D7, Business rules 3, S-14, S-16): each group of the running instance (one per Point or Admin
+/// wave, one per AroundPlayer group, one per Region spot) takes the eligible player nearest to its live units' mean x and z
+/// among the players inside a scope region, ties by key; eligible is Hunt's rule. A unit is seeded on the eligible players
+/// inside the regions within 60 m of it, nearest first, at most HuntPlan.MaxTargets.
+/// </summary>
+public static class HuntRule
+{
+    /// <summary>Hunt's rule (online, alive, usable position, not in claimed territory, not in PvP combat) and inside a scope
+    /// region.</summary>
+    public static bool Eligible(HuntCandidate p, Scope scope, Func<float, float, string> regionOf) =>
+        p.Online && p.Alive && !p.InTerritory && !p.InPvpCombat && PlayerPosition.Usable(p.X, p.Z)
+        && HuntingGrounds.Inside(scope, regionOf, p.X, p.Z);
+
+    public static List<HuntCandidate> EligibleInside(IEnumerable<HuntCandidate> players, Scope scope, Func<float, float, string> regionOf) =>
+        players.Where(p => Eligible(p, scope, regionOf)).ToList();
+
+    /// <summary>The mean x and z of a group's live units.</summary>
+    public static (float X, float Z) Mean(IReadOnlyCollection<RegionUnit> units) =>
+        ((float)units.Average(u => (double)u.X), (float)units.Average(u => (double)u.Z));
+
+    /// <summary>The target of a group at <paramref name="mean"/>: the nearest of <paramref name="eligible"/>, ties by key;
+    /// null when there is none.</summary>
+    public static HuntCandidate? Target(IReadOnlyList<HuntCandidate> eligible, (float X, float Z) mean) =>
+        eligible.Count == 0 ? null
+        : eligible.OrderBy(p => HuntingGrounds.Distance(p.X, p.Z, mean.X, mean.Z)).ThenBy(p => p.Key).First();
+
+    /// <summary>The players to seed for a unit at <paramref name="at"/>: the eligible players inside the regions within 60 m,
+    /// nearest first (ties by key), at most HuntPlan.MaxTargets (D7).</summary>
+    public static List<long> SeedTargets(IEnumerable<HuntCandidate> players, Scope scope, Func<float, float, string> regionOf, (float X, float Z) at) =>
+        HuntPlan.Targets(EligibleInside(players, scope, regionOf), at, HuntingGrounds.Reach);
+
+    /// <summary>The instance's groups: its units by wave and group.</summary>
+    public static IEnumerable<IGrouping<(int Wave, int Group), RegionUnit>> Groups(IEnumerable<RegionUnit> units) =>
+        units.GroupBy(u => (u.Wave, u.Group)).OrderBy(g => g.Key.Wave).ThenBy(g => g.Key.Group);
+}
+
+/// <summary>What one unit does at a hunt check (D8).</summary>
+public enum JumpKind { InReach, Waiting, Jump }
+
+/// <summary>
+/// The jump rule (D8, Business rules 4, S-10, S-11, S-17). A unit whose target stands more than 60 m away jumps toward it
+/// only while no online player, eligible or not, stands within 100 m of it: at most 25 m along the line (or a little to its
+/// side), and a jump that would end within 100 m of the target lands instead 50-60 m from the target. A landing lies inside
+/// a scope region, outside claimed territory, at least 50 m from every online player, and is free and grounded at the
+/// unit's height level or a neighbouring one, or the unit waits. Between 60 and 100 m nothing moves it (the target itself
+/// is an online player within 100 m).
+/// </summary>
+public static class JumpRule
+{
+    static readonly double[] StepTurns = [0, 15, -15, 30, -30];
+    static readonly float[] StepLengths = [HuntingGrounds.Step, 20f, 15f];
+    static readonly double[] FinalTurns = [0, 10, -10, 20, -20];
+    static readonly float[] FinalDistances = [55f, 50f, 60f, 52.5f, 57.5f];
+
+    /// <summary>The nearest online player with a usable position, or null.</summary>
+    public static float? Nearest(IEnumerable<HuntCandidate> online, float x, float z)
+    {
+        float? best = null;
+        foreach (var p in online)
+        {
+            if (!p.Online || !PlayerPosition.Usable(p.X, p.Z)) continue;
+            var d = HuntingGrounds.Distance(p.X, p.Z, x, z);
+            if (best is null || d < best) best = d;
+        }
+        return best;
+    }
+
+    /// <summary>The candidate landings of a unit at <paramref name="u"/> hunting <paramref name="target"/>, in the order
+    /// they are tried: the final ring 50-60 m from the target when a straight step would end within 100 m of it, else steps
+    /// of at most 25 m toward it.</summary>
+    public static IEnumerable<(float X, float Z, bool Final)> Candidates((float X, float Z) u, (float X, float Z) target)
+    {
+        var d = HuntingGrounds.Distance(u.X, u.Z, target.X, target.Z);
+        if (d <= 0) yield break;
+        var ux = (target.X - u.X) / d;
+        var uz = (target.Z - u.Z) / d;
+        if (d - HuntingGrounds.Step <= HuntingGrounds.WatchRange)
+        {
+            foreach (var dist in FinalDistances)
+                foreach (var turn in FinalTurns)
+                {
+                    var (rx, rz) = Turn(-ux, -uz, turn);                      // from the target back toward the unit
+                    yield return (target.X + rx * dist, target.Z + rz * dist, true);
+                }
+            yield break;
+        }
+        foreach (var len in StepLengths)
+            foreach (var turn in StepTurns)
+            {
+                var (rx, rz) = Turn(ux, uz, turn);
+                yield return (u.X + rx * len, u.Z + rz * len, false);
+            }
+    }
+
+    static (float X, float Z) Turn(float x, float z, double degrees)
+    {
+        var a = degrees * Math.PI / 180;
+        var (c, s) = (Math.Cos(a), Math.Sin(a));
+        return ((float)(x * c - z * s), (float)(x * s + z * c));
+    }
+
+    /// <summary>One unit's plan at a check: in reach (60 m or less from its target), waiting, or a jump to a landing that
+    /// passes every test. <paramref name="online"/> is every connected character read; <paramref name="allowed"/> says a
+    /// point lies inside a scope region and outside claimed territory; the walk check takes two calls a level from
+    /// <paramref name="budget"/> (spent: the unit waits).</summary>
+    public static (JumpKind Kind, RegionJump? Jump) Plan(RegionUnit u, (float X, float Z) target, IReadOnlyList<HuntCandidate> online,
+        Func<float, float, bool> allowed, Func<float, float, byte, bool> walkable, Func<byte, float> heightOf, WalkBudget budget)
+    {
+        if (HuntingGrounds.Distance(u.X, u.Z, target.X, target.Z) <= HuntingGrounds.Reach) return (JumpKind.InReach, null);
+        if (Nearest(online, u.X, u.Z) is { } near && near <= HuntingGrounds.WatchRange) return (JumpKind.Waiting, null);
+        foreach (var (x, z, _) in Candidates((u.X, u.Z), target))
+        {
+            var clearance = Nearest(online, x, z) ?? float.MaxValue;
+            if (clearance < HuntingGrounds.LandingDistance) continue;
+            if (!allowed(x, z)) continue;
+            foreach (var level in WalkLevels.Spot(u.Level))
+            {
+                if (!budget.TryTake(2)) return (JumpKind.Waiting, null);
+                if (walkable(x, z, level)) return (JumpKind.Jump, new RegionJump(u.Key, x, heightOf(level), z, level, clearance));
+            }
+        }
+        return (JumpKind.Waiting, null);
+    }
+
+    /// <summary>"region hunt &lt;id&gt;: &lt;j&gt; jumped, &lt;w&gt; waiting, &lt;r&gt; in reach, landed &lt;d&gt; m" (the service
+    /// adds "[nyar] "); d is the smallest distance between a landing and an online player (Review 1 F4). Counts and one
+    /// distance only, never a name or a position.</summary>
+    public static string LogLine(string eventId, int jumped, int waiting, int inReach, float landed) =>
+        string.Create(CultureInfo.InvariantCulture, $"region hunt {eventId}: {jumped} jumped, {waiting} waiting, {inReach} in reach, landed {Math.Min(landed, 9999f):0} m");
+
+    public static string FailedLine(string eventId, string message) => $"region hunt {eventId}: move failed: {message}";
+}
+
+/// <summary>
+/// The lock phase (D5, D6): every <see cref="HuntingGrounds.CheckSeconds"/> s while a locked instance runs, each such
+/// instance's own live units are read, their last inside spots recorded and the strays returned. Guarded per unit and per
+/// event: a throwing region lookup, read or return skips that unit and the rest runs; a check that met any throw logs
+/// "region lock &lt;id&gt;: check failed: &lt;message&gt;" once per streak and holds <see cref="Failing"/> on the health line
+/// until a check of that event runs clean, the event ends or the server restarts. Never throws.
+/// </summary>
+public sealed class LockPhase
+{
+    public const string Failing = "region lock: check failing";
+
+    readonly Dictionary<string, Dictionary<long, InsideSpot>> _inside = new(StringComparer.Ordinal);
+    readonly SortedSet<string> _failing = new(StringComparer.Ordinal);
+    bool _phaseFailing;
+    DateTime _next;
+
+    public IReadOnlyList<string> Health => _failing.Count > 0 || _phaseFailing ? [Failing] : [];
+
+    /// <summary>The last inside spots held for <paramref name="eventId"/> (memory only).</summary>
+    public int Records(string eventId) => _inside.TryGetValue(eventId, out var r) ? r.Count : 0;
+
+    /// <summary>Every record held, for the end-path checks.</summary>
+    public int AllRecords => _inside.Values.Sum(r => r.Count) + _failing.Count;
+
+    public void EventEnded(string eventId)
+    {
+        _inside.Remove(eventId);
+        _failing.Remove(eventId);
+    }
+
+    public void Clear()
+    {
+        _inside.Clear();
+        _failing.Clear();
+        _phaseFailing = false;
+        _next = default;
+    }
+
+    /// <summary>One scheduler tick: records and streaks of instances no longer locked and running are dropped first; then,
+    /// when <see cref="HuntingGrounds.CheckSeconds"/> have passed, one check per locked instance.</summary>
+    public IReadOnlyList<LockCheck> Tick(DateTime now, IReadOnlyCollection<ActiveEvent> active, IRegionWorld world, Func<double> random,
+        Action<string> info, Action<string> error, bool due = true)
+    {
+        var checks = new List<LockCheck>();
+        try
+        {
+            var locked = active.Where(HuntingGrounds.Locked).ToList();
+            foreach (var id in _inside.Keys.Where(id => !locked.Any(a => a.Id == id)).ToList()) _inside.Remove(id);
+            _failing.RemoveWhere(id => !locked.Any(a => a.Id == id));
+            if (locked.Count == 0 || !due) return checks;
+            foreach (var a in locked)
+                if (Run(a, world, random, info, error) is { } c) checks.Add(c);
+            _phaseFailing = false;
+        }
+        catch (Exception e)
+        {
+            if (!_phaseFailing) Phases.Safe(error, LockRule.FailedLine("phase", e.Message));
+            _phaseFailing = true;
+        }
+        return checks;
+    }
+
+    /// <summary>Whether a check is due at <paramref name="now"/> (and the next one scheduled).</summary>
+    internal bool Due(DateTime now)
+    {
+        if (now < _next) return false;
+        _next = now.AddSeconds(HuntingGrounds.CheckSeconds);
+        return true;
+    }
+
+    /// <summary>One check of <paramref name="a"/>; the returns written, or null when it could not run. Never throws.</summary>
+    public LockCheck? Run(ActiveEvent a, IRegionWorld world, Func<double> random, Action<string> info, Action<string> error)
+    {
+        string? fault = null;
+        LockCheck? done = null;
+        try
+        {
+            if (a.Definition.Action is not { RegionLock: true } action) return null;
+            var scope = action.Scope;
+            if (!_inside.TryGetValue(a.Id, out var records)) _inside[a.Id] = records = new Dictionary<long, InsideSpot>();
+            var seen = new HashSet<long>();
+            var written = new List<RegionReturn>();
+            foreach (var t in world.Units.Where(t => HuntingGrounds.Ours(t, a)).ToList())
+            {
+                try
+                {
+                    if (world.Read(t) is not { } u) continue;
+                    seen.Add(u.Key);
+                    var inside = HuntingGrounds.Inside(scope, world.RegionOf, u.X, u.Z);
+                    if (inside)
+                    {
+                        records[u.Key] = new InsideSpot(u.X, u.Y, u.Z, u.Level);
+                        continue;
+                    }
+                    if (!records.TryGetValue(u.Key, out var last))
+                    {
+                        if (u.Spawn is not { } s) continue;                     // nothing known inside yet: left alone
+                        records[u.Key] = last = new InsideSpot(s.X, s.Y, s.Z, u.Level);
+                    }
+                    if (!LockRule.Strays(false, u.X, u.Z, last)) continue;
+                    var d = HuntingGrounds.Distance(u.X, u.Z, last.X, last.Z);
+                    var (x, y, z) = LockRule.ReturnSpot(last, (px, pz) => HuntingGrounds.Inside(scope, world.RegionOf, px, pz), world.Walkable,
+                        world.Budget, random);
+                    var r = new RegionReturn(u.Key, x, y, z, d);
+                    world.Return(r, scope);
+                    written.Add(r);
+                }
+                catch (Exception e) { fault ??= e.Message; }
+            }
+            foreach (var gone in records.Keys.Where(k => !seen.Contains(k)).ToList()) records.Remove(gone);   // died or despawned
+            done = new LockCheck(a.Id, written, written.Count == 0 ? 0f : written.Max(r => r.Distance));
+            if (done.LogLine is { } line) Phases.Safe(info, line);
+        }
+        catch (Exception e) { fault ??= e.Message; }
+        if (fault is null) _failing.Remove(a.Id);
+        else if (_failing.Add(a.Id)) Phases.Safe(error, LockRule.FailedLine(a.Id, fault));
+        return done;
+    }
+}
+
+/// <summary>
+/// The hunt phase (D7, D8, D9): every <see cref="HuntingGrounds.CheckSeconds"/> s while a RegionHunt instance runs, the
+/// players are read once for each such instance (a throwing read skips that event's whole check: nothing moves), each
+/// group's target is chosen again, and its units in reach, waiting or jumping are counted; at most
+/// <see cref="HuntingGrounds.MaxJumps"/> units jump per tick across all events. A throwing unit read, landing check or jump
+/// write skips that unit. A check that met any throw logs "region hunt &lt;id&gt;: move failed: &lt;message&gt;" once per
+/// streak and holds <see cref="Failing"/> until a check of that event runs clean, the event ends or the server restarts.
+/// The targets live in memory for one check. Never throws.
+/// </summary>
+public sealed class HuntPhase
+{
+    public const string Failing = "region hunt: move failing";
+
+    readonly Dictionary<string, Dictionary<(int Wave, int Group), long>> _targets = new(StringComparer.Ordinal);
+    readonly SortedSet<string> _failing = new(StringComparer.Ordinal);
+    bool _phaseFailing;
+
+    public IReadOnlyList<string> Health => _failing.Count > 0 || _phaseFailing ? [Failing] : [];
+
+    /// <summary>The target key of each group of <paramref name="eventId"/> at its last check (memory only).</summary>
+    public IReadOnlyDictionary<(int Wave, int Group), long> Targets(string eventId) =>
+        _targets.TryGetValue(eventId, out var t) ? t : new Dictionary<(int, int), long>();
+
+    public int AllRecords => _targets.Values.Sum(t => t.Count) + _failing.Count;
+
+    public void EventEnded(string eventId)
+    {
+        _targets.Remove(eventId);
+        _failing.Remove(eventId);
+    }
+
+    public void Clear()
+    {
+        _targets.Clear();
+        _failing.Clear();
+        _phaseFailing = false;
+    }
+
+    public IReadOnlyList<HuntCheck> Tick(IReadOnlyCollection<ActiveEvent> active, IRegionWorld world, Action<string> info, Action<string> error,
+        bool due = true)
+    {
+        var checks = new List<HuntCheck>();
+        try
+        {
+            var hunting = active.Where(HuntingGrounds.Hunts).ToList();
+            foreach (var id in _targets.Keys.Where(id => !hunting.Any(a => a.Id == id)).ToList()) _targets.Remove(id);
+            _failing.RemoveWhere(id => !hunting.Any(a => a.Id == id));
+            if (hunting.Count == 0 || !due) return checks;
+            var jumps = new JumpAllowance(HuntingGrounds.MaxJumps);
+            foreach (var a in hunting)
+                if (Run(a, world, jumps, info, error) is { } c) checks.Add(c);
+            _phaseFailing = false;
+        }
+        catch (Exception e)
+        {
+            if (!_phaseFailing) Phases.Safe(error, JumpRule.FailedLine("phase", e.Message));
+            _phaseFailing = true;
+        }
+        return checks;
+    }
+
+    /// <summary>One check of <paramref name="a"/> under the tick's shared jump allowance; null when it could not run (a
+    /// failed player read). Never throws.</summary>
+    public HuntCheck? Run(ActiveEvent a, IRegionWorld world, JumpAllowance jumps, Action<string> info, Action<string> error)
+    {
+        string? fault = null;
+        HuntCheck? done = null;
+        try
+        {
+            if (a.Definition.Action is not { } action || !HuntingGrounds.Hunts(a)) return null;
+            var scope = action.Scope;
+            IReadOnlyList<HuntCandidate> players;
+            try { players = world.Players().ToList(); }
+            catch (Exception e)
+            {
+                _targets.Remove(a.Id);                                          // no stale target survives a failed read
+                fault = e.Message;
+                throw new SkipCheck();
+            }
+            var eligible = new List<HuntCandidate>();
+            foreach (var p in players)
+            {
+                try { if (HuntRule.Eligible(p, scope, world.RegionOf)) eligible.Add(p); }
+                catch (Exception e) { fault ??= e.Message; }
+            }
+            var units = new List<RegionUnit>();
+            foreach (var t in world.Units.Where(t => HuntingGrounds.Ours(t, a)).ToList())
+            {
+                try { if (world.Read(t) is { } u) units.Add(u); }
+                catch (Exception e) { fault ??= e.Message; }
+            }
+            var targets = new Dictionary<(int, int), long>();
+            var written = new List<RegionJump>();
+            int waiting = 0, inReach = 0;
+            bool Allowed(float x, float z) => HuntingGrounds.Inside(scope, world.RegionOf, x, z) && !world.IsClaimed(a.Id, x, z);
+            foreach (var group in HuntRule.Groups(units))
+            {
+                var members = group.OrderBy(u => u.Key).ToList();
+                if (HuntRule.Target(eligible, HuntRule.Mean(members)) is not { } target) continue;   // no target: no jump, no seed
+                targets[group.Key] = target.Key;
+                foreach (var u in members)
+                {
+                    try
+                    {
+                        var (kind, jump) = JumpRule.Plan(u, (target.X, target.Z), players, Allowed, world.Walkable, world.HeightOf, world.Budget);
+                        if (kind == JumpKind.InReach) inReach++;
+                        else if (kind == JumpKind.Jump && jump is { } j && jumps.Take())
+                        {
+                            world.Jump(j);
+                            written.Add(j);
+                        }
+                        else waiting++;
+                    }
+                    catch (Exception e) { fault ??= e.Message; }
+                }
+            }
+            _targets[a.Id] = targets;
+            done = new HuntCheck(a.Id, written, waiting, inReach);
+            if (done.LogLine is { } line) Phases.Safe(info, line);
+        }
+        catch (SkipCheck) { }
+        catch (Exception e) { fault ??= e.Message; }
+        if (fault is null) _failing.Remove(a.Id);
+        else if (_failing.Add(a.Id)) Phases.Safe(error, JumpRule.FailedLine(a.Id, fault));
+        return done;
+    }
+
+    sealed class SkipCheck : Exception { }
+}
+
+/// <summary>The jumps left in one tick across all events (D8, S-11).</summary>
+public sealed class JumpAllowance(int max)
+{
+    int _left = max;
+    public int Left => _left;
+
+    public bool Take()
+    {
+        if (_left <= 0) return false;
+        _left--;
+        return true;
+    }
+}
+
+/// <summary>
+/// The "region" tick phase (D5-D9, D12): the lock, then the hunt, every <see cref="HuntingGrounds.CheckSeconds"/> s while
+/// a locked or RegionHunt instance runs. One end-path entry drops both phases' records for an event; a restart or a purge
+/// clears both. Never throws.
+/// </summary>
+public sealed class RegionPhase
+{
+    public LockPhase Lock { get; } = new();
+    public HuntPhase Hunt { get; } = new();
+
+    /// <summary>The two health entries (D6, D9), each while failing.</summary>
+    public IReadOnlyList<string> Health => Lock.Health.Concat(Hunt.Health).ToList();
+
+    /// <summary>Every end path of <paramref name="eventId"/>: its last inside spots, targets and streaks go (D12).</summary>
+    public void EventEnded(string eventId)
+    {
+        Lock.EventEnded(eventId);
+        Hunt.EventEnded(eventId);
+    }
+
+    public void Clear()
+    {
+        Lock.Clear();
+        Hunt.Clear();
+    }
+
+    /// <summary>True when any running instance needs the phase (a lock or a region hunt).</summary>
+    public static bool Needed(IEnumerable<ActiveEvent> active) => active.Any(HuntingGrounds.Locked);
+
+    /// <summary>One scheduler tick: the lock's and the hunt's checks when due; never throws.</summary>
+    public (IReadOnlyList<LockCheck> Locks, IReadOnlyList<HuntCheck> Hunts) Tick(DateTime now, IReadOnlyCollection<ActiveEvent> active,
+        IRegionWorld world, Func<double> random, Action<string> info, Action<string> error)
+    {
+        var due = false;
+        try { due = active.Any(HuntingGrounds.Locked) && Lock.Due(now); }
+        catch (Exception) { /* never throws */ }
+        var locks = Lock.Tick(now, active, world, random, info, error, due);
+        var hunts = Hunt.Tick(active, world, info, error, due);
+        return (locks, hunts);
+    }
+}
+
+static class Phases
+{
+    internal static void Safe(Action<string> log, string line)
+    {
+        try { log(line); }
+        catch (Exception) { /* a log line never breaks a check */ }
+    }
+}

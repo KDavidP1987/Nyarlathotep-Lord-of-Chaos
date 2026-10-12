@@ -194,8 +194,23 @@ public static class CommandArgs
         d[ScoreboardField] = ("spawn action", "admin");             // wave-sets D14
         foreach (var f in WaveListFields) d[f] = ("spawn action", "admin");
         foreach (var f in SwarmFields) d[f] = ("spawn action", "admin");      // swarm D9
+        d[RegionLockField] = ("spawn action", "admin");             // hunting-grounds D14
         return d;
     }
+
+    /// <summary>`action.regionLock` (hunting-grounds D14): true, false or none (absent and false are the same).</summary>
+    public const string RegionLockField = "action.regionLock";
+
+    /// <summary>`action.regionLock`'s value, refused with the validator's reason (hunting-grounds D2).</summary>
+    static Arg<object> RegionLockValue(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? Arg<object>.Bad(ValueRequired)
+        : value switch
+        {
+            "true" => Arg<object>.Of(true),
+            "false" => Arg<object>.Of(false),
+            "none" => Arg<object>.Of(FieldRemoval.Instance),
+            _ => Arg<object>.Bad(EventValidator.RegionLockRule),
+        };
 
     /// <summary>`action.arena` (swarm D9): 15-60 or none.</summary>
     public const string ArenaField = "action.arena";
@@ -436,12 +451,13 @@ public static class CommandArgs
         field != UnitChanceField && !(field.StartsWith("action.waveList.", StringComparison.Ordinal) && field.Contains(".N", StringComparison.Ordinal))
         && SettableFields.ContainsKey(TableName(field));
 
-    /// <summary>`location here` or `location aroundplayer &lt;minDist&gt; &lt;maxDist&gt;` (event-library D11, event-spawns
-    /// D18), each distance in D6's range and minDist below maxDist.</summary>
+    /// <summary>`location here`, `location aroundplayer &lt;minDist&gt; &lt;maxDist&gt;` (event-library D11, event-spawns
+    /// D18), each distance in D6's range and minDist below maxDist, or `location region` (hunting-grounds D14).</summary>
     static Arg<object> LocationValue(string? value)
     {
         const string rule = LocationSetRule;
         if (value == "here") return Arg<object>.Of(LocationHere.Instance);
+        if (string.Equals(value, "region", StringComparison.OrdinalIgnoreCase)) return Arg<object>.Of(RegionArg.Instance);
         var parts = (value ?? "").Split(' ');
         if (parts.Length != 3 || !string.Equals(parts[0], "aroundplayer", StringComparison.OrdinalIgnoreCase)) return Arg<object>.Bad(rule);
         if (!(int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var min) && min is >= 10 and <= 60))
@@ -459,8 +475,8 @@ public static class CommandArgs
         return m >= min && m <= max && decimal.Round(m, 2) == m ? m : null;
     }
 
-    public const string LocationSetRule = "location takes here or aroundplayer MIN MAX";
-    public const string BehaviourRule = "action.behaviour takes none or hunt RANGE";
+    public const string LocationSetRule = "location takes here, aroundplayer MIN MAX or region";
+    public const string BehaviourRule = "action.behaviour takes none, hunt RANGE or regionhunt";
     public const string ValueRequired = "value required";
     public const string UnitChanceRule = "action.units.N.chance must be 0.05-1.0 with at most two decimals";
 
@@ -485,6 +501,8 @@ public static class CommandArgs
             {
                 var parts = (value ?? "").Split(' ');
                 if (parts[0].Length == 0 || parts.Length > 2) return Arg<object>.Bad(BehaviourRule);
+                if (string.Equals(parts[0], "regionhunt", StringComparison.OrdinalIgnoreCase))     // hunting-grounds D14: no range
+                    return parts.Length == 1 ? Arg<object>.Of(RegionHuntArg.Instance) : Arg<object>.Bad(BehaviourRule);
                 if (!string.Equals(parts[0], "hunt", StringComparison.OrdinalIgnoreCase))
                     return Arg<object>.Bad(IsNameValue("CHAR_" + parts[0], "CHAR_") ? EventValidator.UnknownBehaviour(parts[0].ToLowerInvariant()) : BehaviourRule);
                 return parts.Length == 2 && int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var r)
@@ -573,6 +591,7 @@ public static class CommandArgs
             return Arg<object>.Bad(ValueRequired);                   // event-spawns D18's empty input
         if (SwarmFields.Contains(field)) return string.IsNullOrWhiteSpace(value) ? Arg<object>.Bad(ValueRequired) : SwarmValue(field, value);
         if (field == FanOutField) return FanOutValue(value);
+        if (field == RegionLockField) return RegionLockValue(value);
         if (field == ScoreboardField)
             return value switch { "true" => Arg<object>.Of(true), "false" => Arg<object>.Of(false), _ => Arg<object>.Bad(EventValidator.ScoreboardRule) };
         if (WaveListPath(field) is { } wave) return WaveListValue(field, wave, value);
@@ -623,6 +642,22 @@ public sealed class FieldRemoval
 public readonly record struct BehaviourArg(int Range)
 {
     public override string ToString() => FormattableString.Invariant($"hunt {Range}");
+}
+
+/// <summary>`action.behaviour regionhunt` (hunting-grounds D14): written as { "type": "RegionHunt" }.</summary>
+public sealed class RegionHuntArg
+{
+    public static readonly RegionHuntArg Instance = new();
+    RegionHuntArg() { }
+    public override string ToString() => "regionhunt";
+}
+
+/// <summary>`location region` (hunting-grounds D14): written as action.location { "type": "Region" }.</summary>
+public sealed class RegionArg
+{
+    public static readonly RegionArg Instance = new();
+    RegionArg() { }
+    public override string ToString() => "region";
 }
 
 /// <summary>`action.fanOut &lt;maxInstances&gt; &lt;minSpacing&gt;` (automation D16): written as action.fanOut

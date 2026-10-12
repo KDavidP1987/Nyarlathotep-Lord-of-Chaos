@@ -59,7 +59,8 @@
         "event-spawns › build outputs",
         "automation › build outputs",
         "wave-sets › build outputs",
-        "swarm › build outputs"
+        "swarm › build outputs",
+        "hunting-grounds › build outputs"
       ]
     },
     {
@@ -90,7 +91,9 @@
         "wave-sets › release zip",
         "wave-sets › tag and GitHub release v0.9.0",
         "swarm › release zip",
-        "swarm › tag and GitHub release v0.10.0"
+        "swarm › tag and GitHub release v0.10.0",
+        "hunting-grounds › release zip",
+        "hunting-grounds › tag and GitHub release v0.11.0"
       ]
     },
     {
@@ -127,7 +130,8 @@
         "event-spawns › templates.json examples",
         "automation › templates.json examples",
         "wave-sets › templates.json graveyard-waves",
-        "swarm › templates.json spider-swarm"
+        "swarm › templates.json spider-swarm",
+        "hunting-grounds › templates.json spider-hunting-grounds"
       ]
     },
     {
@@ -175,7 +179,8 @@
         "automation › events.json.bak",
         "automation › events.json.tmp, state.json.tmp",
         "wave-sets › events.json waveList and scoreboard",
-        "swarm › events.json arena, winner and growth"
+        "swarm › events.json arena, winner and growth",
+        "hunting-grounds › events.json Region location, regionLock, RegionHunt"
       ]
     },
     {
@@ -368,7 +373,8 @@
         "event-spawns › snapshot",
         "automation › snapshot",
         "wave-sets › snapshot",
-        "swarm › snapshot"
+        "swarm › snapshot",
+        "hunting-grounds › snapshot"
       ],
       "location": "%TEMP%\\nyar-snap-* (saved\\manifest.json plus the copies)",
       "owner": "tools/dev-snapshot.ps1",
@@ -478,9 +484,10 @@
       "covers": [
         "nyar-s*-logs",
         "nyar-ws*-logs",
-        "nyar-sw*-logs"
+        "nyar-sw*-logs",
+        "nyar-hg*-logs"
       ],
-      "location": "%TEMP%\\nyar-s<n>-logs (copies of LogOutput.log and NyarDev.log taken by hand during event-library Sessions 4 and 5); %TEMP%\\nyar-ws<n>-logs (wave-sets Session 1); %TEMP%\\nyar-sw<n>-logs (swarm Session 1)",
+      "location": "%TEMP%\\nyar-s<n>-logs (copies of LogOutput.log and NyarDev.log taken by hand during event-library Sessions 4 and 5); %TEMP%\\nyar-ws<n>-logs (wave-sets Session 1); %TEMP%\\nyar-sw<n>-logs (swarm Session 1); %TEMP%\nyar-hg<n>-logs (hunting-grounds Sessions 1-2)",
       "owner": "Claude during a server session",
       "retention": "the session that made them",
       "deletion": "deleted once the session is recorded; later sessions copy to nyar-soak-* instead; a leftover fails -Paths",
@@ -493,7 +500,8 @@
         "event-spawns › session log copies",
         "automation › session log copies",
         "wave-sets › session log copies",
-        "swarm › session log copies"
+        "swarm › session log copies",
+        "hunting-grounds › session log copies"
       ]
     },
     {
@@ -562,7 +570,9 @@
         "wave-sets › review prompts",
         "wave-sets › Claude's scratchpad (Codex prompts and outputs, drafts)",
         "swarm › review prompts",
-        "swarm › Claude's scratchpad (Codex prompts and outputs)"
+        "swarm › Claude's scratchpad (Codex prompts and outputs)",
+        "hunting-grounds › review prompts",
+        "hunting-grounds › Claude's scratchpad (Codex prompts and outputs, the v0.10.0 archive)"
       ]
     },
     {
@@ -648,7 +658,8 @@
       "rows": [
         "event-spawns › health and failure-streak state",
         "automation › health and failure-streak state",
-        "swarm › arena check streak and health entry"
+        "swarm › arena check streak and health entry",
+        "hunting-grounds › lock and hunt streaks and health entries"
       ]
     },
     {
@@ -735,7 +746,7 @@
       "covers": [
         "BepInEx/plugins/NyarDevTools.dll"
       ],
-      "location": "%TEMP%\\vrclient\\results and %TEMP%\\vrclient\\shots; the dev server's BepInEx/plugins/DevChatEcho.dll and NyarDevTools.dll",
+      "location": "%TEMP%\\vrclient\\results and %TEMP%\\vrclient\\shots; the dev server's BepInEx/plugins/DevChatEcho.dll and NyarDevTools.dll; NyarDevTools' marks (BepInEx/config/NyarDevTools/marks.json, set by `.devmark`)",
       "owner": "tools/vrclient",
       "retention": "results and shots as in-game test evidence; the plugins while vrclient tests run",
       "deletion": "by the tool or Claude; the plugins live on the dev server only and never ship",
@@ -743,7 +754,9 @@
       "rows": [
         "automation › vrclient outputs (A18, Epic A36)",
         "wave-sets › vrclient outputs",
-        "swarm › vrclient outputs"
+        "swarm › vrclient outputs",
+        "hunting-grounds › vrclient outputs",
+        "hunting-grounds › dev marks"
       ]
     },
     {
@@ -781,6 +794,31 @@
       "singleCopy": false,
       "rows": [
         "swarm › the generated waves"
+      ]
+    },
+    {
+      "artifact": "Region wave spots",
+      "covers": [],
+      "location": "memory, the groups of one Region wave (Logic/HuntingGrounds.cs SpotDraw, RegionWave; Services/WaveAction), in the server process",
+      "owner": "WaveAction",
+      "retention": "while the wave is planned",
+      "deletion": "when the wave is queued; the units carry their group's anchor (hunting-grounds D4)",
+      "singleCopy": false,
+      "rows": [
+        "hunting-grounds › Region spots of a wave"
+      ]
+    },
+    {
+      "artifact": "Region lock and hunt records",
+      "covers": [],
+      "location": "memory (Logic/HuntingGrounds.cs LockPhase and HuntPhase), in the server process",
+      "owner": "Logic/HuntingGrounds.cs",
+      "retention": "last inside spots while the unit and the event live; a hunt target and its group for one check",
+      "deletion": "at the unit's death or despawn, the next check, the event's end (hunting-grounds D12) or a restart; never logged or saved (D13)",
+      "singleCopy": false,
+      "rows": [
+        "hunting-grounds › last inside spot per unit",
+        "hunting-grounds › hunt target and group per event"
       ]
     }
   ]

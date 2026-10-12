@@ -623,6 +623,12 @@ public static class WaveLines
     public static string AroundPlayers(int groups) => groups == 1 ? AroundAPlayer : $"around {groups} players";
     /// <summary>A fanned-out wave whose groups all fit no free unit slot (automation D6).</summary>
     public static string NoFreeSlot(int wave, string id) => $"wave {wave} of {id} skipped: no free unit slot";
+    /// <summary>A Region wave none of whose groups found a spot (hunting-grounds D4).</summary>
+    public static string NoRegionSpot(int wave, string id) => $"wave {wave} of {id} skipped: no walkable spot in the regions";
+    /// <summary>A Region wave's place in its spawn line (hunting-grounds D4): its group count and the scope's region
+    /// names (<paramref name="regions"/>, comma separated), never a position.</summary>
+    public static string OverRegions(int groups, string regions) =>
+        $"in {groups} {(groups == 1 ? "group" : "groups")} over {regions}";
 }
 
 /// <summary>The per-copy chance roll of a wave (event-spawns D8).</summary>
@@ -1080,9 +1086,9 @@ public sealed record WaveFacts(
     bool CentreClaimed = false,
     bool AllowTerritory = false)
 {
-    /// <summary>AroundPlayer needs the map for its player pick and Hunt for its target filter, whatever allowTerritory
-    /// says; any other wave needs it only for the claimed-centre skip, which allowTerritory lifts (A27).</summary>
-    public bool NeedsMap => Location == LocationType.AroundPlayer || Behaviour == BehaviourType.Hunt || !AllowTerritory;
+    /// <summary>AroundPlayer needs the map for its player pick and Hunt and RegionHunt (hunting-grounds D7, D8) for their
+    /// target filter and landings, whatever allowTerritory says; any other wave needs it only for the claimed-centre skip, which allowTerritory lifts (A27).</summary>
+    public bool NeedsMap => Location == LocationType.AroundPlayer || Behaviour is BehaviourType.Hunt or BehaviourType.RegionHunt || !AllowTerritory;
 }
 
 /// <summary>The one order of a wave's rules (event-spawns D29, A26, A27): a control blocker or an ended event; territory
