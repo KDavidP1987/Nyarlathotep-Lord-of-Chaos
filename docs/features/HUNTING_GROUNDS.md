@@ -100,9 +100,9 @@ hg-point moved to the pond (-1880, -1640) and Chaos to hg-b (-1580, -1640), the 
 | D21 roam | `hunting-grounds.vrs` | **PASS 8/8** (`hunting-grounds-20261012-105140.json`). Wave 1 had 2 groups at (-1757.8, -1554.5) and (-1388.7, -1510.7), about 370 m apart. Wave 2 had 2 groups at (-1237.2, -1804.5) and (-998.1, -1853), about 244 m apart. All spots were at h 10-11. A visit run (session scratchpad, PASS 15/15) found each spot in FarbaneWoods with its group listed by `debug here 15`. |
 | D22 lock | `hunting-grounds-lock.vrs` | **PASS 19/19** (`-105922`). "region lock hg-lock: returned 6, farthest 77 m out"; the 6 were back at hg-in, in FarbaneWoods. |
 | D23 ambush | `hunting-grounds-ambush.vrs` | **PASS 12/12** (`-110124`). At the pond (inside): "around a player: 4 units queued". From DunleyFarmlands: "wave 1 of hg-ambush skipped: no eligible player". |
-| D24 hunt | `hunting-grounds-hunt.vrs` | First run 15/17: two arrivals were killed by bandits at the old hg-b, so the line moved. **PASS 17/17** on the new line (`-113113`): jumps 267 → 239 → … → 55 m, "no tracked units within 49 m" right after the final jump, the 6 listed within 60 m, and no jump after Chaos crossed into Dunley. Rerun on the A1 build: **PASS 17/17** (`-121504`), and on the final A3 build: **PASS 17/17** (`-144703`). |
+| D24 hunt | `hunting-grounds-hunt.vrs` | First run 15/17: two arrivals were killed by bandits at the old hg-b, so the line moved. **PASS 17/17** on the new line (`-113113`): jumps 267 → 239 → … → 55 m, "no tracked units within 49 m" right after the final jump, the 6 listed within 60 m, and no jump after Chaos crossed into Dunley. Rerun on the A1 build: **PASS 17/17** (`-121504`), on the A3 build: **PASS 17/17** (`-144703`), and after the review fix: **PASS 17/17** (`-151056`). |
 | D25 ends | `hunting-grounds-ends.vrs` | **PASS 18/18** (`-113622`). Stop and pillar-off each left 0 tracked, with no region line after the end. Restart: "event hg-point cancelled by restart …" and "boot marker sweep: 6 found, 6 queued for despawn". Purge: at the end of the timing run, "purge: 1 events ended, 20 units queued", then 0 tracked and no region line. |
-| D28 tick | `hunting-grounds-timing.vrs` | First run 11/12: the scenario expected 12 units in wave 2, but one of its three groups found no spot and was skipped, as D4 says. The expectation was fixed. On the A1 build: **PASS 12/12** (`-124725`); `preflight -TimingSpan … -Windows 10 -MinTracked 10`: "timing span: 10/10 windows under 5 ms, tracked >= 10, targets >= 1, 0 slow ticks" (windows averaged about 0.4 ms). On the final A3 build: **PASS 12/12** (`-144040`), and the same timing-span line. All 24 units reached Chaos, with no unit stranded. |
+| D28 tick | `hunting-grounds-timing.vrs` | First run 11/12: the scenario expected 12 units in wave 2, but one of its three groups found no spot and was skipped, as D4 says. The expectation was fixed. On the A1 build: **PASS 12/12** (`-124725`); `preflight -TimingSpan … -Windows 10 -MinTracked 10`: "timing span: 10/10 windows under 5 ms, tracked >= 10, targets >= 1, 0 slow ticks" (windows averaged about 0.4 ms). On the A3 build: **PASS 12/12** (`-144040`), and after the review fix: **PASS 12/12** (`-154144`), each with the same timing-span line. All 24 units reached Chaos, with no unit stranded. |
 
 What the runs found, each fixed and amended before release:
 
@@ -128,8 +128,10 @@ What the runs found, each fixed and amended before release:
 - **One slow region tick.** The final timing run logged one "slow tick: 273 ms (region 273 ms …)" before its ten
   windows. That check made 45 walk checks (about 18 ms), so the walk checks did not cause it. The build now logs
   "region parts: <t> ms (open, walk in n checks, players, claimed, moves in m, outside parts; gc …)" for a region phase
-  of 100 ms or more, at most once a minute. The hunt rerun and a 150 s timing rerun on that build had no slow tick and no
-  region parts line. If the stall comes back, the line names it.
+  of 100 ms or more, at most once a minute. The reruns on that build and on the review fix (hunt, a 150 s timing run and
+  the full timing run) had no slow tick and no region parts line. If the stall comes back, the line names it.
+- **The review fix.** A fresh review of A1-A3 found that one event's stuck units could still spend the shared cap before
+  another event's movable units planned. Every event's units with no failed check now plan first, then the stuck ones.
 - **The hand-over.** After the final jump the units stood about 53 m from Chaos. They were seeded within one hunt
   interval ("hunt targets: 1"), went into Combat, then into Return. Chaos is invulnerable, so the real fight with a
   vulnerable player is D26's.
