@@ -1,8 +1,8 @@
 # Swarm — a contained arena of growing waves with a kill-to-death winner
 
-**Status:** 0.10.0 (docs/dod/swarm.md, audit docs/audits/swarm.md). The owner's Session 3 (2026-10-12) passed the
-arena return and the look and feel. Region-bound placement modes, which the owner asked for after that run, are
-planned separately (design §9).
+**Status:** released in 0.10.0 (GitHub pre-release 2026-10-12; docs/dod/swarm.md done, audit docs/audits/swarm.md).
+The owner's Session 3 passed the arena return and the look and feel. Region-bound placement, which the owner asked
+for after that run, is the next child, hunting-grounds (design §9 D48).
 
 ## Goal
 
