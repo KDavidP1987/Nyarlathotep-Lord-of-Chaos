@@ -885,6 +885,55 @@ public class HuntingGroundsTests
     }
 
     [Fact]
+    public void Jumps_fails_when_another_events_stuck_units_spend_the_budget()
+    {
+        var a = Hunting("a");
+        var b = Hunting("b");
+        var w = new World { Walk = (x, _, _) => x > 600 };                            // a's units never land; b's does
+        for (var i = 0; i < 3; i++) w.Add(i, 100 + 20 * i, 100, eventId: "a");
+        w.Add(100, 800, 100, eventId: "b");
+        w.People.Add(Player(9, 500, 900));
+        var phase = new HuntPhase();
+        phase.Tick([a, b], w, _ => { }, _ => { });                                     // a first: its three spend the cap
+        var second = phase.Tick([b, a], w, _ => { }, _ => { });                        // the turn falls to a again
+        Assert.Contains(second.SelectMany(c => c.Jumps), j => j.Key == 100);          // re-review F1: b's free unit plans before a's stuck ones
+    }
+
+    [Fact]
+    public void Jumps_fails_when_a_rejoin_breaks_its_rules()
+    {
+        var a = Hunting();
+        var w = new World { Walk = (x, _, _) => x > 400 };
+        w.Add(1, 100, 100);                                                           // stuck
+        w.Add(2, 500, 845);                                                           // in reach of the target, 55 m away
+        w.People.Add(Player(9, 500, 900));
+        var phase = new HuntPhase();
+        phase.Tick([a], w, _ => { }, _ => { });
+        var rejoin = Assert.Single(Assert.Single(phase.Tick([a], w, _ => { }, _ => { })).Jumps);
+        Assert.Equal(1L, rejoin.Key);                                                 // beside the unit in reach
+        Assert.InRange(HuntingGrounds.Distance(rejoin.X, rejoin.Z, 500, 845), 2.99f, 3.01f);
+
+        var watched = new World { Walk = (x, _, _) => x > 400 };                      // a player 99 m from the stuck unit
+        watched.Add(1, 100, 100);
+        watched.People.Add(Player(9, 500, 900));
+        var seen = new HuntPhase();
+        seen.Tick([a], watched, _ => { }, _ => { });
+        Assert.Equal(1, seen.FailedChecks("hg", 1));
+        watched.People.Add(Player(8, 100, 199));
+        seen.Tick([a], watched, _ => { }, _ => { });
+        Assert.Equal(1, seen.FailedChecks("hg", 1));                                  // re-review F2: watched, the count stands
+
+        var anchors = new List<(float X, float Z, byte Level)> { (500, 300, 10) };
+        var online = new[] { Player(1, 500, 800) };
+        Assert.Null(JumpRule.Rejoin(Unit(500, 100), (500, 800), anchors, online, (_, _) => false, (_, _, _) => true, Height, new WalkBudget()));   // outside the regions or claimed
+        Assert.Null(JumpRule.Rejoin(Unit(500, 100), (500, 800), anchors, online, (_, _) => true, (_, _, _) => false, Height, new WalkBudget()));   // not free and grounded
+        Assert.Null(JumpRule.Rejoin(Unit(500, 100), (500, 800), anchors, online, (_, _) => true, (_, _, _) => true, Height, new WalkBudget(1)));   // out of budget
+        var close = new List<(float X, float Z, byte Level)> { (498, 100, 10) };     // 2 m nearer a target to the west
+        var ahead = JumpRule.Rejoin(Unit(500, 100), (200, 100), close, [Player(1, 200, 100)], (_, _) => true, (_, _, _) => true, Height, new WalkBudget());
+        Assert.Equal(495f, ahead!.Value.X, 3);                                        // re-review F3: not x 501, farther than the unit
+    }
+
+    [Fact]
     public void Jumps_fails_when_a_capped_unit_is_marked_stuck()
     {
         var a = Hunting();

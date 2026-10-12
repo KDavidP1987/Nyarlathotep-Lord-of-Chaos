@@ -570,6 +570,7 @@ public static class JumpRule
         foreach (var (dx, dz) in RejoinOffsets)
         {
             var (x, z) = (anchor.X + dx, anchor.Z + dz);
+            if (HuntingGrounds.Distance(x, z, target.X, target.Z) >= own) continue;   // the landing too is nearer the target (re-review F3)
             var clearance = Nearest(online, x, z) ?? float.MaxValue;
             if (clearance < HuntingGrounds.LandingDistance || !allowed(x, z)) continue;
             foreach (var level in WalkLevels.Spot(anchor.Level))
@@ -793,8 +794,15 @@ public sealed class HuntPhase
             var jumps = new JumpAllowance(HuntingGrounds.MaxJumps);
             var walk = new WalkBudget(HuntingGrounds.WalkCapCalls, world.Budget);    // A3: at most 200 walk checks a check
             var first = _turn++ % hunting.Count;                                // the events take turns at the cap (A3)
+            var runs = new List<EventRun>();
             foreach (var a in hunting.Skip(first).Concat(hunting.Take(first)))
-                if (Run(a, world, jumps, info, error, walk) is { } c) checks.Add(c);
+                if (Prepare(a, world) is { } r) runs.Add(r);
+            // every event's units with no failed check plan before any event's stuck units, so a stuck unit never spends
+            // the walk budget of a unit that can jump, in its own event or another (A3; step 3 re-review F1)
+            foreach (var r in runs) PlanUnits(r, stuck: false, world, jumps, walk);
+            foreach (var r in runs) PlanUnits(r, stuck: true, world, jumps, walk);
+            foreach (var r in runs)
+                if (Finish(r, info, error) is { } c) checks.Add(c);
             _phaseFailing = false;
         }
         catch (Exception e)
@@ -805,116 +813,164 @@ public sealed class HuntPhase
         return checks;
     }
 
-    /// <summary>One check of <paramref name="a"/> under the tick's shared jump allowance; null when it could not run (a
-    /// failed player read). Never throws.</summary>
+    /// <summary>One check of <paramref name="a"/> alone under the tick's shared jump allowance (its fresh units, then its
+    /// stuck ones); null when it could not run (a failed player read). Never throws.</summary>
     public HuntCheck? Run(ActiveEvent a, IRegionWorld world, JumpAllowance jumps, Action<string> info, Action<string> error,
         WalkBudget? walk = null)
     {
         walk ??= new WalkBudget(HuntingGrounds.WalkCapCalls, world.Budget);
-        string? fault = null;
-        HuntCheck? done = null;
+        if (Prepare(a, world) is not { } r) return null;
+        PlanUnits(r, stuck: false, world, jumps, walk);
+        PlanUnits(r, stuck: true, world, jumps, walk);
+        return Finish(r, info, error);
+    }
+
+    /// <summary>One event's check in progress: its players, plans, counts and records until <see cref="Finish"/>.</summary>
+    sealed class EventRun(ActiveEvent a)
+    {
+        public ActiveEvent Event { get; } = a;
+        public string? Fault;
+        public bool Skipped;
+        public IReadOnlyList<HuntCandidate> Players = [];
+        public Func<float, float, bool> Allowed = (_, _) => false;
+        public readonly List<(RegionUnit Unit, (float X, float Z) Target)> Plans = [];
+        public readonly Dictionary<(int, int), long> Targets = [];
+        public readonly List<RegionJump> Written = [];
+        public int Waiting, InReach;
+        public readonly WaitTally Tally = new();
+        public Dictionary<long, int> WaitedBefore = [];
+        public readonly Dictionary<long, int> WaitedNow = [];
+        public readonly List<(float X, float Z, byte Level)> Anchors = [];   // units that found a landing or are in reach (A3)
+        public int Failed(long key) => WaitedBefore.TryGetValue(key, out var n) ? n : 0;
+    }
+
+    /// <summary>Reads <paramref name="a"/>'s players and units and gives each unit its group's target; null when the
+    /// event does not hunt. A failed player read leaves a skipped run that <see cref="Finish"/> reports. Never throws.</summary>
+    EventRun? Prepare(ActiveEvent a, IRegionWorld world)
+    {
+        var r = new EventRun(a);
         try
         {
             if (a.Definition.Action is not { } action || !HuntingGrounds.Hunts(a)) return null;
             var scope = action.Scope;
-            IReadOnlyList<HuntCandidate> players;
-            try { players = world.Players().ToList(); }
+            try { r.Players = world.Players().ToList(); }
             catch (Exception e)
             {
                 _targets.Remove(a.Id);                                          // no stale target survives a failed read
-                fault = e.Message;
-                throw new SkipCheck();
+                r.Fault = e.Message;
+                r.Skipped = true;
+                return r;
             }
             var eligible = new List<HuntCandidate>();
-            foreach (var p in players)
+            foreach (var p in r.Players)
             {
                 try { if (HuntRule.Eligible(p, scope, world.RegionOf)) eligible.Add(p); }
-                catch (Exception e) { fault ??= e.Message; }
+                catch (Exception e) { r.Fault ??= e.Message; }
             }
             var units = new List<RegionUnit>();
             foreach (var t in world.Units.Where(t => HuntingGrounds.Ours(t, a)).ToList())
             {
                 try { if (world.Read(t) is { } u) units.Add(u); }
-                catch (Exception e) { fault ??= e.Message; }
+                catch (Exception e) { r.Fault ??= e.Message; }
             }
-            var targets = new Dictionary<(int, int), long>();
-            var written = new List<RegionJump>();
-            int waiting = 0, inReach = 0;
-            var tally = new WaitTally();
-            var waitedBefore = _waited.TryGetValue(a.Id, out var w) ? w : new Dictionary<long, int>();
-            var waitedNow = new Dictionary<long, int>();
-            var anchors = new List<(float X, float Z, byte Level)>();            // units that found a landing or are in reach (A3)
-            bool Allowed(float x, float z) => HuntingGrounds.Inside(scope, world.RegionOf, x, z) && !world.IsClaimed(a.Id, x, z);
-            var plans = new List<(RegionUnit Unit, (float X, float Z) Target)>();
+            r.WaitedBefore = _waited.TryGetValue(a.Id, out var w) ? w : new Dictionary<long, int>();
+            r.Allowed = (x, z) => HuntingGrounds.Inside(scope, world.RegionOf, x, z) && !world.IsClaimed(a.Id, x, z);
             foreach (var group in HuntRule.Groups(units))
             {
                 if (HuntRule.Target(eligible, HuntRule.Mean(group.OrderBy(u => u.Key).ToList())) is not { } target) continue;   // no target: no jump, no seed
-                targets[group.Key] = target.Key;
-                foreach (var u in group) plans.Add((u, (target.X, target.Z)));
+                r.Targets[group.Key] = target.Key;
+                foreach (var u in group) r.Plans.Add((u, (target.X, target.Z)));
             }
-            // units plan fewest failed checks first, so units that cannot jump never spend the walk budget of those that
-            // can (A1; step 3 review F1), and a unit cut off by the cap keeps its count, so the cap rotates (A3)
-            int Failed(long key) => waitedBefore.TryGetValue(key, out var n) ? n : 0;
-            foreach (var (u, target) in plans.OrderBy(p => Failed(p.Unit.Key)).ThenBy(p => p.Unit.Key))
-            {
-                try
-                {
-                    var before = Failed(u.Key);
-                    if (jumps.Left == 0 && HuntingGrounds.Distance(u.X, u.Z, target.X, target.Z) > HuntingGrounds.Reach)
-                    {
-                        waiting++;                                              // the tick's 20 jumps are spent: no plan, no mark (F2)
-                        if (before > 0) waitedNow[u.Key] = before;
-                        tally.Waited(u);
-                        continue;
-                    }
-                    (JumpKind Kind, RegionJump? Jump) planned = (JumpKind.Waiting, null);
-                    var streak = 0;
-                    if (before > 0 && HuntingGrounds.Distance(u.X, u.Z, target.X, target.Z) > HuntingGrounds.Reach
-                        && JumpRule.Rejoin(u, target, anchors, players, Allowed, world.Walkable, world.HeightOf, walk) is { } r)
-                        planned = (JumpKind.Jump, r);                           // A3: no landing last time, it rejoins a nearer unit first
-                    else
-                    {
-                        var (spent, watched) = (tally.Budget, tally.Watched);
-                        planned = JumpRule.Plan(u, target, players, Allowed, world.Walkable, world.HeightOf, walk, tally);
-                        var noLanding = planned.Kind == JumpKind.Waiting && tally.Budget == spent && tally.Watched == watched;
-                        var cutOff = planned.Kind == JumpKind.Waiting && tally.Budget != spent;
-                        streak = noLanding ? before + 1 : cutOff ? before : 0;
-                    }
-                    var (kind, jump) = planned;
-                    if (kind == JumpKind.InReach)
-                    {
-                        inReach++;
-                        anchors.Add((u.X, u.Z, u.Level));
-                    }
-                    else if (kind == JumpKind.Jump && jump is { } j && jumps.Take())
-                    {
-                        world.Jump(j);
-                        written.Add(j);
-                        if (!waitedBefore.ContainsKey(u.Key)) anchors.Add((j.X, j.Z, j.Level));
-                    }
-                    else
-                    {
-                        waiting++;
-                        if (streak > 0) waitedNow[u.Key] = streak;              // found no landing; one cut off by the budget keeps its turn
-                        tally.Waited(u);
-                    }
-                }
-                catch (Exception e) { fault ??= e.Message; }
-            }
-            _targets[a.Id] = targets;
-            _waited[a.Id] = waitedNow;
-            done = new HuntCheck(a.Id, written, waiting, inReach);
-            if (done.LogLine is { } line) Phases.Safe(info, line);
-            if (waiting > 0 && Detail is { } detail) Phases.Safe(detail, tally.Line(a.Id, waiting));
         }
-        catch (SkipCheck) { }
-        catch (Exception e) { fault ??= e.Message; }
-        if (fault is null) _failing.Remove(a.Id);
-        else if (_failing.Add(a.Id)) Phases.Safe(error, JumpRule.FailedLine(a.Id, fault));
+        catch (Exception e)
+        {
+            r.Fault ??= e.Message;
+            r.Skipped = true;
+        }
+        return r;
+    }
+
+    /// <summary>Plans <paramref name="r"/>'s units with no failed check (<paramref name="stuck"/> false, by key) or its
+    /// units that failed at an earlier check (true, fewest failures first): units that cannot jump never spend the walk
+    /// budget of those that can (A1; step 3 review F1), and a unit cut off by the cap keeps its count, so the cap rotates
+    /// (A3). Never throws.</summary>
+    void PlanUnits(EventRun r, bool stuck, IRegionWorld world, JumpAllowance jumps, WalkBudget walk)
+    {
+        if (r.Skipped) return;
+        var batch = r.Plans.Where(p => r.Failed(p.Unit.Key) > 0 == stuck).OrderBy(p => r.Failed(p.Unit.Key)).ThenBy(p => p.Unit.Key).ToList();
+        foreach (var (u, target) in batch)
+        {
+            try
+            {
+                var before = r.Failed(u.Key);
+                if (jumps.Left == 0 && HuntingGrounds.Distance(u.X, u.Z, target.X, target.Z) > HuntingGrounds.Reach)
+                {
+                    r.Waiting++;                                                // the tick's 20 jumps are spent: no plan, no mark (F2)
+                    if (before > 0) r.WaitedNow[u.Key] = before;
+                    r.Tally.Waited(u);
+                    continue;
+                }
+                (JumpKind Kind, RegionJump? Jump) planned;
+                var streak = 0;
+                if (before > 0 && HuntingGrounds.Distance(u.X, u.Z, target.X, target.Z) > HuntingGrounds.Reach
+                    && JumpRule.Rejoin(u, target, r.Anchors, r.Players, r.Allowed, world.Walkable, world.HeightOf, walk) is { } j0)
+                    planned = (JumpKind.Jump, j0);                              // A3: no landing last time, it rejoins a nearer unit first
+                else
+                {
+                    var (spent, watched) = (r.Tally.Budget, r.Tally.Watched);
+                    planned = JumpRule.Plan(u, target, r.Players, r.Allowed, world.Walkable, world.HeightOf, walk, r.Tally);
+                    var waits = planned.Kind == JumpKind.Waiting;
+                    var cutOff = waits && r.Tally.Budget != spent;
+                    var seen = waits && r.Tally.Watched != watched;
+                    // found no landing: one more; cut off by the cap or watched by a player: the count stands (re-review F2)
+                    streak = waits && !cutOff && !seen ? before + 1 : waits ? before : 0;
+                }
+                var (kind, jump) = planned;
+                if (kind == JumpKind.InReach)
+                {
+                    r.InReach++;
+                    r.Anchors.Add((u.X, u.Z, u.Level));
+                }
+                else if (kind == JumpKind.Jump && jump is { } j && jumps.Take())
+                {
+                    world.Jump(j);
+                    r.Written.Add(j);
+                    if (before == 0) r.Anchors.Add((j.X, j.Z, j.Level));
+                }
+                else
+                {
+                    r.Waiting++;
+                    if (streak > 0) r.WaitedNow[u.Key] = streak;
+                    r.Tally.Waited(u);
+                }
+            }
+            catch (Exception e) { r.Fault ??= e.Message; }
+        }
+    }
+
+    /// <summary>Keeps <paramref name="r"/>'s targets and counts, writes its lines and its failure state; null for a
+    /// skipped run. Never throws.</summary>
+    HuntCheck? Finish(EventRun r, Action<string> info, Action<string> error)
+    {
+        var id = r.Event.Id;
+        HuntCheck? done = null;
+        if (!r.Skipped)
+        {
+            try
+            {
+                _targets[id] = r.Targets;
+                _waited[id] = r.WaitedNow;
+                done = new HuntCheck(id, r.Written, r.Waiting, r.InReach);
+                if (done.LogLine is { } line) Phases.Safe(info, line);
+                if (r.Waiting > 0 && Detail is { } detail) Phases.Safe(detail, r.Tally.Line(id, r.Waiting));
+            }
+            catch (Exception e) { r.Fault ??= e.Message; }
+        }
+        if (r.Fault is null) _failing.Remove(id);
+        else if (_failing.Add(id)) Phases.Safe(error, JumpRule.FailedLine(id, r.Fault));
         return done;
     }
 
-    sealed class SkipCheck : Exception { }
 }
 
 /// <summary>The jumps left in one tick across all events (D8, S-11).</summary>
