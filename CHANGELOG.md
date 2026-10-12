@@ -3,6 +3,77 @@
 The complete technical history. The concise, player-facing changelog that ships to Thunderstore lives at
 `Nyarlathotep/Nyarlathotep/CHANGELOG.md`. Public beta from 0.2.0; features stay experimental until validated on live servers.
 
+## [0.10.0] - 2026-10-11
+
+The `swarm` child of the DoD Epic (`docs/dod/swarm.md`). A spawn event can be held inside an arena, grow its waves
+from one base wave, and name the player with the best kill-to-death ratio. The arena return has not yet been seen in game (see Sessions). Design and sessions:
+`docs/features/SWARM.md`; audit: `docs/audits/swarm.md`; design §9 D33, D42. No wire change (api 6). state.json and
+the cfg are unchanged.
+
+<details open>
+<summary><b>Definition keys</b></summary>
+
+All optional, on a SpawnWaves action. A key that fails validation disables the event, with one reason that names the
+field. SchemaVersion stays 1.
+
+| Key | Values | Effect |
+|---|---|---|
+| `action.arena` | `{ "radius": 15-60 }`, Point or Admin location | Keeps the event's own units in a circle around the spot, or around the admin who started it. Refused on AroundPlayer, and when the spawn radius or Hunt range is wider than the arena |
+| `action.growth` | `{ "addUnits": 0-10, "addLevels": 0-5, "whenCleared": bool }`, units form, `waves` 2-10 | Generates `waves` waves from the base wave. Wave n has each entry's count + (n−1)·addUnits and level + (n−1)·addLevels (capped at 120). Waves 2+ start `intervalSeconds` later, or also when the previous wave is cleared. The last wave may hold at most 50 units; each wave is still clamped by `[Limits] MaxUnitsPerWave` (default 20) |
+| `action.winner` | `"KillDeath"`, needs `scoreboard: true` | Adds a winner line after the scoreboard: the best kills ÷ max(1, deaths) among players with a kill |
+</details>
+
+<details open>
+<summary><b>Runtime</b></summary>
+
+- **Arena** (`Logic/Arena.cs`, `Services/SpawnTracker.cs` ArenaTick, the EventScheduler "arena" phase). Every 5 s while
+  an arena event runs, a unit of that running instance more than radius + 10 m from the centre is returned to a spot
+  within the spawn radius. The return uses the walkable height (a Point saved without one uses the units' own median
+  height), regroups, and drops the unit's targets that are outside the arena. Units of other events, of earlier
+  instances and of `.nyar spawn` are never moved. A return logs "[nyar] arena <id>: returned <n>, farthest <d> m",
+  never a name or a position.
+- **Growth** (`Logic/Growth.cs`). The parser stores the generated list as an ordinary wave list, so the 0.9.0 wave
+  schedule, clears, "all waves defeated" and the scoreboard run unchanged. The generated waves are never written to
+  events.json.
+- **Winner** (`Logic/Scoreboard.cs`, `Logic/Messages.cs`). The winner is picked over every scoreboard row, not only
+  the top 3. Ties go to more kills, then fewer deaths, then the earlier first kill. The line is "<event> winner:
+  <name>, K/D <r> (<k> kills, <d> deaths)", with r in the invariant culture, or "winner: none". It shows only where
+  the scoreboard shows. The scoreboard log line ends ", winner K/D <r>" or ", no winner", never a name.
+- **Failures.** A failing arena check (one unit, or the whole phase) logs "[nyar] arena <id>: check failed: …" once per
+  streak and holds `arena: check failing` on the health line and `.nyar status` until a check succeeds. No later tick
+  phase, despawn batch or event end is skipped.
+- **Chat.** `.nyar event set <id>` takes `action.arena <15-60|none>`, `action.winner <killdeath|none>`,
+  `action.growth.addUnits`, `.addLevels`, `.whenCleared` and `action.growth none`. An edit that would add an arena,
+  winner or growth conflict is refused with the validator's reason; a conflict the file already held never blocks an
+  edit. `event info` shows the arena, the winner, the growth line and one line per generated wave.
+- **Template.** `spider-swarm`: an Admin location, arena 40, radius 12, Hunt 40, scoreboard with winner, 1200 s,
+  five spider waves growing from 6 units at level 30 to 18 units at level 42 (every 120 s or when cleared). Manual,
+  disabled. Eleven templates in all.
+</details>
+
+<details>
+<summary><b>Static checks and tools</b></summary>
+
+- **Rollback drill.** Accepts 0.9.0's "unknown field action.arena", "unknown field action.winner" and "unknown field
+  action.growth" among the newer keys; fixtures pair-arena, pair-winner and pair-growth pass, pair-otherkey still
+  fails; selftest 23/23.
+- **`-DependencySuite swarm`.** arena-read, with its control.
+- **vrclient** (dev only): scenarios swarm, swarm-waves, swarm-death, swarm-prep-restart, swarm-noadmins,
+  swarm-purge, swarm-timing and swarm-chase; launch waits 10 s so the first PLAY click can't land on Continue.
+</details>
+
+<details>
+<summary><b>Sessions</b></summary>
+
+- **Session 1** (vrclient, three boots): sw-arena's 8 units stayed at the spot with Chaos 60 m away, but they never
+  engaged the invulnerable Chaos, so the return never fired (no "[nyar] arena" line). spider-swarm
+  grew 6/9/12/15/18 units at levels 30/33/…/42 and ended "all waves defeated (5 of 5 waves)" with a 60-kill winner.
+  The winner line was seen rendered in chat. A death counted (K/D 15.00). Admins off gave no winner. Stop, purge and
+  restart each left 0 tracked units. Tick budget "10/10 windows under 5 ms".
+- **Session 2** (vrclient): a chase probe. vrclient can't walk the character, and an invulnerable character draws no
+  attack, so the in-game return is left to the owner's run with a vulnerable player.
+</details>
+
 ## [0.9.0] - 2026-10-11
 
 The `wave-sets` child of the DoD Epic (`docs/dod/wave-sets.md`): a spawn event's waves can each have their own units,

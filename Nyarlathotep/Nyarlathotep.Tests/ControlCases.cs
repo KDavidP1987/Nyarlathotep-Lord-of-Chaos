@@ -38,7 +38,6 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        new(Swarm, "D20", 3, "0.10.0"), new(Swarm, "D21", 3, "0.10.0"), new(Swarm, "D22", 3, "0.10.0"), new(Swarm, "D23", 3, "0.10.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -549,6 +548,25 @@ public static class ControlCases
         C("D13", "DependencySuite", "preflight -DependencySuite swarm",
             ["selftest DependencySuite/bad", "selftest DependencySuite/bad-2", "selftest DependencySuite/bad-floor-spawns"], ["selftest DependencySuite/good"],
             ["selftest DependencySuite/empty"]) with { Plan = Swarm },
+        C("D20", "RollbackDrill", "rollback-drill.ps1 -SelfTest (pairs and fixtures under tools/rollback-drill-fixtures)",
+            ["tools/rollback-drill-fixtures/pair-otherkey", "tools/rollback-drill-fixtures/pair-colourkey"],
+            ["tools/rollback-drill-fixtures/pair-arena", "tools/rollback-drill-fixtures/pair-winner", "tools/rollback-drill-fixtures/pair-growth"],
+            ["tools/rollback-drill-fixtures/empty"]) with { Plan = Swarm },
+        C("D21", "Release", "preflight › Test-CheckReleaseTags and Test-CheckVersion, then release-verify.ps1 -SelfTest",
+            ["tools/preflight-fixtures/ReleaseTags/bad", "tools/preflight-fixtures/ReleaseTags/bad-2", "tools/preflight-fixtures/Version/bad",
+             "selftest missing asset", "selftest differing hash"],
+            ["tools/preflight-fixtures/ReleaseTags/good", "tools/preflight-fixtures/Version/good", "selftest matching hash"],
+            ["tools/preflight-fixtures/ReleaseTags/empty", "tools/preflight-fixtures/Version/empty", "selftest no audit records the asset"]) with { Plan = Swarm },
+        C("D22", "Records", "preflight -AuditOf, -SessionsOf and -Paths -DeclaredOf › AuditSteps, SessionLogs and Paths",
+            ["tools/preflight-fixtures/AuditSteps/bad", "tools/preflight-fixtures/SessionLogs/bad", "tools/preflight-fixtures/SessionLogs/bad-17",
+             "tools/preflight-fixtures/SessionLogs/bad-handrestore", "tools/preflight-fixtures/Paths/bad-undeclared"],
+            ["tools/preflight-fixtures/AuditSteps/good", "tools/preflight-fixtures/SessionLogs/good", "tools/preflight-fixtures/SessionLogs/good-handrestore",
+             "tools/preflight-fixtures/Paths/good"],
+            ["tools/preflight-fixtures/AuditSteps/empty", "tools/preflight-fixtures/SessionLogs/empty", "tools/preflight-fixtures/Paths/empty"]) with { Plan = Swarm },
+        C("D23", "Secrets", "preflight › Test-CheckSecrets",
+            ["tools/preflight-fixtures/Secrets/bad", "tools/preflight-fixtures/Secrets/bad-sentinel-zip", "tools/preflight-fixtures/Secrets/bad-sentinel-log"],
+            ["tools/preflight-fixtures/Secrets/good", "tools/preflight-fixtures/Secrets/good-sentinel"],
+            ["tools/preflight-fixtures/Secrets/empty", "tools/preflight-fixtures/Secrets/empty-sentinel"]) with { Plan = Swarm },
         T("D5", "Winner", "ScoreboardTests", ["the_best_ratio_fourth_by_kills_is_not_chosen", "zero_deaths_divides_by_zero_or_outranks", "a_tie_breaks_the_wrong_way",
             "a_dropped_admin_or_a_player_without_a_kill_wins", "the_201st_player_wins"], ["the_winner_through_end"], ["no_kill"]) with { Plan = Swarm },
         T("D6", "WinnerLines", "ScoreboardTests", ["the_ratio_prints_a_comma_or_a_third_decimal", "a_line_exceeds_480_bytes", "a_name_keeps_markup",

@@ -2,6 +2,24 @@
 
 Public beta. Event pillars and automatic announcements default off; admins opt in per feature.
 
+## 0.10.0 (2026-10-11)
+
+- **Arenas.** `"arena": { "radius": 15-60 }` keeps a spawn event's units inside a circle around its spot, or around
+  the admin who started it. Every 5 s, a unit more than 10 m past the edge is brought back near the centre and
+  forgets the players outside. Experimental: the return hasn't yet been seen in game with a player
+  walking out.
+- **Growing waves.** `"growth": { "addUnits", "addLevels", "whenCleared" }` turns one wave into `waves` waves, each
+  bigger and stronger than the last, starting every `intervalSeconds`, or also when the wave before is cleared with
+  `whenCleared`. `event info`
+  lists every wave before you start it.
+- **Winner.** `"winner": "KillDeath"` (with the scoreboard) adds one chat line naming the player with the best
+  kill-to-death ratio. It shows wherever the scoreboard shows.
+- **New template** `spider-swarm` (off): five growing spider waves held in a 40 m arena around the admin who starts
+  it, with the scoreboard and the winner. Every new key can be set in chat (`.nyar event set <id> action.arena …`,
+  `action.winner …`, `action.growth.…`).
+- No Raphael change (api 6). Rolling back to 0.9.0 disables the events that use `arena`, `growth` or `winner`.
+  The scoreboard opt-out still comes with the stats release.
+
 ## 0.9.0 (2026-10-11)
 
 - **Wave sets.** A spawn event can list its waves one by one with `waveList`: each wave has its own units (up to 10

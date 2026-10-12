@@ -1,7 +1,7 @@
 # Swarm — a contained arena of growing waves with a kill-to-death winner
 
-**Status:** in progress (target 0.10.0). Steps 1 (logic) and 2 (services, template, Sessions 1-2) are built; D15's
-chase-and-return part and D18's look and feel wait on the owner's run (docs/dod/swarm.md, audit docs/audits/swarm.md).
+**Status:** 0.10.0 (docs/dod/swarm.md, audit docs/audits/swarm.md). D15's chase and return part and D18's look and
+feel wait on the owner's run, and so does the owner's acceptance of D16 and D17.
 
 ## Goal
 

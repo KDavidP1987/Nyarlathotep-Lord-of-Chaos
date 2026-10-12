@@ -6,7 +6,7 @@ A **server-side** event layer for V Rising. Admins stage NPC events the base gam
 and empowered factions on a schedule, at nightfall or after a V Blood falls, with warnings and banners for
 players, and in later releases castle sieges, defended zones and boss-fight adds.
 
-> **Public beta (0.9.0).** Every pillar and automatic announcement is off by default; no event runs until an
+> **Public beta (0.10.0).** Every pillar and automatic announcement is off by default; no event runs until an
 > admin turns on its pillar and enables it.
 
 ## What it does
@@ -128,6 +128,22 @@ This is the shipped `graveyard-waves` template (its announce lines left out); `.
 </details>
 
 <details>
+<summary><b>Swarms: arenas, growing waves and a winner</b> · <i>0.10.0</i></summary>
+
+Three more optional keys on a spawn event:
+
+| Key | Values | Effect |
+|---|---|---|
+| `arena` | `{ "radius": 15–60 }`, with a Point location or one started by an admin | Every 5 s, any of the event's units more than 10 m past the edge is brought back near the centre and forgets players outside (experimental: not yet seen in game) |
+| `growth` | `{ "addUnits": 0–10, "addLevels": 0–5, "whenCleared": true/false }`, with `units` and `waves` 2–10 | Wave n gets each unit's count + (n−1)·addUnits and level + (n−1)·addLevels; level capped at 120; each wave starts `intervalSeconds` after the last, or also when it is cleared with `whenCleared` |
+| `winner` | `"KillDeath"`, with `"scoreboard": true` | After the scoreboard, one line names the player with the best kills ÷ deaths (a player needs one kill) |
+
+`event info` lists every generated wave before you start it. The `spider-swarm` template uses all three:
+`.nyar template use spider-swarm`, `.nyar event enable spider-swarm`, then `.nyar event start spider-swarm` where the
+swarm should be. Rolling back to 0.9.0 disables the events that use these keys.
+</details>
+
+<details>
 <summary><b>Announcements</b> · <i>0.2.0</i></summary>
 
 Wave warnings before each wave (by default 5 min, 1 min and 10 s ahead), start and end banners with your own
@@ -176,9 +192,9 @@ Optional action keys: `includeUnits` / `excludeUnits` (unit names such as `CHAR_
 </details>
 
 <details>
-<summary><b>Event templates and chat authoring</b> · <i>0.5.0; three automatic templates 0.8.0; a wave set 0.9.0</i></summary>
+<summary><b>Event templates and chat authoring</b> · <i>0.5.0; three automatic templates 0.8.0; a wave set 0.9.0; a swarm 0.10.0</i></summary>
 
-Ten ready-made events ship inside the mod. `.nyar template use <id>` copies one into your `events.json`,
+Eleven ready-made events ship inside the mod. `.nyar template use <id>` copies one into your `events.json`,
 disabled, ready to adjust and enable.
 
 | Template | What it does | Starts |
@@ -193,6 +209,7 @@ disabled, ready to adjust and enable.
 | `border-watch` | 3 militia and 2 crossbowmen near the player, hunting (0.8.0) | A player enters Dunley Farmlands (30 min per player) |
 | `bandit-reprisal` | 4 thugs and 2 hunters near the player, hunting (0.8.0) | A player kills 20 bandits within 5 min |
 | `graveyard-waves` | 3 growing undead waves near a player, the last with a Guardian, hunting, with the scoreboard (0.9.0) | By command |
+| `spider-swarm` | 5 spider waves growing from 6 to 18 units and level 30 to 42, held in a 40 m arena around the admin, with the scoreboard and a K/D winner (0.10.0) | By command |
 
 You can build and change events without touching the file. Use `.nyar event new <id> <pillar>`,
 `.nyar event copy <id> <newId>` and `.nyar event delete <id>` (then `confirm`). `.nyar event set` also changes
