@@ -39,7 +39,7 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        new(HuntingGrounds, "D29", 4, "0.11.0"), new(HuntingGrounds, "D30", 4, "0.11.0"),
+        new(HuntingGrounds, "D30", 4, "0.11.0"),
         new(HuntingGrounds, "D31", 4, "0.11.0"), new(HuntingGrounds, "D32", 4, "0.11.0"),
     ];
 
@@ -643,5 +643,9 @@ public static class ControlCases
             ["tools/preflight-fixtures/TimingSpan/bad-avg", "tools/preflight-fixtures/TimingSpan/bad-slow", "tools/preflight-fixtures/TimingSpan/bad-tracked",
              "tools/preflight-fixtures/TimingSpan/bad-notarget"],
             ["tools/preflight-fixtures/TimingSpan/good"], ["tools/preflight-fixtures/TimingSpan/empty"]) with { Plan = HuntingGrounds },
+        C("D29", "RollbackDrill", "rollback-drill.ps1 -SelfTest (pairs and fixtures under tools/rollback-drill-fixtures)",
+            ["tools/rollback-drill-fixtures/pair-otherkey", "tools/rollback-drill-fixtures/pair-colourkey"],
+            ["tools/rollback-drill-fixtures/pair-regionlock", "tools/rollback-drill-fixtures/pair-regionhunt", "tools/rollback-drill-fixtures/pair-regionlocation"],
+            ["tools/rollback-drill-fixtures/empty"]) with { Plan = HuntingGrounds },
     ];
 }

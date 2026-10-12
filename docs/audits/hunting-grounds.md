@@ -29,6 +29,14 @@
   - code (builder subagent, reviewed by the orchestrator): compile 0/0; tests 2918/2918 (2888 before, 30 new); PREFLIGHT OK; "dependency suite: hunting-grounds 2/2 (region-lock, region-hunt)"; -Paths -DeclaredOf OK after Paths walked gained three paths (Log note). Review: every write goes only to units in SpawnTracker's `_entities` and sits behind Has/Exists checks; Move writes Translation, LastTranslation, PreCombatPosition and SpawnTransform.Position, empties PathBuffer and zeroes Velocity (the Session 0 method); Return drops AggroBuffer entries on players outside the scope regions, with their seed records, before the move; the walk probe is disposed in finally each tick; players are read once per tick, memory only; with no territory map nobody is a target (fail closed), and RegionHunt's NeedsMap builds the map each wave (Services/WaveAction.cs:59). Existing tests changed (D11): TemplateLibraryTests (11 → 12, 11/11 → 12/12, Differences +2 → +3, the fake unit list), TemplateLibraryTests.WaveSets and .Swarm (!= 11 → != 12), TemplateCommandTests (the spawns id list; ValidCount 10 → 11), DependencyFailureTests.Library (12/12, 11/12)
   - planted faults: D6, D9, D16, D18, each caught and restored by copy (Log notes)
 
+### Step 4 · 2026-10-12 · 744b63a
+- git status: clean at 744b63a (the step 3 post-audit commit)
+- compile: 0 Warning(s), 0 Error(s); tests 2929/2929 (step 3 post-audit, same tree)
+- preflight: PREFLIGHT OK; `-Paths -DeclaredOf hunting-grounds` only "leftover temp nyar-snap-hg2" (kept for the owner's run)
+- dod status: verified 20/32; D20-D25 wait for the owner's acceptance, D26/D27 for the owner's run, D29-D32 are this step's
+- feature doc read: docs/features/HUNTING_GROUNDS.md (Status step 3 done; Session 2 results; Open questions F5 and pathing)
+- in game: the rollback gate's drill boots the dev world and refuses while a server runs, so it waits until the owner's D26/D27 run is done and snapshot hg2 is restored
+
 ## Post-audit
 ### Step 1 · 2026-10-12 · e11f66c + working tree
 - compile: `dotnet build Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__` 0 Warning(s), 0 Error(s) (the mod is unchanged in this step)
