@@ -39,8 +39,6 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        new(HuntingGrounds, "D30", 4, "0.11.0"),
-        new(HuntingGrounds, "D31", 4, "0.11.0"), new(HuntingGrounds, "D32", 4, "0.11.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -601,11 +599,11 @@ public static class ControlCases
             with { Plan = HuntingGrounds },
         T("D4", "Spread", "HuntingGroundsTests", ["a_spot_leaves_the_scope_or_enters_territory", "area_does_not_weight_the_draw",
             "two_spots_stand_closer_than_30_m", "a_group_exceeds_5_units", "a_spot_has_no_free_grounded_tile", "a_wave_without_a_spot_spawns_or_is_not_skipped",
-            "the_clamp_runs_per_group", "a_player_position_is_read"], ["groups_over_the_regions"], ["no_unit_rolled"]) with { Plan = HuntingGrounds },
+            "the_clamp_runs_per_group", "a_player_position_is_read", "a_group_takes_another_groups_spot"], ["groups_over_the_regions"], ["no_unit_rolled"]) with { Plan = HuntingGrounds },
         T("D5", "Lock", "HuntingGroundsTests", ["the_slack_is_off", "a_return_lands_outside_or_far", "an_entry_outside_is_kept", "a_seed_goes_outside",
             "a_location_is_missed", "another_units_move", "the_line_names_or_locates"], ["check_every_5_s"], ["no_live_unit"]) with { Plan = HuntingGrounds },
         T("D7", "HuntTargets", "HuntingGroundsTests", ["an_ineligible_player_is_targeted_or_seeded", "a_farther_player_wins", "a_tie_breaks_other_than_by_key",
-            "a_group_without_a_player_moves", "a_target_is_kept_past_its_check", "a_group_is_split_or_merged"], ["each_group_its_nearest"],
+            "a_group_without_a_player_moves", "a_target_is_kept_past_its_check", "a_group_is_split_or_merged", "one_events_territory_vetoes_another"], ["each_group_its_nearest"],
             ["no_player_inside"]) with { Plan = HuntingGrounds },
         T("D8", "Jumps", "HuntingGroundsTests", ["a_player_at_99_m_is_ignored", "a_free_unit_does_not_jump", "a_step_passes_25_m", "a_final_lands_outside_50_60_m",
             "a_landing_breaks_a_rule", "more_than_20_jump", "another_units_move", "the_line_names_or_locates",
@@ -647,5 +645,20 @@ public static class ControlCases
             ["tools/rollback-drill-fixtures/pair-otherkey", "tools/rollback-drill-fixtures/pair-colourkey"],
             ["tools/rollback-drill-fixtures/pair-regionlock", "tools/rollback-drill-fixtures/pair-regionhunt", "tools/rollback-drill-fixtures/pair-regionlocation"],
             ["tools/rollback-drill-fixtures/empty"]) with { Plan = HuntingGrounds },
+        C("D30", "Release", "preflight › Test-CheckReleaseTags and Test-CheckVersion, then release-verify.ps1 -SelfTest",
+            ["tools/preflight-fixtures/ReleaseTags/bad", "tools/preflight-fixtures/ReleaseTags/bad-2", "tools/preflight-fixtures/Version/bad",
+             "selftest missing asset", "selftest differing hash"],
+            ["tools/preflight-fixtures/ReleaseTags/good", "tools/preflight-fixtures/Version/good", "selftest matching hash"],
+            ["tools/preflight-fixtures/ReleaseTags/empty", "tools/preflight-fixtures/Version/empty", "selftest no audit records the asset"]) with { Plan = HuntingGrounds },
+        C("D31", "Records", "preflight -AuditOf, -SessionsOf and -Paths -DeclaredOf › AuditSteps, SessionLogs and Paths",
+            ["tools/preflight-fixtures/AuditSteps/bad", "tools/preflight-fixtures/SessionLogs/bad", "tools/preflight-fixtures/SessionLogs/bad-17",
+             "tools/preflight-fixtures/SessionLogs/bad-handrestore", "tools/preflight-fixtures/Paths/bad-undeclared"],
+            ["tools/preflight-fixtures/AuditSteps/good", "tools/preflight-fixtures/SessionLogs/good", "tools/preflight-fixtures/SessionLogs/good-handrestore",
+             "tools/preflight-fixtures/Paths/good"],
+            ["tools/preflight-fixtures/AuditSteps/empty", "tools/preflight-fixtures/SessionLogs/empty", "tools/preflight-fixtures/Paths/empty"]) with { Plan = HuntingGrounds },
+        C("D32", "Secrets", "preflight › Test-CheckSecrets",
+            ["tools/preflight-fixtures/Secrets/bad", "tools/preflight-fixtures/Secrets/bad-sentinel-zip", "tools/preflight-fixtures/Secrets/bad-sentinel-log"],
+            ["tools/preflight-fixtures/Secrets/good", "tools/preflight-fixtures/Secrets/good-sentinel"],
+            ["tools/preflight-fixtures/Secrets/empty", "tools/preflight-fixtures/Secrets/empty-sentinel"]) with { Plan = HuntingGrounds },
     ];
 }

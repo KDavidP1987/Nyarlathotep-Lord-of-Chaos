@@ -107,7 +107,8 @@ public class HuntingGroundsTests
             : At.TryGetValue(unit.Key, out var u) ? u : null;
 
         public string RegionOf(float x, float z) => MapOf(x, z);
-        public bool IsClaimed(string eventId, float x, float z) => Claimed(x, z);
+        public Func<string, float, float, bool>? ClaimedFor { get; set; }
+        public bool IsClaimed(string eventId, float x, float z) => ClaimedFor?.Invoke(eventId, x, z) ?? Claimed(x, z);
         public bool Walkable(float x, float z, byte level) => Walk(x, z, level);
         public float HeightOf(byte level) => Height(level);
 
@@ -132,6 +133,9 @@ public class HuntingGroundsTests
         }
     }
 
+    /// <summary>The spots one Region draw found, in group order (its groups without a spot left out).</summary>
+    static List<RegionSpot> Found(int groups, SpotWorld w, IRandom rng) => SpotDraw.Draw(groups, w, rng).OfType<RegionSpot>().ToList();
+
     static HuntCandidate Player(long key, float x, float z, bool online = true, bool alive = true, bool territory = false, bool pvp = false) =>
         new(key, x, z, online, alive, territory, pvp);
 
@@ -150,7 +154,7 @@ public class HuntingGroundsTests
         var claimed = (Func<float, float, bool>)((x, _) => x < 500);
         var all = new List<RegionSpot>();
         for (var seed = 0; seed < 50; seed++)
-            all.AddRange(SpotDraw.Draw(6, Spots([wide, OtherRect], HomeScope, claimed: claimed), Rng(seed)));
+            all.AddRange(Found(6, Spots([wide, OtherRect], HomeScope, claimed: claimed), Rng(seed)));
         Assert.True(all.Count > 200, $"{all.Count} spots");
         Assert.All(all, s =>
         {
@@ -158,7 +162,7 @@ public class HuntingGroundsTests
             Assert.Equal(Home, s.Region);
             Assert.False(claimed(s.X, s.Z), $"{s.X} {s.Z} claimed");
         });
-        var allowed = Enumerable.Range(0, 20).SelectMany(seed => SpotDraw.Draw(6, Spots([wide], HomeScope), Rng(seed))).ToList();
+        var allowed = Enumerable.Range(0, 20).SelectMany(seed => Found(6, Spots([wide], HomeScope), Rng(seed))).ToList();
         Assert.Contains(allowed, s => s.X < 500);                                     // allowTerritory (no claimed test): anywhere inside
     }
 
@@ -168,7 +172,7 @@ public class HuntingGroundsTests
         int home = 0, other = 0;
         var rng = Rng(11);
         for (var i = 0; i < 1000; i++)
-            foreach (var s in SpotDraw.Draw(1, Spots([OtherRect, HomeRect], BothScope), rng))
+            foreach (var s in Found(1, Spots([OtherRect, HomeRect], BothScope), rng))
                 if (s.Region == Home) home++; else if (s.Region == Other) other++;
         Assert.Equal(1000, home + other);
         Assert.True(home > 3.3 * other && home < 4.8 * other, $"home {home}, other {other}");   // four times the area: about 800 to 200
@@ -182,12 +186,12 @@ public class HuntingGroundsTests
         var tiny = Rect(Home, 100, 100, 160, 160);
         for (var seed = 0; seed < 40; seed++)
         {
-            foreach (var spots in new[] { SpotDraw.Draw(10, Spots([tiny], HomeScope), Rng(seed)), SpotDraw.Draw(25, Spots([HomeRect], HomeScope), Rng(seed)) })
+            foreach (var spots in new[] { Found(10, Spots([tiny], HomeScope), Rng(seed)), Found(25, Spots([HomeRect], HomeScope), Rng(seed)) })
                 for (var i = 0; i < spots.Count; i++)
                     for (var j = i + 1; j < spots.Count; j++)
                         Assert.True(HuntingGrounds.Distance(spots[i].X, spots[i].Z, spots[j].X, spots[j].Z) >= HuntingGrounds.SpotSpacing,
                             $"seed {seed}: spots {i} and {j}");
-            Assert.True(SpotDraw.Draw(10, Spots([tiny], HomeScope), Rng(seed)).Count <= 5);   // a 60 m square holds few 30 m-spaced spots
+            Assert.True(Found(10, Spots([tiny], HomeScope), Rng(seed)).Count <= 5);   // a 60 m square holds few 30 m-spaced spots
         }
     }
 
@@ -213,7 +217,7 @@ public class HuntingGroundsTests
     public void Spread_fails_when_a_spot_has_no_free_grounded_tile()
     {
         var probe = new Probe(grounded: (_, _, level) => level == 12, free: (x, _, _) => x > 500);
-        var spots = Enumerable.Range(0, 20).SelectMany(seed => SpotDraw.Draw(4, Spots([HomeRect], HomeScope, probe), Rng(seed))).ToList();
+        var spots = Enumerable.Range(0, 20).SelectMany(seed => Found(4, Spots([HomeRect], HomeScope, probe), Rng(seed))).ToList();
         Assert.NotEmpty(spots);
         Assert.All(spots, s =>
         {
@@ -221,13 +225,13 @@ public class HuntingGroundsTests
             Assert.Equal(24f, s.Y);                                                   // the level's height: the group's walk height
             Assert.True(s.X > 500);
         });
-        Assert.Empty(SpotDraw.Draw(4, Spots([HomeRect], HomeScope, new Probe(free: (_, _, _) => false)), Rng(1)));
-        Assert.Empty(SpotDraw.Draw(4, Spots([HomeRect], HomeScope, new Probe(throws: true)), Rng(1)));   // a failed check: no spot, not an unchecked one
+        Assert.Empty(Found(4, Spots([HomeRect], HomeScope, new Probe(free: (_, _, _) => false)), Rng(1)));
+        Assert.Empty(Found(4, Spots([HomeRect], HomeScope, new Probe(throws: true)), Rng(1)));   // a failed check: no spot, not an unchecked one
         var noProbe = new SpotWorld([HomeRect], HomeScope, MapOf, null, new WaveWalk(null, new WalkBudget()), Levels, Height);
-        Assert.Empty(SpotDraw.Draw(4, noProbe, Rng(1)));
+        Assert.Empty(Found(4, noProbe, Rng(1)));
         var budget = new WalkBudget(5);                                              // two calls a level: two levels, then spent
         var counted = new Probe(grounded: (_, _, _) => false);
-        Assert.Empty(SpotDraw.Draw(4, Spots([HomeRect], HomeScope, counted, budget: budget), Rng(1)));
+        Assert.Empty(Found(4, Spots([HomeRect], HomeScope, counted, budget: budget), Rng(1)));
         Assert.Equal(2, counted.Calls);                                              // only the calls the budget paid for
         Assert.Equal(1, budget.Left);
     }
@@ -249,7 +253,7 @@ public class HuntingGroundsTests
         Assert.Equal([WaveOutcome.Skip], reports);
         Assert.Equal(["wave 2 of hg skipped: no walkable spot in the regions"], skipped);
 
-        var one = RegionWave.Decide(RegionFacts(), () => Units(12), 20, 0, 150, _ => [new RegionSpot(300, 24, 300, 12, Home)]);
+        var one = RegionWave.Decide(RegionFacts(), () => Units(12), 20, 0, 150, _ => [(RegionSpot?)new RegionSpot(300, 24, 300, 12, Home)]);
         Assert.Equal(WaveOutcome.Spawn, one.Outcome);
         var g = Assert.Single(one.Groups);                                            // the groups without a spot are not queued
         Assert.Equal((300f, 24f, 300f), g.Centre);
@@ -257,13 +261,32 @@ public class HuntingGroundsTests
     }
 
     [Fact]
+    public void Spread_fails_when_a_group_takes_another_groups_spot()
+    {
+        // Codex step 4 F2: group 0 finds no spot, group 1 does: group 1 spawns at its own spot, group 0 is the one skipped
+        var spot = new RegionSpot(300, 24, 300, 12, Home);
+        var d = RegionWave.Decide(RegionFacts(), () => Units(10), 20, 0, 150, n => [null, spot]);
+        var expected = RegionWave.Split(Units(10));
+        var g = Assert.Single(d.Groups);
+        Assert.Equal(1, g.Index);
+        Assert.Equal((300f, 24f, 300f), g.Centre);
+        Assert.Equal(expected[1], g.Units);
+        var drawn = SpotDraw.Draw(4, Spots([HomeRect], HomeScope, new Probe(free: (_, _, _) => false)), Rng(1));
+        Assert.Equal(4, drawn.Count);                                                 // one entry per group, by its index
+        Assert.All(drawn, s => Assert.Null(s));
+        var found = SpotDraw.Draw(3, Spots([HomeRect, OtherRect], BothScope), Rng(3));
+        Assert.Equal(3, found.Count);
+        Assert.All(found, s => Assert.NotNull(s));
+    }
+
+    [Fact]
     public void Spread_fails_when_the_clamp_runs_per_group()
     {
-        var capped = RegionWave.Decide(RegionFacts(), () => Units(12), 10, 0, 150, n => Enumerable.Range(0, n).Select(i => new RegionSpot(100 + 40 * i, 0, 100, 10, Home)).ToList());
+        var capped = RegionWave.Decide(RegionFacts(), () => Units(12), 10, 0, 150, n => Enumerable.Range(0, n).Select(i => (RegionSpot?)new RegionSpot(100 + 40 * i, 0, 100, 10, Home)).ToList());
         Assert.Equal(10, capped.Groups.Sum(g => g.Units.Sum(u => u.Count)));       // 12 rolled, MaxUnitsPerWave 10, once for the wave
         Assert.Equal(2, capped.Groups.Count);
         Assert.Single(capped.CapLines);
-        var slots = RegionWave.Decide(RegionFacts(), () => Units(12), 20, 145, 150, n => Enumerable.Range(0, n).Select(i => new RegionSpot(100 + 40 * i, 0, 100, 10, Home)).ToList());
+        var slots = RegionWave.Decide(RegionFacts(), () => Units(12), 20, 145, 150, n => Enumerable.Range(0, n).Select(i => (RegionSpot?)new RegionSpot(100 + 40 * i, 0, 100, 10, Home)).ToList());
         Assert.Equal(5, slots.Groups.Sum(g => g.Units.Sum(u => u.Count)));          // 5 free MaxTrackedUnits slots
         Assert.Single(slots.Groups);
     }
@@ -275,7 +298,7 @@ public class HuntingGroundsTests
             .Concat(typeof(RegionWave).GetMethods().SelectMany(m => m.GetParameters()).Select(p => p.ParameterType))
             .Concat(typeof(SpotDraw).GetMethods().SelectMany(m => m.GetParameters()).Select(p => p.ParameterType)).ToList();
         Assert.DoesNotContain(types, t => t.ToString().Contains("HuntCandidate") || t.ToString().Contains("PickCandidate") || t.ToString().Contains("FanOutPick"));
-        var picked = RegionWave.Decide(RegionFacts(pick: PickOutcome.NoEligible), () => Units(5), 20, 0, 150, _ => [new RegionSpot(1, 2, 3, 10, Home)]);
+        var picked = RegionWave.Decide(RegionFacts(pick: PickOutcome.NoEligible), () => Units(5), 20, 0, 150, _ => [(RegionSpot?)new RegionSpot(1, 2, 3, 10, Home)]);
         Assert.Equal(WaveOutcome.Spawn, picked.Outcome);                              // a pick outcome is not read for a Region wave
     }
 
@@ -300,8 +323,8 @@ public class HuntingGroundsTests
         var d = RegionWave.Decide(RegionFacts(), () => [], 20, 0, 150, _ => { drawn = true; return []; });
         Assert.Equal(WaveOutcome.ZeroRolled, d.Outcome);
         Assert.False(drawn);
-        Assert.Empty(SpotDraw.Draw(0, Spots([HomeRect], HomeScope), Rng(1)));
-        Assert.Empty(SpotDraw.Draw(3, Spots([], HomeScope), Rng(1)));
+        Assert.Empty(Found(0, Spots([HomeRect], HomeScope), Rng(1)));
+        Assert.Empty(Found(3, Spots([], HomeScope), Rng(1)));
     }
 
     // ================= D5 Lock =================
@@ -551,6 +574,22 @@ public class HuntingGroundsTests
         Assert.Equal(0, check.Waiting + check.InReach);
         Assert.Empty(info);
         Assert.Empty(HuntRule.SeedTargets(w.People, HomeScope, MapOf, (500, 500)));
+    }
+
+    [Fact]
+    public void HuntTargets_fails_when_one_events_territory_vetoes_another()
+    {
+        // Codex step 4 F1: territory is each event's own map; "a" has none (all claimed, fail closed), "b" claims nothing
+        var a = Hunting("a");
+        var b = Hunting("b");
+        var w = new World { ClaimedFor = (id, _, _) => id == "a" };
+        w.Add(1, 500, 500, eventId: "a");
+        w.Add(2, 500, 500, eventId: "b");
+        w.People.Add(Player(7, 520, 500));
+        var phase = Hunted(w, a, b);
+        Assert.Empty(phase.Targets("a"));
+        Assert.Equal(7L, phase.Targets("b")[(1, 0)]);
+        Assert.False(Assert.Single(w.People).InTerritory);                           // the shared read is left as it was
     }
 
     [Fact]

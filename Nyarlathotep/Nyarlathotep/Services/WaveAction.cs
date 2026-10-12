@@ -61,7 +61,7 @@ internal static class WaveAction
         Func<float, float, bool> claimed = map is null ? (_, _) => false : (x, z) => Territory.IsClaimed(map, x, z);
 
         IReadOnlyList<(float X, float Z)> origins = [];                 // AroundPlayer: each group's picked player (A7)
-        var spots = new List<RegionSpot>();                             // Region: each group's spot, in group order (hunting-grounds D4)
+        var spots = new List<RegionSpot?>();                            // Region: each group's spot by its index, null without one (D4)
         Func<IReadOnlyList<UnitEntry>> roll = () => WaveRoll.ExpandEntries(action.UnitsOf(due.Wave), _rng);
         FanOutDecision decision;
         if (location.Type == LocationType.Region)
@@ -118,8 +118,8 @@ internal static class WaveAction
                 { Type: BehaviourType.RegionHunt } => new HuntTag(gx, gz, HuntingGrounds.Reach),
                 _ => null,
             };
-            if (Settings.VerboseLogging.Value && location.Type == LocationType.Region && group.Index < spots.Count)
-                Core.Log.LogInfo($"[nyar] {RegionWave.SpotLine(id, due.Wave, group.Index + 1, spots[group.Index])}");   // D21: our units' spot only
+            if (Settings.VerboseLogging.Value && location.Type == LocationType.Region && group.Index < spots.Count && spots[group.Index] is { } spot)
+                Core.Log.LogInfo($"[nyar] {RegionWave.SpotLine(id, due.Wave, group.Index + 1, spot)}");   // D21: our units' spot only
             var first = 0;
             var t0 = Stopwatch.GetTimestamp();
             var check = WalkCheck.OpenWave(WavePlan.WalkY(location, group.Centre, active.Origin));   // walkable-spawns D3, A13
@@ -181,8 +181,8 @@ internal static class WaveAction
     /// claimed territory refused unless allowTerritory (<paramref name="claimed"/> null). The found spots are also kept in
     /// <paramref name="into"/> for the verbose spot lines. No spot without the region index or a walk check: the wave is
     /// then skipped "no walkable spot in the regions", never placed unchecked.</summary>
-    static IReadOnlyList<RegionSpot> DrawSpots(int groups, SpawnWavesAction action, Func<float, float, string> regionOf,
-        Func<float, float, bool> claimed, List<RegionSpot> into)
+    static IReadOnlyList<RegionSpot?> DrawSpots(int groups, SpawnWavesAction action, Func<float, float, string> regionOf,
+        Func<float, float, bool> claimed, List<RegionSpot?> into)
     {
         if (regionOf is null) return into;                                   // regions unavailable (D1 disables such a definition)
         var check = WalkCheck.OpenSpots();

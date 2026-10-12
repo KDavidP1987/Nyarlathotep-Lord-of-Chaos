@@ -183,11 +183,12 @@ public static class SpotDraw
         return null;
     }
 
-    /// <summary>The spots of one Region wave: up to <paramref name="groups"/>, one per group that found one within its
-    /// tries, in group order. Fewer spots than groups means the last groups found none (or the walk check stopped).</summary>
-    public static List<RegionSpot> Draw(int groups, SpotWorld w, IRandom rng)
+    /// <summary>The spots of one Region wave, one entry per group by its index: the group's spot, or null when it found
+    /// none within its tries (or the walk check stopped), so a failed group is itself the one skipped (D4; Codex step 4
+    /// F2).</summary>
+    public static List<RegionSpot?> Draw(int groups, SpotWorld w, IRandom rng)
     {
-        var spots = new List<RegionSpot>();
+        var spots = Enumerable.Repeat<RegionSpot?>(null, groups).ToList();
         var polygons = InScope(w.Polygons, w.Scope);
         var areas = polygons.Select(Area).ToList();
         for (var g = 0; g < groups; g++)
@@ -198,11 +199,11 @@ public static class SpotDraw
                 var region = w.RegionOf(at.X, at.Z);
                 if (!w.Scope.Names(region)) continue;
                 if (w.Claimed is { } claimed && claimed(at.X, at.Z)) continue;
-                if (spots.Any(s => HuntingGrounds.Distance(s.X, s.Z, at.X, at.Z) < HuntingGrounds.SpotSpacing)) continue;
+                if (spots.Any(s => s is { } o && HuntingGrounds.Distance(o.X, o.Z, at.X, at.Z) < HuntingGrounds.SpotSpacing)) continue;
                 var level = Level(at.X, at.Z, w.Walk, w.Levels, out var stop);
                 if (stop != ScanStop.None) return spots;                       // no game calls left this tick, or a failed check
                 if (level is not { } l) continue;
-                spots.Add(new RegionSpot(at.X, w.HeightOf(l), at.Z, l, region));
+                spots[g] = new RegionSpot(at.X, w.HeightOf(l), at.Z, l, region);
                 break;
             }
         }
@@ -230,17 +231,20 @@ public static class RegionWave
         return groups.Select(g => WaveRoll.GroupPicks(g)).ToList();
     }
 
-    /// <summary>The decision of one Region wave. <paramref name="draw"/> gets the group count and returns the spots found,
-    /// in group order; it is called only for a wave that spawns.</summary>
+    /// <summary>The decision of one Region wave. <paramref name="draw"/> gets the group count and returns one entry per
+    /// group by its index, null for a group without a spot; it is called only for a wave that spawns. Each group spawns at
+    /// its own spot, never another group's (Codex step 4 F2).</summary>
     public static FanOutDecision Decide(WaveFacts facts, Func<IReadOnlyList<UnitEntry>> roll, int maxPerWave, int occupied, int maxTracked,
-        Func<int, IReadOnlyList<RegionSpot>> draw)
+        Func<int, IReadOnlyList<RegionSpot?>> draw)
     {
         var one = WaveGate.DecideEntries(facts with { Pick = null, CentreClaimed = false }, roll, maxPerWave, occupied, maxTracked);
         if (one.Outcome != WaveOutcome.Spawn) return new FanOutDecision(one.Outcome, one.Line, [], one.CapLines);
         var groups = Split(one.Units);
         var spots = draw(groups.Count);
-        if (spots.Count == 0) return new FanOutDecision(WaveOutcome.Skip, WaveLines.NoRegionSpot(facts.Wave, facts.EventId), [], one.CapLines);
-        var result = spots.Take(groups.Count).Select((s, i) => new WaveGroup(i, (s.X, s.Y, s.Z), groups[i])).ToList();
+        var result = new List<WaveGroup>();
+        for (var i = 0; i < groups.Count && i < spots.Count; i++)
+            if (spots[i] is { } s) result.Add(new WaveGroup(i, (s.X, s.Y, s.Z), groups[i]));
+        if (result.Count == 0) return new FanOutDecision(WaveOutcome.Skip, WaveLines.NoRegionSpot(facts.Wave, facts.EventId), [], one.CapLines);
         return new FanOutDecision(WaveOutcome.Spawn, null, result, one.CapLines);
     }
 
@@ -308,7 +312,9 @@ public interface IRegionWorld
     /// <summary>The tick's walk-check budget (WalkBudget.PerTick).</summary>
     WalkBudget Budget { get; }
 
-    /// <summary>Every connected character as Hunt sees it (PlayerQuery.Read): read once per hunt check, memory only.</summary>
+    /// <summary>Every connected character as Hunt sees it (PlayerQuery.Read): read once per hunt check, memory only. The
+    /// territory flag is the hunt's to set per event (<see cref="IsClaimed"/>), never one event's map for another (Codex
+    /// step 4 F1).</summary>
     IReadOnlyList<HuntCandidate> Players();
 
     /// <summary>Moves one of our units to <paramref name="r"/>'s spot, its PreCombatPosition with it, and drops its
@@ -853,7 +859,8 @@ public sealed class HuntPhase
         {
             if (a.Definition.Action is not { } action || !HuntingGrounds.Hunts(a)) return null;
             var scope = action.Scope;
-            try { r.Players = world.Players().ToList(); }
+            // claimed territory by this event's own map: one event's missing map never vetoes another's targets (Codex step 4 F1)
+            try { r.Players = world.Players().Select(p => p with { InTerritory = p.InTerritory || world.IsClaimed(a.Id, p.X, p.Z) }).ToList(); }
             catch (Exception e)
             {
                 _targets.Remove(a.Id);                                          // no stale target survives a failed read

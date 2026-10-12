@@ -625,9 +625,9 @@ internal static class SpawnTracker
 
         public WalkBudget Budget => WalkCheck.Budget;
 
-        /// <summary>Every connected character (PlayerQuery.Read), read once per tick, memory only. A player stands in
-        /// claimed territory by the running RegionHunt events' kept maps; while any of them has no map, every player
-        /// does, so nobody is targeted (fail closed). A failed read throws for every event of the tick (D9).</summary>
+        /// <summary>Every connected character (PlayerQuery.Read), read once per tick, memory only. The territory flag is
+        /// left false: the hunt sets it per event by that event's kept map (IsClaimed, fail closed per event; Codex step 4
+        /// F1). A failed read throws for every event of the tick (D9).</summary>
         public IReadOnlyList<HuntCandidate> Players()
         {
             if (!_playersRead)
@@ -636,11 +636,7 @@ internal static class SpawnTracker
                 var t0 = Stopwatch.GetTimestamp();
                 try
                 {
-                    var rows = PlayerQuery.Read();
-                    var maps = EventRuntime.Engine.Active.Where(HuntingGrounds.Hunts).Select(a => TerritoryMap.Maps.ForHunt(a.Id)).ToList();
-                    var unknown = maps.Count == 0 || maps.Any(m => m is null);
-                    _players = rows.Select(p => new HuntCandidate(p.Key, p.X, p.Z, true, p.Alive,
-                        unknown || maps.Any(m => Territory.IsClaimed(m, p.X, p.Z)), p.InPvpCombat)).ToList();
+                    _players = PlayerQuery.Read().Select(p => new HuntCandidate(p.Key, p.X, p.Z, true, p.Alive, false, p.InPvpCombat)).ToList();
                 }
                 catch (Exception e) { _playersFault = e.Message; }
                 finally { _playersTicks += Stopwatch.GetTimestamp() - t0; }
