@@ -1,0 +1,51 @@
+# hunting-grounds-ends.vrs: hunting-grounds D25 (Session 2). hg-point hunting toward Chaos at hg-b (-1580, -1640) is ended by
+# `.nyar event stop`, then by `.nyar pillar spawns off`, each leaving 0 tracked and no region line after the end; then
+# it is started a third time and left hunting for the restart (the server is restarted by hand after this scenario:
+# "cancelled by restart" and the boot sweep are read from the next boot's log). The purge path runs at the end of
+# hunting-grounds-timing.vrs (its cooldown blocks starts).
+# Needs: the step 3 Release DLL; NyarDevTools (.devtp, .devgo, .devmark, .devhop) and DevChatEcho; the dev events.json
+# entries hg-roam, hg-lock, hg-ambush, hg-point, hg-timing (docs/features/HUNTING_GROUNDS.md, Session 2), scope
+# FarbaneWoods (the pond is in it, Session 1); [Debug] VerboseLogging = true; Chaos invulnerable
+# (`ToggleInvulnerable true`, a Boolean, never false).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar event reload
+expect-log events: reloaded
+chat .devtp -1580 -1640
+expect-log \[DEV TP\] to
+wait 3
+mark
+chat .nyar event start hg-point
+expect-log event hg-point wave 1/1: 6 units queued timeout=30
+expect-log region hunt hg-point: [0-9]+ jumped timeout=60
+chat .nyar event stop hg-point
+expect-log event hg-point stopped
+expect-no-log region (lock|hunt) hg-point timeout=15
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+mark
+chat .nyar event start hg-point
+expect-log event hg-point wave 1/1: 6 units queued timeout=30
+expect-log region hunt hg-point: [0-9]+ jumped timeout=60
+chat .nyar pillar spawns off
+expect-reply spawns
+expect-no-log region (lock|hunt) hg-point timeout=15
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+chat .nyar pillar spawns on
+expect-reply spawns
+wait 3
+mark
+chat .nyar event start hg-point
+expect-log event hg-point wave 1/1: 6 units queued timeout=30
+expect-log region hunt hg-point: [0-9]+ jumped timeout=60
+chat .nyar status
+expect-reply tracked units: 6

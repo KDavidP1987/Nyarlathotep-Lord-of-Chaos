@@ -1,0 +1,43 @@
+# hunting-grounds-timing.vrs: hunting-grounds D28 (Session 2, after the restart). hg-timing (a Region location over
+# FarbaneWoods, the lock and RegionHunt, two waves of 12 CHAR_Spider_Forest 20 s apart; a group without a spot is skipped, as D4) runs for eleven timing windows
+# with Chaos at the pond inside the region, so the lock and the mover both run; -TimingSpan -Windows 10 -MinTracked 10
+# reads the budget from the log copy. Then `.nyar purge confirm` while it hunts (D25's purge path) leaves 0 and no
+# region line follows. Needs [Debug] TimingLog = true too.
+# Needs: the step 3 Release DLL; NyarDevTools (.devtp, .devgo, .devmark, .devhop) and DevChatEcho; the dev events.json
+# entries hg-roam, hg-lock, hg-ambush, hg-point, hg-timing (docs/features/HUNTING_GROUNDS.md, Session 2), scope
+# FarbaneWoods (the pond is in it, Session 1); [Debug] VerboseLogging = true; Chaos invulnerable
+# (`ToggleInvulnerable true`, a Boolean, never false).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar event reload
+expect-log events: reloaded
+mark
+chat .nyar event start hg-timing
+expect-log event hg-timing started by
+expect-log event hg-timing wave 1/2 in [0-9]+ groups? over FarbaneWoods: 12 units queued timeout=30
+expect-log event hg-timing wave 2/2 in [0-9]+ groups? over FarbaneWoods: [0-9]+ units queued timeout=60
+wait 30
+chat .nyar status
+expect-reply tracked units:
+shot full hg-timing-start
+wait 1500
+expect-no-log region (lock|hunt)( hg-timing: (check|move) failed|: (check|move) failing) timeout=3
+chat .nyar status
+expect-reply tracked units:
+mark
+chat .nyar purge
+wait 2
+chat .nyar purge confirm
+expect-log purge: 1 events ended, [0-9]+ units queued
+expect-no-log region (lock|hunt) hg-timing timeout=15
+wait 20
+chat .nyar status
+expect-reply tracked units: 0 timeout=40

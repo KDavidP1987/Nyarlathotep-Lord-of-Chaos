@@ -643,6 +643,25 @@ public class HuntingGroundsTests
     }
 
     [Fact]
+    public void Jumps_passes_wait_tally_names_each_reason()
+    {
+        var u = Unit(500, 200);
+        var online = new[] { Player(1, 500, 800) };
+        var claimed = new WaitTally();
+        Assert.Equal(JumpKind.Waiting, JumpRule.Plan(u, (500, 800), online, (_, _) => false, (_, _, _) => true, Height, new WalkBudget(), claimed).Kind);
+        Assert.Equal(15, claimed.Candidates);
+        Assert.Equal(15, claimed.NotAllowed);
+        var blocked = new WaitTally();
+        JumpRule.Plan(u, (500, 800), online, (_, _) => true, (_, _, _) => false, Height, new WalkBudget(), blocked);
+        Assert.Equal(15, blocked.NotWalkable);
+        var watched = new WaitTally();
+        JumpRule.Plan(u, (500, 800), [Player(1, 500, 800), Player(2, 500, 260)], (_, _) => true, (_, _, _) => true, Height, new WalkBudget(), watched);
+        Assert.Equal(1, watched.Watched);
+        var line = claimed.Line("hg", 1);
+        Assert.Equal("region hunt hg: waiting 1: 0 watched; of 15 landings tried 0 near a player, 15 outside the regions or claimed, 0 not walkable, 0 out of budget", line);
+    }
+
+    [Fact]
     public void Jumps_fails_when_a_free_unit_does_not_jump()
     {
         var (kind, jump) = Plan(Unit(500, 200), (500, 800), [Player(1, 500, 800), Player(2, 900, 200)]);
@@ -715,7 +734,7 @@ public class HuntingGroundsTests
             Assert.True(HuntingGrounds.Inside(HomeScope, MapOf, j.X, j.Z), $"case {i}: outside");
             Assert.False(Claimed(j.X, j.Z), $"case {i}: claimed");
             Assert.True(Walk(j.X, j.Z, j.Level), $"case {i}: not walkable");
-            Assert.Contains(j.Level, WalkLevels.Spot(u.Level));
+            Assert.Contains(j.Level, WalkLevels.Spot(u.Level).Concat(WalkLevels.Wide(u.Level)));
             Assert.Equal(Height(j.Level), j.Y);
             foreach (var p in players.Where(p => p.Online))
             {
@@ -726,6 +745,49 @@ public class HuntingGroundsTests
         }
         Assert.True(jumped > 100, $"{jumped} jumps");
         Assert.Equal(JumpKind.Waiting, Plan(Unit(500, 100), (500, 900), [Player(1, 500, 900)], budget: new WalkBudget(1)).Kind);   // budget spent: waits
+    }
+
+    [Fact]
+    public void Jumps_fails_when_a_hillside_unit_waits()
+    {
+        var hill = Unit(500, 200, level: 13);                                       // A1: Session 2's units at h 13 over ground at h 10
+        foreach (var ground in new byte[] { 10, 11, 15, 16 })
+        {
+            var (kind, jump) = Plan(hill, (500, 800), [Player(1, 500, 800)], walkable: (_, _, l) => l == ground);
+            Assert.Equal(JumpKind.Jump, kind);
+            Assert.Equal(ground, jump!.Value.Level);
+            Assert.Equal(Height(ground), jump.Value.Y);
+        }
+        foreach (var ground in new byte[] { 9, 17 })                                  // four levels away: still waits
+            Assert.Equal(JumpKind.Waiting, Plan(hill, (500, 800), [Player(1, 500, 800)], walkable: (_, _, l) => l == ground).Kind);
+        var near = Plan(hill, (500, 800), [Player(1, 500, 800)], walkable: (_, z, l) => l == 12 ? z < 220 : l == 10);
+        Assert.Equal((byte)12, near.Jump!.Value.Level);                               // a neighbouring level anywhere beats a wide one
+        var wide = Plan(hill, (500, 800), [Player(1, 500, 800)], walkable: (x, z, l) => l == 10 && Math.Abs(x - 500) > 1);
+        Assert.Equal(JumpKind.Jump, wide.Kind);                                       // the wide pass skips the straight step only
+        Assert.True(HuntingGrounds.Distance(500, 200, wide.Jump!.Value.X, wide.Jump.Value.Z) <= HuntingGrounds.Step + 0.01f);
+        Assert.Equal(JumpKind.Waiting, Plan(hill, (500, 800), [Player(1, 500, 800)], walkable: (_, _, l) => l == 10,
+            budget: new WalkBudget(90)).Kind);                                        // the neighbouring pass spends it: waits
+    }
+
+    [Fact]
+    public void Jumps_fails_when_a_stuck_unit_spends_the_budget()
+    {
+        var a = Hunting();
+        var w = new World { Walk = (x, _, _) => x > 400 };
+        w.Add(1, 100, 100);                                                           // no landing near x 100: 130 calls each
+        w.Add(2, 120, 100);
+        w.Add(3, 600, 100);
+        w.People.Add(Player(9, 500, 900));
+        var phase = new HuntPhase();
+        w.Budget = new WalkBudget(260);
+        var first = Assert.Single(phase.Tick([a], w, _ => { }, _ => { }));
+        Assert.Empty(first.Jumps);                                                    // 1 and 2 spent it, 3 cut off
+        w.Budget = new WalkBudget(260);
+        var second = Assert.Single(phase.Tick([a], w, _ => { }, _ => { }));
+        Assert.Equal([3L], second.Jumps.Select(j => j.Key));                          // the stuck units plan last
+        Assert.Equal(2, second.Waiting);
+        phase.EventEnded("hg");
+        Assert.Equal(0, phase.AllRecords);
     }
 
     [Fact]

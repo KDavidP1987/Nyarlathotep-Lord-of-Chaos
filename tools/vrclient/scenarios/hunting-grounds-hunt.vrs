@@ -1,0 +1,53 @@
+# hunting-grounds-hunt.vrs: hunting-grounds D24 (Session 2). hg-point spawns 6 CHAR_Spider_Forest at hg-a, the pond (-1880, -1640)
+# with RegionHunt under the lock; Chaos waits at hg-b (-1580, -1640), 300 m east in the same region (FarbaneWoods), the Session 0 spike's line (the
+# first choice, (-1680, -1300), had native bandits that killed the arrivals). The
+# units jump unseen ("[nyar] region hunt hg-point: <j> jumped ..."); the final jump lands 50-60 m from Chaos ("landed
+# 5x m"), so right after it `.nyar debug here 49` lists none and `debug here 60` lists the 6. Then Chaos goes to
+# (-1680, -1080), in DunleyFarmlands, and no jump line follows in 30 s.
+# Needs: the step 3 Release DLL; NyarDevTools (.devtp, .devgo, .devmark, .devhop) and DevChatEcho; the dev events.json
+# entries hg-roam, hg-lock, hg-ambush, hg-point, hg-timing (docs/features/HUNTING_GROUNDS.md, Session 2), scope
+# FarbaneWoods (the pond is in it, Session 1); [Debug] VerboseLogging = true; Chaos invulnerable
+# (`ToggleInvulnerable true`, a Boolean, never false).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar event reload
+expect-log events: reloaded
+chat .devtp -1580 -1640
+expect-log \[DEV TP\] to
+wait 3
+chat .devmark hg-b
+expect-log \[DEV MARK\] hg-b
+chat .nyar region here
+expect-reply you are in FarbaneWoods
+mark
+chat .nyar event start hg-point
+expect-log event hg-point wave 1/1: 6 units queued timeout=30
+expect-log region hunt hg-point: [0-9]+ jumped timeout=60
+expect-log region hunt hg-point: [0-9]+ jumped, [0-9]+ waiting, [0-9]+ in reach, landed (5[0-9]|60) m timeout=120
+chat .nyar debug here 49
+expect-reply no tracked units within 49 m timeout=5
+shot full hg-point-landed
+wait 2
+chat .nyar debug here 60
+expect-reply CHAR_Spider_Forest hg-point
+chat .nyar status
+expect-reply tracked units: 6
+chat .devtp -1680 -1080
+expect-log \[DEV TP\] to
+wait 3
+chat .nyar region here
+expect-reply you are in DunleyFarmlands
+wait 5
+expect-no-log region hunt hg-point: [0-9]+ jumped timeout=30
+chat .nyar event stop hg-point
+expect-log event hg-point stopped
+chat .nyar status
+expect-reply tracked units: 0 timeout=40

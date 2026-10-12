@@ -476,6 +476,7 @@ internal static class SpawnTracker
         _regionWorld.Begin();
         try
         {
+            _region.Hunt.Detail = Settings.VerboseLogging.Value ? line => Core.Log.LogInfo($"[nyar] {line}") : null;   // why units wait
             _region.Tick(now, EventRuntime.Engine.Active, _regionWorld, _random.NextDouble,
                 line => Core.Log.LogInfo($"[nyar] {line}"), line => Core.Log.LogError($"[nyar] {line}"));
         }

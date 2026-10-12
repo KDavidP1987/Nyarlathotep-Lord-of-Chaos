@@ -174,6 +174,14 @@ public static class WalkLevels
             if (h + d is >= 0 and <= 255) yield return (byte)(h + d);
     }
 
+    /// <summary>The wide landing levels (hunting-grounds A1): h-2, h+2, h-3, h+3, within 0-255, tried after
+    /// <see cref="Spot"/> when a unit on a hillside finds no landing at its own level or a neighbouring one.</summary>
+    public static IEnumerable<byte> Wide(byte h)
+    {
+        foreach (var d in new[] { -2, 2, -3, 3 })
+            if (h + d is >= 0 and <= 255) yield return (byte)(h + d);
+    }
+
     /// <summary>The levels one up and one down from <paramref name="level"/>, within 0-255.</summary>
     public static IEnumerable<byte> Steps(byte level)
     {

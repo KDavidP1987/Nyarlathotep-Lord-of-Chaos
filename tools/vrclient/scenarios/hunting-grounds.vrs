@@ -1,0 +1,30 @@
+# hunting-grounds.vrs: hunting-grounds D21 (Session 2). hg-roam (a Region location over FarbaneWoods, the lock on, no
+# behaviour, two waves of 10 CHAR_Spider_Forest 30 s apart) logs each wave "in <g> groups over FarbaneWoods" with g of 2
+# or more and one verbose spot line per group. The spots are then visited one by one (a second run written from those
+# spot lines: `.devtp` there, `.nyar region here`, `.nyar debug here 15`), and the 30 m spacing is read from them.
+# Needs: the step 3 Release DLL; NyarDevTools (.devtp, .devgo, .devmark, .devhop) and DevChatEcho; the dev events.json
+# entries hg-roam, hg-lock, hg-ambush, hg-point, hg-timing (docs/features/HUNTING_GROUNDS.md, Session 2), scope
+# FarbaneWoods (the pond is in it, Session 1); [Debug] VerboseLogging = true; Chaos invulnerable
+# (`ToggleInvulnerable true`, a Boolean, never false).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar event reload
+expect-log events: reloaded
+chat .nyar region here
+expect-reply you are in FarbaneWoods
+mark
+chat .nyar event start hg-roam
+expect-log event hg-roam started by
+expect-log event hg-roam wave 1/2 in [2-9] groups over FarbaneWoods: 10 units queued timeout=30
+expect-log event hg-roam wave 2/2 in [2-9] groups over FarbaneWoods: 10 units queued timeout=60
+wait 10
+chat .nyar status
+expect-reply tracked units: 20

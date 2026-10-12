@@ -405,13 +405,32 @@ public static class HuntRule
 /// <summary>What one unit does at a hunt check (D8).</summary>
 public enum JumpKind { InReach, Waiting, Jump }
 
+/// <summary>Why the units of one hunt check waited (a diagnostic, counts only): a player within 100 m, and over the
+/// candidate landings tried, those too near a player, outside the regions or claimed, not walkable, or a spent budget.</summary>
+public sealed class WaitTally
+{
+    public int Watched, NearPlayer, NotAllowed, NotWalkable, Budget, Candidates;
+
+    /// <summary>The first few waiting units' walk-check level and height (our own units, never a player).</summary>
+    public readonly List<string> Units = new();
+
+    public void Waited(RegionUnit u)
+    {
+        if (Units.Count < 3) Units.Add(string.Create(CultureInfo.InvariantCulture, $"h {u.Level} y {u.Y:0.#}"));
+    }
+
+    /// <summary>"region hunt &lt;id&gt;: waiting &lt;n&gt;: …" (the service adds "[nyar] "), counts only.</summary>
+    public string Line(string eventId, int waiting) =>
+        $"region hunt {eventId}: waiting {waiting}: {Watched} watched; of {Candidates} landings tried {NearPlayer} near a player, {NotAllowed} outside the regions or claimed, {NotWalkable} not walkable, {Budget} out of budget{(Units.Count > 0 ? "; units " + string.Join(", ", Units) : "")}";
+}
+
 /// <summary>
 /// The jump rule (D8, Business rules 4, S-10, S-11, S-17). A unit whose target stands more than 60 m away jumps toward it
 /// only while no online player, eligible or not, stands within 100 m of it: at most 25 m along the line (or a little to its
 /// side), and a jump that would end within 100 m of the target lands instead 50-60 m from the target. A landing lies inside
 /// a scope region, outside claimed territory, at least 50 m from every online player, and is free and grounded at the
-/// unit's height level or a neighbouring one, or the unit waits. Between 60 and 100 m nothing moves it (the target itself
-/// is an online player within 100 m).
+/// unit's height level or a neighbouring one, else (A1) two or three levels from it on its first five open landings, or
+/// the unit waits. Between 60 and 100 m nothing moves it (the target itself is an online player within 100 m).
 /// </summary>
 public static class JumpRule
 {
@@ -472,23 +491,43 @@ public static class JumpRule
     /// point lies inside a scope region and outside claimed territory; the walk check takes two calls a level from
     /// <paramref name="budget"/> (spent: the unit waits).</summary>
     public static (JumpKind Kind, RegionJump? Jump) Plan(RegionUnit u, (float X, float Z) target, IReadOnlyList<HuntCandidate> online,
-        Func<float, float, bool> allowed, Func<float, float, byte, bool> walkable, Func<byte, float> heightOf, WalkBudget budget)
+        Func<float, float, bool> allowed, Func<float, float, byte, bool> walkable, Func<byte, float> heightOf, WalkBudget budget,
+        WaitTally? tally = null)
     {
         if (HuntingGrounds.Distance(u.X, u.Z, target.X, target.Z) <= HuntingGrounds.Reach) return (JumpKind.InReach, null);
-        if (Nearest(online, u.X, u.Z) is { } near && near <= HuntingGrounds.WatchRange) return (JumpKind.Waiting, null);
+        if (Nearest(online, u.X, u.Z) is { } near && near <= HuntingGrounds.WatchRange)
+        {
+            if (tally is not null) tally.Watched++;
+            return (JumpKind.Waiting, null);
+        }
+        var open = new List<(float X, float Z, float Clearance)>();
         foreach (var (x, z, _) in Candidates((u.X, u.Z), target))
         {
+            if (tally is not null) tally.Candidates++;
             var clearance = Nearest(online, x, z) ?? float.MaxValue;
-            if (clearance < HuntingGrounds.LandingDistance) continue;
-            if (!allowed(x, z)) continue;
+            if (clearance < HuntingGrounds.LandingDistance) { if (tally is not null) tally.NearPlayer++; continue; }
+            if (!allowed(x, z)) { if (tally is not null) tally.NotAllowed++; continue; }
+            open.Add((x, z, clearance));
             foreach (var level in WalkLevels.Spot(u.Level))
             {
-                if (!budget.TryTake(2)) return (JumpKind.Waiting, null);
+                if (!budget.TryTake(2)) { if (tally is not null) tally.Budget++; return (JumpKind.Waiting, null); }
                 if (walkable(x, z, level)) return (JumpKind.Jump, new RegionJump(u.Key, x, heightOf(level), z, level, clearance));
             }
+            if (tally is not null) tally.NotWalkable++;
         }
+        // A1: a unit on a hillside (Session 2: half of hg-timing's units waited at h 13 over ground two or three levels
+        // down) tries its first WideCandidates open landings again at the wide levels, within three of its own.
+        foreach (var (x, z, clearance) in open.Take(WideCandidates))
+            foreach (var level in WalkLevels.Wide(u.Level))
+            {
+                if (!budget.TryTake(2)) { if (tally is not null) tally.Budget++; return (JumpKind.Waiting, null); }
+                if (walkable(x, z, level)) return (JumpKind.Jump, new RegionJump(u.Key, x, heightOf(level), z, level, clearance));
+            }
         return (JumpKind.Waiting, null);
     }
+
+    /// <summary>How many open landings the wide pass tries again (A1): at most 5 × 4 levels × 2 calls a unit.</summary>
+    public const int WideCandidates = 5;
 
     /// <summary>"region hunt &lt;id&gt;: &lt;j&gt; jumped, &lt;w&gt; waiting, &lt;r&gt; in reach, landed &lt;d&gt; m" (the service
     /// adds "[nyar] "); d is the smallest distance between a landing and an online player (Review 1 F4). Counts and one
@@ -634,26 +673,32 @@ public sealed class HuntPhase
 
     readonly Dictionary<string, Dictionary<(int Wave, int Group), long>> _targets = new(StringComparer.Ordinal);
     readonly SortedSet<string> _failing = new(StringComparer.Ordinal);
+    readonly Dictionary<string, HashSet<long>> _waited = new(StringComparer.Ordinal);
     bool _phaseFailing;
 
     public IReadOnlyList<string> Health => _failing.Count > 0 || _phaseFailing ? [Failing] : [];
+
+    /// <summary>Where the "waiting" diagnostic goes (Debug.VerboseLogging), or null for none.</summary>
+    public Action<string>? Detail { get; set; }
 
     /// <summary>The target key of each group of <paramref name="eventId"/> at its last check (memory only).</summary>
     public IReadOnlyDictionary<(int Wave, int Group), long> Targets(string eventId) =>
         _targets.TryGetValue(eventId, out var t) ? t : new Dictionary<(int, int), long>();
 
-    public int AllRecords => _targets.Values.Sum(t => t.Count) + _failing.Count;
+    public int AllRecords => _targets.Values.Sum(t => t.Count) + _failing.Count + _waited.Values.Sum(w => w.Count);
 
     public void EventEnded(string eventId)
     {
         _targets.Remove(eventId);
         _failing.Remove(eventId);
+        _waited.Remove(eventId);
     }
 
     public void Clear()
     {
         _targets.Clear();
         _failing.Clear();
+        _waited.Clear();
         _phaseFailing = false;
     }
 
@@ -665,6 +710,7 @@ public sealed class HuntPhase
         {
             var hunting = active.Where(HuntingGrounds.Hunts).ToList();
             foreach (var id in _targets.Keys.Where(id => !hunting.Any(a => a.Id == id)).ToList()) _targets.Remove(id);
+            foreach (var id in _waited.Keys.Where(id => !hunting.Any(a => a.Id == id)).ToList()) _waited.Remove(id);
             _failing.RemoveWhere(id => !hunting.Any(a => a.Id == id));
             if (hunting.Count == 0 || !due) return checks;
             var jumps = new JumpAllowance(HuntingGrounds.MaxJumps);
@@ -713,31 +759,44 @@ public sealed class HuntPhase
             var targets = new Dictionary<(int, int), long>();
             var written = new List<RegionJump>();
             int waiting = 0, inReach = 0;
+            var tally = new WaitTally();
+            var waitedBefore = _waited.TryGetValue(a.Id, out var w) ? w : [];
+            var waitedNow = new HashSet<long>();
             bool Allowed(float x, float z) => HuntingGrounds.Inside(scope, world.RegionOf, x, z) && !world.IsClaimed(a.Id, x, z);
             foreach (var group in HuntRule.Groups(units))
             {
-                var members = group.OrderBy(u => u.Key).ToList();
+                // a unit that found no landing at the last check plans after the others, so units that cannot jump never
+                // spend the walk budget of those that can (A1)
+                var members = group.OrderBy(u => waitedBefore.Contains(u.Key)).ThenBy(u => u.Key).ToList();
                 if (HuntRule.Target(eligible, HuntRule.Mean(members)) is not { } target) continue;   // no target: no jump, no seed
                 targets[group.Key] = target.Key;
                 foreach (var u in members)
                 {
                     try
                     {
-                        var (kind, jump) = JumpRule.Plan(u, (target.X, target.Z), players, Allowed, world.Walkable, world.HeightOf, world.Budget);
+                        var spent = tally.Budget;
+                        var (kind, jump) = JumpRule.Plan(u, (target.X, target.Z), players, Allowed, world.Walkable, world.HeightOf, world.Budget, tally);
                         if (kind == JumpKind.InReach) inReach++;
                         else if (kind == JumpKind.Jump && jump is { } j && jumps.Take())
                         {
                             world.Jump(j);
                             written.Add(j);
                         }
-                        else waiting++;
+                        else
+                        {
+                            waiting++;
+                            if (tally.Budget == spent) waitedNow.Add(u.Key);   // found no landing; one cut off by the budget keeps its turn
+                            tally.Waited(u);
+                        }
                     }
                     catch (Exception e) { fault ??= e.Message; }
                 }
             }
             _targets[a.Id] = targets;
+            _waited[a.Id] = waitedNow;
             done = new HuntCheck(a.Id, written, waiting, inReach);
             if (done.LogLine is { } line) Phases.Safe(info, line);
+            if (waiting > 0 && Detail is { } detail) Phases.Safe(detail, tally.Line(a.Id, waiting));
         }
         catch (SkipCheck) { }
         catch (Exception e) { fault ??= e.Message; }

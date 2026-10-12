@@ -1,0 +1,59 @@
+# hunting-grounds-lock.vrs: hunting-grounds D22 (Session 2). hg-lock spawns 6 CHAR_Spider_Forest at hg-in (-1680,
+# -1215), about 20 m inside the FarbaneWoods border with DunleyFarmlands (Session 1: Farbane at z -1200, Dunley at -1160).
+# `.devhop` pushes them 75 m north into Dunley (their spawn point moved too, so only the lock brings them back); within
+# 10 s "[nyar] region lock hg-lock: returned 6, farthest <d> m out" and the 6 are back at hg-in, inside Farbane.
+# Spider guid for .devhop: CHAR_Spider_Forest -581295882.
+# Needs: the step 3 Release DLL; NyarDevTools (.devtp, .devgo, .devmark, .devhop) and DevChatEcho; the dev events.json
+# entries hg-roam, hg-lock, hg-ambush, hg-point, hg-timing (docs/features/HUNTING_GROUNDS.md, Session 2), scope
+# FarbaneWoods (the pond is in it, Session 1); [Debug] VerboseLogging = true; Chaos invulnerable
+# (`ToggleInvulnerable true`, a Boolean, never false).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar event reload
+expect-log events: reloaded
+chat .devtp -1680 -1215
+expect-log \[DEV TP\] to
+wait 3
+chat .devmark hg-in
+expect-log \[DEV MARK\] hg-in
+chat .devmark hg-lk
+expect-log \[DEV MARK\] hg-lk
+chat .nyar region here
+expect-reply you are in FarbaneWoods
+mark
+chat .nyar event start hg-lock
+expect-log event hg-lock wave 1/1: 6 units queued timeout=30
+wait 6
+chat .nyar debug here 20
+expect-reply CHAR_Spider_Forest hg-lock
+shot full hg-lock-spawn
+chat .devtp -1680 -1450
+expect-log \[DEV TP\] to
+wait 3
+chat .devhop -581295882 0 75 25 hg-lk true
+expect-log \[DEV HOP\] moved=6
+expect-log region lock hg-lock: returned 6, farthest [0-9]+ m out timeout=12
+wait 2
+chat .devgo hg-in
+expect-log \[DEV TP\] hg-in
+wait 3
+chat .nyar debug here 30
+expect-reply CHAR_Spider_Forest hg-lock
+chat .nyar region here
+expect-reply you are in FarbaneWoods
+chat .nyar status
+expect-reply tracked units: 6
+shot full hg-lock-back
+chat .nyar event stop hg-lock
+expect-log event hg-lock stopped
+expect-no-log region (lock|hunt) hg-lock timeout=15
+chat .nyar status
+expect-reply tracked units: 0 timeout=40

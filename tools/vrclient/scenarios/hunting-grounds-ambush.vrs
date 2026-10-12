@@ -1,0 +1,45 @@
+# hunting-grounds-ambush.vrs: hunting-grounds D23 (Session 2). hg-ambush (AroundPlayer 20-30 m, scope FarbaneWoods, the
+# lock on, one wave of 4 CHAR_Spider_Forest): with Chaos at the pond, inside Farbane, the start spawns 4 around Chaos;
+# with Chaos at (-1680, -1080), in DunleyFarmlands, the same start skips the wave "no eligible player".
+# Needs: the step 3 Release DLL; NyarDevTools (.devtp, .devgo, .devmark, .devhop) and DevChatEcho; the dev events.json
+# entries hg-roam, hg-lock, hg-ambush, hg-point, hg-timing (docs/features/HUNTING_GROUNDS.md, Session 2), scope
+# FarbaneWoods (the pond is in it, Session 1); [Debug] VerboseLogging = true; Chaos invulnerable
+# (`ToggleInvulnerable true`, a Boolean, never false).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar event reload
+expect-log events: reloaded
+chat .nyar region here
+expect-reply you are in FarbaneWoods
+mark
+chat .nyar event start hg-ambush
+expect-log event hg-ambush wave 1/1 around a player: 4 units queued timeout=30
+wait 6
+chat .nyar debug here 40
+expect-reply CHAR_Spider_Forest hg-ambush
+shot full hg-ambush-in
+chat .nyar event stop hg-ambush
+expect-log event hg-ambush stopped
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+chat .devtp -1680 -1080
+expect-log \[DEV TP\] to
+wait 3
+chat .nyar region here
+expect-reply you are in DunleyFarmlands
+mark
+chat .nyar event start hg-ambush
+expect-log wave 1 of hg-ambush skipped: no eligible player timeout=30
+wait 5
+chat .nyar status
+expect-reply tracked units: 0
+chat .nyar event stop hg-ambush
+wait 2

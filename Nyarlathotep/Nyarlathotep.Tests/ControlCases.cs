@@ -608,7 +608,8 @@ public static class ControlCases
             "a_group_without_a_player_moves", "a_target_is_kept_past_its_check", "a_group_is_split_or_merged"], ["each_group_its_nearest"],
             ["no_player_inside"]) with { Plan = HuntingGrounds },
         T("D8", "Jumps", "HuntingGroundsTests", ["a_player_at_99_m_is_ignored", "a_free_unit_does_not_jump", "a_step_passes_25_m", "a_final_lands_outside_50_60_m",
-            "a_landing_breaks_a_rule", "more_than_20_jump", "another_units_move", "the_line_names_or_locates"], ["closing_in_unseen"], ["no_target"])
+            "a_landing_breaks_a_rule", "more_than_20_jump", "another_units_move", "the_line_names_or_locates",
+            "a_hillside_unit_waits", "a_stuck_unit_spends_the_budget"], ["closing_in_unseen", "wait_tally_names_each_reason"], ["no_target"])
             with { Plan = HuntingGrounds },
         T("D10", "Ambush", "HuntingGroundsTests", ["a_player_outside_is_picked", "no_player_inside_spawns_a_unit"], ["a_player_inside"], ["no_player"])
             with { Plan = HuntingGrounds },
