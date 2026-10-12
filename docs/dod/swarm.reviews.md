@@ -143,3 +143,33 @@ VERDICT: READY
 - F4 · accepted · deferred to the Log: `note · deferred · Review 2 F4`, a growth event's `event info` renders its generated waveList by wave-sets D15, base-entry chances shown in the wave lines
 - F5 · accepted · deferred to the Log: `note · deferred · Review 2 F5`, wave-sets A3 already bounds the credit: Logic/ScoreFeed.cs ScoreRule.Counting credits a unit only when `u.SpawnedUtc >= a.Instance.StartedUtc`, ScoreboardTests `Counting_fails_when_an_earlier_instance_unit_credits` fails on it, and Scoreboard.End removes the event's rows at every end path, so a restart starts empty
 - UF1 · rejected · (the reviewer wrote the names with dots, `action.location aroundplayer, action.scoreboard false, action.radius, action.behaviour.range`; the checker's name grammar allows no dot, so the line above spells them with spaces) not edited after the READY (review.md, freeze): D9 already refuses `action.scoreboard false` under a winner and `action.location aroundplayer` on an arena; `action.radius` and `action.behaviour.range` past arena.radius are refused by D1's validator, which disables the definition on reload; whether D9 refuses them at the chat command too is the builder's choice under Log note Review 2 F1, an amendment if it changes a promise
+
+## Review 3 · 2026-10-11 · subagent · plan commit a7ddeb8 · plan 84763 B · 25 items · files 0 · e3b0c44298fc · prompt 20805a692def · scope A1
+L1 · Considered · no finding
+L2 · Considered · no finding
+L3 · Considered · no finding
+L4 · Considered · no finding
+L5 · Considered · no finding
+L6 · Considered · no finding
+L7 · Considered · no finding
+L8 · Considered · no finding
+L9 · Considered · no finding
+L10 · Considered · no finding
+L11 · Considered · no finding
+L12 · Considered · F3
+L13 · Considered · no finding
+L14 · Considered · F1, F2
+L15 · Considered · no finding
+F1 · advisory · probe 14.3 · Build plan step 3 still says the gate gives "(4/4)", which contradicts A1 and the amended D20. Fix: record in the step 3 post-audit or the Log that A1 / D20's "3/4, failed: repo" replaces it.
+F2 · advisory · probe 14.3 · A1 does not say where the hand-run revert's evidence goes. Fix: put the four outputs and the gate's own repo-part output in docs/audits/swarm.md › Post-audit › Step 3, and cite that place on D20's pass line.
+F3 · advisory · probe 12.4 · "that test alone" is read from the gate's console. Fix: quote the failing test's fully qualified name and message from both runs when recording D20.
+missing components: none
+undeclared families: none
+15/15 layers · 50/50 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · logged: `note · deferred · Review 3 F1`; D20 governs, and the step 3 post-audit says so
+- F2 · accepted · applied: the hand-run outputs and the gate's repo-part output are in docs/audits/swarm.md › Post-audit › Step 3, cited on D20's pass line
+- F3 · accepted · applied: both runs name ControlCaseTests.ControlCases_passes_plan_and_table_agree and its message in the audit
+

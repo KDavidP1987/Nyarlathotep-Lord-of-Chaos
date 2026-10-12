@@ -18,7 +18,7 @@
 | [regions](regions.md) | Regions — global or regional scope for triggers and actions, and release 0.6.0 | done | L | 16/16 | 16 | 31 % | nyarlathotep |
 | [revenge](revenge.md) | Revenge — per-player faction heat, private warnings, a faction alert and ambush tiers around the player | ready | L | 0/27 | 27 | n/a | nyarlathotep |
 | [spikes](spikes.md) | Spikes S1-S3, march, restart marker, carrier buff | done ⚠ 1 | M | 20/20 | 20 | 50 % | nyarlathotep |
-| [swarm](swarm.md) | Swarm — a contained arena of growing spider waves with a kill-to-death winner | in-progress | L | 17/25 | 25 | 100 % | nyarlathotep |
+| [swarm](swarm.md) | Swarm — a contained arena of growing spider waves with a kill-to-death winner | in-progress | L | 19/25 | 25 | 96 % | nyarlathotep |
 | [walkable-spawns](walkable-spawns.md) | Walkable spawns — the walk probe, walkable spawn points and release 0.5.1 | done | M | 12/12 | 12 | 41 % | nyarlathotep |
 | [wave-sets](wave-sets.md) | Wave sets — per-wave units and stats, waves that wait to be cleared, the event scoreboard | done | L | 27/27 | 27 | 68 % | nyarlathotep |
 
