@@ -38,10 +38,11 @@ public static class HuntingGrounds
     public const int Reach = EventValidator.MaxHuntRange;
     /// <summary>Units that jump in one check across all events (S-11).</summary>
     public const int MaxJumps = 20;
-    /// <summary>Walk checks the hunt spends in one check across all events (A3): about 80 ms at Session 2's 0.4 ms a check.</summary>
+    /// <summary>Walk checks the hunt spends in one check across all events (A3): about 80 ms at Session 2's 0.4 ms a check.
+    /// A walk check takes two budget calls (<see cref="WalkCapCalls"/>).</summary>
     public const int WalkCap = 200;
-    /// <summary>Checks in a row without a landing before a unit rejoins its instance's nearest movable unit (A3).</summary>
-    public const int RejoinAfter = 3;
+    /// <summary><see cref="WalkCap"/> in <see cref="WalkBudget"/> calls: every walk check takes two.</summary>
+    public const int WalkCapCalls = 2 * WalkCap;
     /// <summary>How far beside the unit it rejoins a stuck unit lands (A3).</summary>
     public const float RejoinOffset = 3f;
     /// <summary>How often the lock and the hunt run: the existing behaviour cadence (HuntPlan.IntervalSeconds).</summary>
@@ -551,7 +552,7 @@ public static class JumpRule
     static readonly (float X, float Z)[] RejoinOffsets =
         [(HuntingGrounds.RejoinOffset, 0), (-HuntingGrounds.RejoinOffset, 0), (0, HuntingGrounds.RejoinOffset), (0, -HuntingGrounds.RejoinOffset)];
 
-    /// <summary>A3: the rejoin of a unit that found no landing at <see cref="HuntingGrounds.RejoinAfter"/> checks in a row:
+    /// <summary>A3: the rejoin of a unit that found no landing at an earlier check, its first try at the next one:
     /// a landing 3 m beside the anchor nearest <paramref name="target"/> among <paramref name="anchors"/> (units of the same
     /// instance that found a landing or are in reach at this check) that stands nearer the target than the unit, by the
     /// landing rules (no online player within 100 m of the unit, 50 m or more from every online player, allowed, free and
@@ -745,7 +746,8 @@ public sealed class HuntPhase
 
     readonly Dictionary<string, Dictionary<(int Wave, int Group), long>> _targets = new(StringComparer.Ordinal);
     readonly SortedSet<string> _failing = new(StringComparer.Ordinal);
-    readonly Dictionary<string, Dictionary<long, int>> _waited = new(StringComparer.Ordinal);   // checks in a row without a landing (A1, A3)
+    readonly Dictionary<string, Dictionary<long, int>> _waited = new(StringComparer.Ordinal);   // checks without a landing (A1, A3)
+    int _turn;                                                                  // which event plans first this check (A3)
     bool _phaseFailing;
 
     public IReadOnlyList<string> Health => _failing.Count > 0 || _phaseFailing ? [Failing] : [];
@@ -758,6 +760,9 @@ public sealed class HuntPhase
         _targets.TryGetValue(eventId, out var t) ? t : new Dictionary<(int, int), long>();
 
     public int AllRecords => _targets.Values.Sum(t => t.Count) + _failing.Count + _waited.Values.Sum(w => w.Count);
+
+    /// <summary>The checks without a landing recorded for <paramref name="key"/> of <paramref name="eventId"/> (A3), for the tests.</summary>
+    public int FailedChecks(string eventId, long key) => _waited.TryGetValue(eventId, out var w) && w.TryGetValue(key, out var n) ? n : 0;
 
     public void EventEnded(string eventId)
     {
@@ -786,8 +791,9 @@ public sealed class HuntPhase
             _failing.RemoveWhere(id => !hunting.Any(a => a.Id == id));
             if (hunting.Count == 0 || !due) return checks;
             var jumps = new JumpAllowance(HuntingGrounds.MaxJumps);
-            var walk = new WalkBudget(HuntingGrounds.WalkCap, world.Budget);    // A3: at most 200 walk checks a check
-            foreach (var a in hunting)
+            var walk = new WalkBudget(HuntingGrounds.WalkCapCalls, world.Budget);    // A3: at most 200 walk checks a check
+            var first = _turn++ % hunting.Count;                                // the events take turns at the cap (A3)
+            foreach (var a in hunting.Skip(first).Concat(hunting.Take(first)))
                 if (Run(a, world, jumps, info, error, walk) is { } c) checks.Add(c);
             _phaseFailing = false;
         }
@@ -804,7 +810,7 @@ public sealed class HuntPhase
     public HuntCheck? Run(ActiveEvent a, IRegionWorld world, JumpAllowance jumps, Action<string> info, Action<string> error,
         WalkBudget? walk = null)
     {
-        walk ??= new WalkBudget(HuntingGrounds.WalkCap, world.Budget);
+        walk ??= new WalkBudget(HuntingGrounds.WalkCapCalls, world.Budget);
         string? fault = null;
         HuntCheck? done = null;
         try
@@ -846,25 +852,35 @@ public sealed class HuntPhase
                 targets[group.Key] = target.Key;
                 foreach (var u in group) plans.Add((u, (target.X, target.Z)));
             }
-            // a unit that found no landing at the last check plans after every other unit of the instance, so units that
-            // cannot jump never spend the walk budget of those that can (A1; step 3 review F1)
-            foreach (var (u, target) in plans.OrderBy(p => waitedBefore.ContainsKey(p.Unit.Key)).ThenBy(p => p.Unit.Key))
+            // units plan fewest failed checks first, so units that cannot jump never spend the walk budget of those that
+            // can (A1; step 3 review F1), and a unit cut off by the cap keeps its count, so the cap rotates (A3)
+            int Failed(long key) => waitedBefore.TryGetValue(key, out var n) ? n : 0;
+            foreach (var (u, target) in plans.OrderBy(p => Failed(p.Unit.Key)).ThenBy(p => p.Unit.Key))
             {
                 try
                 {
+                    var before = Failed(u.Key);
                     if (jumps.Left == 0 && HuntingGrounds.Distance(u.X, u.Z, target.X, target.Z) > HuntingGrounds.Reach)
                     {
                         waiting++;                                              // the tick's 20 jumps are spent: no plan, no mark (F2)
+                        if (before > 0) waitedNow[u.Key] = before;
                         tally.Waited(u);
                         continue;
                     }
-                    var (spent, watched) = (tally.Budget, tally.Watched);
-                    var (kind, jump) = JumpRule.Plan(u, target, players, Allowed, world.Walkable, world.HeightOf, walk, tally);
-                    var noLanding = kind == JumpKind.Waiting && tally.Budget == spent && tally.Watched == watched;
-                    var streak = noLanding ? (waitedBefore.TryGetValue(u.Key, out var n) ? n : 0) + 1 : 0;
-                    if (streak >= HuntingGrounds.RejoinAfter
+                    (JumpKind Kind, RegionJump? Jump) planned = (JumpKind.Waiting, null);
+                    var streak = 0;
+                    if (before > 0 && HuntingGrounds.Distance(u.X, u.Z, target.X, target.Z) > HuntingGrounds.Reach
                         && JumpRule.Rejoin(u, target, anchors, players, Allowed, world.Walkable, world.HeightOf, walk) is { } r)
-                        (kind, jump, streak) = (JumpKind.Jump, r, 0);           // A3: stuck three checks, it rejoins a nearer unit
+                        planned = (JumpKind.Jump, r);                           // A3: no landing last time, it rejoins a nearer unit first
+                    else
+                    {
+                        var (spent, watched) = (tally.Budget, tally.Watched);
+                        planned = JumpRule.Plan(u, target, players, Allowed, world.Walkable, world.HeightOf, walk, tally);
+                        var noLanding = planned.Kind == JumpKind.Waiting && tally.Budget == spent && tally.Watched == watched;
+                        var cutOff = planned.Kind == JumpKind.Waiting && tally.Budget != spent;
+                        streak = noLanding ? before + 1 : cutOff ? before : 0;
+                    }
+                    var (kind, jump) = planned;
                     if (kind == JumpKind.InReach)
                     {
                         inReach++;

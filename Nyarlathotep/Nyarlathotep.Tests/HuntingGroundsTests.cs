@@ -786,8 +786,8 @@ public class HuntingGroundsTests
         Assert.Empty(first.Jumps);                                                    // 1 and 2 spent it, 3 cut off
         w.Budget = new WalkBudget(368);
         var second = Assert.Single(phase.Tick([a], w, _ => { }, _ => { }));
-        Assert.Equal([3L], second.Jumps.Select(j => j.Key));                          // the stuck units plan last
-        Assert.Equal(2, second.Waiting);
+        Assert.Equal([3L, 1L, 2L], second.Jumps.Select(j => j.Key));                  // the stuck units plan last, then rejoin 3 (A3)
+        Assert.Equal(0, second.Waiting);
         phase.EventEnded("hg");
         Assert.Equal(0, phase.AllRecords);
     }
@@ -822,14 +822,11 @@ public class HuntingGroundsTests
         w.Add(2, 600, 100);                                                           // nearer (500, 900) and free
         w.People.Add(Player(9, 500, 900));
         var phase = new HuntPhase();
-        for (var check = 1; check <= 2; check++)
-        {
-            var c = Assert.Single(phase.Tick([a], w, _ => { }, _ => { }));
-            Assert.DoesNotContain(c.Jumps, j => j.Key == 1);                          // one or two checks stuck: waits
-        }
-        var third = Assert.Single(phase.Tick([a], w, _ => { }, _ => { }));
-        var landed = Assert.Single(third.Jumps, j => j.Key == 2);
-        var rejoin = Assert.Single(third.Jumps, j => j.Key == 1);                    // A3: the third check rejoins unit 2
+        var c1 = Assert.Single(phase.Tick([a], w, _ => { }, _ => { }));
+        Assert.DoesNotContain(c1.Jumps, j => j.Key == 1);                             // never in the check it failed
+        var second = Assert.Single(phase.Tick([a], w, _ => { }, _ => { }));
+        var landed = Assert.Single(second.Jumps, j => j.Key == 2);
+        var rejoin = Assert.Single(second.Jumps, j => j.Key == 1);                   // A3: the next check rejoins unit 2
         Assert.InRange(HuntingGrounds.Distance(rejoin.X, rejoin.Z, landed.X, landed.Z), 2.99f, 3.01f);
         Assert.Equal(1, phase.AllRecords);                                            // the group's target; the streak is gone
 
@@ -864,11 +861,27 @@ public class HuntingGroundsTests
         for (var i = 0; i < 15; i++) w.Add(100 + i, 100 + 20 * i, 120, eventId: "b");
         w.People.Add(Player(1, 500, 900));
         new HuntPhase().Tick([a, b], w, _ => { }, _ => { });
-        Assert.Equal(HuntingGrounds.WalkCap, 1_000_000 - w.Budget.Left);             // A3: 200 across both events, no more
+        Assert.Equal(2 * HuntingGrounds.WalkCap, 1_000_000 - w.Budget.Left);         // A3: 200 walk checks (two calls each) across both events
         var shared = new WalkBudget(50);
-        var capped = new WalkBudget(HuntingGrounds.WalkCap, shared);
+        var capped = new WalkBudget(HuntingGrounds.WalkCapCalls, shared);
         Assert.False(capped.TryTake(52));                                             // the tick's shared budget still binds
-        Assert.Equal(HuntingGrounds.WalkCap, capped.Left);
+        Assert.Equal(HuntingGrounds.WalkCapCalls, capped.Left);
+
+        // the cap rotates: a unit that failed is recorded with its count, one cut off is not; every stuck unit of a is planned
+        // within a few checks, and b plans first at the next check
+        var r = new World { Walk = (_, _, _) => false };
+        for (var i = 0; i < 15; i++) r.Add(i, 50 + 60 * i, 100, eventId: "a");
+        for (var i = 0; i < 3; i++) r.Add(100 + i, 100 + 100 * i, 150, eventId: "b");
+        r.People.Add(Player(1, 500, 990));
+        var phase = new HuntPhase();
+        phase.Tick([a, b], r, _ => { }, _ => { });
+        var afterA = phase.AllRecords;                                                // two targets, a's planned units; b cut off
+        phase.Tick([a, b], r, _ => { }, _ => { });
+        Assert.True(phase.AllRecords > afterA);                                       // b's turn first
+        for (var check = 0; check < 18; check++) phase.Tick([a, b], r, _ => { }, _ => { });
+        Assert.Equal(2 + 15 + 3, phase.AllRecords);                                   // no stuck unit is never planned
+        var counts = Enumerable.Range(0, 15).Select(i => phase.FailedChecks("a", i)).ToList();
+        Assert.True(counts.Max() - counts.Min() <= 1, string.Join(",", counts));      // fewest failures first: the counts stay even
     }
 
     [Fact]

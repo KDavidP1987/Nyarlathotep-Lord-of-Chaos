@@ -115,6 +115,16 @@ What the runs found, each fixed and amended before release:
   grounded, 22 not free". A jump now tries 35, 45 and 55 m crossings, but only after every landing of 25 m or less
   failed, and never ending within 100 m of the target. A 150 s rerun took the waiting units from 7-10 down to 0-4, and
   units in reach up to 17.
+- **A walk-check cap and rejoining (A3).** The A2 build's full timing run left 8 of 24 units at a south-east corner
+  (near x -934, z -1958 to -2000) that neither a step nor a 55 m crossing clears. Re-planning them every check cost
+  "region walk: 736 checks" and slow ticks of 262-290 ms in the region phase, because a walk check costs about 0.4 ms in
+  game. The hunt now spends at most 200 walk checks per check across all events. A unit that found no landing tries,
+  at its next check, to land 3 m beside the unit of its own event nearest its target. The first cap build starved the
+  units: "1 jumped, 13 waiting", "13 out of budget", "region walk: 100 checks". It counted the two budget calls a walk
+  check takes, so it allowed only 100 checks, and units it cut off never got their turn. The cap now counts walk
+  checks. Units plan fewest failed checks first, a unit cut off keeps its count, and the events take turns planning
+  first, so the cap rotates. In the 150 s rerun every check moved 11-12 units, with 0 waiting, at most 158 walk checks
+  per check, and no slow tick.
 - **The hand-over.** After the final jump the units stood about 53 m from Chaos. They were seeded within one hunt
   interval ("hunt targets: 1"), went into Combat, then into Return. Chaos is invulnerable, so the real fight with a
   vulnerable player is D26's.
