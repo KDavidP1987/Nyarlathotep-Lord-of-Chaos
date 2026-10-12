@@ -77,4 +77,8 @@ yar-rollback-manual-swarm; `git revert --no-edit v0.9.0..v0.10.0` exit 0; `git d
 - release: waiting for the owner's OK to push main and v0.10.0 and create the GitHub pre-release (D21); D15 to D18 wait on the owner's spider-swarm run
 - privacy grep (7656119[0-9]{10}): none in the tree or in `git log -p origin/main..main`
 - dod status: D20 and D23 pass at c06a928; D21 and D22 wait on the push and the release records
+- session 3 (the owner's run, 2026-10-12, docs/features/SWARM.md › Session 3): "[nyar] arena sw-arena: returned 4, farthest 46 m"; spider-swarm "all waves defeated (5 of 5 waves)"; the owner's verdict "It went well" passes D15 to D18 (recorded as the owner's, who kd)
+- session 3 log check: 0 unhandled, 1774 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons; every [Error]/[Warning] line read in both logs: 0 [Error], the known warnings plus the sw-arena stop
+- session 3 snapshot: "snapshot restored; hashes equal (sw3, …)"
+- dod status after session 3: 23/25; D21 and D22 wait on the push
 

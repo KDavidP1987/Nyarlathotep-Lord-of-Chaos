@@ -1,7 +1,8 @@
 # Swarm — a contained arena of growing waves with a kill-to-death winner
 
-**Status:** 0.10.0 (docs/dod/swarm.md, audit docs/audits/swarm.md). D15's chase and return part and D18's look and
-feel wait on the owner's run, and so does the owner's acceptance of D16 and D17.
+**Status:** 0.10.0 (docs/dod/swarm.md, audit docs/audits/swarm.md). The owner's Session 3 (2026-10-12) passed the
+arena return and the look and feel. Region-bound placement modes, which the owner asked for after that run, are
+planned separately (design §9).
 
 ## Goal
 
@@ -28,11 +29,8 @@ The `spider-swarm` template uses all three (design §9 D33, D42).
 
 ## Open questions
 
-- Whether the arena return looks right when a player walks out of the arena and the spiders chase. Sessions 1 and 2
-  could not test it. The spiders never attacked the invulnerable Chaos, so nothing chased, and vrclient can't walk
-  the character (held movement keys don't move it). Every unit stayed at its spawn spot, and no
-  "[nyar] arena" line was ever logged. The owner's D18 run (a vulnerable player who walks 60 m out) settles it,
-  and D15 with it.
+- Resolved 2026-10-12 (Session 3): the arena return was seen in game. A player walked out, the spiders followed,
+  "[nyar] arena sw-arena: returned 4, farthest 46 m" was logged, and the owner judged the run good.
 
 ## Test results
 
@@ -100,3 +98,24 @@ yar-sw2-logs before the stop. Restored after: "snapshot restored; hashes equal (
   and combat parts need a vulnerable player who walks, which is the owner's D18 run.
 - Logs: -LogCheck "0 unhandled, 182 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; [Warning] lines
   the known three plus the stop; 0 [Error].
+
+### Session 3 · 2026-10-12 · owner run, D15 and D18 (c06a928, dev world nyardev, the owner as Chaos)
+
+Setup: the 0.10.0 Release DLL ("templates: 11/11 valid"), `pwsh tools/dev-snapshot.ps1 -Save sw3`, Scoreboard.IncludeAdmins
+true, sw-arena in the dev events.json. One boot. The owner connected by Direct Connect to 127.0.0.1:9876.
+
+- sw-arena (D15): `.nyar event set sw-arena location here` saved "Point -1878.9, -1641.1"; `.nyar event start sw-arena`
+  queued 8 units (2 moved, 4 shortened). After the owner moved away, the log read "[nyar] arena sw-arena: returned 4,
+  farthest 46 m". The owner stopped it: "scoreboard: 0 players, 0 kills, 0 deaths, no winner", 8 units queued for despawn.
+- spider-swarm (D16, D18): `.nyar template use spider-swarm`, `event enable`, `event start`. Waves of 6, 9, 12, 15 and 18
+  units, each cleared, then "event spider-swarm ended: all waves defeated (5 of 5 waves)" and "scoreboard: 1 players,
+  60 kills, 0 deaths, winner K/D 60.00".
+- Owner's verdict: "I've completed all of the testing. It went well." That covers the arena return and its feel (D15,
+  D18) and the acceptance of the Session 1 evidence (D16, D17).
+- Follow-up from the owner: wave and swarm events also need region-bound modes (spawn anywhere in a region and stay in
+  it, spawn at a point and spread through the region, ambush only players inside a region, and a map-wide spread for
+  apocalypse). Recorded in design §9 and planned as its own child.
+- Logs: -LogCheck "0 unhandled, 1774 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons". [Warning] lines:
+  the known example-empowerment reason, Beelzebub's TUNE line, Il2CppInterop's Class::Init line, and the sw-arena
+  stop. 0 [Error]. NyarDev.log's missing-prefab stacks equal every earlier boot's (226). The server was stopped without
+  /F; "snapshot restored; hashes equal (sw3, …)".
