@@ -389,7 +389,8 @@ internal static class SpawnTracker
                 aggro.PreCombatPosition = to;
                 unit.Write(aggro);
             }
-            if (r.DropTarget) DropTargets(r.Key, unit, centre, arenaRadius);
+            // Every entry on someone outside the arena goes, whatever the current target (code review F1); entries inside stay.
+            DropTargets(r.Key, unit, centre, arenaRadius);
             // The game snaps the unit to a terrain level near the anchor's height; one on another level is moved to the
             // anchor by the existing regroup check (A23). A Point stored without a height has no anchor and no regroup.
             if (anchor is { } a) _regroup.Add((r.Key, a, 0));

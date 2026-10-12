@@ -1,4 +1,4 @@
-# swarm-timing.vrs: swarm D18 (Session 1): sw-timing holds 24 tracked units inside a 30 m arena for eleven timing
+# swarm-timing.vrs: swarm D19 (Session 1): sw-timing holds 24 tracked units inside a 30 m arena for eleven timing
 # windows while Chaos stands at the spot, so the 5 s arena check runs over every unit each time; the tick budget is
 # read afterwards with -TimingSpan -Windows 10 -MinTracked 10 on the logs, as wave-sets-timing did (the "arena" phase
 # is one more phase in the same tick). No "[nyar] arena sw-timing: check failed" line and no "arena: check failing"

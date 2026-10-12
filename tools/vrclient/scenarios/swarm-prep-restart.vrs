@@ -1,0 +1,28 @@
+# swarm-prep-restart.vrs: swarm D17's restart path, before the stop. spider-swarm reaches wave 2 with its units alive;
+# the server is then stopped (taskkill, no /F) and started, and the boot logs "cancelled by restart", the boot sweep
+# finds the units and no scoreboard or winner line is shown (checked in the logs after the boot).
+# Needs: what swarm.vrs needs; spider-swarm enabled.
+ensure
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+mark
+chat .nyar event start spider-swarm
+expect-log event spider-swarm wave 1/5: 6 units queued timeout=30
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 1 cleared timeout=20
+expect-log event spider-swarm wave 2/5: 9 units queued timeout=20
+wait 15
+chat .nyar status
+expect-reply tracked units:

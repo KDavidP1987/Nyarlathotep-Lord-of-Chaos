@@ -1,0 +1,74 @@
+# swarm-noadmins.vrs: swarm D16 with [Scoreboard] IncludeAdmins = false (Session 1, second boot): Chaos kills all five
+# waves of spider-swarm; the scoreboard reads "no player scored" and no winner line follows. Also checks the restart
+# path's 0 tracked units first.
+# Needs: the boot after swarm-prep-restart.vrs, its restart lines checked; IncludeAdmins = false; spider-swarm enabled.
+ensure
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar status
+expect-reply tracked units: 0
+mark
+chat .nyar event start spider-swarm
+expect-log event spider-swarm wave 1/5: 6 units queued timeout=30
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 1 cleared timeout=20
+expect-log event spider-swarm wave 2/5: 9 units queued timeout=20
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 2 cleared timeout=20
+expect-log event spider-swarm wave 3/5: 12 units queued timeout=20
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 3 cleared timeout=20
+expect-log event spider-swarm wave 4/5: 15 units queued timeout=20
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 4 cleared timeout=20
+expect-log event spider-swarm wave 5/5: 18 units queued timeout=20
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 5 cleared timeout=20
+expect-log event spider-swarm ended: all waves defeated \(5 of 5 waves\) timeout=20
+expect-log event spider-swarm scoreboard: 0 players, 0 kills, 0 deaths, no winner
+expect-chat scoreboard: no player scored timeout=20
+expect-no-log winner: timeout=5
+shot full sw-noadmins
+wait 30
+chat .nyar status
+expect-reply tracked units: 0

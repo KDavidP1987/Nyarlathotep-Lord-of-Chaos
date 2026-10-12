@@ -1,0 +1,36 @@
+# swarm-death.vrs: swarm D16's death run. spider-swarm's wave 1 is killed (6 kills), then a spider kills Chaos (.devdie,
+# the nearest CHAR_Spider_Forest as the killer); an admin stop shows "1 players, 6 kills, 1 deaths, winner K/D 6.00" and
+# "Spider swarm winner: Chaos, K/D 6.00 (6 kills, 1 deaths)". Runs after swarm.vrs (spider-swarm exists and is enabled);
+# the death drops inventory items at the spot and the respawn is a held space.
+# Needs: IncludeAdmins = true; no purge cooldown (wait 60 s after swarm.vrs's purge); NyarDevTools (.devdie).
+ensure
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+mark
+chat .nyar event start spider-swarm
+expect-log event spider-swarm wave 1/5: 6 units queued timeout=30
+wait 10
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+wait 3
+chat .devkill -581295882 50
+chat .devkill 2136899683 50
+chat .devkill 2103131615 50
+expect-log event spider-swarm wave 1 cleared timeout=20
+expect-log event spider-swarm wave 2/5: 9 units queued timeout=20
+wait 10
+chat .devdie -581295882 50
+expect-log \[DEV DIE\] found=1
+wait 5
+shot full sw-dead
+chat .nyar event stop spider-swarm
+expect-log event spider-swarm scoreboard: 1 players, 6 kills, 1 deaths, winner K/D 6\.00
+expect-chat Spider swarm winner: Chaos, K/D 6.00 timeout=20
+shot chat sw-dead-winner
+hold space 1.5
+wait 10
+shot full sw-respawned

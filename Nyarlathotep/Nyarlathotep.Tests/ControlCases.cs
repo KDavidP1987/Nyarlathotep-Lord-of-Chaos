@@ -538,7 +538,7 @@ public static class ControlCases
             "a_target_outside_is_kept", "a_form_is_missed", "another_units_move", "the_admin_centre_is_not_the_origin", "the_log_line_names_a_player",
             "a_point_without_height_returns_to_0", "a_target_inside_is_dropped"],
             ["check_every_behaviour_tick"], ["no_stray"]) with { Plan = Swarm },
-        T("D4", "ArenaRead", "SwarmDependencyFailureTests", ["one_throwing_unit_stops_the_others", "the_error_line_repeats_within_a_streak",
+        T("D4", "ArenaRead", "SwarmDependencyFailureTests", ["one_throwing_unit_stops_the_others", "a_phase_fault_is_silent", "the_error_line_repeats_within_a_streak",
             "the_entry_outlives_a_good_check", "a_throw_skips_a_later_phase_the_despawn_or_the_end"], ["a_clean_check_returns_and_clears"],
             ["no_arena_event"]) with { Plan = Swarm },
         T("D11", "Swarm", "TemplateLibraryTests", ["the_template_differs"], ["spider_swarm_as_planned"], ["none_in_an_empty_catalogue"])

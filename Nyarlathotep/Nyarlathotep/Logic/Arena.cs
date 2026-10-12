@@ -164,10 +164,13 @@ public sealed class ArenaPhase
     public const string Failing = "arena: check failing";
 
     readonly SortedSet<string> _failing = new(StringComparer.Ordinal);
+    /// <summary>A throw outside any one event's check (code review F5): logged once per streak and held on the health
+    /// line like an event's, until a tick runs through.</summary>
+    bool _phaseFailing;
     DateTime _next;
 
-    /// <summary>The health entry: one while any arena event's check is failing.</summary>
-    public IReadOnlyList<string> Health => _failing.Count > 0 ? [Failing] : [];
+    /// <summary>The health entry: one while any arena event's check, or the phase itself, is failing.</summary>
+    public IReadOnlyList<string> Health => _failing.Count > 0 || _phaseFailing ? [Failing] : [];
 
     public static string FailedLine(string eventId, string message) => $"arena {eventId}: check failed: {message}";
 
@@ -179,6 +182,7 @@ public sealed class ArenaPhase
     public void Clear()
     {
         _failing.Clear();
+        _phaseFailing = false;
         _next = default;
     }
 
@@ -200,8 +204,14 @@ public sealed class ArenaPhase
             _next = now.AddSeconds(Arena.CheckSeconds);
             foreach (var a in arenas)
                 if (Run(a, world, random, info, error) is { } c) checks.Add(c);
+            _phaseFailing = false;
         }
-        catch (Exception) { /* the phase never throws (D4); every per-event fault is caught in Run */ }
+        catch (Exception e)
+        {
+            // the phase never throws (D4); a fault outside Run is logged once per streak and held on the health line
+            if (!_phaseFailing) Safe(error, FailedLine("phase", e.Message));
+            _phaseFailing = true;
+        }
         return checks;
     }
 

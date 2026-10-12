@@ -12,6 +12,7 @@
 # Two dev marks, saved once by hand at the pond's own x/z (from `.devgo pond` then `.devwhere`):
 #   sw-far  = 60 m east of the pond: `.devtp <pondX+60> <pondZ>`, then `.devmark sw-far`
 #   sw-near = 10 m east of the pond: `.devtp <pondX+10> <pondZ>`, then `.devmark sw-near`
+#   sw-far2 = 60 m west of the pond: `.devtp <pondX-60> <pondZ>`, then `.devmark sw-far2`
 # The pond had native units in wave-sets (A5); if natives kill the test units there, use another spot and its marks.
 #
 # The dev server's events.json entry (paste it into the "events" array; the location is overwritten by
@@ -56,6 +57,14 @@ wait 20
 chat .nyar debug here 25
 expect-reply no tracked units within 25 m
 shot full sw-arena-far
+# code review F2: the opposite side too, so a unit stuck 40-80 m west is caught; the count within 35 m below is read
+# from the results JSON's reply lines against "tracked units: 8"
+chat .devgo sw-far2
+expect-log \[DEV TP\] sw-far2
+wait 10
+chat .nyar debug here 25
+expect-reply no tracked units within 25 m
+shot full sw-arena-far2
 chat .devgo pond
 expect-log \[DEV TP\] pond
 wait 1

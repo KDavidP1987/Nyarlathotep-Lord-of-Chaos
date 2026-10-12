@@ -186,4 +186,32 @@ public class SwarmDependencyFailureTests
         Assert.Empty(error.Lines);
         Assert.Empty(phase.Health);
     }
+
+    /// <summary>Code review F5: a throw outside any one event's check (here the running list itself) is logged once per
+    /// streak and holds the health entry until a tick runs through.</summary>
+    sealed class ThrowingActive(IReadOnlyCollection<ActiveEvent> inner) : IReadOnlyCollection<ActiveEvent>
+    {
+        public bool Throws { get; set; } = true;
+        public int Count => inner.Count;
+        public IEnumerator<ActiveEvent> GetEnumerator() => Throws ? throw new InvalidOperationException("engine gone") : inner.GetEnumerator();
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    [Fact]
+    public void ArenaRead_fails_when_a_phase_fault_is_silent()
+    {
+        var engine = Started(ArenaEvent("sw"));
+        var world = new FakeWorld();
+        world.Add(1, "sw", 0, 60);
+        var active = new ThrowingActive(engine.Active);
+        var (info, error) = (new LogLines(), new LogLines());
+        var phase = new ArenaPhase();
+        Assert.Empty(phase.Tick(T0.AddSeconds(5), active, world, Rng(), info.Add, error.Add));
+        Assert.Empty(phase.Tick(T0.AddSeconds(10), active, world, Rng(), info.Add, error.Add));
+        Assert.Equal(["arena phase: check failed: engine gone"], error.Lines);        // once per streak
+        Assert.Equal([ArenaPhase.Failing], phase.Health);
+        active.Throws = false;
+        Assert.Single(phase.Tick(T0.AddSeconds(15), active, world, Rng(), info.Add, error.Add));
+        Assert.Empty(phase.Health);
+    }
 }
