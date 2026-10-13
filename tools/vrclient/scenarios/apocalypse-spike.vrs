@@ -31,109 +31,109 @@ expect-log \[DEV TP\] to
 wait 5
 chat .devwhere
 expect-log \[DEV WHERE\]
-chat .devunits -837329073 400 apo-s0
+chat .devunits -837329073 30 apo-s0
 expect-log \[DEV UNITS\] n=20
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devunits -837329073 400 apo-s0
+chat .devunits -837329073 30 apo-s0
 expect-log \[DEV UNITS\]
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devunits -837329073 400 apo-s0
+chat .devunits -837329073 30 apo-s0
 expect-log \[DEV UNITS\]
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devunits -837329073 400 apo-s0
+chat .devunits -837329073 30 apo-s0
 expect-log \[DEV UNITS\]
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devunits -837329073 400 apo-s0
+chat .devunits -837329073 30 apo-s0
 expect-log \[DEV UNITS\]
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devunits -837329073 400 apo-s0
+chat .devunits -837329073 30 apo-s0
 expect-log \[DEV UNITS\]
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devhop -837329073 10 0 25 apo-s0 true
+chat .devhop -837329073 10 0 25 apo-s0 true true
 expect-log \[DEV HOP\] moved=
 wait 4
-chat .devunits -837329073 400 apo-s0
+chat .devunits -837329073 30 apo-s0
 expect-log \[DEV UNITS\]
 wait 5
 # the approach: Chaos at the end point (pond + 300 m east)
@@ -245,7 +245,7 @@ chat .devwalk -837329073 apo-s0 40 400
 expect-log \[DEV WALK\] set=
 chat .devunits -837329073 30 apo-s0
 expect-log \[DEV UNITS\]
-chat .devunits -837329073 400 apo-s0
+chat .devunits -837329073 30 apo-s0
 expect-log \[DEV UNITS\]
 chat .devgo apo-s0
 expect-log \[DEV TP\] apo-s0

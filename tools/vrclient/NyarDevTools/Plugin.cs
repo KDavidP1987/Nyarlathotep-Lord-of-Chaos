@@ -26,7 +26,7 @@ namespace NyarDevTools;
 //                          The prefab is required: an open query also killed castle and world units (Session 1).
 //   .devdie <prefabGuid> [radius]  the sender is killed by the nearest living unit of that prefab within radius, so a
 //                          kill feed reads that unit as the killer; log [DEV DIE] found=<0|1> distance=<m>
-//   .devhop <prefabGuid> <dx> <dz> [radius] [mark] [home]  move the living units of that prefab within radius (default 30) of
+//   .devhop <prefabGuid> <dx> <dz> [radius] [mark] [home] [clearPath]  move the living units of that prefab within radius (default 30) of
 //                          the sender, or of the named mark, by dx and dz (Translation, LastTranslation, PreCombatPosition;
 //                          height kept for the game to snap; home true also moves SpawnTransform.Position, the spot an
 //                          idle unit walks back to); with a mark, the mark moves along so the next hop follows
@@ -39,9 +39,10 @@ namespace NyarDevTools;
 //   .devunits <prefabGuid> [radius] [mark]  log each living unit of that prefab within radius (default 60) of the sender
 //                          or the mark: [DEV UNIT] x y z state=<BehaviourTreeState> target=<0|1> pre=<PreCombatPosition>
 //                          home=<SpawnTransform.Position>
-//   .devwalk <prefabGuid> <targetMark> [step] [radius] [max]  every living unit of that prefab within radius (default 400)
+//   .devwalk <prefabGuid> <targetMark> [step] [radius] [max] [sendHome]  every living unit of that prefab within radius (default 400)
 //                          of the mark gets its return point (SpawnTransform.Position, PreCombatPosition) step metres (default
-//                          40) ahead toward the mark, Translation untouched, so the game's pathing walks it (apocalypse D24's
+//                          40) ahead toward the mark, Translation untouched, and (sendHome, default true) a unit not in combat is
+//                          put in the Return state, so the game's pathing walks it (apocalypse D24's
 //                          pathing probe); log [DEV WALK] set=<n> arrived=<k> (within 30 m) farthest=<m> stall=<s> (longest
 //                          time a unit has gone without getting 2 m closer)
 // Positions are logged on purpose: this plugin runs only on the local dev server and is never shipped.
@@ -206,7 +207,7 @@ static class DevCommands
     }
 
     [Command("devhop", adminOnly: true)]
-    public static void DevHop(ChatCommandContext ctx, int prefab, float dx, float dz, float radius = 30f, string mark = "", bool home = false)
+    public static void DevHop(ChatCommandContext ctx, int prefab, float dx, float dz, float radius = 30f, string mark = "", bool home = false, bool clearPath = false)
     {
         float3 from;
         Dictionary<string, float[]> marks = null;
@@ -247,6 +248,11 @@ static class DevCommands
                     var st = em.GetComponentData<SpawnTransform>(u);
                     st.Position = to;
                     em.SetComponentData(u, st);
+                }
+                if (clearPath)
+                {
+                    if (em.HasBuffer<ProjectM.Pathfinding.PathBuffer>(u)) em.GetBuffer<ProjectM.Pathfinding.PathBuffer>(u).Clear();
+                    if (em.HasComponent<Velocity>(u)) em.SetComponentData(u, new Velocity());
                 }
                 n++;
             }
@@ -351,7 +357,7 @@ static class DevCommands
     static readonly Dictionary<Entity, (float best, DateTime at)> WalkProgress = new();
 
     [Command("devwalk", adminOnly: true)]
-    public static void DevWalk(ChatCommandContext ctx, int prefab, string targetMark, float step = 40f, float radius = 400f, int max = 0)
+    public static void DevWalk(ChatCommandContext ctx, int prefab, string targetMark, float step = 40f, float radius = 400f, int max = 0, bool sendHome = true)
     {
         if (!LoadMarks().TryGetValue(targetMark, out var m) || m.Length != 3) { ctx.Reply($"devwalk: no mark {targetMark}"); return; }
         var target = new float3(m[0], m[1], m[2]);
@@ -382,6 +388,13 @@ static class DevCommands
                 var home = new float3(at.x + dir.x * ahead, at.y, at.z + dir.y * ahead);
                 if (em.HasComponent<SpawnTransform>(u)) { var st = em.GetComponentData<SpawnTransform>(u); st.Position = home; em.SetComponentData(u, st); }
                 if (em.HasComponent<AggroConsumer>(u)) { var a = em.GetComponentData<AggroConsumer>(u); a.PreCombatPosition = home; em.SetComponentData(u, a); }
+                // an idle unit does not notice a moved return point (spike run 1: no unit moved in 120 s); the Return
+                // state sends it walking there on the game's own pathing
+                if (sendHome && em.HasComponent<BehaviourTreeState>(u))
+                {
+                    var bt = em.GetComponentData<BehaviourTreeState>(u);
+                    if (bt.Value != GenericEnemyState.Combat) { bt.Value = GenericEnemyState.Return; em.SetComponentData(u, bt); }
+                }
                 set++;
             }
         }
