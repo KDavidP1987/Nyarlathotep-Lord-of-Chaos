@@ -1,0 +1,14 @@
+# revenge-boot2.vrs: revenge D21's restart, second half (after the server restarted during rv-test0's tier 2). The boot
+# log holds "event rv-test0 cancelled by restart", "revenge rv-test0 ended: restart" and the boot marker sweep (checked on
+# the log copy); in game nothing is tracked, no revenge line reached Chaos and the counts line reads 0 heat rows.
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .nyar status
+expect-reply tracked units: 0
+chat .nyar event info rv-test0
+expect-reply revenge: 0 heat rows, 0 due, 0 running
+expect-no-log revenge rv-test0 (due|started|: warning) timeout=10
+shot chat rv0-boot2

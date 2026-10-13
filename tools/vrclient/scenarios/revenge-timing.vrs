@@ -1,0 +1,52 @@
+# revenge-timing.vrs: revenge D23 (its own run). rv-test0 runs into tier 3, left alive, beside fk-test (the bandit-ambush
+# FactionKills template, 20 kills in 300 s never reached, so the death read serves both) and 8 tracked bandits (allies, so no infighting), at
+# least 10 tracked units for eleven timing windows; then `.nyar purge confirm`. -TimingSpan -Windows 10 -MinTracked 10
+# reads the budget from the log copy. Needs [Debug] TimingLog = true; rv-test0 enabled (fk-test is made here); rv-test, bw-test
+# disabled; no purge cooldown. Run: --var CAMP=<mark> --var BANDIT=<guid>
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .nyar event reload
+expect-log events: reloaded
+chat .nyar template use bandit-ambush as fk-test
+expect-reply fk-test
+chat .nyar event enable fk-test
+expect-reply fk-test
+chat .devgo ${CAMP}
+expect-log \[DEV TP\] ${CAMP}
+wait 4
+mark
+chat .devkill ${BANDIT} 60 6
+expect-log \[DEV KILL\] n=6
+expect-log revenge rv-test0 due timeout=10
+chat .devgo pond
+expect-log \[DEV TP\] pond
+expect-log event rv-test0 started by Revenge timeout=15
+expect-log spawned CHAR_Bandit_Thug for rv-test0 timeout=30
+wait 4
+chat .devkill -301730941 40
+expect-log event rv-test0 wave 1 cleared timeout=20
+expect-log spawned CHAR_Bandit_Hunter for rv-test0 timeout=40
+wait 4
+chat .devkill -301730941 40
+chat .devkill -1301144178 40
+expect-log event rv-test0 wave 2 cleared timeout=20
+expect-log event rv-test0 wave 3/3 timeout=30
+wait 8
+chat .nyar spawn CHAR_Bandit_Thug 8
+expect-log spawned CHAR_Bandit_Thug timeout=20
+wait 10
+chat .nyar status
+expect-reply tracked units: 12
+wait 690
+chat .nyar status
+expect-reply tracked units:
+mark
+chat .nyar purge
+wait 2
+chat .nyar purge confirm
+expect-log purge: 1 events ended
+chat .nyar event disable fk-test
+expect-reply fk-test

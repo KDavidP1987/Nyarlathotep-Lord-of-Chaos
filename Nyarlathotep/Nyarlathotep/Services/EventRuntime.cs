@@ -303,6 +303,7 @@ internal static class EventRuntime
         EndScoreboard(path, ended);
         if (path == EndPath.Stop) RevengeEnded(ended, RevengeEndPath.AdminStop);
         else if (path == EndPath.PillarOff) RevengeEnded(ended, RevengeEndPath.PillarOff);
+        else if (path == EndPath.Fault) RevengeEnded(ended, RevengeEndPath.Fault);           // logged, silent to the player
         return true;
     }
 

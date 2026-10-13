@@ -35,8 +35,10 @@ Two pieces, both off until an admin enables an event that uses them:
   cooldown. An admin start focuses the admin, skips target-busy, resets no heat and sets no cooldown (review 3 F4).
 - **Edits:** a heat or factions edit keeps a row's points; the next scan applies the new heat (review 3 F6).
 - **Lines:** RevengeWarning, RevengeStart, RevengeEnd and RevengeAlertPool (Logic/Messages.cs), plain text, within
-  480 bytes, naming no player. The end line goes on a natural end, all waves defeated and an admin stop; purge, restart
-  and pillar off are silent.
+  480 bytes, naming no player. The end line goes on a natural end, all waves defeated and an admin stop; purge, restart,
+  pillar off and a fault end (three tick faults) are silent, though each still logs `revenge <id> ended: <path>`.
+- **Restart line:** the boot writes `revenge <id> ended: restart` only when the definition in the catalogue is still a
+  Revenge one; a definition deleted or retyped before the restart logs only `event <id> cancelled by restart`.
 - **Wire:** api 7, `trigger=revenge` on def and tpl rows; nothing else.
 - **Bosses:** a boss is a SpawnTracker unit like any other: the caps cut the final wave's regular units before its
   bosses, a Region wave trades a boss into a group that found a spot, and every end path, the purge and the boot sweep

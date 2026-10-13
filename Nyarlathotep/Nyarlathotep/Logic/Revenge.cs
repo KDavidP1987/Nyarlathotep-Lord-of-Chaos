@@ -17,7 +17,7 @@ public enum RevengeHold { Territory, Busy, TargetBusy, Ineligible, Controls }
 public enum RevengeStartResult { Started, ConditionsRefused, Refused }
 
 /// <summary>The six ways a running Revenge instance ends (revenge D8). The first three send the target the end line.</summary>
-public enum RevengeEndPath { NaturalEnd, AllWavesDefeated, AdminStop, Purge, Restart, PillarOff }
+public enum RevengeEndPath { NaturalEnd, AllWavesDefeated, AdminStop, Purge, Restart, PillarOff, Fault }
 
 /// <summary>A player as the revenge gate sees it (revenge D5): the platform id, the position, whether alive and whether
 /// in PvP combat. A player missing from the read is offline.</summary>
@@ -62,7 +62,7 @@ public static class RevengeRule
             ? (focus, Messages.RevengeStart(FactionText(active.Definition.Trigger))) : null;
 
     /// <summary>The private line of a revenge end (D8): to the focus alone on a natural end, all waves defeated or an admin
-    /// stop; none on a purge, a restart or a pillar off, and none for any other instance.</summary>
+    /// stop; none on a purge, a restart, a pillar off or a fault, and none for any other instance.</summary>
     public static (string Player, string Line)? EndPrivate(ActiveEvent active, RevengeEndPath path) =>
         IsRevenge(active.Definition) && SendsEndLine(path) && active.Focus is { Length: > 0 } focus
             ? (focus, Messages.RevengeEnd(FactionText(active.Definition.Trigger))) : null;
@@ -90,6 +90,7 @@ public static class RevengeRule
         RevengeEndPath.AdminStop => "admin stop",
         RevengeEndPath.Purge => "purge",
         RevengeEndPath.Restart => "restart",
+        RevengeEndPath.Fault => "fault",
         _ => "pillar off",
     };
 

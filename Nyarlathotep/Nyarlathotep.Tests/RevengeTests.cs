@@ -729,9 +729,11 @@ public class RevengeTests
     {
         var (engine, _) = Running();
         var active = engine.Find("rv")!;
-        foreach (var path in new[] { RevengeEndPath.Purge, RevengeEndPath.Restart, RevengeEndPath.PillarOff })
+        var silent = new[] { RevengeEndPath.Purge, RevengeEndPath.Restart, RevengeEndPath.PillarOff, RevengeEndPath.Fault };
+        foreach (var path in silent)
             Assert.Null(RevengeRule.EndPrivate(active, path));
-        Assert.Equal([false, false, false], new[] { RevengeEndPath.Purge, RevengeEndPath.Restart, RevengeEndPath.PillarOff }.Select(RevengeRule.SendsEndLine));
+        Assert.Equal([false, false, false, false], silent.Select(RevengeRule.SendsEndLine));
+        Assert.Equal("revenge rv ended: fault", RevengeRule.EndedLine("rv", RevengeEndPath.Fault));
     }
 
     [Fact]
@@ -777,14 +779,14 @@ public class RevengeTests
     public void EndPaths_fails_when_a_log_line_is_missing()
     {
         Assert.Equal(["revenge rv ended: natural end", "revenge rv ended: all waves defeated", "revenge rv ended: admin stop", "revenge rv ended: purge",
-                "revenge rv ended: restart", "revenge rv ended: pillar off"],
+                "revenge rv ended: restart", "revenge rv ended: pillar off", "revenge rv ended: fault"],
             Enum.GetValues<RevengeEndPath>().Select(p => RevengeRule.EndedLine("rv", p)));
     }
 
     [Fact]
     public void EndPaths_passes_six_paths()
     {
-        Assert.Equal(6, Enum.GetValues<RevengeEndPath>().Length);
+        Assert.Equal(7, Enum.GetValues<RevengeEndPath>().Length);              // D8's six and the fault end (logged only)
         Assert.Equal(3, Enum.GetValues<RevengeEndPath>().Count(RevengeRule.SendsEndLine));
         var (engine, _) = Running();
         Assert.Equal(P1, Assert.Single(engine.CancelAll()).Focus);           // a purge ends it as every event

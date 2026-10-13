@@ -1,0 +1,27 @@
+# revenge-restart.vrs: revenge D21's restart, first half (Session 1, after revenge-vblood.vrs and the 240 s purge
+# cooldown). On rv-test0, Chaos gathers heat 6 at the camp mark ${CAMP} (prefab ${BANDIT}), the revenge starts at the pond
+# and runs into tier 2; then the client closes and the server restarts (outside the scenario). revenge-boot2.vrs checks
+# the boot. Run: --var CAMP=<mark> --var BANDIT=<guid>
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo ${CAMP}
+expect-log \[DEV TP\] ${CAMP}
+wait 4
+mark
+chat .devkill ${BANDIT} 60 6
+expect-log \[DEV KILL\] n=6
+expect-log revenge rv-test0 due timeout=10
+chat .devgo pond
+expect-log \[DEV TP\] pond
+expect-log event rv-test0 started by Revenge timeout=15
+expect-log spawned CHAR_Bandit_Thug for rv-test0 timeout=30
+wait 4
+chat .devkill -301730941 40
+expect-log event rv-test0 wave 1 cleared timeout=20
+expect-log spawned CHAR_Bandit_Hunter for rv-test0 timeout=40
+wait 5
+chat .nyar status
+expect-reply tracked units: 3
