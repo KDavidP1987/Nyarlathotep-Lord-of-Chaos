@@ -18,7 +18,7 @@ public partial class TriggerActivationTests
         var starts = 0;
         foreach (var seen in new[] { Now, Now.AddSeconds(4.9) })
         {
-            if (!DeathRule.IsVBloodKill(hasConsumeSource: true, hasVBloodUnit: true) || !dedupe.ShouldFire("boss-entity-42", seen)) continue;
+            if (!DeathRule.IsVBloodKill(hasConsumeSource: true, hasVBloodUnit: true, isPlayer: false) || !dedupe.ShouldFire("boss-entity-42", seen)) continue;
             foreach (var d in TriggerRouter.VBloodKilled(catalog.Current, "CHAR_Bandit_Tourok_VBlood"))
                 if (engine.Start(d.Id, "vbloodkilled", seen, controls) is null) starts++;
         }

@@ -579,5 +579,5 @@ public sealed record SweepPlan(IReadOnlyList<long> Despawn, IReadOnlyList<long> 
 /// player's death raises nothing either, or every "any" trigger would fire on it.</summary>
 public static class DeathRule
 {
-    public static bool IsVBloodKill(bool hasConsumeSource, bool hasVBloodUnit, bool isPlayer = false) => hasConsumeSource && !isPlayer;
+    public static bool IsVBloodKill(bool hasConsumeSource, bool hasVBloodUnit, bool isPlayer) => hasConsumeSource && !isPlayer;
 }

@@ -11,7 +11,7 @@ public class DeathRuleTests
     [InlineData(false, true, false)]       // a gate boss: VBloodUnit alone
     [InlineData(false, false, false)]
     public void Only_a_consume_source_makes_a_V_Blood_kill(bool consume, bool vbloodUnit, bool expected) =>
-        Assert.Equal(expected, DeathRule.IsVBloodKill(consume, vbloodUnit));
+        Assert.Equal(expected, DeathRule.IsVBloodKill(consume, vbloodUnit, isPlayer: false));
 
     /// <summary>A player character carries VBloodConsumeSource as well; its death is never a V Blood kill, so an "any"
     /// VBloodKilled trigger never fires on a player's death.</summary>
