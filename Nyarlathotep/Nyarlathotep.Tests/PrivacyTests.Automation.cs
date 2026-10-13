@@ -94,7 +94,7 @@ public partial class PrivacyTests
     [Fact]
     public void Automation_fails_when_state_gains_a_per_player_field()
     {
-        Assert.Equal(["DailyBanner", "Instances", "LastFired", "LastStart", "NextInterval", "PurgeUntilUtc", "SchemaVersion", "Units"],
+        Assert.Equal(["Apocalypse", "DailyBanner", "Instances", "LastFired", "LastStart", "NextInterval", "PurgeUntilUtc", "SchemaVersion", "Units"],
             typeof(StateDocument).GetProperties().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal));
         var doc = new StateDocument { NextInterval = new() { ["tick"] = Now.AddMinutes(30) } };
         doc.LastStart["border"] = Now;

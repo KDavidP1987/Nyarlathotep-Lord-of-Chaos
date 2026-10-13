@@ -92,7 +92,7 @@ public partial class PrivacyTests
     [Fact]
     public void Swarm_fails_when_state_gains_a_property()
     {
-        Assert.Equal(["DailyBanner", "Instances", "LastFired", "LastStart", "NextInterval", "PurgeUntilUtc", "SchemaVersion", "Units"],
+        Assert.Equal(["Apocalypse", "DailyBanner", "Instances", "LastFired", "LastStart", "NextInterval", "PurgeUntilUtc", "SchemaVersion", "Units"],
             typeof(StateDocument).GetProperties().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal));
         var text = Encoding.UTF8.GetString(new StateDocument().Serialize());
         Assert.All(SwarmMarks, m => Assert.DoesNotContain(m, text, StringComparison.Ordinal));

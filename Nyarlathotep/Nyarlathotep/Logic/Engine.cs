@@ -8,16 +8,35 @@ namespace Nyarlathotep.Logic;
 // (waves due, faults, end, the despawn after the grace). Services/EventRuntime, TriggerBus and WaveAction drive it
 // on the server main thread, so there are no locks.
 
-/// <summary>Which action a definition runs (faction-empowerment D9). None only for a definition validation disabled.</summary>
-public enum EventActionKind { None, Waves, Empower }
+/// <summary>Which action a definition runs (faction-empowerment D9, apocalypse D1). None only for a definition validation
+/// disabled.</summary>
+public enum EventActionKind { None, Waves, Empower, Apocalypse }
 
 public static class EventActions
 {
-    /// <summary>Waves for a SpawnWaves action, Empower for an Empower action. EventRuntime dispatches on it.</summary>
+    /// <summary>Waves for a SpawnWaves action, Empower for an Empower action, Apocalypse for an Apocalypse action.
+    /// EventRuntime dispatches on it.</summary>
     public static EventActionKind ActionKindOf(EventDefinition def) =>
         def.Empower is not null ? EventActionKind.Empower
         : def.Action is not null ? EventActionKind.Waves
+        : def.Apocalypse is not null ? EventActionKind.Apocalypse
         : EventActionKind.None;
+
+    /// <summary>True for the kinds whose units outlive the end by the grace: Waves and Apocalypse (apocalypse D8, D9).</summary>
+    public static bool HasUnits(EventDefinition def) => ActionKindOf(def) is EventActionKind.Waves or EventActionKind.Apocalypse;
+
+    /// <summary>"an apocalypse is already running: &lt;id&gt;" (apocalypse D14).</summary>
+    public static string ApocalypseRunning(string id) => $"an apocalypse is already running: {id}";
+
+    /// <summary>One apocalypse at a time (apocalypse D14; Review 3 F1): the reason <paramref name="def"/> may not start while
+    /// <paramref name="active"/> run or <paramref name="resumePending"/> holds the slot for a resume, or null.</summary>
+    public static string? ApocalypseClash(EventDefinition def, IEnumerable<ActiveEvent> active, string? resumePending)
+    {
+        if (def.Apocalypse is null) return null;
+        if (resumePending is not null) return ApocalypseRunning(resumePending);
+        var running = active.Where(a => a.Definition.Apocalypse is not null).Select(a => a.Id).OrderBy(i => i, StringComparer.Ordinal).FirstOrDefault();
+        return running is null ? null : ApocalypseRunning(running);
+    }
 
     /// <summary>One empowerment per faction (faction-empowerment D6, Business rules 3): the reason
     /// <paramref name="def"/> may not start while <paramref name="active"/> run, or null. The first shared faction is
@@ -345,23 +364,33 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
     public ActiveEvent? Find(string id) => _active.TryGetValue(id, out var a) ? a : null;
     public DateTime? LastStartUtc(string id) => Starts.TryGetValue(id, out var t) ? t : null;
 
+    /// <summary>The apocalypse a boot record will resume, from the boot until it is rebuilt or refused (apocalypse D12,
+    /// Review 3 F1): it holds the one-apocalypse slot (D14) and its definition's single instance, so a trigger firing during
+    /// the drain wait starts no second run. Null when no resume is pending.</summary>
+    public string? ResumePending { get; set; }
+
     /// <summary>Starts the current definition <paramref name="id"/>. The reply on refusal, highest first: "unknown event",
-    /// "already active", the controls of <see cref="Precedence.StartBlocker"/>, one empowerment per faction
-    /// (<see cref="EventActions.EmpowerClash"/>), the Admin-location checks, then the trigger scope (regions D4, A18):
-    /// a start carrying <paramref name="kill"/> (only the VBloodKilled route passes one) needs the kill in a named
-    /// region, every other start needs an online player in one.</summary>
+    /// "already active" (a pending resume of <paramref name="id"/> included), the controls of
+    /// <see cref="Precedence.StartBlocker"/>, one empowerment per faction (<see cref="EventActions.EmpowerClash"/>), one
+    /// apocalypse at a time (<see cref="EventActions.ApocalypseClash"/>), the Admin-location checks (an Admin goal's
+    /// included), then the trigger scope (regions D4, A18): a start carrying <paramref name="kill"/> (only the VBloodKilled
+    /// route passes one) needs the kill in a named region, every other start needs an online player in one.</summary>
     public Outcome? Start(string id, string trigger, DateTime utcNow, ControlState controls, (float X, float Y, float Z)? origin = null,
         (float X, float Z)? kill = null, string? focus = null)
     {
         var def = catalog.Current.Find(id);
         if (def is null) return AdminLines.UnknownEvent(id);
-        if (_active.ContainsKey(id)) return AdminLines.AlreadyActive(id);
+        if (_active.ContainsKey(id) || ResumePending == id) return AdminLines.AlreadyActive(id);
         var blocker = Precedence.StartBlocker(def, controls);
         if (blocker is not null) return blocker;
         var clash = EventActions.EmpowerClash(def, _active.Values);
         if (clash is not null) return Outcome.Refused(clash, RefusalCode.State, "id", reason: Reasons.EmpowerClash);
+        var apocalypse = EventActions.ApocalypseClash(def, _active.Values, ResumePending);
+        if (apocalypse is not null) return Outcome.Refused(apocalypse, RefusalCode.State, "id", reason: Reasons.AlreadyActive);
         if (def.Action?.Location.Type == LocationType.Admin && origin is null)
             return Outcome.Refused($"event {id} spawns at the admin: start it with .nyar event start", RefusalCode.BadArg, "location", reason: Reasons.AdminLocation);
+        if (def.Apocalypse?.Goal.Location.Type == LocationType.Admin && origin is null)
+            return Outcome.Refused($"event {id} marches on the admin: start it with .nyar event start", RefusalCode.BadArg, "location", reason: Reasons.AdminLocation);
         var outside = ScopeGate.AdminOutside(def, origin, controls);
         if (outside is not null) return outside;
         var gate = ScopeGate.TriggerBlocker(def, controls, kill);
@@ -449,19 +478,47 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
     }
 
     /// <summary>Removes the events whose end has come and schedules their units' despawn after the grace
-    /// (Business rules 2). Only a Waves event has units, so only it gets a cleanup: an Empower event has no ending phase
-    /// (faction-empowerment D9).</summary>
+    /// (Business rules 2). Only a Waves or Apocalypse event has units, so only it gets a cleanup: an Empower event has no
+    /// ending phase (faction-empowerment D9). An apocalypse that ends here has survived (apocalypse D8).</summary>
     public IReadOnlyList<ActiveEvent> Expire(DateTime utcNow, int graceSeconds)
     {
         var ended = _active.Values.Where(a => a.Instance.EndsUtc <= utcNow).ToList();
         foreach (var a in ended)
         {
             Remove(a.Id);
-            if (EventActions.ActionKindOf(a.Definition) == EventActionKind.Waves)
+            if (EventActions.HasUnits(a.Definition))
                 _cleanups.Add(new Cleanup(a.Id, DateTime.MaxValue, a.Instance.EndsUtc.AddSeconds(graceSeconds)));
             Push?.EventEnded(a.Id, ApiLines.Region(a.Definition));
         }
         return ended;
+    }
+
+    /// <summary>Resumes the apocalypse <paramref name="id"/> from its record after a restart (apocalypse D12): the running
+    /// instance keeps the record's <paramref name="startedUtc"/> and <paramref name="endsUtc"/> (the clock ran while the
+    /// server was down) and its resolved goal as <paramref name="goal"/>, never re-read from a player. It clears
+    /// <see cref="ResumePending"/>; no start push is sent, since the run never ended. Null on success, else the refusal.</summary>
+    public Outcome? Resume(string id, DateTime startedUtc, DateTime endsUtc, (float X, float Y, float Z) goal)
+    {
+        if (ResumePending == id) ResumePending = null;
+        var def = catalog.Current.Find(id);
+        if (def?.Apocalypse is null) return AdminLines.UnknownEvent(id);
+        if (_active.ContainsKey(id)) return AdminLines.AlreadyActive(id);
+        var error = catalog.TryStart(id, startedUtc, out var instance);
+        if (error is not null) return error;
+        _active[id] = new ActiveEvent(instance! with { EndsUtc = endsUtc }, "resume", goal);
+        Starts[id] = startedUtc;
+        return null;
+    }
+
+    /// <summary>An apocalypse won or lost (apocalypse D8): ends <paramref name="id"/> now, as a natural end, with the grace
+    /// cleanup of its units and one `event-end` push. Null when it is not active.</summary>
+    public ActiveEvent? Complete(string id, DateTime utcNow, int graceSeconds)
+    {
+        if (!_active.TryGetValue(id, out var a)) return null;
+        Remove(id);
+        _cleanups.Add(new Cleanup(id, DateTime.MaxValue, utcNow.AddSeconds(graceSeconds)));
+        Push?.EventEnded(id, ApiLines.Region(a.Definition));
+        return a;
     }
 
     /// <summary>All waves defeated (wave-sets D7; design §9 D41): ends now, as a natural end, every waveList event that

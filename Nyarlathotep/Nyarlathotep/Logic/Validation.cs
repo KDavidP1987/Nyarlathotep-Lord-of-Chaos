@@ -182,12 +182,17 @@ public static class EventValidator
             var pillar = ParsePillar(Required(e, "pillar", "pillar is required"));
             var trigger = ParseTrigger(Required(e, "trigger", "trigger is required"), units, factions, regions);
             var conditions = e.TryGetProperty("conditions", out var c) ? ParseConditions(c) : new Conditions();
-            var duration = Int(Required(e, "durationSeconds", "durationSeconds must be 30-7200"), 30, 7200, "durationSeconds must be 30-7200");
-            var (action, empower) = ParseAction(Required(e, "action", "action is required"), pillar, trigger, units, factions, regions);
+            // apocalypse D1: an Apocalypse runs 600-604800 s, every other kind keeps 30-7200 s.
+            var (minDuration, maxDuration, durationRule) = IsApocalypse(e)
+                ? (ApocalypseLimits.MinDurationSeconds, ApocalypseLimits.MaxDurationSeconds, ApocalypseDurationRule)
+                : (ApocalypseLimits.OtherMinDurationSeconds, ApocalypseLimits.OtherMaxDurationSeconds, DurationRule);
+            var duration = Int(Required(e, "durationSeconds", durationRule), minDuration, maxDuration, durationRule);
+            var (action, empower, apocalypse) = ParseAction(Required(e, "action", "action is required"), pillar, trigger, units, factions, regions,
+                duration);
             RevengeAction(trigger, action);                              // revenge D2
             var announce = e.TryGetProperty("announce", out var a) ? ParseAnnounce(a) : Announce.None;
             return new EventDefinition(id, name.GetString()!, enabledEl.GetBoolean(), pillar, trigger, conditions, duration, action, announce,
-                Empower: empower);
+                Empower: empower, Apocalypse: apocalypse);
         }
         catch (Fail f)
         {
@@ -506,11 +511,12 @@ public static class EventValidator
         return r;
     }
 
-    /// <summary>The action by its type, exactly one of the pair set. The pairing rule (faction-empowerment D2) is checked
+    /// <summary>The action by its type, exactly one of the three set. The pairing rule (faction-empowerment D2) is checked
     /// on the type, before the action's own fields: pillar empowerment takes an Empower action and an Empower action
-    /// needs pillar empowerment.</summary>
-    static (SpawnWavesAction? Waves, EmpowerAction? Empower) ParseAction(JsonElement a, Pillar pillar, Trigger trigger,
-        IUnitCatalog units, IFactionCatalog factions, IRegionCatalog regions)
+    /// needs pillar empowerment; an Apocalypse runs under the Spawns pillar switch (apocalypse S-6), so it needs pillar
+    /// spawns.</summary>
+    static (SpawnWavesAction? Waves, EmpowerAction? Empower, ApocalypseAction? Apocalypse) ParseAction(JsonElement a, Pillar pillar,
+        Trigger trigger, IUnitCatalog units, IFactionCatalog factions, IRegionCatalog regions, int durationSeconds)
     {
         if (a.ValueKind != JsonValueKind.Object) throw new Fail("action must be an object with a type");
         var type = a.TryGetProperty("type", out var ty) && ty.ValueKind == JsonValueKind.String ? ty.GetString()! : "";
@@ -518,13 +524,150 @@ public static class EventValidator
         {
             case "SpawnWaves":
                 if (pillar == Pillar.Empowerment) throw new Fail("pillar empowerment takes an Empower action");
-                return (ParseSpawnWaves(a, trigger, units, regions), null);
+                return (ParseSpawnWaves(a, trigger, units, regions), null, null);
             case "Empower":
                 if (pillar != Pillar.Empowerment) throw new Fail("action Empower needs pillar empowerment");
-                return (null, ParseEmpower(a, units, factions, regions));
+                return (null, ParseEmpower(a, units, factions, regions), null);
+            case ApocalypseType:
+                if (pillar != Pillar.Spawns) throw new Fail(ApocalypsePillar);
+                return (null, null, ParseApocalypse(a, trigger, units, factions, regions, durationSeconds));
             default:
                 throw new Fail($"unknown action type{Shown(type)}");
         }
+    }
+
+    // ---------------------------------------------------------------- Apocalypse (apocalypse D1)
+
+    public const string ApocalypseType = "Apocalypse";
+    public const string DurationRule = "durationSeconds must be 30-7200";
+    public const string ApocalypseDurationRule = "durationSeconds must be 600-604800 for an Apocalypse";
+    public const string ApocalypsePillar = "action Apocalypse needs pillar spawns";
+    public const string ApocalypseFactionRule = "action.faction must be a Faction_ name";
+    public const string ApocalypseUnitsRule = "action.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-50 }";
+    public const string HotspotsObject = "action.hotspots must be an object { count, minNatives, minSpacing }";
+    public const string HotspotsCountRule = "action.hotspots.count must be 1-5";
+    public const string MinNativesRule = "action.hotspots.minNatives must be 3-50";
+    public const string MinSpacingRule = "action.hotspots.minSpacing must be 100-3000";
+    public const string RoamersObject = "action.roamers must be an object { perHotspot, perKill, max, perMinute, huntRange }";
+    public const string PerHotspotRule = "action.roamers.perHotspot must be 1-10";
+    public const string PerKillRule = "action.roamers.perKill must be 0-2";
+    public const string RoamersMaxRule = "action.roamers.max must be 1-100";
+    public const string PerMinuteRule = "action.roamers.perMinute must be 1-30";
+    public const string RoamersHuntRangeRule = "action.roamers.huntRange must be 20-60";
+    public const string HordesObject = "action.hordes must be an object { count, firstAfterMinutes, everyMinutes, size, growth }";
+    public const string HordesCountRule = "action.hordes.count must be 1-10";
+    public const string FirstAfterRule = "action.hordes.firstAfterMinutes must be 0-1440";
+    public const string EveryMinutesRule = "action.hordes.everyMinutes must be 5-1440";
+    public const string HordeSizeRule = "action.hordes.size must be 5-50";
+    public const string HordeGrowthRule = "action.hordes.growth must be 0-20";
+    public const string LastHordeLate = "action.hordes: last horde rises at or after the duration";
+    public const string GoalObject = "action.goal must be an object { location, radius, name }";
+    public const string GoalLocationRule = "action.goal.location must be { \"type\": \"Point\", \"x\", \"z\", optional \"y\" } or { \"type\": \"Admin\" }";
+    public const string GoalAdminManual = "action.goal.location Admin needs a Manual trigger";
+    public const string GoalRadiusRule = "action.goal.radius must be 10-100";
+    public const string GoalNameRule = "action.goal.name must be 1-32 characters, no angle brackets or control characters";
+    public const string MarchSpeedRule = "action.marchSpeed must be a number 0.5-5.0";
+
+    /// <summary>Every reason apocalypse D1 adds, for the 120-byte check (the unknown-field, unit, faction, scope, modifier
+    /// and bosses reasons are the existing builders').</summary>
+    public static readonly IReadOnlyList<string> ApocalypseReasons =
+    [
+        ApocalypseDurationRule, ApocalypsePillar, ApocalypseFactionRule, ApocalypseUnitsRule, HotspotsObject, HotspotsCountRule,
+        MinNativesRule, MinSpacingRule, RoamersObject, PerHotspotRule, PerKillRule, RoamersMaxRule, PerMinuteRule, RoamersHuntRangeRule,
+        HordesObject, HordesCountRule, FirstAfterRule, EveryMinutesRule, HordeSizeRule, HordeGrowthRule, LastHordeLate, GoalObject,
+        GoalLocationRule, GoalAdminManual, GoalRadiusRule, GoalNameRule, MarchSpeedRule, GoalCoordRule("x"),
+    ];
+
+    public static string GoalCoordRule(string axis) => $"action.goal.location.{axis} must be a number within -10000..10000";
+
+    /// <summary>True when the event's action names the Apocalypse type, read before the duration so its bound applies.</summary>
+    static bool IsApocalypse(JsonElement e) =>
+        e.TryGetProperty("action", out var a) && a.ValueKind == JsonValueKind.Object && a.TryGetProperty("type", out var t)
+        && t.ValueKind == JsonValueKind.String && t.GetString() == ApocalypseType;
+
+    /// <summary>`"type": "Apocalypse"` (apocalypse D1): every key in its range, an unknown key named with its path, an Admin
+    /// goal only with a Manual trigger, and no horde rising at or after the duration.</summary>
+    static ApocalypseAction ParseApocalypse(JsonElement a, Trigger trigger, IUnitCatalog units, IFactionCatalog factions,
+        IRegionCatalog regions, int durationSeconds)
+    {
+        OnlyKeys(a, "action", "type", "faction", "units", "hotspots", "roamers", "hordes", "goal", "marchSpeed", "bosses", "scope", "scoreboard");
+        var faction = Str(Required(a, "faction", ApocalypseFactionRule), ApocalypseFactionRule);
+        if (FactionDenyList.IsDenied(faction)) throw new Fail($"faction{Shown(faction)} is deny-listed");
+        if (!faction.StartsWith("Faction_", StringComparison.Ordinal)) throw new Fail(ApocalypseFactionRule);
+        if (!factions.IsKnown(faction)) throw new Fail($"unknown faction{Shown(faction)}");
+        var list = ParseEntries(Required(a, "units", ApocalypseUnitsRule), "action.units", ApocalypseUnitsRule, units, withModifiers: true);
+
+        var h = Obj(Required(a, "hotspots", HotspotsObject), HotspotsObject);
+        OnlyKeys(h, "action.hotspots", "count", "minNatives", "minSpacing");
+        var hotspots = new ApocalypseHotspots(
+            Int(Required(h, "count", HotspotsCountRule), ApocalypseLimits.MinHotspots, ApocalypseLimits.MaxHotspots, HotspotsCountRule),
+            Int(Required(h, "minNatives", MinNativesRule), ApocalypseLimits.MinNatives, ApocalypseLimits.MaxNatives, MinNativesRule),
+            Int(Required(h, "minSpacing", MinSpacingRule), ApocalypseLimits.MinSpacing, ApocalypseLimits.MaxSpacing, MinSpacingRule));
+
+        var r = Obj(Required(a, "roamers", RoamersObject), RoamersObject);
+        OnlyKeys(r, "action.roamers", "perHotspot", "perKill", "max", "perMinute", "huntRange");
+        var roamers = new ApocalypseRoamers(
+            Int(Required(r, "perHotspot", PerHotspotRule), ApocalypseLimits.MinPerHotspot, ApocalypseLimits.MaxPerHotspot, PerHotspotRule),
+            Int(Required(r, "perKill", PerKillRule), ApocalypseLimits.MinPerKill, ApocalypseLimits.MaxPerKill, PerKillRule),
+            Int(Required(r, "max", RoamersMaxRule), ApocalypseLimits.MinRoamers, ApocalypseLimits.MaxRoamers, RoamersMaxRule),
+            Int(Required(r, "perMinute", PerMinuteRule), ApocalypseLimits.MinPerMinute, ApocalypseLimits.MaxPerMinute, PerMinuteRule),
+            Int(Required(r, "huntRange", RoamersHuntRangeRule), ApocalypseLimits.MinHuntRange, ApocalypseLimits.MaxHuntRange, RoamersHuntRangeRule));
+
+        var o = Obj(Required(a, "hordes", HordesObject), HordesObject);
+        OnlyKeys(o, "action.hordes", "count", "firstAfterMinutes", "everyMinutes", "size", "growth");
+        var hordes = new ApocalypseHordes(
+            Int(Required(o, "count", HordesCountRule), ApocalypseLimits.MinHordes, ApocalypseLimits.MaxHordes, HordesCountRule),
+            Int(Required(o, "firstAfterMinutes", FirstAfterRule), ApocalypseLimits.MinFirstAfter, ApocalypseLimits.MaxFirstAfter, FirstAfterRule),
+            Int(Required(o, "everyMinutes", EveryMinutesRule), ApocalypseLimits.MinEvery, ApocalypseLimits.MaxEvery, EveryMinutesRule),
+            Int(Required(o, "size", HordeSizeRule), ApocalypseLimits.MinSize, ApocalypseLimits.MaxSize, HordeSizeRule),
+            Int(Required(o, "growth", HordeGrowthRule), ApocalypseLimits.MinGrowth, ApocalypseLimits.MaxGrowth, HordeGrowthRule));
+        if (HordeSchedule.LastRiseSeconds(hordes) >= durationSeconds) throw new Fail(LastHordeLate);
+
+        var goal = ParseGoal(Required(a, "goal", GoalObject), trigger);
+        var march = Number(Required(a, "marchSpeed", MarchSpeedRule), ApocalypseLimits.MinMarchSpeed, ApocalypseLimits.MaxMarchSpeed, MarchSpeedRule);
+        var bosses = a.TryGetProperty("bosses", out var bo) ? ParseBosses(bo, units, null) : null;
+        var scope = a.TryGetProperty("scope", out var sc) ? ParseScope(sc, "action.scope", regions) : Scope.Global;
+        var scoreboard = !a.TryGetProperty("scoreboard", out var sb) || Bool(sb, ScoreboardRule);      // absent = true (D1)
+        return new ApocalypseAction(faction, list, hotspots, roamers, hordes, goal, march, scope, scoreboard, bosses);
+    }
+
+    static JsonElement Obj(JsonElement v, string rule) => v.ValueKind == JsonValueKind.Object ? v : throw new Fail(rule);
+
+    /// <summary>`goal` (apocalypse D1, S-10): a Point (x, z, optional y) or Admin location, Admin only with a Manual trigger,
+    /// a radius of 10-100 m and a plain name of 1-32 characters.</summary>
+    static ApocalypseGoal ParseGoal(JsonElement g, Trigger trigger)
+    {
+        Obj(g, GoalObject);
+        OnlyKeys(g, "action.goal", "location", "radius", "name");
+        var l = Obj(Required(g, "location", GoalLocationRule), GoalLocationRule);
+        var type = l.TryGetProperty("type", out var ty) && ty.ValueKind == JsonValueKind.String ? ty.GetString() : null;
+        Location location;
+        switch (type)
+        {
+            case "Point":
+                OnlyKeys(l, "action.goal.location", "type", "x", "y", "z");
+                float? y = l.TryGetProperty("y", out var yv) ? GoalCoord(yv, "y") : null;
+                location = new Location(LocationType.Point, GoalCoord(Required(l, "x", GoalLocationRule), "x"), GoalCoord(Required(l, "z", GoalLocationRule), "z"), y);
+                break;
+            case "Admin":
+                OnlyKeys(l, "action.goal.location", "type");
+                if (trigger.Type != TriggerType.Manual) throw new Fail(GoalAdminManual);
+                location = new Location(LocationType.Admin, 0, 0);
+                break;
+            default:
+                throw new Fail(GoalLocationRule);
+        }
+        var radius = Int(Required(g, "radius", GoalRadiusRule), ApocalypseLimits.MinGoalRadius, ApocalypseLimits.MaxGoalRadius, GoalRadiusRule);
+        var name = Str(Required(g, "name", GoalNameRule), GoalNameRule);
+        if (!IsPlainText(name, ApocalypseLimits.MaxGoalName)) throw new Fail(GoalNameRule);
+        return new ApocalypseGoal(location, radius, name);
+    }
+
+    static float GoalCoord(JsonElement v, string axis)
+    {
+        var rule = GoalCoordRule(axis);
+        if (v.ValueKind != JsonValueKind.Number || !v.TryGetDouble(out var d) || double.IsNaN(d) || d < -10000 || d > 10000) throw new Fail(rule);
+        return (float)d;
     }
 
     public const int MaxFactions = 5;

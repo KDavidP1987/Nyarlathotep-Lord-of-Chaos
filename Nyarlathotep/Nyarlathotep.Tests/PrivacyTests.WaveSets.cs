@@ -82,7 +82,7 @@ public partial class PrivacyTests
     [Fact]
     public void WaveSets_fails_when_state_gains_a_property()
     {
-        Assert.Equal(["DailyBanner", "Instances", "LastFired", "LastStart", "NextInterval", "PurgeUntilUtc", "SchemaVersion", "Units"],
+        Assert.Equal(["Apocalypse", "DailyBanner", "Instances", "LastFired", "LastStart", "NextInterval", "PurgeUntilUtc", "SchemaVersion", "Units"],
             typeof(StateDocument).GetProperties().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal));
         Assert.DoesNotContain(typeof(StateDocument).GetProperties(), p => p.PropertyType == typeof(Scoreboard));
         var text = Encoding.UTF8.GetString(new StateDocument().Serialize());

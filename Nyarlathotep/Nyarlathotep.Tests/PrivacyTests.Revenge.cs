@@ -70,7 +70,7 @@ public partial class PrivacyTests
     [Fact]
     public void Revenge_fails_when_state_gains_a_property()
     {
-        Assert.Equal(["DailyBanner", "Instances", "LastFired", "LastStart", "NextInterval", "PurgeUntilUtc", "SchemaVersion", "Units"],
+        Assert.Equal(["Apocalypse", "DailyBanner", "Instances", "LastFired", "LastStart", "NextInterval", "PurgeUntilUtc", "SchemaVersion", "Units"],
             typeof(StateDocument).GetProperties().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal));
         // the heat has no state.json form: it is a Logic object with no serialisable property
         Assert.DoesNotContain(typeof(RevengeHeat).GetProperties(), p => p.CanWrite);

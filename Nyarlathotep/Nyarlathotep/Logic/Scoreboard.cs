@@ -20,7 +20,8 @@ public sealed record ScoreSummary(IReadOnlyList<ScoreRow> Top, int Players, int 
 /// <summary>
 /// The per-event scoreboard (wave-sets D8, D9; design §9 D38, D39). In memory only: rows end with the event (every end
 /// path calls <see cref="End"/>, a restart starts a new one) and nothing reaches state.json, a log line, a push or the
-/// wire (D12). A kill is an event unit killed by a player, the player's familiar or summon credited to the player (the
+/// wire (D12), but for an apocalypse's rows, whose platform ids and counts (no name) ride in its resume record
+/// (<see cref="Export"/>, <see cref="Restore"/>; apocalypse D10, D11). A kill is an event unit killed by a player, the player's familiar or summon credited to the player (the
 /// caller resolves the owner, as KillReader does); a death is a player killed by one of the event's units. An admin's
 /// credit is dropped, row and totals, unless <c>includeAdmins</c>. At most <see cref="Limits.ScoreboardPlayers"/> rows per
 /// event. Every caller runs on the server main thread.
@@ -45,8 +46,9 @@ public sealed class Scoreboard
         return false;
     }
 
-    /// <summary>The running instance keeps a scoreboard: its own definition's SpawnWaves action has `scoreboard: true`.</summary>
-    public static bool Counts(ActiveEvent a) => a.Definition.Action is { Scoreboard: true };
+    /// <summary>The running instance keeps a scoreboard: its own definition's SpawnWaves or Apocalypse action has
+    /// `scoreboard: true` (an Apocalypse's absent key is true, apocalypse D1, D10).</summary>
+    public static bool Counts(ActiveEvent a) => a.Definition.Action is { Scoreboard: true } || a.Definition.Apocalypse is { Scoreboard: true };
 
     /// <summary>A kill of one of <paramref name="eventId"/>'s units by <paramref name="player"/>.</summary>
     public void Kill(string eventId, Scorer player, bool includeAdmins) => Credit(eventId, player, includeAdmins, kill: true);
@@ -117,19 +119,63 @@ public sealed class Scoreboard
 
     /// <summary>Events with at least one credit.</summary>
     public int Events => _byEvent.Count;
+
+    /// <summary>The rows of <paramref name="eventId"/> as an apocalypse's record keeps them (apocalypse D10, D11; design §9
+    /// D45): platform id, kills, deaths and first credit, never a name; ordered by first credit.</summary>
+    public IReadOnlyList<ApocalypseScore> Export(string eventId) =>
+        _byEvent.TryGetValue(eventId, out var score)
+            ? score.Rows.OrderBy(kv => kv.Value.First).Select(kv => new ApocalypseScore(kv.Key, kv.Value.Kills, kv.Value.Deaths, kv.Value.First)).ToList()
+            : [];
+
+    /// <summary>The rows of a resumed apocalypse (apocalypse D12): each row back under its platform id with its counts and
+    /// first credit and no name (read at show time, <see cref="Names"/>); the totals are the rows' sums. At most
+    /// <see cref="Limits.ScoreboardPlayers"/> rows; a later first credit numbers after every restored one.</summary>
+    public void Restore(string eventId, IEnumerable<ApocalypseScore> rows)
+    {
+        var score = new EventScore();
+        foreach (var r in rows.OrderBy(r => r.First))
+        {
+            if (score.Rows.Count >= Limits.ScoreboardPlayers || string.IsNullOrEmpty(r.PlatformId) || score.Rows.ContainsKey(r.PlatformId)) continue;
+            var kills = Math.Max(0, r.Kills);
+            var deaths = Math.Max(0, r.Deaths);
+            score.Rows[r.PlatformId] = new ScoreRow("", kills, deaths, r.First);
+            score.Kills += kills;
+            score.Deaths += deaths;
+            _sequence = Math.Max(_sequence, r.First);
+        }
+        _byEvent[eventId] = score;
+    }
+
+    /// <summary>Fills the empty names of <paramref name="eventId"/>'s restored rows from <paramref name="nameOf"/> (platform
+    /// id → the character's name, null when unknown) at show time (design §9 D45); a row whose name stays unknown shows
+    /// "a vampire".</summary>
+    public void Names(string eventId, Func<string, string?> nameOf)
+    {
+        if (!_byEvent.TryGetValue(eventId, out var score)) return;
+        foreach (var (id, row) in score.Rows.Where(kv => kv.Value.Name.Length == 0).ToList())
+            score.Rows[id] = row with { Name = nameOf(id) is { Length: > 0 } n ? n : UnknownName };
+    }
+
+    /// <summary>The name a restored row shows when the game no longer knows its player.</summary>
+    public const string UnknownName = "a vampire";
 }
 
+/// <summary>One scoreboard row in an apocalypse's record (apocalypse D11, D19; design §9 D45): the platform id it is
+/// counted under, kills, deaths and the order of the first credit; no name and no position.</summary>
+public sealed record ApocalypseScore(string PlatformId, int Kills, int Deaths, long First);
+
 /// <summary>How a running instance ended (wave-sets D11): its natural end at its duration, all waves defeated, an admin's
-/// `.nyar event stop`, the purge, a restart, its pillar switched off, or the fault limit.</summary>
-public enum EndPath { Natural, Victory, Stop, Purge, Restart, PillarOff, Fault }
+/// `.nyar event stop`, the purge, a restart, its pillar switched off, the fault limit, or an apocalypse's goal fallen
+/// (<see cref="Defeat"/>, apocalypse D8: lost). An apocalypse's won is Victory and its survived Natural.</summary>
+public enum EndPath { Natural, Victory, Stop, Purge, Restart, PillarOff, Fault, Defeat }
 
 /// <summary>When the scoreboard is shown (wave-sets D11; design §9 D41, S-6, S-7): at the natural end, all waves
-/// defeated and an admin stop of an event with `scoreboard: true`, whatever EventBanners says; never at a purge, a
-/// restart, a pillar switched off or a fault cancel.</summary>
+/// defeated and an admin stop of an event with `scoreboard: true`, whatever EventBanners says, and an apocalypse's lost
+/// (apocalypse D10); never at a purge, a restart, a pillar switched off or a fault cancel.</summary>
 public static class ScoreboardRule
 {
     public static bool Shows(EndPath path, ActiveEvent ended) =>
-        Scoreboard.Counts(ended) && path is EndPath.Natural or EndPath.Victory or EndPath.Stop;
+        Scoreboard.Counts(ended) && path is EndPath.Natural or EndPath.Victory or EndPath.Stop or EndPath.Defeat;
 
     /// <summary>The end of <paramref name="ended"/> by <paramref name="path"/> (D11): its rows end on every path; when
     /// <see cref="Shows"/>, the chat lines to queue as Info lines and the log line, else none. The winner rule is the
