@@ -54,7 +54,9 @@
     swarm (D20): pair-arena, pair-winner and pair-growth ("unknown field action.arena", "action.winner", "action.growth":
     pass), pair-otherkey still failing; three for hunting-grounds (D29): pair-regionlock ("unknown field
     action.regionLock"), pair-regionhunt ("unknown behaviour type RegionHunt") and pair-regionlocation (0.10.0's
-    three-type location rule, for a Region location): pass, pair-colourkey still failing → "drill selftest: 26/26".
+    three-type location rule, for a Region location): pass, pair-colourkey still failing; three for revenge (D24):
+    pair-revenge ("unknown trigger type Revenge") and pair-bosses ("unknown field action.bosses"): pass, and
+    pair-othertrigger2 ("unknown trigger type Swarmz", a type no release has): fail → "drill selftest: 29/29".
 
     -LogsTo <dir> keeps the logs of N's drill-mark boot and N-1's boot there as N.txt and N-1.txt.
 #>
@@ -111,10 +113,10 @@ function Get-DisabledLines([string]$Text) {
 # Point gets the same text from 0.6.0 but is disabled by N too, so it is never an extra (Codex step 4 F2). Hunting-grounds
 # (D29) adds regionLock, the RegionHunt behaviour type (0.10.0: "unknown behaviour type RegionHunt") and 0.10.0's
 # three-type location rule, its refusal of a Region location.
-$script:NewerKeyReasons = '^(unknown field action\.(modifiers|loot|behaviour|allowTerritory|units\.chance|fanOut|waveList|scoreboard|arena|winner|growth|regionLock)|unknown behaviour type RegionHunt|action\.location must be \{ "type": "Point", "x": number, "z": number, optional "y": number \} or \{ "type": "Admin" \}|action\.location must be \{ "type": "Point", "x": number, "z": number, optional "y": number \}, \{ "type": "Admin" \} or \{ "type": "AroundPlayer", "minDist": 10-60, "maxDist": 15-80 \})$'
+$script:NewerKeyReasons = '^(unknown field action\.(modifiers|loot|behaviour|allowTerritory|units\.chance|fanOut|waveList|scoreboard|arena|winner|growth|regionLock|bosses)|unknown behaviour type RegionHunt|action\.location must be \{ "type": "Point", "x": number, "z": number, optional "y": number \} or \{ "type": "Admin" \}|action\.location must be \{ "type": "Point", "x": number, "z": number, optional "y": number \}, \{ "type": "Admin" \} or \{ "type": "AroundPlayer", "minDist": 10-60, "maxDist": 15-80 \})$'
 
 # The trigger types automation added (D23): 0.7.0 refuses each with "unknown trigger type <T>".
-$script:NewerTriggerReasons = '^unknown trigger type (Interval|RegionEntered|FactionKills)$'
+$script:NewerTriggerReasons = '^unknown trigger type (Interval|RegionEntered|FactionKills|Revenge)$'
 
 function Test-EventsReadback([string]$LogN, [string]$LogN1, [string]$TagN, [string]$TagN1) {
     $rx = 'events: reloaded: (\d+) valid, (\d+) disabled'
@@ -196,7 +198,8 @@ if ($SelfTest) {
         @{ Name = 'pair-interval'; Pass = $true }, @{ Name = 'pair-fanout'; Pass = $true }, @{ Name = 'pair-othertrigger'; Pass = $false },
         @{ Name = 'pair-wavelist'; Pass = $true }, @{ Name = 'pair-scoreboard'; Pass = $true }, @{ Name = 'pair-colourkey'; Pass = $false },
         @{ Name = 'pair-arena'; Pass = $true }, @{ Name = 'pair-winner'; Pass = $true }, @{ Name = 'pair-growth'; Pass = $true },
-        @{ Name = 'pair-regionlock'; Pass = $true }, @{ Name = 'pair-regionhunt'; Pass = $true }, @{ Name = 'pair-regionlocation'; Pass = $true })
+        @{ Name = 'pair-regionlock'; Pass = $true }, @{ Name = 'pair-regionhunt'; Pass = $true }, @{ Name = 'pair-regionlocation'; Pass = $true },
+        @{ Name = 'pair-revenge'; Pass = $true }, @{ Name = 'pair-bosses'; Pass = $true }, @{ Name = 'pair-othertrigger2'; Pass = $false })
     foreach ($pair in $pairs) {
         $pn = Join-Path $fx "$($pair.Name)\N.txt"; $pn1 = Join-Path $fx "$($pair.Name)\N-1.txt"
         $r = if ((Test-Path -LiteralPath $pn) -and (Test-Path -LiteralPath $pn1)) {

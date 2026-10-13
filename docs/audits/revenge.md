@@ -14,9 +14,16 @@
 - preflight: PREFLIGHT OK, "secrets: none (1972 files scanned, 1922 index blobs)"
 - dod status: 17/32 verified (D1-D9, D11-D13, D15, D17, D28-D30); D31 waits on TemplateLibraryTests.Bosses
 - feature doc read: docs/features/REVENGE.md (Status: step 1 built; open questions: idle squads when the focus leaves Hunt range, scaling and replacements after Halloween)
-- baseline boot: the 8a43069 Release DLL on the dev server inside snapshot rv1 (`dev-snapshot.ps1 -Save rv1`, 33 files); logs copied to %TEMP%
-yar-rv1-logs first; "events: reloaded: 12 valid, 1 disabled" (example-empowerment, the known one), "templates: 12/12 valid", "triggers: all hooks available"; -LogCheck PREFLIGHT OK
+- baseline boot: the 8a43069 Release DLL on the dev server inside snapshot rv1 (`dev-snapshot.ps1 -Save rv1`, 33 files); logs copied to %TEMP%\nyar-rv1-logs first; "events: reloaded: 12 valid, 1 disabled" (example-empowerment, the known one), "templates: 12/12 valid", "triggers: all hooks available"; -LogCheck PREFLIGHT OK
 - timing baseline (Review 3 F2): hunting-grounds-timing.vrs on the 8a43069 DLL (hg-timing, 24 tracked spiders for 25 min) SCENARIO PASS 12/12; `preflight -TimingSpan <log copy> -Windows 10 -MinTracked 10` → "timing span: 10/10 windows under 5 ms, tracked >= 10, targets >= 1, 0 slow ticks" (window averages 0.27-3.75 ms). Runs 1 and 2 stopped at "the HUD never appeared": Chaos lay dead at the pond from the owner's test; respawned at the coffin, run 3 passed
+
+### Step 3 · 2026-10-13 · 12ee095
+- git status: clean at 12ee095 (Session 1 and the step 2 post-audit committed)
+- compile: 0 Warning(s), 0 Error(s); tests 3132/3132
+- preflight: PREFLIGHT OK, "secrets: none (1987 files scanned, 1931 index blobs)", "release tags: 13/13", wire api 7
+- dod status: 22/32 verified; D18-D21, D32 manual (owner acceptance), D22 the owner's second-player session, D24-D27 this step
+- feature doc read: docs/features/REVENGE.md (Status: Session 1 passed; open questions: idle squads beyond Hunt range, scaling and replacements after Halloween)
+- in-game baseline: none needed for a release step beyond the rollback gate's own boots; the dev server is stopped, snapshot rv1 restored
 
 ## Post-audit
 ### Step 1 · 2026-10-13 · revenge half: 1c9127c (builder subagent, on 0aacdba)

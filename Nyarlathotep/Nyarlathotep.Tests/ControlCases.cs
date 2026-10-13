@@ -40,8 +40,7 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        new(Revenge, "D23", 2, "0.12.0"),
-        new(Revenge, "D24", 3, "0.12.0"), new(Revenge, "D25", 3, "0.12.0"), new(Revenge, "D26", 3, "0.12.0"), new(Revenge, "D27", 3, "0.12.0"),
+        new(Revenge, "D25", 3, "0.12.0"), new(Revenge, "D26", 3, "0.12.0"), new(Revenge, "D27", 3, "0.12.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -720,5 +719,13 @@ public static class ControlCases
             ["selftest DependencySuite/empty"]) with { Plan = Revenge },
         T("D31", "Bosses", "TemplateLibraryTests", ["a_template_loses_its_boss"], ["the_spider_templates_end_on_ungoro"], ["none_in_an_empty_catalogue"])
             with { Plan = Revenge },
+        C("D23", "TimingSpan", "preflight -TimingSpan -Windows 10 -MinTracked 10 › Test-CheckTimingSpan",
+            ["tools/preflight-fixtures/TimingSpan/bad-avg", "tools/preflight-fixtures/TimingSpan/bad-slow", "tools/preflight-fixtures/TimingSpan/bad-tracked",
+             "tools/preflight-fixtures/TimingSpan/bad-notarget"],
+            ["tools/preflight-fixtures/TimingSpan/good"], ["tools/preflight-fixtures/TimingSpan/empty"]) with { Plan = Revenge },
+        C("D24", "RollbackDrill", "rollback-drill.ps1 -SelfTest (pairs and fixtures under tools/rollback-drill-fixtures)",
+            ["tools/rollback-drill-fixtures/pair-othertrigger2", "tools/rollback-drill-fixtures/pair-otherkey"],
+            ["tools/rollback-drill-fixtures/pair-revenge", "tools/rollback-drill-fixtures/pair-bosses"],
+            ["tools/rollback-drill-fixtures/empty"]) with { Plan = Revenge },
     ];
 }
