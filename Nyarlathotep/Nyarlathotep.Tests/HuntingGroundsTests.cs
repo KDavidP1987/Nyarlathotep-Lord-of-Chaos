@@ -383,6 +383,41 @@ public class HuntingGroundsTests
     }
 
     [Fact]
+    public void Lock_fails_when_a_return_lands_in_a_castle()
+    {
+        // A6: a castle (claimed territory) inside the region at x 0-30; the unit walks from x 60 through it and out
+        var a = Running(Def("hg"));
+        for (var seed = 0; seed < 50; seed++)
+        {
+            var copy = new World { Claimed = (x, _) => x >= 0 && x <= 30 };
+            copy.Add(1, 60, 500, spawn: (300, 20, 300));
+            var p = new LockPhase();
+            p.Run(a, copy, Doubles(seed), _ => { }, _ => { });                       // inside, unclaimed: recorded at 60
+            copy.Move(1, 10, 500);                                                    // walks into the castle: allowed, not recorded
+            p.Run(a, copy, Doubles(seed), _ => { }, _ => { });
+            copy.Move(1, -20, 500);                                                   // strays 20 m out of the region
+            var r = Assert.Single(p.Run(a, copy, Doubles(seed), _ => { }, _ => { })!.Returns);
+            Assert.False(copy.Claimed(r.X, r.Z), $"seed {seed}: returned into the castle at {r.X}");
+            Assert.True(HuntingGrounds.Distance(r.X, r.Z, 60, 500) <= HuntingGrounds.Slack + 0.001f);   // near its last unclaimed spot
+        }
+        bool InsideFree(float x, float z) => HuntingGrounds.Inside(HomeScope, MapOf, x, z) && !(x >= 0 && x <= 30);
+        var near = new InsideSpot(35, 20, 500, 10);                                   // beside the castle wall
+        for (var seed = 0; seed < 100; seed++)
+        {
+            var (x, _, _) = LockRule.ReturnSpot(near, InsideFree, (_, _, _) => true, new WalkBudget(), Doubles(seed));
+            Assert.True(x > 30, $"seed {seed}: {x}");
+        }
+        var open = Running(Def("hg") with { Action = Def("hg").Action! with { AllowTerritory = true } });   // the admin allowed territory
+        var free = new World { Claimed = (_, _) => true };                            // no map: every point would count as claimed
+        free.Add(1, 60, 500, spawn: (300, 20, 300));
+        var lp = new LockPhase();
+        lp.Run(open, free, Doubles(1), _ => { }, _ => { });
+        free.Move(1, -20, 500);
+        var back = Assert.Single(lp.Run(open, free, Doubles(1), _ => { }, _ => { })!.Returns);
+        Assert.True(HuntingGrounds.Distance(back.X, back.Z, 60, 500) <= HuntingGrounds.Slack + 0.001f);   // its last spot, not the spawn point
+    }
+
+    [Fact]
     public void Lock_fails_when_an_entry_outside_is_kept()
     {
         var a = Running(Def("hg"));

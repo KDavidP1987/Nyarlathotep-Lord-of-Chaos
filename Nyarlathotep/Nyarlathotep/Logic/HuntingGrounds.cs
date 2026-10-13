@@ -712,6 +712,8 @@ public sealed class LockPhase
         {
             if (a.Definition.Action is not { RegionLock: true } action) return null;
             var scope = action.Scope;
+            // A6: claimed castle ground is never a return spot, unless the admin allowed territory (no map is then built)
+            Func<float, float, bool> castle = action.AllowTerritory ? (_, _) => false : (x, z) => world.IsClaimed(a.Id, x, z);
             if (!_inside.TryGetValue(a.Id, out var records)) _inside[a.Id] = records = new Dictionary<long, InsideSpot>();
             var seen = new HashSet<long>();
             var written = new List<RegionReturn>();
@@ -724,7 +726,8 @@ public sealed class LockPhase
                     var inside = HuntingGrounds.Inside(scope, world.RegionOf, u.X, u.Z);
                     if (inside)
                     {
-                        records[u.Key] = new InsideSpot(u.X, u.Y, u.Z, u.Level);
+                        // never a spot in a claimed castle: a return is put down there unseen (A6, the owner 2026-10-13)
+                        if (!castle(u.X, u.Z)) records[u.Key] = new InsideSpot(u.X, u.Y, u.Z, u.Level);
                         continue;
                     }
                     if (!records.TryGetValue(u.Key, out var last))
@@ -734,7 +737,8 @@ public sealed class LockPhase
                     }
                     if (!LockRule.Strays(false, u.X, u.Z, last)) continue;
                     var d = HuntingGrounds.Distance(u.X, u.Z, last.X, last.Z);
-                    var (x, y, z) = LockRule.ReturnSpot(last, (px, pz) => HuntingGrounds.Inside(scope, world.RegionOf, px, pz), world.Walkable,
+                    var (x, y, z) = LockRule.ReturnSpot(last,
+                        (px, pz) => HuntingGrounds.Inside(scope, world.RegionOf, px, pz) && !castle(px, pz), world.Walkable,
                         world.Budget, random);
                     var r = new RegionReturn(u.Key, x, y, z, d);
                     world.Return(r, scope);

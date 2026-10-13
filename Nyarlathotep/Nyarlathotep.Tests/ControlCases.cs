@@ -601,7 +601,7 @@ public static class ControlCases
             "two_spots_stand_closer_than_30_m", "a_group_exceeds_5_units", "a_spot_has_no_free_grounded_tile", "a_wave_without_a_spot_spawns_or_is_not_skipped",
             "the_clamp_runs_per_group", "a_player_position_is_read", "a_group_takes_another_groups_spot"], ["groups_over_the_regions"], ["no_unit_rolled"]) with { Plan = HuntingGrounds },
         T("D5", "Lock", "HuntingGroundsTests", ["the_slack_is_off", "a_return_lands_outside_or_far", "an_entry_outside_is_kept", "a_seed_goes_outside",
-            "a_location_is_missed", "another_units_move", "the_line_names_or_locates"], ["check_every_5_s"], ["no_live_unit"]) with { Plan = HuntingGrounds },
+            "a_location_is_missed", "another_units_move", "the_line_names_or_locates", "a_return_lands_in_a_castle"], ["check_every_5_s"], ["no_live_unit"]) with { Plan = HuntingGrounds },
         T("D7", "HuntTargets", "HuntingGroundsTests", ["an_ineligible_player_is_targeted_or_seeded", "a_farther_player_wins", "a_tie_breaks_other_than_by_key",
             "a_group_without_a_player_moves", "a_target_is_kept_past_its_check", "a_group_is_split_or_merged", "one_events_territory_vetoes_another", "a_unit_at_the_ring_is_not_seeded", "a_seeded_unit_keeps_a_far_home"], ["each_group_its_nearest"],
             ["no_player_inside"]) with { Plan = HuntingGrounds },
