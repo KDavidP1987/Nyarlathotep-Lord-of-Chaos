@@ -8,14 +8,15 @@ or send waves of units that can be levelled, strengthened, set to hunt nearby pl
 player, outside claimed castle territory unless the event allows it. Events can also start themselves: on a random
 interval, when a player enters a region, or when a player kills enough of a faction, and a wave can spread over
 several players. Each wave can have its own units and stats, waves can grow by themselves, an event can be held
-inside an arena, and an event can end with a scoreboard and a kill-to-death winner. Eleven built-in templates,
+inside an arena or bound to map regions, where its units roam and hunt the players inside, and an event can end
+with a scoreboard and a kill-to-death winner. Twelve built-in templates,
 in-game authoring, regional scope, warnings and banners, and a kill switch come with it. The companion client Raphael reads a machine-readable API (api 6).
 
-0.10.x is a public beta. Every pillar and automatic announcement starts disabled; admins opt in.
+0.11.x is a public beta. Every pillar and automatic announcement starts disabled; admins opt in.
 
 ## Status
 
-**v0.10.0.** See [`CHANGELOG.md`](CHANGELOG.md) for what ships and [`docs/dod/`](docs/dod/) for the
+**v0.11.0.** See [`CHANGELOG.md`](CHANGELOG.md) for what ships and [`docs/dod/`](docs/dod/) for the
 build plan. Next, for Halloween: the revenge and apocalypse events.
 
 ## Quick start
@@ -61,6 +62,7 @@ names the slowest phase if a tick runs long.
 | Automation: the `Interval`, `RegionEntered` and `FactionKills` triggers, `fanOut` on AroundPlayer waves, reachable spawn points (a walkable line from the player), three templates, their chat fields, api 6; 0.7.0 disables, after a rollback, a definition using them | 0.8.0 | [`docs/features/AUTOMATION.md`](docs/features/AUTOMATION.md) |
 | Wave sets: `waveList` (per-wave units, per-entry level and stats, `afterSeconds` / `whenCleared` starts, "all waves defeated"), the per-event `scoreboard` and `[Scoreboard] IncludeAdmins`, the `graveyard-waves` template, their chat fields; 0.8.0 disables, after a rollback, a definition using them | 0.9.0 | [`docs/features/WAVE_SETS.md`](docs/features/WAVE_SETS.md) |
 | Swarm: `arena` (units kept in a 15-60 m circle around the spot or the starting admin), `growth` (waves generated from one base wave, larger and stronger each time), `winner: "KillDeath"` (the best kill-to-death ratio after the scoreboard), the `spider-swarm` template, their chat fields; 0.9.0 disables, after a rollback, a definition using them | 0.10.0 | [`docs/features/SWARM.md`](docs/features/SWARM.md) |
+| Hunting grounds: the `Region` location (waves spread over the scope regions), `regionLock` (units kept inside), the `RegionHunt` behaviour (groups hunt the nearest player inside, hidden jumps beyond 60 m), region ambush, the `spider-hunting-grounds` template, their chat fields; 0.10.0 disables, after a rollback, a definition using them | 0.11.0 | [`docs/features/HUNTING_GROUNDS.md`](docs/features/HUNTING_GROUNDS.md) |
 | Boss reinforcements | in development | [`docs/features/BOSS_REINFORCEMENTS.md`](docs/features/BOSS_REINFORCEMENTS.md) |
 | Defended zones | in development | [`docs/features/DEFENDED_ZONES.md`](docs/features/DEFENDED_ZONES.md) |
 | Sieges | in development | [`docs/features/SIEGES.md`](docs/features/SIEGES.md) |

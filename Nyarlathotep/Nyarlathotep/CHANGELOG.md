@@ -2,6 +2,26 @@
 
 Public beta. Event pillars and automatic announcements default off; admins opt in per feature.
 
+## 0.11.0 (2026-10-13)
+
+- **Hunting grounds.** A spawn event can be bound to its `scope` regions with three new keys:
+  - `"location": { "type": "Region" }` spreads each wave in small groups over the regions, on walkable ground and
+    outside castle territory.
+  - `"regionLock": true` keeps the units inside: one that wanders out is brought back near where it left, and
+    forgets the players outside.
+  - `"behaviour": { "type": "RegionHunt" }` (with the lock) sends each group after the nearest player inside the
+    regions. Far away, units close in with hidden jumps that no player is near enough to see; the last jump lands
+    50-60 m away, and from there they walk in and fight as normal.
+- **Region ambush.** An event placed around a player with a regional scope now picks only players inside the regions.
+- **New template** `spider-hunting-grounds` (off): three waves of level 30 spiders roaming Dunley Farmlands, hunting
+  players there. Every new key can be set in chat (`.nyar event set <id> location region`, `action.regionLock …`,
+  `action.behaviour regionhunt`), and `event info` shows them.
+- **Arenas** are no longer experimental: the return was seen in game.
+- **Fixed:** a player's death no longer counts as a V Blood kill, so an event triggered by `"bosses": ["any"]` no
+  longer starts every time a player dies.
+- No Raphael change (api 6). Rolling back to 0.10.0 disables the events that use a Region location, `regionLock` or
+  RegionHunt.
+
 ## 0.10.0 (2026-10-11)
 
 - **Arenas.** `"arena": { "radius": 15-60 }` keeps a spawn event's units inside a circle around its spot, or around

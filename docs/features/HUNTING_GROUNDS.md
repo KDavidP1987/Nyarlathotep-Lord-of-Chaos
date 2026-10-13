@@ -1,8 +1,8 @@
 # Hunting grounds — wave events bound to map regions
 
-**Status:** in progress for 0.11.0 (docs/dod/hunting-grounds.md, audit docs/audits/hunting-grounds.md). Steps 1-3 are
-built: the mover spike passed with hidden jumps, and the logic and services passed their Session 2 scenarios (Test
-results). The owner's live checks (D26, D27) and the release (step 4) are next.
+**Status:** released in 0.11.0 (docs/dod/hunting-grounds.md, audit docs/audits/hunting-grounds.md). The mover spike
+passed with hidden jumps, and the logic and services passed their Session 2 scenarios (Test results). The owner's
+live checks (D26, D27) are recorded under Test results when done.
 
 ## Goal
 
@@ -15,7 +15,8 @@ pieces on a SpawnWaves action (design §9 D48, D50):
   where it left, and forgets the players outside, as swarm's arena does for its circle.
 - a **region hunt** (behaviour `{ "type": "RegionHunt" }`, with the lock): each group goes after the nearest eligible
   player inside the regions. A unit farther than about 60 m from its player is moved toward them in hidden jumps,
-  only while no player is within 100 m to see it; within 60 m the game's own pathing and aggro take over.
+  only while no player is within 100 m to see it, the last jump landing 50-60 m away; a unit within 100 m of an eligible
+  player inside the regions is set on them (A4), and the game's own pathing and aggro take over.
 
 ## Design summary
 
@@ -137,3 +138,27 @@ What the runs found, each fixed and amended before release:
   vulnerable player is D26's.
 - **Log checks.** Every boot: 0 unhandled, 0 orphan errors, 0 unity errors, regions 10 polygons. The only warnings were
   the known three, plus the stop and purge lines. NyarDev.log had only the 226 missing-prefab lines.
+
+### Session 3 · 2026-10-13 · the owner's D26 run and the final-ring fixes
+
+Same dev server and dev events.json, still wrapped by `dev-snapshot -Save hg2`. The owner played by hand on the
+b136d7f build (the Codex F1/F2 fixes); Claude reran with vrclient after each fix.
+
+| Run | Build | Result |
+|---|---|---|
+| Owner, D26 (hg-point, standing still at hg-b) | b136d7f | **FAIL, as the owner reported it:** all 6 units jumped from 300 m to the final ring ("landed 55 m") and then idled 55-64 m away for the rest of the event, with "0 seeds kept" in all 85 hunt ticks. When the owner walked about 15 m toward them, they attacked. Two causes, each amended before its code: the seed range was 60 m, the same as the ring's outer edge (A4), and the spider's leash (`MaxDistanceFromPreCombatPosition` 45 m) dropped any seed, because every jump set its return point 50-60 m from the player (A5). |
+| vrclient `hunting-grounds-hunt.vrs` | A4 (df4d9ae) | 16/20: Chaos was targeted from the ring ("1 targeted"), but the units stayed about 58 m away (`.nyar debug here 15`: "no tracked units within 15 m"). This confirmed the leash cause. The other failed steps were chat inputs that didn't open. |
+| vrclient `hunting-grounds-hunt.vrs` | A5 | 18/19, then **PASS 19/19** (`-20261013-002835.json`) after the scenario's "tracked units: 6" check was relaxed, because one spider died in the fight. Seeds now hold ("5 seeds kept", "6 seeds kept"), and `debug here 15` lists the spiders at -1580 -1641, on Chaos, in both runs (screenshots `hg-point-closed-002138` and `-002733`). |
+
+| vrclient `hunting-grounds-timing.vrs` | A5 | **PASS 12/12** (`-20261013-010258.json`): "timing span: 10/10 windows under 5 ms, tracked >= 10, targets >= 1, 0 slow ticks". |
+| vrclient `hunting-grounds-lock.vrs` | A6 (eb1c0a2) | **PASS 19/19** (`-20261013-011200.json`). A6, the owner's castle rule, is unit-tested; the dev world has no castle at a region border. |
+| vrclient `hunting-grounds-lock.vrs` and `hunting-grounds-hunt.vrs` | 772762a (review 2's F5) | lock **PASS 19/19** (`-012437`). Hunt was 18/19: its "none within 49 m right after the last jump" step became a race, because the units now run at Chaos as soon as they land (one stood at 46 m). The step was removed; "landed 5x m" remains the no-pop-in proof. Rerun: **PASS 18/18** (`-012958`). |
+
+| Owner, D26 (hg-point) | 772762a | **PASS** (owner). The spiders arrived and attacked while the owner stood still. Running north, two followed to the Dunley border and stopped there; the rest had turned on NPCs and dropped the chase. "Everything seemed to work perfectly or nearly perfectly." |
+| Owner, D27 roam (hg-roam with RegionHunt) | 772762a | **PASS** (owner). Spots 550-900 m away; the spiders reached the owner about 4.5 min after the start and attacked. (The first sheet's hg-roam had no RegionHunt, so its units stood where they spawned: a test-sheet error.) |
+| Owner, D27 ambush (hg-ambush) | 772762a | **PASS** (owner). 4 spiders at the pond; from -1680 -1080 in Dunley "wave 1 of hg-ambush skipped: no eligible player". |
+| Owner, D27 arena (spider-swarm) | 772762a | **PASS** (owner). Wave 1 cleared, wave 2 caught the owner in sunlight. The scoreboard read "no player scored" because IncludeAdmins is false. The run showed "trigger: VBloodKilled CHAR_VampireMale" on the owner's death, a defect since faction-empowerment, fixed in 62ce215 (a player's death raises nothing). |
+
+| vrclient `vblood-player-death.vrs` | 62ce215 | **PASS 8/8** (`-20261013-114727.json`): Chaos killed by a tracked spider, no VBloodKilled; a tracked CHAR_Spider_Queen_VBlood killed, "trigger: VBloodKilled CHAR_Spider_Queen_VBlood". |
+
+D27 **PASS** (owner): "the modes feel right overall. It feels like we're moving in a good direction." spider-hunting-grounds (optional) was not run.

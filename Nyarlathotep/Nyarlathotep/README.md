@@ -6,7 +6,7 @@ A **server-side** event layer for V Rising. Admins stage NPC events the base gam
 and empowered factions on a schedule, at nightfall or after a V Blood falls, with warnings and banners for
 players, and in later releases castle sieges, defended zones and boss-fight adds.
 
-> **Public beta (0.10.0).** Every pillar and automatic announcement is off by default; no event runs until an
+> **Public beta (0.11.0).** Every pillar and automatic announcement is off by default; no event runs until an
 > admin turns on its pillar and enables it.
 
 ## What it does
@@ -134,13 +134,38 @@ Three more optional keys on a spawn event:
 
 | Key | Values | Effect |
 |---|---|---|
-| `arena` | `{ "radius": 15–60 }`, with a Point location or one started by an admin | Every 5 s, any of the event's units more than 10 m past the edge is brought back near the centre and forgets players outside (experimental: not yet seen in game) |
+| `arena` | `{ "radius": 15–60 }`, with a Point location or one started by an admin | Every 5 s, any of the event's units more than 10 m past the edge is brought back near the centre and forgets players outside |
 | `growth` | `{ "addUnits": 0–10, "addLevels": 0–5, "whenCleared": true/false }`, with `units` and `waves` 2–10 | Wave n gets each unit's count + (n−1)·addUnits and level + (n−1)·addLevels; level capped at 120; each wave starts `intervalSeconds` after the last, or also when it is cleared with `whenCleared` |
 | `winner` | `"KillDeath"`, with `"scoreboard": true` | After the scoreboard, one line names the player with the best kills ÷ deaths (a player needs one kill) |
 
 `event info` lists every generated wave before you start it. The `spider-swarm` template uses all three:
 `.nyar template use spider-swarm`, `.nyar event enable spider-swarm`, then `.nyar event start spider-swarm` where the
 swarm should be. Rolling back to 0.9.0 disables the events that use these keys.
+</details>
+
+<details>
+<summary><b>Hunting grounds: events bound to map regions</b> · <i>0.11.0</i></summary>
+
+Three more optional keys bind a spawn event to its `scope` regions (a list of region names, not Global):
+
+| Key | Values | Effect |
+|---|---|---|
+| `location` | `{ "type": "Region" }` | Each wave spawns in groups of up to 5 at spots spread over the regions, at least 30 m apart, on walkable ground and outside castle territory |
+| `regionLock` | `true` / `false` | Every 5 s, a unit that has left the regions is brought back near where it left and forgets players outside |
+| `behaviour` | `{ "type": "RegionHunt" }`, with `regionLock: true` | Each group goes after the nearest player inside the regions. A unit more than 60 m away closes in with hidden jumps, only while no player is within 100 m to see it; from there it is set on the player and walks in and fights as normal |
+
+Together with the existing locations they give four modes:
+
+- **Region roam:** a Region location, the lock and RegionHunt. The `spider-hunting-grounds` template is one.
+- **Region ambush:** a location around a player with a regional scope picks only players inside the regions, and
+  with the lock the units never chase out.
+- **Point spread:** a Point location with the lock and RegionHunt: the units start at the point and spread through
+  the region after players.
+- **Point arena:** swarm's `arena`, above.
+
+A map-wide spread comes with the apocalypse event. In chat: `.nyar event set <id> location region`,
+`action.regionLock true|false|none` and `action.behaviour regionhunt`. Rolling back to 0.10.0 disables the events
+that use these keys.
 </details>
 
 <details>
@@ -192,9 +217,9 @@ Optional action keys: `includeUnits` / `excludeUnits` (unit names such as `CHAR_
 </details>
 
 <details>
-<summary><b>Event templates and chat authoring</b> · <i>0.5.0; three automatic templates 0.8.0; a wave set 0.9.0; a swarm 0.10.0</i></summary>
+<summary><b>Event templates and chat authoring</b> · <i>0.5.0; three automatic templates 0.8.0; a wave set 0.9.0; a swarm 0.10.0; hunting grounds 0.11.0</i></summary>
 
-Eleven ready-made events ship inside the mod. `.nyar template use <id>` copies one into your `events.json`,
+Twelve ready-made events ship inside the mod. `.nyar template use <id>` copies one into your `events.json`,
 disabled, ready to adjust and enable.
 
 | Template | What it does | Starts |
@@ -210,6 +235,7 @@ disabled, ready to adjust and enable.
 | `bandit-reprisal` | 4 thugs and 2 hunters near the player, hunting (0.8.0) | A player kills 20 bandits within 5 min |
 | `graveyard-waves` | 3 growing undead waves near a player, the last with a Guardian, hunting, with the scoreboard (0.9.0) | By command |
 | `spider-swarm` | 5 spider waves growing from 6 to 18 units and level 30 to 42, held in a 40 m arena around the admin, with the scoreboard and a K/D winner (0.10.0) | By command |
+| `spider-hunting-grounds` | 3 waves of 6 level 30 spiders spread over Dunley Farmlands, kept inside and hunting the players there, with the scoreboard (0.11.0) | By command |
 
 You can build and change events without touching the file. Use `.nyar event new <id> <pillar>`,
 `.nyar event copy <id> <newId>` and `.nyar event delete <id>` (then `confirm`). `.nyar event set` also changes
@@ -309,7 +335,8 @@ Install and start the server once. Then, in game as an admin, no file edits need
 If anything goes wrong, `.nyar purge` then `.nyar purge confirm` ends everything. Announcements stay off until
 you turn on `[Announcements] WaveWarnings` and `EventBanners` in `BepInEx/config/kdpen.Nyarlathotep.cfg`.
 
-Scheduled and triggered events spawn at a `Point` location (world `x` and `z` in `events.json`) or `AroundPlayer`;
+Scheduled and triggered events spawn at a `Point` location (world `x` and `z` in `events.json`), `AroundPlayer` or
+`Region` (spread over the event's regions, see Hunting grounds above);
 an `Admin` location spawns around the admin and works for manual starts only; `.nyar event set <id> location here`
 stores your position as a `Point`. Edit the file, then `.nyar event reload`. A
 bad entry is disabled with a log line naming the event and the reason; a file that doesn't parse leaves the last good

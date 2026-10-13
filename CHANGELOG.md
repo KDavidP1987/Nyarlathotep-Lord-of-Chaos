@@ -3,6 +3,87 @@
 The complete technical history. The concise, player-facing changelog that ships to Thunderstore lives at
 `Nyarlathotep/Nyarlathotep/CHANGELOG.md`. Public beta from 0.2.0; features stay experimental until validated on live servers.
 
+## [0.11.0] - 2026-10-13
+
+The `hunting-grounds` child of the DoD Epic (`docs/dod/hunting-grounds.md`). A spawn event can be bound to the game's
+world regions: its waves spread over the regions, its units stay inside them, and its groups hunt the nearest player
+inside. Design and sessions: `docs/features/HUNTING_GROUNDS.md`; audit: `docs/audits/hunting-grounds.md`; design §9
+D48-D50. No wire change (api 6). state.json and the cfg are unchanged.
+
+<details open>
+<summary><b>Definition keys</b></summary>
+
+All optional, on a SpawnWaves action, and each needs a regional `scope` (a list of region names, never Global). A key
+that fails validation disables the event, with one reason that names the field. SchemaVersion stays 1.
+
+| Key | Values | Effect |
+|---|---|---|
+| `action.location` | `{ "type": "Region" }` | Each wave spawns in groups of at most 5 units at spots drawn over the scope regions, weighted by area, at least 30 m apart, on free and grounded tiles, outside claimed territory. A group without a spot is skipped; a wave with none is skipped. Refused with `arena` and `fanOut` |
+| `action.regionLock` | `true` / `false` (absent: false) | Every 5 s, a unit of the running instance that has left the scope regions is moved back to its last spot inside, near where it left, and drops its targets on players outside. Hunt never seeds a player outside. Refused with `arena` |
+| `action.behaviour` | `{ "type": "RegionHunt" }`, needs `regionLock: true` | Each group targets the nearest eligible player inside the regions. A unit more than 60 m from its target is moved toward it in hidden jumps, the last landing 50-60 m away; a unit within 100 m of an eligible player inside the regions is set on them, and the game's own pathing and aggro take over |
+</details>
+
+<details open>
+<summary><b>The four modes</b></summary>
+
+1. **Region roam:** a Region location with the lock and RegionHunt (the `spider-hunting-grounds` template).
+2. **Point arena:** swarm's `arena`, unchanged.
+3. **Region ambush:** an AroundPlayer location with a regional scope picks only players standing inside the regions;
+   with no player inside, the wave is skipped "no eligible player". With the lock the units never chase out.
+4. **Point spread:** a Point location with the lock and RegionHunt: the units start at the point and spread through
+   the region after players.
+
+The fifth, map-wide spread, comes with the apocalypse event, on this release's mover.
+</details>
+
+<details open>
+<summary><b>Runtime</b></summary>
+
+- **Region phase** (`Logic/HuntingGrounds.cs` LockPhase, HuntPhase, JumpRule; `Services/SpawnTracker.cs` RegionTick;
+  the EventScheduler "region" phase after "arena"). Every 5 s while a locked or RegionHunt event runs: the lock, then
+  the hunt. Only the running instance's own tracked units are read or moved; units of other events, of earlier
+  instances and of `.nyar spawn` are never touched. A move writes Translation, LastTranslation, PreCombatPosition and
+  SpawnTransform.Position, empties the path buffer and zeroes velocity.
+- **Hidden jumps** (D8, A1-A3). A unit jumps only while no online player stands within 100 m of it: at most 25 m
+  along the line to its target, or 35, 45 or 55 m to cross a ravine when no shorter landing passes, never ending
+  within 100 m of the target; the final jump lands 50-60 m from the target. A landing is free and grounded at the
+  unit's height level or a neighbouring one (two or three levels on hillsides), inside a scope region, outside
+  claimed territory and at least 50 m from every online player. At most 20 units jump per check across all events,
+  and the hunt spends at most 200 walk checks per check. Every event's units that can jump plan before any stuck unit;
+  a stuck unit rejoins, 3 m beside, the unit of its instance nearest its target. A unit that cannot move unseen waits.
+- **Lines.** "[nyar] region lock <id>: returned <n>, farthest <d> m out" and "[nyar] region hunt <id>: <j> jumped,
+  <w> waiting, <r> in reach, landed <d> m", counts and one distance only, never a name or a position. A failing check
+  logs "check failed" or "move failed" once per streak and holds `region lock: check failing` or `region hunt: move
+  failing` on the health line and `.nyar status` until a check succeeds. A region phase of 100 ms or more logs
+  "region parts: …" (where its time went), at most once a minute.
+- **End paths.** Stop, pillar off, purge, the event's end and a restart drop the instance's records; nothing moves
+  after the end.
+- **Chat.** `.nyar event set <id> location region`, `action.regionLock <true|false|none>` and `action.behaviour
+  regionhunt`, refused with the validator's reason; `action.scope global` on a Region or locked event, `action.arena`
+  on a locked event, removing the lock under RegionHunt and `fanOut` on a Region location are refused. `event info`
+  shows "location: anywhere in the scope regions", "region lock: on" and "behaviour: hunts the nearest player in the
+  regions, hidden jumps beyond 60 m".
+- **Template.** `spider-hunting-grounds`: a Region location over DunleyFarmlands with the lock and RegionHunt, three
+  waves of 2 forestlings, 2 forest spiders and 2 ranged spiders at level 30, 300 s apart, the scoreboard, 1800 s. Manual,
+  disabled. Twelve templates in all.
+- **Swarm.** The arena return was seen in game with a player walking out (swarm Session 3); it is no longer marked
+  experimental.
+- **Fixed: a player's death raised VBloodKilled** (`Logic/Empowerment.cs` DeathRule, `Patches/DeathEventPatch.cs`). A
+  player character carries VBloodConsumeSource, so since faction-empowerment D13 every player death reached each
+  `"bosses": ["any"]` trigger (seen in the owner's test as "trigger: VBloodKilled CHAR_VampireMale"). A death of a
+  PlayerCharacter now raises nothing.
+</details>
+
+<details>
+<summary><b>Static checks and tools</b></summary>
+
+- **Rollback drill.** Accepts 0.10.0's "unknown field action.regionLock", "unknown behaviour type RegionHunt" and its
+  three-type location rule (a Region location) among the newer keys; fixtures pair-regionlock, pair-regionhunt and
+  pair-regionlocation pass, pair-colourkey still fails; selftest 26/26.
+- **`-DependencySuite hunting-grounds`.** region-lock and region-hunt.
+- **Tests.** 2935 (2768 at 0.10.0), with a control row for every D-item (ControlCases).
+</details>
+
 ## [0.10.0] - 2026-10-11
 
 The `swarm` child of the DoD Epic (`docs/dod/swarm.md`). A spawn event can be held inside an arena, grow its waves
