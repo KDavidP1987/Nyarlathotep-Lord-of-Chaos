@@ -2,6 +2,25 @@
 
 Public beta. Event pillars and automatic announcements default off; admins opt in per feature.
 
+## 0.12.0 (2026-10-13)
+
+- **Revenge.** A spawn event with a `"Revenge"` trigger lets a faction take revenge on one player. Kills of the
+  faction's units within a window add heat (a V Blood kill adds `vbloodHeat`, 10 by default; units spawned by events
+  add none); at the `warnAt` steps the player gets a private warning, and at `heat` the revenge starts on the next check
+  once the player is online, alive, out of PvP combat and out of castle territory: a server alert that names no one, a private line to the player, and waves around that player only that
+  hunt only that player. Killing every wave ends it with a private end line. A cooldown follows, heat lives in memory
+  only (a restart forgets it), and the units never spawn in or are moved into claimed territory.
+- **Final-wave bosses.** `"bosses": [ { "prefab": "CHAR_Spider_Queen_VBlood", "count": 1 } ]` on any spawn event adds
+  bosses to its last wave; they must die for "all waves defeated", and players feed on their V Blood as usual.
+  `spider-swarm` and `spider-hunting-grounds` now end on Ungoro.
+- **New template** `bandit-revenge` (off): three tiers of bandits on a player who kills too many bandits. Every new
+  field can be set in chat (`.nyar event set <id> trigger.heat 30`, `trigger.warnAt 10,20`, `action.bosses
+  CHAR_Spider_Queen_VBlood:1`, …), and `event info` shows the heat counts.
+- **Changed:** a V Blood spawned by an event or `.nyar spawn` no longer raises the V Blood trigger, so a boss wave
+  cannot start other events. A V Blood of the world still does.
+- Raphael: api 7 (`trigger=revenge` on definition and template rows). Rolling back to 0.11.0 disables the events that
+  use the Revenge trigger or `bosses`.
+
 ## 0.11.0 (2026-10-13)
 
 - **Hunting grounds.** A spawn event can be bound to its `scope` regions with three new keys:

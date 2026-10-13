@@ -160,6 +160,11 @@ internal static class TriggerBus
     internal static void Tell(string player, string line) =>
         _feed.Tell(Announcer.SendTo, player, line, l => Core.Log.LogWarning($"[nyar] {l}"));
 
+    /// <summary>`.nyar pillar &lt;name&gt; off` (revenge D8): the heat of that pillar's Revenge definitions goes at once,
+    /// not at the next 5 s scan, so an off and on inside one scan keeps none of it.</summary>
+    internal static void PruneRevenge(DateTime utcNow) =>
+        _feed.Heat.Prune(PlayerTriggerFeed.RevengeStartable(EventStore.Catalog.Current, PillarOn), utcNow);
+
     /// <summary>The purge (revenge D8): every heat row, warning level, due player and cooldown goes.</summary>
     internal static void ClearRevenge() => _feed.Heat.Clear();
 

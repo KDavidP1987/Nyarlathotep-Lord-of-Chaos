@@ -670,7 +670,8 @@ public static class ControlCases
             with { Plan = Revenge },
         T("D3", "Heat", "RevengeTests", ["an_excluded_kill_adds_heat", "a_familiar_kill_is_not_credited", "a_vblood_kill_adds_other_than_vblood_heat",
             "a_point_outlives_its_window", "heat_is_added_during_the_cooldown", "the_201st_row_is_kept", "heat_rows_and_kill_counters_evict_each_other",
-            "a_disabled_definition_keeps_rows"], ["kills_within_the_window", "an_edit_keeps_points_and_applies_the_new_heat"], ["no_revenge_definition"])
+            "a_disabled_definition_keeps_rows", "a_row_queue_grows_past_max_heat", "pillar_off_keeps_heat_until_the_next_scan"],
+            ["kills_within_the_window", "an_edit_keeps_points_and_applies_the_new_heat"], ["no_revenge_definition"])
             with { Plan = Revenge },
         T("D4", "Warnings", "RevengeTests", ["a_warning_reaches_another_player", "a_warning_repeats_within_a_climb", "a_threshold_does_not_rearm",
             "one_kill_sends_two_lines", "a_line_holds_a_name_digits_or_angle", "the_log_line_names_the_player"], ["each_threshold_once_in_order"], ["warn_at_none"])

@@ -9,15 +9,16 @@ player, outside claimed castle territory unless the event allows it. Events can 
 interval, when a player enters a region, or when a player kills enough of a faction, and a wave can spread over
 several players. Each wave can have its own units and stats, waves can grow by themselves, an event can be held
 inside an arena or bound to map regions, where its units roam and hunt the players inside, and an event can end
-with a scoreboard and a kill-to-death winner. Twelve built-in templates,
-in-game authoring, regional scope, warnings and banners, and a kill switch come with it. The companion client Raphael reads a machine-readable API (api 6).
+with a scoreboard and a kill-to-death winner. A faction can take revenge on a player who kills too many of its
+units, and an event's last wave can carry bosses. Thirteen built-in templates,
+in-game authoring, regional scope, warnings and banners, and a kill switch come with it. The companion client Raphael reads a machine-readable API (api 7).
 
-0.11.x is a public beta. Every pillar and automatic announcement starts disabled; admins opt in.
+0.12.x is a public beta. Every pillar and automatic announcement starts disabled; admins opt in.
 
 ## Status
 
-**v0.11.0.** See [`CHANGELOG.md`](CHANGELOG.md) for what ships and [`docs/dod/`](docs/dod/) for the
-build plan. Next, for Halloween: the revenge and apocalypse events.
+**v0.12.0.** See [`CHANGELOG.md`](CHANGELOG.md) for what ships and [`docs/dod/`](docs/dod/) for the
+build plan. Next, for Halloween: the apocalypse event.
 
 ## Quick start
 
@@ -63,6 +64,7 @@ names the slowest phase if a tick runs long.
 | Wave sets: `waveList` (per-wave units, per-entry level and stats, `afterSeconds` / `whenCleared` starts, "all waves defeated"), the per-event `scoreboard` and `[Scoreboard] IncludeAdmins`, the `graveyard-waves` template, their chat fields; 0.8.0 disables, after a rollback, a definition using them | 0.9.0 | [`docs/features/WAVE_SETS.md`](docs/features/WAVE_SETS.md) |
 | Swarm: `arena` (units kept in a 15-60 m circle around the spot or the starting admin), `growth` (waves generated from one base wave, larger and stronger each time), `winner: "KillDeath"` (the best kill-to-death ratio after the scoreboard), the `spider-swarm` template, their chat fields; 0.9.0 disables, after a rollback, a definition using them | 0.10.0 | [`docs/features/SWARM.md`](docs/features/SWARM.md) |
 | Hunting grounds: the `Region` location (waves spread over the scope regions), `regionLock` (units kept inside), the `RegionHunt` behaviour (groups hunt the nearest player inside, hidden jumps beyond 60 m), region ambush, the `spider-hunting-grounds` template, their chat fields; 0.10.0 disables, after a rollback, a definition using them | 0.11.0 | [`docs/features/HUNTING_GROUNDS.md`](docs/features/HUNTING_GROUNDS.md) |
+| Revenge: the `Revenge` trigger (per-player heat from a faction's kills and V Blood kills, private warnings, a faction alert that names no one, tiers around the target only, never in claimed territory, heat in memory only), `bosses` on a wave event's last wave, the `bandit-revenge` template and Ungoro on the spider templates, their chat fields, api 7; 0.11.0 disables, after a rollback, a definition using them | 0.12.0 | [`docs/features/REVENGE.md`](docs/features/REVENGE.md) |
 | Boss reinforcements | in development | [`docs/features/BOSS_REINFORCEMENTS.md`](docs/features/BOSS_REINFORCEMENTS.md) |
 | Defended zones | in development | [`docs/features/DEFENDED_ZONES.md`](docs/features/DEFENDED_ZONES.md) |
 | Sieges | in development | [`docs/features/SIEGES.md`](docs/features/SIEGES.md) |

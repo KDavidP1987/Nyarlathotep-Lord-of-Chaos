@@ -30,7 +30,9 @@ Two pieces, both off until an admin enables an event that uses them:
   (hunting-grounds A5).
 - **Heat:** Logic/Revenge.cs (`RevengeHeat`), rows per definition and player, bounded like the FactionKills counters
   (200 per definition, 2000 in all, least recently updated non-due row dropped first) but a separate table, so neither
-  evicts the other. Cooldowns and warning states live outside the evictable rows (review 3 F3).
+  evicts the other. Cooldowns and warning states live outside the evictable rows (review 3 F3). A row keeps at most 500
+  entries (the largest `heat`; Codex 0.12.0 F1). A disable or invalid edit drops a definition's rows at the next scan,
+  `.nyar pillar <name> off` at once (Codex 0.12.0 F2); cooldowns keep their own expiry.
 - **Gate:** due players start in the order they became due; held (territory, busy, target busy, ineligible, controls)
   with one log line per change of reason; a controls refusal keeps the heat, a conditions refusal resets it without a
   cooldown. An admin start focuses the admin, skips target-busy, resets no heat and sets no cooldown (review 3 F4).

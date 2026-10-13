@@ -3,6 +3,74 @@
 The complete technical history. The concise, player-facing changelog that ships to Thunderstore lives at
 `Nyarlathotep/Nyarlathotep/CHANGELOG.md`. Public beta from 0.2.0; features stay experimental until validated on live servers.
 
+## [0.12.0] - 2026-10-13
+
+The `revenge` child of the DoD Epic (`docs/dod/revenge.md`). A faction takes revenge on one player who killed too many
+of its units, and a spawn event's last wave can carry bosses. Design and sessions: `docs/features/REVENGE.md`; audit:
+`docs/audits/revenge.md`; design §9 D46, D47, D51. Wire api 7. state.json and the cfg are unchanged; heat lives in
+memory only.
+
+<details open>
+<summary><b>Definition keys</b></summary>
+
+A key that fails validation disables the event, with one reason that names the field. SchemaVersion stays 1.
+
+| Key | Values | Effect |
+|---|---|---|
+| `trigger` | `{ "type": "Revenge", "factions": [1-5 factions], "heat": 3-500, "windowSeconds": 60-3600, "warnAt": [0-3 values below heat, ascending], "vbloodHeat": 0-100 (10), "playerCooldownMinutes": 0-1440 (30) }`, optional `scope` | Per definition and player, the kills of the factions within the window: 1 point a kill, `vbloodHeat` for a V Blood. Our own spawned units and other players add none. Spawns pillar, SpawnWaves only, with an AroundPlayer location (tiers 15-40 m out), Hunt, no fanOut and no `allowTerritory` |
+| `action.bosses` | `[ { "prefab": "<V Blood or unit>", "count": 1-3, "modifiers": {...} } ]`, at most 3 entries | On any SpawnWaves action: the bosses join the last wave only, beside its units. A boss without modifiers takes the wave's (growth included). Refused with fanOut |
+</details>
+
+<details open>
+<summary><b>Runtime</b></summary>
+
+- **Heat** (`Logic/Revenge.cs` RevengeHeat). Fed from the same guarded death read as FactionKills (`Services/TriggerBus.cs`
+  KillReader, with the victim's V Blood flag from DeathRule). Rows per definition and player, 200 per definition and
+  2000 in all, the least recently updated non-due row dropped first; a due player's row is never dropped. Warning
+  levels and cooldowns live outside the rows. "[nyar] revenge <id>: warning <k> of <n>", "vblood kill +<p> heat" and
+  "revenge <id> due" carry the definition id and counts only.
+- **Gate.** Every 5 s the due players start in the order they became due: held "(territory)" inside claimed territory,
+  "(busy)" while the definition runs, "(target busy)" while another revenge has the player, "(ineligible)" while the
+  player is offline, dead, in PvP combat, at an unusable position or outside the action's scope (or the territory map
+  is down), "(controls)" when the caps, cooldowns or purge cooldown refuse, one line per change of reason. A started revenge
+  resets the heat and starts `playerCooldownMinutes`; a conditions refusal resets the heat without a cooldown; a
+  controls refusal keeps it. `.nyar event start` of a Revenge definition focuses the admin.
+- **Focus only.** Each tier spawns around the target only (Logic/PlayerPick ChooseFocus), never in claimed territory,
+  and Hunt seeds only the target (HuntPlan.TargetsFor). Another player who attacks a squad is fought through the game's
+  own aggro. A squad whose target leaves its Hunt range idles until the target returns or the event ends.
+- **Lines.** A server alert from RevengeAlertPool names the faction only; the private RevengeWarning, RevengeStart and
+  RevengeEnd go to the target alone (`Announcer.SendTo`, skipped when offline; a failing send logs once per streak and
+  never stops the heat or the start). The end line goes on a natural end, all waves defeated and an admin stop.
+- **End paths.** "[nyar] revenge <id> ended: natural end|all waves defeated|admin stop|purge|restart|pillar off|fault".
+  Purge empties every heat row, due player, warning and cooldown; a restart cancels the instance, the boot sweep
+  removes its units, and the heat is gone (memory only). A disable or an invalid edit drops the definition's rows at
+  the next 5 s scan; `.nyar pillar <name> off` drops them at once. A heat row keeps at most 500 entries (the largest
+  `heat`), so a long window cannot grow it without bound.
+- **Bosses.** A boss is a SpawnTracker unit like any other: the caps cut the last wave's regular units before its
+  bosses, a Region wave trades a boss into a group that found a spot, and every end path, the purge and the boot sweep
+  remove it. Ungoro's own summons belong to the game and end within 120 s.
+- **Changed: our V Bloods raise nothing** (`Logic/Empowerment.cs` DeathRule, D30). A V Blood spawned by an event or
+  `.nyar spawn` no longer raises VBloodKilled, so a boss wave cannot start another event; a native V Blood still does.
+- **Chat.** `.nyar event set <id> trigger.factions|trigger.heat|trigger.windowSeconds|trigger.warnAt|trigger.vbloodHeat|
+  trigger.playerCooldownMinutes <value>` and `action.bosses <prefab[:count],…|none>`, refused with the validator's
+  reason. `event info` shows the trigger, the bosses and "revenge: <r> heat rows, <d> due, <n> running".
+- **Templates.** `bandit-revenge` (disabled): Faction_Bandits, heat 30 in 900 s, warnings at 10 and 20, three tiers
+  (thugs and hunters, then a deadeye with doubled health) around the target, Hunt, the scoreboard. `spider-swarm`'s
+  and `spider-hunting-grounds`' last waves carry Ungoro (CHAR_Spider_Queen_VBlood). Thirteen templates in all.
+- **Wire.** api 7: `trigger=revenge` on def and tpl rows; nothing else.
+</details>
+
+<details>
+<summary><b>Static checks and tools</b></summary>
+
+- **Rollback drill.** Accepts 0.11.0's "unknown trigger type Revenge" and "unknown field action.bosses"; fixtures
+  pair-revenge and pair-bosses pass, pair-othertrigger2 ("Swarmz") fails; selftest 29/29.
+- **`-DependencySuite revenge`.** heat-read and private-send.
+- **vrclient.** Scenarios revenge, revenge-vblood, revenge-restart/-boot2, revenge-timing, boss-wave; NyarDevTools
+  `.devkill <prefab> <radius> <max>` and `.devunits` over far (disabled) chunks.
+- **Tests.** 3134 (2935 at 0.11.0), with a control row for every D-item (ControlCases).
+</details>
+
 ## [0.11.0] - 2026-10-13
 
 The `hunting-grounds` child of the DoD Epic (`docs/dod/hunting-grounds.md`). A spawn event can be bound to the game's

@@ -163,6 +163,9 @@ public sealed class RevengeHeat
         Expire(row, t, utcNow);
         row.Points.Enqueue((utcNow, points));
         row.Sum += points;
+        // at most MaxHeat entries a row: each is worth 1 point or more, so a capped row stays at or above any heat and
+        // warning threshold while a long window cannot grow the queue without bound
+        while (row.Points.Count > EventValidator.MaxHeat) row.Sum -= row.Points.Dequeue().Points;
         row.Updated = utcNow;
         var warning = Rearm(key, warnAt, row.Sum, climb: true);
         var becameDue = false;

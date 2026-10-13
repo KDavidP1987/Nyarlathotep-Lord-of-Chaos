@@ -20,8 +20,8 @@ Everything ships **disabled**; admins opt in per pillar and per event.
 Same family as the author's other mods — **Beelzebub** (server), **Uriel** (server), **Faust** (server),
 and **Raphael** (client, formerly BloodCraftHub). Nyarlathotep mirrors the Faust/Uriel architecture.
 
-> **Status:** v0.11.0 public beta (hunting-grounds, 2026-10-13; swarm 0.10.0). **Halloween track** (design §9
-> D33-D37, D42-D50, Epic A35, A37): next revenge (0.12.0), apocalypse (0.13.0, with map-wide roaming and a pathing
+> **Status:** v0.12.0 public beta (revenge, 2026-10-13; hunting-grounds 0.11.0). **Halloween track** (design §9
+> D33-D37, D42-D51, Epic A35, A37): next apocalypse (0.13.0, with map-wide roaming and a pathing
 > study), a test weekend with the owner's players, release by 2026-10-31. Development is tracked by the DoD Epic
 > `docs/dod/nyarlathotep.md` (its child manifest and `docs/dod/README.md` give the order). New decisions go to the
 > user in plan mode before dependent code.

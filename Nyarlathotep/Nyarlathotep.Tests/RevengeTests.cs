@@ -127,6 +127,34 @@ public class RevengeTests
     }
 
     [Fact]
+    public void Heat_fails_when_a_row_queue_grows_past_max_heat()
+    {
+        // Codex 0.12.0 F1: a long window of many kills keeps at most MaxHeat entries a row, and the capped row stays due
+        var d = Def(trigger: Trigger(heat: 500, window: 3600, warnAt: "[499]", cooldown: 0));
+        var heat = new RevengeHeat();
+        for (var i = 0; i < 2000; i++) heat.Add(d, P1, 1, T0.AddSeconds(i));
+        Assert.Equal(EventValidator.MaxHeat, heat.HeatOf("rv", P1));
+        Assert.True(heat.IsDue("rv", P1));
+        heat.Add(d, P1, 10, T0.AddSeconds(2001));                                 // a V Blood point replaces one of 1
+        Assert.Equal(EventValidator.MaxHeat + 9, heat.HeatOf("rv", P1));
+    }
+
+    [Fact]
+    public void Heat_fails_when_pillar_off_keeps_heat_until_the_next_scan()
+    {
+        // Codex 0.12.0 F2 (D8): `.nyar pillar <name> off` prunes at once, so an off and on inside one scan keeps no heat
+        var set = Set(Event());
+        var heat = new RevengeHeat();
+        heat.Add(set.Find("rv")!, P1, 3, T0);
+        heat.Prune(PlayerTriggerFeed.RevengeStartable(set, _ => false), T0.AddSeconds(1));
+        Assert.Equal(0, heat.Rows);
+        heat.Prune(PlayerTriggerFeed.RevengeStartable(set, _ => true), T0.AddSeconds(2));
+        Assert.Equal(0, heat.HeatOf("rv", P1));
+        var source = EndPathTests.RuntimeSource().Replace("\r\n", "\n");
+        Assert.Contains("TriggerBus.PruneRevenge(", EndPathTests.Body(source, "internal static IReadOnlyList<string> EndPillar(Pillar pillar)"), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Heat_fails_when_heat_is_added_during_the_cooldown()
     {
         var set = Set(Event());

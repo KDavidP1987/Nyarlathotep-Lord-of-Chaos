@@ -6,7 +6,7 @@ A **server-side** event layer for V Rising. Admins stage NPC events the base gam
 and empowered factions on a schedule, at nightfall or after a V Blood falls, with warnings and banners for
 players, and in later releases castle sieges, defended zones and boss-fight adds.
 
-> **Public beta (0.11.0).** Every pillar and automatic announcement is off by default; no event runs until an
+> **Public beta (0.12.0).** Every pillar and automatic announcement is off by default; no event runs until an
 > admin turns on its pillar and enables it.
 
 ## What it does
@@ -169,6 +169,31 @@ that use these keys.
 </details>
 
 <details>
+<summary><b>Revenge and final-wave bosses</b> · <i>0.12.0</i></summary>
+
+A spawn event with a `Revenge` trigger lets a faction take revenge on one player:
+
+| Key | Values | Effect |
+|---|---|---|
+| `trigger` | `{ "type": "Revenge", "factions": [1–5], "heat": 3–500, "windowSeconds": 60–3600, "warnAt": [up to 3 steps below heat], "vbloodHeat": 0–100 (10), "playerCooldownMinutes": 0–1440 (30) }` | Each kill of those factions' NPCs within the window adds 1 heat to the killer, a V Blood kill `vbloodHeat`; units spawned by events and kills during the player's cooldown add none. At each `warnAt` step the player gets a private warning; at `heat` the revenge starts once the player is online, alive, out of PvP combat and outside castle territory |
+
+The revenge sends a server alert that names no one ("The Bandits swear revenge…"), a private line to the player, and
+the event's waves around that player only, hunting only that player; killing every wave ends it with a private end
+line. Then the player's cooldown runs. The event must be a spawn event with an `AroundPlayer` location (15–40 m) and
+Hunt. The heat lives in memory only, so a restart or `.nyar purge confirm` forgets it, and nothing ever spawns in
+or is moved into claimed territory. Another player can join the fight; the squads hunt only their target.
+
+`"bosses": [ { "prefab": "CHAR_Spider_Queen_VBlood", "count": 1–3, "modifiers": {...} } ]` (up to 3 entries) on any
+spawn event adds bosses to its last wave. They must die for "all waves defeated", and players feed on their V Blood
+as usual. A V Blood spawned by an event or `.nyar spawn` never starts a V Blood triggered event.
+
+In chat: `.nyar event set <id> trigger.type Revenge`, `trigger.heat`, `trigger.warnAt 10,20`, `trigger.vbloodHeat`,
+`trigger.windowSeconds`, `trigger.playerCooldownMinutes`, `trigger.factions` and `action.bosses
+CHAR_Spider_Queen_VBlood:1` (or `none`); `event info` shows "revenge: <n> heat rows, <d> due, <r> running". Rolling back to 0.11.0
+disables the events that use these keys.
+</details>
+
+<details>
 <summary><b>Announcements</b> · <i>0.2.0</i></summary>
 
 Wave warnings before each wave (by default 5 min, 1 min and 10 s ahead), start and end banners with your own
@@ -217,9 +242,9 @@ Optional action keys: `includeUnits` / `excludeUnits` (unit names such as `CHAR_
 </details>
 
 <details>
-<summary><b>Event templates and chat authoring</b> · <i>0.5.0; three automatic templates 0.8.0; a wave set 0.9.0; a swarm 0.10.0; hunting grounds 0.11.0</i></summary>
+<summary><b>Event templates and chat authoring</b> · <i>0.5.0; three automatic templates 0.8.0; a wave set 0.9.0; a swarm 0.10.0; hunting grounds 0.11.0; revenge 0.12.0</i></summary>
 
-Twelve ready-made events ship inside the mod. `.nyar template use <id>` copies one into your `events.json`,
+Thirteen ready-made events ship inside the mod. `.nyar template use <id>` copies one into your `events.json`,
 disabled, ready to adjust and enable.
 
 | Template | What it does | Starts |
@@ -234,8 +259,9 @@ disabled, ready to adjust and enable.
 | `border-watch` | 3 militia and 2 crossbowmen near the player, hunting (0.8.0) | A player enters Dunley Farmlands (30 min per player) |
 | `bandit-reprisal` | 4 thugs and 2 hunters near the player, hunting (0.8.0) | A player kills 20 bandits within 5 min |
 | `graveyard-waves` | 3 growing undead waves near a player, the last with a Guardian, hunting, with the scoreboard (0.9.0) | By command |
-| `spider-swarm` | 5 spider waves growing from 6 to 18 units and level 30 to 42, held in a 40 m arena around the admin, with the scoreboard and a K/D winner (0.10.0) | By command |
-| `spider-hunting-grounds` | 3 waves of 6 level 30 spiders spread over Dunley Farmlands, kept inside and hunting the players there, with the scoreboard (0.11.0) | By command |
+| `spider-swarm` | 5 spider waves growing from 6 to 18 units and level 30 to 42, held in a 40 m arena around the admin, ending on Ungoro, with the scoreboard and a K/D winner (0.10.0; Ungoro 0.12.0) | By command |
+| `spider-hunting-grounds` | 3 waves of 6 level 30 spiders spread over Dunley Farmlands, kept inside and hunting the players there, ending on Ungoro, with the scoreboard (0.11.0; Ungoro 0.12.0) | By command |
+| `bandit-revenge` | 3 tiers of bandits around a player who killed 30 bandits within 15 minutes, warned at 10 and 20, hunting only that player, with the scoreboard (0.12.0) | Revenge |
 
 You can build and change events without touching the file. Use `.nyar event new <id> <pillar>`,
 `.nyar event copy <id> <newId>` and `.nyar event delete <id>` (then `confirm`). `.nyar event set` also changes
@@ -372,6 +398,7 @@ V Rising offers no screen reader for it, a limitation of the game.
 | `.nyar event set <id> <field> <value>` (0.7.0) | On a wave event: `action.modifiers.<level\|levelDelta\|maxHealth\|power\|moveSpeed\|attackSpeed>` (a value or `none`), `action.loot`, `action.allowTerritory` (`true\|false`), `action.behaviour` (`none` or `"hunt <range>"`), `action.units.<n>.chance`, `location "aroundplayer <min> <max>"` |
 | `.nyar event set <id> <field> <value>` (0.8.0) | `trigger.type Interval\|RegionEntered\|FactionKills`, `trigger.minMinutes`, `trigger.maxMinutes`, `trigger.playerCooldownMinutes`, `trigger.factions` (`Name,Name`), `trigger.kills`, `trigger.windowSeconds`, `trigger.shared` (`true\|false`), `action.fanOut` (`none` or `"<maxInstances> <minSpacing>"`). `event info` shows an Interval event's next start |
 | `.nyar event set <id> <field> <value>` (0.9.0) | `action.scoreboard` (`true\|false`), `action.waveList.<n>.units` (`CHAR_<name>[:<count>][,…]`; n up to one past the last wave appends one; on a units-form event `waveList.1.units` converts it), `action.waveList.<n>.afterSeconds` (10-3600 or `none`), `action.waveList.<n>.whenCleared` (`true\|false`), `action.waveList.<n>.units.<m>.<level\|levelDelta\|maxHealth\|power\|moveSpeed\|attackSpeed>` (a value or `none`), `action.waveList.<n> none` (removes the wave). `event info` shows one line per wave |
+| `.nyar event set <id> <field> <value>` (0.12.0) | `trigger.type Revenge`, `trigger.heat`, `trigger.warnAt` (`n,n` or `none`), `trigger.vbloodHeat`, and on a Revenge event `trigger.factions`, `trigger.windowSeconds` and `trigger.playerCooldownMinutes`; `action.bosses` (`CHAR_<name>[:<count>][,…]` or `none`). `event info` shows the heat counts |
 | `.nyar event reload` | Re-read `events.json` |
 | `.nyar region list` / `region here` | The map's regions with their event counts / the region you stand in (0.6.0) |
 | `.nyar spawn <unit> [count] [level\|+n\|-n] [hp] [power]` | One-off test spawn beside you, removed after `ManualSpawnLifetimeSeconds` |
@@ -442,7 +469,7 @@ Faction empowerment above.
 Stop the server and delete `Nyarlathotep.dll`. The mod's units carry a timer and expire on their own, and so
 do empowerment buffs. To downgrade to 0.3.0, run `.nyar purge confirm` first: 0.3.0 does not remove the buffs,
 which otherwise stay until their event's time runs out. An older release disables an event using a key it does not
-know until you remove the key: 0.8.0 the 0.9.0 keys `waveList` and `scoreboard` (it ignores `[Scoreboard]
+know until you remove the key: 0.11.0 the 0.12.0 `Revenge` trigger and `bosses`, 0.8.0 the 0.9.0 keys `waveList` and `scoreboard` (it ignores `[Scoreboard]
 IncludeAdmins`), 0.7.0 the 0.8.0 triggers (`Interval`, `RegionEntered`, `FactionKills`) and `fanOut`
 (it ignores the next starts kept in `state.json`), 0.6.0 the 0.7.0 wave keys (`chance`, `modifiers`, `loot`, `behaviour`,
 `allowTerritory`) and the `AroundPlayer` location, 0.5.x `scope` and `{region}`. To
