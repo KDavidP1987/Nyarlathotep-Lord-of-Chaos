@@ -189,3 +189,45 @@ VERDICT: READY
 - F4 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 3 F4`, D1's test plants an Admin goal with each trigger kind other than Manual (Schedule, Interval and each event-driven kind), each refused, so the rule "an Admin goal needs a Manual trigger" is checked across the family (UF1)
 - F5 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 3 F5`, no action beyond the plan: Build plan step 2 keeps every step-2 and step-3 item in ControlCases.Pending until its planted fault is recorded in its step's post-audit (Review 1 F9)
 - UF1 · rejected · not edited after the READY (review.md, freeze): D1's rule is "an Admin goal needs a Manual trigger", so every other trigger kind is refused by the same check; the builder plants each kind (Schedule, Interval and each event-driven kind) in D1's test under Log note Review 3 F4, an amendment if it changes a promise
+
+## Review 4 · 2026-10-13 · subagent · plan commit a2771a8 · plan 132155 B · 38 items · files 0 · e3b0c44298fc · prompt d82a0ae8e6bf
+Scope: the full re-review that A1-A6 owe (51 % of items touched after `start`).
+
+L1 · Considered · no finding
+L2 · Considered · no finding
+L3 · Considered · F1
+L4 · Considered · F2, F3
+L5 · Considered · F1
+L6 · Considered · F5
+L7 · Considered · no finding
+L8 · Considered · no finding
+L9 · Considered · no finding
+L10 · Considered · no finding
+L11 · Considered · F7
+L12 · Considered · F5
+L13 · Considered · F6
+L14 · Considered · F4
+L15 · Considered · no finding
+
+F1 · blocking · blocks: outcome · probe 5.3 / 3.3 · D36 says a living boss must be rebuilt at a resume (its test fails when "a resume … leaves a boss out"). The D11 record and the Interfaces 5.3 contract `hordes[]{number,frontX,frontZ,living}` hold only one living count per horde, and D19 fixes the record at "exactly `Apocalypse` with its listed fields". So after a restart the rebuild cannot tell a horde of 5 regulars plus a living boss from 6 regulars with the boss dead. Fix: D11, 5.3 and D19's field list give each living horde a living-boss count, and D12 rebuilds from it.
+F2 · advisory · probe 4.1 · Business rule 3 still says roamers "hunt within huntRange of their hotspot", and S-7 says "'roaming' is hunting around the hotspot". Both contradict the amended D3 and design §9 D49. Fix: rewrite Business rule 3 to D3's map-wide rule and mark S-7 superseded by A2 / D49.
+F3 · advisory · probe 4.1 · D3 hands over to Hunt "within huntRange (20-60)", but hunting-grounds' mover lands units 50-60 m from the target and seeds aggro within 100 m (SeedReach = WatchRange), so a huntRange under 50 would leave roamers waiting. "Nearest eligible player" also does not say nearest to what. Fix: D3 names the mover's seed reach (100 m) and measures from the roamers' mean position; give apo-test (D25) an explicit huntRange.
+F4 · advisory · probe 14.4 · Paths walked does not list Logic/FactionGroups.cs (D38), tools/vrclient/scenarios/faction-mix.vrs and docs/GAME_ASSETS.md (D37), or Logic/HuntingGrounds.cs and its service for a no-region mover. Fix: add them under Steps 1-3.
+F5 · advisory · probe 6.2 · D21 and D22's five faults cover march reads but not a failing roamer move (A2). Fix: a throwing roam move leaves the roamers where they stand, logs once per streak and shows a health entry, in the march-read category or a sixth.
+F6 · advisory · probe 13.1 · The hot-path list predates A2 and leaves out the roam check for up to roamers.max map-wide roamers; D29 runs with Chaos near the hordes. Fix: add the roam check to 13.1 and make D29's run include roamers moving towards Chaos from afar.
+F7 · advisory · probe 11.2 · revenge D31 gives SpawnWaves an `action.bosses` chat field; D16 does not list it for Apocalypse. Fix: add `action.bosses` to D16, or name it events.json-only.
+
+missing components: none
+undeclared families: undead mix, spider mix, bandit mix, militia mix
+15/15 layers · 50/50 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · fixed by A7 (discovered, 5.3): D11 records each living horde's living-boss count, the 5.3 contract gains `livingBosses`, D12 rebuilds that many bosses, D19's field list and D36's test name it.
+- F2 · accepted · fixed: Business rule 3 states D3's map-wide rule; S-7 marked superseded by A2 (design §9 D49).
+- F3 · accepted · fixed under A2: D3 measures from the roamers' mean position and hands over at the mover's seed reach (100 m, hunting-grounds A4); D25's apo-test gains huntRange 40.
+- F4 · accepted · fixed: Paths walked step 1 adds faction-mix.vrs and docs/GAME_ASSETS.md; step 2 adds Logic/HuntingGrounds.cs and Logic/FactionGroups.cs; step 3 adds Services/WaveAction.cs (the mover's service) and Logic/FactionGroups.cs.
+- F5 · accepted · fixed by A8 (discovered, 6.2): the roam move fault is in D21 under march-read, so D22's suite keeps five categories.
+- F6 · accepted · fixed by A9 (discovered, 13.1): the roam check is a 13.1 hot path; D29's run keeps Chaos 300 m or more from the hotspots for its first windows.
+- F7 · accepted · fixed by A10 (discovered, 11.2): D16 takes `action.bosses` with revenge D31's form and reasons.
+- UF1 · accepted · D37
