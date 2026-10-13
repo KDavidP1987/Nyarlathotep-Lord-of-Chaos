@@ -324,10 +324,14 @@ sealed class FakeAdminOps : IAdminOps
 
     public (DateTime? PurgeUntilUtc, int Events, int Units) KillSwitch => (PurgeUntilUtc, Engine.Active.Count, TrackedUnits);
 
-    public Outcome OpStartEvent(string id, (float X, float Y, float Z)? origin)
+    /// <summary>The focus the last start was given (revenge D13).</summary>
+    public string? LastFocus { get; private set; }
+
+    public Outcome OpStartEvent(string id, (float X, float Y, float Z)? origin, string? focus = null)
     {
         Call($"start {id}");
-        var refused = Engine.Start(id, "manual", Now, Controls(), origin);
+        LastFocus = focus;
+        var refused = Engine.Start(id, "manual", Now, Controls(), origin, focus: focus);
         return After($"start {id}", refused is null ? AdminLines.Started(id) : AdminLines.StartRefused(refused, true, PurgeUntilUtc, Now));
     }
 

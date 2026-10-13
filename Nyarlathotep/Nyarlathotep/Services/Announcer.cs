@@ -46,12 +46,24 @@ internal static class Announcer
         Core.Log.LogInfo($"[nyar] announcements: {(on.Count == 0 ? "all off" : string.Join(", ", on))}; warning offsets {string.Join(",", Settings.WarningOffsets)} s; daily banner {Settings.DailyBannerTime:HH\\:mm}");
     }
 
-    /// <summary>EventRuntime: an event started. With EventBanners on, its start banner is queued.</summary>
+    /// <summary>EventRuntime: an event started. With EventBanners on, its start banner is queued; a Revenge definition
+    /// queues its faction alert instead, whatever EventBanners says (revenge D7).</summary>
     internal static void EventStarted(RunningInstance instance)
     {
-        if (!Settings.EventBanners.Value) return;
         var minutes = (int)Math.Ceiling((instance.EndsUtc - instance.StartedUtc).TotalMinutes);
-        _queue.Enqueue(new QueuedLine(Messages.StartBanner(instance.Definition, minutes, _random.Next()), LineKind.Info, instance.Definition.Id), DateTime.UtcNow);
+        foreach (var line in RevengeRule.StartLines(instance.Definition, Settings.EventBanners.Value, _random.Next(),
+            () => Messages.StartBanner(instance.Definition, minutes, _random.Next())))
+            _queue.Enqueue(line, DateTime.UtcNow);
+    }
+
+    /// <summary>A private line to the player with platform id <paramref name="player"/> (revenge D4, D7, D8): nothing when
+    /// that player is not connected. Throws when the send fails, so the caller's streak logs it (revenge D10).</summary>
+    internal static void SendTo(string player, string text)
+    {
+        if (!ulong.TryParse(player, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var id)) return;
+        var users = new GameUsers();
+        if (!users.Connected().Contains(id)) return;
+        users.Send(id, TextSink.CutToBytes(text, Wire.MaxBytes));
     }
 
     /// <summary>EventRuntime: an event ended (expired, stopped or cancelled). Its unsent warnings go; with EventBanners on,

@@ -208,7 +208,8 @@
         "arena": { "radius": 40 },
         "behaviour": { "type": "Hunt", "range": 40 },
         "scoreboard": true,
-        "winner": "KillDeath"
+        "winner": "KillDeath",
+        "bosses": [ { "prefab": "CHAR_Spider_Queen_VBlood", "count": 1, "modifiers": { "level": 45 } } ]
       },
       "announce": { "start": [ "The webs stir: {event}." ], "end": [ "The swarm withdraws. {event} is over." ], "warnings": false }
     },
@@ -232,9 +233,43 @@
         "regionLock": true,
         "modifiers": { "level": 30 },
         "behaviour": { "type": "RegionHunt" },
-        "scoreboard": true
+        "scoreboard": true,
+        "bosses": [ { "prefab": "CHAR_Spider_Queen_VBlood", "count": 1, "modifiers": { "level": 35 } } ]
       },
       "announce": { "start": [ "Dunley Farmlands crawls with spiders: {event}." ], "end": [ "The spiders retreat to their webs. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "bandit-revenge",
+      "name": "Bandit revenge",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": {
+        "type": "Revenge", "factions": [ "Faction_Bandits" ], "heat": 30, "windowSeconds": 900, "warnAt": [ 10, 20 ],
+        "vbloodHeat": 10, "playerCooldownMinutes": 30
+      },
+      "durationSeconds": 900,
+      "action": {
+        "type": "SpawnWaves",
+        "waveList": [
+          { "units": [
+            { "prefab": "CHAR_Bandit_Thug", "count": 3 },
+            { "prefab": "CHAR_Bandit_Hunter", "count": 1 } ] },
+          { "units": [
+            { "prefab": "CHAR_Bandit_Thug", "count": 4, "modifiers": { "levelDelta": 1 } },
+            { "prefab": "CHAR_Bandit_Hunter", "count": 2, "modifiers": { "levelDelta": 1 } } ],
+            "afterSeconds": 120, "whenCleared": true },
+          { "units": [
+            { "prefab": "CHAR_Bandit_Thug", "count": 4, "modifiers": { "levelDelta": 2 } },
+            { "prefab": "CHAR_Bandit_Hunter", "count": 3, "modifiers": { "levelDelta": 2 } },
+            { "prefab": "CHAR_Bandit_Deadeye", "count": 1, "modifiers": { "levelDelta": 2, "maxHealth": 2.0 } } ],
+            "afterSeconds": 120, "whenCleared": true }
+        ],
+        "radius": 8,
+        "location": { "type": "AroundPlayer", "minDist": 20, "maxDist": 40 },
+        "behaviour": { "type": "Hunt", "range": 45 },
+        "scoreboard": true
+      },
+      "announce": { "start": [ "The {faction} want revenge: {event}." ], "end": [ "The {faction} give up the hunt. {event} is over." ], "warnings": false }
     }
   ]
 }

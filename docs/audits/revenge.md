@@ -8,6 +8,16 @@
 - dod status: 0/32 verified (just started)
 - feature doc read: docs/features/REVENGE.md created in this step (Status: in progress); docs/features/HUNTING_GROUNDS.md (released 0.11.0) and docs/features/WAVE_SETS.md read
 
+### Step 2 · 2026-10-13 · 8a43069
+- git status: clean at 8a43069 (step 1 post-audit committed)
+- compile: 0 Warning(s), 0 Error(s); tests 3102/3102
+- preflight: PREFLIGHT OK, "secrets: none (1972 files scanned, 1922 index blobs)"
+- dod status: 17/32 verified (D1-D9, D11-D13, D15, D17, D28-D30); D31 waits on TemplateLibraryTests.Bosses
+- feature doc read: docs/features/REVENGE.md (Status: step 1 built; open questions: idle squads when the focus leaves Hunt range, scaling and replacements after Halloween)
+- baseline boot: the 8a43069 Release DLL on the dev server inside snapshot rv1 (`dev-snapshot.ps1 -Save rv1`, 33 files); logs copied to %TEMP%
+yar-rv1-logs first; "events: reloaded: 12 valid, 1 disabled" (example-empowerment, the known one), "templates: 12/12 valid", "triggers: all hooks available"; -LogCheck PREFLIGHT OK
+- timing baseline (Review 3 F2): TIMING_PENDING
+
 ## Post-audit
 ### Step 1 · 2026-10-13 · revenge half: 1c9127c (builder subagent, on 0aacdba)
 - compile: `dotnet build Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__` 0 Warning(s), 0 Error(s)

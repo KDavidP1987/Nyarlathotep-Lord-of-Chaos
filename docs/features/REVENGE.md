@@ -1,9 +1,10 @@
 # Revenge — factions that hunt a vampire who kills too many of them
 
 **Status:** in progress for 0.12.0 (docs/dod/revenge.md, audit docs/audits/revenge.md). Step 1 (the logic: trigger,
-heat, gate, focus-only waves and hunts, lines, chat fields, info, wire api 7, and the final-wave bosses) is built; the
-services that feed and start a revenge are step 2, so a Revenge definition loads and shows in `.nyar event info` but
-nothing starts it in game yet. The final-wave bosses (design §9 D51) ship with this child.
+heat, gate, focus-only waves and hunts, lines, chat fields, info, wire api 7, and the final-wave bosses) and step 2's
+services are built: the death read feeds the heat, the 5 s scan starts a due player's revenge, waves and hunts take the
+target only, the alert and the private lines go out, and the end paths log and clear. The bandit-revenge template is in
+the library, and spider-swarm and spider-hunting-grounds end on Ungoro. The in-game session (step 2) follows.
 
 ## Goal
 

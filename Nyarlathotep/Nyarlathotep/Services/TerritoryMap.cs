@@ -57,6 +57,14 @@ internal static class TerritoryMap
         WalkCheck.Health.Territory(_maps.AnyFailed);
     }
 
+    /// <summary>The claimed blocks for one revenge scan (revenge D5), kept by no event; null when the read failed (the
+    /// due players hold "ineligible"). Never throws.</summary>
+    internal static IReadOnlySet<(int X, int Z)> ForScan()
+    {
+        try { return Territory.Build(ReadBlocks()).Blocks; }
+        catch (Exception) { return null; }
+    }
+
     /// <summary>`purge confirm`: every kept map goes.</summary>
     internal static void Clear()
     {

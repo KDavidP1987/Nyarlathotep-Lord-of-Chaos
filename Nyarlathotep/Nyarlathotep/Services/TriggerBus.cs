@@ -105,10 +105,11 @@ internal static class TriggerBus
         if (utcNow < _nextScan) return;
         _nextScan = utcNow.AddSeconds(TriggerLimits.ScanSeconds);
         var regionOf = RegionMap.State.Available ? RegionMap.State.Index.RegionOf : (Func<float, float, string>)null;
+        var revenge = RevengeInputs();
         if (!Settings.TimingLog.Value)
         {
             _feed.Scan(ReadPlayers, regionOf, EventStore.Catalog.Current, IsActive, utcNow,
-                line => Core.Log.LogWarning($"[nyar] {line}"), FirePlayer, Verbose);
+                line => Core.Log.LogWarning($"[nyar] {line}"), FirePlayer, Verbose, revenge);
             return;
         }
         // automation A6: with Debug.TimingLog, a scan of 5 ms or more names its parts, its log writes and the CoreCLR
@@ -119,12 +120,51 @@ internal static class TriggerBus
         var start = Stopwatch.GetTimestamp();
         _feed.Scan(() => Timed(ReadPlayers, ref read), regionOf is null ? null : (x, z) => Timed(() => regionOf(x, z), ref regions),
             set, IsActive, utcNow, line => Timed(() => { Core.Log.LogWarning($"[nyar] {line}"); return 0; }, ref logged), FirePlayer,
-            line => Timed(() => { Verbose(line); return 0; }, ref logged));
+            line => Timed(() => { Verbose(line); return 0; }, ref logged), revenge);
         var total = Stopwatch.GetTimestamp() - start;
         if (Ms(total) >= 5)
             Core.Log.LogInfo($"[nyar] player triggers: {Ms(total):0.0} ms (read {Ms(read):0.0} ms, regions {Ms(regions):0.0} ms, " +
                 $"log {Ms(logged):0.0} ms, rest {Ms(total - read - regions - logged):0.0} ms; gc {GC.CollectionCount(0) - collections})");
     }
+
+    /// <summary>The revenge inputs of one scan (revenge D5): the players with the gate's facts, the claimed territory
+    /// built only while someone is due (null while it cannot be read: the due players hold "ineligible"), whether another
+    /// running Revenge instance is focused on a player, the start, and the pillars that are on.</summary>
+    static RevengeScan RevengeInputs()
+    {
+        Func<float, float, bool> claimed = null;
+        if (_feed.Heat.Due > 0 && TerritoryMap.ForScan() is { } map) claimed = (x, z) => Territory.IsClaimed(map, x, z);
+        return new RevengeScan(ReadTargets, claimed, TargetBusy, StartRevenge, PillarOn);
+    }
+
+    static IReadOnlyList<RevengeTarget> ReadTargets() =>
+        PlayerQuery.Read().Select(p => new RevengeTarget(p.PlatformId, p.X, p.Y, p.Z, p.Alive, p.InPvpCombat)).ToList();
+
+    static bool TargetBusy(string player) =>
+        EventRuntime.Engine.Active.Any(a => RevengeRule.IsRevenge(a.Definition) && a.Focus == player);
+
+    static bool PillarOn(Pillar pillar) => Settings.Enabled.Value && PillarSwitches.On(pillar);
+
+    /// <summary>A due player's revenge start (revenge D5): a System player-action start focused on the player, its
+    /// refusal read by RevengeRule.Classify (a conditions refusal resets the heat, anything else holds the player).</summary>
+    static RevengeStartResult StartRevenge(PlayerFire fire)
+    {
+        var def = fire.Definition;
+        var outcome = Gateway.Run(ActionKind.StartEvent, Actor.System,
+            () => EventRuntime.StartEvent(def.Id, fire.Trigger, Actor.System, null, fire.At, fire.PlayerId, _ => { }), def.Startable);
+        return RevengeRule.Classify(outcome.Ok ? null : outcome);
+    }
+
+    /// <summary>A private revenge line to <paramref name="player"/> (revenge D4, D7, D8): nothing when the player is
+    /// offline; a throwing send is logged once per streak by the feed (D10) and stops nothing else.</summary>
+    internal static void Tell(string player, string line) =>
+        _feed.Tell(Announcer.SendTo, player, line, l => Core.Log.LogWarning($"[nyar] {l}"));
+
+    /// <summary>The purge (revenge D8): every heat row, warning level, due player and cooldown goes.</summary>
+    internal static void ClearRevenge() => _feed.Heat.Clear();
+
+    /// <summary>`.nyar event info`'s revenge counts (D12): heat rows and due players of <paramref name="id"/>.</summary>
+    internal static (int Rows, int Due) RevengeCounts(string id) => (_feed.Heat.RowsFor(id), _feed.Heat.DueFor(id));
 
     static T Timed<T>(Func<T> f, ref long ticks)
     {
@@ -162,7 +202,8 @@ internal static class TriggerBus
     {
         var regionOf = RegionMap.State.Available ? RegionMap.State.Index.RegionOf : (Func<float, float, string>)null;
         _feed.Died(needsPosition => KillReader.Read(killer, died, victimOurs, needsPosition), EventStore.Catalog.Current, regionOf,
-            _hooks.AllowsTrigger, IsActive, DateTime.UtcNow, line => Core.Log.LogWarning($"[nyar] {line}"), FirePlayer, Verbose);
+            _hooks.AllowsTrigger, IsActive, DateTime.UtcNow, line => Core.Log.LogWarning($"[nyar] {line}"), FirePlayer, Verbose,
+            Announcer.SendTo, PillarOn);
     }
 
     static bool IsActive(string id) => EventRuntime.Engine.Find(id) is not null;
@@ -267,8 +308,11 @@ internal static class KillReader
         float? x = null, z = null;
         if (needsPosition && died.TryGetComponent<Translation>(out var t)) (x, z) = (t.Value.x, t.Value.z);
         var faction = died.TryGetComponent<FactionReference>(out var f) ? f.FactionGuid._Value.GetPrefabName() : null;
-        return new KillFacts(killerPlayer, ownerPlayer, died.Has<PlayerCharacter>(), died.Has<Minion>(), ours, faction, x, z,
-            killer == died);
+        var isPlayer = died.Has<PlayerCharacter>();
+        // revenge D3, D10: the V Blood flag by DeathRule, in this same guard; a unit of ours is never one (D30)
+        var vblood = DeathRule.IsVBloodKill(died.Has<VBloodConsumeSource>(), hasVBloodUnit: false, isPlayer, ours);
+        return new KillFacts(killerPlayer, ownerPlayer, isPlayer, died.Has<Minion>(), ours, faction, x, z,
+            killer == died, vblood);
     }
 
     /// <summary>The platform id of a player character, or null for anything else.</summary>

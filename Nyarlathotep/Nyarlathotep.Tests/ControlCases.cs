@@ -40,7 +40,7 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        new(Revenge, "D10", 2, "0.12.0"), new(Revenge, "D14", 2, "0.12.0"), new(Revenge, "D16", 2, "0.12.0"), new(Revenge, "D23", 2, "0.12.0"),
+        new(Revenge, "D23", 2, "0.12.0"),
         new(Revenge, "D24", 3, "0.12.0"), new(Revenge, "D25", 3, "0.12.0"), new(Revenge, "D26", 3, "0.12.0"), new(Revenge, "D27", 3, "0.12.0"),
     ];
 
@@ -60,7 +60,7 @@ public static class ControlCases
         "HumanReplyTests", "OutcomeCodeTests", "ApiTwinTests", "RateGateTests", "ApiOverloadTests", "EventAdminTests",
         "EndPathTests", "WavePrecedenceTests", "SpawnsDependencyFailureTests", "AutomationTests", "AutomationDependencyFailureTests", "SpawnPlacementTests",
         "WaveSetTests", "ScoreboardTests", "WaveSetDependencyFailureTests", "SwarmTests", "SwarmDependencyFailureTests",
-        "HuntingGroundsTests", "HuntingGroundsDependencyFailureTests", "RevengeTests", "BossWaveTests",
+        "HuntingGroundsTests", "HuntingGroundsDependencyFailureTests", "RevengeTests", "BossWaveTests", "RevengeDependencyFailureTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -709,5 +709,16 @@ public static class ControlCases
         T("D31", "Bosses", "CommandArgTests", ["the_field_accepts_a_value_the_validator_refuses", "a_name_or_fanOut_is_let_through"], ["set_and_none", "the_table_name"],
             ["value_required"]) with { Plan = Revenge },
         T("D31", "Bosses", "AuthoringTests", ["the_line_exceeds_480_bytes"], ["the_final_wave_line"], ["no_line"]) with { Plan = Revenge },
+        T("D10", "HeatRead", "RevengeDependencyFailureTests", ["a_throw_skips_the_death_pass", "one_throwing_read_prints_more_than_one_line",
+            "a_throwing_heat_update_escapes_or_repeats", "the_entry_shows_without_a_revenge_definition"], ["good_read_clears_the_entry"],
+            ["reads_no_death_without_a_definition"]) with { Plan = Revenge },
+        T("D10", "PrivateSend", "RevengeDependencyFailureTests", ["a_failed_send_stops_the_heat_or_repeats", "a_failed_send_throws_into_the_start"],
+            ["good_send_ends_the_streak"], ["no_tell_no_line"]) with { Plan = Revenge },
+        T("D14", "Revenge", "TemplateLibraryTests", ["the_template_differs"], ["bandit_revenge_as_planned"], ["none_in_an_empty_catalogue"]) with { Plan = Revenge },
+        C("D16", "DependencySuite", "preflight -DependencySuite revenge",
+            ["selftest DependencySuite/bad", "selftest DependencySuite/bad-2", "selftest DependencySuite/bad-floor-spawns"], ["selftest DependencySuite/good"],
+            ["selftest DependencySuite/empty"]) with { Plan = Revenge },
+        T("D31", "Bosses", "TemplateLibraryTests", ["a_template_loses_its_boss"], ["the_spider_templates_end_on_ungoro"], ["none_in_an_empty_catalogue"])
+            with { Plan = Revenge },
     ];
 }

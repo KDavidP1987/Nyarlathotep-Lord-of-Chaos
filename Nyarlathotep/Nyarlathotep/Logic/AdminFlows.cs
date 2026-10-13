@@ -20,7 +20,9 @@ public interface IAdminOps
     /// <summary>The purge cooldown's end, the active events and the tracked units, for `api killswitch` (D7).</summary>
     (DateTime? PurgeUntilUtc, int Events, int Units) KillSwitch { get; }
 
-    Outcome OpStartEvent(string id, (float X, float Y, float Z)? origin);
+    /// <summary>Starts <paramref name="id"/>; <paramref name="focus"/> is the admin's platform id for a Revenge definition
+    /// (revenge D13), else null.</summary>
+    Outcome OpStartEvent(string id, (float X, float Y, float Z)? origin, string? focus = null);
     Outcome OpStopEvent(string id);
     Outcome OpPurge();
 
@@ -83,7 +85,9 @@ public sealed class AdminFlows(IAdminOps ops, ActionGateway gateway, PurgeArming
             if (origin is null) return AdminLines.PositionUnread;
         }
         LogAdmin(who, $"event start {id}");
-        return gateway.Run<Outcome>(Kinds["event start"], Actor.Admin, () => ops.OpStartEvent(id, origin), ActionGateway.Denied);
+        var focus = ops.Definitions.Find(id) is { } def
+            ? RevengeRule.AdminFocus(def, who.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)) : null;   // revenge D13
+        return gateway.Run<Outcome>(Kinds["event start"], Actor.Admin, () => ops.OpStartEvent(id, origin, focus), ActionGateway.Denied);
     }
 
     public Outcome Stop(AdminCaller who, string id)

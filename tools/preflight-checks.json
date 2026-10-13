@@ -1258,6 +1258,26 @@
           "control": "Hunt"
         }
       ]
+    },
+    "revenge": {
+      "categories": [
+        "heat-read",
+        "private-send"
+      ],
+      "rows": [
+        {
+          "name": "heat-read",
+          "kind": "tests",
+          "class": "RevengeDependencyFailureTests",
+          "control": "HeatRead"
+        },
+        {
+          "name": "private-send",
+          "kind": "tests",
+          "class": "RevengeDependencyFailureTests",
+          "control": "PrivateSend"
+        }
+      ]
     }
   },
   "controlSuites": {

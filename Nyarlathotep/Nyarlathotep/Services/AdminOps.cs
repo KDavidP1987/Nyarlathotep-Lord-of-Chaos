@@ -21,7 +21,8 @@ internal sealed class AdminOps : IAdminOps
         (Persistence.State.Document.PurgeUntilUtc, EventRuntime.Engine.Active.Count, SpawnTracker.Ledger.Units.Count);
 
     [Mutating]
-    public Outcome OpStartEvent(string id, (float X, float Y, float Z)? origin) => EventRuntime.StartEvent(id, "manual", Actor.Admin, origin);
+    public Outcome OpStartEvent(string id, (float X, float Y, float Z)? origin, string focus = null) =>
+        EventRuntime.StartEvent(id, "manual", Actor.Admin, origin, focus: focus);
 
     [Mutating]
     public Outcome OpStopEvent(string id) => EventRuntime.StopEvent(id);

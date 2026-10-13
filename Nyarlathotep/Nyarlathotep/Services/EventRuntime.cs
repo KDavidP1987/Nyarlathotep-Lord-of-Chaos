@@ -51,7 +51,11 @@ internal static class EventRuntime
         Board.Clear();                                                       // a restart shows no scoreboard (wave-sets D11)
         var doc = Persistence.State.Document;
         foreach (var instance in doc.Instances)
+        {
             Core.Log.LogInfo($"[nyar] event {instance.EventId} cancelled by restart (it was due to end {instance.EndsUtc:u})");
+            if (EventStore.Catalog.Current.Find(instance.EventId) is { } def && RevengeRule.IsRevenge(def))
+                Core.Log.LogInfo($"[nyar] {RevengeRule.EndedLine(def.Id, RevengeEndPath.Restart)}");   // revenge D8: silent
+        }
         if (doc.Instances.Count > 0)
         {
             doc.Instances.Clear();
@@ -147,6 +151,7 @@ internal static class EventRuntime
         Core.Log.LogInfo($"[nyar] event {id} started by {trigger} (ends {active.Instance.EndsUtc:u})");
         if (EventActions.ActionKindOf(active.Definition) == EventActionKind.Empower) EmpowerAction.StartCarriers(active);
         Announcer.EventStarted(active.Instance);
+        if (RevengeRule.StartPrivate(active) is { } start) TriggerBus.Tell(start.Player, start.Line);   // revenge D7
         return AdminLines.Started(id);
     }
 
@@ -167,7 +172,9 @@ internal static class EventRuntime
         {
             EndSpawnState(e.Id);                                             // event-spawns D33
             ScoreboardRule.End(EndPath.Purge, e, Board);                     // its rows go, nothing shown (wave-sets D11)
+            RevengeEnded(e, RevengeEndPath.Purge);
         }
+        TriggerBus.ClearRevenge();                                           // revenge D8: no heat outlives the purge
         HuntAction.Clear();                                                  // seeds and kept maps go too
         SpawnTracker.RegionPurged();                                         // hunting-grounds D12: every lock and hunt record
         TerritoryMap.Clear();
@@ -208,6 +215,7 @@ internal static class EventRuntime
             }
             Announcer.EventEnded(ended.Definition);
             EndScoreboard(EndPath.Natural, ended);
+            RevengeEnded(ended, RevengeEndPath.NaturalEnd);
         }
         foreach (var (id, wave) in Engine.NewlyCleared(Cleared)) Core.Log.LogInfo($"[nyar] event {id} wave {wave} cleared");   // D20
         // All waves defeated (wave-sets D7): a natural end now, its grace cleanup scheduled by Engine.Complete.
@@ -219,6 +227,7 @@ internal static class EventRuntime
             Core.Log.LogInfo($"[nyar] {ScoreboardRule.VictoryLine(beaten)}");
             Announcer.EventEnded(beaten.Definition);
             EndScoreboard(EndPath.Victory, beaten);
+            RevengeEnded(beaten, RevengeEndPath.AllWavesDefeated);
         }
         Board.Keep(Engine.Active.Select(a => a.Id).ToHashSet());             // no row outlives its instance (D8)
         foreach (var cleanup in Engine.DueCleanups(now))
@@ -292,7 +301,18 @@ internal static class EventRuntime
         }
         Announcer.EventEnded(ended.Definition);
         EndScoreboard(path, ended);
+        if (path == EndPath.Stop) RevengeEnded(ended, RevengeEndPath.AdminStop);
+        else if (path == EndPath.PillarOff) RevengeEnded(ended, RevengeEndPath.PillarOff);
         return true;
+    }
+
+    /// <summary>A Revenge instance's end (revenge D8): one "revenge &lt;id&gt; ended: &lt;path&gt;" line, and the private
+    /// end line to its focus on a natural end, all waves defeated or an admin stop. Nothing for any other instance.</summary>
+    static void RevengeEnded(ActiveEvent ended, RevengeEndPath path)
+    {
+        if (!RevengeRule.IsRevenge(ended.Definition)) return;
+        Core.Log.LogInfo($"[nyar] {RevengeRule.EndedLine(ended.Id, path)}");
+        if (RevengeRule.EndPrivate(ended, path) is { } end) TriggerBus.Tell(end.Player, end.Line);
     }
 
     /// <summary>Ends <paramref name="ended"/>'s scoreboard on <paramref name="path"/> (wave-sets D11): shown after the end

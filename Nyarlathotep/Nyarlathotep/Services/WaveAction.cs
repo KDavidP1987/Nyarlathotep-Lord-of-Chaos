@@ -54,8 +54,9 @@ internal static class WaveAction
         Func<float, float, string> regionOf = RegionMap.State.Available ? RegionMap.State.Index.RegionOf : null;
         var inScope = WavePoints.ScopeCheck(action.Scope, regionOf);   // regions D6
 
+        var focusOnly = WaveFacts.IsFocusOnly(active.Definition);          // revenge D6
         var probe = new WaveFacts(due.Wave, id, false, Location: location.Type, Behaviour: action.Behaviour?.Type,
-            AllowTerritory: action.AllowTerritory);
+            AllowTerritory: action.AllowTerritory, FocusOnly: focusOnly);
         var map = probe.NeedsMap ? TerritoryMap.ForWave(id) : null;
         var mapFailed = probe.NeedsMap && map is null;
         Func<float, float, bool> claimed = map is null ? (_, _) => false : (x, z) => Territory.IsClaimed(map, x, z);
@@ -78,7 +79,7 @@ internal static class WaveAction
             IReadOnlyList<GroupCentre> centres;
             if (location.Type == LocationType.AroundPlayer && !mapFailed)
             {
-                var result = Pick(id, location, action.FanOut, active.Focus, claimed, inScope);
+                var result = Pick(id, location, action.FanOut, active.Focus, claimed, inScope, focusOnly);
                 pick = result.Outcome;
                 centres = result.Centres.Select(c => new GroupCentre(c.X, c.Y, c.Z, map is not null && claimed(c.X, c.Z))).ToList();
                 origins = result.Origins;
@@ -204,14 +205,23 @@ internal static class WaveAction
     /// <summary>The wave's AroundPlayer centres (D16; automation D5, D13): up to fanOut.maxInstances spaced players, one
     /// without fanOut, the focus player first when eligible. A throwing player read is a failed query, which skips the
     /// wave and opens the "player query failing" entry for the event, logged once per streak (D21, D30). In a Debug build,
-    /// Debug.FaultInjection = phantoms:&lt;n&gt; adds phantom candidates (automation D29).</summary>
+    /// Debug.FaultInjection = phantoms:&lt;n&gt; adds phantom candidates (automation D29). A Revenge instance's wave
+    /// (<paramref name="focusOnly"/>) is centred on its focus alone, or on nobody (revenge D6).</summary>
     static FanOutPick Pick(string id, Location location, FanOut fanOut, string focus, Func<float, float, bool> claimed,
-        Func<float, float, bool> inScope)
+        Func<float, float, bool> inScope, bool focusOnly = false)
     {
         FanOutPick result;
         try
         {
             var players = PlayerQuery.Read().Select(p => new PickCandidate(p.X, p.Y, p.Z, true, p.Alive, p.InPvpCombat, p.PlatformId)).ToList();
+            if (focusOnly)
+            {
+                var one = PlayerPick.ChooseFocus(players, _rng, location.MinDist, location.MaxDist, claimed, inScope, focus);
+                var target = players.FirstOrDefault(p => p.PlatformId == focus);
+                return Settle(id, one.Outcome == PickOutcome.Picked
+                    ? new FanOutPick(one.Outcome, [one.Centre]) { Origins = [(target.X, target.Z)] }
+                    : new FanOutPick(one.Outcome, [], one.Error));
+            }
 #if DEBUG
             players.AddRange(PlacePhantoms(players, claimed, inScope));
 #endif
@@ -222,6 +232,11 @@ internal static class WaveAction
         {
             result = new FanOutPick(PickOutcome.QueryFailed, [], ex.Message);
         }
+        return Settle(id, result);
+    }
+
+    static FanOutPick Settle(string id, FanOutPick result)
+    {
         if (result.Outcome == PickOutcome.QueryFailed)
         {
             if (WalkCheck.Health.Failing(SpawnFailure.PlayerQuery, id)) Core.Log.LogWarning($"[nyar] event {id}: player query failed: {result.Error}");

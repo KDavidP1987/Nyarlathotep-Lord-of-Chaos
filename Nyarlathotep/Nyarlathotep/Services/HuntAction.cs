@@ -199,23 +199,29 @@ internal static class HuntAction
     /// <summary>Whom one event's units may target this tick: null without a territory map (fail closed: every seed goes,
     /// D13); else the players as Hunt candidates, narrowed while the event's region lock holds to those inside its scope
     /// regions (hunting-grounds D5, S-9; none while the region index is unavailable), with the scope and region lookup a
-    /// RegionHunt unit seeds by (hunting-grounds D7). Read from the running instance's own definition.</summary>
+    /// RegionHunt unit seeds by (hunting-grounds D7). Read from the running instance's own definition. A Revenge
+    /// instance targets its focus player alone, resolved to a key from this tick's read (revenge D6).</summary>
     static EventTargeting Targeting(string eventId, List<PlayerRow> players, IReadOnlySet<(int X, int Z)> map)
     {
         if (map is null) return null;
         var candidates = players.Select(p => Candidate(p, map));
-        var action = EventRuntime.Engine.Active.FirstOrDefault(a => a.Id == eventId)?.Definition.Action;
+        var active = EventRuntime.Engine.Active.FirstOrDefault(a => a.Id == eventId);
+        var action = active?.Definition.Action;
         if (action is null) return new EventTargeting(candidates.ToList(), null, null);
+        var focusOnly = WaveFacts.IsFocusOnly(active.Definition);
+        var focusKey = focusOnly ? HuntPlan.FocusKey(players.Select(p => (p.Key, p.PlatformId)), active.Focus) : null;
         Func<float, float, string> regionOf = RegionMap.State.Available ? RegionMap.State.Index.RegionOf : null;
         var pool = LockRule.SeedPool(action, candidates, regionOf).ToList();
         return action.Behaviour is { Type: BehaviourType.RegionHunt } && regionOf is not null
             ? new EventTargeting(pool, action.Scope, regionOf)
-            : new EventTargeting(pool, null, null);
+            : new EventTargeting(pool, null, null, focusOnly, focusKey);
     }
 
-    /// <summary>One event's targeting for a tick (see <see cref="Targeting"/>): the candidate pool, and for RegionHunt the
-    /// scope and the region lookup its units are seeded by from their own positions.</summary>
-    sealed record EventTargeting(List<HuntCandidate> Pool, Scope? RegionHuntScope, Func<float, float, string> RegionOf);
+    /// <summary>One event's targeting for a tick (see <see cref="Targeting"/>): the candidate pool, for RegionHunt the
+    /// scope and the region lookup its units are seeded by from their own positions, and for a Revenge instance its focus
+    /// key (revenge D6).</summary>
+    sealed record EventTargeting(List<HuntCandidate> Pool, Scope? RegionHuntScope, Func<float, float, string> RegionOf,
+        bool FocusOnly = false, long? FocusKey = null);
 
     /// <summary>The players to seed for one unit: a Hunt unit's within its range of its wave's centre (HuntPlan.Targets); a
     /// RegionHunt unit's within 100 m (A4) of its own position among the eligible players inside the scope regions
@@ -223,7 +229,8 @@ internal static class HuntAction
     static List<long> TargetsOf(Entity unit, HuntTag tag, EventTargeting targeting)
     {
         if (targeting is null) return new List<long>();
-        if (targeting.RegionHuntScope is not { } scope) return HuntPlan.Targets(targeting.Pool, (tag.X, tag.Z), tag.Range);
+        if (targeting.RegionHuntScope is not { } scope)
+            return HuntPlan.TargetsFor(targeting.Pool, (tag.X, tag.Z), tag.Range, targeting.FocusOnly, targeting.FocusKey);
         return unit.TryGetComponent<Translation>(out var at)
             ? HuntRule.SeedTargets(targeting.Pool, scope, targeting.RegionOf, (at.Value.x, at.Value.z))
             : new List<long>();

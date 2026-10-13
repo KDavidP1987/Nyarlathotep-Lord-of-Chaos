@@ -172,7 +172,7 @@ static class DevCommands
     }
 
     [Command("devkill", adminOnly: true)]
-    public static void DevKill(ChatCommandContext ctx, int prefab, float radius = 30f)
+    public static void DevKill(ChatCommandContext ctx, int prefab, float radius = 30f, int max = 0)
     {
         var p = Where(ctx);
         if (p is null) { ctx.Reply("devkill: no position"); return; }
@@ -188,6 +188,7 @@ static class DevCommands
                 if (em.GetComponentData<PrefabGUID>(u).GuidHash != prefab) continue;
                 if (math.distance(em.GetComponentData<Translation>(u).Value, p.Value) > radius) continue;
                 if (em.GetComponentData<Health>(u).IsDead) continue;
+                if (max > 0 && n >= max) break;                                   // the nearest are not chosen: any max units in range
                 StatChangeUtility.KillEntity(em, u, killer, 0.0, StatChangeReason.Default, true);
                 n++;
             }
