@@ -1,6 +1,7 @@
 # vblood-player-death.vrs: a player's death never raises VBloodKilled (fix 62ce215; a player character carries
-# VBloodConsumeSource), while a real V Blood's death still does. A tracked spider kills Chaos (.devdie), then a tracked
-# Ungoro (CHAR_Spider_Queen_VBlood -548489519) is killed (.devkill).
+# VBloodConsumeSource). A tracked spider kills Chaos (.devdie), then a tracked Ungoro (CHAR_Spider_Queen_VBlood -548489519)
+# is killed (.devkill): since revenge D30 a tracked V Blood raises nothing either. That a native V Blood still raises
+# VBloodKilled is shown by revenge-vblood.vrs (a native Faction_Bandits V Blood).
 # Needs: NyarDevTools (.devgo, .devdie, .devkill), no purge cooldown. Wrap the world in dev-snapshot (Chaos gains the V Blood).
 ensure
 console ToggleInvulnerable true
@@ -29,6 +30,7 @@ expect-log spawned CHAR_Spider_Queen_VBlood timeout=20
 wait 4
 mark
 chat .devkill -548489519 50
-expect-log trigger: VBloodKilled CHAR_Spider_Queen_VBlood timeout=20
+expect-log \[DEV KILL\] n=1
+expect-no-log trigger: VBloodKilled timeout=10
 wait 2
 chat .devkill -581295882 60

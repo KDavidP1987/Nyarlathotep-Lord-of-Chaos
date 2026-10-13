@@ -408,3 +408,8 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-13 · note · Review 5 F2, F4 · built in step 1: BossWaveTests gains the zero-room case and covers the units, waveList and growth forms and the Point, Admin, AroundPlayer and Region locations
 - 2026-10-13 · note · re-review A1 · Review 5 READY
 - 2026-10-13 · note · re-review A2 · Review 5 READY
+- 2026-10-13 · note · planted · D28 · the fanOut refusal dropped (Validation.ParseBosses) → EventValidationTests Bosses failed 1/16 · restored by copy
+- 2026-10-13 · note · planted · D29 · bosses appended after the wave's own units → BossWaveTests failed 8/11; IsFinal true for every wave → failed 3/11; Region KeepLead skipped → failed 1/11; a modifier-less boss given no modifiers → failed 1/11 · each restored by copy
+- 2026-10-13 · note · planted · D30 · the ours read ignored (VBloodPass.Before) → DeathRuleTests failed 2/8; a failed read dropping the trigger → failed 1/8 · each restored by copy
+- 2026-10-13 · note · planted · D31 · a boss count of 4-9 accepted in chat → CommandArgTests Bosses failed 1/9; `none` leaving the key → failed 1/9; the info line dropped → AuthoringTests Bosses failed 1/2 · each restored by copy
+- 2026-10-13 · note · method · Review 4 F4 built as RegionWave.Decide's `lead`: the boss picks lead the deal, and one dealt to a group without a spot trades places with a regular pick of the first group with a spot (KeepLead); the units form's SpawnTuning.For takes an entry's own modifiers first (only a boss carries them), so 0.11.0 entries tune as before

@@ -1,0 +1,37 @@
+# boss-wave.vrs: revenge D32 (design §9 D51). bw-test (Admin location, waveList: 3 CHAR_Spider_Forest, then 3 more when
+# cleared, bosses CHAR_Spider_Queen_VBlood count 1 at level 40) spawns no boss in wave 1; wave 2 spawns the spiders and
+# Ungoro; killing them all ends "all waves defeated (2 of 2 waves)" with no VBloodKilled for the tracked boss (D30).
+# Ungoro's own summons (CHAR_Spiderling_Summon -18289884) belong to the game and end within 120 s (Review 5 F1).
+# Needs: NyarDevTools (.devgo, .devkill, .devunits); bw-test in events.json; rv-test, rv-test0 and every FactionKills
+# definition disabled (Review 4 F1); no purge cooldown. Wrap the world in dev-snapshot (Chaos may gain the V Blood).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 3
+mark
+chat .nyar event start bw-test
+expect-log event bw-test started by
+expect-log event bw-test wave 1/2: 3 units queued timeout=30
+expect-no-log spawned CHAR_Spider_Queen_VBlood timeout=8
+wait 4
+chat .devkill -581295882 40
+expect-log \[DEV KILL\] n=3
+expect-log event bw-test wave 1 cleared timeout=20
+mark
+expect-log event bw-test wave 2/2: 4 units queued timeout=30
+expect-log spawned CHAR_Spider_Queen_VBlood for bw-test timeout=20
+wait 5
+mark
+chat .devkill -548489519 60
+expect-log \[DEV KILL\] n=1
+expect-no-log trigger: VBloodKilled timeout=8
+chat .devkill -581295882 60
+expect-log event bw-test ended: all waves defeated \(2 of 2 waves\) timeout=30
+wait 125
+mark
+chat .devunits -18289884 80
+expect-log \[DEV UNITS\] n=0
