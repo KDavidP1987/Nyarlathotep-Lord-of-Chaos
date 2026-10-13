@@ -39,6 +39,11 @@ namespace NyarDevTools;
 //   .devunits <prefabGuid> [radius] [mark]  log each living unit of that prefab within radius (default 60) of the sender
 //                          or the mark: [DEV UNIT] x y z state=<BehaviourTreeState> target=<0|1> pre=<PreCombatPosition>
 //                          home=<SpawnTransform.Position>
+//   .devwalk <prefabGuid> <targetMark> [step] [radius] [max]  every living unit of that prefab within radius (default 400)
+//                          of the mark gets its return point (SpawnTransform.Position, PreCombatPosition) step metres (default
+//                          40) ahead toward the mark, Translation untouched, so the game's pathing walks it (apocalypse D24's
+//                          pathing probe); log [DEV WALK] set=<n> arrived=<k> (within 30 m) farthest=<m> stall=<s> (longest
+//                          time a unit has gone without getting 2 m closer)
 // Positions are logged on purpose: this plugin runs only on the local dev server and is never shipped.
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 [BepInDependency("gg.deca.VampireCommandFramework")]
@@ -51,7 +56,7 @@ public class Plugin : BasePlugin
         if (Application.productName != "VRisingServer") return;
         Logger = Log;
         CommandRegistry.RegisterAll();
-        Log.LogInfo("NyarDevTools loaded: .devwhere .devtp .devmark .devgo .devmarks .devkill .devdie .devhop .devjump .devunits");
+        Log.LogInfo("NyarDevTools loaded: .devwhere .devtp .devmark .devgo .devmarks .devkill .devdie .devhop .devjump .devwalk .devunits");
     }
 
     public override bool Unload() { CommandRegistry.UnregisterAssembly(); return true; }
@@ -340,5 +345,48 @@ static class DevCommands
         finally { units.Dispose(); query.Dispose(); }
         Plugin.Logger.LogInfo($"[DEV JUMP] jumped={jumped} arrived={arrived} farthest={F(farthest)} target={targetMark}");
         ctx.Reply($"devjump jumped={jumped} arrived={arrived}");
+    }
+
+    // per unit: its best distance to the walk target so far and when it last got 2 m closer (the stall clock)
+    static readonly Dictionary<Entity, (float best, DateTime at)> WalkProgress = new();
+
+    [Command("devwalk", adminOnly: true)]
+    public static void DevWalk(ChatCommandContext ctx, int prefab, string targetMark, float step = 40f, float radius = 400f, int max = 0)
+    {
+        if (!LoadMarks().TryGetValue(targetMark, out var m) || m.Length != 3) { ctx.Reply($"devwalk: no mark {targetMark}"); return; }
+        var target = new float3(m[0], m[1], m[2]);
+        var em = Em;
+        var query = LivingUnits(em);
+        var units = query.ToEntityArray(Allocator.Temp);
+        int set = 0, arrived = 0;
+        var farthest = 0f;
+        var stall = 0.0;
+        var now = DateTime.UtcNow;
+        try
+        {
+            foreach (var u in units)
+            {
+                if (em.GetComponentData<PrefabGUID>(u).GuidHash != prefab || em.GetComponentData<Health>(u).IsDead) continue;
+                var at = em.GetComponentData<Translation>(u).Value;
+                var d = math.distance(at.xz, target.xz);
+                if (d > radius) continue;
+                if (max > 0 && set + arrived >= max) break;
+                farthest = math.max(farthest, d);
+                if (!WalkProgress.TryGetValue(u, out var pr) || d < pr.best - 2f) WalkProgress[u] = pr = (d, now);
+                stall = Math.Max(stall, (now - pr.at).TotalSeconds);
+                if (d <= 30f) { arrived++; continue; }
+                // the return point goes at most step metres ahead of where the unit stands; Translation is left alone,
+                // so the game's own pathing walks the unit there (hunting-grounds spike variant 1: units walk home)
+                var dir = math.normalize(target.xz - at.xz);
+                var ahead = math.min(step, d);
+                var home = new float3(at.x + dir.x * ahead, at.y, at.z + dir.y * ahead);
+                if (em.HasComponent<SpawnTransform>(u)) { var st = em.GetComponentData<SpawnTransform>(u); st.Position = home; em.SetComponentData(u, st); }
+                if (em.HasComponent<AggroConsumer>(u)) { var a = em.GetComponentData<AggroConsumer>(u); a.PreCombatPosition = home; em.SetComponentData(u, a); }
+                set++;
+            }
+        }
+        finally { units.Dispose(); query.Dispose(); }
+        Plugin.Logger.LogInfo($"[DEV WALK] set={set} arrived={arrived} farthest={F(farthest)} stall={F((float)stall)} target={targetMark}");
+        ctx.Reply($"devwalk set={set} arrived={arrived} farthest={F(farthest)}");
     }
 }

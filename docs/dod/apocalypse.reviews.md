@@ -263,3 +263,36 @@ VERDICT: READY
 ### Dispositions
 - F1 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 5 F1`, step 2 adds `Bosses` to ApocalypseAction and the 5.3 contract row in docs/features/APOCALYPSE.md names `bosses[]{prefab,count,modifiers}`
 - F2 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 5 F2`, huntRange stays the Hunt behaviour's range once aggro is seeded (event-spawns' Hunt), stated in docs/features/APOCALYPSE.md
+
+## Review 6 · 2026-10-13 · subagent · plan uncommitted · plan 105457 B · 38 items · files 0 · e3b0c44298fc · prompt 1bfa8aafa93a · scope A7,A8,A9,A10
+L1 · Considered · no finding
+L2 · Considered · no finding
+L3 · Considered · no finding
+L4 · Considered · F4
+L5 · Considered · F1
+L6 · Considered · F2
+L7 · Considered · no finding
+L8 · Considered · no finding
+L9 · Considered · no finding
+L10 · Considered · no finding
+L11 · Considered · F4
+L12 · Considered · F2
+L13 · Considered · F3
+L14 · Considered · no finding
+L15 · Considered · no finding
+
+F1 · blocking · blocks: outcome · probe 5.3 (A7): one `livingBosses` count per horde cannot say which boss to rebuild when `bosses` holds up to 3 entries with their own prefab, count and modifiers (bosses A×1 and B×1, A dead: the record says 1). Fix: one living count per `bosses` entry index, the rebuild spawns each entry's prefab with its modifiers; carry it into 5.3, D11, D19 and a mixed-entry case in D12/D36.
+F2 · advisory · D21/D22 (A8): the roam-move fault sits under march-read, but nothing says the march-read control fails when only the roam-move guard is removed. Fix: plant a fault in the roam-move guard alone in step 3's post-audit.
+F3 · advisory · D29 (A9): nothing shows roamers jumped inside the measured windows, and the cmd reads "<the Session 2 log copy>" while D29 says "in its own run". Fix: the session record shows a roam line inside the span; name D29's own log copy.
+F4 · advisory · D16 (A10): A10's fails-when includes a refused valid `action.bosses`, D16's list does not; D1 allows 0-3 entries while revenge D28 refuses an empty list. Fix: add the case to D16; align D1 to "absent, or 1-3 entries".
+
+missing components: none
+undeclared families: none
+15/15 layers · 50/50 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · fixed by A11 (discovered, 5.3): D11 records the living bosses per `bosses` entry, the 5.3 contract reads `livingBosses[]`, D12 rebuilds each entry's prefab with its modifiers and fails on two boss prefabs with one dead, D19 and D36 follow.
+- F2 · accepted · Log `note · method · Review 6 F2`: step 3's post-audit plants the roam-move guard fault alone.
+- F3 · accepted · fixed by A11: D29's cmd names the log copy of its own run (Session 2) and its record needs a roam line inside the span.
+- F4 · accepted · fixed by A11: D16 fails when a valid `action.bosses` is refused; D1's `bosses` is absent or 1-3 entries.
