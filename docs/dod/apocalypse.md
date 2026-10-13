@@ -446,3 +446,9 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-13 · note · deferred · Review 5 F1 · step 2 adds `Bosses` to Logic/Model.cs ApocalypseAction, and docs/features/APOCALYPSE.md's contract row names `bosses[]{prefab,count,modifiers}` beside the other action keys
 - 2026-10-13 · note · deferred · Review 5 F2 · `roamers.huntRange` stays the Hunt behaviour's range once the mover has seeded aggro (event-spawns' Hunt); docs/features/APOCALYPSE.md says so
 - 2026-10-13 · note · method · Review 6 F2 · step 3's post-audit plants a fault in the roam-move guard alone and records that D22's march-read category fails on it
+- 2026-10-13 · note · re-review A7 · Review 7 READY
+- 2026-10-13 · note · re-review A8 · Review 7 READY
+- 2026-10-13 · note · re-review A9 · Review 7 READY
+- 2026-10-13 · note · re-review A10 · Review 7 READY
+- 2026-10-13 · note · re-review A11 · Review 7 READY
+- 2026-10-13 · note · deferred · Review 7 F2 · step 2 stores each living `bosses` entry's prefab beside its count in the record, so the rebuild spawns the recorded prefab; an entry whose prefab is gone from the current definition counts as "changed" under D12's refusal; an amendment if it changes a promise

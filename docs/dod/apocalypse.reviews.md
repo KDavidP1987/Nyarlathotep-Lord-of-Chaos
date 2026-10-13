@@ -296,3 +296,35 @@ VERDICT: REVISE
 - F2 · accepted · Log `note · method · Review 6 F2`: step 3's post-audit plants the roam-move guard fault alone.
 - F3 · accepted · fixed by A11: D29's cmd names the log copy of its own run (Session 2) and its record needs a roam line inside the span.
 - F4 · accepted · fixed by A11: D16 fails when a valid `action.bosses` is refused; D1's `bosses` is absent or 1-3 entries.
+
+## Review 7 · 2026-10-13 · subagent · plan commit 143af72 · plan 106769 B · 38 items · files 0 · e3b0c44298fc · prompt 215d293b0a67 · scope A7,A8,A9,A10,A11
+L1 · Considered · no finding
+L2 · Considered · no finding
+L3 · Considered · no finding
+L4 · Considered · F2
+L5 · Considered · F1, F2
+L6 · Considered · no finding
+L7 · Considered · F2
+L8 · Considered · no finding
+L9 · Considered · no finding
+L10 · Considered · no finding
+L11 · Considered · no finding
+L12 · Considered · no finding
+L13 · Considered · no finding
+L14 · Considered · no finding
+L15 · Considered · no finding
+
+Probe 5.3 (Review 6's blocker) is answered: `hordes[]{…,living,livingBosses[]}` keeps one living count per `bosses` entry by index; D11 and D12 rebuild each entry's prefab with its modifiers; D12 and D36 name "two boss prefabs, one dead"; D19 lists the field; D1's `bosses` is absent or 1-3 entries (revenge D28); D16 fails when a valid `action.bosses` is refused; D29 names its own log copy and a roam line inside the span.
+
+F1 · advisory · The 5.3 events.json line lists the action keys without `bosses`, and step 2's Model.cs field list leaves out `Bosses`; D1's test still catches a parser that rejects the key. Fix: add both (Review 5 F1 already deferred this to step 2).
+F2 · advisory · The record keeps living bosses by entry index and the resume reads each prefab from the current definition, so an admin who edits `bosses` while the run is live can have the restart rebuild the wrong boss or index past the list; D21's resume path keeps the boot alive. Fix: count a change to the `bosses` entries (number or prefabs) as "changed" in D12 and Business rule 10, or store each entry's prefab in the record beside its count.
+
+missing components: none
+undeclared families: none
+EARLIER: all resolved
+15/15 layers · 50/50 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · deferred to the Log (advice on a READY review, no D-item edited): already `note · deferred · Review 5 F1`
+- F2 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 7 F2`, step 2 stores each living `bosses` entry's prefab beside its count, so the rebuild spawns the recorded prefab, and an entry whose prefab is gone from the definition counts as "changed" under D12's refusal; recorded as an amendment if it changes a promise
