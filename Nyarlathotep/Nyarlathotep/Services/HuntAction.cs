@@ -155,9 +155,12 @@ internal static class HuntAction
                     string why;
                     try
                     {
-                        var tag = g.First().Value.Tag;
+                        var (first, _, tag) = g.First().Value;
+                        // a RegionHunt unit seeds from its own position over 100 m (hunting-grounds A4): counted the same way
                         why = map is null ? "no territory map, nobody targeted"
-                            : HuntPlan.Tally(players.Select(p => Candidate(p, map)).ToList(), (tag.X, tag.Z), tag.Range).ToString();
+                            : targeting?.RegionHuntScope is { } scope && first.TryGetComponent<Translation>(out var at)
+                                ? HuntPlan.Tally(HuntRule.EligibleInside(targeting.Pool, scope, targeting.RegionOf), (at.Value.x, at.Value.z), HuntingGrounds.SeedReach).ToString()
+                                : HuntPlan.Tally(players.Select(p => Candidate(p, map)).ToList(), (tag.X, tag.Z), tag.Range).ToString();
                     }
                     catch { why = "counts unreadable"; }
                     Core.Log.LogInfo($"[nyar] hunt {g.Key}: {kept} seeds kept, {left} left to the game; at the first unit's centre: {why}");
@@ -213,7 +216,7 @@ internal static class HuntAction
     sealed record EventTargeting(List<HuntCandidate> Pool, Scope? RegionHuntScope, Func<float, float, string> RegionOf);
 
     /// <summary>The players to seed for one unit: a Hunt unit's within its range of its wave's centre (HuntPlan.Targets); a
-    /// RegionHunt unit's within 60 m of its own position among the eligible players inside the scope regions
+    /// RegionHunt unit's within 100 m (A4) of its own position among the eligible players inside the scope regions
     /// (HuntRule.SeedTargets), none while its position cannot be read; none without a targeting (no territory map).</summary>
     static List<long> TargetsOf(Entity unit, HuntTag tag, EventTargeting targeting)
     {

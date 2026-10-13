@@ -603,7 +603,7 @@ public static class ControlCases
         T("D5", "Lock", "HuntingGroundsTests", ["the_slack_is_off", "a_return_lands_outside_or_far", "an_entry_outside_is_kept", "a_seed_goes_outside",
             "a_location_is_missed", "another_units_move", "the_line_names_or_locates"], ["check_every_5_s"], ["no_live_unit"]) with { Plan = HuntingGrounds },
         T("D7", "HuntTargets", "HuntingGroundsTests", ["an_ineligible_player_is_targeted_or_seeded", "a_farther_player_wins", "a_tie_breaks_other_than_by_key",
-            "a_group_without_a_player_moves", "a_target_is_kept_past_its_check", "a_group_is_split_or_merged", "one_events_territory_vetoes_another"], ["each_group_its_nearest"],
+            "a_group_without_a_player_moves", "a_target_is_kept_past_its_check", "a_group_is_split_or_merged", "one_events_territory_vetoes_another", "a_unit_at_the_ring_is_not_seeded"], ["each_group_its_nearest"],
             ["no_player_inside"]) with { Plan = HuntingGrounds },
         T("D8", "Jumps", "HuntingGroundsTests", ["a_player_at_99_m_is_ignored", "a_free_unit_does_not_jump", "a_step_passes_25_m", "a_final_lands_outside_50_60_m",
             "a_landing_breaks_a_rule", "more_than_20_jump", "another_units_move", "the_line_names_or_locates",

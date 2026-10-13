@@ -36,6 +36,9 @@ public static class HuntingGrounds
     public const float WatchRange = 100f;
     /// <summary>Hunt's reach (Validation MaxHuntRange, SIEGES.md › S1): within it the game's own pathing and aggro take over.</summary>
     public const int Reach = EventValidator.MaxHuntRange;
+    /// <summary>A RegionHunt unit's seed range (A4): the watch range, so every unit that may no longer jump (a player within
+    /// 100 m) is seeded and the game's pathing walks the last metres from the 50-60 m final ring.</summary>
+    public const int SeedReach = (int)WatchRange;
     /// <summary>Units that jump in one check across all events (S-11).</summary>
     public const int MaxJumps = 20;
     /// <summary>Walk checks the hunt spends in one check across all events (A3): about 80 ms at Session 2's 0.4 ms a check.
@@ -405,10 +408,10 @@ public static class HuntRule
         eligible.Count == 0 ? null
         : eligible.OrderBy(p => HuntingGrounds.Distance(p.X, p.Z, mean.X, mean.Z)).ThenBy(p => p.Key).First();
 
-    /// <summary>The players to seed for a unit at <paramref name="at"/>: the eligible players inside the regions within 60 m,
-    /// nearest first (ties by key), at most HuntPlan.MaxTargets (D7).</summary>
+    /// <summary>The players to seed for a unit at <paramref name="at"/>: the eligible players inside the regions within 100 m
+    /// (<see cref="HuntingGrounds.SeedReach"/>, A4), nearest first (ties by key), at most HuntPlan.MaxTargets (D7).</summary>
     public static List<long> SeedTargets(IEnumerable<HuntCandidate> players, Scope scope, Func<float, float, string> regionOf, (float X, float Z) at) =>
-        HuntPlan.Targets(EligibleInside(players, scope, regionOf), at, HuntingGrounds.Reach);
+        HuntPlan.Targets(EligibleInside(players, scope, regionOf), at, HuntingGrounds.SeedReach);
 
     /// <summary>The instance's groups: its units by wave and group.</summary>
     public static IEnumerable<IGrouping<(int Wave, int Group), RegionUnit>> Groups(IEnumerable<RegionUnit> units) =>

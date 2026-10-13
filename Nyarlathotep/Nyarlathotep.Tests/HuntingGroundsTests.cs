@@ -536,6 +536,20 @@ public class HuntingGroundsTests
     }
 
     [Fact]
+    public void HuntTargets_fails_when_a_unit_at_the_ring_is_not_seeded()
+    {
+        // A4 (the owner's D26 run): a unit on the 50-60 m final ring, or nudged past it, may no longer jump (a player within
+        // 100 m) and must be seeded, or it idles; beyond the watch range it is not seeded and may jump again
+        var player = Player(9, 500, 500);
+        foreach (var d in new[] { 50f, 55f, 60f, 64f, 80f, 100f })
+            Assert.Equal([9L], HuntRule.SeedTargets([player], HomeScope, MapOf, (400 + 100 - d, 500)));
+        Assert.Empty(HuntRule.SeedTargets([player], HomeScope, MapOf, (500 - 100.5f, 500)));
+        Assert.True(HuntingGrounds.SeedReach >= HuntingGrounds.WatchRange);           // no unit both barred from jumping and unseeded
+        Assert.True(HuntingGrounds.FinalMax < HuntingGrounds.SeedReach);
+        Assert.Empty(HuntRule.SeedTargets([Player(9, -5, 500)], HomeScope, MapOf, (40, 500)));   // still only players inside
+    }
+
+    [Fact]
     public void HuntTargets_fails_when_a_farther_player_wins()
     {
         var a = Hunting();
