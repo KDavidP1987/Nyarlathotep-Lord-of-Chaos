@@ -45,7 +45,7 @@ and the hunt. No log line names or locates a player.
 ### Spike (D20) · Session 0 · 2026-10-12
 
 The dev server ran the 0.10.0 DLL with the dev-only NyarDevTools (`.devhop`, `.devjump`, `.devunits`), wrapped by
-`dev-snapshot -Save hg0` (restored afterwards, hashes equal). There were 12 `CHAR_Spider_Forest` from `.nyar spawn` at
+`pwsh tools/dev-snapshot.ps1 -Save hg0` (restored afterwards: "snapshot restored; hashes equal (hg0, …)"). There were 12 `CHAR_Spider_Forest` from `.nyar spawn` at
 the pond (-1880, -1640). Chaos stood 150 m or more from every move.
 
 | Run | Scenario | Result |
@@ -75,7 +75,7 @@ vrclient's first cold launch fails at "could not find 'Online Play'"; a second r
 
 ### Session 1 · 2026-10-12 · the border scan
 
-The 0.10.0 DLL, wrapped by `dev-snapshot -Save hg1` (restored afterwards, hashes equal). `hunting-grounds-borders.vrs`
+The 0.10.0 DLL, wrapped by `pwsh tools/dev-snapshot.ps1 -Save hg1` (restored afterwards: "snapshot restored; hashes equal (hg1, …)"). `hunting-grounds-borders.vrs`
 (51/53; the two misses were a doubled reply) and `hunting-grounds-borders2.vrs` (PASS 39/39) moved Chaos with `.devtp`
 and asked `.nyar region here` at each point:
 
@@ -91,7 +91,7 @@ and asked `.nyar region here` at each point:
 ### Session 2 · 2026-10-12 · the step 3 build
 
 The plan's D-items call this run "Session 1"; this child's Session 1 was the border scan above. The step 3 Release DLL
-ran with NyarDevTools and DevChatEcho, wrapped by `dev-snapshot -Save hg2`. The dev events.json held hg-roam, hg-lock
+ran with NyarDevTools and DevChatEcho, wrapped by `pwsh tools/dev-snapshot.ps1 -Save hg2` (kept through Session 3, restored after it: "snapshot restored; hashes equal (hg2, …)"). The dev events.json held hg-roam, hg-lock
 (Point -1680, -1215), hg-ambush, hg-point and hg-timing, all scoped to FarbaneWoods, and `[Debug] VerboseLogging = true`.
 hg-point first stood at (-1680, -1600), with Chaos at (-1680, -1300). Native bandits there killed the arriving units, so
 hg-point moved to the pond (-1880, -1640) and Chaos to hg-b (-1580, -1640), the spike's line.
@@ -141,7 +141,7 @@ What the runs found, each fixed and amended before release:
 
 ### Session 3 · 2026-10-13 · the owner's D26 run and the final-ring fixes
 
-Same dev server and dev events.json, still wrapped by `dev-snapshot -Save hg2`. The owner played by hand on the
+Same dev server and dev events.json, still wrapped by Session 2's `pwsh tools/dev-snapshot.ps1 -Save hg2`; restored after the owner's run and the VBloodKilled check: "snapshot restored; hashes equal (hg2, …)". The owner played by hand on the
 b136d7f build (the Codex F1/F2 fixes); Claude reran with vrclient after each fix.
 
 | Run | Build | Result |
