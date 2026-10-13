@@ -60,7 +60,8 @@
         "automation › build outputs",
         "wave-sets › build outputs",
         "swarm › build outputs",
-        "hunting-grounds › build outputs"
+        "hunting-grounds › build outputs",
+        "revenge › build outputs"
       ]
     },
     {
@@ -93,7 +94,9 @@
         "swarm › release zip",
         "swarm › tag and GitHub release v0.10.0",
         "hunting-grounds › release zip",
-        "hunting-grounds › tag and GitHub release v0.11.0"
+        "hunting-grounds › tag and GitHub release v0.11.0",
+        "revenge › release zip",
+        "revenge › tag and GitHub release v0.11.0"
       ]
     },
     {
@@ -131,7 +134,8 @@
         "automation › templates.json examples",
         "wave-sets › templates.json graveyard-waves",
         "swarm › templates.json spider-swarm",
-        "hunting-grounds › templates.json spider-hunting-grounds"
+        "hunting-grounds › templates.json spider-hunting-grounds",
+        "revenge › templates.json bandit-revenge"
       ]
     },
     {
@@ -180,7 +184,8 @@
         "automation › events.json.tmp, state.json.tmp",
         "wave-sets › events.json waveList and scoreboard",
         "swarm › events.json arena, winner and growth",
-        "hunting-grounds › events.json Region location, regionLock, RegionHunt"
+        "hunting-grounds › events.json Region location, regionLock, RegionHunt",
+        "revenge › events.json Revenge trigger"
       ]
     },
     {
@@ -374,7 +379,8 @@
         "automation › snapshot",
         "wave-sets › snapshot",
         "swarm › snapshot",
-        "hunting-grounds › snapshot"
+        "hunting-grounds › snapshot",
+        "revenge › snapshot"
       ],
       "location": "%TEMP%\\nyar-snap-* (saved\\manifest.json plus the copies)",
       "owner": "tools/dev-snapshot.ps1",
@@ -485,9 +491,10 @@
         "nyar-s*-logs",
         "nyar-ws*-logs",
         "nyar-sw*-logs",
-        "nyar-hg*-logs"
+        "nyar-hg*-logs",
+        "nyar-rv*-logs"
       ],
-      "location": "%TEMP%\\nyar-s<n>-logs (copies of LogOutput.log and NyarDev.log taken by hand during event-library Sessions 4 and 5); %TEMP%\\nyar-ws<n>-logs (wave-sets Session 1); %TEMP%\\nyar-sw<n>-logs (swarm Session 1); %TEMP%\nyar-hg<n>-logs (hunting-grounds Sessions 1-2)",
+      "location": "%TEMP%\\nyar-s<n>-logs (copies of LogOutput.log and NyarDev.log taken by hand during event-library Sessions 4 and 5); %TEMP%\\nyar-ws<n>-logs (wave-sets Session 1); %TEMP%\\nyar-sw<n>-logs (swarm Session 1); %TEMP%\nyar-hg<n>-logs (hunting-grounds Sessions 1-2); %TEMP%\\nyar-rv<n>-logs (revenge sessions)",
       "owner": "Claude during a server session",
       "retention": "the session that made them",
       "deletion": "deleted once the session is recorded; later sessions copy to nyar-soak-* instead; a leftover fails -Paths",
@@ -501,7 +508,8 @@
         "automation › session log copies",
         "wave-sets › session log copies",
         "swarm › session log copies",
-        "hunting-grounds › session log copies"
+        "hunting-grounds › session log copies",
+        "revenge › session log copies"
       ]
     },
     {
@@ -572,7 +580,9 @@
         "swarm › review prompts",
         "swarm › Claude's scratchpad (Codex prompts and outputs)",
         "hunting-grounds › review prompts",
-        "hunting-grounds › Claude's scratchpad (Codex prompts and outputs, the v0.10.0 archive)"
+        "hunting-grounds › Claude's scratchpad (Codex prompts and outputs, the v0.10.0 archive)",
+        "revenge › review prompts",
+        "revenge › Claude's scratchpad (Codex prompts and outputs, drafts, isolated dry-run copies)"
       ]
     },
     {
@@ -707,7 +717,8 @@
       "deletion": "at every end path, with the instance (automation D13)",
       "singleCopy": false,
       "rows": [
-        "automation › focus"
+        "automation › focus",
+        "revenge › the running revenge's focus"
       ]
     },
     {
@@ -756,7 +767,8 @@
         "wave-sets › vrclient outputs",
         "swarm › vrclient outputs",
         "hunting-grounds › vrclient outputs",
-        "hunting-grounds › dev marks"
+        "hunting-grounds › dev marks",
+        "revenge › vrclient outputs"
       ]
     },
     {
@@ -819,6 +831,18 @@
       "rows": [
         "hunting-grounds › last inside spot per unit",
         "hunting-grounds › hunt target and group per event"
+      ]
+    },
+    {
+      "artifact": "Revenge heat",
+      "covers": [],
+      "location": "memory (Logic/Revenge.cs RevengeHeat: heat rows, warning states, due players, cooldowns, keyed by platform id), in the server process",
+      "owner": "Logic/Revenge.cs",
+      "retention": "a point windowSeconds, a cooldown playerCooldownMinutes; at most 200 rows a definition and 2000 in all",
+      "deletion": "on expiry, on a purge, when the definition stops being startable, and on every boot; never logged or saved (revenge D3, D8, D9)",
+      "singleCopy": false,
+      "rows": [
+        "revenge › heat rows, warning states, due players, cooldowns"
       ]
     }
   ]

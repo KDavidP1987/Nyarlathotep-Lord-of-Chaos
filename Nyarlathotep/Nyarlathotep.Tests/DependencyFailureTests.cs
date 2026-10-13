@@ -12,7 +12,7 @@ public partial class DependencyFailureTests
         [Dependency.EventsJson] = EventsJson,
         [Dependency.StateJson] = StateJson,
         [Dependency.CfgValues] = CfgValues,
-        [Dependency.HookDeathEvent] = () => HookFault(Hook.DeathEvent, TriggerType.VBloodKilled, TriggerType.FactionKills),
+        [Dependency.HookDeathEvent] = () => HookFault(Hook.DeathEvent, TriggerType.VBloodKilled, TriggerType.FactionKills, TriggerType.Revenge),   // revenge D10
         [Dependency.HookDayNight] = () => HookFault(Hook.DayNight, TriggerType.GameTime),
         [Dependency.HookUserConnect] = () => HookFault(Hook.UserConnect),
         [Dependency.HookUserDisconnect] = DisconnectHook,

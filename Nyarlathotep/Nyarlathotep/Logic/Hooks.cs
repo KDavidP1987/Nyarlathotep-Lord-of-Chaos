@@ -40,6 +40,7 @@ public sealed class HookSet(IHookRegistry registry, Action<string> log)
     {
         TriggerType.VBloodKilled => Hook.DeathEvent,
         TriggerType.FactionKills => Hook.DeathEvent,
+        TriggerType.Revenge => Hook.DeathEvent,                       // revenge D10: heat rides the FactionKills read
         TriggerType.GameTime => Hook.DayNight,
         _ => null,
     };

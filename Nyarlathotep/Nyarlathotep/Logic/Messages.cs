@@ -76,6 +76,21 @@ public static class Messages
         "Tonight: {event}.",
     ];
 
+    /// <summary>The server-wide line of a revenge start (revenge D7): {faction} only, never the target or a place.</summary>
+    public static readonly IReadOnlyList<string> RevengeAlertPool =
+    [
+        "The {faction} swear revenge on a vampire.",
+        "The {faction} gather to hunt a vampire down.",
+    ];
+
+    /// <summary>The private warnings of revenge D4, warning k of n using the k-th line.</summary>
+    static readonly IReadOnlyList<string> RevengeWarnings =
+    [
+        "The {faction} have noticed your killing.",
+        "The {faction} are gathering against you.",
+        "The {faction} are almost ready to strike.",
+    ];
+
     /// <summary>Most event names one daily banner lists; the rest are counted.</summary>
     public const int DailyBannerMaxNames = 5;
 
@@ -87,6 +102,7 @@ public static class Messages
         [nameof(WaveWarningPool)] = WaveWarningPool,
         [nameof(WaveImminentPool)] = WaveImminentPool,
         [nameof(DailyBannerPool)] = DailyBannerPool,
+        [nameof(RevengeAlertPool)] = RevengeAlertPool,
     };
 
     /// <summary>The `.nyar` overview for anyone.</summary>
@@ -157,6 +173,21 @@ public static class Messages
     public static string WaveWarning(EventDefinition def, int wave, int secondsUntil, int pick) =>
         Render(Choose([], secondsUntil >= 60 ? WaveWarningPool : WaveImminentPool, pick),
             MessageContext.For(def, (secondsUntil + 59) / 60, wave));
+
+    /// <summary>The private warning <paramref name="k"/> of <paramref name="n"/> to the player whose heat climbs (revenge
+    /// D4). <paramref name="factions"/> is the trigger's short faction names joined by ", " (RevengeRule.FactionText); the
+    /// line names no player, holds no number and fits Wire.MaxBytes.</summary>
+    public static string RevengeWarning(int k, int n, string factions) =>
+        RevengeLine(RevengeWarnings[Math.Clamp(k, 1, Math.Min(n, RevengeWarnings.Count)) - 1], factions);
+
+    /// <summary>The private line to the target when its revenge starts (revenge D7).</summary>
+    public static string RevengeStart(string factions) => RevengeLine("The {faction} come for you.", factions);
+
+    /// <summary>The private line to the target at a natural end, all waves defeated or an admin stop (revenge D8).</summary>
+    public static string RevengeEnd(string factions) => RevengeLine("The {faction}' revenge is spent.", factions);
+
+    static string RevengeLine(string template, string factions) =>
+        TextSink.CutToBytes(Render(template, new MessageContext("-", TextSink.Clean(factions), 0, 0, 0, "-")), Wire.MaxBytes);
 
     /// <summary>The daily banner naming <paramref name="names"/> (A19): at most <see cref="DailyBannerMaxNames"/>, fewer
     /// when the line would pass <see cref="Wire.MaxBytes"/>, then "and &lt;k&gt; more".</summary>

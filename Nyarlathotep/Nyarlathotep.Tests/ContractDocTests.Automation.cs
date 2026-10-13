@@ -15,12 +15,13 @@ public partial class ContractDocTests
     {
         var p = new List<string>();
         var current = Regex.Match(contract, @"\*\*Current api:\*\* (\d+)");
-        if (!current.Success || int.Parse(current.Groups[1].Value) != 6) p.Add("the current api is not 6");
+        if (!current.Success || int.Parse(current.Groups[1].Value) < 6) p.Add("the current api is below 6");   // revenge D15 moved it to 7
         var values = Regex.Match(contract, @"(?m)^- `trigger` ∈ (.*(?:\r?\n  .*)*)").Groups[1].Value;
         foreach (var (_, wire) in AutomationTriggers)
             if (!Regex.IsMatch(values, $@"(?<![a-z]){wire}(?![a-z])")) p.Add($"the trigger values lack {wire}");
         if (!Regex.IsMatch(contract, @"(?m)^\| 6 \| 0\.8\.0 \(automation\) \|")) p.Add("the change log has no api 6 row");
-        if (!Regex.IsMatch(contract, @"(?m)^## 10\. api 7 and later — PLANNED")) p.Add("§10 is not api 7 and later");
+        // revenge D15 moved §10 to api 8 and later: any api above 6
+        if (!Regex.IsMatch(contract, @"(?m)^## 10\. api ([7-9]|[1-9]\d+) and later — PLANNED")) p.Add("§10 is not api 7 and later");
         return p;
     }
 
@@ -30,7 +31,7 @@ public partial class ContractDocTests
         foreach (var (_, wire) in AutomationTriggers)
             Assert.Contains($"the trigger values lack {wire}", AutomationProblems(Regex.Replace(Contract, $@"(?<![a-z]){wire}(?![a-z])", "x")));
         Assert.Contains("the change log has no api 6 row", AutomationProblems(Contract.Replace("| 6 | 0.8.0 (automation) |", "| 6 | 0.8.0 |")));
-        Assert.Contains("the current api is not 6", AutomationProblems(Contract.Replace("**Current api:** 6", "**Current api:** 5")));
+        Assert.Contains("the current api is below 6", AutomationProblems(Contract.Replace("**Current api:** 7", "**Current api:** 5")));
     }
 
     [Fact]
@@ -45,7 +46,7 @@ public partial class ContractDocTests
     [Fact]
     public void Automation_passes_api_6_and_values()
     {
-        Assert.Equal(6, Wire.Api);
+        Assert.True(Wire.Api >= 6);        // revenge D15 moved the api to 7
         Assert.Empty(AutomationProblems(Contract));
         // no tag, key, push kind or command is added: no row of the table is new at api 6
         Assert.DoesNotContain(Table(), kv => kv.Value.Api.Trim() == "6");
@@ -53,6 +54,6 @@ public partial class ContractDocTests
 
     [Fact]
     public void Automation_empty_contract() =>
-        Assert.Equal(["the current api is not 6", "the trigger values lack interval", "the trigger values lack regionentered",
+        Assert.Equal(["the current api is below 6", "the trigger values lack interval", "the trigger values lack regionentered",
             "the trigger values lack factionkills", "the change log has no api 6 row", "§10 is not api 7 and later"], AutomationProblems(""));
 }

@@ -56,4 +56,14 @@ public class DeathRuleTests
         Assert.False(VBloodPass.Raises(VBloodPass.Before(true, true, () => { reads++; return false; })));
         Assert.Equal(0, reads);
     }
+
+    [Fact]
+    public void EventUnits_passes_a_native_V_Blood()
+    {
+        Assert.True(VBloodPass.Raises(VBloodPass.Before(true, false, () => false)));
+    }
+
+    [Fact]
+    public void EventUnits_empty_a_death_without_a_consume_source() =>
+        Assert.False(VBloodPass.Raises(VBloodPass.Before(false, false, () => false)));
 }

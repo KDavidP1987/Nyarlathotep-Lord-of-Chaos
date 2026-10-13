@@ -36,6 +36,7 @@ public static class ApiLines
         TriggerType.Interval => "interval",
         TriggerType.RegionEntered => "regionentered",
         TriggerType.FactionKills => "factionkills",
+        TriggerType.Revenge => "revenge",                              // api 7 (revenge D15)
         _ => "manual",
     };
 

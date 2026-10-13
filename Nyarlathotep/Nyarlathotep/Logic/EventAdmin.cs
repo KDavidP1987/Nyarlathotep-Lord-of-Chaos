@@ -151,6 +151,7 @@ public static class EventsEditor
         decimal m => JsonValue.Create(m),
         string s => JsonValue.Create(s),
         string[] list => new JsonArray(list.Select(x => (JsonNode?)JsonValue.Create(x)).ToArray()),
+        int[] ints => new JsonArray(ints.Select(x => (JsonNode?)JsonValue.Create(x)).ToArray()),            // revenge D11: trigger.warnAt
         UnitEntry[] units => new JsonArray(units.Select(u => (JsonNode?)new JsonObject { ["prefab"] = u.Prefab, ["count"] = u.Count }).ToArray()),
         PointArg p => new JsonObject { ["type"] = "Point", ["x"] = p.X, ["y"] = p.Y, ["z"] = p.Z },
         AroundPlayerArg a => new JsonObject { ["type"] = "AroundPlayer", ["minDist"] = a.MinDist, ["maxDist"] = a.MaxDist },
@@ -463,7 +464,7 @@ public static class EventsEditor
 
     /// <summary>trigger.type replaces the whole trigger with that type's default (Schedule Sat 20:00, GameTime night,
     /// VBloodKilled any, Interval 60-90 min, RegionEntered with a 30 min cooldown and no scope yet, FactionKills
-    /// Faction_Bandits 20 in 300 s, Manual), so no key of the old type stays, the scope included (regions D9); trigger.scope fits
+    /// Faction_Bandits 20 in 300 s, Revenge as RevengeDefault, Manual), so no key of the old type stays, the scope included (regions D9); trigger.scope fits
     /// every type; any other trigger field needs its trigger type (event-library D9).</summary>
     static string? SetTrigger(JsonNode root, JsonObject ev, string path, JsonNode node, out Outcome? error)
     {
@@ -481,6 +482,7 @@ public static class EventsEditor
                 {
                     ["type"] = "FactionKills", ["factions"] = new JsonArray("Faction_Bandits"), ["kills"] = 20, ["windowSeconds"] = 300,
                 },
+                "Revenge" => RevengeDefault(),                                                                  // revenge D11
                 _ => new JsonObject { ["type"] = "Manual" },
             };
             return root.ToJsonString(Write) + Environment.NewLine;
@@ -494,9 +496,40 @@ public static class EventsEditor
         }
         var need = CommandArgs.TriggerTypeOf(path);
         var type = trigger?["type"] is JsonValue tv && tv.TryGetValue<string>(out var t) ? t : null;
-        if (need is null || trigger is null || type != need) { error = Invalid($"{path} needs {(need is "Interval" ? "an" : "a")} {need ?? "known"} trigger", Reasons.Trigger); return null; }
-        trigger[path["trigger.".Length..]] = node;
+        if (need is null || trigger is null || type is null || !CommandArgs.TriggerTypesOf(path).Contains(type))
+        {
+            error = Invalid($"{path} needs {(need is "Interval" ? "an" : "a")} {need ?? "known"} trigger", Reasons.Trigger);
+            return null;
+        }
+        if (type == "Revenge" && RevengeRefusal(trigger!, path, node) is { } refusal) { error = Invalid(refusal, Reasons.Value); return null; }
+        trigger![path["trigger.".Length..]] = node;
         return root.ToJsonString(Write) + Environment.NewLine;
+    }
+
+    /// <summary>The default Revenge trigger of `trigger.type Revenge` and `event new … revenge` (revenge D11, D12).</summary>
+    public static JsonObject RevengeDefault() => new()
+    {
+        ["type"] = "Revenge", ["factions"] = new JsonArray("Faction_Bandits"), ["heat"] = 30, ["windowSeconds"] = 900,
+        ["warnAt"] = new JsonArray(10, 20), ["vbloodHeat"] = EventValidator.DefaultVBloodHeat,
+        ["playerCooldownMinutes"] = EventValidator.DefaultPlayerCooldownMinutes,
+    };
+
+    /// <summary>What the validator would refuse in a Revenge trigger's field that the chat parse cannot see (revenge D11):
+    /// a window under 60 s (FactionKills allows 10), or a warnAt value not below the trigger's heat, from either side.</summary>
+    static string? RevengeRefusal(JsonObject trigger, string path, JsonNode node)
+    {
+        static int? IntOf(JsonNode? n) => n is JsonValue v && v.TryGetValue<int>(out var i) ? i : null;
+        static IEnumerable<int> Ints(JsonNode? n) => (n as JsonArray)?.Select(IntOf).OfType<int>() ?? [];
+        switch (path)
+        {
+            case "trigger.windowSeconds" when IntOf(node) < EventValidator.MinRevengeWindowSeconds:
+                return EventValidator.RevengeWindowRule;
+            case "trigger.heat" when Ints(trigger["warnAt"]).Any(w => w >= IntOf(node)):
+            case CommandArgs.WarnAtField when IntOf(trigger["heat"]) is { } heat && Ints(node).Any(w => w >= heat):
+                return EventValidator.WarnAtRule;
+            default:
+                return null;
+        }
     }
 }
 
@@ -544,16 +577,22 @@ public static class EventLines
 
     /// <summary>`event info`. <paramref name="nextInterval"/> is an Interval definition's stored next start (automation D16):
     /// "next start in &lt;m&gt; min" while it waits, "next start: after the running instance ends" while it runs.</summary>
-    public static IReadOnlyList<string> Info(EventDefinition d, ActiveEvent? active, DateTime utcNow, DateTime? nextInterval = null)
+    /// <remarks>A Revenge definition (revenge D12) names its trigger "revenge" in the first line and gives it a line of its
+    /// own, "trigger: revenge &lt;factions&gt; heat &lt;h&gt; in &lt;w&gt; s, …", shortened as FactionKills' is, then the admin
+    /// counts line of <paramref name="revengeCounts"/> (heat rows and due players of the definition) when given.</remarks>
+    public static IReadOnlyList<string> Info(EventDefinition d, ActiveEvent? active, DateTime utcNow, DateTime? nextInterval = null,
+        (int Rows, int Due)? revengeCounts = null)
     {
         if (d.DisabledReason is { } reason) return [$"{d.Id} disabled: {reason}"];
         var c = d.Conditions;
-        var lines = new List<string>
-        {
-            Fit(tr => $"{d.Id} \"{d.Name}\" {(d.Enabled ? "enabled" : "disabled")} pillar {Lower(d.Pillar)} trigger {tr} duration {d.DurationSeconds}s",
-                d.Trigger, out var shortened),
-        };
-        if (shortened) lines.AddRange(d.Trigger.Type == TriggerType.FactionKills ? FactionLines(d.Trigger.Factions ?? []) : BossLines(d.Trigger.Bosses));
+        var revenge = d.Trigger.Type == TriggerType.Revenge;
+        string Head(string tr) => $"{d.Id} \"{d.Name}\" {(d.Enabled ? "enabled" : "disabled")} pillar {Lower(d.Pillar)} trigger {tr} duration {d.DurationSeconds}s";
+        var shortened = false;
+        var lines = new List<string> { revenge ? Head("revenge") : Fit(Head, d.Trigger, out shortened) };
+        if (revenge) lines.Add(Fit(tr => $"trigger: {tr}", d.Trigger, out shortened));
+        if (shortened)
+            lines.AddRange(d.Trigger.Type is TriggerType.FactionKills or TriggerType.Revenge ? FactionLines(d.Trigger.Factions ?? []) : BossLines(d.Trigger.Bosses));
+        if (revenge && revengeCounts is { } counts) lines.Add(RevengeRule.CountsLine(counts.Rows, counts.Due, active is null ? 0 : 1));
         lines.Add($"conditions: minPlayers {c.MinPlayers}, cooldown {c.CooldownMinutes} min, chance {c.ChancePercent}%, " +
             $"window {(c.Window is { } w ? $"{w.From:HH\\:mm}-{w.To:HH\\:mm}" : "none")}, mode {Lower(c.Mode)}");
         if (d.Empower is { } emp)
@@ -751,8 +790,15 @@ public static class EventLines
         TriggerType.RegionEntered => $"regionentered cooldown {t.PlayerCooldownMinutes} min",
         TriggerType.FactionKills => $"factionkills {string.Join(",", (t.Factions ?? []).Select(FactionDenyList.ShortName))} " +
                                     $"{t.Kills} in {t.WindowSeconds}s{(t.Shared ? " shared" : "")}",
+        TriggerType.Revenge => $"revenge {string.Join(",", (t.Factions ?? []).Select(FactionDenyList.ShortName))} {RevengeTail(t)}",
         _ => "manual",
     };
+
+    /// <summary>A Revenge trigger after its factions (revenge D12): "heat &lt;h&gt; in &lt;w&gt; s, warn at &lt;a,b|none&gt;,
+    /// vblood +&lt;v&gt;, cooldown &lt;c&gt; min".</summary>
+    static string RevengeTail(Trigger t) =>
+        $"heat {t.Heat} in {t.WindowSeconds} s, warn at {(t.WarnAt is { Count: > 0 } w ? string.Join(",", w) : "none")}, " +
+        $"vblood +{t.VBloodHeat}, cooldown {t.PlayerCooldownMinutes} min";
 
     /// <summary>A line built around <paramref name="trigger"/>: the whole trigger when the line fits one chat message
     /// (Wire.MaxBytes), else a vbloodkilled trigger as "vbloodkilled &lt;n&gt; bosses" (event-library A21) and a
@@ -761,11 +807,14 @@ public static class EventLines
     public static string Fit(Func<string, string> build, Trigger trigger, out bool shortened)
     {
         var full = build(Trigger(trigger));
-        shortened = trigger.Type is TriggerType.VBloodKilled or TriggerType.FactionKills && !Fits(full);
+        shortened = trigger.Type is TriggerType.VBloodKilled or TriggerType.FactionKills or TriggerType.Revenge && !Fits(full);
         if (!shortened) return full;
-        return build(trigger.Type == TriggerType.VBloodKilled
-            ? $"vbloodkilled {trigger.Bosses.Count} bosses"
-            : $"factionkills {(trigger.Factions ?? []).Count} factions {trigger.Kills} in {trigger.WindowSeconds}s{(trigger.Shared ? " shared" : "")}");
+        return build(trigger.Type switch
+        {
+            TriggerType.VBloodKilled => $"vbloodkilled {trigger.Bosses.Count} bosses",
+            TriggerType.Revenge => $"revenge {(trigger.Factions ?? []).Count} factions {RevengeTail(trigger)}",      // revenge D12
+            _ => $"factionkills {(trigger.Factions ?? []).Count} factions {trigger.Kills} in {trigger.WindowSeconds}s{(trigger.Shared ? " shared" : "")}",
+        });
     }
 
     /// <summary>"bosses: a,b,…" lines, each within one chat message, together naming every boss once, in order.</summary>

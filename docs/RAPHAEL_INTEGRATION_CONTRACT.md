@@ -10,7 +10,7 @@
 > **IMPLEMENTED (api N)**. Build against IMPLEMENTED only. A PLANNED shape can still change before it ships;
 > once it is IMPLEMENTED it only grows (§7).
 >
-> **Current api:** 6
+> **Current api:** 7
 >
 > api 1 shipped with the `foundation` release (0.2.0): the handshake. api 2 ships with the `raphael-api-core`
 > release (0.3.0): `status`, `events` and the push subscription. `me`, `top` and `zones` stay PLANNED until the
@@ -26,8 +26,12 @@
 >
 > api 6 ships with the `automation` release (0.8.0): three new values of `trigger` on `[NYAR:def]` rows, `interval`,
 > `regionentered` and `factionkills` (§3). It adds no tag, key, push kind or command; a fanned-out wave still sends one
-> `wave` push. api 6 adds no key; an api 5 client may show an unknown `trigger` value wrongly. api 7 and later are
-> PLANNED in §10, the rows each later child adds. Nothing in §10 is sent yet.
+> `wave` push. api 6 adds no key; an api 5 client may show an unknown `trigger` value wrongly.
+>
+> api 7 ships with the `revenge` release (0.12.0): a new value of `trigger` on `[NYAR:def]` and `[NYAR:tpl]` rows,
+> `revenge` (§3). It adds no tag, key, push kind or command, and no heat, player or position reaches the wire; an api 6
+> client may show the unknown `trigger` value wrongly. api 8 and later are PLANNED in §10, the rows each later child
+> adds. Nothing in §10 is sent yet.
 
 ### Tags and commands
 
@@ -184,8 +188,8 @@ All live under `.nyar api …`. Paged commands take an optional 1-based `[page]`
 ```
 [NYAR:def] id=ashfall name=Ashfall_Raid enabled=1 trigger=schedule action=waves duration=900 state=idle reason=- region=-
 ```
-- `trigger` ∈ `schedule | ingame | vbloodkilled | interval | regionentered | factionkills | bossengaged | bosshealth |
-  zoneactivity | manual`; `interval`, `regionentered` and `factionkills` from api 6.
+- `trigger` ∈ `schedule | ingame | vbloodkilled | interval | regionentered | factionkills | revenge | bossengaged |
+  bosshealth | zoneactivity | manual`; `interval`, `regionentered` and `factionkills` from api 6, `revenge` from api 7.
 - `action` ∈ `empower | waves | boss | siege`: the definition's pillar action, sent even when validation disabled a
   definition for a missing action.
 - `state` ∈ `idle | scheduled | active | disabled`.
@@ -484,10 +488,11 @@ Gate the panels on the handshake:
 | 4 | 0.5.2 (raphael-api-admin) | Admin action twins `event`, `template`, `pillar`, `purge` (§5a); reads `templates`, `template info`, `pillar list`, `killswitch`; tags `tpl`, `pillar`, `ks`; `verb=` on twin `ok` and `err` lines; `reason=` on `err` lines; error codes `exists`, `state`, `invalid`, `full`, `io`, `confirm`, `limit` (§4); `config-changed` after a pillar switch. |
 | 5 | 0.6.0 (regions) | The `regions` read and tag `region` (§3); `region=` last on `[NYAR:def]` and `[NYAR:event]` rows and after `secs` on `event-start` and `event-end` pushes; reasons `no_player_in_region` and `out_of_region` (§5a). |
 | 6 | 0.8.0 (automation) | `trigger` values `interval`, `regionentered` and `factionkills` on `[NYAR:def]` rows (§3). No new tag, key, push kind or command. |
+| 7 | 0.12.0 (revenge) | `trigger` value `revenge` on `[NYAR:def]` and `[NYAR:tpl]` rows (§3). No new tag, key, push kind or command. |
 
 ---
 
-## 10. api 7 and later — PLANNED
+## 10. api 8 and later — PLANNED
 
 Nothing in this section is sent yet. Every shape is PLANNED under the child named with it, and can change until that
 child ships. The Tags and commands table carries one row per new tag and command. A child that grows the wire bumps

@@ -48,7 +48,7 @@ public class BossWaveTests
 
     [Theory]
     [MemberData(nameof(Forms))]
-    public void Fails_when_a_boss_spawns_in_an_earlier_wave_or_the_final_wave_lacks_it(string form)
+    public void Final_fails_when_a_boss_spawns_in_an_earlier_wave_or_the_final_wave_lacks_it(string form)
     {
         var a = Form(form);
         for (var w = 1; w < a.Waves; w++)
@@ -67,7 +67,7 @@ public class BossWaveTests
     [InlineData(LocationType.Point)]
     [InlineData(LocationType.Admin)]
     [InlineData(LocationType.AroundPlayer)]
-    public void Fails_when_a_location_drops_the_boss(LocationType location)
+    public void Final_fails_when_a_location_drops_the_boss(LocationType location)
     {
         var a = UnitsForm();
         var d = Decide(a, a.Waves, location: location);
@@ -76,7 +76,7 @@ public class BossWaveTests
     }
 
     [Fact]
-    public void Fails_when_a_clamp_drops_a_boss_before_the_waves_other_units_or_breaks_the_boss_order()
+    public void Final_fails_when_a_clamp_drops_a_boss_before_the_waves_other_units_or_breaks_the_boss_order()
     {
         var a = UnitsForm(Bosses("{ \"prefab\": \"" + Tourok + "\", \"count\": 2 }, { \"prefab\": \"" + Deadeye + "\", \"count\": 1 }"));
         Assert.Equal([Tourok, Tourok, Deadeye, Thug], Prefabs(Decide(a, 3, maxPerWave: 4).Units));        // MaxUnitsPerWave
@@ -85,7 +85,7 @@ public class BossWaveTests
     }
 
     [Fact]
-    public void Fails_when_a_clamp_to_zero_room_spawns_a_boss_or_stops_the_wave_differently()
+    public void Final_fails_when_a_clamp_to_zero_room_spawns_a_boss_or_stops_the_wave_differently()
     {
         var with = UnitsForm();
         var without = with with { Bosses = null };
@@ -97,7 +97,7 @@ public class BossWaveTests
     }
 
     [Fact]
-    public void Fails_when_a_region_wave_loses_its_boss_to_a_group_without_a_spot()
+    public void Final_fails_when_a_region_wave_loses_its_boss_to_a_group_without_a_spot()
     {
         var spot = new RegionSpot(300, 24, 300, 12, "FarbaneWoods");
         IReadOnlyList<UnitEntry> Roll() => [new UnitEntry(Tourok, 1, 1.0, null), .. Enumerable.Repeat(new UnitEntry(Thug, 1), 9)];
@@ -118,7 +118,7 @@ public class BossWaveTests
     }
 
     [Fact]
-    public void Fails_when_a_boss_without_modifiers_does_not_take_the_final_waves()
+    public void Final_fails_when_a_boss_without_modifiers_does_not_take_the_final_waves()
     {
         static int? Level(SpawnWavesAction a, UnitEntry e) => SpawnTuning.For(a, e).Level is { IsOffset: false } l ? l.Value : null;
 
@@ -137,7 +137,7 @@ public class BossWaveTests
     }
 
     [Fact]
-    public void Fails_when_a_boss_is_not_counted_for_the_clear()
+    public void Final_fails_when_a_boss_is_not_counted_for_the_clear()
     {
         // The final wave's decision carries the bosses, so WaveAction queues them under that wave's number and
         // SpawnLedger.WaveCleared waits for them as for the wave's other units.
@@ -145,5 +145,20 @@ public class BossWaveTests
         var d = Decide(a, 2);
         Assert.Contains(Tourok, Prefabs(d.Units));
         Assert.Equal(4, Prefabs(d.Units).Count);
+    }
+
+    [Fact]
+    public void Final_passes_one_boss_beside_the_wave()
+    {
+        var a = WaveListForm();
+        Assert.Equal([Tourok, Deadeye, Deadeye, Deadeye], Prefabs(Decide(a, 2).Units));
+    }
+
+    [Fact]
+    public void Final_empty_no_bosses()
+    {
+        var a = UnitsForm() with { Bosses = null };
+        Assert.Equal(a.UnitsOf(3), BossWave.Units(a, 3));
+        Assert.Equal(0, BossWave.Lead(a, 3));
     }
 }

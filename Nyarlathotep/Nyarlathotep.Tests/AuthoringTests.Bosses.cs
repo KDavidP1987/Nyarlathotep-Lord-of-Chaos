@@ -13,8 +13,11 @@ public partial class AuthoringTests
         var lines = EventLines.Info(HgEvent(HgPoint,
             "\"bosses\": [ { \"prefab\": \"CHAR_Bandit_Tourok_VBlood\", \"count\": 2 }, { \"prefab\": \"CHAR_Bandit_Deadeye\", \"count\": 1 } ]"), null, Now);
         Assert.Contains("final wave adds: CHAR_Bandit_Tourok_VBlood x2, CHAR_Bandit_Deadeye x1", lines);
-        Assert.DoesNotContain(EventLines.Info(HgEvent(HgPoint, "\"loot\": false"), null, Now), l => l.StartsWith("final wave adds", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void Bosses_empty_no_line() =>
+        Assert.DoesNotContain(EventLines.Info(HgEvent(HgPoint, "\"loot\": false"), null, Now), l => l.StartsWith("final wave adds", StringComparison.Ordinal));
 
     [Fact]
     public void Bosses_fails_when_the_line_exceeds_480_bytes()

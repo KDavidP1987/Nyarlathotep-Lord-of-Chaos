@@ -43,6 +43,16 @@ static class Json
         "\"action\": { \"type\": \"SpawnWaves\", \"units\": [ { \"prefab\": \"CHAR_Bandit_Thug\", \"count\": 5 } ], " +
         "\"waves\": 3, \"intervalSeconds\": 60, \"radius\": 10, \"location\": { \"type\": \"Point\", \"x\": -1200.5, \"z\": -800 } }";
 
+    /// <summary>A valid Revenge trigger (revenge D1): Faction_Bandits, heat 6 in 900 s, warnings at 2 and 4.</summary>
+    public const string RevengeTrigger =
+        "{ \"type\": \"Revenge\", \"factions\": [\"Faction_Bandits\"], \"heat\": 6, \"windowSeconds\": 900, \"warnAt\": [2, 4] }";
+
+    /// <summary>The action a Revenge trigger needs (revenge D2): SpawnWaves around the player, Hunt.</summary>
+    public const string RevengeAction =
+        "\"action\": { \"type\": \"SpawnWaves\", \"units\": [ { \"prefab\": \"CHAR_Bandit_Thug\", \"count\": 4 } ], " +
+        "\"waves\": 3, \"intervalSeconds\": 60, \"radius\": 10, \"location\": { \"type\": \"AroundPlayer\", \"minDist\": 20, \"maxDist\": 40 }, " +
+        "\"behaviour\": { \"type\": \"Hunt\", \"range\": 45 } }";
+
     /// <summary>An Empower action on <paramref name="factions"/> (JSON array text) with <paramref name="stats"/>.</summary>
     public static string EmpowerAction(string factions = "[\"Faction_Bandits\"]", string stats = "{ \"physicalPower\": 1.3 }", string? extra = null) =>
         "\"action\": { \"type\": \"Empower\", \"factions\": " + factions + (extra is null ? "" : ", " + extra) + ", \"stats\": " + stats + " }";

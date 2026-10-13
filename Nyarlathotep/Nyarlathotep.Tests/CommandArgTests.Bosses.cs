@@ -19,7 +19,6 @@ public partial class CommandArgTests
         AuthoringTests.Units());
 
     [Theory]
-    [InlineData("", CommandArgs.ValueRequired)]
     [InlineData("CHAR_Bandit_Tourok_VBlood:0", EventValidator.BossCountRule)]
     [InlineData("CHAR_Bandit_Tourok_VBlood:4", EventValidator.BossCountRule)]
     [InlineData("CHAR_Bandit_Tourok_VBlood:x", EventValidator.BossCountRule)]
@@ -69,4 +68,8 @@ public partial class CommandArgTests
     [Fact]
     public void Bosses_passes_the_table_name() =>
         Assert.Equal(("spawn action", "admin"), CommandArgs.SettableFields[CommandArgs.BossesField]);
+
+    [Fact]
+    public void Bosses_empty_value_required() =>
+        Assert.Equal(CommandArgs.ValueRequired, AuthoringTests.Set(BossLib(), "raid", CommandArgs.BossesField, ""));
 }
