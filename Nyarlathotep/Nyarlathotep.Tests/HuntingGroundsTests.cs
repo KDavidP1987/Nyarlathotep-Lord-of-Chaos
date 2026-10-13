@@ -407,6 +407,32 @@ public class HuntingGroundsTests
             var (x, _, _) = LockRule.ReturnSpot(near, InsideFree, (_, _, _) => true, new WalkBudget(), Doubles(seed));
             Assert.True(x > 30, $"seed {seed}: {x}");
         }
+        for (var seed = 0; seed < 50; seed++)                                        // review 2 F1: the last spot 5 m from the wall
+        {
+            var wall = new World { Claimed = (x, _) => x >= 0 && x <= 30 };
+            wall.Add(1, 35, 500, spawn: (300, 20, 300));
+            var p = new LockPhase();
+            p.Run(a, wall, Doubles(seed), _ => { }, _ => { });
+            wall.Move(1, -20, 500);
+            var r = Assert.Single(p.Run(a, wall, Doubles(seed), _ => { }, _ => { })!.Returns);
+            Assert.True(r.X > 30, $"seed {seed}: returned into the castle at {r.X}");
+            Assert.True(HuntingGrounds.Distance(r.X, r.Z, 35, 500) <= HuntingGrounds.Slack + 0.001f, $"seed {seed}: not beside its last spot");
+        }
+        var grown = new World();                                                      // review 2 F5: a heart claims the last spot mid-event
+        grown.Add(1, 60, 500, spawn: (300, 20, 300));
+        var gp = new LockPhase();
+        gp.Run(a, grown, Doubles(1), _ => { }, _ => { });
+        grown.Claimed = (x, z) => x >= 45 && x <= 75 && z >= 485 && z <= 515;
+        grown.Move(1, -20, 500);
+        var g = Assert.Single(gp.Run(a, grown, Doubles(1), _ => { }, _ => { })!.Returns);
+        Assert.Equal((300f, 300f), (g.X, g.Z));                                       // the spawn point, never the claimed spot
+        var both = new World();
+        both.Add(1, 60, 500, spawn: (60, 20, 505));
+        var bp = new LockPhase();
+        bp.Run(a, both, Doubles(1), _ => { }, _ => { });
+        both.Claimed = (x, z) => x >= 45 && x <= 75 && z >= 485 && z <= 515;
+        both.Move(1, -20, 500);
+        Assert.Empty(bp.Run(a, both, Doubles(1), _ => { }, _ => { })!.Returns);       // both claimed: no return at all
         var open = Running(Def("hg") with { Action = Def("hg").Action! with { AllowTerritory = true } });   // the admin allowed territory
         var free = new World { Claimed = (_, _) => true };                            // no map: every point would count as claimed
         free.Add(1, 60, 500, spawn: (300, 20, 300));

@@ -740,6 +740,13 @@ public sealed class LockPhase
                     var (x, y, z) = LockRule.ReturnSpot(last,
                         (px, pz) => HuntingGrounds.Inside(scope, world.RegionOf, px, pz) && !castle(px, pz), world.Walkable,
                         world.Budget, random);
+                    if (castle(x, z))
+                    {
+                        // the last spot itself was claimed since it was recorded (a heart placed mid-event; review 2 F5): the
+                        // spawn point instead, or no return at all while that is claimed too
+                        if (u.Spawn is not { } home || castle(home.X, home.Z)) continue;
+                        (x, y, z) = home;
+                    }
                     var r = new RegionReturn(u.Key, x, y, z, d);
                     world.Return(r, scope);
                     written.Add(r);
