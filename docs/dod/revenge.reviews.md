@@ -168,3 +168,116 @@ VERDICT: READY
 - F4 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 3 F4`, an admin start (D13) skips the target-busy check and sets no cooldown for the admin, checked in RevengeTests AdminStart; recorded as an amendment if it changes a promise
 - F5 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 3 F5`, docs/features/REVENGE.md states that a spawned squad whose focus moved more than `range` from its wave centre idles or leashes until the event ends or the wave is cleared (accepted, HuntPlan.Targets seeds only players within range), and D22's owner look check notes it
 - F6 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 3 F6`, a heat or factions edit keeps a row's existing points and changes only what new kills add, and the next scan applies the new `heat` (a player at or above it becomes due without a new kill); one case in RevengeTests Heat; recorded as an amendment if it changes a promise
+
+## Review 4 · 2026-10-13 · subagent · plan uncommitted · plan 91953 B · 32 items · files 0 · e3b0c44298fc · prompt 95d13c4d986d
+L1 · Considered · no finding
+L2 · Considered · no finding
+L3 · Considered · F7
+L4 · Considered · F1, F2, F4, F5
+L5 · Considered · F6
+L6 · Considered · F2
+L7 · Considered · no finding
+L8 · Considered · no finding
+L9 · Considered · no finding
+L10 · Considered · no finding
+L11 · Considered · no finding
+L12 · Gap · F1, F8 (the author already counts this as 49/50: the failing cases of the new test classes, now including D28-D31, were never run before approval and are planned as step 1 `note · planted` lines; not a new Gap)
+L13 · Considered · no finding
+L14 · Considered · F3, F6, F7
+L15 · Considered · no finding
+
+F1 · advisory · probes 4.1 and 12.4 (D30). D30's evidence cannot catch the most likely way its promise breaks. In `Patches/DeathEventPatch.cs:63-67` the "ours" ledger read (`SpawnTracker.IsOurs`) runs only `if (wantsKills)`, and it runs in `before`. The VBloodKilled path (`:77-80`) runs in `rest`, after `SpawnTracker.Died` has forgotten the victim. If D30 reuses `read.Ours`, a tracked boss still raises VBloodKilled whenever no FactionKills or Revenge definition is startable, which is the default setup. `DeathRuleTests EventUnits` tests only the pure `DeathRule` function, so it passes anyway. D32 can hide the bug too, because nothing stops rv-test or rv-test0 (or bandit-ambush for D23) from being startable when bw-test runs.
+  Fix: add to D30's fails-when: "a tracked V Blood raises VBloodKilled while no FactionKills or Revenge definition is startable", tested through `DeathPass` order (ours read before Died, whatever wantsKills says). Pin D32 to run with no Revenge or FactionKills definition startable.
+
+F2 · advisory · probes 4.4 and 6.2 (D10 against D30). When the ours read throws, D10 says a throw "never skips … the V Blood trigger". D30 says an event unit never raises VBloodKilled. One of the two must give way, and the plan does not say which. In practice the throw is rare: `IsOurs` checks the ledger first, so a tracked boss never reaches the buffer read that can throw. The exposed case is a marker-only unit, such as a not-yet-swept orphan.
+  Fix: one sentence in D30: "a failed ours read raises VBloodKilled as before (fail open, D10); a ledger hit never does."
+
+F3 · advisory · probe 14.4 (D26). Rollout › Paths walked › Step 3 lists `tools/rollback-drill-fixtures/{pair-revenge,pair-othertrigger}/**` but not `pair-bosses`, which A1, D24 and Build plan step 3 all write. `-Paths -DeclaredOf revenge` would then report an undeclared path at step 3.
+  Fix: make it `{pair-revenge,pair-bosses,pair-othertrigger}/**`. Do it before approval, since an edit after READY voids it.
+
+F4 · advisory · probe 4.5 (D28, D29). D28 promises bosses "with any trigger and location". A Region location's wave goes through `RegionWave.Decide`/`Split` (`Logic/HuntingGrounds.cs:228-252`), which deals units round-robin into groups of 5 at separate spots. D29's "beside that wave's own units at its spot or ring" does not say which group a boss joins. Also, `Logic/HuntingGrounds.cs` and `Logic/Precedence.cs` (`WaveSize`) are missing from Paths walked step 1, though the clamp-bosses-last rule may land there.
+  Fix: state that a Region wave's bosses join its first group with a spot (or similar), and add both files to step 1's paths.
+
+F5 · advisory · probe 4.1 (D28 wording). D28 says a boss entry's modifiers are "as a units entry's". In the units form, entries are parsed `withModifiers: false` (`Logic/Validation.cs:548`). Only waveList entries carry modifiers. For a growth wave, D29's "else the wave's" leaves open whether a boss without modifiers inherits the generated wave's addLevels.
+  Fix: say "as a waveList entry's modifiers" and "a boss without modifiers takes the final wave's modifiers, growth's added levels included", or the opposite.
+
+F6 · advisory · probe 5.3. `Logic/ScoreFeed.cs` (`DeathPass`) and `Logic/DeathPass` ordering may change if the ours read is moved out of the `wantsKills` gate (F1). Neither file is in Paths walked.
+  Fix: list `Logic/ScoreFeed.cs` under step 1, or note it is untouched.
+
+F7 · advisory · probe 3.3. Three places still describe the old 0.11.0 release. Design › Data's last row is "tag and GitHub release v0.11.0", but this child creates v0.12.0. S-15 still reasons about 0.11.0 and v0.10.0. Also considered › Localisation says "in 0.11.0".
+  Fix: change the Data row to v0.12.0, mark S-15 superseded by A1, and correct the Localisation line.
+
+F8 · advisory · probe 12.4 (D28-D32). The Log has no dry-run note for any A2 item: `BossWaveTests` does not exist yet, and there is nothing for `DeathRuleTests EventUnits` or `TemplateLibraryTests Bosses`. D32's dev event bw-test is described as "3 CHAR_Spider_Forest, waves 2, the second when cleared". The units form has no plain whenCleared (only through growth, which needs adds), so bw-test has to be a two-entry waveList.
+  Fix: add `note · dry-run · D28-D31` lines (the current filter output), and write bw-test as a waveList with wave 2 `whenCleared: true`.
+
+Checked and found sound:
+- A1: csproj is 0.11.0 and `Wire.Api` is 6, so D15 gives 7. The reason "unknown field action.bosses" matches `Validation.cs:228`'s format exactly. The rollback range is v0.11.0..v0.12.0, the gate is 4/4, and the drill gains three cases.
+- A2: `ParseSpawnWaves`' OnlyKeys list is the right place for the new key. `Growth.Generate` and `WavePlan.Split` give the final-wave and clamp seams. `vblood-player-death.vrs:27-32` does rely on a tracked Ungoro raising VBloodKilled, and the plan already moves that half to a native V Blood.
+
+missing components: none
+undeclared families: units form, waveList form, growth form; Point, Admin, AroundPlayer, Region
+14/15 layers · 49/50 probes
+VERDICT: READY
+### Dispositions
+- F1 · accepted · built: the ours read for the V Blood rule runs before SpawnTracker.Died whatever WantsKills says, and a DeathPass-order case in DeathRuleTests EventUnits fails when a tracked V Blood raises VBloodKilled with no FactionKills or Revenge definition startable; D32's run keeps rv-test, rv-test0 and every FactionKills definition disabled (Log)
+- F2 · accepted · deferred to the Log (advice on a READY review, no item edited): `note · deferred · Review 4 F2`, a failed ours read raises VBloodKilled as before (fail open, D10); a ledger hit never does
+- F3 · accepted · deferred to the Log (advice on a READY review, no item edited): `note · deferred · Review 4 F3`, step 3 also writes tools/rollback-drill-fixtures/pair-bosses/**, declared there for -Paths -DeclaredOf
+- F4 · accepted · built: a wave's bosses lead its unit list, so a Region wave deals the first boss to its first group with a spot and the bosses are dealt first under the clamp; Logic/HuntingGrounds.cs and Logic/Precedence.cs are read in step 1 (Log)
+- F5 · accepted · deferred to the Log (advice on a READY review, no item edited): `note · deferred · Review 4 F5`, a boss entry's modifiers are a waveList entry's; a boss without modifiers takes the final wave's tuning, growth's added levels included
+- F6 · accepted · deferred to the Log: `note · deferred · Review 4 F6`, Logic/ScoreFeed.cs (DeathPass) is read in step 1 and declared there
+- F7 · accepted · deferred to the Log (advice on a READY review, no item edited): `note · deferred · Review 4 F7`, Design › Data's release row, S-15 and Localisation's "in 0.11.0" read as superseded by A1 (0.12.0, v0.12.0)
+- F8 · accepted · built in the Log: dry-run notes for D28-D31; bw-test is a two-entry waveList, wave 2 `whenCleared: true`
+- UF1 · accepted · D29
+- UF2 · accepted · D29
+
+## Review 5 · 2026-10-13 · subagent · plan uncommitted · plan 94654 B · 32 items · files 0 · e3b0c44298fc · prompt cc5ae3c70fb5 · scope A1,A2
+L1 · Considered · no finding
+L2 · Considered · no finding
+L3 · Considered · F3
+L4 · Considered · F2, F4
+L5 · Considered · F5
+L6 · Considered · F1
+L7 · Considered · no finding
+L8 · Considered · no finding
+L9 · Considered · F3
+L10 · Considered · no finding
+L11 · Considered · no finding
+L12 · Considered · F2
+L13 · Gap · no finding (frozen context: the 13.1 measurement predates the recon commit and was not re-run; D23 gates the release; outside A1/A2 scope)
+L14 · Considered · F5, F6
+
+F1 · advisory · The plan says nothing about what a boss itself summons during a fight. CHAR_Spider_Queen_VBlood has AB_Spider_Queen_SpawnAdds_*, which summon CHAR_Spiderling_Summon (IsMinion, EntityOwner, DestroyAfterDuration 120). Those adds are not SpawnTracker units, they fall outside MaxTrackedUnits, and a purge or restart does not remove them. They disappear on their own within 120 s, so no cap or kill-switch promise actually fails.
+  Fix: in docs/features/REVENGE.md, say that a boss's summons belong to the game, are timed by DestroyAfterDuration, and count for no cap, clear or scoreboard. Have D32's scenario check that no CHAR_Spiderling_Summon remains near the pond 120 s after the end.
+
+F2 · advisory · A2's probe 4.2 promises "a clamp to zero room spawns no boss and the wave still runs". D29's fails-when only covers dropping or reordering bosses under a clamp, not the zero-room case.
+  Fix: add a BossWaveTests case where MaxTrackedUnits leaves no room: no boss spawns, and the final wave is decided as the existing clamp decides a fully clamped wave.
+
+F3 · advisory · D28 doesn't say whether the bosses count toward validation's existing 50-unit final-wave ceiling (Validation.GrowthLastWave, Growth.LastWaveUnits). Up to 9 bosses are possible (3 entries × count 3). A growth action at 49 units plus bosses could load and then lose units to the runtime clamp.
+  Fix: state whether the 50-unit ceiling includes the bosses, and add the matching EventValidationTests Bosses case.
+
+F4 · advisory · Two sets of siblings are checked without being declared. D28/D29 promise "any of the three forms" and "any location", but the `siblings:` line lists only the end paths. D32 runs only one form (waveList) at one location (Admin). The two shipped boss templates use the growth form (spider-swarm) and Region (spider-hunting-grounds).
+  Fix: add `siblings: units, waveList, growth; Point, Admin, AroundPlayer, Region` to Business rules, and put `twins:` on D29 and D32 naming the BossWaveTests cases that cover each form and location.
+
+F5 · advisory · Build plan step 1 and Paths walked › Step 1 name Logic/WaveSets.cs, which does not exist (Logic/ holds Growth.cs, Spawning.cs, Scoreboard.cs). The final-wave roll may live in Services/WaveAction.cs or Logic/Spawning.cs. A file touched there and not declared in step 1 would trip D26's -DeclaredOf. Paths walked › Step 3 still names only {pair-revenge,pair-othertrigger}; the pair-bosses fixture appears only in the deferred Log note.
+  Fix: replace WaveSets with the real file(s) once step 1's recon finds the roll. Add pair-bosses to the Step 3 fixture glob.
+
+F6 · advisory · D30 changes existing behaviour. A V Blood placed with `.nyar spawn` or by an event used to raise VBloodKilled and so could chain events. After 0.12.0 it cannot. D25's surface list names the bosses key but not this change.
+  Fix: have D25 require both changelogs to state that event and `.nyar spawn` V Bloods no longer raise VBloodKilled.
+
+F7 · advisory · Both boss templates are proven in game only through unit tests: spider-swarm's growth final wave and spider-hunting-grounds' Region dealing (Review 4 F4: the first boss goes to the first group with a spot). The level rule "absolute level at or above the final wave's" gives spider-swarm a boss at 42 or more (30 + 4×3) and spider-hunting-grounds one at 30 or more. CHAR_Spider_Queen_VBlood's native level is 63.
+  Fix: name the chosen boss levels in D31, and optionally add a Region pass to boss-wave.vrs.
+
+missing components: none
+undeclared families: units, waveList, growth; Point, Admin, AroundPlayer, Region
+14/15 layers · 49/50 probes
+VERDICT: READY
+### Dispositions
+- F1 · accepted · deferred to the Log (advice on a READY review, no item edited): `note · deferred · Review 5 F1`, docs/features/REVENGE.md states that a boss's summons (CHAR_Spiderling_Summon) belong to the game, end through DestroyAfterDuration 120 s and count for no cap, clear or scoreboard; boss-wave.vrs checks that none is left near the pond 120 s after the end
+- F2 · accepted · built: BossWaveTests gains the zero-room case (no boss spawns, the final wave decided as a fully clamped wave) (Log)
+- F3 · accepted · deferred to the Log (advice on a READY review, no item edited): `note · deferred · Review 5 F3`, validation's 50-unit final-wave ceiling stays the wave's own units; the bosses ride the runtime clamp, which D29 keeps them first under
+- F4 · accepted · built: BossWaveTests covers the units, waveList and growth forms and the Point, Admin, AroundPlayer and Region locations (Log)
+- F5 · accepted · deferred to the Log: `note · deferred · Review 5 F5`, the final wave's roll lives in Services/WaveAction.cs and Logic/Spawning.cs (there is no Logic/WaveSets.cs), declared there for step 1; pair-bosses as Review 4 F3
+- F6 · accepted · deferred to the Log (advice on a READY review, no item edited): `note · deferred · Review 5 F6`, both changelogs state that an event's or `.nyar spawn`'s V Blood no longer raises VBloodKilled
+- F7 · accepted · deferred to the Log: `note · deferred · Review 5 F7`, the templates' boss levels are named in the step 2 Log note when chosen (at or above each final wave's level)
+- UF1 · accepted · D29
+- UF2 · accepted · D29
