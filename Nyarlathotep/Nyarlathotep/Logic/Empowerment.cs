@@ -574,8 +574,10 @@ public sealed record SweepPlan(IReadOnlyList<long> Despawn, IReadOnlyList<long> 
 }
 
 /// <summary>The VBloodKilled trigger (D13): a V Blood kill is a death whose entity carries VBloodConsumeSource
-/// (DEV_REMINDERS #26). A gate boss carries VBloodUnit alone and raises nothing.</summary>
+/// (DEV_REMINDERS #26). A gate boss carries VBloodUnit alone and raises nothing. A player character carries
+/// VBloodConsumeSource too (seen in game 2026-10-13: "trigger: VBloodKilled CHAR_VampireMale" on a player's death), so a
+/// player's death raises nothing either, or every "any" trigger would fire on it.</summary>
 public static class DeathRule
 {
-    public static bool IsVBloodKill(bool hasConsumeSource, bool hasVBloodUnit) => hasConsumeSource;
+    public static bool IsVBloodKill(bool hasConsumeSource, bool hasVBloodUnit, bool isPlayer = false) => hasConsumeSource && !isPlayer;
 }

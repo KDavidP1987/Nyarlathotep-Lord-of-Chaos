@@ -70,11 +70,11 @@ internal static class DeathEventPatch
                 }, death => SpawnTracker.Died(death.Died, death.Killer), (death, read) =>
                 {
                     // faction-empowerment D13: a V Blood kill carries VBloodConsumeSource; a gate boss with VBloodUnit alone
-                    // raises nothing (DEV_REMINDERS #26). Guarded per death, so a throw never skips this death's kill feed
+                    // raises nothing (DEV_REMINDERS #26), nor does a player character, which carries it too. Guarded per death, so a throw never skips this death's kill feed
                     // or a later death's SpawnTracker.Died (step 2 Codex round 2 F1).
                     try
                     {
-                        if (Logic.DeathRule.IsVBloodKill(death.Died.Has<VBloodConsumeSource>(), death.Died.Has<VBloodUnit>()))
+                        if (Logic.DeathRule.IsVBloodKill(death.Died.Has<VBloodConsumeSource>(), death.Died.Has<VBloodUnit>(), death.Died.Has<PlayerCharacter>()))
                         {
                             var died = death.Died;
                             TriggerBus.VBloodKilled(died.GetPrefabGuid().GetPrefabName(), () => KillPosition(died));   // read on demand (A38)
