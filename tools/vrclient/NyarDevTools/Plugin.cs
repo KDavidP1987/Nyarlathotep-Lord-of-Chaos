@@ -139,11 +139,13 @@ static class DevCommands
         ctx.Reply(marks.Count == 0 ? "devmarks: none" : "devmarks: " + string.Join(", ", marks.Keys.OrderBy(k => k)));
     }
 
-    static EntityQuery LivingUnits(EntityManager em) => em.CreateEntityQuery(new EntityQueryDesc
+    // disabled: also the units of chunks far from every player (devunits' worldwide scouting)
+    static EntityQuery LivingUnits(EntityManager em, bool disabled = false) => em.CreateEntityQuery(new EntityQueryDesc
     {
         All = new[] { ComponentType.ReadOnly<Health>(), ComponentType.ReadOnly<Translation>(), ComponentType.ReadOnly<UnitLevel>(),
             ComponentType.ReadOnly<PrefabGUID>() },
         None = new[] { ComponentType.ReadOnly<PlayerCharacter>(), ComponentType.ReadOnly<Dead>() },
+        Options = disabled ? EntityQueryOptions.IncludeDisabled : EntityQueryOptions.Default,
     });
 
     [Command("devdie", adminOnly: true)]
@@ -270,7 +272,7 @@ static class DevCommands
             from = p.Value;
         }
         var em = Em;
-        var query = LivingUnits(em);
+        var query = LivingUnits(em, true);
         var units = query.ToEntityArray(Allocator.Temp);
         var n = 0;
         try

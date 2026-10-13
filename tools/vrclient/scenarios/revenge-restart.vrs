@@ -1,7 +1,7 @@
 # revenge-restart.vrs: revenge D21's restart, first half (Session 1, after revenge-vblood.vrs and the 240 s purge
-# cooldown). On rv-test0, Chaos gathers heat 6 at the camp mark ${CAMP} (prefab ${BANDIT}), the revenge starts at the pond
+# cooldown). On rv-test0, Chaos gathers heat 6 at the camp mark ${CAMP} (prefab ${BANDIT}), the revenge starts at the camp
 # and runs into tier 2; then the client closes and the server restarts (outside the scenario). revenge-boot2.vrs checks
-# the boot. Run: --var CAMP=<mark> --var BANDIT=<guid>
+# the boot. Run: --var CAMP=<mark> --var BANDIT=<guid> --var BANDIT2=<guid> --var BANDIT3=<guid> (heat top-ups) --var KR=<kill radius>
 ensure
 console ToggleInvulnerable true
 wait 2
@@ -11,11 +11,14 @@ chat .devgo ${CAMP}
 expect-log \[DEV TP\] ${CAMP}
 wait 4
 mark
-chat .devkill ${BANDIT} 60 6
-expect-log \[DEV KILL\] n=6
+# three prefabs, so the camp's thinned natives still reach heat 6 (a due mid-way starts at once: no kill-line checks between)
+chat .devkill ${BANDIT} ${KR} 6
+wait 2
+chat .devkill ${BANDIT2} ${KR} 6
+wait 2
+chat .devkill ${BANDIT3} ${KR} 6
 expect-log revenge rv-test0 due timeout=10
-chat .devgo pond
-expect-log \[DEV TP\] pond
+# outside the territory the revenge starts at once, around Chaos at the camp; the waves are fought there
 expect-log event rv-test0 started by Revenge timeout=15
 expect-log spawned CHAR_Bandit_Thug for rv-test0 timeout=30
 wait 4

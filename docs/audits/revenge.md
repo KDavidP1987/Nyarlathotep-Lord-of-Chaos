@@ -16,7 +16,7 @@
 - feature doc read: docs/features/REVENGE.md (Status: step 1 built; open questions: idle squads when the focus leaves Hunt range, scaling and replacements after Halloween)
 - baseline boot: the 8a43069 Release DLL on the dev server inside snapshot rv1 (`dev-snapshot.ps1 -Save rv1`, 33 files); logs copied to %TEMP%
 yar-rv1-logs first; "events: reloaded: 12 valid, 1 disabled" (example-empowerment, the known one), "templates: 12/12 valid", "triggers: all hooks available"; -LogCheck PREFLIGHT OK
-- timing baseline (Review 3 F2): TIMING_PENDING
+- timing baseline (Review 3 F2): hunting-grounds-timing.vrs on the 8a43069 DLL (hg-timing, 24 tracked spiders for 25 min) SCENARIO PASS 12/12; `preflight -TimingSpan <log copy> -Windows 10 -MinTracked 10` → "timing span: 10/10 windows under 5 ms, tracked >= 10, targets >= 1, 0 slow ticks" (window averages 0.27-3.75 ms). Runs 1 and 2 stopped at "the HUD never appeared": Chaos lay dead at the pond from the owner's test; respawned at the coffin, run 3 passed
 
 ## Post-audit
 ### Step 1 · 2026-10-13 · revenge half: 1c9127c (builder subagent, on 0aacdba)
@@ -50,3 +50,12 @@ yar-rv1-logs first; "events: reloaded: 12 valid, 1 disabled" (example-empowermen
 - merge: conflicts only in this file and docs/features/REVENGE.md (both kept); ControlCases gains the D28-D31 rows and BossWaveTests in NewClasses; SettableFields 63; the builder touched no Services or Patches
 - review of the diff: the boss half's 10 planted faults and the revenge half's 14 each caught and restored (Log notes); Codex once before the release (design §9 D34)
 - dod status: D1-D9, D11-D13, D15, D17, D28-D30 pass at 7031eb2; D31 waits on TemplateLibraryTests.Bosses (step 2)
+
+### Step 2 · 2026-10-13 · b766a73 + fix 3e6ff70
+- compile: `dotnet build Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__` 0 Warning(s), 0 Error(s)
+- tests: Passed! 3132/3132
+- preflight: PREFLIGHT OK; `-DependencySuite revenge` → "dependency suite: revenge 2/2 (heat-read, private-send)"
+- planted faults: D10 heat read 1/6 and private send 1/4, D14 1/13, D31 3/7, D16 the suite's FAILED line; each caught and restored (Log notes)
+- review of the diff: fresh read-only subagent, VERDICT: ISSUES (2), both low: a fault end wrote no revenge end line (fixed in 3e6ff70, logged and silent to the player); the boot's restart line reads the current catalogue (accepted, REVENGE.md › Restart line). Codex once before the release (design §9 D34)
+- in game: Session 1 (REVENGE.md › Test results) revenge 39/39, revenge-vblood 20/20, revenge-restart 8/8 + boot lines, revenge-boot2 4/4, revenge-timing 20/20 with the D23 span 10/10 under 5 ms, boss-wave 13/13, vblood-player-death 9/9; every [Warning]/[Error] in both logs read (state lines only); snapshot rv1 restored
+- dod status: D10, D14, D16, D23, D31 pass; D18-D21 and D32 manual, waiting on the owner's acceptance; D22 waits on a second player; D24-D27 are step 3

@@ -4,10 +4,11 @@
 # spawned bandits add none; warning 1 of 2 at 2 and 2 of 2 at 4, each shown privately in chat; at 6 Chaos is due. At home
 # (claimed territory) the start is held; at the pond it starts within 10 s with the alert and the private line, tier 1
 # stands within 25 m; each tier killed brings the next; "all waves defeated (3 of 3 waves)" with the private end line;
-# kills within the 5 min cooldown warn no more.
+# kills within the 5 min cooldown warn no more. A purge first arms the 240 s cooldown, so the due player is held (controls)
+# at the camp and (territory) at home once it lapses.
 # Needs: the step 2 Release DLL; NyarDevTools (.devgo, .devkill with max, .devmark) and DevChatEcho; rv-test enabled and
 # rv-test0, bw-test and every FactionKills definition disabled; Scoreboard.IncludeAdmins true; marks home, pond and
-# ${CAMP}; Chaos invulnerable (`ToggleInvulnerable true`, never false). Run: --var CAMP=<mark> --var BANDIT=<guid>
+# ${CAMP}; Chaos invulnerable (`ToggleInvulnerable true`, never false). Run: --var CAMP=<mark> --var BANDIT=<guid> --var BANDIT2=<guid for the cooldown kills> --var KR=<kill radius>
 ensure
 console ToggleInvulnerable true
 wait 2
@@ -26,31 +27,43 @@ mark
 chat .devkill -301730941 30
 expect-log \[DEV KILL\] n=2
 expect-no-log revenge rv-test timeout=6
+# the purge cooldown (240 s) holds the start while Chaos becomes due at the camp and goes home; it ends with Chaos inside
+chat .nyar spawn CHAR_Bandit_Thug 1
+expect-log spawned CHAR_Bandit_Thug timeout=20
+wait 2
+chat .nyar purge
+wait 2
+chat .nyar purge confirm
+expect-log purge: 0 events ended, 1 units queued
 # D18: native kills, two at a time
 chat .devgo ${CAMP}
 expect-log \[DEV TP\] ${CAMP}
 wait 4
 mark
-chat .devkill ${BANDIT} 40 2
+chat .devkill ${BANDIT} ${KR} 2
 expect-log \[DEV KILL\] n=2
 expect-log revenge rv-test: warning 1 of 2 timeout=10
 expect-chat have noticed your killing
 shot chat rv-warning1
 mark
-chat .devkill ${BANDIT} 40 2
+chat .devkill ${BANDIT} ${KR} 2
 expect-log \[DEV KILL\] n=2
 expect-log revenge rv-test: warning 2 of 2 timeout=10
 expect-chat are gathering against you
 shot chat rv-warning2
 mark
-chat .devkill ${BANDIT} 40 2
+chat .devkill ${BANDIT} ${KR} 2
 expect-log \[DEV KILL\] n=2
 expect-log revenge rv-test due timeout=10
-# D19: held in claimed territory
+expect-log revenge rv-test: held \(controls\) timeout=10
+# D19: held in claimed territory (the territory is checked before the controls)
 console TPHome
 wait 3
 expect-log revenge rv-test: held \(territory\) timeout=15
 expect-no-log event rv-test started timeout=30
+# the purge cooldown (240 s from the purge) must be over before the pond, or the start is held (controls)
+wait 200
+expect-no-log event rv-test started timeout=3
 # D19: outside, it starts within 10 s
 mark
 chat .devgo pond
@@ -61,7 +74,7 @@ expect-log spawned CHAR_Bandit_Thug for rv-test timeout=30
 expect-chat The Bandits come for you
 shot chat rv-start
 wait 4
-chat .nyar debug here 25
+chat .nyar debug here 60
 expect-reply rv-test
 shot full rv-tier1
 chat .devkill -301730941 40
@@ -87,7 +100,7 @@ chat .devgo ${CAMP}
 expect-log \[DEV TP\] ${CAMP}
 wait 4
 mark
-chat .devkill ${BANDIT} 60 4
+chat .devkill ${BANDIT2} ${KR} 4
 expect-log \[DEV KILL\] n=[1-4]
 expect-no-log revenge rv-test: warning timeout=8
 console TPHome

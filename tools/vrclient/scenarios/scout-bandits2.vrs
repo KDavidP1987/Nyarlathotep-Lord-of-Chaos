@@ -1,0 +1,26 @@
+# scout-bandits2.vrs: dev scouting near (-1680,-1600), where native bandits were seen (not a test).
+ensure
+console ToggleInvulnerable true
+wait 2
+chat .devtp -1680 -1600
+expect-log \[DEV TP\]
+wait 8
+chat .devunits -301730941 400
+expect-log \[DEV UNITS\] n=
+chat .devunits -1301144178 400
+expect-log \[DEV UNITS\] n=
+chat .devunits 923140362 400
+expect-log \[DEV UNITS\] n=
+chat .devunits 2057508774 400
+expect-log \[DEV UNITS\] n=
+chat .devunits -309264723 400
+expect-log \[DEV UNITS\] n=
+chat .devunits -1030822544 400
+expect-log \[DEV UNITS\] n=
+chat .devunits 1124739990 600
+expect-log \[DEV UNITS\] n=
+chat .devunits 2122229952 600
+expect-log \[DEV UNITS\] n=
+chat .devunits -2025101517 600
+expect-log \[DEV UNITS\] n=
+console TPHome

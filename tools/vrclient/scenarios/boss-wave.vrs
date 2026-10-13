@@ -21,7 +21,6 @@ wait 4
 chat .devkill -581295882 40
 expect-log \[DEV KILL\] n=3
 expect-log event bw-test wave 1 cleared timeout=20
-mark
 expect-log event bw-test wave 2/2: 4 units queued timeout=30
 expect-log spawned CHAR_Spider_Queen_VBlood for bw-test timeout=20
 wait 5

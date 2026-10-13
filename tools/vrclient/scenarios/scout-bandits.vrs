@@ -1,0 +1,21 @@
+# scout-bandits.vrs: lists living native bandits and the bandit V Bloods worldwide (dev scouting, not a test). The
+# [DEV UNIT] lines in the plugin log give x,z for a camp mark and a V Blood mark.
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devunits -301730941 9999
+expect-log \[DEV UNITS\] n=
+chat .devunits -1301144178 9999
+expect-log \[DEV UNITS\] n=
+chat .devunits 2122229952 9999
+expect-log \[DEV UNITS\] n=
+chat .devunits 1124739990 9999
+expect-log \[DEV UNITS\] n=
+chat .devunits -2025101517 9999
+expect-log \[DEV UNITS\] n=
+chat .devunits 1106149033 9999
+expect-log \[DEV UNITS\] n=
+chat .devunits 763273073 9999
+expect-log \[DEV UNITS\] n=

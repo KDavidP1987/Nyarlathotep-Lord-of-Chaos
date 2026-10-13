@@ -12,6 +12,10 @@ console TPHome
 wait 3
 chat .nyar event reload
 expect-log events: reloaded
+chat .nyar event disable rv-test
+expect-reply rv-test
+chat .nyar event enable rv-test0
+expect-reply rv-test0
 chat .devgo ${VBMARK}
 expect-log \[DEV TP\] ${VBMARK}
 wait 4
@@ -36,8 +40,8 @@ mark
 chat .nyar purge
 expect-reply purge confirm
 chat .nyar purge confirm
-expect-log purge: 1 events ended
-expect-log revenge rv-test0 ended: purge timeout=5
+expect-log revenge rv-test0 ended: purge timeout=10
+expect-log purge: 1 events ended timeout=5
 expect-no-log revenge is spent timeout=10
 wait 20
 chat .nyar status

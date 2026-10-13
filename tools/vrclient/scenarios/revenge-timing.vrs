@@ -1,8 +1,8 @@
 # revenge-timing.vrs: revenge D23 (its own run). rv-test0 runs into tier 3, left alive, beside fk-test (the bandit-ambush
 # FactionKills template, 20 kills in 300 s never reached, so the death read serves both) and 8 tracked bandits (allies, so no infighting), at
 # least 10 tracked units for eleven timing windows; then `.nyar purge confirm`. -TimingSpan -Windows 10 -MinTracked 10
-# reads the budget from the log copy. Needs [Debug] TimingLog = true; rv-test0 enabled (fk-test is made here); rv-test, bw-test
-# disabled; no purge cooldown. Run: --var CAMP=<mark> --var BANDIT=<guid>
+# reads the budget from the log copy. Needs [Debug] TimingLog = true; rv-test0 enabled; fk-test made once with `.nyar template use bandit-ambush as fk-test` (enabled here); rv-test, bw-test
+# disabled; no purge cooldown. Run: --var CAMP=<mark> --var BANDIT=<guid> --var BANDIT2=<guid> --var BANDIT3=<guid> (heat top-ups) --var KR=<kill radius>
 ensure
 console ToggleInvulnerable true
 wait 2
@@ -10,19 +10,23 @@ console TPHome
 wait 3
 chat .nyar event reload
 expect-log events: reloaded
-chat .nyar template use bandit-ambush as fk-test
-expect-reply fk-test
 chat .nyar event enable fk-test
 expect-reply fk-test
+# 900 s ends the event before eleven windows pass: 1800 s for this run
+chat .nyar event set rv-test0 durationSeconds 1800
+expect-reply durationSeconds
 chat .devgo ${CAMP}
 expect-log \[DEV TP\] ${CAMP}
 wait 4
 mark
-chat .devkill ${BANDIT} 60 6
-expect-log \[DEV KILL\] n=6
+# three prefabs, so the camp's thinned natives still reach heat 6 (a due mid-way starts at once: no kill-line checks between)
+chat .devkill ${BANDIT} ${KR} 6
+wait 2
+chat .devkill ${BANDIT2} ${KR} 6
+wait 2
+chat .devkill ${BANDIT3} ${KR} 6
 expect-log revenge rv-test0 due timeout=10
-chat .devgo pond
-expect-log \[DEV TP\] pond
+# outside the territory the revenge starts at once, around Chaos at the camp; the waves are fought there
 expect-log event rv-test0 started by Revenge timeout=15
 expect-log spawned CHAR_Bandit_Thug for rv-test0 timeout=30
 wait 4
@@ -40,7 +44,23 @@ expect-log spawned CHAR_Bandit_Thug timeout=20
 wait 10
 chat .nyar status
 expect-reply tracked units: 12
-wait 690
+# `.nyar spawn` units live 390 s: a fresh 8 every 300 s keeps at least 12 tracked for the health lines and the windows
+wait 300
+chat .nyar spawn CHAR_Bandit_Thug 8
+wait 10
+chat .nyar status
+expect-reply tracked units:
+wait 300
+chat .nyar spawn CHAR_Bandit_Thug 8
+wait 10
+chat .nyar status
+expect-reply tracked units:
+wait 300
+chat .nyar spawn CHAR_Bandit_Thug 8
+wait 10
+chat .nyar status
+expect-reply tracked units:
+wait 240
 chat .nyar status
 expect-reply tracked units:
 mark
