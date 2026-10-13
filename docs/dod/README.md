@@ -5,7 +5,7 @@
 
 | Plan | Title | Status | Size | Verified | Baseline items | Prediction | Parent |
 |---|---|---|---|---|---|---|---|
-| [apocalypse](apocalypse.md) | Apocalypse — hotspots, spreading roamers, marching hordes, win or lose, the scoreboard, resume after a restart | ready | L | 0/35 | 35 | n/a | nyarlathotep |
+| [apocalypse](apocalypse.md) | Apocalypse — hotspots, spreading roamers, marching hordes, win or lose, the scoreboard, resume after a restart | in-progress | L | 0/38 | 35 | 100 % | nyarlathotep |
 | [automation](automation.md) | Automation — interval, player-action triggers and fan-out | done | L | 34/34 | 31 | 63 % | nyarlathotep |
 | [boss-reinforcements](boss-reinforcements.md) | Boss reinforcements — adds, phases and the anti-carry burst, and release 0.8.0 | ready | L | 0/20 | 20 | n/a | nyarlathotep |
 | [event-library](event-library.md) | Event library — built-in templates and in-game authoring | done | L | 36/36 | 34 | 55 % | nyarlathotep |
