@@ -21,7 +21,7 @@ public partial class ContractDocTests
     [Fact]
     public void WaveSets_passes_api_6_and_the_two_sentences()
     {
-        Assert.Equal(6, Wire.Api);
+        Assert.True(Wire.Api >= 6);        // wave-sets added no wire change; revenge D15 moved the api to 7
         Assert.Empty(WaveSetProblems(Contract));
         Assert.Equal(["config-changed", "event-end", "event-start", "killswitch", "wave", "wave-warn"],
             typeof(PushLines).GetFields().Where(f => f.IsLiteral && f.Name.EndsWith("Type", StringComparison.Ordinal))

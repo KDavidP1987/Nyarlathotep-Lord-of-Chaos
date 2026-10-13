@@ -32,13 +32,16 @@ public static class ControlCases
     public const string WaveSets = "wave-sets";
     public const string Swarm = "swarm";
     public const string HuntingGrounds = "hunting-grounds";
+    public const string Revenge = "revenge";
 
     /// <summary>The plans whose controls the table lists; each is copied to the test output under Resources/.</summary>
-    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm, HuntingGrounds];
+    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm, HuntingGrounds, Revenge];
 
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
+        new(Revenge, "D10", 2, "0.12.0"), new(Revenge, "D14", 2, "0.12.0"), new(Revenge, "D16", 2, "0.12.0"), new(Revenge, "D23", 2, "0.12.0"),
+        new(Revenge, "D24", 3, "0.12.0"), new(Revenge, "D25", 3, "0.12.0"), new(Revenge, "D26", 3, "0.12.0"), new(Revenge, "D27", 3, "0.12.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -57,7 +60,7 @@ public static class ControlCases
         "HumanReplyTests", "OutcomeCodeTests", "ApiTwinTests", "RateGateTests", "ApiOverloadTests", "EventAdminTests",
         "EndPathTests", "WavePrecedenceTests", "SpawnsDependencyFailureTests", "AutomationTests", "AutomationDependencyFailureTests", "SpawnPlacementTests",
         "WaveSetTests", "ScoreboardTests", "WaveSetDependencyFailureTests", "SwarmTests", "SwarmDependencyFailureTests",
-        "HuntingGroundsTests", "HuntingGroundsDependencyFailureTests",
+        "HuntingGroundsTests", "HuntingGroundsDependencyFailureTests", "RevengeTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -660,5 +663,40 @@ public static class ControlCases
             ["tools/preflight-fixtures/Secrets/bad", "tools/preflight-fixtures/Secrets/bad-sentinel-zip", "tools/preflight-fixtures/Secrets/bad-sentinel-log"],
             ["tools/preflight-fixtures/Secrets/good", "tools/preflight-fixtures/Secrets/good-sentinel"],
             ["tools/preflight-fixtures/Secrets/empty", "tools/preflight-fixtures/Secrets/empty-sentinel"]) with { Plan = HuntingGrounds },
+
+        // ---- revenge (steps 2-3 add D10, D14, D16 and D23-D27, listed in Pending until then)
+        T("D1", "Revenge", "EventValidationTests", ["a_bound_is_off_by_one", "warn_at_is_out_of_order", "shared_or_an_unknown_key_loads", "a_reason_exceeds_120_bytes"],
+            ["every_key_at_its_bounds"], ["optional_keys_absent"]) with { Plan = Revenge },
+        T("D2", "RevengeAction", "EventValidationTests", ["a_combination_loads"], ["units_and_wave_list_forms", "other_triggers_unchanged"], ["no_action"])
+            with { Plan = Revenge },
+        T("D3", "Heat", "RevengeTests", ["an_excluded_kill_adds_heat", "a_familiar_kill_is_not_credited", "a_vblood_kill_adds_other_than_vblood_heat",
+            "a_point_outlives_its_window", "heat_is_added_during_the_cooldown", "the_201st_row_is_kept", "heat_rows_and_kill_counters_evict_each_other",
+            "a_disabled_definition_keeps_rows"], ["kills_within_the_window", "an_edit_keeps_points_and_applies_the_new_heat"], ["no_revenge_definition"])
+            with { Plan = Revenge },
+        T("D4", "Warnings", "RevengeTests", ["a_warning_reaches_another_player", "a_warning_repeats_within_a_climb", "a_threshold_does_not_rearm",
+            "one_kill_sends_two_lines", "a_line_holds_a_name_digits_or_angle", "the_log_line_names_the_player"], ["each_threshold_once_in_order"], ["warn_at_none"])
+            with { Plan = Revenge },
+        T("D5", "Gate", "RevengeTests", ["an_ineligible_player_starts", "the_controls_refusal_resets_or_is_not_held", "a_busy_definition_or_target_starts",
+            "a_held_player_loses_heat", "the_hold_line_repeats", "heat_survives_a_start_or_a_conditions_refusal", "a_conditions_refusal_starts_a_cooldown",
+            "due_players_start_out_of_order"], ["an_eligible_due_player_starts"], ["nobody_due"]) with { Plan = Revenge },
+        T("D6", "FocusOnly", "RevengeTests", ["a_wave_is_centred_on_another_player", "another_player_is_a_hunt_target", "an_ineligible_focus_spawns_or_skips",
+            "a_held_wave_releases_its_successor", "a_non_revenge_pick_or_hunt_changes"], ["waves_and_hunts_the_focus"], ["no_focus"]) with { Plan = Revenge },
+        T("D7", "Alert", "RevengeTests", ["the_alert_names_or_locates_the_target", "a_line_exceeds_480_bytes", "the_start_line_reaches_another_player"],
+            ["alert_and_private_start_line"], ["one_faction"]) with { Plan = Revenge },
+        T("D8", "EndPaths", "RevengeTests", ["a_line_path_sends_nothing_or_to_another_player", "a_silent_path_sends_a_line",
+            "a_disable_or_invalid_reload_ends_the_instance", "heat_survives_a_purge_or_the_pillar_off", "a_log_line_is_missing"], ["six_paths"],
+            ["no_running_revenge"]) with { Plan = Revenge },
+        T("D9", "Revenge", "PrivacyTests", ["the_planted_id_or_name_reaches_a_line", "state_gains_a_property", "a_builder_line_exceeds_480_bytes_or_holds_angle",
+            "another_builder_renders_a_revenge_line"], ["four_builders_with_five_long_factions"], ["no_revenge_definition"]) with { Plan = Revenge },
+        T("D11", "Revenge", "CommandArgTests", ["a_field_accepts_a_value_the_validator_refuses", "window_bounds_cross_trigger_types", "a_reply_exceeds_480_bytes",
+            "the_table_and_settable_fields_differ"], ["default_trigger_and_each_field"], ["value"]) with { Plan = Revenge },
+        T("D12", "Revenge", "AuthoringTests", ["a_field_is_missing_from_the_line", "a_line_exceeds_480_bytes", "the_counts_line_shows_a_name_or_id",
+            "the_new_definition_is_enabled_or_invalid", "a_faction_kills_info_changes"], ["info_lines_and_new_definition"], ["warn_at_none"]) with { Plan = Revenge },
+        T("D13", "AdminStart", "RevengeTests", ["the_start_has_no_focus", "a_wave_is_centred_on_another_player", "a_players_heat_changes", "a_non_admin_start_runs"],
+            ["focused_on_the_admin"], ["no_revenge_definition"]) with { Plan = Revenge },
+        T("D15", "Revenge", "ContractDocTests", ["a_row_carries_another_value_or_the_contract_lags", "a_push_kind_is_added"], ["api_7_and_the_value"], ["contract"])
+            with { Plan = Revenge },
+        T("D17", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit", "pending_at_release"],
+            ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = Revenge },
     ];
 }

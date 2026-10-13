@@ -255,6 +255,7 @@ public static class CommandArgs
         "trigger.type", "trigger.days", "trigger.times", "trigger.phase", "trigger.bosses",
         "trigger.minMinutes", "trigger.maxMinutes", "trigger.playerCooldownMinutes",                     // automation D16
         "trigger.factions", "trigger.kills", "trigger.windowSeconds", "trigger.shared",
+        "trigger.heat", "trigger.warnAt", "trigger.vbloodHeat",                                           // revenge D11
     ];
 
     /// <summary>action.fanOut (automation D16): none, or MAX SPACING.</summary>
@@ -270,8 +271,23 @@ public static class CommandArgs
         "trigger.minMinutes" or "trigger.maxMinutes" => "Interval",
         "trigger.playerCooldownMinutes" => "RegionEntered",
         "trigger.factions" or "trigger.kills" or "trigger.windowSeconds" or "trigger.shared" => "FactionKills",
+        "trigger.heat" or "trigger.warnAt" or "trigger.vbloodHeat" => "Revenge",
         _ => null,
     };
+
+    /// <summary>Every trigger type a trigger field fits (revenge D11): <see cref="TriggerTypeOf"/>'s, and Revenge for the
+    /// keys it shares (trigger.factions, trigger.windowSeconds, trigger.playerCooldownMinutes). The refusal names
+    /// <see cref="TriggerTypeOf"/>'s type, as before.</summary>
+    public static IReadOnlyList<string> TriggerTypesOf(string field) => field switch
+    {
+        "trigger.factions" or "trigger.windowSeconds" => ["FactionKills", "Revenge"],
+        "trigger.playerCooldownMinutes" => ["RegionEntered", "Revenge"],
+        _ => TriggerTypeOf(field) is { } type ? [type] : [],
+    };
+
+    /// <summary>trigger.warnAt (revenge D11): none, or 1-3 comma separated integers, strictly ascending, each at least 1
+    /// and below the highest heat; the bound by the trigger's own heat is EventsEditor's, on the file.</summary>
+    public const string WarnAtField = "trigger.warnAt";
 
     static readonly string[] DayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     public const int MaxNameLength = 96;
@@ -311,7 +327,7 @@ public static class CommandArgs
         return null;
     }
 
-    public const string TriggerTypeRule = "trigger.type must be Manual, Schedule, GameTime, VBloodKilled, Interval, RegionEntered or FactionKills";
+    public const string TriggerTypeRule = "trigger.type must be Manual, Schedule, GameTime, VBloodKilled, Interval, RegionEntered, FactionKills or Revenge";
 
     static Arg<object> TriggerValue(string field, string? value)
     {
@@ -321,7 +337,7 @@ public static class CommandArgs
         switch (field)
         {
             case "trigger.type":
-                return value is "Manual" or "Schedule" or "GameTime" or "VBloodKilled" or "Interval" or "RegionEntered" or "FactionKills"
+                return value is "Manual" or "Schedule" or "GameTime" or "VBloodKilled" or "Interval" or "RegionEntered" or "FactionKills" or "Revenge"
                     ? Arg<object>.Of(value)
                     : Arg<object>.Bad(TriggerTypeRule);
             case "trigger.minMinutes":
@@ -343,6 +359,24 @@ public static class CommandArgs
                 };
             case "trigger.factions":
                 return Factions(field, value);
+            case "trigger.heat":
+                return IntIn(value, EventValidator.MinHeat, EventValidator.MaxHeat, EventValidator.HeatRule);
+            case "trigger.vbloodHeat":
+                return IntIn(value, 0, EventValidator.MaxVBloodHeat, EventValidator.VBloodHeatRule);
+            case WarnAtField:
+            {
+                if (value == "none") return Arg<object>.Of(Array.Empty<int>());
+                var parts = CommaList(value, EventValidator.MaxWarnAt);
+                var list = new List<int>();
+                foreach (var part in parts ?? [])
+                {
+                    if (!int.TryParse(part, NumberStyles.None, CultureInfo.InvariantCulture, out var k) || k < 1 || k >= EventValidator.MaxHeat
+                        || list.Count > 0 && k <= list[^1])
+                        return Arg<object>.Bad(EventValidator.WarnAtRule);
+                    list.Add(k);
+                }
+                return parts is null ? Arg<object>.Bad(EventValidator.WarnAtRule) : Arg<object>.Of(list.ToArray());
+            }
             case "trigger.phase":
                 return value is "day" or "night" ? Arg<object>.Of(value) : Arg<object>.Bad("trigger.phase must be day or night");
             case "trigger.days":

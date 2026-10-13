@@ -58,6 +58,7 @@ public sealed class DefinitionEditor(EventsFile file, IFileStore files, EventCat
         var shown = value switch
         {
             string[] list => string.Join(",", list),
+            int[] ints => ints.Length == 0 ? "none" : string.Join(",", ints),               // revenge D11: trigger.warnAt
             UnitEntry[] u => string.Join(",", u.Select(e => $"{e.Prefab}:{e.Count}")),
             bool b => b ? "true" : "false",                                           // as typed and as events.json spells it (A50)
             _ => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture),

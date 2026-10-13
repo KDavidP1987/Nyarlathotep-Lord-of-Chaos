@@ -9,8 +9,9 @@ namespace Nyarlathotep.Logic;
 public enum Pillar { Empowerment, Spawns, Boss, Zones, Sieges }
 
 /// <summary>How a definition starts. Interval, RegionEntered and FactionKills are automation's (docs/dod/automation.md D1, D8,
-/// D10): a random clock, a player walking into a region, and kills of listed factions.</summary>
-public enum TriggerType { Manual, Schedule, GameTime, VBloodKilled, Interval, RegionEntered, FactionKills }
+/// D10): a random clock, a player walking into a region, and kills of listed factions. Revenge (revenge D1) is per-player
+/// heat from kills of listed factions, which starts an ambush around that player (Logic/Revenge.cs).</summary>
+public enum TriggerType { Manual, Schedule, GameTime, VBloodKilled, Interval, RegionEntered, FactionKills, Revenge }
 
 public enum DayPhase { Day, Night }
 
@@ -22,7 +23,9 @@ public enum LocationType { Point, Admin, AroundPlayer, Region }
 
 /// <summary>A trigger. Each type reads only its own fields: Interval <see cref="MinMinutes"/>..<see cref="MaxMinutes"/>;
 /// RegionEntered <see cref="PlayerCooldownMinutes"/> and its <see cref="Scope"/>; FactionKills <see cref="Factions"/>,
-/// <see cref="Kills"/> within <see cref="WindowSeconds"/>, per player or <see cref="Shared"/> (automation D1, D8, D10).</summary>
+/// <see cref="Kills"/> within <see cref="WindowSeconds"/>, per player or <see cref="Shared"/> (automation D1, D8, D10); Revenge
+/// <see cref="Factions"/>, <see cref="Heat"/> within <see cref="WindowSeconds"/>, <see cref="WarnAt"/>, <see cref="VBloodHeat"/>
+/// and <see cref="PlayerCooldownMinutes"/> (revenge D1).</summary>
 public sealed record Trigger(
     TriggerType Type,
     IReadOnlyList<DayOfWeek> Days,
@@ -36,7 +39,10 @@ public sealed record Trigger(
     IReadOnlyList<string>? Factions = null,
     int Kills = 0,
     int WindowSeconds = 0,
-    bool Shared = false)
+    bool Shared = false,
+    int Heat = 0,
+    IReadOnlyList<int>? WarnAt = null,
+    int VBloodHeat = 0)
 {
     public static Trigger Manual() => new(TriggerType.Manual, [], [], DayPhase.Night, []);
 }

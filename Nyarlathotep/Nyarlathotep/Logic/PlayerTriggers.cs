@@ -91,7 +91,8 @@ public sealed class RegionEntries
 /// <summary>A death as the kill rule sees it (automation D11). <see cref="KillerPlayer"/> is the platform id of the killer
 /// when it is a player character, and <see cref="OwnerPlayer"/> that of the player character its EntityOwner names (a
 /// familiar, summon or projectile); a castle servant or structure, whose owner is no player character, has neither.
-/// <see cref="VictimOurs"/> is read before SpawnTracker.Died forgets the unit. Position null when unread or unreadable.</summary>
+/// <see cref="VictimOurs"/> is read before SpawnTracker.Died forgets the unit. Position null when unread or unreadable.
+/// <see cref="VictimVBlood"/> is DeathRule.IsVBloodKill's answer, read in the same guard (revenge D3, D10).</summary>
 public readonly record struct KillFacts(
     string? KillerPlayer,
     string? OwnerPlayer,
@@ -101,7 +102,8 @@ public readonly record struct KillFacts(
     string? VictimFaction,
     float? X = null,
     float? Z = null,
-    bool VictimIsKiller = false)
+    bool VictimIsKiller = false,
+    bool VictimVBlood = false)
 {
     /// <summary>The player the kill counts for, or null.</summary>
     public string? Player => KillerPlayer ?? OwnerPlayer;
@@ -113,10 +115,17 @@ public static class KillRule
     /// <summary>True when the death counts for <paramref name="definition"/>: a player killed it (directly or through what it
     /// owns), the victim is not a player, a minion, one of our units or the killer itself, its faction is listed, and with a regional scope
     /// the victim stands in a named region (an unknown position counts nothing there).</summary>
-    public static bool Counts(KillFacts kill, EventDefinition definition, Func<float, float, string>? regionOf)
+    public static bool Counts(KillFacts kill, EventDefinition definition, Func<float, float, string>? regionOf) =>
+        definition.Trigger.Type == TriggerType.FactionKills && Matches(kill, definition.Trigger, regionOf);
+
+    /// <summary>The same rule for a Revenge definition's heat (revenge D3): the kills <see cref="Counts"/> counts, by the
+    /// Revenge trigger's factions and scope.</summary>
+    public static bool CountsHeat(KillFacts kill, EventDefinition definition, Func<float, float, string>? regionOf) =>
+        definition.Trigger.Type == TriggerType.Revenge && Matches(kill, definition.Trigger, regionOf);
+
+    static bool Matches(KillFacts kill, Trigger t, Func<float, float, string>? regionOf)
     {
-        var t = definition.Trigger;
-        if (t.Type != TriggerType.FactionKills || kill.Player is null) return false;
+        if (kill.Player is null) return false;
         if (kill.VictimIsPlayer || kill.VictimMinion || kill.VictimOurs || kill.VictimIsKiller) return false;
         if (kill.VictimFaction is null || !(t.Factions ?? []).Contains(kill.VictimFaction, StringComparer.Ordinal)) return false;
         if (t.Scope.IsGlobal) return true;
@@ -320,33 +329,63 @@ public sealed class PlayerTriggerFeed
 {
     public const string ScanFailing = "triggers: player scan failing";
     public const string KillFailing = "triggers: kill read failing";
+    public const string HeatFailing = "revenge: kill read failing";
 
     readonly FailureStreak _scanFaults = new();
     readonly FailureStreak _killFaults = new();
+    readonly FailureStreak _heatFaults = new();
+    readonly FailureStreak _sendFaults = new();
+    bool _revengeStartable;
     (int Players, int Entries)? _lastCounts;
 
     public RegionEntries Entries { get; } = new();
     public KillWindows Kills { get; } = new();
     public PlayerTriggerGate Gate { get; } = new();
+    /// <summary>The Revenge heat (revenge D3-D5), fed by <see cref="Died"/> and started by <see cref="Scan"/>.</summary>
+    public RevengeHeat Heat { get; } = new();
 
-    /// <summary>The health entries (D15), shown in the health line, `.nyar status` and the admin login notice.</summary>
+    /// <summary>The health entries (D15), shown in the health line, `.nyar status` and the admin login notice. The revenge
+    /// entry shows while a kill read or a heat update fails and a Revenge definition is startable (revenge D10).</summary>
     public IReadOnlyList<string> Health =>
-        (_scanFaults.Count > 0 ? [ScanFailing] : Array.Empty<string>()).Concat(_killFaults.Count > 0 ? [KillFailing] : []).ToList();
+        (_scanFaults.Count > 0 ? [ScanFailing] : Array.Empty<string>()).Concat(_killFaults.Count > 0 ? [KillFailing] : [])
+            .Concat(_revengeStartable && (_killFaults.Count > 0 || _heatFaults.Count > 0) ? [HeatFailing] : []).ToList();
 
-    /// <summary>One 5 s scan. Prunes the kill counters against the startable FactionKills set; then, with a startable
-    /// RegionEntered definition and the regions available, reads the players once and turns each entry that passes the
-    /// cooldown and the gate into a start attempt, whose cooldown starts then. With none, no player is read.</summary>
+    /// <summary>The Revenge definitions heat is kept for (revenge D3, D8): startable, and with <paramref name="pillarOn"/>
+    /// given, of a pillar that is on.</summary>
+    public static List<EventDefinition> RevengeStartable(DefinitionSet set, Func<Pillar, bool>? pillarOn) =>
+        TriggerRouter.Candidates(set, TriggerType.Revenge).Where(d => pillarOn?.Invoke(d.Pillar) ?? true).ToList();
+
+    /// <summary>One 5 s scan. Prunes the kill counters against the startable FactionKills set and the heat against the
+    /// startable Revenge set, and with <paramref name="revenge"/> given runs the revenge gate over the due players (revenge
+    /// D5) inside the scan's guard; then, with a startable RegionEntered definition and the regions available, reads the
+    /// players once and turns each entry that passes the cooldown and the gate into a start attempt, whose cooldown starts
+    /// then. With none, no player is read.</summary>
     public void Scan(Func<IReadOnlyList<ScanRow>> read, Func<float, float, string>? regionOf, DefinitionSet set,
-        Func<string, bool> isActive, DateTime utcNow, Action<string> log, Action<PlayerFire> start, Action<string>? verbose = null)
+        Func<string, bool> isActive, DateTime utcNow, Action<string> log, Action<PlayerFire> start, Action<string>? verbose = null,
+        RevengeScan? revenge = null)
     {
         var killDefinitions = TriggerRouter.Candidates(set, TriggerType.FactionKills).ToList();
         Kills.Prune(killDefinitions, utcNow);
-        if (killDefinitions.Count == 0) _killFaults.Ok();                      // no kill is read, so none is failing (review F2)
+        var revengeDefinitions = RevengeStartable(set, revenge?.PillarOn);
+        _revengeStartable = revengeDefinitions.Count > 0;
+        if (killDefinitions.Count == 0 && revengeDefinitions.Count == 0) _killFaults.Ok();   // no kill is read, so none is failing (review F2)
+        if (revengeDefinitions.Count == 0) _heatFaults.Ok();
+        var revengeFailed = false;
+        try
+        {
+            if (revenge is null) Heat.Prune(revengeDefinitions, utcNow);
+            else Heat.Scan(revengeDefinitions, revenge.Read, revenge.IsClaimed, regionOf, isActive, revenge.TargetBusy, utcNow, log, revenge.Start);
+        }
+        catch (Exception ex)
+        {
+            revengeFailed = true;
+            if (_scanFaults.Fail()) log($"revenge: scan failed: {ex.Message}");
+        }
         var definitions = TriggerRouter.Candidates(set, TriggerType.RegionEntered).ToList();
         Gate.Keep(definitions.Concat(killDefinitions).Select(d => d.Id));
         if (definitions.Count == 0 || regionOf is null)
         {
-            _scanFaults.Ok();                                                   // nothing is scanned, so nothing is failing
+            if (!revengeFailed) _scanFaults.Ok();                               // nothing is scanned, so nothing is failing
             Entries.ForgetRegions();
             _lastCounts = null;
             return;
@@ -364,7 +403,7 @@ public sealed class PlayerTriggerFeed
             if (_scanFaults.Fail()) log($"player triggers: scan failed: {ex.Message}");
             return;
         }
-        _scanFaults.Ok();
+        if (!revengeFailed) _scanFaults.Ok();
         // automation A6: the line only when its counts change or an entry is found; a console write every 5 s scan cost
         // up to 190 ms a tick with VerboseLogging on
         if (entries.Count > 0 || _lastCounts != (players, entries.Count))
@@ -378,25 +417,31 @@ public sealed class PlayerTriggerFeed
         }
     }
 
-    /// <summary>True when a death is worth reading: the DeathEvent hook is available and a FactionKills definition is
-    /// startable. Otherwise the kill rule returns at once (D11, Performance).</summary>
+    /// <summary>True when a death is worth reading: the DeathEvent hook is available and a FactionKills or a Revenge
+    /// definition is startable (revenge D10). Otherwise the kill rule returns at once (D11, Performance).</summary>
     public static bool WantsKills(DefinitionSet set, Func<TriggerType, bool> allows) =>
-        allows(TriggerType.FactionKills) && TriggerRouter.Candidates(set, TriggerType.FactionKills).Any();
+        allows(TriggerType.FactionKills) && TriggerRouter.Candidates(set, TriggerType.FactionKills).Any()
+        || allows(TriggerType.Revenge) && TriggerRouter.Candidates(set, TriggerType.Revenge).Any();
 
-    /// <summary>One death. <paramref name="read"/> gets whether the position is needed (a scoped FactionKills definition is
-    /// startable) and returns the kill; a throwing read or region lookup skips this death. Each definition the kill counts
+    /// <summary>One death. <paramref name="read"/> gets whether the position is needed (a scoped FactionKills or Revenge
+    /// definition is startable) and returns the kill; a throwing read or region lookup skips this death. Each definition the kill counts
     /// for adds it to its counter; a counter that reaches its kills is emptied and, past the gate, becomes a start attempt
-    /// focused on the killing player.</summary>
+    /// focused on the killing player. Then each Revenge definition the kill counts for adds its points to the player's heat
+    /// in a guard of its own (revenge D3, D4, D10): a warning goes to the player alone through <paramref name="tell"/>
+    /// (platform id, line), and the warning, V Blood and due lines are logged with the definition id only.</summary>
     public void Died(Func<bool, KillFacts> read, DefinitionSet set, Func<float, float, string>? regionOf, Func<TriggerType, bool> allows,
-        Func<string, bool> isActive, DateTime utcNow, Action<string> log, Action<PlayerFire> start, Action<string>? verbose = null)
+        Func<string, bool> isActive, DateTime utcNow, Action<string> log, Action<PlayerFire> start, Action<string>? verbose = null,
+        Action<string, string>? tell = null, Func<Pillar, bool>? pillarOn = null)
     {
         if (!WantsKills(set, allows)) return;
-        var definitions = TriggerRouter.Candidates(set, TriggerType.FactionKills).ToList();
+        var definitions = allows(TriggerType.FactionKills) ? TriggerRouter.Candidates(set, TriggerType.FactionKills).ToList() : [];
+        var revengeDefinitions = allows(TriggerType.Revenge) ? RevengeStartable(set, pillarOn) : [];
+        _revengeStartable = revengeDefinitions.Count > 0;
         KillFacts kill;
         List<EventDefinition> counted;
         try
         {
-            kill = Clean(read(definitions.Any(d => !d.Trigger.Scope.IsGlobal)));
+            kill = Clean(read(definitions.Concat(revengeDefinitions).Any(d => !d.Trigger.Scope.IsGlobal)));
             counted = definitions.Where(d => KillRule.Counts(kill, d, regionOf)).ToList();
         }
         catch (Exception ex)
@@ -413,6 +458,49 @@ public sealed class PlayerTriggerFeed
             if (Gate.Admit(d.Id, player, isActive(d.Id), utcNow) != GateStep.Attempt) continue;
             start(new PlayerFire(d, nameof(TriggerType.FactionKills), player,
                 kill.X is { } x && kill.Z is { } z ? (x, z) : null));
+        }
+        if (revengeDefinitions.Count > 0) AddHeat(kill, player, revengeDefinitions, regionOf, utcNow, log, tell);
+    }
+
+    void AddHeat(KillFacts kill, string player, List<EventDefinition> definitions, Func<float, float, string>? regionOf,
+        DateTime utcNow, Action<string> log, Action<string, string>? tell)
+    {
+        try
+        {
+            foreach (var d in definitions)
+            {
+                if (!KillRule.CountsHeat(kill, d, regionOf)) continue;
+                var change = Heat.Add(d, player, RevengeRule.Points(kill, d.Trigger), utcNow);
+                if (change.Points == 0) continue;
+                if (kill.VictimVBlood) log(RevengeRule.VBloodLine(d.Id, change.Points));
+                if (change.Warning > 0)
+                {
+                    log(RevengeRule.WarningLine(d.Id, change.Warning, change.Warnings));
+                    if (tell is not null)
+                        Tell(tell, player, Messages.RevengeWarning(change.Warning, change.Warnings, RevengeRule.FactionText(d.Trigger)), log);
+                }
+                if (change.BecameDue) log(RevengeRule.DueLine(d.Id));
+            }
+            _heatFaults.Ok();
+        }
+        catch (Exception ex)
+        {
+            if (_heatFaults.Fail()) log($"revenge: kill skipped: {ex.Message}");
+        }
+    }
+
+    /// <summary>A private revenge line to <paramref name="player"/> (revenge D4, D7, D8, D10): a throwing send logs
+    /// "revenge: private line failed: &lt;message&gt;" once per failure streak and stops nothing else.</summary>
+    public void Tell(Action<string, string> tell, string player, string line, Action<string> log)
+    {
+        try
+        {
+            tell(player, line);
+            _sendFaults.Ok();
+        }
+        catch (Exception ex)
+        {
+            if (_sendFaults.Fail()) log($"revenge: private line failed: {ex.Message}");
         }
     }
 
@@ -431,7 +519,16 @@ public sealed class PlayerTriggerFeed
         Entries.Clear();
         Kills.Clear();
         Gate.Clear();
+        Heat.Clear();
         _scanFaults.Ok();
         _killFaults.Ok();
+        _heatFaults.Ok();
+        _sendFaults.Ok();
     }
 }
+
+/// <summary>The revenge inputs of one scan (revenge D5): the players with the facts the gate needs, the claimed-territory
+/// read (null while the map is down), whether another running Revenge instance targets a player, the start attempt and,
+/// when given, which pillars are on (a definition of a pillar that is off keeps no heat, D8).</summary>
+public sealed record RevengeScan(Func<IReadOnlyList<RevengeTarget>> Read, Func<float, float, bool>? IsClaimed,
+    Func<string, bool> TargetBusy, Func<PlayerFire, RevengeStartResult> Start, Func<Pillar, bool>? PillarOn = null);

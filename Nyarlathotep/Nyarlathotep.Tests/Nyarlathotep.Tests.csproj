@@ -39,6 +39,8 @@
 		<None Include="..\..\docs\audits\swarm.md" Link="Resources\audits\swarm.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\dod\hunting-grounds.md" Link="Resources\hunting-grounds.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\audits\hunting-grounds.md" Link="Resources\audits\hunting-grounds.md" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\..\docs\dod\revenge.md" Link="Resources\revenge.md" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\..\docs\audits\revenge.md" Link="Resources\audits\revenge.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\RAPHAEL_INTEGRATION_CONTRACT.md" Link="Resources\RAPHAEL_INTEGRATION_CONTRACT.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\NYARLATHOTEP_DESIGN.md" Link="Resources\NYARLATHOTEP_DESIGN.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\RAPHAEL_HANDOFF_API4.md" Link="Resources\RAPHAEL_HANDOFF_API4.md" CopyToOutputDirectory="PreserveNewest" />

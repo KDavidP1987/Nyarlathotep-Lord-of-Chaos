@@ -36,13 +36,26 @@ public partial class TriggerActivationTests
             }),
         [TriggerType.FactionKills] = ("{ \"type\": \"FactionKills\", \"factions\": [\"Faction_Bandits\"], \"kills\": 3, \"windowSeconds\": 60 }",
             set => TriggerRouter.FactionKills(set, new KillFacts("p1", null, false, false, false, "Faction_Bandits"), null).Select(d => d.Id)),
+        // revenge D3, D5: six counted kills make the player due on each startable Revenge definition
+        [TriggerType.Revenge] = (Json.RevengeTrigger,
+            set =>
+            {
+                var heat = new RevengeHeat();
+                var defs = TriggerRouter.Candidates(set, TriggerType.Revenge).ToList();
+                var kill = new KillFacts("p1", null, false, false, false, "Faction_Bandits");
+                foreach (var d in defs.Where(d => KillRule.CountsHeat(kill, d, null))) heat.Add(d, "p1", 6, Now);
+                return defs.Where(d => heat.IsDue(d.Id, "p1")).Select(d => d.Id);
+            }),
     };
 
-    static DefinitionSet Twins(string trigger) =>
-        EventValidator.Parse(Json.File(
-            Json.Event("on", trigger),
-            Json.Event("off", trigger).Replace("\"enabled\": true", "\"enabled\": false"),
-            Json.Event("broken", trigger, extra: "\"bogus\": 1")), FakeUnits.Default(), regions: FakeRegions.All()).Set;
+    static DefinitionSet Twins(string trigger)
+    {
+        var action = trigger.Contains("\"Revenge\"", StringComparison.Ordinal) ? Json.RevengeAction : null;    // revenge D2
+        return EventValidator.Parse(Json.File(
+            Json.Event("on", trigger, action: action),
+            Json.Event("off", trigger, action: action).Replace("\"enabled\": true", "\"enabled\": false"),
+            Json.Event("broken", trigger, extra: "\"bogus\": 1", action: action)), FakeUnits.Default(), regions: FakeRegions.All()).Set;
+    }
 
     [Fact]
     public void Every_automatic_trigger_kind_has_a_case()
@@ -59,6 +72,7 @@ public partial class TriggerActivationTests
     [InlineData(TriggerType.Interval)]
     [InlineData(TriggerType.RegionEntered)]
     [InlineData(TriggerType.FactionKills)]
+    [InlineData(TriggerType.Revenge)]
     public void Enabled_fires_and_disabled_or_invalid_twins_do_not(TriggerType type)
     {
         var (trigger, fire) = Cases[type];

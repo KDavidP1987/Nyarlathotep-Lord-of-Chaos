@@ -57,6 +57,11 @@ public partial class PrivacyTests
         [nameof(Messages.WaveImminentPool)] = () => Messages.WaveImminentPool,
         [nameof(Messages.DailyBannerMaxNames)] = () => [Messages.DailyBannerMaxNames.ToString()],
         [nameof(Messages.DailyBannerText)] = () => Enumerable.Range(0, 3).Select(p => Messages.DailyBannerText(Running.Select(r => r.Definition.Name).ToList(), p)),
+        // revenge D9: the four revenge builders, one family (PrivacyTests.Revenge.cs checks them together)
+        [nameof(Messages.RevengeAlertPool)] = () => Messages.RevengeAlertPool,
+        [nameof(Messages.RevengeWarning)] = () => Enumerable.Range(1, 3).Select(k => Messages.RevengeWarning(k, 3, "Bandits, Legion")),
+        [nameof(Messages.RevengeStart)] = () => [Messages.RevengeStart("Bandits, Legion")],
+        [nameof(Messages.RevengeEnd)] = () => [Messages.RevengeEnd("Bandits, Legion")],
     };
 
     static IEnumerable<string> Members() =>

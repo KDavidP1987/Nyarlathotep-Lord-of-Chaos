@@ -809,6 +809,14 @@ public static class PlayerPick
         }
     }
 
+    /// <summary>A Revenge instance's pick (revenge D6): <see cref="Choose"/> among the <paramref name="focus"/> player alone,
+    /// so a wave is never centred on another player; with no focus, or the focus not eligible, NoEligible, which WaveGate
+    /// holds for a focus-only wave (<see cref="WaveFacts.FocusOnly"/>).</summary>
+    public static PickResult ChooseFocus(IReadOnlyList<PickCandidate> players, IRandom rng, int minDist, int maxDist,
+        Func<float, float, bool> isClaimed, Func<float, float, bool>? inScope, string? focus) =>
+        string.IsNullOrEmpty(focus) ? PickResult.NoEligible
+        : Choose(players.Where(p => p.PlatformId == focus).Take(1).ToList(), rng, minDist, maxDist, isClaimed, inScope);
+
     /// <summary>A fanned-out wave's centres (automation D5): up to <paramref name="maxInstances"/>, each for a different
     /// player eligible by <see cref="Choose"/>'s rule, picked uniformly among the eligible players at least
     /// <paramref name="minSpacing"/> metres (x and z) from every player already picked. An eligible <paramref name="focus"/>
@@ -934,6 +942,24 @@ public static class HuntPlan
             .Take(MaxTargets)
             .Select(p => p.Key)
             .ToList();
+
+    /// <summary>A Hunt tick's targets for an instance (revenge D6, design §9 D46): <see cref="Targets"/>, and for a
+    /// focus-only instance (a Revenge trigger) among its focus player alone, by <paramref name="focusKey"/>, whoever else
+    /// stands within range; with the focus unresolved (offline), nobody.</summary>
+    public static List<long> TargetsFor(IEnumerable<HuntCandidate> players, (float X, float Z) centre, int range, bool focusOnly, long? focusKey) =>
+        !focusOnly ? Targets(players, centre, range)
+        : focusKey is { } key ? Targets(players.Where(p => p.Key == key), centre, range)
+        : [];
+
+    /// <summary>The Hunt key of the focus player (revenge D6): the key of the read row whose platform id is
+    /// <paramref name="focus"/>, or null. The join of ActiveEvent.Focus to a HuntCandidate without a new field on it.</summary>
+    public static long? FocusKey(IEnumerable<(long Key, string PlatformId)> players, string? focus)
+    {
+        if (string.IsNullOrEmpty(focus)) return null;
+        foreach (var (key, id) in players)
+            if (id == focus) return key;
+        return null;
+    }
 
     /// <summary>Why a Hunt tick targets whom (A66, verbose only): each player read is counted once, as a target or under
     /// the first reason <see cref="Targets"/> leaves it out for. Counts only, never a position or name.</summary>
@@ -1133,8 +1159,13 @@ public sealed record WaveFacts(
     BehaviourType? Behaviour = null,
     PickOutcome? Pick = null,
     bool CentreClaimed = false,
-    bool AllowTerritory = false)
+    bool AllowTerritory = false,
+    bool FocusOnly = false)
 {
+    /// <summary>A Revenge instance's wave (revenge D6): no eligible focus holds the wave (NoWave) instead of skipping it,
+    /// so neither it nor its successor is used until the focus is eligible again or the event ends.</summary>
+    public static bool IsFocusOnly(EventDefinition definition) => RevengeRule.IsRevenge(definition);
+
     /// <summary>AroundPlayer needs the map for its player pick and Hunt and RegionHunt (hunting-grounds D7, D8) for their
     /// target filter and landings, whatever allowTerritory says; any other wave needs it only for the claimed-centre skip, which allowTerritory lifts (A27).</summary>
     public bool NeedsMap => Location == LocationType.AroundPlayer || Behaviour is BehaviourType.Hunt or BehaviourType.RegionHunt || !AllowTerritory;
@@ -1154,6 +1185,7 @@ public static class WaveGate
     {
         if (f.Blocked) return new(WaveOutcome.NoWave, null, [], []);
         if (f.MapFailed && f.NeedsMap) return new(WaveOutcome.Skip, WaveLines.TerritoryUnknown(f.Wave, f.EventId), [], []);
+        if (f.Pick is PickOutcome.NoEligible && f.FocusOnly) return new(WaveOutcome.NoWave, null, [], []);   // revenge D6: held
         if (f.Pick is PickOutcome.NoEligible) return new(WaveOutcome.Skip, WaveLines.NoEligiblePlayer(f.Wave, f.EventId), [], []);
         if (f.Pick is PickOutcome.QueryFailed) return new(WaveOutcome.Skip, WaveLines.PlayerQueryFailed(f.Wave, f.EventId), [], []);
         if (f.CentreClaimed && !f.AllowTerritory) return new(WaveOutcome.Skip, WaveLines.CentreClaimed(f.Wave, f.EventId), [], []);

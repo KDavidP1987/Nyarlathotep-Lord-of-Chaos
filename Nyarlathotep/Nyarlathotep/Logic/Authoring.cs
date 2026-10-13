@@ -41,9 +41,10 @@ public static class Authoring
 
     /// <summary>`.nyar event new &lt;id&gt; &lt;pillar&gt;` (D6): a disabled skeleton named after its id, Manual, 600 s;
     /// an Empower on Faction_Bandits with physicalPower 1.2 for empowerment, else CHAR_Bandit_Thug × 3 in 1 wave around
-    /// the admin.</summary>
+    /// the admin. <see cref="RevengeKind"/> in place of a pillar writes <see cref="NewRevenge"/>'s definition (revenge D12).</summary>
     public static EditPlan New(string text, string id, string pillarName)
     {
+        if (pillarName == RevengeKind) return NewRevenge(text, id);
         if (!PillarNames.TryParse(pillarName, out var pillar)) return EditPlan.Refuse(Outcome.Refused(PillarNames.Unknown(pillarName), RefusalCode.NotFound, "pillar"));
         if (CommandArgs.EventId(id).Error is not null) return EditPlan.Refuse(BadId("id"));
         var name = PillarNames.Name(pillar);
@@ -75,6 +76,41 @@ public static class Authoring
         };
         return Append(text, def, id, $"event {id} created (disabled, {name}); set its fields with .nyar event set", $"event {id} already exists", "id",
             ("pillar", name));
+    }
+
+    /// <summary>The word `.nyar event new &lt;id&gt; revenge` takes in place of a pillar (revenge D12).</summary>
+    public const string RevengeKind = "revenge";
+
+    /// <summary>`.nyar event new &lt;id&gt; revenge` (revenge D12): a disabled spawns definition with the default Revenge
+    /// trigger (EventsEditor.RevengeDefault), 600 s, and a SpawnWaves action of the bandit-ambush units (CHAR_Bandit_Thug × 4,
+    /// CHAR_Bandit_Hunter × 2, 3 waves 60 s apart, radius 10) around the target 20-40 m, Hunt 45.</summary>
+    static EditPlan NewRevenge(string text, string id)
+    {
+        if (CommandArgs.EventId(id).Error is not null) return EditPlan.Refuse(BadId("id"));
+        var name = PillarNames.Name(Pillar.Spawns);
+        var def = new JsonObject
+        {
+            ["id"] = id,
+            ["name"] = id,
+            ["enabled"] = false,
+            ["pillar"] = name,
+            ["trigger"] = EventsEditor.RevengeDefault(),
+            ["durationSeconds"] = 600,
+            ["action"] = new JsonObject
+            {
+                ["type"] = "SpawnWaves",
+                ["units"] = new JsonArray(
+                    new JsonObject { ["prefab"] = "CHAR_Bandit_Thug", ["count"] = 4 },
+                    new JsonObject { ["prefab"] = "CHAR_Bandit_Hunter", ["count"] = 2 }),
+                ["waves"] = 3,
+                ["intervalSeconds"] = 60,
+                ["radius"] = 10,
+                ["location"] = new JsonObject { ["type"] = "AroundPlayer", ["minDist"] = 20, ["maxDist"] = 40 },
+                ["behaviour"] = new JsonObject { ["type"] = "Hunt", ["range"] = 45 },
+            },
+        };
+        return Append(text, def, id, $"event {id} created (disabled, {name}, revenge); set its fields with .nyar event set",
+            $"event {id} already exists", "id", ("pillar", name));
     }
 
     /// <summary>`.nyar event copy &lt;id&gt; &lt;newId&gt;` (D7): the source's JSON verbatim under newId, disabled. An

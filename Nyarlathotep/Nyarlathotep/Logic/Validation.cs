@@ -184,6 +184,7 @@ public static class EventValidator
             var conditions = e.TryGetProperty("conditions", out var c) ? ParseConditions(c) : new Conditions();
             var duration = Int(Required(e, "durationSeconds", "durationSeconds must be 30-7200"), 30, 7200, "durationSeconds must be 30-7200");
             var (action, empower) = ParseAction(Required(e, "action", "action is required"), pillar, trigger, units, factions, regions);
+            RevengeAction(trigger, action);                              // revenge D2
             var announce = e.TryGetProperty("announce", out var a) ? ParseAnnounce(a) : Announce.None;
             return new EventDefinition(id, name.GetString()!, enabledEl.GetBoolean(), pillar, trigger, conditions, duration, action, announce,
                 Empower: empower);
@@ -281,6 +282,56 @@ public static class EventValidator
     public const string KillsRule = "trigger.kills must be 3-500";
     public const string KillWindowRule = "trigger.windowSeconds must be 10-3600";
     public const string SharedRule = "trigger.shared must be true or false";
+    public const int MinHeat = 3;
+    public const int MaxHeat = 500;
+    public const int MinRevengeWindowSeconds = 60;
+    public const int MaxWarnAt = 3;
+    public const int MaxVBloodHeat = 100;
+    public const int DefaultVBloodHeat = 10;
+    public const string HeatRule = "trigger.heat must be 3-500";
+    public const string RevengeWindowRule = "trigger.windowSeconds must be 60-3600";
+    public const string WarnAtRule = "trigger.warnAt must be up to 3 ascending values below trigger.heat";
+    public const string VBloodHeatRule = "trigger.vbloodHeat must be 0-100";
+    public const string RevengeNeedsWaves = "a Revenge trigger needs a SpawnWaves action";
+    public const string RevengeNeedsAroundPlayer = "a Revenge trigger needs location AroundPlayer";
+    public const string RevengeNeedsHunt = "a Revenge trigger needs behaviour Hunt";
+    public const string RevengeNoFanOut = "a Revenge trigger takes no fanOut";
+    public const string RevengeNoTerritory = "a Revenge trigger never spawns in claimed territory";
+
+    /// <summary>Every reason revenge D1 and D2 add, for the 120-byte check (the factions, cooldown, unknown-field and
+    /// unknown-type reasons are the existing builders').</summary>
+    public static readonly IReadOnlyList<string> RevengeReasons =
+    [
+        HeatRule, RevengeWindowRule, WarnAtRule, VBloodHeatRule, PlayerCooldownRule,
+        RevengeNeedsWaves, RevengeNeedsAroundPlayer, RevengeNeedsHunt, RevengeNoFanOut, RevengeNoTerritory,
+    ];
+
+    /// <summary>`warnAt` (revenge D1): 0-3 integers, strictly ascending, each 1..heat−1.</summary>
+    static List<int> WarnAtList(JsonElement v, int heat)
+    {
+        if (v.ValueKind != JsonValueKind.Array || v.GetArrayLength() > MaxWarnAt) throw new Fail(WarnAtRule);
+        var list = new List<int>();
+        foreach (var x in v.EnumerateArray())
+        {
+            var k = Int(x, 1, heat - 1, WarnAtRule);
+            if (list.Count > 0 && k <= list[^1]) throw new Fail(WarnAtRule);
+            list.Add(k);
+        }
+        return list;
+    }
+
+    /// <summary>The action rules of a Revenge trigger (revenge D2), checked after the action parsed: a SpawnWaves action,
+    /// in either form, whose location is AroundPlayer and whose behaviour is Hunt, without fanOut or allowTerritory. Any
+    /// other trigger type passes unchanged.</summary>
+    static void RevengeAction(Trigger trigger, SpawnWavesAction? action)
+    {
+        if (trigger.Type != TriggerType.Revenge) return;
+        if (action is null) throw new Fail(RevengeNeedsWaves);
+        if (action.Location.Type != LocationType.AroundPlayer) throw new Fail(RevengeNeedsAroundPlayer);
+        if (action.Behaviour is not { Type: BehaviourType.Hunt }) throw new Fail(RevengeNeedsHunt);
+        if (action.FanOut is not null) throw new Fail(RevengeNoFanOut);
+        if (action.AllowTerritory) throw new Fail(RevengeNoTerritory);
+    }
 
     /// <summary>1-5 distinct factions, each not deny-listed and known to <paramref name="factions"/>; the Empower action's
     /// rules and reasons (faction-empowerment D1), under <paramref name="rule"/>.</summary>
@@ -401,6 +452,21 @@ public static class EventValidator
                 var window = Int(Required(t, "windowSeconds", KillWindowRule), MinKillWindowSeconds, MaxKillWindowSeconds, KillWindowRule);
                 var shared = t.TryGetProperty("shared", out var sh) && Bool(sh, SharedRule);
                 return new Trigger(TriggerType.FactionKills, [], [], DayPhase.Night, [], Factions: list, Kills: kills, WindowSeconds: window, Shared: shared);
+            }
+            case "Revenge":
+            {
+                // revenge D1: per-player heat; `shared` is FactionKills' and is refused here as any other unknown key
+                OnlyKeys(t, "trigger", "type", "factions", "heat", "windowSeconds", "warnAt", "vbloodHeat", "playerCooldownMinutes", "scope");
+                var list = FactionNames(Required(t, "factions", TriggerFactionsRule), TriggerFactionsRule, factions);
+                var heat = Int(Required(t, "heat", HeatRule), MinHeat, MaxHeat, HeatRule);
+                var window = Int(Required(t, "windowSeconds", RevengeWindowRule), MinRevengeWindowSeconds, MaxKillWindowSeconds, RevengeWindowRule);
+                var warnAt = t.TryGetProperty("warnAt", out var wa) ? WarnAtList(wa, heat) : [];
+                var vblood = t.TryGetProperty("vbloodHeat", out var vb) ? Int(vb, 0, MaxVBloodHeat, VBloodHeatRule) : DefaultVBloodHeat;
+                var cooldown = t.TryGetProperty("playerCooldownMinutes", out var pc)
+                    ? Int(pc, 0, MaxPlayerCooldownMinutes, PlayerCooldownRule)
+                    : DefaultPlayerCooldownMinutes;
+                return new Trigger(TriggerType.Revenge, [], [], DayPhase.Night, [], PlayerCooldownMinutes: cooldown, Factions: list,
+                    WindowSeconds: window, Heat: heat, WarnAt: warnAt, VBloodHeat: vblood);
             }
             default:
                 throw new Fail($"unknown trigger type{Shown(type)}");

@@ -12,7 +12,8 @@
     "docs/dod/automation.md",
     "docs/dod/wave-sets.md",
     "docs/dod/swarm.md",
-    "docs/dod/hunting-grounds.md"
+    "docs/dod/hunting-grounds.md",
+    "docs/dod/revenge.md"
   ],
   "sessionsUncounted": {
     "event-spawns": [1]
@@ -31,7 +32,8 @@
     "automation": 1,
     "wave-sets": 1,
     "swarm": 1,
-    "hunting-grounds": 0
+    "hunting-grounds": 0,
+    "revenge": 1
   },
   "dataTests": {
     "event-spawns": [
@@ -82,6 +84,9 @@
     ],
     "hunting-grounds": [
       "docs/features/HUNTING_GROUNDS.md"
+    ],
+    "revenge": [
+      "docs/features/REVENGE.md"
     ],
     "boss-reinforcements": [
       "docs/features/BOSS_REINFORCEMENTS.md"

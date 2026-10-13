@@ -125,7 +125,7 @@ public static class TriggerRouter
 
     /// <summary>True for the triggers a player's action fires (automation D13, D14): only their starts carry a focus and
     /// pass PlayerTriggerGate.</summary>
-    public static bool IsPlayerAction(TriggerType type) => type is TriggerType.RegionEntered or TriggerType.FactionKills;
+    public static bool IsPlayerAction(TriggerType type) => type is TriggerType.RegionEntered or TriggerType.FactionKills or TriggerType.Revenge;
 }
 
 /// <summary>How one wave is sized (Business rules 1, D22): the whole wave is clamped by MaxUnitsPerWave, then by the free

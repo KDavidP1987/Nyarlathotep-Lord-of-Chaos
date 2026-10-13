@@ -113,7 +113,7 @@ public partial class CommandArgTests
     [Fact]
     public void SettableFields_passes_every_table_name()
     {
-        Assert.Equal(59, CommandArgs.SettableFields.Count);      // automation D16: 7 trigger fields and action.fanOut; wave-sets D14: 11; swarm D9: 6; hunting-grounds D14: 1
+        Assert.Equal(62, CommandArgs.SettableFields.Count);      // automation D16: 7 trigger fields and action.fanOut; wave-sets D14: 11; swarm D9: 6; hunting-grounds D14: 1; revenge D11: 3
         foreach (var (name, (family, who)) in CommandArgs.SettableFields)
         {
             var field = name.Replace(".N.", ".1.", StringComparison.Ordinal).Replace(".M.", ".1.", StringComparison.Ordinal);   // the placeholders
