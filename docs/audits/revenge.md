@@ -32,3 +32,11 @@
   - D15 the wire value revenge → factionkills → ContractDocTests.Revenge_passes_api_7_and_the_value failed
   - D17 the pending entry of D10 removed → ControlCaseTests.ControlCases_passes_plan_and_table_agree failed
 - carried to step 2: the services (DeathEventPatch's V Blood flag and private send, the 5 s scan with RevengeScan, the start path's alert, private lines and admin focus, the wave pick and hunt seeding through PlayerPick.ChooseFocus and HuntPlan.TargetsFor, the end paths' lines, the counts in `event info`); RevengeDependencyFailureTests joins ControlCases.NewClasses with its class
+
+### Step 1 · 2026-10-13 · merged tree: 7031eb2 (boss half b81599b + revenge half 1c9127c)
+- compile: `dotnet build Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__` 0 Warning(s), 0 Error(s)
+- tests: Passed! 3102/3102 (3056 on the revenge half, 46 from the boss half and the merge's control rows)
+- preflight: PREFLIGHT OK, "secrets: none (1972 files scanned, 1922 index blobs)", wire api 7
+- merge: conflicts only in this file and docs/features/REVENGE.md (both kept); ControlCases gains the D28-D31 rows and BossWaveTests in NewClasses; SettableFields 63; the builder touched no Services or Patches
+- review of the diff: the boss half's 10 planted faults and the revenge half's 14 each caught and restored (Log notes); Codex once before the release (design §9 D34)
+- dod status: D1-D9, D11-D13, D15, D17, D28-D30 pass at 7031eb2; D31 waits on TemplateLibraryTests.Bosses (step 2)
