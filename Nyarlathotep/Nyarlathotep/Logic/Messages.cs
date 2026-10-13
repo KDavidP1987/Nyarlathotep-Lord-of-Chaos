@@ -17,17 +17,19 @@ public sealed record MessageContext(string Event, string Faction, int Minutes, i
 
     /// <summary>The context of <paramref name="def"/>. Its faction: for an Empower action the short names of its factions
     /// joined by ", " (Faction_Legion, Faction_Bandits → "Legion, Bandits", faction-empowerment D10); otherwise the
-    /// second part of the first unit's prefab name (CHAR_Bandit_Thug → Bandit), or "-".</summary>
+    /// second part of the first unit's prefab name (CHAR_Bandit_Thug → Bandit), or "-". An Apocalypse's faction is its
+    /// faction's short name and its waves its hordes (apocalypse D7).</summary>
     public static MessageContext For(EventDefinition def, int minutes, int wave) => new(
         def.Name,
         def.Empower is { } empower
             ? string.Join(", ", empower.Factions.Select(FactionDenyList.ShortName))
+            : def.Apocalypse is { } apocalypse ? FactionDenyList.ShortName(apocalypse.Faction)
             : FactionOf(def.Action?.Units.FirstOrDefault()?.Prefab),
         minutes,
         wave,
-        def.Action?.Waves ?? 0,
+        def.Action?.Waves ?? def.Apocalypse?.Hordes.Count ?? 0,
         "-",
-        RegionOf(def.Action?.Scope ?? def.Empower?.Scope ?? Scope.Global));
+        RegionOf(def.Action?.Scope ?? def.Empower?.Scope ?? def.Apocalypse?.Scope ?? Scope.Global));
 
     static string FactionOf(string? prefab)
     {
@@ -166,7 +168,7 @@ public static class Messages
 
     /// <summary>The end banner of <paramref name="def"/>, as <see cref="StartBanner"/>.</summary>
     public static string EndBanner(EventDefinition def, int pick) =>
-        Render(Choose(def.Announce.End, EventEndPool, pick), MessageContext.For(def, 0, def.Action?.Waves ?? 0));
+        Render(Choose(def.Announce.End, EventEndPool, pick), MessageContext.For(def, 0, def.Action?.Waves ?? def.Apocalypse?.Hordes.Count ?? 0));
 
     /// <summary>The warning before wave <paramref name="wave"/>, <paramref name="secondsUntil"/> ahead: in whole
     /// minutes, rounded up, from a minute ahead; "almost here" under a minute.</summary>
@@ -228,6 +230,39 @@ public static class Messages
                 : $"{name} winner: none", Wire.MaxBytes));
         return lines;
     }
+
+    /// <summary>{region} of a hotspot that lies in no region (apocalypse D7).</summary>
+    public const string Wilds = "the wilds";
+
+    /// <summary>A horde's rise (apocalypse D7): "&lt;event&gt;: a horde of &lt;n&gt; rises in &lt;region&gt; and marches on
+    /// &lt;goal&gt;". The region is the hotspot's display name ("the wilds" when none); no player, no position.</summary>
+    public static string ApocalypseRise(string eventName, int units, string? region, string goalName) =>
+        Line($"{TextSink.Clean(eventName)}: a horde of {units} rises in {TextSink.Clean(string.IsNullOrEmpty(region) ? Wilds : region)} and marches on {TextSink.Clean(goalName)}");
+
+    /// <summary>A march's 25 % step (apocalypse D7): "&lt;event&gt;: the horde is &lt;p&gt; % of the way to &lt;goal&gt;".</summary>
+    public static string ApocalypseProgress(string eventName, int percent, string goalName) =>
+        Line($"{TextSink.Clean(eventName)}: the horde is {percent} % of the way to {TextSink.Clean(goalName)}");
+
+    /// <summary>A horde's defeat (apocalypse D7): "&lt;event&gt;: horde &lt;k&gt; of &lt;c&gt; destroyed".</summary>
+    public static string ApocalypseDefeat(string eventName, int horde, int hordes) =>
+        Line($"{TextSink.Clean(eventName)}: horde {horde} of {hordes} destroyed");
+
+    /// <summary>The outcome line (apocalypse D8): "the living have won", "&lt;goal&gt; has fallen" or "the living held out",
+    /// after the event's name.</summary>
+    public static string ApocalypseOutcome(string eventName, ApocalypseResult result, string goalName) =>
+        Line($"{TextSink.Clean(eventName)}: " + result switch
+        {
+            ApocalypseResult.Won => "the living have won",
+            ApocalypseResult.Lost => $"{TextSink.Clean(goalName)} has fallen",
+            _ => "the living held out",
+        });
+
+    /// <summary>`.nyar status` of a running apocalypse (apocalypse D17): "&lt;event&gt;: horde &lt;r&gt;/&lt;c&gt;, &lt;p&gt; % to
+    /// &lt;goal&gt;, &lt;n&gt; roamers, ends in &lt;t&gt;" with t in whole minutes; no position.</summary>
+    public static string ApocalypseStatus(string eventName, int risen, int hordes, int percent, string goalName, int roamers, int minutesLeft) =>
+        Line($"{TextSink.Clean(eventName)}: horde {risen}/{hordes}, {percent} % to {TextSink.Clean(goalName)}, {roamers} roamers, ends in {minutesLeft} min");
+
+    static string Line(string text) => TextSink.CutToBytes(text, Wire.MaxBytes);
 
     static string Choose(IReadOnlyList<string> own, IReadOnlyList<string> pool, int pick)
     {

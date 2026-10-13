@@ -195,8 +195,45 @@ public static class CommandArgs
         foreach (var f in WaveListFields) d[f] = ("spawn action", "admin");
         foreach (var f in SwarmFields) d[f] = ("spawn action", "admin");      // swarm D9
         d[RegionLockField] = ("spawn action", "admin");             // hunting-grounds D14
-        d[BossesField] = ("spawn action", "admin");                 // revenge D31
+        d[BossesField] = ("spawn action", "admin");                 // revenge D31; an Apocalypse's too (apocalypse D16)
+        foreach (var f in ApocalypseFields) d[f] = ("apocalypse action", "admin");     // apocalypse D16
         return d;
+    }
+
+    /// <summary>`action.goal` (apocalypse D16): here only, the admin's x, y and z as a Point goal.</summary>
+    public const string GoalField = "action.goal";
+    public const string GoalHereRule = "action.goal takes here (your position)";
+
+    /// <summary>The eight Apocalypse fields (apocalypse D16); `action.bosses` and `durationSeconds` are shared with other
+    /// kinds. Every other Apocalypse key is edited in events.json and loaded with `.nyar event reload`.</summary>
+    public static readonly IReadOnlyList<string> ApocalypseFields =
+    [
+        GoalField, "action.goal.radius", "action.goal.name", "action.hordes.count", "action.hordes.everyMinutes", "action.hordes.size",
+        "action.roamers.max", "action.marchSpeed",
+    ];
+
+    /// <summary>`durationSeconds` takes 30-604800 here; EventsEditor holds it to the event's kind on the file (apocalypse D1:
+    /// 600-604800 for an Apocalypse, 30-7200 for every other kind).</summary>
+    public const string DurationRule = "durationSeconds must be 30-7200 (600-604800 for an Apocalypse)";
+
+    /// <summary>An Apocalypse field's value (apocalypse D16), each in D1's range and refused with the validator's own reason.</summary>
+    static Arg<object> ApocalypseValue(string field, string? value)
+    {
+        static Arg<object> IntIn(string? v, int min, int max, string rule) =>
+            int.TryParse(v, NumberStyles.None, CultureInfo.InvariantCulture, out var i) && i >= min && i <= max ? Arg<object>.Of(i) : Arg<object>.Bad(rule);
+        if (string.IsNullOrWhiteSpace(value)) return Arg<object>.Bad(ValueRequired);
+        return field switch
+        {
+            GoalField => value == "here" ? Arg<object>.Of(LocationHere.Instance) : Arg<object>.Bad(GoalHereRule),
+            "action.goal.radius" => IntIn(value, ApocalypseLimits.MinGoalRadius, ApocalypseLimits.MaxGoalRadius, EventValidator.GoalRadiusRule),
+            "action.goal.name" => EventValidator.IsPlainText(value, ApocalypseLimits.MaxGoalName) ? Arg<object>.Of(value) : Arg<object>.Bad(EventValidator.GoalNameRule),
+            "action.hordes.count" => IntIn(value, ApocalypseLimits.MinHordes, ApocalypseLimits.MaxHordes, EventValidator.HordesCountRule),
+            "action.hordes.everyMinutes" => IntIn(value, ApocalypseLimits.MinEvery, ApocalypseLimits.MaxEvery, EventValidator.EveryMinutesRule),
+            "action.hordes.size" => IntIn(value, ApocalypseLimits.MinSize, ApocalypseLimits.MaxSize, EventValidator.HordeSizeRule),
+            "action.roamers.max" => IntIn(value, ApocalypseLimits.MinRoamers, ApocalypseLimits.MaxRoamers, EventValidator.RoamersMaxRule),
+            _ => Decimal2(value, (decimal)ApocalypseLimits.MinMarchSpeed, (decimal)ApocalypseLimits.MaxMarchSpeed) is { } m
+                ? Arg<object>.Of(m) : Arg<object>.Bad(EventValidator.MarchSpeedRule),
+        };
     }
 
     /// <summary>`action.bosses` (revenge D31): CHAR_name or CHAR_name:count entries, or none.</summary>
@@ -654,6 +691,7 @@ public static class CommandArgs
         if (field == FanOutField) return FanOutValue(value);
         if (field == RegionLockField) return RegionLockValue(value);
         if (field == BossesField) return BossesValue(value);
+        if (ApocalypseFields.Contains(field)) return ApocalypseValue(field, value);
         if (field == ScoreboardField)
             return value switch { "true" => Arg<object>.Of(true), "false" => Arg<object>.Of(false), _ => Arg<object>.Bad(EventValidator.ScoreboardRule) };
         if (WaveListPath(field) is { } wave) return WaveListValue(field, wave, value);
@@ -674,7 +712,8 @@ public static class CommandArgs
             "name" => value is not null && EventValidator.IsPlainText(value, 40)
                 ? Arg<object>.Of(value)
                 : Arg<object>.Bad("name must be 1-40 characters, no angle brackets or control characters"),
-            "durationSeconds" => IntIn(field, value, 30, 7200),
+            "durationSeconds" => int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var s) && s >= ApocalypseLimits.OtherMinDurationSeconds && s <= ApocalypseLimits.MaxDurationSeconds
+                ? Arg<object>.Of(s) : Arg<object>.Bad(DurationRule),
             "conditions.minPlayers" => IntIn(field, value, 0, 100),
             "conditions.cooldownMinutes" => IntIn(field, value, 0, 10080),
             "conditions.chancePercent" => IntIn(field, value, 1, 100),

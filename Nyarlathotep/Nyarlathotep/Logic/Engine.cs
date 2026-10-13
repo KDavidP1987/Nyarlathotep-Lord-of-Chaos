@@ -496,8 +496,9 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
     /// <summary>Resumes the apocalypse <paramref name="id"/> from its record after a restart (apocalypse D12): the running
     /// instance keeps the record's <paramref name="startedUtc"/> and <paramref name="endsUtc"/> (the clock ran while the
     /// server was down) and its resolved goal as <paramref name="goal"/>, never re-read from a player. It clears
-    /// <see cref="ResumePending"/>; no start push is sent, since the run never ended. Null on success, else the refusal.</summary>
-    public Outcome? Resume(string id, DateTime startedUtc, DateTime endsUtc, (float X, float Y, float Z) goal)
+    /// <see cref="ResumePending"/>; no start push is sent, since the run never ended. <paramref name="hordesRisen"/> becomes
+    /// its WavesSpawned, the status row's `wave=&lt;r&gt;/&lt;c&gt;` (D20). Null on success, else the refusal.</summary>
+    public Outcome? Resume(string id, DateTime startedUtc, DateTime endsUtc, (float X, float Y, float Z) goal, int hordesRisen = 0)
     {
         if (ResumePending == id) ResumePending = null;
         var def = catalog.Current.Find(id);
@@ -505,7 +506,7 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
         if (_active.ContainsKey(id)) return AdminLines.AlreadyActive(id);
         var error = catalog.TryStart(id, startedUtc, out var instance);
         if (error is not null) return error;
-        _active[id] = new ActiveEvent(instance! with { EndsUtc = endsUtc }, "resume", goal);
+        _active[id] = new ActiveEvent(instance! with { EndsUtc = endsUtc }, "resume", goal) { WavesSpawned = Math.Max(0, hordesRisen) };
         Starts[id] = startedUtc;
         return null;
     }

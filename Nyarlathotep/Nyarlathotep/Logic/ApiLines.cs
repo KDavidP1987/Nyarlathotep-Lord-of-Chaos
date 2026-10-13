@@ -56,7 +56,7 @@ public static class ApiLines
             rows.Add(def.Empower is { } emp
                 ? Wire.Event(a.Id, "empower", def.Name, "active", Factions(emp), SecondsLeft(a.Instance.EndsUtc, utcNow), "-", Units(a.Id), Region(def))
                 : Wire.Event(a.Id, Kind(def.Pillar), def.Name, "active", "-", SecondsLeft(a.Instance.EndsUtc, utcNow),
-                    $"{a.WavesSpawned}/{def.Action?.Waves ?? 0}", Units(a.Id), Region(def)));
+                    $"{a.WavesSpawned}/{def.Action?.Waves ?? def.Apocalypse?.Hordes.Count ?? 0}", Units(a.Id), Region(def)));   // apocalypse D20: hordes
         }
         // One ending row per event id, for its latest cleanup still in the future; an id that is active again shows
         // only its active row, and a cleanup already due (removed on this tick) shows none.
@@ -91,13 +91,13 @@ public static class ApiLines
     /// <summary>The `region=` value (api 5, regions D10): the action scope's names joined by ',', or "-" for a Global
     /// scope or no definition. It names only the event's configured scope, never where a player is (D14).</summary>
     public static string Region(EventDefinition? d) =>
-        (d?.Action?.Scope ?? d?.Empower?.Scope ?? Scope.Global) is { IsGlobal: false } s ? string.Join(",", s.Regions) : "-";
+        (d?.Action?.Scope ?? d?.Empower?.Scope ?? d?.Apocalypse?.Scope ?? Scope.Global) is { IsGlobal: false } s ? string.Join(",", s.Regions) : "-";
 
     /// <summary>`api regions`: one `[NYAR:region]` row per region in <see cref="RegionNames.All"/> order, counting the
     /// active events whose action scope names it (regions D10).</summary>
     public static IReadOnlyList<string> Regions(IEnumerable<ActiveEvent> active)
     {
-        var scopes = active.Select(a => a.Definition.Action?.Scope ?? a.Definition.Empower?.Scope ?? Scope.Global).ToList();
+        var scopes = active.Select(a => a.Definition.Action?.Scope ?? a.Definition.Empower?.Scope ?? a.Definition.Apocalypse?.Scope ?? Scope.Global).ToList();
         return RegionNames.All.Select(r => Wire.Region(r, scopes.Count(s => s.Names(r)))).ToList();
     }
 

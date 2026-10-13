@@ -121,7 +121,7 @@ public partial class CommandArgTests
 
     [Theory]
     [InlineData("durationSeconds", "600", null)]
-    [InlineData("durationSeconds", "29", "durationSeconds must be 30-7200")]
+    [InlineData("durationSeconds", "29", CommandArgs.DurationRule)]
     [InlineData("action.waves", "11", "action.waves must be 1-10")]
     [InlineData("action.radius", "2", null)]
     [InlineData("conditions.chancePercent", "0", "conditions.chancePercent must be 1-100")]

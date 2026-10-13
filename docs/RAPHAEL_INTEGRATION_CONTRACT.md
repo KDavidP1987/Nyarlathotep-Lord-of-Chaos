@@ -147,6 +147,7 @@ All live under `.nyar api …`. Paged commands take an optional 1-based `[page]`
 - A wave set's scoreboard (0.9.0) is a server chat line only: player names never reach the wire, and an event that ends with all its waves defeated sends the usual `event-end`.
 - A swarm (0.10.0, `action.arena`, `action.winner`, `action.growth`) adds nothing to the wire: an event's arena and winner never reach the wire, and names never do. A growth event's `wave` total is its `action.waves`.
 - Hunting grounds (0.11.0, a Region location, `action.regionLock`, the RegionHunt behaviour) add nothing to the wire: a Region location, the region lock and the region hunt never reach the wire, and a hunt target is never named or located.
+- An apocalypse (0.13.0, `"type": "Apocalypse"`) adds no tag, key, push kind or command: Wire.Api stays 7, and hotspots, roamers, fronts and the goal never reach the wire. Its status row is `kind=waves` with `wave=<hordes risen>/<hordes>`, and every outcome (won, lost, survived) sends the usual `event-end`.
 - An empower row (api 3) carries `faction=<names joined by ','>`: each faction of the event without its `Faction_`
   prefix, e.g. `faction=Legion,Bandits`; its `wave` is `-`, and its admin `units` is the number of NPCs holding the
   event's empowerment. An empower event has no `ending` row.
