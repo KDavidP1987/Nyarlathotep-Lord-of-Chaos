@@ -15,7 +15,7 @@ closed: none
 recon_commit: e4f0594
 coverage_author: 15/15 layers · 50/50 probes
 coverage_reviewer: 15/15 layers · 50/50 probes
-review: pending
+review: subagent
 ---
 
 # DoD: Apocalypse — hotspots, spreading roamers, marching hordes, win or lose, the scoreboard, resume after a restart
@@ -432,3 +432,15 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-13 · version · v2 · owner-requested scope: 0.13.0 after hunting-grounds and revenge (A1), map-wide roaming (A2, design §9 D49), the pathing probe (A3, D50), bosses in the last horde (A4, D51), faction mixes (A5, A6)
 - 2026-10-13 · note · A1 names gating probe 14.3 and A1-A6 touch 4 work packages and 13 of 38 items: review set to pending; a scoped re-review of A1-A6 (fresh subagent, one round per design §9 D34, two at most) before step 2's code; step 1's spikes may run meanwhile, as they change no promise
 - 2026-10-13 · note · re-review A1…A10 · Review 4 REVISE: F1 blocking fixed by A7, F2-F7 advisory fixed (A8-A10), D37 names every template mix; round 2 owed
+- 2026-10-13 · note · re-review A1 · Review 5 READY
+- 2026-10-13 · note · re-review A2 · Review 5 READY
+- 2026-10-13 · note · re-review A3 · Review 5 READY
+- 2026-10-13 · note · re-review A4 · Review 5 READY
+- 2026-10-13 · note · re-review A5 · Review 5 READY
+- 2026-10-13 · note · re-review A6 · Review 5 READY
+- 2026-10-13 · note · re-review A7 · Review 5 READY
+- 2026-10-13 · note · re-review A8 · Review 5 READY
+- 2026-10-13 · note · re-review A9 · Review 5 READY
+- 2026-10-13 · note · re-review A10 · Review 5 READY
+- 2026-10-13 · note · deferred · Review 5 F1 · step 2 adds `Bosses` to Logic/Model.cs ApocalypseAction, and docs/features/APOCALYPSE.md's contract row names `bosses[]{prefab,count,modifiers}` beside the other action keys
+- 2026-10-13 · note · deferred · Review 5 F2 · `roamers.huntRange` stays the Hunt behaviour's range once the mover has seeded aggro (event-spawns' Hunt); docs/features/APOCALYPSE.md says so

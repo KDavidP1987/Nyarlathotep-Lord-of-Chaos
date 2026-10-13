@@ -1,5 +1,7 @@
 # Outbreak: undead and Dracul hordes (planned child)
 
+> **Built as the apocalypse child (0.13.0):** see docs/features/APOCALYPSE.md.
+
 > **Status:** planned. The owner asked for this on 2026-09-26, and it is in the Epic as child `outbreak`, after
 > anti-farming and before sieges (docs/dod/nyarlathotep.md, A24, A30). **Nothing here is designed yet.** The questions below are for the
 > child's dod planning, and the owner decides them in plan mode before any code is written.

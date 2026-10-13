@@ -1,0 +1,13 @@
+# Audit — apocalypse
+
+## Pre-audit
+### Step 1 · 2026-10-13 · a2771a8 (re-checked at 71342dd, docs only)
+- git status: clean at a2771a8 (the plan started with A1-A6); 71342dd adds Review 4's dispositions and A7-A10, docs only
+- compile: `dotnet build Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__` 0 Warning(s), 0 Error(s); tests 3134/3134
+- preflight: fails one check only, "release tags: 13/14 (v0.12.0 not pushed)": revenge 0.12.0 is tagged locally and its push waits on the owner's OK; "secrets: none (1995 files scanned, 1941 index blobs)"
+- dod status: 0/38 verified (just started); review pending (Review 4 REVISE dispositioned, round 2 running)
+- S-11: wave-sets 0.9.0, swarm 0.10.0 and hunting-grounds 0.11.0 are released on GitHub; revenge 0.12.0 is released locally only (commit 8ee59c5, tag v0.12.0), so its changes are in this child's base and its push does not change this diff
+- 13.1: wave-sets A7's 176.8 ms Hunt tick did not come back: revenge step 2's timing baseline (24 tracked spiders, 25 min) read "timing span: 10/10 windows under 5 ms, tracked >= 10, targets >= 1, 0 slow ticks"; D29 measures the apocalypse's own load
+- feature doc read: docs/features/OUTBREAK.md (the owner's brief, design §9 D23, D24, D44-D45, D49-D51); docs/features/APOCALYPSE.md created in this step; docs/features/HUNTING_GROUNDS.md (the mover) and docs/features/REVENGE.md (final-wave bosses)
+
+## Post-audit

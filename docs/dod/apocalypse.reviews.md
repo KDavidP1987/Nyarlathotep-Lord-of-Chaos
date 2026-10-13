@@ -231,3 +231,35 @@ VERDICT: REVISE
 - F6 · accepted · fixed by A9 (discovered, 13.1): the roam check is a 13.1 hot path; D29's run keeps Chaos 300 m or more from the hotspots for its first windows.
 - F7 · accepted · fixed by A10 (discovered, 11.2): D16 takes `action.bosses` with revenge D31's form and reasons.
 - UF1 · accepted · D37
+
+## Review 5 · 2026-10-13 · subagent · plan commit 71342dd · plan 104487 B · 38 items · files 0 · e3b0c44298fc · prompt 2225c0b3bc84
+Scope: round 2 of the full re-review owed by A1-A10.
+
+L1 · Considered · no finding
+L2 · Considered · no finding
+L3 · Considered · no finding (Review 4's 3.3 block is answered: D11 records each living horde's `livingBosses`, D12 rebuilds from it)
+L4 · Considered · F2
+L5 · Considered · F1 (Review 4's 5.3 block is answered for state.json: `hordes[]{number,frontX,frontZ,living,livingBosses}`, D19 names it, D36 and D12's tests fail when a boss is rebuilt wrongly)
+L6 · Considered · no finding
+L7 · Considered · no finding
+L8 · Considered · no finding
+L9 · Considered · no finding
+L10 · Considered · no finding
+L11 · Considered · no finding
+L12 · Considered · no finding
+L13 · Considered · no finding
+L14 · Considered · no finding
+L15 · Considered · no finding
+
+F1 · advisory · probe 5.3 · The events.json contract in Interfaces › Contracts (5.3) lists the action's keys without `bosses`, and Build plan step 2's Model.cs list leaves out `Bosses`, although D1, D16 and D36 require it; D1's test catches a missing parser rule, so no outcome fails. Fix: add `bosses[]{prefab,count,modifiers}` to the 5.3 contract and `Bosses` to step 2's Model.cs list.
+F2 · advisory · probe 4.1 · Since A2, D3 hands roamers over at the mover's seed reach (100 m), and `roamers.huntRange` (20-60) is still a required D1 key with no item saying what it now controls. Fix: one clause saying huntRange is the Hunt behaviour's range after aggro is seeded (event-spawns' Hunt), or drop the key.
+
+EARLIER: all resolved
+missing components: none
+undeclared families: none
+15/15 layers · 50/50 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 5 F1`, step 2 adds `Bosses` to ApocalypseAction and the 5.3 contract row in docs/features/APOCALYPSE.md names `bosses[]{prefab,count,modifiers}`
+- F2 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 5 F2`, huntRange stays the Hunt behaviour's range once aggro is seeded (event-spawns' Hunt), stated in docs/features/APOCALYPSE.md
