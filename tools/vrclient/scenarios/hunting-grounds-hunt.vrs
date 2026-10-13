@@ -2,7 +2,7 @@
 # with RegionHunt under the lock; Chaos waits at hg-b (-1580, -1640), 300 m east in the same region (FarbaneWoods), the Session 0 spike's line (the
 # first choice, (-1680, -1300), had native bandits that killed the arrivals). The
 # units jump unseen ("[nyar] region hunt hg-point: <j> jumped ..."); the final jump lands 50-60 m from Chaos ("landed
-# 5x m"), so right after it `.nyar debug here 49` lists none and `debug here 60` lists the 6. Then Chaos goes to
+# 5x m"), and `debug here 60` lists them. Then Chaos goes to
 # (-1680, -1080), in DunleyFarmlands, and no jump line follows in 30 s. A4 (the owner's D26 run): standing still, Chaos is
 # targeted from the ring ("1 targeted"); A5 moves the units' return point to Chaos, so they walk in: `debug here 15` lists one within 25 s.
 # Needs: the step 3 Release DLL; NyarDevTools (.devtp, .devgo, .devmark, .devhop) and DevChatEcho; the dev events.json
@@ -33,8 +33,8 @@ chat .nyar event start hg-point
 expect-log event hg-point wave 1/1: 6 units queued timeout=30
 expect-log region hunt hg-point: [0-9]+ jumped timeout=60
 expect-log region hunt hg-point: [0-9]+ jumped, [0-9]+ waiting, [0-9]+ in reach, landed (5[0-9]|60) m timeout=120
-chat .nyar debug here 49
-expect-reply no tracked units within 49 m timeout=5
+# (A4/A5: the units run at Chaos as soon as they land, so "none within 49 m" is a race; the landing distance is the
+# no-pop-in proof, read from "landed 5x m" above)
 shot full hg-point-landed
 wait 2
 chat .nyar debug here 60
