@@ -100,7 +100,8 @@ CHAR_Bandit_Stalker_VBlood's home.
   neither raised VBloodKilled; the native Stalker V Blood above did.
 - **Logs:** every [Warning] in LogOutput.log is a revenge state line (warning, due, held, vblood heat) or a purge line;
   no [Error]. NyarDev.log holds only the base game's boot-time "PrefabLookupMap … unknown state" warnings (226, the same
-  count at every boot). The world, plugins and config were restored from snapshot rv1 afterwards.
+  count at every boot). `tools/dev-snapshot.ps1 -Save rv1` before the session; afterwards the world, plugins and
+  config came back: "snapshot restored; hashes equal (rv1, …)".
 - **Scenario lessons:** a due player outside the territory starts at once, so the hold is shown with the purge
   cooldown first; a camp's natives thin out over repeated runs (the heat top-ups use a second and third prefab); a mark
   at y 0 over a cliff dropped Chaos under the map (y -45) and the wave found no ground, so marks sit where natives

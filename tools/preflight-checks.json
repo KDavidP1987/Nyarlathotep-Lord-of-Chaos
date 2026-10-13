@@ -933,7 +933,8 @@
       "plant": {
         "bad": "the On a server bullet removed (event-library D29)",
         "bad-2": "the Published release bullet without \"withdrawn by retitling\" (event-library D29)",
-        "bad-3": "the Commit range v0.3.0..v0.5.0 while the plan's gate command runs v0.4.0..v0.5.0 (event-library D29)"
+        "bad-3": "the Commit range v0.3.0..v0.5.0 while the plan's gate command runs v0.4.0..v0.5.0 (event-library D29)",
+        "good-baseline": "the frozen Baseline still quotes an older range v0.3.0..v0.4.0, which the check leaves out (revenge 0.12.0)"
       }
     }
   ],
@@ -1033,7 +1034,7 @@
         "tools/repo-rollback-drill.ps1",
         "-SelfTest"
       ],
-      "success": "repo rollback selftest: 5/5",
+      "success": "repo rollback selftest: 6/6",
       "cases": {
         "bad": "a scratch repository whose range holds a merge commit: git refuses the revert and the drill fails",
         "good": "a scratch repository with a clean range reverts to the older tag and passes",

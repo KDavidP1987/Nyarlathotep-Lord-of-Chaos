@@ -29,6 +29,7 @@
       "artifact": "Local workspace and editor state",
       "covers": [
         ".claude/**",
+        "docs/dod/.session/**",
         ".vs/**",
         ".vscode/**",
         ".idea/**",

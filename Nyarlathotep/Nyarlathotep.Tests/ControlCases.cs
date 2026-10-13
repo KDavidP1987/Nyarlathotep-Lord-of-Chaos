@@ -38,10 +38,7 @@ public static class ControlCases
     public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm, HuntingGrounds, Revenge];
 
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
-    public static readonly IReadOnlyList<PendingControl> Pending =
-    [
-        new(Revenge, "D25", 3, "0.12.0"), new(Revenge, "D26", 3, "0.12.0"), new(Revenge, "D27", 3, "0.12.0"),
-    ];
+    public static readonly IReadOnlyList<PendingControl> Pending = [];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
         new(control, name, "test", cls, bad.Select(x => $"{name}_fails_when_{x}").ToArray(), good.Select(x => $"{name}_passes_{x}").ToArray(),
@@ -728,5 +725,20 @@ public static class ControlCases
             ["tools/rollback-drill-fixtures/pair-othertrigger2", "tools/rollback-drill-fixtures/pair-otherkey"],
             ["tools/rollback-drill-fixtures/pair-revenge", "tools/rollback-drill-fixtures/pair-bosses"],
             ["tools/rollback-drill-fixtures/empty"]) with { Plan = Revenge },
+        C("D25", "Release", "preflight › Test-CheckReleaseTags and Test-CheckVersion, then release-verify.ps1 -SelfTest",
+            ["tools/preflight-fixtures/ReleaseTags/bad", "tools/preflight-fixtures/ReleaseTags/bad-2", "tools/preflight-fixtures/Version/bad",
+             "selftest missing asset", "selftest differing hash"],
+            ["tools/preflight-fixtures/ReleaseTags/good", "tools/preflight-fixtures/Version/good", "selftest matching hash"],
+            ["tools/preflight-fixtures/ReleaseTags/empty", "tools/preflight-fixtures/Version/empty", "selftest no audit records the asset"]) with { Plan = Revenge },
+        C("D26", "Records", "preflight -AuditOf, -SessionsOf and -Paths -DeclaredOf › AuditSteps, SessionLogs and Paths",
+            ["tools/preflight-fixtures/AuditSteps/bad", "tools/preflight-fixtures/SessionLogs/bad", "tools/preflight-fixtures/SessionLogs/bad-17",
+             "tools/preflight-fixtures/SessionLogs/bad-handrestore", "tools/preflight-fixtures/Paths/bad-undeclared"],
+            ["tools/preflight-fixtures/AuditSteps/good", "tools/preflight-fixtures/SessionLogs/good", "tools/preflight-fixtures/SessionLogs/good-handrestore",
+             "tools/preflight-fixtures/Paths/good"],
+            ["tools/preflight-fixtures/AuditSteps/empty", "tools/preflight-fixtures/SessionLogs/empty", "tools/preflight-fixtures/Paths/empty"]) with { Plan = Revenge },
+        C("D27", "Secrets", "preflight › Test-CheckSecrets",
+            ["tools/preflight-fixtures/Secrets/bad", "tools/preflight-fixtures/Secrets/bad-sentinel-zip", "tools/preflight-fixtures/Secrets/bad-sentinel-log"],
+            ["tools/preflight-fixtures/Secrets/good", "tools/preflight-fixtures/Secrets/good-sentinel"],
+            ["tools/preflight-fixtures/Secrets/empty", "tools/preflight-fixtures/Secrets/empty-sentinel"]) with { Plan = Revenge },
     ];
 }

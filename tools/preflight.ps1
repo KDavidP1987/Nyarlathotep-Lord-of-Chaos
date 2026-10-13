@@ -971,8 +971,10 @@ function Test-CheckRollbackRoutes([string]$Root) {
     if ($null -eq $plan) { return New-Result $false "rollback routes: docs/dod/$slug.md not found" }
     $sec = [regex]::Match($plan, '(?ms)^### Rollback[ \t]*\r?$(.*?)(?=^##)')
     if (-not $sec.Success) { return New-Result $false "rollback routes: $slug has no Rollout › Rollback section" }
-    # Every rollback-gate command for this plan must name one range, so a stale quote elsewhere cannot set it.
-    $cmds = @([regex]::Matches($plan, "rollback-gate\.ps1 -From (v[\w.-]+) -To (v[\w.-]+) -Plan $([regex]::Escape($slug))\b") |
+    # Every rollback-gate command for this plan must name one range, so a stale quote elsewhere cannot set it. The
+    # Baseline is left out: it is the frozen first DoD and keeps the range a later renumbering replaced (revenge 0.12.0).
+    $live = [regex]::Replace($plan, '(?ms)^## Baseline[ \t]*\r?$.*?(?=^## |\z)', '')
+    $cmds = @([regex]::Matches($live, "rollback-gate\.ps1 -From (v[\w.-]+) -To (v[\w.-]+) -Plan $([regex]::Escape($slug))\b") |
         ForEach-Object { "$($_.Groups[1].Value)..$($_.Groups[2].Value)" } | Sort-Object -Unique)
     if ($cmds.Count -eq 0) { return New-Result $false "rollback routes: $slug has no rollback-gate.ps1 -From <tag> -To <tag> -Plan $slug command" }
     if ($cmds.Count -gt 1) { return New-Result $false "rollback routes: $slug's rollback-gate commands name $($cmds.Count) ranges ($($cmds -join ', '))" }

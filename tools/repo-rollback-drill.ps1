@@ -6,18 +6,19 @@
 .DESCRIPTION
     pwsh tools/repo-rollback-drill.ps1 -From v0.3.0 -To v0.4.0
       Runs D25's command with -From as the older tag and -To as the newer one: a disposable worktree of -To under
-      %TEMP%\nyar-rollback-<guid>; `git revert --no-edit <From>..<To>`; `git diff --quiet <From>` (the reverted tree
+      %TEMP%\nyar-rollback-<guid>; `git revert --no-edit` of each commit of `git rev-list --first-parent <From>..<To>`,
+      newest first, a merge with `-m 1` (<From> must be on that first-parent line); `git diff --quiet <From>` (the reverted tree
       equals the older release); then, in that tree, the Release build (no deploy), `dotnet test` of
       Nyarlathotep/Nyarlathotep.Tests and the older release's own tools/preflight.ps1. Native commands stop the drill
       on a non-zero exit. The worktree is always removed. → "rollback: clean", else "rollback: fail — <message>", exit 1.
 
     pwsh tools/repo-rollback-drill.ps1 -SelfTest
-      Three cases on a scratch git repository under %TEMP%\nyar-rollback-selftest-<guid> (removed when done), with the build,
-      test and preflight stage replaced by a stub: a clean range passes; a range whose revert git cannot apply fails
-      (a merge commit in the range; a linear range reverted from its tip never conflicts, so this is how a whole-range
-      revert of this repository stops); a missing tag fails; and the -BeforePush rule over captured preflight output:
-      the unpushed tag as the one failure passes, the same with a second failed check fails.
-      → "repo rollback selftest: 5/5".
+      Four cases on a scratch git repository under %TEMP%\nyar-rollback-selftest-<guid> (removed when done), with the build,
+      test and preflight stage replaced by a stub: a clean range passes; a range holding a merge commit passes (its
+      first-parent line reverted, the merge with -m 1); an older tag off the newer one's first-parent line fails; a
+      missing tag fails; and the -BeforePush rule over captured preflight output: the unpushed tag as the one failure
+      passes, the same with a second failed check fails.
+      → "repo rollback selftest: 6/6".
 
     -BeforePush (faction-empowerment A9): on the local tag before it is pushed, the older release's preflight fails
       its release-tags check ("release tags: <n>/<m> (<To> not pushed)"); that one failed check, and nothing else,
@@ -41,7 +42,17 @@ function Invoke-RepoRollback([string]$RepoDir, [string]$Old, [string]$New, [scri
     $wt = Join-Path $env:TEMP "nyar-rollback-$([guid]::NewGuid().ToString('N'))"
     Invoke-Git -C $RepoDir worktree add --detach $wt $New
     try {
-        Invoke-Git -C $wt revert --no-edit "$Old..$New"
+        # The first-parent history from <New> back to <Old>, newest first, each commit reverted against its first parent
+        # (a merge with -m 1), so a range holding a merge (revenge 0.12.0, 7031eb2) reverts as one line of changes.
+        $line = @(git -C $wt rev-list --first-parent "$Old..$New" 2>&1 | ForEach-Object { "$_" })
+        if ($LASTEXITCODE) { throw "git rev-list: $(($line | Select-Object -Last 1))" }
+        $oldId = "$(git -C $wt rev-parse "$Old^{commit}" 2>&1)".Trim()
+        $parentsOfLast = if ($line) { @("$(git -C $wt rev-list --parents -n 1 $line[-1])".Trim() -split ' ') } else { @() }
+        if ($line -and $parentsOfLast[1] -ne $oldId) { throw "$Old is not on the first-parent history of $New" }
+        foreach ($c in $line) {
+            $parents = @("$(git -C $wt rev-list --parents -n 1 $c)".Trim() -split ' ')
+            if ($parents.Count -gt 2) { Invoke-Git -C $wt revert --no-edit -m 1 $c } else { Invoke-Git -C $wt revert --no-edit $c }
+        }
         git -C $wt diff --quiet $Old
         if ($LASTEXITCODE) { throw "the reverted tree differs from $Old" }
         & $Verify $wt
@@ -100,16 +111,18 @@ if ($SelfTest) {
         # A clean range: v2 reverted to v1.
         try { $r = Invoke-RepoRollback $scratch 'v1' 'v2' $stub; if ($r -eq 'rollback: clean') { $ok++ } else { Write-Host "  - clean range: got '$r'" } }
         catch { Write-Host "  - clean range: expected pass, got fail — $($_.Exception.Message)" }
-        # A revert git cannot apply: a range holding a merge commit (git refuses it without -m; release history is
-        # linear, so this is the one way a whole-range revert of it stops).
+        # A range holding a merge commit: its first-parent line reverts (the merge with -m 1) back to v2's tree.
         & $g checkout -q v1
         Set-Content -LiteralPath (Join-Path $scratch 'c.txt') -Value 'side'
-        & $g add -A; & $g commit -q -m side
+        & $g add -A; & $g commit -q -m side; & $g tag vside
         & $g checkout -q main
-        & $g merge -q --no-ff -m merge '@{-1}'; & $g tag v3
+        & $g merge -q --no-ff -m merge vside; & $g tag v3
+        try { $r = Invoke-RepoRollback $scratch 'v2' 'v3' $stub; if ($r -eq 'rollback: clean') { $ok++ } else { Write-Host "  - merge in range: got '$r'" } }
+        catch { Write-Host "  - merge in range: expected pass, got fail — $($_.Exception.Message)" }
+        # An older tag off the newer one's first-parent line (the side branch): no whole-range revert reaches its tree.
         $refused = $false
-        try { $null = Invoke-RepoRollback $scratch 'v2' 'v3' $stub } catch { $refused = $true; Write-Host "  - merge in range: fails — $($_.Exception.Message)" }
-        if ($refused) { $ok++ } else { Write-Host '  - revert git cannot apply: expected fail, got pass' }
+        try { $null = Invoke-RepoRollback $scratch 'vside' 'v3' $stub } catch { $refused = $true; Write-Host "  - off the first-parent line: fails — $($_.Exception.Message)" }
+        if ($refused) { $ok++ } else { Write-Host '  - off the first-parent line: expected fail, got pass' }
         # A missing tag.
         $missing = $false
         try { $null = Invoke-RepoRollback $scratch 'v1' 'v9' $stub } catch { $missing = $true; Write-Host "  - missing tag: fails — $($_.Exception.Message)" }
@@ -122,8 +135,8 @@ if ($SelfTest) {
         if ($why) { $ok++; Write-Host "  - before push, another failure: fails - $why" } else { Write-Host '  - before push, another failure: expected fail, got pass' }
     } catch { Write-Host "  - scratch repository: $($_.Exception.Message)" }
     finally { Remove-Item -LiteralPath $scratch -Recurse -Force -ErrorAction SilentlyContinue }
-    Write-Host "repo rollback selftest: $ok/5"
-    exit ([int]($ok -ne 5))
+    Write-Host "repo rollback selftest: $ok/6"
+    exit ([int]($ok -ne 6))
 }
 
 if (-not $From -or -not $To) { Write-Host 'usage: repo-rollback-drill.ps1 -From <older tag> -To <newer tag> | -SelfTest'; exit 2 }

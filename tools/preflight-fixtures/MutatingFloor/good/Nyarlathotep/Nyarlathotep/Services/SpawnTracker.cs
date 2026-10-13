@@ -59,6 +59,14 @@ internal static class SpawnTracker
         _regroup.Clear();
     }
 
+    /// <summary>The scheduler's "arena" phase (swarm D3).</summary>
+    [Mutating]
+    internal static void ArenaTick() { }
+
+    /// <summary>The scheduler's "region" phase (hunting-grounds D5, D8).</summary>
+    [Mutating]
+    internal static void RegionTick() { }
+
     /// <summary>Once at IsReady, through Logic/SweepPlan (faction-empowerment D7): every unit carrying our unit marker is a
     /// survivor of an earlier run (the ledger is empty at boot), so each is queued for despawn; every carrier buff is queued
     /// for removal with EmpowerAction, and its native unit is never touched. state.json's unit list is informational and is

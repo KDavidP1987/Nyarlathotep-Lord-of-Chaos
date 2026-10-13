@@ -57,6 +57,7 @@
 - merge: conflicts only in this file and docs/features/REVENGE.md (both kept); ControlCases gains the D28-D31 rows and BossWaveTests in NewClasses; SettableFields 63; the builder touched no Services or Patches
 - review of the diff: the boss half's 10 planted faults and the revenge half's 14 each caught and restored (Log notes); Codex once before the release (design §9 D34)
 - dod status: D1-D9, D11-D13, D15, D17, D28-D30 pass at 7031eb2; D31 waits on TemplateLibraryTests.Bosses (step 2)
+- Codex verdict: deferred to step 3 (the child's single cross-inspection, design §9 D34)
 
 ### Step 2 · 2026-10-13 · b766a73 + fix 3e6ff70
 - compile: `dotnet build Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__` 0 Warning(s), 0 Error(s)
@@ -66,3 +67,21 @@
 - review of the diff: fresh read-only subagent, VERDICT: ISSUES (2), both low: a fault end wrote no revenge end line (fixed in 3e6ff70, logged and silent to the player); the boot's restart line reads the current catalogue (accepted, REVENGE.md › Restart line). Codex once before the release (design §9 D34)
 - in game: Session 1 (REVENGE.md › Test results) revenge 39/39, revenge-vblood 20/20, revenge-restart 8/8 + boot lines, revenge-boot2 4/4, revenge-timing 20/20 with the D23 span 10/10 under 5 ms, boss-wave 13/13, vblood-player-death 9/9; every [Warning]/[Error] in both logs read (state lines only); snapshot rv1 restored
 - dod status: D10, D14, D16, D23, D31 pass; D18-D21 and D32 manual, waiting on the owner's acceptance; D22 waits on a second player; D24-D27 are step 3
+- Codex verdict: deferred to step 3 (the child's single cross-inspection, design §9 D34)
+
+### Step 3 · 2026-10-13 · 8ee59c5 (chore(release): v0.12.0, tag v0.12.0 local)
+- compile: `dotnet build Nyarlathotep.sln -c Release --no-incremental` at 8ee59c5 with a clean tree: 0 Warning(s), 0 Error(s) (the DLL also deployed to the stopped dev server)
+- tests: Passed! 3134/3134 (3132 at step 2; the two Codex fixes added RevengeTests.Heat_fails_when_a_row_queue_grows_past_max_heat and Heat_fails_when_pillar_off_keeps_heat_until_the_next_scan)
+- preflight: PREFLIGHT OK, "secrets: none (1987 files scanned, 1937 index blobs)", "release tags: 13/13" before the tag
+- Codex verdict: CHANGES REQUESTED (2) — the child's single cross-inspection (`git diff v0.11.0` plus the surfaces, tools/vrclient/** left out): F1 medium (a heat row's point queue unbounded within a long window), F2 medium (a pillar turned off kept its Revenge heat until the next 5 s scan, D8); both fixed before 8ee59c5 (Log)
+- Codex verdict: PASS — re-check of the two fixes (`git diff` of Logic, Services and the tests), no findings
+- review of the diff: fresh read-only subagent, VERDICT: ISSUES (4), all low docs: F1-F3 fixed before 8ee59c5, F4 kept (Log)
+- planted faults: the queue cap and the PruneRevenge call commented out → both new tests failed (3132/3134), restored by copy
+- tooling: the rollback gate's repo part could not revert a range holding the step 1 merge 7031eb2 → tools/repo-rollback-drill.ps1 reverts the first-parent line (a merge with -m 1), selftest "repo rollback selftest: 6/6"; its routes part read D24's old range from the frozen Baseline → RollbackRoutes leaves `## Baseline` out (fixture good-baseline) (Log)
+- rollback: `rollback-drill.ps1 -SelfTest` "drill selftest: 29/29"; `repo-rollback-drill.ps1 -SelfTest` "repo rollback selftest: 6/6"; `rollback-gate.ps1 -From v0.11.0 -To v0.12.0 -Plan revenge` "rollback gate: 4/4" (repo with -BeforePush, the tag not yet on origin; its boots each 0 unhandled, 0 orphan errors, 0 unity errors)
+- records: `-AuditOf revenge` "audit steps: revenge 3/3 pre, 3/3 post, 3/3 Codex verdicts"; `-SessionsOf revenge` "session logs: revenge 1/1 checked; snapshots 1/1 from session 1"; `-Paths -DeclaredOf revenge` "paths: 1959 walked, all in manifest; declared: 132/132 in revenge"
+- tcli build: kdpen-Nyarlathotep-0.12.0.zip (495333 bytes), built at the release commit 8ee59c5 with a clean tree, the tcli token variable set to a sentinel (absent from build/tcli-build.log); icon.png, README.md, manifest.json, BepInEx/plugins/Nyarlathotep.dll (915968 bytes), CHANGELOG.md, LICENSE; no platform id or mail name in the zip's README or CHANGELOG
+- zip sha256: kdpen-Nyarlathotep-0.12.0.zip F793056AD187ABDE7C7822E6FE36C894235EC9F8CC79D54B7A86BCC6DFE30C91
+- session 1 log check: 0 unhandled, 133 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons
+  - session 1's line is its last boot (after the D21 restart, `-LogCheck -ServerPath` over the saved copies); its restart-run boot read 0 unhandled, 2167 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons, and the earlier boots of the session (scout, timing runs) held no frame from our assembly and no [Error]
+- push: waits on the owner's OK; then the privacy grep, `git log -p origin/main..main`, HEAD = ls-remote, the pre-release and release-verify

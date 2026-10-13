@@ -42,6 +42,8 @@ ignored: Reference Data/**
 ignored: Learning Mods/**
 ignored: artwork/**
 ignored: .claude/**
+# the dod skill's per-session records (its own .gitignore keeps them out of git; revenge step 3)
+ignored: docs/dod/.session/**
 ignored: .vs/**
 ignored: .vscode/**
 ignored: .idea/**
