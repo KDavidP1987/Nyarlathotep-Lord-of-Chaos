@@ -108,7 +108,7 @@ public sealed partial record Growth(int AddUnits, int AddLevels, bool WhenCleare
 /// <see cref="Waves"/>, <see cref="IntervalSeconds"/> and <see cref="Modifiers"/> then stay the base the file holds, and
 /// everything after the parser reads the generated list. <see cref="Arena"/> and <see cref="Winner"/> are swarm D1 and
 /// D2. <see cref="RegionLock"/> keeps the units inside the scope regions (hunting-grounds D2, D5); false is 0.10.0's
-/// behaviour.</summary>
+/// behaviour. <see cref="Bosses"/> join the final wave only (revenge D28, D29; design §9 D51), null without the key.</summary>
 public sealed record SpawnWavesAction(
     IReadOnlyList<UnitEntry> Units,
     int Waves,
@@ -127,7 +127,8 @@ public sealed record SpawnWavesAction(
     Arena? Arena = null,
     WinnerRule Winner = WinnerRule.None,
     Growth? Growth = null,
-    bool RegionLock = false)
+    bool RegionLock = false,
+    IReadOnlyList<UnitEntry>? Bosses = null)
 {
     /// <summary>The units of wave <paramref name="wave"/> (1-based): its waveList entry's, or <see cref="Units"/> for
     /// every wave of the units form.</summary>

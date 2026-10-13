@@ -704,8 +704,9 @@ public static class SpawnTuning
 
     /// <summary>The tuning of one queued unit of <paramref name="action"/> (wave-sets D3): its own entry's modifiers for a
     /// waveList, the action's for the units form (one tuning per action, as 0.8.0).</summary>
+    /// <remarks>A units-form entry carries no modifiers of its own; a final-wave boss does (revenge D29, BossWave.Units).</remarks>
     public static UnitTuning For(SpawnWavesAction action, UnitEntry entry) =>
-        TuningFrom(action.WaveList is null ? action.Modifiers : entry.Modifiers);
+        TuningFrom(action.WaveList is null ? entry.Modifiers ?? action.Modifiers : entry.Modifiers);
 
     /// <summary>maxHealth → MaxHealth; power → PhysicalPower and SpellPower; moveSpeed → MovementSpeed; attackSpeed →
     /// PrimaryAttackSpeed and AbilityAttackSpeed; a multiplier of 1.0 gives no entry.</summary>
@@ -1238,6 +1239,28 @@ public sealed record WaveGroup(int Index, (float X, float Y, float Z) Centre, IR
 
 /// <summary>A fanned-out wave's decision (automation D6): its outcome and line, the groups to spawn, the cap lines.</summary>
 public sealed record FanOutDecision(WaveOutcome Outcome, string? Line, IReadOnlyList<WaveGroup> Groups, IReadOnlyList<string> CapLines);
+
+/// <summary>The final wave's bosses (revenge D29; design §9 D51): the units a wave rolls are its own units, and for the
+/// final wave (the last of `waves`, the last generated growth wave, the last waveList entry) its bosses first, so the
+/// caps (WavePlan.Split, RegionWave's deal) cut the wave's other units before a boss and keep the bosses in list order.
+/// A boss without modifiers takes the final wave's: the action's for the units form, the wave's first entry's for a
+/// waveList or a growth wave (growth's added levels included).</summary>
+public static class BossWave
+{
+    public static bool IsFinal(SpawnWavesAction action, int wave) => wave == action.Waves;
+
+    /// <summary>How many units at the head of wave <paramref name="wave"/>'s roll are bosses (RegionWave keeps them).</summary>
+    public static int Lead(SpawnWavesAction action, int wave) =>
+        action.Bosses is { } bosses && IsFinal(action, wave) ? bosses.Sum(b => b.Count) : 0;
+
+    public static IReadOnlyList<UnitEntry> Units(SpawnWavesAction action, int wave)
+    {
+        var own = action.UnitsOf(wave);
+        if (action.Bosses is not { Count: > 0 } bosses || !IsFinal(action, wave)) return own;
+        var shared = action.WaveList is null ? action.Modifiers : own.Count > 0 ? own[0].Modifiers : null;
+        return [.. bosses.Select(b => new UnitEntry(b.Prefab, b.Count, 1.0, b.Modifiers ?? shared)), .. own];
+    }
+}
 
 /// <summary>Carries out a decided wave for Services/WaveAction (automation D17; step 2 Codex round 3 F1): a wave that is
 /// not spawned logs its line and is reported; a spawned wave queues each group, then is reported. Every decided wave is

@@ -576,8 +576,28 @@ public sealed record SweepPlan(IReadOnlyList<long> Despawn, IReadOnlyList<long> 
 /// <summary>The VBloodKilled trigger (D13): a V Blood kill is a death whose entity carries VBloodConsumeSource
 /// (DEV_REMINDERS #26). A gate boss carries VBloodUnit alone and raises nothing. A player character carries
 /// VBloodConsumeSource too (seen in game 2026-10-13: "trigger: VBloodKilled CHAR_VampireMale" on a player's death), so a
-/// player's death raises nothing either, or every "any" trigger would fire on it.</summary>
+/// player's death raises nothing either, or every "any" trigger would fire on it. A unit an event or `.nyar spawn`
+/// spawned (a SpawnTracker unit) raises nothing (revenge D30; design §9 D51), so an event's boss never chains another
+/// event.</summary>
 public static class DeathRule
 {
-    public static bool IsVBloodKill(bool hasConsumeSource, bool hasVBloodUnit, bool isPlayer) => hasConsumeSource && !isPlayer;
+    public static bool IsVBloodKill(bool hasConsumeSource, bool hasVBloodUnit, bool isPlayer, bool ours) =>
+        hasConsumeSource && !isPlayer && !ours;
+}
+
+/// <summary>The V Blood rule's ledger read (revenge D30, Review 4 F1, F2): taken before SpawnTracker.Died forgets the
+/// victim, for every death that could be a V Blood kill, whatever the kill feed wants. A failed read counts as not ours,
+/// so the trigger fails open as before (D10); a ledger hit never raises it.</summary>
+public static class VBloodPass
+{
+    public readonly record struct Read(bool Candidate, bool Ours, Exception? Fault);
+
+    public static Read Before(bool hasConsumeSource, bool isPlayer, Func<bool> ours)
+    {
+        if (!hasConsumeSource || isPlayer) return default;
+        try { return new Read(true, ours(), null); }
+        catch (Exception ex) { return new Read(true, false, ex); }
+    }
+
+    public static bool Raises(Read read) => DeathRule.IsVBloodKill(read.Candidate, hasVBloodUnit: false, isPlayer: false, read.Ours);
 }

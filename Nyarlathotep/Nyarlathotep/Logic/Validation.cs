@@ -526,7 +526,8 @@ public static class EventValidator
     static SpawnWavesAction ParseSpawnWaves(JsonElement a, Trigger trigger, IUnitCatalog units, IRegionCatalog regions)
     {
         OnlyKeys(a, "action", "type", "units", "waves", "intervalSeconds", "radius", "location", "unitLifetimeSeconds", "scope",
-            "modifiers", "loot", "behaviour", "allowTerritory", "fanOut", "waveList", "scoreboard", "arena", "winner", "growth", "regionLock");
+            "modifiers", "loot", "behaviour", "allowTerritory", "fanOut", "waveList", "scoreboard", "arena", "winner", "growth", "regionLock",
+            "bosses");
 
         IReadOnlyList<UnitEntry> list;
         IReadOnlyList<WaveSpec>? waveList = null;
@@ -577,8 +578,42 @@ public static class EventValidator
             growth = ParseGrowth(gr, waveList is not null, list, waves);
             waveList = Growth.Generate(list, modifiers, waves, interval, growth);
         }
+        var bosses = a.TryGetProperty("bosses", out var bo) ? ParseBosses(bo, units, fanOut) : null;
         return new SpawnWavesAction(list, waves, interval, radius, location, lifetime, scope, modifiers, loot, behaviour, allowTerritory, fanOut,
-            waveList, scoreboard, arena, winner, growth, regionLock);
+            waveList, scoreboard, arena, winner, growth, regionLock, bosses);
+    }
+
+    public const int MaxBosses = 3;
+    public const int MaxBossCount = 3;
+    public const string BossesRule = "action.bosses must hold 1-3 entries";
+    public const string BossCountRule = "action.bosses count must be 1-3";
+    public const string BossesFanOut = "action.bosses takes no fanOut";
+
+    /// <summary>Every reason revenge D28 adds, for the 120-byte check (the unknown-field and unit-name reasons are the
+    /// existing builders').</summary>
+    public static readonly IReadOnlyList<string> BossReasons = [BossesRule, BossCountRule, BossesFanOut];
+
+    /// <summary>`bosses` (revenge D28): 1-3 entries { "prefab", "count": 1-3, "modifiers"? }, a prefab checked as a units
+    /// entry's and modifiers as a waveList entry's; never with fanOut, whose groups would each need their own boss.</summary>
+    static IReadOnlyList<UnitEntry> ParseBosses(JsonElement b, IUnitCatalog units, FanOut? fanOut)
+    {
+        if (b.ValueKind != JsonValueKind.Array || b.GetArrayLength() is < 1 or > MaxBosses) throw new Fail(BossesRule);
+        if (fanOut is not null) throw new Fail(BossesFanOut);
+        var list = new List<UnitEntry>();
+        var m = 0;
+        foreach (var x in b.EnumerateArray())
+        {
+            m++;
+            if (x.ValueKind != JsonValueKind.Object) throw new Fail(BossesRule);
+            OnlyKeys(x, "action.bosses", "prefab", "count", "modifiers");
+            var prefab = Str(Required(x, "prefab", BossesRule), BossesRule);
+            if (UnitDenyList.IsDenied(prefab) || units.IsDenied(prefab)) throw new Fail($"unit{Shown(prefab)} is deny-listed");
+            if (!prefab.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(prefab)) throw new Fail($"unknown unit{Shown(prefab)}");
+            var count = Int(Required(x, "count", BossCountRule), 1, MaxBossCount, BossCountRule);
+            var modifiers = x.TryGetProperty("modifiers", out var mo) ? ParseModifiers(mo, $"action.bosses.{m}.modifiers") : null;
+            list.Add(new UnitEntry(prefab, count, 1.0, modifiers));
+        }
+        return list;
     }
 
     public const string RegionLocationScope = "action.location Region needs action.scope regions";

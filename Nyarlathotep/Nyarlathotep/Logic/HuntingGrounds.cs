@@ -225,25 +225,64 @@ public static class RegionWave
 {
     /// <summary>The clamped wave's units split into groups of at most 5, dealt round robin so each group mixes the wave's
     /// entries, each group's picks grouped back into entries (their modifiers kept, wave-sets D3).</summary>
-    public static List<List<UnitEntry>> Split(IReadOnlyList<UnitEntry> units)
+    public static List<List<UnitEntry>> Split(IReadOnlyList<UnitEntry> units) =>
+        Deal(units, 0).Select(g => WaveRoll.GroupPicks(g.Select(p => p.Pick).ToList())).ToList();
+
+    /// <summary>The round-robin deal of <see cref="Split"/>, each pick marked when it is one of the first
+    /// <paramref name="lead"/> (a final wave's bosses, revenge D29).</summary>
+    static List<List<(UnitEntry Pick, bool Lead)>> Deal(IReadOnlyList<UnitEntry> units, int lead)
     {
         var picks = units.SelectMany(u => Enumerable.Repeat(new UnitEntry(u.Prefab, 1, 1.0, u.Modifiers), u.Count)).ToList();
         var count = (picks.Count + HuntingGrounds.GroupUnits - 1) / HuntingGrounds.GroupUnits;
-        var groups = Enumerable.Range(0, count).Select(_ => new List<UnitEntry>()).ToList();
-        for (var i = 0; i < picks.Count; i++) groups[i % count].Add(picks[i]);
-        return groups.Select(g => WaveRoll.GroupPicks(g)).ToList();
+        var groups = Enumerable.Range(0, count).Select(_ => new List<(UnitEntry, bool)>()).ToList();
+        for (var i = 0; i < picks.Count; i++) groups[i % count].Add((picks[i], i < lead));
+        return groups;
+    }
+
+    /// <summary>revenge D29 (Review 4 F4): a lead pick (a boss) dealt to a group without a spot trades places with a
+    /// regular pick of the first group that has a spot, so a boss is lost only when every spotted group holds bosses
+    /// alone.</summary>
+    static void KeepLead(List<List<(UnitEntry Pick, bool Lead)>> groups, IReadOnlyList<RegionSpot?> spots)
+    {
+        bool Spotted(int g) => g < spots.Count && spots[g] is not null;
+        for (var g = 0; g < groups.Count; g++)
+        {
+            if (Spotted(g)) continue;
+            for (var i = 0; i < groups[g].Count; i++)
+            {
+                if (!groups[g][i].Lead) continue;
+                for (var h = 0; h < groups.Count; h++)
+                {
+                    if (!Spotted(h)) continue;
+                    var j = groups[h].FindLastIndex(p => !p.Lead);
+                    if (j < 0) continue;
+                    (groups[g][i], groups[h][j]) = (groups[h][j], groups[g][i]);
+                    break;
+                }
+            }
+        }
+        foreach (var group in groups)
+        {
+            var ordered = group.Where(p => p.Lead).Concat(group.Where(p => !p.Lead)).ToList();   // a group's bosses first, order kept
+            group.Clear();
+            group.AddRange(ordered);
+        }
     }
 
     /// <summary>The decision of one Region wave. <paramref name="draw"/> gets the group count and returns one entry per
     /// group by its index, null for a group without a spot; it is called only for a wave that spawns. Each group spawns at
     /// its own spot, never another group's (Codex step 4 F2).</summary>
+    /// <remarks><paramref name="lead"/>: the number of units at the head of the roll that must not be lost to a missing
+    /// spot (a final wave's bosses, revenge D29; <see cref="KeepLead"/>).</remarks>
     public static FanOutDecision Decide(WaveFacts facts, Func<IReadOnlyList<UnitEntry>> roll, int maxPerWave, int occupied, int maxTracked,
-        Func<int, IReadOnlyList<RegionSpot?>> draw)
+        Func<int, IReadOnlyList<RegionSpot?>> draw, int lead = 0)
     {
         var one = WaveGate.DecideEntries(facts with { Pick = null, CentreClaimed = false }, roll, maxPerWave, occupied, maxTracked);
         if (one.Outcome != WaveOutcome.Spawn) return new FanOutDecision(one.Outcome, one.Line, [], one.CapLines);
-        var groups = Split(one.Units);
-        var spots = draw(groups.Count);
+        var dealt = Deal(one.Units, lead);
+        var spots = draw(dealt.Count);
+        if (lead > 0) KeepLead(dealt, spots);
+        var groups = dealt.Select(g => WaveRoll.GroupPicks(g.Select(p => p.Pick).ToList())).ToList();
         var result = new List<WaveGroup>();
         for (var i = 0; i < groups.Count && i < spots.Count; i++)
             if (spots[i] is { } s) result.Add(new WaveGroup(i, (s.X, s.Y, s.Z), groups[i]));

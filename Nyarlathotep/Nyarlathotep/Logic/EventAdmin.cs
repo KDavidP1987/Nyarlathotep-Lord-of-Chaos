@@ -86,6 +86,7 @@ public static class EventsEditor
             error = Invalid($"{EventValidator.GrowthUnitsForm}: set action.growth none first", Reasons.Field);   // swarm D9: never a conversion
             return null;
         }
+        if (path == CommandArgs.BossesField) return SetBosses(root, ev, actionType, value, out error);
         if (CommandArgs.SwarmFields.Contains(path)) return SetSwarm(root, ev, actionType, path, value, out error);
         if (CommandArgs.SpawnKeyFields.Contains(CommandArgs.TableName(path)) || path is CommandArgs.FanOutField or CommandArgs.RegionLockField)
             return SetSpawnKey(root, ev, actionType, path, value, out error);
@@ -171,6 +172,42 @@ public static class EventsEditor
     /// <summary>An event-spawns field (D18) of a SpawnWaves action, refused on any other: a unit's chance on an existing
     /// entry; a modifier into action.modifiers (created when missing; "none" removes the key, and the object once it is
     /// empty), never level beside levelDelta; loot, allowTerritory and behaviour on the action ("none" removes it).</summary>
+    /// <summary>`action.bosses` (revenge D31): the entries replace the key, an entry keeping the modifiers of the entry it
+    /// replaces when that names the same prefab; none removes the key. Never beside fanOut (D28).</summary>
+    static string? SetBosses(JsonNode root, JsonObject ev, string? actionType, object value, out Outcome? error)
+    {
+        error = null;
+        if (actionType != "SpawnWaves" || ev["action"] is not JsonObject action)
+        {
+            error = Invalid($"{CommandArgs.BossesField} is not {Article(actionType)} field", Reasons.Field);
+            return null;
+        }
+        if (value is FieldRemoval)
+        {
+            action.Remove("bosses");
+            return root.ToJsonString(Write) + Environment.NewLine;
+        }
+        if (action["fanOut"] is not null)
+        {
+            error = Invalid($"{EventValidator.BossesFanOut}: set action.fanOut none first", Reasons.Field);
+            return null;
+        }
+        var old = action["bosses"] as JsonArray;
+        var list = new JsonArray();
+        var i = 0;
+        foreach (var b in (UnitEntry[])value)
+        {
+            var entry = new JsonObject { ["prefab"] = b.Prefab, ["count"] = b.Count };
+            if (old is not null && i < old.Count && old[i] is JsonObject was && was["prefab"] is JsonValue p
+                && p.TryGetValue<string>(out var prefab) && prefab == b.Prefab && was["modifiers"] is JsonObject mods)
+                entry["modifiers"] = JsonNode.Parse(mods.ToJsonString());
+            list.Add(entry);
+            i++;
+        }
+        action["bosses"] = list;
+        return root.ToJsonString(Write) + Environment.NewLine;
+    }
+
     static string? SetSpawnKey(JsonNode root, JsonObject ev, string? actionType, string path, object value, out Outcome? error)
     {
         error = null;
@@ -194,6 +231,11 @@ public static class EventsEditor
             && !(action["location"] is JsonObject loc && loc["type"] is JsonValue lt && lt.TryGetValue<string>(out var locType) && locType == "AroundPlayer"))
         {
             error = Invalid(EventValidator.FanOutLocation, Reasons.Field);          // automation D16
+            return null;
+        }
+        if (path == CommandArgs.FanOutField && value is not FieldRemoval && action["bosses"] is not null)
+        {
+            error = Invalid($"{EventValidator.BossesFanOut}: set action.bosses none first", Reasons.Field);   // revenge D28
             return null;
         }
         if (key.StartsWith("modifiers.", StringComparison.Ordinal))
@@ -565,6 +607,7 @@ public static class EventLines
             if (a.WaveList is null && a.Winner != WinnerRule.None) lines.Add(ScoreboardLine(a));   // swarm D10: the units form's winner
             if (a.Arena is { } arena) lines.Add(ArenaLine(arena, a.Location.Type));
             lines.AddRange(HuntingGroundsLines(a));
+            if (BossesLine(a) is { } bosses) lines.Add(bosses);
         }
         lines.Add($"trigger scope: {d.Trigger.Scope}");                 // regions D9
         lines.Add($"action scope: {d.Action?.Scope ?? d.Empower?.Scope ?? Scope.Global}");
@@ -574,6 +617,15 @@ public static class EventLines
               (d.Empower is null ? $", wave {active.WavesSpawned}/{d.Action?.Waves ?? 0}" : ""));
         if (d.Trigger.Type == TriggerType.Interval && d.Enabled && NextStartLine(active is not null, nextInterval, utcNow) is { } next) lines.Add(next);
         return lines;
+    }
+
+    /// <summary>"final wave adds: &lt;prefab&gt; x&lt;count&gt;, …" (revenge D31), or "final wave adds: &lt;n&gt; bosses" when the
+    /// names would not fit one chat message; null without bosses.</summary>
+    public static string? BossesLine(SpawnWavesAction a)
+    {
+        if (a.Bosses is not { Count: > 0 } bosses) return null;
+        var full = "final wave adds: " + string.Join(", ", bosses.Select(b => $"{b.Prefab} x{b.Count}"));
+        return System.Text.Encoding.UTF8.GetByteCount(full) <= Wire.MaxBytes ? full : $"final wave adds: {bosses.Sum(b => b.Count)} bosses";
     }
 
     public const string RegionLocationLine = "location: anywhere in the scope regions";

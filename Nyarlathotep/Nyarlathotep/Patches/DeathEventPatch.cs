@@ -33,6 +33,7 @@ internal static class DeathEventPatch
         public bool Ours;
         public Exception OursFault;
         public Logic.ScoreSides? Sides;
+        public Logic.VBloodPass.Read VBlood;                                        // revenge D30: read before Died
     }
 
     [HarmonyPostfix]
@@ -66,6 +67,16 @@ internal static class DeathEventPatch
                         catch (Exception ex) { read.OursFault = ex; }                     // the kill feed counts it as a failed read
                     }
                     if (wantsScore) read.Sides = feed.Before(() => ScoreReader.Sides(death.Killer, death.Died), ScoreLog);
+                    try
+                    {
+                        var died = death.Died;
+                        read.VBlood = Logic.VBloodPass.Before(died.Has<VBloodConsumeSource>(), died.Has<PlayerCharacter>(),
+                            () => wantsKills && read.OursFault is null ? read.Ours : SpawnTracker.IsOurs(died));
+                    }
+                    catch (Exception ex)
+                    {
+                        if (VBloodFaults.Fail()) Core.Log.LogError($"[nyar] vblood kill: death skipped: {ex.Message}");
+                    }
                     return read;
                 }, death => SpawnTracker.Died(death.Died, death.Killer), (death, read) =>
                 {
@@ -74,7 +85,9 @@ internal static class DeathEventPatch
                     // or a later death's SpawnTracker.Died (step 2 Codex round 2 F1).
                     try
                     {
-                        if (Logic.DeathRule.IsVBloodKill(death.Died.Has<VBloodConsumeSource>(), death.Died.Has<VBloodUnit>(), death.Died.Has<PlayerCharacter>()))
+                        if (read.VBlood.Fault is { } fault && VBloodFaults.Fail())
+                            Core.Log.LogError($"[nyar] vblood kill: ours read failed, counted as native: {fault.Message}");
+                        if (Logic.VBloodPass.Raises(read.VBlood))
                         {
                             var died = death.Died;
                             TriggerBus.VBloodKilled(died.GetPrefabGuid().GetPrefabName(), () => KillPosition(died));   // read on demand (A38)

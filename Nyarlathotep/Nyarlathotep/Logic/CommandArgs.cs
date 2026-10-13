@@ -195,7 +195,34 @@ public static class CommandArgs
         foreach (var f in WaveListFields) d[f] = ("spawn action", "admin");
         foreach (var f in SwarmFields) d[f] = ("spawn action", "admin");      // swarm D9
         d[RegionLockField] = ("spawn action", "admin");             // hunting-grounds D14
+        d[BossesField] = ("spawn action", "admin");                 // revenge D31
         return d;
+    }
+
+    /// <summary>`action.bosses` (revenge D31): CHAR_name or CHAR_name:count entries, or none.</summary>
+    public const string BossesField = "action.bosses";
+
+    /// <summary>`action.bosses`'s value: 1-3 entries, each count 1-3 (default 1), refused with the validator's reasons
+    /// (revenge D28); none removes the key.</summary>
+    static Arg<object> BossesValue(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return Arg<object>.Bad(ValueRequired);
+        if (value == "none") return Arg<object>.Of(FieldRemoval.Instance);
+        var parts = CommaList(value, 10);
+        if (parts is null || parts.Length > EventValidator.MaxBosses) return Arg<object>.Bad(EventValidator.BossesRule);
+        var entries = new List<UnitEntry>();
+        foreach (var part in parts)
+        {
+            var colon = part.IndexOf(':');
+            var name = colon < 0 ? part : part[..colon];
+            var count = 1;
+            if (colon >= 0 && !(int.TryParse(part.AsSpan(colon + 1), NumberStyles.None, CultureInfo.InvariantCulture, out count)
+                    && count is >= 1 and <= EventValidator.MaxBossCount))
+                return Arg<object>.Bad(EventValidator.BossCountRule);
+            if (!IsNameValue(name, "CHAR_")) return Arg<object>.Bad(NameRule(BossesField));
+            entries.Add(new UnitEntry(name, count));
+        }
+        return Arg<object>.Of(entries.ToArray());
     }
 
     /// <summary>`action.regionLock` (hunting-grounds D14): true, false or none (absent and false are the same).</summary>
@@ -592,6 +619,7 @@ public static class CommandArgs
         if (SwarmFields.Contains(field)) return string.IsNullOrWhiteSpace(value) ? Arg<object>.Bad(ValueRequired) : SwarmValue(field, value);
         if (field == FanOutField) return FanOutValue(value);
         if (field == RegionLockField) return RegionLockValue(value);
+        if (field == BossesField) return BossesValue(value);
         if (field == ScoreboardField)
             return value switch { "true" => Arg<object>.Of(true), "false" => Arg<object>.Of(false), _ => Arg<object>.Bad(EventValidator.ScoreboardRule) };
         if (WaveListPath(field) is { } wave) return WaveListValue(field, wave, value);

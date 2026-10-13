@@ -62,14 +62,15 @@ internal static class WaveAction
 
         IReadOnlyList<(float X, float Z)> origins = [];                 // AroundPlayer: each group's picked player (A7)
         var spots = new List<RegionSpot?>();                            // Region: each group's spot by its index, null without one (D4)
-        Func<IReadOnlyList<UnitEntry>> roll = () => WaveRoll.ExpandEntries(action.UnitsOf(due.Wave), _rng);
+        Func<IReadOnlyList<UnitEntry>> roll = () => WaveRoll.ExpandEntries(BossWave.Units(action, due.Wave), _rng);   // revenge D29
         FanOutDecision decision;
         if (location.Type == LocationType.Region)
         {
             // hunting-grounds D4: the whole wave clamped once, split into groups of at most 5, each at its own spot drawn
             // over the scope regions; no player position is read.
             decision = RegionWave.Decide(probe with { MapFailed = mapFailed }, roll, ledger.Limits.MaxPerWave, ledger.Occupied, ledger.Limits.MaxTracked,
-                groups => DrawSpots(groups, action, regionOf, map is null || action.AllowTerritory ? null : claimed, spots));
+                groups => DrawSpots(groups, action, regionOf, map is null || action.AllowTerritory ? null : claimed, spots),
+                BossWave.Lead(action, due.Wave));
         }
         else
         {

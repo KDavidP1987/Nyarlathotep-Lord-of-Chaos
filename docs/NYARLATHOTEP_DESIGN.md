@@ -212,6 +212,7 @@ action type, except `trigger.scope` and `action.scope` (regions D9), which fit e
 | `action.growth.addLevels` | spawn action | admin |
 | `action.growth.whenCleared` | spawn action | admin |
 | `action.regionLock` | spawn action | admin |
+| `action.bosses` | spawn action | admin |
 | `location` | location | admin |
 | `action.scope` | action | admin |
 
