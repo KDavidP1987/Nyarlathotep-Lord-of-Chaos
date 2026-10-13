@@ -15,7 +15,7 @@ closed: none
 recon_commit: e4f0594
 coverage_author: 15/15 layers · 50/50 probes
 coverage_reviewer: 15/15 layers · 50/50 probes
-review: pending
+review: subagent
 ---
 
 # DoD: Apocalypse — hotspots, spreading roamers, marching hordes, win or lose, the scoreboard, resume after a restart
@@ -452,3 +452,13 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-13 · note · re-review A10 · Review 7 READY
 - 2026-10-13 · note · re-review A11 · Review 7 READY
 - 2026-10-13 · note · deferred · Review 7 F2 · step 2 stores each living `bosses` entry's prefab beside its count in the record, so the rebuild spawns the recorded prefab; an entry whose prefab is gone from the current definition counts as "changed" under D12's refusal; an amendment if it changes a promise
+- 2026-10-13 · note · re-review A1 · Review 8 READY
+- 2026-10-13 · note · re-review A2 · Review 8 READY
+- 2026-10-13 · note · re-review A3 · Review 8 READY
+- 2026-10-13 · note · re-review A4 · Review 8 READY
+- 2026-10-13 · note · re-review A5 · Review 8 READY
+- 2026-10-13 · note · re-review A6 · Review 8 READY
+- 2026-10-13 · note · deferred · Review 8 F1 · step 5 reads 0.12.0 in Rollout › Rollback › On a server when the release surfaces move
+- 2026-10-13 · note · deferred · Review 8 F2 · faction-mix.vrs spawns every shipped template's units (CHAR_Undead_ArmoredSkeletonCrossbow_Farbane, CHAR_Undead_Guardian, CHAR_Bandit_Deadeye, CHAR_Spider_Forestling included) and docs/GAME_ASSETS.md › Faction compatibility names each template per mix
+- 2026-10-13 · note · deferred · Review 8 F3 · Logic/FactionGroups.cs gives each group its Faction_* names beside its prefixes; TemplateLibraryTests Factions fails when an Apocalypse template's faction is not one of them
+- 2026-10-13 · note · deferred · Review 8 F4 · zombie-apocalypse's `bosses` entry has count 1, so horde 4 is 19 + 1 = 20 (MaxUnitsPerWave)

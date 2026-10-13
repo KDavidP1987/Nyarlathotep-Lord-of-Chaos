@@ -5,7 +5,7 @@
 
 | Plan | Title | Status | Size | Verified | Baseline items | Prediction | Parent |
 |---|---|---|---|---|---|---|---|
-| [apocalypse](apocalypse.md) | Apocalypse — hotspots, spreading roamers, marching hordes, win or lose, the scoreboard, resume after a restart | in-progress | L | 0/38 | 35 | 100 % | nyarlathotep |
+| [apocalypse](apocalypse.md) | Apocalypse — hotspots, spreading roamers, marching hordes, win or lose, the scoreboard, resume after a restart | in-progress | L | 0/38 | 35 | 73 % | nyarlathotep |
 | [automation](automation.md) | Automation — interval, player-action triggers and fan-out | done | L | 34/34 | 31 | 63 % | nyarlathotep |
 | [boss-reinforcements](boss-reinforcements.md) | Boss reinforcements — adds, phases and the anti-carry burst, and release 0.8.0 | ready | L | 0/20 | 20 | n/a | nyarlathotep |
 | [event-library](event-library.md) | Event library — built-in templates and in-game authoring | done | L | 36/36 | 34 | 55 % | nyarlathotep |
@@ -23,7 +23,7 @@
 | [walkable-spawns](walkable-spawns.md) | Walkable spawns — the walk probe, walkable spawn points and release 0.5.1 | done | M | 12/12 | 12 | 41 % | nyarlathotep |
 | [wave-sets](wave-sets.md) | Wave sets — per-wave units and stats, waves that wait to be cleared, the event scoreboard | done | L | 27/27 | 27 | 68 % | nyarlathotep |
 
-Most-missed layers — done plans: layer 14.4 (33), layer 12.4 (33), layer 4.1 (21), layer 6.1 (21), layer 6.2 (16); open plans (provisional): layer 6.1 (3), layer 14.1 (2), layer 5.1 (1), layer 10.1 (1), layer 3.1 (1).
+Most-missed layers — done plans: layer 14.4 (33), layer 12.4 (33), layer 4.1 (21), layer 6.1 (21), layer 6.2 (16); open plans (provisional): layer 6.1 (3), layer 5.3 (2), layer 11.2 (2), layer 14.1 (2), layer 6.2 (1).
 Miss history — done plans: 3.1 (3 of 13) · 3.3 (3 of 13) · 4.1 (6 of 13) · 4.2 (3 of 13) · 4.3 (3 of 13) · 4.4 (4 of 13) · 4.5 (5 of 13) · 5.1 (5 of 13) · 5.2 (2 of 13) · 5.3 (3 of 13) · 6.1 (7 of 13) · 6.2 (6 of 13) · 7.1 (2 of 13) · 7.2 (4 of 13) · 7.3 (4 of 13) · 10.1 (2 of 13) · 11.2 (3 of 13) · 12.2 (5 of 13) · 12.3 (4 of 13) · 12.4 (7 of 13) · 13.1 (4 of 13) · 13.2 (2 of 13) · 14.2 (2 of 13) · 14.3 (3 of 13) · 14.4 (7 of 13)
 Rework — done plans: 0 of 247 misses corrected an earlier amendment.
 

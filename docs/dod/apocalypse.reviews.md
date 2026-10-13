@@ -328,3 +328,38 @@ VERDICT: READY
 ### Dispositions
 - F1 · accepted · deferred to the Log (advice on a READY review, no D-item edited): already `note · deferred · Review 5 F1`
 - F2 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 7 F2`, step 2 stores each living `bosses` entry's prefab beside its count, so the rebuild spawns the recorded prefab, and an entry whose prefab is gone from the definition counts as "changed" under D12's refusal; recorded as an amendment if it changes a promise
+
+## Review 8 · 2026-10-13 · subagent · plan commit 1e02b3d · plan 107358 B · 38 items · files 0 · e3b0c44298fc · prompt 4b6a8a3d396c · scope A1,A2,A3,A4,A5,A6
+Scope: the same-day scoped pass over A1-A6, which Review 5 (unscoped, READY) covered in full.
+
+L1 · Considered · no finding
+L2 · Considered · no finding
+L3 · Considered · no finding
+L4 · Considered · F2, F3
+L5 · Considered · no finding
+L6 · Considered · F2
+L7 · Considered · no finding
+L8 · Considered · no finding
+L9 · Considered · no finding
+L10 · Considered · no finding
+L11 · Considered · no finding
+L12 · Considered · no finding
+L13 · Considered · no finding
+L14 · Considered · F1
+L15 · Considered · no finding
+
+F1 · advisory · 14.3 (A1): Rollout › Rollback › On a server still says "Nothing is written that 0.11.0 cannot read past"; the target is now 0.12.0. Fix: read 0.12.0.
+F2 · advisory · 6.1 / 4.5 (A5, A6): D37 names only zombie-apocalypse's undead units; undead-rising and graveyard-waves (CHAR_Undead_ArmoredSkeletonCrossbow_Farbane, CHAR_Undead_Guardian), bandit-revenge (CHAR_Bandit_Deadeye) and spider-hunting-grounds (CHAR_Spider_Forestling) spawn units too; D37's opening rule covers them. Fix: name every shipped template per mix so faction-mix.vrs spawns those units.
+F3 · advisory · 4.5 (A6): D38's "an Apocalypse template's group holds its `faction`" needs each group to carry its Faction_* name(s). Fix: say so in D38.
+F4 · advisory · 4.1 (A4): D18 does not give the boss's count; the worst case 83 and horde 4 = 20 assume count 1. Fix: state `count: 1` in D18.
+
+missing components: none
+undeclared families: none
+15/15 layers · 50/50 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 8 F1`, step 5 reads 0.12.0 in Rollout's sentence when the release surfaces move
+- F2 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 8 F2`, faction-mix.vrs already spawns CHAR_Undead_ArmoredSkeletonCrossbow_Farbane, CHAR_Undead_Guardian, CHAR_Bandit_Deadeye and CHAR_Spider_Forestling, and docs/GAME_ASSETS.md › Faction compatibility names every template per mix
+- F3 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 8 F3`, Logic/FactionGroups.cs gives each group its Faction_* names beside its prefixes
+- F4 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 8 F4`, zombie-apocalypse's boss entry has count 1 (horde 4 = 19 + 1 = 20)

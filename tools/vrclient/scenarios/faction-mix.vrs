@@ -1,0 +1,276 @@
+# faction-mix.vrs: apocalypse D37, faction mixes checked in game (step 1). Each pass spawns one unit mix a shipped or
+# planned template uses with `.nyar spawn` (2 of each unit, 1 boss) at a site among natives of its faction, then Chaos
+# stands 40 m off, invulnerable, for 60 s. Allied = no died line for a mix unit in those 60 s (`expect-no-log`, needs
+# [Debug] VerboseLogging = true), every mix prefab still counts its spawned units, and the natives' count is unchanged.
+# After each pass `.devkill` clears the mix (its died lines come after the check). Passes: undead (zombie-apocalypse's
+# candidates with the Farbane V Blood Goreswine), shadow (Legion Shadowkin beside undead and ghosts), spider, bandit, militia.
+# Run: --var UX= --var UZ= --var UAX= --var UAZ= (undead site and the spot 40 m off) --var UNATIVE=<native undead guid>
+#      --var MX= --var MZ= --var MAX= --var MAZ= --var MNATIVE=<native militia guid>
+# Needs: NyarDevTools (.devtp .devmark .devunits .devkill), DevChatEcho; Chaos invulnerable (true only).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+# pass undead
+chat .devtp ${UX} ${UZ}
+expect-log \[DEV TP\] to
+wait 5
+console ToggleInvulnerable true
+wait 1
+chat .devmark mix-undead
+expect-log \[DEV MARK\] mix-undead
+chat .nyar spawn CHAR_Undead_SkeletonSoldier_Armored_Farbane 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Undead_ArmoredSkeletonCrossbow_Farbane 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Undead_Guardian 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Undead_GhostMilitia_Light 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Undead_GhostBanshee 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Undead_ShadowSoldier 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Undead_BishopOfDeath_VBlood 1
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+wait 3
+chat .devunits ${UNATIVE} 40 mix-undead
+expect-log \[DEV UNITS\] n=(?P<nat_undead>\d+) prefab=
+chat .devtp ${UAX} ${UAZ}
+expect-log \[DEV TP\] to
+wait 2
+mark
+wait 60
+expect-no-log \[nyar\] CHAR_\S+ of \S+ died timeout=1
+chat .devunits ${UNATIVE} 40 mix-undead
+expect-log \[DEV UNITS\] n=${nat_undead} prefab=
+chat .devunits -837329073 60 mix-undead
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-837329073
+chat .devunits -195077008 60 mix-undead
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-195077008
+chat .devunits -1967480038 60 mix-undead
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-1967480038
+chat .devunits -1618703048 60 mix-undead
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-1618703048
+chat .devunits -1146194149 60 mix-undead
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-1146194149
+chat .devunits 678628353 60 mix-undead
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=678628353
+chat .devunits 577478542 60 mix-undead
+expect-log \[DEV UNITS\] n=([1-9]|[1-9][0-9]) prefab=577478542
+shot full mix-undead
+chat .devtp ${UX} ${UZ}
+expect-log \[DEV TP\] to
+wait 3
+chat .devkill -837329073 60 2
+expect-log \[DEV KILL\]
+chat .devkill -195077008 60 2
+expect-log \[DEV KILL\]
+chat .devkill -1967480038 60 2
+expect-log \[DEV KILL\]
+chat .devkill -1618703048 60 2
+expect-log \[DEV KILL\]
+chat .devkill -1146194149 60 2
+expect-log \[DEV KILL\]
+chat .devkill 678628353 60 2
+expect-log \[DEV KILL\]
+chat .devkill 577478542 60 1
+expect-log \[DEV KILL\]
+wait 3
+# pass shadow
+chat .devtp ${UX} ${UZ}
+expect-log \[DEV TP\] to
+wait 5
+console ToggleInvulnerable true
+wait 1
+chat .devmark mix-shadow
+expect-log \[DEV MARK\] mix-shadow
+chat .nyar spawn CHAR_Legion_Shadowkin_Lesser 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Undead_SkeletonSoldier_Armored_Farbane 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Undead_GhostBanshee 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+wait 3
+chat .devunits ${UNATIVE} 40 mix-shadow
+expect-log \[DEV UNITS\] n=(?P<nat_shadow>\d+) prefab=
+chat .devtp ${UAX} ${UAZ}
+expect-log \[DEV TP\] to
+wait 2
+mark
+wait 60
+expect-no-log \[nyar\] CHAR_\S+ of \S+ died timeout=1
+chat .devunits ${UNATIVE} 40 mix-shadow
+expect-log \[DEV UNITS\] n=${nat_shadow} prefab=
+chat .devunits -1200074387 60 mix-shadow
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-1200074387
+chat .devunits -837329073 60 mix-shadow
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-837329073
+chat .devunits -1146194149 60 mix-shadow
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-1146194149
+shot full mix-shadow
+chat .devtp ${UX} ${UZ}
+expect-log \[DEV TP\] to
+wait 3
+chat .devkill -1200074387 60 2
+expect-log \[DEV KILL\]
+chat .devkill -837329073 60 2
+expect-log \[DEV KILL\]
+chat .devkill -1146194149 60 2
+expect-log \[DEV KILL\]
+wait 3
+# pass spider
+chat .devtp -1880 -1640
+expect-log \[DEV TP\] to
+wait 5
+console ToggleInvulnerable true
+wait 1
+chat .devmark mix-spider
+expect-log \[DEV MARK\] mix-spider
+chat .nyar spawn CHAR_Spider_Forest 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Spider_Melee 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Spider_Range 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Spider_Forestling 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Spider_Queen_VBlood 1
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+wait 3
+chat .devunits -581295882 40 mix-spider
+expect-log \[DEV UNITS\] n=(?P<nat_spider>\d+) prefab=
+chat .devtp -1840 -1640
+expect-log \[DEV TP\] to
+wait 2
+mark
+wait 60
+expect-no-log \[nyar\] CHAR_\S+ of \S+ died timeout=1
+chat .devunits -581295882 40 mix-spider
+expect-log \[DEV UNITS\] n=${nat_spider} prefab=
+chat .devunits -581295882 60 mix-spider
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-581295882
+chat .devunits 2136899683 60 mix-spider
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=2136899683
+chat .devunits 2103131615 60 mix-spider
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=2103131615
+chat .devunits 574276383 60 mix-spider
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=574276383
+chat .devunits -548489519 60 mix-spider
+expect-log \[DEV UNITS\] n=([1-9]|[1-9][0-9]) prefab=-548489519
+shot full mix-spider
+chat .devtp -1880 -1640
+expect-log \[DEV TP\] to
+wait 3
+chat .devkill -581295882 60 2
+expect-log \[DEV KILL\]
+chat .devkill 2136899683 60 2
+expect-log \[DEV KILL\]
+chat .devkill 2103131615 60 2
+expect-log \[DEV KILL\]
+chat .devkill 574276383 60 2
+expect-log \[DEV KILL\]
+chat .devkill -548489519 60 1
+expect-log \[DEV KILL\]
+wait 3
+# pass bandit
+chat .devtp -1515 -1545
+expect-log \[DEV TP\] to
+wait 5
+console ToggleInvulnerable true
+wait 1
+chat .devmark mix-bandit
+expect-log \[DEV MARK\] mix-bandit
+chat .nyar spawn CHAR_Bandit_Thug 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Bandit_Hunter 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Bandit_Deadeye 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+wait 3
+chat .devunits -301730941 40 mix-bandit
+expect-log \[DEV UNITS\] n=(?P<nat_bandit>\d+) prefab=
+chat .devtp -1475 -1545
+expect-log \[DEV TP\] to
+wait 2
+mark
+wait 60
+expect-no-log \[nyar\] CHAR_\S+ of \S+ died timeout=1
+chat .devunits -301730941 40 mix-bandit
+expect-log \[DEV UNITS\] n=${nat_bandit} prefab=
+chat .devunits -301730941 60 mix-bandit
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-301730941
+chat .devunits -1301144178 60 mix-bandit
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-1301144178
+chat .devunits -1030822544 60 mix-bandit
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-1030822544
+shot full mix-bandit
+chat .devtp -1515 -1545
+expect-log \[DEV TP\] to
+wait 3
+chat .devkill -301730941 60 2
+expect-log \[DEV KILL\]
+chat .devkill -1301144178 60 2
+expect-log \[DEV KILL\]
+chat .devkill -1030822544 60 2
+expect-log \[DEV KILL\]
+wait 3
+# pass militia
+chat .devtp ${MX} ${MZ}
+expect-log \[DEV TP\] to
+wait 5
+console ToggleInvulnerable true
+wait 1
+chat .devmark mix-militia
+expect-log \[DEV MARK\] mix-militia
+chat .nyar spawn CHAR_Militia_Crossbow 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Militia_Light 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+wait 3
+chat .devunits ${MNATIVE} 40 mix-militia
+expect-log \[DEV UNITS\] n=(?P<nat_militia>\d+) prefab=
+chat .devtp ${MAX} ${MAZ}
+expect-log \[DEV TP\] to
+wait 2
+mark
+wait 60
+expect-no-log \[nyar\] CHAR_\S+ of \S+ died timeout=1
+chat .devunits ${MNATIVE} 40 mix-militia
+expect-log \[DEV UNITS\] n=${nat_militia} prefab=
+chat .devunits 956965183 60 mix-militia
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=956965183
+chat .devunits -63435588 60 mix-militia
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-63435588
+shot full mix-militia
+chat .devtp ${MX} ${MZ}
+expect-log \[DEV TP\] to
+wait 3
+chat .devkill 956965183 60 2
+expect-log \[DEV KILL\]
+chat .devkill -63435588 60 2
+expect-log \[DEV KILL\]
+wait 3
+chat .nyar status
+expect-reply tracked units:

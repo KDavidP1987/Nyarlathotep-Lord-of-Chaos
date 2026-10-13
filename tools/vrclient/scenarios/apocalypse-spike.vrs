@@ -1,0 +1,255 @@
+# apocalypse-spike.vrs: apocalypse D24, the march spike and the pathing probe (step 1, before any march code).
+# March: 20 tracked CHAR_Undead_SkeletonSoldier_Armored_Farbane spawned at the pond are moved by NyarDevTools' `.devhop`
+# 10 m east every 5 s, 30 times (300 m), anchored on the mark apo-s0 that moves with them, home moved too (a marching
+# horde's return point moves with its front), while Chaos stands 150 m north of the line's middle, so no player is
+# within 100 m of a hop. Then Chaos goes to the end point: alive, within 30 m, heights and engagement are read from the
+# [DEV UNIT] lines. Pathing (design §9 D50): after a purge, 10 fresh units at the pond get their return point moved up to
+# 40 m ahead toward apo-s0 (300 m east) every 5 s by `.devwalk` for 120 s, Translation untouched, so the game's own
+# pathing walks them; [DEV WALK] logs arrivals (within 30 m), the farthest and the longest stall.
+# Needs: NyarDevTools with .devhop .devwalk .devunits, DevChatEcho; Chaos invulnerable (true only); no purge cooldown.
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .devmark apo-s0
+expect-log \[DEV MARK\] apo-s0
+chat .nyar spawn CHAR_Undead_SkeletonSoldier_Armored_Farbane 20
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 5
+chat .nyar debug here 20
+expect-reply CHAR_Undead_SkeletonSoldier_Armored_Farbane
+shot full apo-spike-spawn
+# away: 150 m north of the middle of the line (pond x -1880 .. -1580, z -1640)
+chat .devtp -1730 -1490
+expect-log \[DEV TP\] to
+wait 5
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .devunits -837329073 400 apo-s0
+expect-log \[DEV UNITS\] n=20
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devunits -837329073 400 apo-s0
+expect-log \[DEV UNITS\]
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devunits -837329073 400 apo-s0
+expect-log \[DEV UNITS\]
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devunits -837329073 400 apo-s0
+expect-log \[DEV UNITS\]
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devunits -837329073 400 apo-s0
+expect-log \[DEV UNITS\]
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devunits -837329073 400 apo-s0
+expect-log \[DEV UNITS\]
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devhop -837329073 10 0 25 apo-s0 true
+expect-log \[DEV HOP\] moved=
+wait 4
+chat .devunits -837329073 400 apo-s0
+expect-log \[DEV UNITS\]
+wait 5
+# the approach: Chaos at the end point (pond + 300 m east)
+chat .devgo apo-s0
+expect-log \[DEV TP\] apo-s0
+wait 4
+chat .devwhere
+expect-log \[DEV WHERE\]
+chat .devunits -837329073 30
+expect-log \[DEV UNITS\]
+chat .devunits -837329073 400
+expect-log \[DEV UNITS\]
+shot full apo-spike-end
+wait 10
+chat .devunits -837329073 60
+expect-log \[DEV UNITS\]
+shot full apo-spike-end-10s
+mark
+chat .nyar purge
+wait 2
+chat .nyar purge confirm
+expect-log purge
+wait 20
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+# the pathing probe: 10 fresh units at the pond walk toward apo-s0, Chaos 150 m north of the line
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+chat .nyar spawn CHAR_Undead_SkeletonSoldier_Armored_Farbane 10
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 5
+chat .devtp -1730 -1490
+expect-log \[DEV TP\] to
+wait 5
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+wait 4
+chat .devwalk -837329073 apo-s0 40 400
+expect-log \[DEV WALK\] set=
+chat .devunits -837329073 30 apo-s0
+expect-log \[DEV UNITS\]
+chat .devunits -837329073 400 apo-s0
+expect-log \[DEV UNITS\]
+chat .devgo apo-s0
+expect-log \[DEV TP\] apo-s0
+wait 4
+shot full apo-walk-end
+chat .nyar status
+expect-reply tracked units:
