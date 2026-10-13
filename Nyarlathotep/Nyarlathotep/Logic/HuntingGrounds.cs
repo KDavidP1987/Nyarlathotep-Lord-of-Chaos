@@ -413,6 +413,18 @@ public static class HuntRule
     public static List<long> SeedTargets(IEnumerable<HuntCandidate> players, Scope scope, Func<float, float, string> regionOf, (float X, float Z) at) =>
         HuntPlan.Targets(EligibleInside(players, scope, regionOf), at, HuntingGrounds.SeedReach);
 
+    /// <summary>A seeded RegionHunt unit's new return point (A5): the position of its nearest seeded player (the first of
+    /// <paramref name="targets"/>, which <see cref="SeedTargets"/> orders nearest first), so the player stands inside the
+    /// unit's leash (a forest spider's MaxDistanceFromPreCombatPosition is 45 m, the final ring 50-60 m); that player is
+    /// eligible, so the point lies inside the regions and outside claimed territory. Null with no seeded player: the
+    /// unit keeps its return point.</summary>
+    public static (float X, float Z)? Home(IReadOnlyList<long> targets, IEnumerable<HuntCandidate> players)
+    {
+        if (targets.Count == 0) return null;
+        foreach (var p in players) if (p.Key == targets[0]) return (p.X, p.Z);
+        return null;
+    }
+
     /// <summary>The instance's groups: its units by wave and group.</summary>
     public static IEnumerable<IGrouping<(int Wave, int Group), RegionUnit>> Groups(IEnumerable<RegionUnit> units) =>
         units.GroupBy(u => (u.Wave, u.Group)).OrderBy(g => g.Key.Wave).ThenBy(g => g.Key.Group);

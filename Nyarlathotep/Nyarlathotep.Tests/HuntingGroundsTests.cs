@@ -550,6 +550,22 @@ public class HuntingGroundsTests
     }
 
     [Fact]
+    public void HuntTargets_fails_when_a_seeded_unit_keeps_a_far_home()
+    {
+        // A5: from the 50-60 m ring a spider's 45 m leash drops its target unless its return point goes to the player
+        var people = new List<HuntCandidate> { Player(9, 500, 500), Player(8, 530, 500), Player(7, -5, 500), Player(6, 505, 505, territory: true) };
+        var at = (443f, 500f);                                                        // a unit on the ring, 57 m from player 9
+        var targets = HuntRule.SeedTargets(people, HomeScope, MapOf, at);
+        Assert.Equal((500f, 500f), HuntRule.Home(targets, people));                  // the nearest seeded player
+        var home = HuntRule.Home(targets, people)!.Value;
+        Assert.True(HuntingGrounds.Inside(HomeScope, MapOf, home.X, home.Z));
+        Assert.True(HuntingGrounds.Distance(home.X, home.Z, 500, 500) <= 45);        // the player inside the leash
+        Assert.Null(HuntRule.Home([], people));                                       // no seeded player: the point stays
+        Assert.Null(HuntRule.Home(HuntRule.SeedTargets(people, HomeScope, MapOf, (200, 500)), people));   // out of range
+        Assert.Null(HuntRule.Home(HuntRule.SeedTargets([Player(7, -5, 500)], HomeScope, MapOf, (40, 500)), people));   // outside the regions
+    }
+
+    [Fact]
     public void HuntTargets_fails_when_a_farther_player_wins()
     {
         var a = Hunting();

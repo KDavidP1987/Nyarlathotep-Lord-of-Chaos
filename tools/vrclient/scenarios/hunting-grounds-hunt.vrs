@@ -3,7 +3,8 @@
 # first choice, (-1680, -1300), had native bandits that killed the arrivals). The
 # units jump unseen ("[nyar] region hunt hg-point: <j> jumped ..."); the final jump lands 50-60 m from Chaos ("landed
 # 5x m"), so right after it `.nyar debug here 49` lists none and `debug here 60` lists the 6. Then Chaos goes to
-# (-1680, -1080), in DunleyFarmlands, and no jump line follows in 30 s.
+# (-1680, -1080), in DunleyFarmlands, and no jump line follows in 30 s. A4 (the owner's D26 run): standing still, Chaos is
+# targeted from the ring ("1 targeted"); A5 moves the units' return point to Chaos, so they walk in: `debug here 15` lists one within 25 s.
 # Needs: the step 3 Release DLL; NyarDevTools (.devtp, .devgo, .devmark, .devhop) and DevChatEcho; the dev events.json
 # entries hg-roam, hg-lock, hg-ambush, hg-point, hg-timing (docs/features/HUNTING_GROUNDS.md, Session 2), scope
 # FarbaneWoods (the pond is in it, Session 1); [Debug] VerboseLogging = true; Chaos invulnerable
@@ -38,8 +39,14 @@ shot full hg-point-landed
 wait 2
 chat .nyar debug here 60
 expect-reply CHAR_Spider_Forest hg-point
+expect-log hunt hg-point: .*at the first unit's centre: 1 players read, 1 targeted timeout=30
+wait 25
+mark
+chat .nyar debug here 15
+expect-reply CHAR_Spider_Forest hg-point timeout=5
+shot full hg-point-closed
 chat .nyar status
-expect-reply tracked units: 6
+expect-reply tracked units: 
 chat .devtp -1680 -1080
 expect-log \[DEV TP\] to
 wait 3

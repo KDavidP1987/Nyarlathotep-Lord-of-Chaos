@@ -7,9 +7,11 @@ using Nyarlathotep.Config;
 using Nyarlathotep.Logic;
 using ProjectM;
 using ProjectM.Network;
+using ProjectM.Shared;
 using Stunlock.Core;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Mathematics;
 using Unity.Transforms;
 
 namespace Nyarlathotep.Services;
@@ -254,6 +256,7 @@ internal static class HuntAction
             _seeds.Removed(key, target);
         }
         foreach (var target in targets) if (inBuffer.ContainsKey(target) && !removes.Contains(target)) held.Add(target);
+        if (targeting?.RegionHuntScope is not null) Rehome(unit, targets, targeting.Pool, players);
         foreach (var target in adds)
         {
             var player = players.FirstOrDefault(p => p.Key == target);
@@ -263,6 +266,27 @@ internal static class HuntAction
             held.Add(target);                                                // counted once written (Review 36 F4)
         }
         return (kept, left);
+    }
+
+    /// <summary>hunting-grounds A5: a seeded RegionHunt unit's return point (AggroConsumer.PreCombatPosition and
+    /// SpawnTransform.Position) goes to its nearest seeded player (HuntRule.Home), or the game drops a target beyond the
+    /// unit's leash from the 50-60 m final ring. Written only when it moves 2 m or more; the unit itself is not moved.
+    /// Our tracked units only (this service's own).</summary>
+    static void Rehome(Entity unit, List<long> targets, List<HuntCandidate> pool, List<PlayerRow> players)
+    {
+        if (HuntRule.Home(targets, pool) is not { } home) return;
+        var row = players.FirstOrDefault(p => p.Key == targets[0]);
+        var to = new float3(home.X, row.Y, home.Z);
+        if (unit.TryGetComponent<AggroConsumer>(out var aggro) && math.distance(aggro.PreCombatPosition.xz, to.xz) >= 2f)
+        {
+            aggro.PreCombatPosition = to;
+            unit.Write(aggro);
+        }
+        if (unit.TryGetComponent<SpawnTransform>(out var spawn) && math.distance(spawn.Position.xz, to.xz) >= 2f)
+        {
+            spawn.Position = to;
+            unit.Write(spawn);
+        }
     }
 
     static HuntCandidate Candidate(PlayerRow p, IReadOnlySet<(int X, int Z)> map) =>
