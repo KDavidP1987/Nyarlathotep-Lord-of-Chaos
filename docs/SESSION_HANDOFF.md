@@ -4,51 +4,44 @@ Where work stands between sessions. Overwrite this file at the end of a session;
 The plans (`docs/dod/`), audits (`docs/audits/`) and feature docs stay the source of truth. This file only points
 into them.
 
-**Written 2026-10-12**, during the hunting-grounds build. The repo is `C:\dev\projects\Games\V Rising\Nyarlathotep Lord of Chaos`.
+**Written 2026-10-13**, after the hunting-grounds release was prepared. The repo is `C:\dev\projects\Games\V Rising\Nyarlathotep Lord of Chaos`.
 
 ## Where we are
 
-- **Releases:** 0.9.0 (wave-sets) and 0.10.0 (swarm) are tagged, pushed and on GitHub as pre-releases; swarm is
-  closed. The owner publishes them to Thunderstore.
-- **Current child:** hunting-grounds (0.11.0), `docs/dod/hunting-grounds.md`, owner decisions D48-D50 (design §9).
-  Steps 1-3 of 4 are built and post-audited; step 4 is under way (rollback drill 26/26, release surfaces drafted
-  uncommitted at 0.11.0, Codex cross-inspection FAIL → F1 per-event territory and F2 per-group spots fixed in b136d7f,
-  re-check "Codex verdict: PASS"; dispositions in the plan's Log). Amendments A1 (hillside levels), A2 (ravine crossings) and A3 (a cap of 200 walk checks
-  per hunt check, rotation over stuck units, the rejoin) came out of Session 2, each amended before it was built.
-- **Session 2 (vrclient, Release build) passed:** D21 roam, D22 lock, D23 ambush, D24 hunt, D25 end paths and D28
-  tick budget. The results are in `docs/features/HUNTING_GROUNDS.md` › Test results › Session 2. D21-D25 are manual
-  items. Each has a Log note "ready for the owner's acceptance". On a rubric-3 plan Claude never checks them.
-- **Local only, not pushed:** the hunting-grounds commits since v0.10.0 (`git log origin/main..main`). The push waits
-  for the owner's OK.
-- **Dev server:** running the a902a20 DLL (before the b136d7f fix) with NyarDevTools and DevChatEcho, wrapped by `dev-snapshot -Save hg2`.
-  Its events.json holds the dev events hg-roam, hg-lock, hg-ambush, hg-point, hg-timing and hg-east. **Don't restore
-  hg2 until the owner's D26/D27 run is done.** After it:
-  1. Close the client and copy both logs.
-  2. Run `-LogCheck` and read every [Error]/[Warning].
-  3. Stop the server with t## Next, in order
+- **0.11.0 (hunting-grounds) is committed and tagged locally, NOT pushed.**
+  - The release commit is 91fe093 `chore(release): v0.11.0`, with the annotated tag v0.11.0. The post-audit records come after it.
+  - The zip is `Nyarlathotep/Nyarlathotep/build/kdpen-Nyarlathotep-0.11.0.zip`, with sha256 BBE9C330…C59EF (the full hash is in `docs/audits/hunting-grounds.md`).
+  - The rollback gate gave 4/4. Tests: 2935/2935. Every Codex verdict is PASS after the first FAIL was fixed.
+  - The push waits on the owner's OK.
+- **It also carries a defect fix.** Before it, a player's death raised VBloodKilled, because a player character carries VBloodConsumeSource. Commits 62ce215 and e17c17e fix it; `vblood-player-death.vrs` gave PASS 8/8.
+- **Owner verdicts (who = kd), Session 3:**
+  - D26 and D27 are PASS: "the modes feel right overall".
+  - D20-D25 still need the owner to accept the vrclient evidence (rubric 3, never Claude).
+- **Dev world:** the hg2 snapshot is restored ("hashes equal"). The dev server is stopped, with the 0.11.0 DLL deployed.
 
-1. The owner's D26/D27 run → record it as "### Session 3" in HUNTING_GROUNDS.md; the owner's verdicts are written as
-   theirs. Then close the client, copy both logs, `-LogCheck`, stop, `dev-snapshot -Restore`.
-2. Redeploy b136d7f (or later) and rerun `hunting-grounds.vrs` (Region spots), `hunting-grounds-hunt.vrs` and
-   `hunting-grounds-timing.vrs`, snapshot-wrapped, as Session 4.
-3. Step 4 remainder:
-   - `rollback-gate -From v0.10.0 -To v0.11.0 -Plan hunting-grounds` (server stopped);
-   - `dotnet build -c Release --no-incremental`, tcli build with the token sentinel, the "zip sha256:" audit line;
-   - step 4 post-audit with both Codex verdict lines (FAIL, then the re-check PASS);
-   - `chore(release): v0.11.0` (six surfaces + CLAUDE.md + feature doc), annotated tag, privacy grep;
-   - push only with the owner's OK, then verify; `gh release view` before the create; pre-release; release-verify;
-   - `dod close hunting-grounds`.
-4. revenge (0.12.0) and apocalypse (0.13.0): amend each plan at its start. Apocalypse gets D49's map-wide roaming and
-   a study of pathing ("passing") for crowded areas. Then the test weekend (~10-24/25), and release by 2026-10-31.
+## Next, in order
 
-se and release-verify;
-   - `dod close hunting-grounds`.
-4. revenge (0.12.0) and apocalypse (0.13.0): amend each plan at its start. Apocalypse gets D49's map-wide roaming and
-   a study of pathing ("passing") for crowded areas. Then the test weekend (~10-24/25), and release by 2026-10-31.
+1. **On the owner's push OK:**
+   1. Run the privacy grep and `git log -p origin/main..main` (both were clean on 2026-10-13).
+   2. Run `git push origin main` and `git push origin v0.11.0`.
+   3. Check that HEAD equals `git ls-remote origin main`.
+   4. Run `gh release view v0.11.0` first, then create the pre-release with the zip.
+   5. Run `pwsh tools/release-verify.ps1 -Tag v0.11.0 -Asset kdpen-Nyarlathotep-0.11.0.zip`.
+   6. Set the paths-manifest `remote-tag` and `remote-release` to v0.11.0.
+   7. Run `dod close hunting-grounds`. It closes partial while D20-D25 wait on the owner.
+2. **Revenge (0.12.0), plan `docs/dod/revenge.md` (ready).** Amend it before building:
+   - the version, now 0.12.0;
+   - the lessons from this child: the spider leash is 45 m, so re-home seeded units; no unseen move lands in a claimed castle;
+   - whatever the owner decides about a boss in the last wave and replacement units.
+3. **Apocalypse (0.13.0), plan `docs/dod/apocalypse.md` (ready).** Amend it for:
+   - D49 map-wide roaming and the pathing study;
+   - a faction-compatibility spike (undead, ghosts and other shadow units spawned together must not fight each other).
+4. Test weekend about 10-24/25. Release by 10-31.
 
-## Owner items still open
+## Owner requests recorded 2026-10-13 (in the hunting-grounds Log)
 
-- Confirm whether wave-sets A6 and A7 were emergent.
-- The dod feedback draft aaf0be8334b4 is not sent; the consent file ~/.dod/feedback-consent.json still has the old
-  OneDrive path.
-- Publish 0.9.0 and 0.10.0 on Thunderstore.
+- Scale unit counts and levels to the players in the region (their number and average level). Today admins can already set the start level and HP/damage and use per-wave `growth`.
+- A boss in the last wave: Ungoro (CHAR_Spider_Queen_VBlood) for spiders, undead bosses for undead. A tracked Ungoro spawns and dies cleanly (vblood-player-death.vrs).
+- Faction compatibility for templates, so mixed units don't fight each other.
+- Replace a unit that dies before it has hit a player, within a replacement limit. Border cheese is left to the honor system.
+- An ambush at a hemmed-in spot comes in close ("shortened" by walk safety). A wider search before shortening is a 1.0 candidate.
