@@ -19,3 +19,13 @@
 - built by a builder subagent in its own worktree; the orchestrator reviews, tests and merges
 
 ## Post-audit
+
+### Step 1 · 2026-10-13 · spike session (boots 1-2, 515a020 tools)
+- compile: NyarDevTools 0 Warning(s), 0 Error(s); the mod unchanged (0.12.0 DLL)
+- log check boot 1 (`pwsh tools/preflight.ps1 -LogCheck -ServerPath <dev server>` before the restart): 0 unhandled, 712 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons
+- log check boot 2: 0 unhandled, 499 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons
+- every [Error]/[Warning] read: Beelzebub's TUNE warning, Il2CppInterop's Class::Init warning, example-empowerment's known pillar warning, the purge warning line (a purge in spike run 2); the Unity log's 226 missing-prefab lookups appear at boot in the previous session's log too (226), so they are not this session's
+- scenarios: apocalypse-spike.vrs run 3 SCENARIO PASS 83/83; faction-mix.vrs run 4 SCENARIO PASS 89/89; earlier runs failed on scenario design (records in docs/features/APOCALYPSE.md › Spike)
+- verdicts recorded: "march verdict: go — hop", "pathing verdict: walk not usable"; D24 and D37 wait on the owner's acceptance (rubric 3), not checked
+- snapshot restored; hashes equal (apo0); dev cfg back to VerboseLogging false, ManualSpawnLifetimeSeconds 300
+- Codex verdict: deferred to step 5 (Halloween track: once per child before its release)

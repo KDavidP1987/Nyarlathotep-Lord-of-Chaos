@@ -1,6 +1,6 @@
 # Apocalypse: the outbreak event
 
-> **Status:** step 1 in progress (spikes); step 2 (Logic: schema, rules, record, chat) built on its branch. Plan `docs/dod/apocalypse.md` (0.13.0, the Halloween release). The
+> **Status:** step 1 spikes recorded (march go — hop, pathing walk not usable, faction mixes); step 2 (Logic) merged. Plan `docs/dod/apocalypse.md` (0.13.0, the Halloween release). The
 > owner's brief and the settled questions are in docs/features/OUTBREAK.md.
 
 ## Design summary
@@ -48,11 +48,11 @@ are accounted by the boot sweep's line, and the rebuilt units are queued into th
 
 ## Open questions
 
-- March: hidden hops of the horde (go) or a relay that respawns it at the front (no-go)? The step 1 spike decides
-  it (D24).
-- Pathing (design §9 D50): can the game's own pathing walk a horde 300 m? If so, the owner chooses whether hordes
-  keep walking while players are near (a D6 amendment).
-- Faction mixes: which undead, ghost and shadow units stay allied when spawned together (D37)?
+- Answered by the step 1 spike (owner acceptance pending): the march hops (path cleared, height from the walk
+  check); the game's pathing could not be made to walk a horde with a moved return point, so hordes hold while a player
+  is near (D6 as written); undead, ghosts and the Farbane V Blood are allied, Legion shadows are not (docs/GAME_ASSETS.md).
+- Pathing for crowded areas (design §9 D50) stays a 1.0 study: another lever (a move command or a patrol path) may
+  make the game walk a horde; none was found for Halloween.
 
 ## Test results
 
@@ -90,3 +90,23 @@ pathing verdict: walk not usable
 
 D6 stays as written (hordes hop, hold while a player is near); hordes do not keep walking among players. D24 waits on the
 owner's acceptance of this record (rubric 3).
+
+**Faction mixes (D37)**: `tools/vrclient/scenarios/faction-mix.vrs`, run 4 SCENARIO PASS 89/89
+(`faction-mix-20261013-201008.json`; run with `--var UX=-1388 --var UZ=-1334 --var UAX=-1428 --var UAZ=-1334
+--var UNATIVE=-837329073 --var MX=-1058 --var MZ=-992 --var MAX=-1098 --var MAZ=-992 --var MNATIVE=-63435588`; the sites
+were found with `.devunits <guid> 6000` from home). Runs 1-3 shaped the scenario: run 1 found CHAR_Undead_ShadowSoldier
+killing its twin at spawn (left out); runs 2-3 showed that the native count is not a check (natives that chased Chaos
+leash home out of the 80 m read, with no died line), so it is logged only.
+
+- [x] undead mix allied: Farbane soldier and crossbowman, Undead Guardian, ghost militia, banshee and the V Blood
+  CHAR_Undead_BishopOfDeath_VBlood: no died line in 60 s, every unit counted, every [DEV UNIT] Idle with target=0 after the wait
+- [x] Legion shadows hostile to the undead: "CHAR_Legion_Shadowkin_Lesser of manual died (killer CHAR_Undead_GhostBanshee)"
+  and "(killer CHAR_Undead_SkeletonSoldier_Armored_Farbane)" within the 60 s window (runs 1, 3 and 4 alike)
+- [x] spider mix allied (Forest, Melee, Range, Forestling, Queen V Blood)
+- [x] bandit mix allied (Thug, Hunter, Deadeye)
+- [x] militia mix allied (Crossbow, Light)
+- The table: docs/GAME_ASSETS.md › Faction compatibility. D37 waits on the owner's acceptance of this record (rubric 3).
+
+Session close: both logs copied to %TEMP%
+yar-apo0-logs before each stop; log check lines in docs/audits/apocalypse.md;
+`tools/dev-snapshot.ps1 -Save apo0` before the first boot, snapshot restored; hashes equal (apo0, both boots).
