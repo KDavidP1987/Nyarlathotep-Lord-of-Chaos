@@ -363,3 +363,37 @@ VERDICT: READY
 - F2 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 8 F2`, faction-mix.vrs already spawns CHAR_Undead_ArmoredSkeletonCrossbow_Farbane, CHAR_Undead_Guardian, CHAR_Bandit_Deadeye and CHAR_Spider_Forestling, and docs/GAME_ASSETS.md › Faction compatibility names every template per mix
 - F3 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 8 F3`, Logic/FactionGroups.cs gives each group its Faction_* names beside its prefixes
 - F4 · accepted · deferred to the Log (advice on a READY review, no D-item edited): `note · deferred · Review 8 F4`, zombie-apocalypse's boss entry has count 1 (horde 4 = 19 + 1 = 20)
+
+## Review 9 · 2026-10-14 · subagent · plan commit 7a52dee · plan 121767 B · 38 items · files 0 · e3b0c44298fc · prompt 71084487529a · scope A13
+Scope: A13 (D32's refusal text and the drill's newer action types).
+
+L1 · Considered · no finding
+L2 · Considered · no finding
+L3 · Considered · no finding
+L4 · Considered · no finding
+L5 · Considered · no finding
+L6 · Considered · no finding
+L7 · Considered · no finding
+L8 · Considered · no finding
+L9 · Considered · no finding
+L10 · Considered · no finding
+L11 · Considered · no finding
+L12 · Considered · F2
+L13 · Considered · no finding
+L14 · Considered · F1, F3
+L15 · Considered · no finding
+
+F1 · blocking · blocks: outcome · 14.3: A13 says 0.12.0 refuses an Apocalypse definition with "unknown action type Apocalypse", but at v0.12.0 ParseEvent checks durationSeconds (30-7200, Validation.cs line 183) before ParseAction (line 186), so the shipped zombie-apocalypse (14400 s) and any run of hours is disabled with "durationSeconds must be 30-7200"; the drill as D32 states it counts that as another reason and fails, and Rollout › On a server ("disabled with the action-type reason") is wrong for the template. Fix: D32 and Rollout name both reasons; the drill counts the duration reason as a newer limit (N refuses a non-apocalypse over 7200 s with the same text, so such a definition is never an extra); pair-apocalypse built from a definition over 7200 s, or a pair per reason; pair-otheraction stays the failing pair.
+F2 · advisory · 12.4 (outside A13's scope): the real drill seeds events.json from Resources/events.default.json (no Apocalypse) plus drill-mark and drill-interval, so the N-1 boot never sees an Apocalypse definition or record; only the selftest fixtures show it. Fix: add a disabled drill-apocalypse and a record for N >= 0.13.0, or say in D32 that the selftest fixtures alone cover the apocalypse.
+F3 · advisory · 14.3 (frozen text): Rollout › On a server still says "Nothing is written that 0.11.0 cannot read past"; the previous release is now 0.12.0 (Review 8 F1 deferred it to step 5). Fix: read 0.12.0.
+
+missing components: none
+undeclared families: unknown action type Apocalypse, durationSeconds must be 30-7200
+15/15 layers · 50/50 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · accepted · fixed under A13 (still unapproved, revised before Review 10): D32 and Rollout › On a server name both 0.12.0 reasons ("durationSeconds must be 30-7200" over 7200 s, else "unknown action type Apocalypse"); the drill counts the duration reason among newer limits; the selftest gains pair-apocalypse (a 14400 s definition, the duration reason), pair-apocalypse-short (600 s, the action-type reason) and pair-otheraction (fail)
+- F2 · accepted · fixed in D32's text: the selftest fixtures carry the apocalypse rollback (definition and record); the live drill's seed has no Apocalypse
+- F3 · accepted · fixed now (step 5 preparation): Rollout reads 0.12.0
+- UF1 · accepted · D32 (both 0.12.0 reasons, each with its own selftest pair: pair-apocalypse, pair-apocalypse-short)
