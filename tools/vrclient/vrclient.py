@@ -404,7 +404,7 @@ def launch(timeout: float = 120) -> bool:
         os.startfile(f"steam://rungameid/{CONFIG['appid']}")
     end = time.time() + timeout
     while time.time() < end:
-        if client_running() and (find_text("PLAY") or in_world()):
+        if client_running() and (find_text("PLAY") or find_text("Online Play") or in_world()):
             # A fresh client's menu still animates when PLAY first reads: a click then can land on CONTINUE, which
             # times out on a local server (swarm Session 1, 2026-10-11). Let it settle first.
             if started:
@@ -435,10 +435,16 @@ def connect(timeout: float = 180) -> bool:
     leave_to_menu()
     srv = LogCursor(CONFIG["server_log"])
     steps = [("PLAY", 5), ("Online Play", 5), ("Show all Servers", 6), ("Direct Connect", 3)]
-    for label, wait in steps:
-        if not click_text(label, timeout=25, wait=wait):
-            log(f"connect: FAIL could not find '{label}' on screen ({shot('full', 'connect-fail')})")
-            return False
+    # resume from a menu screen already open (Select Game Mode shows "Online Play"), and retry the previous click once when
+    # a screen did not come (the PLAY click is sometimes swallowed while the main menu's news carousel loads)
+    start = 1 if find_text("Online Play") else 0
+    for i, (label, wait) in enumerate(steps[start:], start):
+        if click_text(label, timeout=25, wait=wait):
+            continue
+        if i > 0 and click_text(steps[i - 1][0], timeout=5, wait=steps[i - 1][1] + 3) and click_text(label, timeout=25, wait=wait):
+            continue
+        log(f"connect: FAIL could not find '{label}' on screen ({shot('full', 'connect-fail')})")
+        return False
     field = find_text("IP[:Port] / Server ID") or find_text("Server")
     if field:
         fx = int(field["x"] + field["w"] / 2)
