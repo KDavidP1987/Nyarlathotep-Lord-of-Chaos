@@ -110,3 +110,7 @@ expect-log \] tracked units: (?P<TRACKED>[0-9]+) \( timeout=10
 shot full apo-prep-restart
 # the record is written every 60 s while the front holds: wait for the next write before the stop
 wait 70
+# then home: a client that rejoins on the front dies before the boot scenario makes Chaos invulnerable again (session
+# 2: the death spread 2 more units and the tracked count read 24 for 21)
+console TPHome
+wait 3

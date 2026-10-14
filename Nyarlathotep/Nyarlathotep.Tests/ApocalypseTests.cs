@@ -811,6 +811,25 @@ public partial class ApocalypseTests
     }
 
     [Fact]
+    public void Resume_fails_when_a_resume_with_no_missed_horde_tops_up_the_roamers()
+    {
+        // horde 1 risen and its next not due yet: the rebuild is exactly the record's 3 + 2 roamers and 6 of horde 1, with no
+        // top-up for hotspot 2's missing roamer (session 2: 21 rebuilt, then "roamers: +1 at hotspot 2")
+        var def = Apo.Def();
+        var record = Record(risen: 1, fronts: [(1, 120f, 0f, 6, [])], roamers: [3, 2]);
+        var now = T0.AddMinutes(3);
+        Assert.Empty(ResumeRule.CatchUp(record, def.Apocalypse!, now));
+        var w = new ApoWorld();
+        var run = ApocalypseRun.Resumed(Apo.Active(def, T0), record, now);
+        var (rebuilt, rises, topUp) = run.Rebuild(w, record, now);
+        Assert.Equal(11, rebuilt);
+        Assert.Empty(rises);
+        Assert.Empty(topUp);
+        Assert.Equal(0, run.TopUps);
+        Assert.Equal(11, w.SpawnAll(run, now).Count);
+    }
+
+    [Fact]
     public void Resume_fails_when_missed_hordes_or_the_top_up_go_wrong()
     {
         var def = Apo.Def();                                                    // hordes at +1, +6, +11 min

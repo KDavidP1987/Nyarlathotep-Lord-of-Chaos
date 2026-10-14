@@ -1051,7 +1051,9 @@ public sealed class ApocalypseRun
             if (RiseHorde(w, k, utcNow, out _, topUp: false) is { } rise) rises.Add(rise);
             else break;
         }
-        var lines = TopUp(w, utcNow);
+        // the roamers top up once after the catch-up rises, never when none rose: a plain resume rebuilds exactly the
+        // recorded units (D12; session 2 rebuilt 21 and topped up 1 more)
+        IReadOnlyList<string> lines = rises.Count > 0 ? TopUp(w, utcNow) : [];
         return (rebuilt, rises, lines);
     }
 

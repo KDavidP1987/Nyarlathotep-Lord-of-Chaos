@@ -775,7 +775,7 @@ public static class ControlCases
             "a_bad_record_takes_the_rest_of_state_with_it", "a_row_carries_a_name_or_a_position", "an_ended_run_keeps_its_record", "a_record_with_a_bad_field_is_kept"],
             ["a_resumed_run_rebuilds_from_the_saved_file"], ["no_run_no_key"]) with { Plan = Apocalypse },
         T("D12", "Resume", "ApocalypseTests", ["a_changed_or_gone_definition_resumes", "an_admin_goal_run_loses_its_goal", "the_rebuild_skips_the_drain_gate",
-            "missed_hordes_or_the_top_up_go_wrong", "a_pending_resume_lets_a_second_run_start",
+            "missed_hordes_or_the_top_up_go_wrong", "a_resume_with_no_missed_horde_tops_up_the_roamers", "a_pending_resume_lets_a_second_run_start",
             "a_purge_in_the_drain_wait_keeps_the_slot", "a_pillar_or_master_switch_turned_off_while_down_is_ignored",
             "a_record_without_its_goal_key_resumes_to_the_origin", "a_failed_resume_leaves_orders_queued", "a_resumed_run_shows_another_status_or_end"],
             ["a_running_record_resumes"], ["no_missed_horde"]) with { Plan = Apocalypse },
