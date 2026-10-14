@@ -75,13 +75,31 @@ public static class HopRule
     public static RegionJump? Land(RegionUnit u, Front front, int i, int n, Func<float, float, byte, bool> walkable, Func<byte, float> heightOf,
         WalkBudget budget)
     {
+        // the unit's own slot first, at every level; then the front point and rings of 8 points out to 25 m at the unit's
+        // level and its neighbours (session 1: one point per unit left 9 of 16 hops unlanded on rough ground)
         var (x, z) = SpawnLedger.Around(front.X, front.Z, Radius, i, n, 0.0);
         foreach (var level in WalkLevels.Spot(u.Level).Concat(WalkLevels.Wide(u.Level)))
         {
             if (!budget.TryTake(2)) return null;
             if (walkable(x, z, level)) return new RegionJump(u.Key, x, heightOf(level), z, level, float.MaxValue);
         }
+        foreach (var (px, pz) in Rings(front.X, front.Z, i))
+            foreach (var level in WalkLevels.Spot(u.Level))
+            {
+                if (!budget.TryTake(2)) return null;
+                if (walkable(px, pz, level)) return new RegionJump(u.Key, px, heightOf(level), pz, level, float.MaxValue);
+            }
         return null;
+    }
+
+    /// <summary>The fallback landings around a front: the point itself, then 8 points at 5, 15 and 25 m, each ring turned by
+    /// the unit's index so units spread over the ring.</summary>
+    public static IEnumerable<(float X, float Z)> Rings(float x, float z, int i)
+    {
+        yield return (x, z);
+        foreach (var r in new[] { 5f, 15f, 25f })
+            for (var k = 0; k < 8; k++)
+                yield return SpawnLedger.Around(x, z, r, (k + i) % 8, 8, 0.0);
     }
 
     /// <summary>The front's next point has walkable ground within 30 m (D6): the point itself, then four points 15 m and

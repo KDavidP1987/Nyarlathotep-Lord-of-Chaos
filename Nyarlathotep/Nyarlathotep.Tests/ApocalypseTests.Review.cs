@@ -181,6 +181,22 @@ public partial class ApocalypseTests
         Assert.Contains(rig.Game.Logs, l => l == $"apocalypse apo horde 1 hops: {horde.Count} of {horde.Count} stragglers moved since the last line");
     }
 
+    [Fact]
+    public void March_fails_when_a_hop_gives_up_after_one_unwalkable_point()
+    {
+        // only ground 15 m east of the front is walkable: the hop still lands there, within 25 m of the front
+        var front = new Front(1, 0, 0, 500, 0);
+        var unit = new RegionUnit(42, "apo", T0, 0, 0, 300, 3);
+        bool Walkable(float x, float z, byte level) => Math.Abs(x - 15) < 0.5 && Math.Abs(z) < 0.5;
+        var hop = HopRule.Land(unit, front, 0, 1, Walkable, _ => 0f, new WalkBudget());
+        Assert.NotNull(hop);
+        Assert.True(Apocalypse.Distance(hop!.Value.X, hop.Value.Z, front.X, front.Z) <= 25);
+        // nothing walkable within 25 m: no hop, and the budget bounds the search
+        var budget = new WalkBudget(1000);
+        Assert.Null(HopRule.Land(unit, front, 0, 1, (_, _, _) => false, _ => 0f, budget));
+        Assert.True(budget.Left > 0);
+    }
+
     // ---- D15 (review L1): an outcome's cancelled orders count as failed, not pending
 
     [Fact]

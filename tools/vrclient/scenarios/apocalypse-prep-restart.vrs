@@ -35,8 +35,7 @@ chat .nyar event start apo-test
 expect-log event apo-test started by manual timeout=20
 expect-log apocalypse apo-test hotspots: 2 \( timeout=10
 chat .nyar event info apo-test
-expect-log (^|\] |\\n )hotspot 1: [A-Za-z' ]+? at (?P<H1X>-?[0-9]+) (?P<H1Z>-?[0-9]+) timeout=10
-expect-log (^|\] |\\n )hotspot 2: [A-Za-z' ]+? at (?P<H2X>-?[0-9]+) (?P<H2Z>-?[0-9]+) timeout=10
+expect-log (^|\] |\\n )hotspot 1: [A-Za-z' ]+? at (?P<H1X>-?[0-9]+) (?P<H1Z>-?[0-9]+) \\n hotspot 2: [A-Za-z' ]+? at (?P<H2X>-?[0-9]+) (?P<H2Z>-?[0-9]+) timeout=10
 chat .nyar event stop apo-test
 expect-log event apo-test stopped
 wait 30
@@ -66,8 +65,7 @@ mark
 chat .nyar event start apo-test
 expect-log event apo-test started by manual timeout=20
 chat .nyar event info apo-test
-expect-log (^|\] |\\n )hotspot 1: [A-Za-z' ]+? at (?P<R1X>-?[0-9]+) (?P<R1Z>-?[0-9]+) timeout=10
-expect-log (^|\] |\\n )hotspot 2: [A-Za-z' ]+? at (?P<R2X>-?[0-9]+) (?P<R2Z>-?[0-9]+) timeout=10
+expect-log (^|\] |\\n )hotspot 1: [A-Za-z' ]+? at (?P<R1X>-?[0-9]+) (?P<R1Z>-?[0-9]+) \\n hotspot 2: [A-Za-z' ]+? at (?P<R2X>-?[0-9]+) (?P<R2Z>-?[0-9]+) timeout=10
 expect-calc hypot(${R1X} - ${H1X}, ${R1Z} - ${H1Z}) <= 30 and hypot(${R2X} - ${H2X}, ${R2Z} - ${H2Z}) <= 30
 expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
 wait 5

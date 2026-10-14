@@ -67,8 +67,7 @@ expect-log event apo-test started by manual timeout=20
 expect-log apocalypse apo-test hotspots: 2 \( timeout=10
 expect-log apocalypse apo-test roam: hotspot [12] on a player timeout=120
 chat .nyar event info apo-test
-expect-log (^|\] |\\n )hotspot 1: [A-Za-z' ]+? at (?P<H1X>-?[0-9]+) (?P<H1Z>-?[0-9]+) timeout=10
-expect-log (^|\] |\\n )hotspot 2: [A-Za-z' ]+? at (?P<H2X>-?[0-9]+) (?P<H2Z>-?[0-9]+) timeout=10
+expect-log (^|\] |\\n )hotspot 1: [A-Za-z' ]+? at (?P<H1X>-?[0-9]+) (?P<H1Z>-?[0-9]+) \\n hotspot 2: [A-Za-z' ]+? at (?P<H2X>-?[0-9]+) (?P<H2Z>-?[0-9]+) timeout=10
 # D25's roam condition and an unobserved march: the pond is 300 m or more from both hotspots and 200 m or more from the goal
 expect-calc hypot(${PX} - ${H1X}, ${PZ} - ${H1Z}) >= 300
 expect-calc hypot(${PX} - ${H2X}, ${PZ} - ${H2Z}) >= 300
@@ -123,8 +122,7 @@ expect-log event apo-test started by manual timeout=20
 expect-log apocalypse apo-test hotspots: 2 \( timeout=10
 expect-log apocalypse apo-test roamers: \+3 at hotspot 1 timeout=20
 chat .nyar event info apo-test
-expect-log (^|\] |\\n )hotspot 1: [A-Za-z' ]+? at (?P<B1X>-?[0-9]+) (?P<B1Z>-?[0-9]+) timeout=10
-expect-log (^|\] |\\n )hotspot 2: [A-Za-z' ]+? at (?P<B2X>-?[0-9]+) (?P<B2Z>-?[0-9]+) timeout=10
+expect-log (^|\] |\\n )hotspot 1: [A-Za-z' ]+? at (?P<B1X>-?[0-9]+) (?P<B1Z>-?[0-9]+) \\n hotspot 2: [A-Za-z' ]+? at (?P<B2X>-?[0-9]+) (?P<B2Z>-?[0-9]+) timeout=10
 expect-calc hypot(${B1X} - ${H1X}, ${B1Z} - ${H1Z}) <= 30 and hypot(${B2X} - ${H2X}, ${B2Z} - ${H2Z}) <= 30
 wait 3
 chat .nyar debug here 60
@@ -251,8 +249,7 @@ mark
 chat .nyar event start apo-test
 expect-log event apo-test started by manual timeout=20
 chat .nyar event info apo-test
-expect-log (^|\] |\\n )hotspot 1: [A-Za-z' ]+? at (?P<E1X>-?[0-9]+) (?P<E1Z>-?[0-9]+) timeout=10
-expect-log (^|\] |\\n )hotspot 2: [A-Za-z' ]+? at (?P<E2X>-?[0-9]+) (?P<E2Z>-?[0-9]+) timeout=10
+expect-log (^|\] |\\n )hotspot 1: [A-Za-z' ]+? at (?P<E1X>-?[0-9]+) (?P<E1Z>-?[0-9]+) \\n hotspot 2: [A-Za-z' ]+? at (?P<E2X>-?[0-9]+) (?P<E2Z>-?[0-9]+) timeout=10
 expect-calc hypot(${E1X} - ${H1X}, ${E1Z} - ${H1Z}) <= 30 and hypot(${E2X} - ${H2X}, ${E2Z} - ${H2Z}) <= 30
 expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
 wait 10
@@ -262,8 +259,7 @@ expect-calc ${E1A} <= 5
 expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=330
 wait ${W2}
 chat .nyar event info apo-test
-expect-log (^|\] |\\n )horde 1 front at -?[0-9]+ -?[0-9]+, (?P<E1B>[0-9]+) % timeout=10
-expect-log (^|\] |\\n )horde 2 front at (?P<EF2X>-?[0-9]+) (?P<EF2Z>-?[0-9]+), (?P<E2A>[0-9]+) % timeout=10
+expect-log (^|\] |\\n )horde 1 front at -?[0-9]+ -?[0-9]+, (?P<E1B>[0-9]+) %.*?horde 2 front at (?P<EF2X>-?[0-9]+) (?P<EF2Z>-?[0-9]+), (?P<E2A>[0-9]+) % timeout=10
 expect-calc ${E1B} == ${E1A}
 expect-calc hypot(${EF2X} - ${H1X}, ${EF2Z} - ${H1Z}) <= 61
 wait 60

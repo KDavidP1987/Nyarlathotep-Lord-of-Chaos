@@ -761,7 +761,7 @@ public static class ControlCases
         T("D5", "Hordes", "ApocalypseTests", ["a_horde_rises_at_another_time_or_hotspot", "a_size_ignores_growth_or_a_clamp", "a_zero_queued_horde_counts_as_risen",
             "a_rise_past_the_end_spawns"], ["three_hordes_on_time"], ["no_horde_before_its_time"]) with { Plan = Apocalypse },
         T("D6", "March", "ApocalypseTests", ["the_front_moves_at_another_speed_or_overshoots", "a_player_holds_it_wrongly", "the_held_line_repeats_within_one_hold",
-            "steps_repeat_or_stragglers_move_while_watched", "a_unit_near_a_player_hops", "the_keep_up_line_counts_a_hopped_unit_where_it_stood"], ["the_front_reaches_the_goal"], ["no_time_no_move"]) with { Plan = Apocalypse },
+            "steps_repeat_or_stragglers_move_while_watched", "a_unit_near_a_player_hops", "the_keep_up_line_counts_a_hopped_unit_where_it_stood", "a_hop_gives_up_after_one_unwalkable_point"], ["the_front_reaches_the_goal"], ["no_time_no_move"]) with { Plan = Apocalypse },
         T("D7", "Lines", "ApocalypseTests", ["a_line_is_long_or_misses_a_name"], ["the_four_lines"], ["no_region_the_wilds"]) with { Plan = Apocalypse },
         T("D8", "Outcomes", "ApocalypseTests", ["won_or_lost_is_read_wrongly", "a_run_reads_won_while_a_horde_lives", "an_outcome_sends_other_than_one_event_end"],
             ["won_after_every_horde"], ["none_before_any_rise"]) with { Plan = Apocalypse },

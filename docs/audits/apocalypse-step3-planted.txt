@@ -18,3 +18,4 @@ D21 · Logic/ApocalypseHost.cs:EntryGuard.Prepare (review L5) a throwing prepare
 D38 · Logic/FactionGroups.cs:Holds (review L4) prefix matching again: an unchecked _Summon or longer variant joins a group · TemplateLibraryTests.Factions_ · failed 4/11 → restored, 11/11 pass
 - D2 native read skips disabled natives (Services/ApocalypseAction.cs Natives: IncludeDisabled removed) → ApocalypseTests.Hotspots_fails_when_the_native_read_skips_disabled_natives fails (session 1 finding)
 - D6/D26 keep-up line counts a hopped unit where it stood (Logic/ApocalypseHost.cs Tick: landing update commented out) → ApocalypseTests.March_fails_when_the_keep_up_line_counts_a_hopped_unit_where_it_stood fails 0/1, restored 1/1 (session 1 finding)
+- D6/D26 a hop gives up after one unwalkable point (HopRule.Land: Rings(...).Take(0)) → ApocalypseTests.March_fails_when_a_hop_gives_up_after_one_unwalkable_point fails 0/1, restored 1/1 (session 1 finding)
