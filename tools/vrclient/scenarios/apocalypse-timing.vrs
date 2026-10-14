@@ -33,11 +33,14 @@ expect-log \] tracked units: (?P<T1>[0-9]+) \( timeout=10
 expect-calc ${T1} >= 50
 # the measured span starts at the first health line with 50 or more tracked (every 10 min from boot)
 expect-seen nyar health: 1 events, ([5-9][0-9]|[1-9][0-9][0-9]) tracked timeout=660
-# two windows in, Chaos steps into his castle (territory: no target, the roam targets reset) and comes back at the
-# far spot (--var RX RZ, 300 m or more from the wait spot), so the roamers jump towards him inside the span
-wait 100
+# two windows in, just after a window's "hunt targets" sample (so no window reads 0 targets), Chaos steps into his
+# castle for 12 s (territory: no target, the roam targets reset) and comes back at the far spot (--var RX RZ, 300 m or
+# more from the wait spot), so the roamers jump towards him inside the span
+wait 60
+mark
+expect-log tick timing: avg timeout=75
 console TPHome
-wait 20
+wait 12
 mark
 chat .devtp ${RX} ${RZ}
 expect-log \[DEV TP\] to x=(?P<QX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<QZ>-?[0-9.]+)
