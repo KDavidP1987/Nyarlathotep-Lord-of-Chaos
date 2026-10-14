@@ -491,11 +491,24 @@ public static class MarchRule
     /// <summary>True when at least 80 % of the living units keep up (none living keeps up trivially).</summary>
     public static bool KeptUp((int Near, int Of) k) => k.Of == 0 || k.Near >= Math.Ceiling(Apocalypse.KeepUpShare * k.Of - 1e-9);
 
+    /// <summary>Refreshes the front's watch time when any player stands within 100 m of the horde: of its front or of one of
+    /// its living <paramref name="units"/> (D6). Called before the hop decision (code review M3).</summary>
+    public static void Watch(Front front, IReadOnlyList<(float X, float Z)> players, IEnumerable<(float X, float Z)> units, DateTime utcNow)
+    {
+        if (players.Count == 0) return;
+        bool Near(float x, float z) => players.Any(p => Apocalypse.Distance(p.X, p.Z, x, z) <= Apocalypse.WatchRange);
+        if (Near(front.X, front.Z) || units.Any(u => Near(u.X, u.Z))) front.LastWatchedUtc = utcNow;
+    }
+
     /// <summary>The units more than 30 m from the front, the ones a hop moves while the horde is unobserved; none while it is
-    /// observed (D6, S-9: our own units only, never while a player is near).</summary>
-    public static IReadOnlyList<long> Stragglers(Front front, IEnumerable<(long Key, float X, float Z)> units, DateTime utcNow) =>
+    /// observed, and never one with a player within 100 m of it (D6, S-9: our own units only, never while a player is
+    /// near).</summary>
+    public static IReadOnlyList<long> Stragglers(Front front, IEnumerable<(long Key, float X, float Z)> units, IReadOnlyList<(float X, float Z)> players,
+        DateTime utcNow) =>
         !IsUnobserved(front, utcNow) ? []
-        : units.Where(u => Apocalypse.Distance(u.X, u.Z, front.X, front.Z) > Apocalypse.KeepUpRange).Select(u => u.Key).ToList();
+        : units.Where(u => Apocalypse.Distance(u.X, u.Z, front.X, front.Z) > Apocalypse.KeepUpRange
+                           && !players.Any(p => Apocalypse.Distance(p.X, p.Z, u.X, u.Z) <= Apocalypse.WatchRange))
+            .Select(u => u.Key).ToList();
 
     /// <summary>"horde &lt;k&gt; front &lt;p&gt; % units &lt;n&gt;/&lt;m&gt; within 30 m of the front" (D6, D26), every 30 s of a march.</summary>
     public static string KeepUpLine(int horde, int percent, (int Near, int Of) k) =>

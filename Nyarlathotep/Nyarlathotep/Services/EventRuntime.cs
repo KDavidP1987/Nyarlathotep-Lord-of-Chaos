@@ -155,7 +155,8 @@ internal static class EventRuntime
         Persistence.State.MarkDirty();
         Core.Log.LogInfo($"[nyar] event {id} started by {trigger} (ends {active.Instance.EndsUtc:u})");
         if (EventActions.ActionKindOf(active.Definition) == EventActionKind.Empower) EmpowerAction.StartCarriers(active);
-        if (EventActions.ActionKindOf(active.Definition) == EventActionKind.Apocalypse) ApocalypseAction.Begin(active, now);   // D3, D11
+        if (EventActions.ActionKindOf(active.Definition) == EventActionKind.Apocalypse && !ApocalypseAction.Begin(active, now))   // D3, D11
+            Core.Log.LogWarning($"[nyar] apocalypse {id}: started without its run (begin failed); `.nyar event stop {id}` ends it");   // review L5
         Announcer.EventStarted(active.Instance);
         if (RevengeRule.StartPrivate(active) is { } start) TriggerBus.Tell(start.Player, start.Line);   // revenge D7
         return AdminLines.Started(id);
@@ -205,6 +206,7 @@ internal static class EventRuntime
         foreach (var ended in Engine.Expire(now, Settings.Limit(Limits.GraceSeconds)))
         {
             RemoveInstance(ended.Id);
+            var cancelled = 0;
             if (EventActions.ActionKindOf(ended.Definition) == EventActionKind.Empower)
             {
                 // Every carrier's LifeTime ends in this same second, so nothing is queued (D5).
@@ -216,7 +218,7 @@ internal static class EventRuntime
             {
                 // Its waiting orders go now: one spawned later would get a fresh LifeTime and outlive end + grace, and the
                 // cleanup after the grace keeps waiting orders, which then belong to a restart of the same event.
-                SpawnTracker.EndEventUnits(ended.Id, DateTime.MinValue);
+                (_, cancelled) = SpawnTracker.EndEventUnits(ended.Id, DateTime.MinValue);
                 EndSpawnState(ended.Id);
                 if (ended.Definition.Apocalypse is { } apo)
                     ApocalypseEnded(ended, ApocalypseResult.Survived, apo);   // D8: the duration ran out first
@@ -225,7 +227,7 @@ internal static class EventRuntime
             }
             if (ended.Definition.Apocalypse is null) Announcer.EventEnded(ended.Definition);
             EndScoreboard(EndPath.Natural, ended);
-            if (ended.Definition.Apocalypse is not null) ApocalypseAction.Ended(ended.Id, ApocalypseEnd.Survived);
+            if (ended.Definition.Apocalypse is not null) ApocalypseAction.Ended(ended.Id, ApocalypseEnd.Survived, cancelled);   // D15: cancelled orders count failed (review L1)
             RevengeEnded(ended, RevengeEndPath.NaturalEnd);
         }
         foreach (var (id, wave) in Engine.NewlyCleared(Cleared)) Core.Log.LogInfo($"[nyar] event {id} wave {wave} cleared");   // D20
@@ -301,23 +303,18 @@ internal static class EventRuntime
     /// it and mark its pillar degraded while the others keep running (D25).</summary>
     static void Guarded(ActiveEvent active, Action work)
     {
-        try
-        {
+        var cancelled = FaultGuard.Run(Engine, active, () =>
+            {
 #if DEBUG
-            if (Settings.FaultInjection.Value == active.Id) throw new InvalidOperationException("Debug.FaultInjection");
+                if (Settings.FaultInjection.Value == active.Id) throw new InvalidOperationException("Debug.FaultInjection");
 #endif
-            work();
-            Engine.Healthy(active.Id);
-        }
-        catch (Exception ex)
-        {
-            var limit = Engine.Fault(active.Id);
-            Core.Log.LogError($"[nyar] event {active.Id} tick failed ({active.Faults}/{EventEngine.FaultLimit}): {ex.Message}");
-            if (!limit) return;
-            End(active.Id, $"cancelled after {EventEngine.FaultLimit} faults", EndPath.Fault);
-            var note = $"{active.Definition.Pillar.ToString().ToLowerInvariant()} (event {active.Id} faulted)";
-            if (!_degraded.Contains(note)) _degraded.Add(note);
-        }
+                work();
+            },
+            line => Core.Log.LogError($"[nyar] {line}"),
+            () => End(active.Id, $"cancelled after {EventEngine.FaultLimit} faults", EndPath.Fault));
+        if (!cancelled) return;
+        var note = $"{active.Definition.Pillar.ToString().ToLowerInvariant()} (event {active.Id} faulted)";
+        if (!_degraded.Contains(note)) _degraded.Add(note);
     }
 
     /// <summary>An event's spawn state beyond its units (event-spawns D13, D30, D33): its hunt seeds, its kept territory
@@ -390,11 +387,11 @@ internal static class EventRuntime
         var ended = Engine.Complete(active.Id, now, Settings.Limit(Limits.GraceSeconds));
         if (ended is null) return;
         RemoveInstance(ended.Id);
-        SpawnTracker.EndEventUnits(ended.Id, DateTime.MinValue);
+        var (_, cancelled) = SpawnTracker.EndEventUnits(ended.Id, DateTime.MinValue);
         EndSpawnState(ended.Id);
         ApocalypseEnded(ended, step.Result, ended.Definition.Apocalypse!);
         EndScoreboard(ApocalypseOutcome.PathOf(step.Result), ended);
-        ApocalypseAction.Ended(ended.Id, EndRule.Of(step.Result));
+        ApocalypseAction.Ended(ended.Id, EndRule.Of(step.Result), cancelled);   // D15: cancelled orders count failed (review L1)
     }
 
     /// <summary>The outcome line, logged and announced (D8): "event &lt;id&gt; ended: &lt;won|lost|survived&gt; (&lt;r&gt; of

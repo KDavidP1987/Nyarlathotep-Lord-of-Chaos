@@ -258,9 +258,12 @@ public sealed class ApocalypseHost
             foreach (var front in run.Fronts.Values.Where(f => !_defeated.Contains(f.Horde)).ToList())
             {
                 var horde = units.Where(u => Apocalypse.HordeOfWave(u.Wave) == front.Horde).ToList();
+                // the watch time first, from the front and every living unit of the horde, so no hop is decided on a stale
+                // one (code review M3)
+                MarchRule.Watch(front, online, horde.Select(u => (u.X, u.Z)), now);
                 if (moveDue)
                 {
-                    var stragglers = MarchRule.Stragglers(front, horde.Select(u => (u.Key, u.X, u.Z)), now);
+                    var stragglers = MarchRule.Stragglers(front, horde.Select(u => (u.Key, u.X, u.Z)), online, now);
                     for (var i = 0; i < stragglers.Count; i++)
                     {
                         var u = horde.First(h => h.Key == stragglers[i]);
@@ -587,6 +590,8 @@ public sealed class ApocalypseHost
         {
             if (_resume.Fail()) Say(game.Warn, $"apocalypse {p.EventId} not resumed: resume read failed: {e.Message}");
             if (engine.Find(p.EventId) is not null) engine.Cancel(p.EventId);
+            // the rebuild's, catch-up's and top-up's orders go with it, and any unit already spawned (code review M2)
+            Safe(game, () => game.Ledger.EndEvent(p.EventId, DateTime.MaxValue));
             Reset(null);
             RemoveRecord(state, p.EventId);
             return null;
@@ -604,10 +609,11 @@ public sealed class ApocalypseHost
 
     // ---- what admins and players see (D17)
 
-    /// <summary>`.nyar status`'s line for the running apocalypse (no position), or null for any other instance.</summary>
+    /// <summary>`.nyar status`'s line for the running apocalypse (no position), or null for any other instance. Matched by
+    /// event id, so a resumed run (its instance rebuilt by Engine.Resume) keeps its line (code review M4).</summary>
     public string? StatusLine(RunningInstance instance, IApocalypseWorld w, DateTime now)
     {
-        if (_run is not { } run || !ReferenceEquals(run.Active.Instance, instance)) return null;
+        if (_run is not { } run || run.Id != instance.Definition.Id) return null;
         var view = run.View(w, (_, _) => "");
         var minutes = instance.EndsUtc > now ? (int)Math.Ceiling((instance.EndsUtc - now).TotalMinutes) : 0;
         return Messages.ApocalypseStatus(instance.Definition.Name, view.Risen, run.Action.Hordes.Count, view.Percent, run.Action.Goal.Name, view.Roamers, minutes);
@@ -641,3 +647,91 @@ public sealed class ApocalypseHost
 
 /// <summary>How a tracked unit left the game (D15's buckets).</summary>
 public enum UnitDeparture { Died, Despawned, Removed }
+
+/// <summary>
+/// The guard of Services/ApocalypseAction's entry points other than the tick (step 3 code review M1, L5): a throw that
+/// escapes the host is logged "apocalypse: &lt;entry&gt; failed: &lt;message&gt;" once per streak of that entry (a success
+/// of the same entry ends it), never every second, and the entry returns its fallback. The tick is not guarded here: its
+/// throw reaches EventRuntime's fault guard (<see cref="FaultGuard"/>), so D9's fault cancel counts it.
+/// </summary>
+public sealed class EntryGuard(Action<string> error)
+{
+    readonly Dictionary<string, FailureStreak> _streaks = new(StringComparer.Ordinal);
+
+    FailureStreak Streak(string entry)
+    {
+        if (!_streaks.TryGetValue(entry, out var s)) _streaks[entry] = s = new FailureStreak();
+        return s;
+    }
+
+    void Say(string line)
+    {
+        try { error(line); }
+        catch { /* a log line never breaks an entry */ }
+    }
+
+    /// <summary><paramref name="work"/>'s result, or <paramref name="fallback"/> when it throws (logged once per streak).</summary>
+    public T? Run<T>(string entry, Func<T> work, T? fallback = default)
+    {
+        var streak = Streak(entry);
+        try
+        {
+            var result = work();
+            streak.Ok();
+            return result;
+        }
+        catch (Exception e)
+        {
+            if (streak.Fail()) Say($"apocalypse: {entry} failed: {e.Message}");
+            return fallback;
+        }
+    }
+
+    /// <summary>"no hotspot: prepare failed: &lt;message&gt;" (L5).</summary>
+    public static string PrepareFailed(string message) => $"no hotspot: prepare failed: {message}";
+
+    /// <summary>Engine.Start's apocalypse gate (L5): <paramref name="work"/>'s verdict, or, when it throws, a refusal of the
+    /// start (<see cref="PrepareFailed"/>, reason read, so the start log does not repeat it) logged once per streak; a throw
+    /// never lets the start through without its run.</summary>
+    public Outcome? Prepare(string id, Func<Outcome?> work)
+    {
+        var streak = Streak("prepare");
+        try
+        {
+            var verdict = work();
+            streak.Ok();
+            return verdict;
+        }
+        catch (Exception e)
+        {
+            var human = PrepareFailed(e.Message);
+            if (streak.Fail()) Say($"apocalypse {id}: {human}");
+            return Outcome.Refused(human, RefusalCode.State, "id", reason: Reasons.Read);
+        }
+    }
+}
+
+/// <summary>An event's tick inside its fault guard (foundation D25; apocalypse D9's fault cancel, step 3 code review M1):
+/// a throw counts a fault and logs "event &lt;id&gt; tick failed (&lt;n&gt;/&lt;limit&gt;): &lt;message&gt;"; the
+/// <see cref="EventEngine.FaultLimit"/>-th fault in a row calls <c>cancel</c>; a clean tick ends the streak.</summary>
+public static class FaultGuard
+{
+    /// <summary>True when this tick's fault cancelled the event.</summary>
+    public static bool Run(EventEngine engine, ActiveEvent active, Action work, Action<string> error, Action cancel)
+    {
+        try
+        {
+            work();
+            engine.Healthy(active.Id);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            var limit = engine.Fault(active.Id);
+            error($"event {active.Id} tick failed ({active.Faults}/{EventEngine.FaultLimit}): {ex.Message}");
+            if (!limit) return false;
+            cancel();
+            return true;
+        }
+    }
+}

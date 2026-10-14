@@ -513,10 +513,10 @@ public partial class ApocalypseTests
         var g = FrontAt(100);
         Assert.True(MarchRule.IsUnobserved(g, T0));
         var units = new List<(long, float, float)> { (1, 100, 0), (2, 110, 0), (3, 200, 0) };
-        Assert.Equal([3L], MarchRule.Stragglers(g, units, T0));
+        Assert.Equal([3L], MarchRule.Stragglers(g, units, [], T0));
         MarchRule.Step(g, 20, 2.0, 0, [(150f, 0f)], Walkable, T0, out _);      // a player 50 m away watches it
-        Assert.Empty(MarchRule.Stragglers(g, units, T0.AddSeconds(9)));
-        Assert.Equal([3L], MarchRule.Stragglers(g, units, T0.AddSeconds(10)));
+        Assert.Empty(MarchRule.Stragglers(g, units, [], T0.AddSeconds(9)));
+        Assert.Equal([3L], MarchRule.Stragglers(g, units, [], T0.AddSeconds(10)));
         Assert.True(MarchRule.KeptUp((4, 5)));
         Assert.False(MarchRule.KeptUp((3, 5)));
         Assert.Equal("horde 1 front 20 % units 4/5 within 30 m of the front", MarchRule.KeepUpLine(1, 20, (4, 5)));

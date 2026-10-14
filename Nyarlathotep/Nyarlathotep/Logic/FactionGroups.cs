@@ -8,11 +8,11 @@ namespace Nyarlathotep.Logic;
 /// <summary>One allied group (apocalypse D37): units of these prefab families stood together in game without fighting
 /// (docs/GAME_ASSETS.md › Faction compatibility), and <see cref="Faction"/> is the faction an Apocalypse template of this
 /// group names.</summary>
-public sealed record FactionGroup(string Name, string Faction, IReadOnlyList<string> Prefixes)
+public sealed record FactionGroup(string Name, string Faction, IReadOnlyList<string> Names)
 {
-    /// <summary>The prefab belongs to this group: it is one of its names or starts with one followed by "_".</summary>
-    public bool Holds(string prefab) =>
-        Prefixes.Any(p => prefab.Equals(p, StringComparison.Ordinal) || prefab.StartsWith(p + "_", StringComparison.Ordinal));
+    /// <summary>The prefab belongs to this group: it is exactly one of its names. A variant (a "_Summon" or "_Farbane" twin)
+    /// joins only when it is listed itself, after a mix run showed it allied (step 3 code review L4).</summary>
+    public bool Holds(string prefab) => Names.Contains(prefab, StringComparer.Ordinal);
 }
 
 /// <summary>

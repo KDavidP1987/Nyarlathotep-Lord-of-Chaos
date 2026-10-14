@@ -20,6 +20,10 @@ sealed class ApoGame : IApocalypseGame
     public Exception? ReadThrow { get; set; }
     public Exception? MoveThrow { get; set; }
     public Exception? PlaceThrow { get; set; }
+    /// <summary>With <see cref="PlaceThrow"/>: the number of placements that succeed before it throws (0: the first throws).</summary>
+    public int PlaceThrowAfter { get; set; }
+    public Exception? AnnounceThrow { get; set; }
+    int _placed;
     public Dictionary<long, (float X, float Z)> Positions { get; } = [];
     public List<RegionJump> Moves { get; } = [];
     public List<string> Logs { get; } = [];
@@ -29,7 +33,7 @@ sealed class ApoGame : IApocalypseGame
 
     public (float X, float Y, float Z) Place(float x, float z, float radius, int i, int n)
     {
-        if (PlaceThrow is { } e) throw e;
+        if (PlaceThrow is { } e && _placed++ >= PlaceThrowAfter) throw e;
         var (px, pz) = SpawnLedger.Around(x, z, radius, i, n, 0.3);
         return (px, 0, pz);
     }
@@ -60,7 +64,11 @@ sealed class ApoGame : IApocalypseGame
     public void MapTerritory(string eventId) { }
     public void Log(string line) => Logs.Add(line);
     public void Warn(string line) => Warns.Add(line);
-    public void Announce(string eventId, string line) => Announced.Add(line);
+    public void Announce(string eventId, string line)
+    {
+        if (AnnounceThrow is { } e) throw e;
+        Announced.Add(line);
+    }
 
     /// <summary>Confirms every waiting order at its spawn point, telling the host as SpawnTracker does; returns the keys.</summary>
     public List<long> SpawnAll(ApocalypseHost host, DateTime at)
@@ -142,6 +150,38 @@ public class ApocalypseDependencyFailureTests
         Assert.NotNull(rig.Start(T0.AddSeconds(5)));                         // the same streak: no second line
         Assert.Single(rig.Game.Warns);
         Assert.Null(rig.Engine.Find("apo"));
+    }
+
+    /// <summary>Code review L5: a throw out of the start gate itself (Services/ApocalypseAction.Prepare) refuses the start,
+    /// logged once per streak, instead of letting the instance start with no run; a Begin that fails is logged.</summary>
+    [Fact]
+    public void NativeRead_fails_when_a_throwing_prepare_lets_the_start_through()
+    {
+        var rig = Make();
+        var guard = new EntryGuard(rig.Game.Warns.Add);
+        Outcome? Gate(EventDefinition d) => guard.Prepare(d.Id, () => throw Boom("probe gone"));
+        var refused = rig.Engine.Start("apo", "manual", T0, Open(), gate: Gate);
+        Assert.NotNull(refused);
+        Assert.Equal(Reasons.Read, refused!.Reason);                           // the start log skips it: the guard logged it
+        Assert.Equal("no hotspot: prepare failed: probe gone", refused.Human);
+        Assert.Null(rig.Engine.Find("apo"));
+        Assert.NotNull(rig.Engine.Start("apo", "manual", T0.AddSeconds(5), Open(), gate: Gate));
+        Assert.Equal(["apocalypse apo: no hotspot: prepare failed: probe gone"], rig.Game.Warns);   // once per streak
+        Assert.Null(rig.Engine.Start("apo", "manual", T0.AddSeconds(10), Open(), gate: d => guard.Prepare(d.Id, () => rig.Host.Prepare(d, rig.Game))));
+        Assert.True(rig.Host.Begin(rig.Active, rig.Game, rig.State, rig.Board, T0.AddSeconds(10)));
+        // the wiring: Prepare goes through the guard, and a Begin that returns false is logged by the start
+        var action = File.ReadAllText(Path.Combine(Repo(), "Nyarlathotep", "Nyarlathotep", "Services", "ApocalypseAction.cs")).Replace("\r\n", "\n");
+        Assert.Contains("_guard.Prepare(def.Id, () => _host.Prepare(def, _game))", action);
+        var start = EndPathTests.Body(EndPathTests.RuntimeSource().Replace("\r\n", "\n"), "internal static Outcome StartEvent(");
+        Assert.Contains("!ApocalypseAction.Begin(active, now)", start);
+        Assert.Contains("started without its run (begin failed)", start);
+    }
+
+    static string Repo()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "tools", "preflight.ps1"))) dir = dir.Parent;
+        return dir!.FullName;
     }
 
     [Fact]
@@ -309,7 +349,7 @@ public class ApocalypseDependencyFailureTests
     // ---- resume-read: the boot record and the rebuild (D12)
 
     /// <summary>A run that wrote its record, then a restart: a new host and engine over the same state.</summary>
-    static (Rig Before, Rig After) Restarted()
+    internal static (Rig Before, Rig After) Restarted()
     {
         var before = Running();
         before.Tick(T0.AddMinutes(1));
