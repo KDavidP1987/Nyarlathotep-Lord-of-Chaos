@@ -406,7 +406,8 @@ public sealed class Front(int horde, float originX, float originZ, float goalX, 
     {
         get
         {
-            var total = Apocalypse.Distance(OriginX, OriginZ, GoalX, GoalZ);
+            // in double: a float division puts 100 m of 500 at 19.99 %, a step short of its announcement (D7)
+            double total = Apocalypse.Distance(OriginX, OriginZ, GoalX, GoalZ);
             return total <= 0 ? 1 : Math.Clamp(1 - Apocalypse.Distance(X, Z, GoalX, GoalZ) / total, 0, 1);
         }
     }
@@ -818,11 +819,33 @@ public sealed class ApocalypseRun
         if (count <= 0) return 0;
         var r = w.Ledger.Request(unit.Prefab, Id, count, Life(w, utcNow), SpawnTuning.TuningFrom(unit.Modifiers), i => w.Place(x, z, radius, i, count), wave: wave);
         Tally.Add(r.Queued);
+        if (r.Queued > 0) _pending[wave] = PendingOf(wave) + r.Queued;
         return r.Queued;
     }
 
-    /// <summary>The run's living (or waiting) units of ledger wave <paramref name="wave"/>.</summary>
-    public int LivingOf(IApocalypseWorld w, int wave) => w.Ledger.Units.Count(u => u.Wave == wave && Apocalypse.Ours(u, Active));
+    // The orders queued and not yet confirmed or failed, per ledger wave: the ledger lists only confirmed units, so a top-up
+    // between a request and its confirmation would otherwise queue the same roamers twice.
+    readonly Dictionary<int, int> _pending = [];
+
+    int PendingOf(int wave) => _pending.TryGetValue(wave, out var n) ? n : 0;
+
+    /// <summary>An order of the run spawned (SpawnTracker's confirmation, step 3): no longer pending, alive in the ledger.</summary>
+    public void Spawned(int wave)
+    {
+        if (PendingOf(wave) > 0) _pending[wave] = PendingOf(wave) - 1;
+        Tally.Spawned();
+    }
+
+    /// <summary><paramref name="n"/> orders of the run failed to spawn or were cancelled by an end (D15).</summary>
+    public void FailedToSpawn(int wave, int n = 1)
+    {
+        _pending[wave] = Math.Max(0, PendingOf(wave) - n);
+        Tally.FailedToSpawn(n);
+    }
+
+    /// <summary>The run's living or waiting units of ledger wave <paramref name="wave"/>: its tracked units spawned since
+    /// the start, and its orders not yet confirmed.</summary>
+    public int LivingOf(IApocalypseWorld w, int wave) => w.Ledger.Units.Count(u => u.Wave == wave && Apocalypse.Ours(u, Active)) + PendingOf(wave);
 
     /// <summary>The living roamers per hotspot (spread roamers counted at their nearest hotspot, D3, D4).</summary>
     public int[] RoamersPerHotspot(IApocalypseWorld w) =>
