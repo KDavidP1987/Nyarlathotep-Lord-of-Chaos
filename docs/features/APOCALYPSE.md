@@ -193,3 +193,27 @@ away, so all three hotspots' roamers jumped towards him again ("roam: hotspot 1/
 tracked >= 50, targets >= 1, 0 slow ticks"; the worst window averaged 0.645 ms (max tick 4.1 ms). Runs 1-2 failed on
 the scenario, not the mod: a regex read the `event info` list's `\n` as a newline, the span began at the first 10-minute
 health line with 50 tracked so 15 min left only 6 windows, and a castle hop over a window's sample read 0 targets.
+
+### Test weekend · about 2026-10-24/25 · the owner with the players (D31)
+
+**Sheet.** Install the Release build of the step-3 commit (`Nyarlathotep.dll` from `Nyarlathotep/Nyarlathotep/bin/Release/net6.0/`)
+on the owner's server with the server stopped, then start it. Spawns pillar on (`.nyar pillar spawns on`), default caps.
+
+1. As an admin, at the spot the players will defend (outside any castle): `.nyar template use zombie-apocalypse`, then
+   `.nyar event enable zombie-apocalypse`, then `.nyar event start zombie-apocalypse`. The goal is where you stand when
+   you start it. PASS: chat shows "The dead rise: Zombie apocalypse." and `.nyar event info zombie-apocalypse` lists
+   3 hotspots with their regions.
+2. Watch the roamers (4 per hotspot at first). They head for the nearest player outside a castle; each kill one of
+   ours makes (a player or a native NPC) adds a roamer where the victim fell (up to 30, at most 6 a minute). PASS: players far from the goal meet roamers within a few minutes, and none jump into a castle.
+3. Horde 1 rises after 10 min, then one every 30 min (4 hordes, 7 units growing by 4; the last brings the Bishop of
+   Death). Each marches to the goal at 2 m/s and stops while a player stands within 60 m of its front. PASS: chat
+   announces each rise, each 25 % of the march and each horde destroyed.
+4. Defend the goal. Won = every horde destroyed; lost = a front reaches the goal; survived = the 4 hours end first. PASS:
+   the outcome line and the scoreboard (kills, deaths) show in chat.
+5. To stop early: `.nyar event stop zombie-apocalypse` (scoreboard shown); emergency: `.nyar purge confirm` (everything
+   of ours despawns, nothing shown). PASS: `.nyar status` reads "tracked units: 0" within a minute.
+
+Note for the verdict: how the march, the announcements, the spread and the scoreboard look and feel to the players; any
+change asked for becomes an amendment before it is built.
+
+Verdict: waiting on the owner.
