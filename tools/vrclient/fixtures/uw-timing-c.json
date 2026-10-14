@@ -1,0 +1,48 @@
+{
+  "id": "uw-timing-c",
+  "name": "Unit watch timing C",
+  "enabled": true,
+  "pillar": "spawns",
+  "trigger": {
+    "type": "Manual"
+  },
+  "durationSeconds": 1800,
+  "action": {
+    "type": "SpawnWaves",
+    "waveList": [
+      {
+        "units": [
+          {
+            "prefab": "CHAR_Spider_Forest",
+            "count": 12
+          }
+        ]
+      },
+      {
+        "units": [
+          {
+            "prefab": "CHAR_Spider_Forest",
+            "count": 6
+          }
+        ],
+        "afterSeconds": 60
+      }
+    ],
+    "radius": 8,
+    "location": {
+      "type": "Point",
+      "x": -1755,
+      "z": -1640
+    },
+    "scoreboard": true
+  },
+  "announce": {
+    "start": [
+      "Spiders gather: {event}."
+    ],
+    "end": [
+      "{event} is over."
+    ],
+    "warnings": false
+  }
+}

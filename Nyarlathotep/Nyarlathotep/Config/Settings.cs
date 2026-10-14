@@ -127,6 +127,8 @@ internal static class Settings
             "Seconds a unit stands still with a player near, or stays off the ground, before it counts as stuck.");
         BindLimit(config, Limits.StallMinutes,
             "Minutes with no death and no fight before the leftovers of a wave the event waits on are treated as stuck. 0 turns this off.");
+        BindLimit(config, Limits.SpawnStillSeconds,
+            "Seconds after a unit is spawned or put down by the mod within which, with a player near, it must have moved; one that has not is stuck at once.");
 
         VerboseLogging = config.Bind("Debug", "VerboseLogging", false,
             "Log each unit spawned and despawned, and each announcement sent.");

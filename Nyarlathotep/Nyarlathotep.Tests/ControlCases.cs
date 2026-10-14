@@ -44,8 +44,7 @@ public static class ControlCases
     [
         // apocalypse: step 5 the release
         new(Apocalypse, "D33", 5, "0.13.0"), new(Apocalypse, "D34", 5, "0.13.0"), new(Apocalypse, "D35", 5, "0.13.0"),
-        // unit-watch: step 3 the services and the dependency suite, step 5 the release
-        new(UnitWatch, "D18", 3, "0.13.0"), new(UnitWatch, "D20", 3, "0.13.0"), new(UnitWatch, "D28", 3, "0.13.0"),
+        // unit-watch: step 5 the release
         new(UnitWatch, "D30", 5, "0.13.0"), new(UnitWatch, "D31", 5, "0.13.0"), new(UnitWatch, "D32", 5, "0.13.0"), new(UnitWatch, "D33", 5, "0.13.0"),
     ];
 
@@ -67,6 +66,7 @@ public static class ControlCases
         "WaveSetTests", "ScoreboardTests", "WaveSetDependencyFailureTests", "SwarmTests", "SwarmDependencyFailureTests",
         "HuntingGroundsTests", "HuntingGroundsDependencyFailureTests", "RevengeTests", "BossWaveTests", "RevengeDependencyFailureTests",
         "ApocalypseTests", "ApocalypseStateTests", "ApocalypseDependencyFailureTests", "UnitWatchTests",
+        "UnitWatchDependencyFailureTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -873,5 +873,23 @@ public static class ControlCases
             with { Plan = UnitWatch },
         T("D21", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit", "pending_at_release"],
             ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = UnitWatch },
+        // unit-watch step 3
+        T("D34", "Still", "UnitWatchTests", ["a_unit_0_4_m_from_its_spawn_spot_with_a_player_at_30_m_is_not_stuck", "a_unit_that_moved_0_6_m_is_stuck",
+            "a_unit_checked_before_spawn_still_seconds_is_stuck", "a_unit_with_no_player_within_40_m_and_no_target_is_stuck", "a_unit_that_fought_is_stuck",
+            "a_unit_put_down_by_a_jump_is_not_checked_from_its_landing", "a_default_outside_5_60_is_accepted"],
+            ["unit_at_its_spawn_spot_beside_a_player_marked_still_once"], ["no_player_no_mark"]) with { Plan = UnitWatch },
+        T("D18", "WatchRead", "UnitWatchDependencyFailureTests", ["one_throwing_unit_stops_the_check", "a_failed_read_marks_a_unit",
+            "an_error_line_repeats_within_a_streak", "a_health_entry_outlives_a_clean_check_or_the_end", "a_throwing_fight_row_stops_the_batch_or_escapes",
+            "a_throw_escapes_the_phase"], ["good_read_ends_the_streak"], ["no_event_no_read"]) with { Plan = UnitWatch },
+        T("D18", "WatchMove", "UnitWatchDependencyFailureTests", ["a_throwing_move_stops_the_others", "a_throwing_move_is_not_a_failed_try",
+            "a_throwing_despawn_stops_the_others_or_removes", "an_error_line_repeats_within_a_streak", "a_health_entry_outlives_a_clean_check_or_the_end"],
+            ["good_move_ends_the_streak"], ["nothing_marked_no_move"]) with { Plan = UnitWatch },
+        C("D20", "DependencySuite", "preflight -DependencySuite unit-watch",
+            ["selftest DependencySuite/bad", "selftest DependencySuite/bad-2", "selftest DependencySuite/bad-floor-spawns"], ["selftest DependencySuite/good"],
+            ["selftest DependencySuite/empty"]) with { Plan = UnitWatch },
+        C("D28", "TimingSpan", "preflight -TimingSpan -Windows 10 -MinTracked 50 › Test-CheckTimingSpan",
+            ["tools/preflight-fixtures/TimingSpan/bad-avg", "tools/preflight-fixtures/TimingSpan/bad-slow", "tools/preflight-fixtures/TimingSpan/bad-tracked",
+             "tools/preflight-fixtures/TimingSpan/bad-notarget"],
+            ["tools/preflight-fixtures/TimingSpan/good"], ["tools/preflight-fixtures/TimingSpan/empty"]) with { Plan = UnitWatch },
     ];
 }

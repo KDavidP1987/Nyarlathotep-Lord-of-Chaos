@@ -71,8 +71,9 @@ internal static class EventCommands
                 Reply(ctx, EventLines.Info(def, active, now, TriggerBus.NextInterval(def.Id),
                     RevengeRule.IsRevenge(def) ? TriggerBus.RevengeCounts(def.Id) : null,   // revenge D12
                     apocalypse: def.Apocalypse is not null ? Services.ApocalypseAction.View(def.Id) : null,   // apocalypse D17
-                    watch: def.Action is not null || def.Apocalypse is not null                                 // unit-watch D15; the
-                        ? UnitWatchLines.Info(Config.Settings.UnitWatchEnabled.Value, default) : null));        // counts come with step 3's phase
+                    watch: def.Action is not null || def.Apocalypse is not null                                 // unit-watch D15
+                        ? UnitWatchLines.Info(Config.Settings.UnitWatchEnabled.Value,
+                            active is not null ? Services.SpawnTracker.WatchCountsOf(active) : default) : null));
                 return;
             }
             default:

@@ -41,12 +41,15 @@ public static partial class Limits
     /// <summary>[UnitWatch]: the quiet minutes before the stall backstop marks a waits-for-clear wave's leftovers (D9); 0
     /// turns the backstop off.</summary>
     public static readonly IntLimit StallMinutes = new("UnitWatch", "StallMinutes", 10, 0, 60);
+    /// <summary>[UnitWatch] (unit-watch D34, A1): seconds after a spawn or a landing by one of our movers within which a
+    /// unit with a player near must have moved more than 0.5 m, or it is stuck at once ("still").</summary>
+    public static readonly IntLimit SpawnStillSeconds = new("UnitWatch", "SpawnStillSeconds", 10, 5, 60);
 
     public static readonly IReadOnlyList<IntLimit> All =
     [
         MaxTrackedUnits, MaxUnitsPerWave, MaxConcurrentEvents, MaxSpawnsPerTick, MaxDespawnsPerTick,
         GraceSeconds, PurgeCooldownSeconds, ManualSpawnLifetimeSeconds, EmpowerBatchPerTick, ShareCooldownSeconds, ShareMaxPerMinute,
-        StuckSeconds, StallMinutes,
+        StuckSeconds, StallMinutes, SpawnStillSeconds,
     ];
 
     /// <summary>Announcements.WarningOffsets: 1–5 integers of 5–3600 s, deduplicated, sorted descending.

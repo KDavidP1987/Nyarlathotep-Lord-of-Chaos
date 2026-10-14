@@ -1,0 +1,47 @@
+{
+  "id": "uw-wave",
+  "name": "Unit watch wave",
+  "enabled": true,
+  "pillar": "spawns",
+  "trigger": {
+    "type": "Manual"
+  },
+  "durationSeconds": 900,
+  "action": {
+    "type": "SpawnWaves",
+    "waveList": [
+      {
+        "units": [
+          {
+            "prefab": "CHAR_Spider_Forest",
+            "count": 4
+          }
+        ]
+      },
+      {
+        "units": [
+          {
+            "prefab": "CHAR_Spider_Forest",
+            "count": 2
+          }
+        ]
+      }
+    ],
+    "radius": 8,
+    "location": {
+      "type": "Point",
+      "x": -1880,
+      "z": -1640
+    },
+    "scoreboard": true
+  },
+  "announce": {
+    "start": [
+      "Spiders gather: {event}."
+    ],
+    "end": [
+      "{event} is over."
+    ],
+    "warnings": false
+  }
+}

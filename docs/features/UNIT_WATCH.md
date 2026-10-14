@@ -37,8 +37,15 @@ A watched unit is **stuck** when either holds (distances are on x and z unless s
    at its own height level or a neighbouring one (under the map, inside a rock, on a roof the walk data does not
    cover), or its height is below WalkHeight.MinY (-100) or below the lowest grounded level at its x and z. This
    applies whether or not a player is near.
+3. **Still at its spawn** (D34, the owner's fast check): SpawnStillSeconds (default 10 s) after it was spawned, or after
+   one of our movers put it down (a hidden jump, an apocalypse hop, a region or arena return, a regroup, a recovery), it
+   has moved no more than 0.5 m from that spot, has not fought, and in that time a player stood within 40 m of it or it
+   held a player target: it is stuck at once (reason "still") and goes through the same tries and removal. With no
+   player near and no target this check never marks. With Debug.VerboseLogging each event unit's first move logs
+   `[nyar watch] first-move event=<id> prefab=<prefab> after=<s> player=<near|none>` (`after=none` after 120 s
+   unmoved), Session 1's measurement for the default.
 
-A unit that **fought** inside the window — it hit a player, or a player hit it — is never stuck by either rule. A
+A unit that **fought** inside the window — it hit a player, or a player hit it — is never stuck by any of these rules. A
 unit moved by another mover of ours (a hidden jump, an apocalypse hop, an arena or region return, a regroup) has
 moved. "Fought" comes from one guarded read the 1.0 replacement rule (design §9 D53) will reuse; which game signal
 answers it (a damage event, or a health sample with the aggro target) is decided by the step 1 spike; a signal
@@ -93,12 +100,13 @@ need no backstop; their units are still watched one by one.
 | Enabled | true | true/false | A safety rail like the caps. False: nothing is marked, moved or removed, no backstop, `unstick` refuses. |
 | StuckSeconds | 90 | 30-600 | The standing window, and the time a try may wait for an unseen moment. |
 | StallMinutes | 10 | 0-60 | The backstop's quiet time; 0 turns the backstop off. |
+| SpawnStillSeconds | 10 | 5-60 | The still-at-spawn check's time after a spawn or a landing (D34); set from Session 1's first-move measurement. |
 
 RecoveryTries is fixed at 2. No events.json key is added.
 
 ### Logs (one greppable line per state change)
 
-- `[nyar] unit-watch <event> stuck: <prefab> wave <k> (standing|off-ground|stall|admin)`
+- `[nyar] unit-watch <event> stuck: <prefab> wave <k> (standing|off-ground|still|stall|admin)`
 - `[nyar] unit-watch <event> recovered: <prefab> try <t>/2, <d> m (group|player|anchor)`
 - `[nyar] unit-watch <event> try failed: <prefab> try <t>/2 (no landing|seen|still stuck)`
 - `[nyar] unit-watch <event> removed: <prefab> wave <k> after 2 tries, no kill credit`, ending ` (in view)` when a player

@@ -185,6 +185,7 @@ internal static class EventRuntime
         HuntAction.Clear();                                                  // seeds and kept maps go too
         ApocalypseAction.Purged();                                           // apocalypse D9: the run, a pending resume and the record
         SpawnTracker.RegionPurged();                                         // hunting-grounds D12: every lock and hunt record
+        SpawnTracker.WatchPurged();                                          // unit-watch D10, D11: every watch row, try, clock and streak
         TerritoryMap.Clear();
         WalkCheck.Health.Purged();                                           // every streak, `.nyar spawn`'s "manual" too (A61, A71)
         EmpowerAction.StopAllCarriers();
@@ -319,8 +320,8 @@ internal static class EventRuntime
 
     /// <summary>An event's spawn state beyond its units (event-spawns D13, D30, D33): its hunt seeds, its kept territory
     /// map and its open failure streaks, the arena check's included (swarm D4), go with the event, and so do its region
-    /// lock and hunt records and streaks (hunting-grounds D12). Every end path but a restart runs it; a restart starts with
-    /// none (SpawnTracker.Initialize).</summary>
+    /// lock and hunt records and streaks (hunting-grounds D12) and its unit watch rows, tries, clocks and counts (unit-watch
+    /// D11). Every end path but a restart runs it; a restart starts with none (SpawnTracker.Initialize).</summary>
     static void EndSpawnState(string id)
     {
         HuntAction.EndEvent(id);
@@ -328,6 +329,7 @@ internal static class EventRuntime
         WalkCheck.Health.EventEnded(id);                                    // A71
         SpawnTracker.ArenaEnded(id);                                        // swarm D4: no arena streak outlives its event
         SpawnTracker.RegionEnded(id);                                       // hunting-grounds D12: nor a last inside spot, target or streak
+        SpawnTracker.WatchEnded(id);                                        // unit-watch D11: nor a watch row, try, clock, count or streak
     }
 
     /// <summary>`.nyar pillar &lt;name&gt; off` (event-library D14, S-7): ends every running event of that pillar through the

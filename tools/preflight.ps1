@@ -1924,13 +1924,13 @@ function Test-InSpan([int]$Index, $Spans) {
 # chat identity, so EventScheduler.cs, Core.cs and every Patches/ file may call these [Mutating] tick and boot entry
 # points directly: SpawnTracker.Tick and EventRuntime.Tick (the scheduler's phases), EmpowerAction.BeginCarrierTick and
 # TickCarriers (EmpowerAction's tick), HuntAction.Tick (the scheduler's "hunt" phase, A70), SpawnTracker.ArenaTick (the
-# scheduler's "arena" phase, swarm D3), SpawnTracker.RegionTick (the scheduler's "region" phase, hunting-grounds D5, D8)
-# and SpawnTracker.BootSweep
+# scheduler's "arena" phase, swarm D3), SpawnTracker.RegionTick (the scheduler's "region" phase, hunting-grounds D5, D8),
+# SpawnTracker.WatchTick (the scheduler's "watch" phase, unit-watch D2-D10) and SpawnTracker.BootSweep
 # (the boot marker sweep, from Core). Only these names:
 # any other [Mutating] name in those files still fails outside Gateway.Run.
 # Each is "<service>.<method>": the use must name its service right before the method (SpawnTracker.Tick, or
 # Services.SpawnTracker.BootSweep), so another service's [Mutating] Tick is no entry point (Codex step 1 F2).
-$script:SystemEntryPoints = @('SpawnTracker.Tick', 'SpawnTracker.BootSweep', 'SpawnTracker.ArenaTick', 'SpawnTracker.RegionTick', 'EventRuntime.Tick', 'EventRuntime.ApocalypseTick', 'EmpowerAction.BeginCarrierTick', 'EmpowerAction.TickCarriers', 'HuntAction.Tick')
+$script:SystemEntryPoints = @('SpawnTracker.Tick', 'SpawnTracker.BootSweep', 'SpawnTracker.ArenaTick', 'SpawnTracker.RegionTick', 'SpawnTracker.WatchTick', 'EventRuntime.Tick', 'EventRuntime.ApocalypseTick', 'EmpowerAction.BeginCarrierTick', 'EmpowerAction.TickCarriers', 'HuntAction.Tick')
 # True when the use of $Name at $Index in $Text is written "<Type>.<Name>" and that pair is a System-actor entry point.
 # A use written "<Type>.<Name>" whose type's own file, Services/<Type>.cs, declares no [Mutating] <Name> is that type's
 # method, not a mutating one (Announcer.Tick beside SpawnTracker.Tick), so a System-actor file may name it too.
@@ -1952,7 +1952,7 @@ $script:MutatingDeclRx = '\[Mutating\]\s*(?:\[[^\]]*\]\s*)*' + $script:MethodMod
 # method is missing, when a listed method is declared without [Mutating], and when a [Mutating] method is not listed,
 # so the list cannot fall behind the tree and removing the attribute cannot drop a writer out of the gateway check.
 $script:MutatingFloor = [ordered]@{
-    'AdminOps'        = @('OpAuthor', 'OpDelete', 'OpEdit', 'OpPurge', 'OpReload', 'OpSetPillar', 'OpStartEvent', 'OpStopEvent', 'OpUseTemplate')
+    'AdminOps'        = @('OpAuthor', 'OpDelete', 'OpEdit', 'OpPurge', 'OpReload', 'OpSetPillar', 'OpStartEvent', 'OpStopEvent', 'OpUnstick', 'OpUseTemplate')
     'Announcer'       = @('AdminAnnounce')
     'EmpowerAction'   = @('BeginCarrierTick', 'EndCarriers', 'QueueBootCarriers', 'StartCarriers', 'StopAllCarriers', 'StopCarriers', 'TickCarriers')
     'EventRuntime'    = @('ApocalypseTick', 'Purge', 'StartEvent', 'StopEvent', 'Tick')
@@ -1961,7 +1961,7 @@ $script:MutatingFloor = [ordered]@{
     'Persistence'     = @('Delete', 'Promote', 'PromoteNew', 'Rename', 'WriteFile')
     'PillarSwitches'  = @('SetPillar')
     'Pusher'          = @('Subscribe', 'Unsubscribe')
-    'SpawnTracker'    = @('ArenaTick', 'BootSweep', 'EndEventUnits', 'MoveOwn', 'PurgeUnits', 'RegionTick', 'RenewOwn', 'RequestWave', 'SpawnManual', 'Tick')
+    'SpawnTracker'    = @('ArenaTick', 'BootSweep', 'EndEventUnits', 'MoveOwn', 'PurgeUnits', 'RegionTick', 'RenewOwn', 'RequestWave', 'SpawnManual', 'Tick', 'WatchTick')
     'TemplateLibrary' = @('UseTemplate')
     'UnitSetup'       = @('Apply', 'StatModifiers')
     'WaveAction'      = @('QueueDueWave')

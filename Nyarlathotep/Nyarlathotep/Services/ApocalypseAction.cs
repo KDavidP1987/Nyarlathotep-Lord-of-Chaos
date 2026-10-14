@@ -121,6 +121,26 @@ internal static class ApocalypseAction
     /// <summary>`event info`'s run view, or null.</summary>
     internal static ApocalypseView View(string id) => Run("info", () => _host.View(id, _game));
 
+    // ---- unit watch (unit-watch D5, D7, D9): reads of the running run, never a write. A unit the watch removes leaves
+    // through SpawnTracker's staged despawn, so <see cref="Left"/> hears it as Despawned (the tally's despawn, no death),
+    // and the record's living counts (ApocalypseRun.LivingOf over the ledger) drop it at that despawn like any despawned
+    // unit; the record is never told about a removal in any other way, so a resume never rebuilds it (D7).
+
+    /// <summary>The hordes the running apocalypse <paramref name="eventId"/> has raised (the stall backstop, D9); null when
+    /// no run of that id runs.</summary>
+    internal static int? HordesRisen(string eventId) => _host.Run is { } run && run.Id == eventId ? run.Risen : null;
+
+    /// <summary>The watch's anchor x and z of an apocalypse unit (D5): a horde unit's or boss's horde front, a roamer's
+    /// hotspot; null for any other unit or event.</summary>
+    internal static (float X, float Z)? AnchorOf(string eventId, int wave)
+    {
+        if (_host.Run is not { } run || run.Id != eventId) return null;
+        if (Apocalypse.HotspotOfWave(wave) is { } spot)
+            return run.Hotspots.FirstOrDefault(h => h.Number == spot) is { } h ? (h.X, h.Z) : null;
+        if (Apocalypse.HordeOfWave(wave) is { } horde && run.Fronts.TryGetValue(horde, out var front)) return (front.X, front.Z);
+        return null;
+    }
+
     /// <summary>An entry other than the tick: a throw is logged once per streak of that entry (Logic/EntryGuard) and gives
     /// the default.</summary>
     static T Run<T>(string entry, Func<T> work)

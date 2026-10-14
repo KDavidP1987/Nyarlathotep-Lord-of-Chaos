@@ -1330,6 +1330,26 @@
           "control": "StateWrite"
         }
       ]
+    },
+    "unit-watch": {
+      "categories": [
+        "watch-read",
+        "watch-move"
+      ],
+      "rows": [
+        {
+          "name": "watch-read",
+          "kind": "tests",
+          "class": "UnitWatchDependencyFailureTests",
+          "control": "WatchRead"
+        },
+        {
+          "name": "watch-move",
+          "kind": "tests",
+          "class": "UnitWatchDependencyFailureTests",
+          "control": "WatchMove"
+        }
+      ]
     }
   },
   "controlSuites": {

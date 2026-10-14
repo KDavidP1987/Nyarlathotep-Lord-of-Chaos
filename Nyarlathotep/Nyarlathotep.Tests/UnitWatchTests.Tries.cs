@@ -694,7 +694,7 @@ public partial class UnitWatchTests
 
     static readonly Regex[] Shapes =
     [
-        new(@"^unit-watch [a-z0-9-]+ stuck: CHAR_\w+ wave \d+ \((standing|off-ground|stall|admin)\)$"),
+        new(@"^unit-watch [a-z0-9-]+ stuck: CHAR_\w+ wave \d+ \((standing|off-ground|stall|admin|still)\)$"),
         new(@"^unit-watch [a-z0-9-]+ recovered: CHAR_\w+ try [12]/2, \d+ m \((group|player|anchor)\)$"),
         new(@"^unit-watch [a-z0-9-]+ try failed: CHAR_\w+ try [12]/2 \((no landing|seen|still stuck)\)$"),
         new(@"^unit-watch [a-z0-9-]+ removed: CHAR_\w+ wave \d+ after 2 tries, no kill credit( \(in view\))?$"),
@@ -703,8 +703,8 @@ public partial class UnitWatchTests
         new(@"^unit-watch [a-z0-9-]+ waiting: CHAR_\w+, a player near$"),
     ];
 
-    /// <summary>Every line of every flow: two tries and a removal, a removal in view, a fight clear, a moving clear and a
-    /// stall.</summary>
+    /// <summary>Every line of every flow: two tries and a removal, a removal in view, a fight clear, a moving clear, a
+    /// stall and a still mark (D34).</summary>
     static List<string> AllLines()
     {
         var lines = new List<string>();
@@ -729,6 +729,9 @@ public partial class UnitWatchTests
         var (e, _, _) = Quiet();
         e.For(605);
         lines.AddRange(e.Log);
+        var (f, _) = AtSpawn(0f);                                  // D34: still at its spawn spot beside a player
+        f.For(15);
+        lines.AddRange(f.Log);
         Assert.NotEqual(0, k2);
         return lines;
     }

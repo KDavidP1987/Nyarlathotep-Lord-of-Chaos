@@ -17,6 +17,14 @@
 - feature doc read: docs/features/UNIT_WATCH.md (Spike verdicts recorded: fight = apply + target clause; off-ground = S-12 fallback)
 - baseline boot: not an in-game step (Logic, commands, docs and tests only)
 
+### Step 3 · 2026-10-14 · f53e8b4
+- git status: step 3's code uncommitted (built by the builder subagent, reviewed); otherwise clean
+- compile: 0 errors, 0 warnings; tests 3560/3560
+- preflight: exit 0, PREFLIGHT OK; dependency suite unit-watch 2/2
+- dod status: 0/34 verified (A1 added D34)
+- feature doc read: docs/features/UNIT_WATCH.md (D34 in Detection and Config)
+- baseline boot: the pathing probe's boot of the same session (0.12.0+ DLL at 6e0b901 code with NyarDevTools): -LogCheck 0 unhandled, only known warnings
+
 ## Post-audit
 ### Step 1 · 2026-10-14 · (this commit)
 - compile / preflight: mod 0 errors 0 warnings; NyarDevTools builds 0 errors (dev server only, never shipped); preflight OK

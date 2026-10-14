@@ -1,0 +1,98 @@
+# unit-watch-ends.vrs: unit-watch D27 part 1 (Session 1 or 2), the end paths with the watch on. Each time uw-wave runs at
+# the mark uw-a with Chaos there, one wave-1 spider is sunk 30 m under the pond's ground, so it is marked off-ground and
+# waits (Chaos within 100 m: "stuck: … (off-ground)", then "waiting: …, a player near"); then the event is ended by
+# `.nyar event stop`, by `.nyar pillar spawns off` and by `.nyar purge confirm`, each leaving "tracked units: 0" after the
+# grace and no "[nyar] unit-watch" line after the event's end line. Last, uw-wave is started again with a spider marked
+# and waiting and left running for the restart.
+# Restart (by hand, after this scenario; logs copied first): set [UnitWatch] Enabled = false in the dev cfg and restart; the
+# next boot's log shows uw-wave cancelled by the restart and no unit-watch line for that instance. Then run
+# unit-watch-ends-off.vrs (part 2, the watch off), and set Enabled = true again after it.
+#
+# Needs: a Release DLL with unit-watch step 3; uw-wave (tools/vrclient/fixtures/uw-wave.json) enabled, every other spawning
+# definition disabled; [UnitWatch] Enabled = true, StuckSeconds 90, StallMinutes 10; no purge cooldown (as swarm-purge.vrs);
+# NyarDevTools (.devtp, .devmark, .devstrand) and DevChatEcho; Chaos invulnerable (`ToggleInvulnerable true`, a Boolean,
+# never false).
+# Run: --var AX=-1880 --var AZ=-1640 (uw-a: the pond, ground y about 0)
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .nyar event reload
+expect-log events: reloaded
+chat .devtp ${AX} ${AZ}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .devmark uw-a
+expect-log \[DEV MARK\] uw-a
+chat .nyar event set uw-wave location here
+expect-reply uw-wave location =
+# 1. event stop
+mark
+chat .nyar event start uw-wave
+expect-log event uw-wave wave 1/2 timeout=30
+wait 8
+chat .devstrand -581295882 under 30
+expect-log \[DEV STRAND\] moved=1 how=under
+expect-log \[nyar\] unit-watch uw-wave stuck: CHAR_Spider_Forest wave 1 \(off-ground\) timeout=25
+expect-log \[nyar\] unit-watch uw-wave waiting: CHAR_Spider_Forest, a player near timeout=10
+chat .nyar event stop uw-wave
+expect-log event uw-wave stopped
+expect-no-log \[nyar\] unit-watch timeout=30
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+# 2. pillar spawns off
+console ToggleInvulnerable true
+wait 2
+mark
+chat .nyar event start uw-wave
+expect-log event uw-wave wave 1/2 timeout=30
+wait 8
+chat .devstrand -581295882 under 30
+expect-log \[DEV STRAND\] moved=1 how=under
+expect-log \[nyar\] unit-watch uw-wave stuck: CHAR_Spider_Forest wave 1 \(off-ground\) timeout=25
+expect-log \[nyar\] unit-watch uw-wave waiting: CHAR_Spider_Forest, a player near timeout=10
+chat .nyar pillar spawns off
+expect-reply spawns
+expect-log event uw-wave timeout=10
+expect-no-log \[nyar\] unit-watch timeout=30
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+chat .nyar pillar spawns on
+expect-reply spawns
+wait 3
+# 3. purge confirm
+console ToggleInvulnerable true
+wait 2
+mark
+chat .nyar event start uw-wave
+expect-log event uw-wave wave 1/2 timeout=30
+wait 8
+chat .devstrand -581295882 under 30
+expect-log \[DEV STRAND\] moved=1 how=under
+expect-log \[nyar\] unit-watch uw-wave stuck: CHAR_Spider_Forest wave 1 \(off-ground\) timeout=25
+expect-log \[nyar\] unit-watch uw-wave waiting: CHAR_Spider_Forest, a player near timeout=10
+chat .nyar purge
+wait 2
+chat .nyar purge confirm
+expect-log purge: 1 events ended, [0-9]+ units queued timeout=20
+expect-no-log \[nyar\] unit-watch timeout=30
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+shot full uw-ends-purged
+# 4. left running with a spider marked and waiting, for the restart
+console ToggleInvulnerable true
+wait 2
+mark
+chat .nyar event start uw-wave
+expect-log event uw-wave wave 1/2 timeout=30
+wait 8
+chat .devstrand -581295882 under 30
+expect-log \[DEV STRAND\] moved=1 how=under
+expect-log \[nyar\] unit-watch uw-wave stuck: CHAR_Spider_Forest wave 1 \(off-ground\) timeout=25
+expect-log \[nyar\] unit-watch uw-wave waiting: CHAR_Spider_Forest, a player near timeout=10
+chat .nyar event info uw-wave
+expect-reply unit watch: 1 stuck now, 0 recovered, 0 removed
+shot full uw-ends-before-restart

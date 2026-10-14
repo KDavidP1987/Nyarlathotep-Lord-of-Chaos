@@ -57,8 +57,15 @@ sealed class WatchWorld(SpawnLedger? ledger = null) : IUnitWatchWorld
 
     public IEnumerable<TrackedUnit> Units => Ledger.Units;
 
+    /// <summary>Where and when our movers last put each unit down (D34); a unit without one is checked from its first read
+    /// and its spawn time.</summary>
+    public Dictionary<long, (DateTime At, float X, float Z)> Landings { get; } = [];
+
+    public void Landing(long key, float x, float z, DateTime at) => Landings[key] = (at, x, z);
+
     public WatchUnit? Read(TrackedUnit unit) =>
-        ThrowRead.Contains(unit.Key) ? throw new InvalidOperationException("entity read failed") : At.TryGetValue(unit.Key, out var u) ? u : null;
+        ThrowRead.Contains(unit.Key) ? throw new InvalidOperationException("entity read failed")
+        : At.TryGetValue(unit.Key, out var u) ? u with { PutDown = Landings.TryGetValue(unit.Key, out var l) ? l : null } : null;
 
     public IReadOnlyList<HuntCandidate> Players() => People;
     public long? FocusKey(ActiveEvent a) => Focus;
@@ -165,11 +172,13 @@ public partial class UnitWatchTests
     static readonly DateTime T0 = WatchRig.T0;
     static readonly DateTime Spawned = T0.AddSeconds(1);
 
-    /// <summary>One uw unit at (500, 500) and one player <paramref name="playerAt"/> m east of it.</summary>
+    /// <summary>One uw unit at (500, 500), 1 m from its spawn spot (it walked off it, so D34's still check is not what
+    /// marks it), and one player <paramref name="playerAt"/> m east of it.</summary>
     static (WatchRig R, long Key) Standing(float? playerAt = 39f)
     {
         var (r, _) = Watch.Rig();
         var key = r.W.Add("uw", Spawned, 500, 500);
+        r.W.Landing(key, 500, 501, Spawned);
         if (playerAt is { } d) r.W.Player(500 + d, 500);
         return (r, key);
     }
@@ -261,6 +270,8 @@ public partial class UnitWatchTests
         r.Active.Add(apo);
         var roamer = r.W.Add("apo", Spawned, 500, 500, wave: Apocalypse.RoamerWave(1));
         var horde = r.W.Add("apo", Spawned, 900, 500, wave: Apocalypse.HordeWave(1));
+        r.W.Landing(roamer, 500, 501, Spawned);                    // both walked off their landing (D34)
+        r.W.Landing(horde, 900, 501, Spawned);
         r.W.Player(530, 500);
         r.W.Player(930, 500, key: 2);
         r.For(95);

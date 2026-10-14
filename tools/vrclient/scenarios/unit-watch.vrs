@@ -1,0 +1,105 @@
+# unit-watch.vrs: unit-watch D23 (Session 1), the standing rule in game. uw-wave (tools/vrclient/fixtures/uw-wave.json:
+# a waveList SpawnWaves, wave 1 of 4 CHAR_Spider_Forest, wave 2 of 2 waiting for its clear with no afterSeconds, 900 s,
+# scoreboard on) is placed at the mark uw-a and started with Chaos there; `.devstrand <guid> mark uw-rock` puts the
+# wave-1 spider nearest Chaos on a rock top 15-30 m from him. Chaos stands still and never attacks (invulnerable, so the
+# stranded spider deals no damage that matters and its target stays beyond 5 m: the line holds under either fight
+# verdict, D4). Within StuckSeconds + 10 s (100 s at the default 90) the log reads the standing mark and the waiting line;
+# no recovery while Chaos stands within 100 m; after `.devtp` of Chaos 150 m away, within 10 s "recovered: … try 1/2",
+# and `.nyar debug here` at the far spot and at uw-a lists the units for the screenshots (the landing kind is in the line).
+# Part 2 (D34 measurement, A1): uw-timing-a (12 then 6 CHAR_Spider_Forest) is placed at uw-a and started with Chaos
+# there; for 150 s the log collects one `[nyar watch] first-move event=uw-timing-a prefab=… after=<s> player=<near|none>`
+# line per spider (after=none past 120 s unmoved). No expect on the values: the orchestrator reads them from the log copy
+# to set SpawnStillSeconds. A spider that stands still beside Chaos may also be marked "(still)" here; that is D34 working.
+#
+# Needs: a Release DLL with unit-watch step 3; NyarDevTools (.devtp, .devmark, .devgo, .devstrand) and DevChatEcho; the
+# dev events.json entries uw-wave and uw-timing-a (tools/vrclient/fixtures/uw-timing-a.json) enabled, every other spawning
+# definition disabled; [Debug] VerboseLogging = true (part 2's lines); [Limits] MaxUnitsPerWave 12 or more;
+# [UnitWatch] Enabled = true, StuckSeconds 90, StallMinutes 10 and SpawnStillSeconds 10 (the defaults: a 1-minute
+# backstop would mark the spiders first);
+# [Scoreboard] IncludeAdmins = true; Chaos invulnerable (`ToggleInvulnerable true`, a Boolean, never false).
+# Run: --var AX=-1880 --var AZ=-1640 (uw-a: the pond, ground y about 0) --var RX RZ RY (a rock top 15-30 m from uw-a
+# that a spider cannot walk down from, chosen by eye, its height RY) --var FX=-1730 --var FZ=-1640 (150 m east of uw-a).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .nyar event reload
+expect-log events: reloaded
+# the rock mark, then uw-a: the event's spot and Chaos's
+chat .devtp ${RX} ${RZ} ${RY}
+expect-log \[DEV TP\] to
+wait 3
+chat .devmark uw-rock
+expect-log \[DEV MARK\] uw-rock x=(?P<KX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<KZ>-?[0-9.]+)
+chat .devtp ${AX} ${AZ}
+expect-log \[DEV TP\] to x=(?P<PX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<PZ>-?[0-9.]+)
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .devmark uw-a
+expect-log \[DEV MARK\] uw-a
+expect-calc hypot(${KX} - ${PX}, ${KZ} - ${PZ}) >= 15 and hypot(${KX} - ${PX}, ${KZ} - ${PZ}) <= 30
+chat .nyar event set uw-wave location here
+expect-reply uw-wave location =
+mark
+chat .nyar event start uw-wave
+expect-log event uw-wave started by manual timeout=20
+expect-log event uw-wave wave 1/2 timeout=30
+wait 8
+chat .devstrand -581295882 mark uw-rock
+expect-log \[DEV STRAND\] moved=1 how=mark
+wait 3
+chat .nyar debug here 40
+expect-reply uw-wave
+shot full uw-rock-stranded
+# the standing mark and the waiting line (Chaos within 40 m and within 100 m)
+expect-log \[nyar\] unit-watch uw-wave stuck: CHAR_Spider_Forest wave 1 \(standing\) timeout=110
+expect-log \[nyar\] unit-watch uw-wave waiting: CHAR_Spider_Forest, a player near timeout=10
+expect-no-log \[nyar\] unit-watch uw-wave recovered: timeout=20
+shot full uw-waiting
+# Chaos 150 m away: the next check moves the spider where no player sees it
+chat .devtp ${FX} ${FZ}
+expect-log \[DEV TP\] to x=(?P<QX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<QZ>-?[0-9.]+)
+expect-calc hypot(${QX} - ${PX}, ${QZ} - ${PZ}) >= 140
+expect-log \[nyar\] unit-watch uw-wave recovered: CHAR_Spider_Forest try 1/2, [0-9]+ m \((?P<KIND>group|player|anchor)\) timeout=12
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar debug here 60
+shot full uw-recovered-far
+chat .devgo uw-a
+expect-log \[DEV TP\] uw-a
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar debug here 15
+expect-reply uw-wave
+shot full uw-recovered-uwa
+chat .nyar event info uw-wave
+expect-reply unit watch:
+# clean up: the admin stop shows the scoreboard; nothing is left after the grace
+chat .nyar event stop uw-wave
+expect-log event uw-wave stopped
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+# part 2: first-move measurement, 12 spiders spawned beside Chaos at uw-a
+chat .devgo uw-a
+expect-log \[DEV TP\] uw-a
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar event set uw-timing-a location here
+expect-reply uw-timing-a location =
+mark
+chat .nyar event start uw-timing-a
+expect-log event uw-timing-a wave 1/2 timeout=30
+expect-log \[nyar watch\] first-move event=uw-timing-a prefab=CHAR_Spider_Forest after=([0-9.]+|none) player=(near|none) timeout=130
+wait 150
+shot full uw-first-move
+chat .nyar event stop uw-timing-a
+expect-log event uw-timing-a stopped
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+console TPHome
+wait 3

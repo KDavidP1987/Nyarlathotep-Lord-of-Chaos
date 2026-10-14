@@ -3,14 +3,14 @@ using Nyarlathotep.Logic;
 
 namespace Nyarlathotep.Tests;
 
-/// <summary>unit-watch D1: the [UnitWatch] section binds Enabled (true), StuckSeconds (90, 30-600) and StallMinutes (10,
-/// 0-60) through Config/Settings.cs as the [Limits] keys are bound, clamped with one warning naming the key; the tries are 2
+/// <summary>unit-watch D1, D34: the [UnitWatch] section binds Enabled (true), StuckSeconds (90, 30-600), StallMinutes (10,
+/// 0-60) and SpawnStillSeconds (10, 5-60) through Config/Settings.cs as the [Limits] keys are bound, clamped with one warning naming the key; the tries are 2
 /// and not configurable; no definition, template or state.json property is added.</summary>
 public partial class ConfigClampTests
 {
     static string SettingsText => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Resources", "Settings.cs.txt"));
 
-    static readonly (string Key, int Default, int Min, int Max)[] WatchKeys = [("StuckSeconds", 90, 30, 600), ("StallMinutes", 10, 0, 60)];
+    static readonly (string Key, int Default, int Min, int Max)[] WatchKeys = [("StuckSeconds", 90, 30, 600), ("StallMinutes", 10, 0, 60), ("SpawnStillSeconds", 10, 5, 60)];
 
     /// <summary>What keeps the cfg text and the limits from binding the three keys as planned; empty when they do.</summary>
     internal static List<string> UnitWatchProblems(string settings, IReadOnlyList<IntLimit> limits)
@@ -96,6 +96,7 @@ public partial class ConfigClampTests
     {
         foreach (var v in new[] { 30, 90, 600 }) Assert.Null(Limits.StuckSeconds.Clamp(v).Log);
         foreach (var v in new[] { 0, 10, 60 }) Assert.Null(Limits.StallMinutes.Clamp(v).Log);
-        Assert.Equal(3, UnitWatchProblems("", Limits.All).Count);   // Enabled and both BindLimit lines missing
+        foreach (var v in new[] { 5, 10, 60 }) Assert.Null(Limits.SpawnStillSeconds.Clamp(v).Log);
+        Assert.Equal(4, UnitWatchProblems("", Limits.All).Count);   // Enabled and the three BindLimit lines missing
     }
 }

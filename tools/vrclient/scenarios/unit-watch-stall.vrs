@@ -1,0 +1,81 @@
+# unit-watch-stall.vrs: unit-watch D25 (Session 1), the stall backstop and unstick in game. uw-stall (tools/vrclient/fixtures/
+# uw-stall.json: uw-wave's shape, wave 1 of 4 CHAR_Spider_Forest, wave 2 of 2 waiting for its clear) at the mark uw-b, Chaos
+# 150 m away and never fighting: no player within 40 m, so the standing rule never marks, and the spiders stand on open
+# ground, so only the backstop does. "[nyar] unit-watch uw-stall stall: wave 1 quiet 1 min, 4 leftovers marked" comes
+# 60-70 s after wave 1 queued (the clock starts at the first check after the wave is decided), then four "stuck: … (stall)"
+# and four "recovered: … (player|group|anchor)" lines. Then uw-stall is restarted: `.nyar event unstick uw-stall` replies
+# "unstick uw-stall: 4 units marked, 0 fighting left alone" and the twin `.nyar api event unstick uw-stall` (the same
+# units, already marked, so marked=0) replies "[NYAR:ok] cmd=event verb=unstick id=uw-stall marked=0 fighting=0"; `.nyar
+# event unstick nosuch` replies "unknown event nosuch", and an unstick of the stopped uw-stall "unstick uw-stall: not
+# running". Every reply is screenshotted in real chat (profile probe 11.2).
+#
+# Needs: a Release DLL with unit-watch step 3; [UnitWatch] StallMinutes = 1 in the dev cfg for this run only (restored to 10
+# after), Enabled = true, StuckSeconds 90; the dev events.json entry uw-stall (fixture above) enabled; NyarDevTools (.devtp,
+# .devmark) and DevChatEcho; Chaos invulnerable (`ToggleInvulnerable true`, a Boolean, never false).
+# Run: --var BX=-1580 --var BZ=-1640 (uw-b: hg-b, open ground in FarbaneWoods) --var FX=-1430 --var FZ=-1640 (150 m east)
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .nyar event reload
+expect-log events: reloaded
+chat .devtp ${BX} ${BZ}
+expect-log \[DEV TP\] to x=(?P<PX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<PZ>-?[0-9.]+)
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .devmark uw-b
+expect-log \[DEV MARK\] uw-b
+chat .nyar event set uw-stall location here
+expect-reply uw-stall location =
+chat .devtp ${FX} ${FZ}
+expect-log \[DEV TP\] to x=(?P<QX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<QZ>-?[0-9.]+)
+expect-calc hypot(${QX} - ${PX}, ${QZ} - ${PZ}) >= 140
+wait 4
+console ToggleInvulnerable true
+wait 2
+mark
+chat .nyar event start uw-stall
+expect-log event uw-stall started by manual timeout=20
+expect-log event uw-stall wave 1/2 timeout=30
+expect-no-log \[nyar\] unit-watch uw-stall stall: timeout=55
+expect-log \[nyar\] unit-watch uw-stall stall: wave 1 quiet 1 min, 4 leftovers marked timeout=20
+expect-log \[nyar\] unit-watch uw-stall stuck: CHAR_Spider_Forest wave 1 \(stall\) timeout=5
+expect-seen \[nyar\] unit-watch uw-stall recovered: CHAR_Spider_Forest try 1/2, [0-9]+ m \((player|group|anchor)\) timeout=20
+chat .nyar event info uw-stall
+expect-reply unit watch: 4 stuck now, 4 recovered, 0 removed timeout=30
+shot full uw-stall-info
+# unstick on a fresh instance: the four new spiders have not fought
+chat .nyar event stop uw-stall
+expect-log event uw-stall stopped
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+mark
+chat .nyar event start uw-stall
+expect-log event uw-stall started by manual timeout=20
+expect-log event uw-stall wave 1/2 timeout=30
+wait 8
+chat .nyar event unstick uw-stall
+expect-reply unstick uw-stall: 4 units marked, 0 fighting left alone
+expect-log \[nyar\] unit-watch uw-stall stuck: CHAR_Spider_Forest wave 1 \(admin\)
+wait 2
+shot chat uw-unstick-reply
+chat .nyar api event unstick uw-stall
+expect-reply [NYAR:ok] cmd=event verb=unstick id=uw-stall marked=0 fighting=0
+wait 2
+shot chat uw-unstick-api
+chat .nyar event unstick nosuch
+expect-reply unknown event nosuch
+wait 2
+shot chat uw-unstick-nosuch
+chat .nyar event stop uw-stall
+expect-log event uw-stall stopped
+chat .nyar event unstick uw-stall
+expect-reply unstick uw-stall: not running
+wait 2
+shot chat uw-unstick-stopped
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+console TPHome
+wait 3

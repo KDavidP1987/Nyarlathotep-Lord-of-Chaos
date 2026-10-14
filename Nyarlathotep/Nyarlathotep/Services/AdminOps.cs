@@ -49,4 +49,9 @@ internal sealed class AdminOps : IAdminOps
 
     [Mutating]
     public Outcome OpSetPillar(string name, string state) => PillarSwitches.SetPillar(name, state);
+
+    /// <summary>`.nyar event unstick &lt;id&gt;` and its twin (unit-watch D12, D13): marks the running instance's units that
+    /// have not fought; the watch phase moves them.</summary>
+    [Mutating]
+    public Outcome OpUnstick(string id) => SpawnTracker.Unstick(id);
 }

@@ -1,0 +1,139 @@
+# unit-watch-apocalypse.vrs: unit-watch D26 (Session 2), an apocalypse horde unit and a roamer in game. apo-test
+# (tools/vrclient/fixtures/apo-test.json: Faction_Undead, CHAR_Undead_Guardian -1967480038 and
+# CHAR_Undead_GhostMilitia_Light -1618703048, 2 hotspots 300 m or more apart, 3 roamers each, 2 hordes from 1 min, size 8,
+# marchSpeed 3.0) is started with Chaos at the wait spot; once horde 1 has risen Chaos goes to its front, sinks the
+# Guardian nearest him 30 m (`.devstrand -1967480038 under 30`) and leaves for the far spot W, 150 m beyond hotspot 2 on
+# the line from hotspot 1 (so 150 m or more from the front and from hotspot 2); "stuck: … (off-ground)" and "recovered: …"
+# follow within 25 s, and `.nyar debug here 15` at the front lists the unit among its horde. Then a roamer at hotspot 2
+# is sunk the same way and recovers near its group or hotspot. The horde strand is then repeated twice more, Chaos
+# returning to the front each time (a held front stays put while he is within 60 m of it), until "removed: … no kill
+# credit"; no "apocalypse apo-test spread" line follows (a removal is a despawn: no death, no spread).
+# A strand picks the unit nearest Chaos: if the recovered Guardian landed behind another, the next strand starts that
+# unit's own try 1 (read the stuck/recovered lines); the scenario's third and fourth strands give it room, and the
+# removal is read with expect-seen.
+# Restart (by hand, after this scenario; logs copied first, D26): the next boot logs "event apo-test resumed after restart
+# (horde <k>/2, <u> units to rebuild)" with u not counting the removed unit (compare with `.nyar event info apo-test`
+# before the restart, shot uw-apo-before-restart).
+#
+# Needs: a Release DLL with unit-watch step 3; apo-test (fixture above) enabled, every other spawning definition disabled;
+# [UnitWatch] Enabled = true, StuckSeconds 90, StallMinutes 10; NyarDevTools (.devtp, .devstrand) and DevChatEcho; vrclient
+# with `calc` and `expect-calc`; no purge cooldown; Chaos invulnerable (`ToggleInvulnerable true`, a Boolean, never false;
+# set again after every teleport, as a death resets it).
+# Run: --var WX=-1690 --var WZ=-1400 (the wait spot, 300 m or more from both hotspots, as apocalypse.vrs)
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .nyar event reload
+expect-log events: reloaded
+chat .devtp ${WX} ${WZ}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
+mark
+chat .nyar event start apo-test
+expect-log event apo-test started by manual timeout=20
+expect-log apocalypse apo-test hotspots: 2 \( timeout=10
+chat .nyar event info apo-test
+expect-log (^|\] |\\n )hotspot 1: [A-Za-z' ]+? at (?P<H1X>-?[0-9]+) (?P<H1Z>-?[0-9]+) \\n hotspot 2: [A-Za-z' ]+? at (?P<H2X>-?[0-9]+) (?P<H2Z>-?[0-9]+) timeout=10
+calc D12 = hypot(${H2X} - ${H1X}, ${H2Z} - ${H1Z})
+calc WFX = round(${H2X} + 150 * (${H2X} - ${H1X}) / ${D12})
+calc WFZ = round(${H2Z} + 150 * (${H2Z} - ${H1Z}) / ${D12})
+expect-seen apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
+# A. a horde unit: Chaos on horde 1's front, the Guardian nearest him sunk, Chaos to W
+chat .nyar event info apo-test
+expect-log (^|\] |\\n )horde 1 front at (?P<F1X>-?[0-9]+) (?P<F1Z>-?[0-9]+), [0-9]+ % timeout=10
+chat .devtp ${F1X} ${F1Z}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
+mark
+chat .devstrand -1967480038 under 30 30
+expect-log \[DEV STRAND\] moved=1 how=under x=-?[0-9.]+ y=(?P<SY>-?[0-9.]+) z=-?[0-9.]+
+expect-calc ${SY} > -100
+chat .devtp ${WFX} ${WFZ}
+expect-log \[DEV TP\] to x=(?P<QX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<QZ>-?[0-9.]+)
+expect-calc hypot(${QX} - ${F1X}, ${QZ} - ${F1Z}) >= 150
+wait 4
+console ToggleInvulnerable true
+wait 2
+expect-seen \[nyar\] unit-watch apo-test stuck: CHAR_Undead_Guardian wave [0-9]+ \(off-ground\) timeout=25
+expect-seen \[nyar\] unit-watch apo-test recovered: CHAR_Undead_Guardian try 1/2, [0-9]+ m \((group|player|anchor)\) timeout=15
+chat .nyar event info apo-test
+expect-log (^|\] |\\n )horde 1 front at (?P<G1X>-?[0-9]+) (?P<G1Z>-?[0-9]+), [0-9]+ % timeout=10
+chat .devtp ${G1X} ${G1Z}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar debug here 15
+expect-reply apo-test
+shot full uw-apo-horde-recovered
+# B. a roamer at hotspot 2, Chaos back to W after the strand
+chat .devtp ${H2X} ${H2Z}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
+mark
+chat .devstrand -1967480038 under 30 40
+expect-log \[DEV STRAND\] moved=1 how=under x=-?[0-9.]+ y=(?P<RY>-?[0-9.]+) z=-?[0-9.]+
+expect-calc ${RY} > -100
+chat .devtp ${WFX} ${WFZ}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
+expect-seen \[nyar\] unit-watch apo-test stuck: CHAR_Undead_Guardian wave [0-9]+ \(off-ground\) timeout=25
+expect-seen \[nyar\] unit-watch apo-test recovered: CHAR_Undead_Guardian try 1/2, [0-9]+ m \((group|player|anchor)\) timeout=15
+chat .devtp ${H2X} ${H2Z}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar debug here 40
+expect-reply apo-test
+shot full uw-apo-roamer-recovered
+# C. the horde strand repeated until the removal (each time: to the front, sink the nearest Guardian, back to W)
+mark
+chat .nyar event info apo-test
+expect-log (^|\] |\\n )horde 1 front at (?P<J1X>-?[0-9]+) (?P<J1Z>-?[0-9]+), [0-9]+ % timeout=10
+chat .devtp ${J1X} ${J1Z}
+expect-log \[DEV TP\] to
+wait 3
+chat .devstrand -1967480038 under 30 30
+expect-log \[DEV STRAND\] moved=1 how=under
+chat .devtp ${WFX} ${WFZ}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+expect-seen \[nyar\] unit-watch apo-test (try failed|stuck): CHAR_Undead_Guardian timeout=30
+wait 12
+chat .devtp ${J1X} ${J1Z}
+expect-log \[DEV TP\] to
+wait 3
+chat .devstrand -1967480038 under 30 30
+expect-log \[DEV STRAND\] moved=1 how=under
+chat .devtp ${WFX} ${WFZ}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 30
+chat .devtp ${J1X} ${J1Z}
+expect-log \[DEV TP\] to
+wait 3
+chat .devstrand -1967480038 under 30 30
+expect-log \[DEV STRAND\] moved=1 how=under
+chat .devtp ${WFX} ${WFZ}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+expect-seen \[nyar\] unit-watch apo-test removed: CHAR_Undead_Guardian wave [0-9]+ after 2 tries, no kill credit timeout=60
+expect-no-log apocalypse apo-test spread timeout=15
+chat .nyar event info apo-test
+expect-reply removed
+shot full uw-apo-before-restart
+# left running for the restart (by hand, logs copied first): the next boot's resumed line is read from its log

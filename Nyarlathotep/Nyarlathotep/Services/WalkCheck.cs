@@ -143,6 +143,10 @@ internal static class WalkCheck
     /// <summary>World metres to a tile index (two tiles per metre, offset 6400; KindredCommands' conversion).</summary>
     static int TileIndex(float v) => (int)math.floor(v * 2) + 6400;
 
+    /// <summary>True when (x, z) has a tile index the grounded read accepts (A10): unit watch's ground read (unit-watch D3)
+    /// gives no reading off the grid instead of a read failure.</summary>
+    internal static bool OnGrid(float x, float z) => float.IsFinite(x) && float.IsFinite(z) && TileIndex(x) >= 0 && TileIndex(z) >= 0;
+
     /// <summary>The game keeps TileWorldSingleton on a system entity, which a default query leaves out (A11): the game's
     /// own singleton lookup first, then a query that includes system entities.</summary>
     static TileWorld? LiveTileWorld()

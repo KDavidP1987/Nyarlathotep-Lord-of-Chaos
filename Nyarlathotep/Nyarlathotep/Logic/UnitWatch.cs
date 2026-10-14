@@ -22,6 +22,9 @@ public static class UnitWatch
     public const float StandStill = 5f;
     /// <summary>Standing counts only while an online player stands this near, or the unit holds a player target (S-5).</summary>
     public const float PlayerReach = 40f;
+    /// <summary>A unit that moved no more than this on x and z from its spawn or landing spot over SpawnStillSeconds has not
+    /// moved at all (D34, A1).</summary>
+    public const float StillReach = 0.5f;
     /// <summary>Two off-ground readings this many seconds apart mark a unit (S-6).</summary>
     public const int OffGroundSeconds = 10;
     /// <summary>A unit this far below the lowest grounded level at its x and z is off the ground (S-12's fallback, the
@@ -57,15 +60,18 @@ public static class UnitWatch
     public static float? Nearest(IEnumerable<HuntCandidate> online, float x, float z) => JumpRule.Nearest(online, x, z);
 }
 
-/// <summary>The three cfg keys as loaded (D1): the switch, the stuck time and the backstop's quiet minutes (0: off).</summary>
-public sealed record WatchSettings(bool Enabled, int StuckSeconds, int StallMinutes)
+/// <summary>The cfg keys as loaded (D1, D34): the switch, the stuck time, the backstop's quiet minutes (0: off) and the
+/// still-at-spawn time.</summary>
+public sealed record WatchSettings(bool Enabled, int StuckSeconds, int StallMinutes, int SpawnStillSeconds = 10)
 {
-    public static readonly WatchSettings Default = new(true, Limits.StuckSeconds.Default, Limits.StallMinutes.Default);
+    public static readonly WatchSettings Default =
+        new(true, Limits.StuckSeconds.Default, Limits.StallMinutes.Default, Limits.SpawnStillSeconds.Default);
     public TimeSpan Stuck => TimeSpan.FromSeconds(StuckSeconds);
+    public TimeSpan SpawnStill => TimeSpan.FromSeconds(SpawnStillSeconds);
 }
 
 /// <summary>Why a unit was marked stuck (D16).</summary>
-public enum StuckReason { Standing, OffGround, Stall, Admin }
+public enum StuckReason { Standing, OffGround, Stall, Admin, Still }
 
 /// <summary>Which landing a recovery used (D5, S-7).</summary>
 public enum LandingKind { Group, Player, Anchor }
@@ -79,9 +85,11 @@ public enum ClearReason { Fought, Moving }
 /// <summary>A live tracked unit as the watch reads it: its ledger key, position, walk-check height level, group within its
 /// wave, its anchor (spawn spot, regroup anchor, arena centre, a horde's front, a roamer's hotspot) with the level there,
 /// and, when it holds a player as its aggro target, that player's distance on x and z (never the player) and its own
-/// attack range.</summary>
+/// attack range; and the last time one of our movers put it down (its spawn, a hidden jump, an apocalypse hop, a region or
+/// arena return, a regroup, a recovery) with the spot, when the game side knows it (D34).</summary>
 public readonly record struct WatchUnit(long Key, float X, float Y, float Z, byte Level, int Group,
-    (float X, float Y, float Z, byte Level) Anchor, float? TargetDistance = null, float AttackRange = 0f);
+    (float X, float Y, float Z, byte Level) Anchor, float? TargetDistance = null, float AttackRange = 0f,
+    (DateTime At, float X, float Z)? PutDown = null);
 
 /// <summary>The walk check's answer at a unit's x and z (D3, S-12's fallback): the height of the lowest grounded level
 /// there, or null when no level is grounded at all.</summary>
@@ -309,6 +317,7 @@ public static class UnitWatchLines
         StuckReason.Standing => "standing",
         StuckReason.OffGround => "off-ground",
         StuckReason.Stall => "stall",
+        StuckReason.Still => "still",
         _ => "admin",
     };
 
@@ -377,6 +386,10 @@ public sealed class UnitWatchPhase
         public DateTime? OffSince;
         public DateTime? GroundRead;
         public DateTime? LastFight;
+        public float StillX, StillZ;
+        public DateTime StillSince;
+        public bool StillNear;
+        public bool StillDone;
         public StuckReason? Mark;
         public DateTime MarkedUtc;
         public DateTime TryClock;
@@ -578,6 +591,11 @@ public sealed class UnitWatchPhase
     Row NewRow(ActiveEvent a, TrackedUnit t, WatchUnit? u, DateTime now)
     {
         var row = new Row(t.Key, a.Id, a.Instance.StartedUtc, t.Prefab, t.Wave) { WindowStart = now, WindowX = u?.X ?? 0, WindowZ = u?.Z ?? 0 };
+        // D34: the still check starts at the spawn (where the game side knows the spot, else the first read) or at the
+        // latest landing of one of our movers
+        if (u?.PutDown is { } p) StillFrom(row, p.X, p.Z, p.At);
+        else StillFrom(row, u?.X ?? 0, u?.Z ?? 0, t.SpawnedUtc);
+        if (u is null) row.StillDone = true;
         _rows[t.Key] = row;
         return row;
     }
@@ -590,6 +608,15 @@ public sealed class UnitWatchPhase
         row.MovedUtc = null;
         row.Waiting = false;
         Phases.Safe(info, UnitWatchLines.Stuck(row.EventId, row.Prefab, row.Wave, reason));
+    }
+
+    static void StillFrom(Row row, float x, float z, DateTime since)
+    {
+        row.StillX = x;
+        row.StillZ = z;
+        row.StillSince = since;
+        row.StillNear = false;
+        row.StillDone = false;
     }
 
     static void Fresh(Row row, WatchUnit u, DateTime now)
@@ -717,6 +744,26 @@ public sealed class UnitWatchPhase
             return now - row.OffSince.Value >= TimeSpan.FromSeconds(UnitWatch.OffGroundSeconds);
         }
 
+        /// <summary>The still-at-spawn check (D34, A1): SpawnStillSeconds after the unit's spawn or its latest landing by one
+        /// of our movers, a unit that moved no more than 0.5 m on x and z from that spot, did not fight, and had an online
+        /// player within 40 m or a player target at some check in that time, is stuck at once. Decided once per spot; a newer
+        /// landing starts it again from the landing.</summary>
+        bool Still(Row row, WatchUnit u)
+        {
+            if (u.PutDown is { } p && p.At > row.StillSince) StillFrom(row, p.X, p.Z, p.At);
+            if (row.StillDone) return false;
+            if (HuntingGrounds.Distance(row.StillX, row.StillZ, u.X, u.Z) > UnitWatch.StillReach
+                || row.LastFight is { } f && f >= row.StillSince)
+            {
+                row.StillDone = true;
+                return false;
+            }
+            if (PlayerNear(u)) row.StillNear = true;
+            if (now - row.StillSince < s.SpawnStill) return false;
+            row.StillDone = true;
+            return row.StillNear;
+        }
+
         void Watch(Row row, WatchUnit u)
         {
             Window(row, u);
@@ -726,6 +773,11 @@ public sealed class UnitWatchPhase
                 return;
             }
             if (failed) return;
+            if (Still(row, u))
+            {
+                phase.Mark(row, StuckReason.Still, now, info);
+                return;
+            }
             if (now - row.WindowStart >= s.Stuck) phase.Mark(row, StuckReason.Standing, now, info);
         }
 
@@ -749,7 +801,7 @@ public sealed class UnitWatchPhase
                     Clear(row, u, ClearReason.Fought);
                     return;
                 }
-                if (row.Mark is StuckReason.Standing or StuckReason.OffGround)
+                if (row.Mark is StuckReason.Standing or StuckReason.OffGround or StuckReason.Still)
                 {
                     Window(row, u);
                     if (OffGroundStuck(row, u, out var failed))
@@ -758,6 +810,11 @@ public sealed class UnitWatchPhase
                         return;
                     }
                     if (failed) return;
+                    if (Still(row, u))
+                    {
+                        Fail(row, u, TryFailure.StillStuck, counted: true);   // still at its landing beside a player (D34)
+                        return;
+                    }
                     if (now - moved < s.Stuck) return;
                     if (row.WindowStart <= moved) Fail(row, u, TryFailure.StillStuck, counted: true);
                     else Clear(row, u, ClearReason.Moving);
@@ -806,6 +863,7 @@ public sealed class UnitWatchPhase
             Phases.Safe(info, UnitWatchLines.Recovered(row.EventId, row.Prefab, row.Try, m.Distance, m.Kind));
             row.MovedUtc = now;
             row.OffSince = null;
+            StillFrom(row, m.X, m.Z, now);                                // D34: checked again from the landing
             row.WindowStart = now;
             row.WindowX = m.X;
             row.WindowZ = m.Z;

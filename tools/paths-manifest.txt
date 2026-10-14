@@ -28,6 +28,8 @@ tracked: docs/audits/apocalypse-step2-planted.txt
 tracked: docs/audits/apocalypse-step3-planted.txt
 # the planted-fault runs of unit-watch step 2, copied into its post-audit (unit-watch Build plan step 2)
 tracked: docs/audits/unit-watch-step2-planted.txt
+# the planted-fault runs of unit-watch step 3, copied into its post-audit (unit-watch Build plan step 3)
+tracked: docs/audits/unit-watch-step3-planted.txt
 tracked: docs/img/*
 tracked: docs/dod/*.md
 tracked: docs/dod/*.html

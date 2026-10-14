@@ -78,6 +78,10 @@ internal static class SpawnTracker
         _region.Clear();                                                     // hunting-grounds D12: nor a last inside spot, target or streak
         _meta.Clear();
         _groups.Clear();
+        _watch.Clear();                                                      // unit-watch D11: a restart keeps no watch row, try, clock or streak
+        _landed.Clear();
+        _spawnSpot.Clear();
+        _fight.Ok();
         HuntAction.Initialize();                                            // event-spawns D33: a restart keeps no seed
         TerritoryMap.Initialize();                                           // and no kept map
     }
@@ -187,7 +191,9 @@ internal static class SpawnTracker
     internal static void Died(Entity unit, Entity killer = default)
     {
         var key = KeyOf(unit);
+        var tracked = _ledger.Find(key);                                     // read before Forget, for the watch's stall clock
         if (!_ledger.Forget(key)) return;
+        WatchDied(key, tracked);
         try { Left(key, Settings.VerboseLogging.Value ? "died" + KillerText(killer) : "died"); }
         finally { Departed(key, UnitDeparture.Died); Release(key); }
     }
@@ -334,6 +340,7 @@ internal static class SpawnTracker
                 var to = new float3(tx, ty, tz);
                 unit.Write(new Translation { Value = to });
                 if (unit.Has<LastTranslation>()) unit.Write(new LastTranslation { Value = to });
+                Landed(unit, to, regroup: true);                             // unit-watch D34: the still check starts here
                 // The spot the AI walks back to after a fight, as Bloodcraft's familiar return does, so it does not path
                 // back to the ring point on the other level.
                 if (unit.TryGetComponent<AggroConsumer>(out var aggro))
@@ -397,6 +404,7 @@ internal static class SpawnTracker
             var to = new float3(r.X, r.Y, r.Z);
             unit.Write(new Translation { Value = to });
             if (unit.Has<LastTranslation>()) unit.Write(new LastTranslation { Value = to });
+            Landed(unit, to);                                                // unit-watch D34
             // The spot the AI walks back to after a fight, as the regroup and Bloodcraft's familiar return set it, so the
             // unit does not path back out to where it stood.
             if (unit.TryGetComponent<AggroConsumer>(out var aggro))
@@ -521,6 +529,7 @@ internal static class SpawnTracker
     {
         unit.Write(new Translation { Value = to });
         if (unit.Has<LastTranslation>()) unit.Write(new LastTranslation { Value = to });
+        Landed(unit, to);                                                    // unit-watch D34: hidden jump, hop, return, recovery
         if (unit.TryGetComponent<AggroConsumer>(out var aggro))
         {
             aggro.PreCombatPosition = to;
@@ -724,6 +733,241 @@ internal static class SpawnTracker
         }
     }
 
+    // ---- the watch phase: unit watch (unit-watch D2-D11, D18) ----
+
+    static readonly UnitWatchPhase _watch = new();
+    static readonly WatchWorld _watchWorld = new();
+    static readonly FightRead _fight = new();
+
+    /// <summary>The last time one of our movers put each unit down, and where (unit-watch D34): its spawn, a regroup, an
+    /// arena or region return, a hidden jump, an apocalypse hop or roam jump, a recovery. Memory only; the row goes with
+    /// the unit.</summary>
+    static readonly Dictionary<long, (DateTime At, float X, float Z)> _landed = new();
+
+    /// <summary>Session 1's measurement for D34's default (Debug.VerboseLogging only): each event unit's spawn spot until its
+    /// first move of more than 0.5 m, logged once as "[nyar watch] first-move …".</summary>
+    static readonly Dictionary<long, (DateTime At, float X, float Z)> _spawnSpot = new();
+
+    /// <summary>A unit waiting longer than this for its first move is logged "after=none" and dropped.</summary>
+    const int FirstMoveCapSeconds = 120;
+
+    static void Landed(Entity unit, float3 to, bool spawn = false, bool regroup = false)
+    {
+        var key = KeyOf(unit);
+        var at = DateTime.UtcNow;
+        _landed[key] = (at, to.x, to.z);
+        if (spawn && Settings.VerboseLogging.Value && Settings.UnitWatchEnabled.Value) _spawnSpot[key] = (at, to.x, to.z);
+        else if (regroup && _spawnSpot.TryGetValue(key, out var was)) _spawnSpot[key] = (was.At, to.x, to.z);   // still the spawn
+    }
+
+    /// <summary>One verbose line per event unit at its first move of more than 0.5 m from its spawn spot, with the seconds
+    /// since its spawn and whether an online player stood within 40 m then (unit-watch D34, Session 1's measurement): no
+    /// name and no id. Runs every tick while units wait; never throws into the tick.</summary>
+    static void FirstMoves(DateTime now)
+    {
+        if (_spawnSpot.Count == 0) return;
+        try
+        {
+            List<(float X, float Z)> players = null;
+            foreach (var (key, spot) in _spawnSpot.ToList())
+            {
+                if (!_entities.TryGetValue(key, out var unit) || !unit.Exists() || !unit.TryGetComponent<Translation>(out var pos))
+                {
+                    _spawnSpot.Remove(key);
+                    continue;
+                }
+                var age = (now - spot.At).TotalSeconds;
+                var moved = math.distance(pos.Value.xz, new float2(spot.X, spot.Z)) > UnitWatch.StillReach;
+                if (!moved && age < FirstMoveCapSeconds) continue;
+                _spawnSpot.Remove(key);
+                if (_ledger.Find(key) is not { EventId: { } eventId } t) continue;
+                players ??= PlayerQuery.Read().Select(p => (p.X, p.Z)).ToList();
+                var near = players.Any(p => math.distance(new float2(p.X, p.Z), pos.Value.xz) <= UnitWatch.PlayerReach);
+                var after = moved ? age.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "none";
+                Core.Log.LogInfo($"[nyar watch] first-move event={eventId} prefab={t.Prefab} after={after} player={(near ? "near" : "none")}");
+            }
+        }
+        catch (Exception ex) { _spawnSpot.Clear(); Core.Log.LogWarning($"[nyar watch] first-move read failed: {ex.Message}"); }
+    }
+
+    /// <summary>The [UnitWatch] keys as loaded (D1, D34); BepInEx reads the cfg at boot.</summary>
+    static WatchSettings WatchSettingsNow() =>
+        new(Settings.UnitWatchEnabled.Value, Settings.Limit(Limits.StuckSeconds), Settings.Limit(Limits.StallMinutes),
+            Settings.Limit(Limits.SpawnStillSeconds));
+
+    /// <summary>The watch's health entries ("unit watch: read failing", "unit watch: move failing"; D18), the fight read's
+    /// own read failure folded into the first, for HealthMonitor and `.nyar status`.</summary>
+    internal static IReadOnlyList<string> WatchHealth => _watch.Health.Concat(_fight.Health).Distinct(StringComparer.Ordinal).ToList();
+
+    /// <summary>`event info`'s counts for a running instance (D15).</summary>
+    internal static WatchCounts WatchCountsOf(ActiveEvent active) => _watch.Counts(active);
+
+    /// <summary>An end path of <paramref name="eventId"/> (D11): its rows, tries, clocks and counts go; with no event left
+    /// running the streaks and health entries go too.</summary>
+    internal static void WatchEnded(string eventId)
+    {
+        _watch.EventEnded(eventId);
+        if (EventRuntime.Engine.Active.Count == 0) _fight.Ok();
+    }
+
+    /// <summary>`purge confirm` (D10, D11): every row, try, clock, count and streak goes at once.</summary>
+    internal static void WatchPurged()
+    {
+        _watch.Clear();
+        _fight.Ok();
+    }
+
+    /// <summary>The death pass, inside <see cref="Died"/>: the unit's row goes and its wave's stall clock restarts (D8, D9);
+    /// never throws, so nothing of the death pass is skipped (D18).</summary>
+    static void WatchDied(long key, TrackedUnit tracked)
+    {
+        try { _watch.Died(key, tracked?.EventId, tracked?.Wave ?? 0, DateTime.UtcNow); }
+        catch (Exception) { /* the watch never breaks the death pass */ }
+    }
+
+    /// <summary>`.nyar event unstick &lt;id&gt;` and its twin (D12, D13), through AdminOps inside the gateway: the phase marks
+    /// the running instance's live units that have not fought; nothing is moved here (the next checks do).</summary>
+    internal static Outcome Unstick(string id) =>
+        _watch.Unstick(id, EventStore.Catalog.Current.Find(id) is not null, EventRuntime.Engine.Find(id), _watchWorld, WatchSettingsNow(),
+            DateTime.UtcNow, line => Core.Log.LogInfo($"[nyar] {line}"));
+
+    /// <summary>The scheduler's watch phase (D2-D10), after the arena, region and apocalypse phases: every
+    /// UnitWatch.CheckSeconds while an event runs and [UnitWatch] Enabled is true; the logic and its guards are
+    /// Logic/UnitWatchPhase, which never throws. The check's walk probe and players are dropped here whatever happens.</summary>
+    [Mutating]
+    internal static void WatchTick(DateTime now)
+    {
+        if (!Settings.UnitWatchEnabled.Value) _spawnSpot.Clear();             // off: the phase drops its rows below; no measurement either
+        else if (Settings.VerboseLogging.Value) FirstMoves(now);                  // unit-watch D34: Session 1's measurement
+        try
+        {
+            var active = EventRuntime.Engine.Active;
+            if (active.Count == 0 || _ledger.Tracked == 0) _fight.Ok();          // the events ended or nothing is tracked: the fight streak too (D18)
+            else _fight.Checked();
+            _watch.Tick(now, active, _watchWorld, WatchSettingsNow(),
+                line => Core.Log.LogInfo($"[nyar] {line}"), line => Core.Log.LogError($"[nyar] {line}"));
+        }
+        finally { _watchWorld.End(); }
+    }
+
+    /// <summary>The fight patch's gate (D4, D10): the watch is on, an event runs and the ledger tracks a unit. A cheap read,
+    /// so the patch returns at once otherwise.</summary>
+    internal static bool WatchesFights => Settings.UnitWatchEnabled.Value && _ledger.Tracked > 0 && EventRuntime.Engine.Active.Count > 0;
+
+    /// <summary>The ledger key of an entity (the fight patch's lookup; never stored with anything of a player).</summary>
+    internal static long KeyFor(Entity e) => KeyOf(e);
+
+    /// <summary>One batch of the fight patch (D4, D18): Logic/FightRead keeps each tracked unit's last fight with a player
+    /// in the phase's FightBook, guarded per row, logged once per streak.</summary>
+    internal static void FightBatch(int count, Func<int, long?> read) =>
+        _fight.Pass(count, read, _watch.Fights, IsTracked, DateTime.UtcNow, line => Core.Log.LogError($"[nyar] {line}"));
+
+    /// <summary>The game side of the watch. Reads only the ledger's own units (through <see cref="_entities"/>, as
+    /// <see cref="ReadOwn"/>), the players once per check and the walk check; writes only units in <see cref="_entities"/>
+    /// (CLAUDE.md › Spawn &amp; buff safety), which Logic/UnitWatchPhase has already filtered to the running instance's own
+    /// (UnitWatch.Watched); a removal is a request on the staged despawn queue, never a destroy here. The walk probe is
+    /// opened at its first use in a check and disposed by <see cref="End"/>; the players are kept for that check only.</summary>
+    sealed class WatchWorld : IUnitWatchWorld
+    {
+        WalkCheck.WaveCheck? _check;
+        List<PlayerRow> _rows;
+
+        /// <summary>The end of a check: the walk probe's native resources are freed and the players forgotten (D17).</summary>
+        internal void End()
+        {
+            var check = _check;
+            _check = null;
+            _rows = null;
+            try { check?.Resource?.Dispose(); }
+            catch (Exception) { /* a failed dispose never breaks the tick */ }
+        }
+
+        IWalkProbe Probe()
+        {
+            _check ??= WalkCheck.OpenSpots();
+            return _check.Value.Walk.Probe;
+        }
+
+        public IEnumerable<TrackedUnit> Units => _ledger.Units;
+
+        /// <summary>The unit's position and level (as <see cref="ReadOwn"/>), its group, its anchor (its spawn spot; an
+        /// apocalypse horde unit's front or a roamer's hotspot, at its spawn height) and, when its aggro target is a player,
+        /// that player's distance on x and z (never the player), with its combat reach as the attack range. Null for a unit
+        /// that is gone or dead.</summary>
+        public WatchUnit? Read(TrackedUnit t)
+        {
+            if (!_entities.TryGetValue(t.Key, out var unit) || !unit.Exists() || unit.Has<Dead>() || !unit.TryGetComponent<Translation>(out var pos)) return null;
+            var p = pos.Value;
+            var known = _meta.TryGetValue(t.Key, out var meta);
+            var (ax, ay, az) = known ? meta.Spawn : (p.x, p.y, p.z);
+            if (t.EventId is { } eventId && ApocalypseAction.AnchorOf(eventId, t.Wave) is { } front) (ax, az) = (front.X, front.Z);
+            float? target = null;
+            if (unit.TryGetComponent<AggroConsumer>(out var aggro) && aggro.AggroTarget._Entity is var e && e.Exists() && e.Has<PlayerCharacter>()
+                && e.TryGetComponent<Translation>(out var tp))
+                target = math.distance(tp.Value.xz, p.xz);
+            var range = unit.TryGetComponent<GenericCombatMovementData>(out var combat) && float.IsFinite(combat.MaxDistance) ? combat.MaxDistance : 0f;
+            return new WatchUnit(t.Key, p.x, p.y, p.z, LevelOf(unit, p.y), known ? meta.Group : 0, (ax, ay, az, LevelAt(ay)), target, range,
+                _landed.TryGetValue(t.Key, out var landed) ? landed : null);
+        }
+
+        static byte LevelAt(float y) => WalkHeight.Problem(y) is null ? TileLayerUtility.GetHeightLevel(y) : (byte)0;
+
+        /// <summary>Every connected character (PlayerQuery.Read), once per check, memory only (D17); in claimed territory
+        /// when any running event's kept map claims the spot (Hunt's eligibility, D5).</summary>
+        public IReadOnlyList<HuntCandidate> Players()
+        {
+            _rows = PlayerQuery.Read();
+            var maps = EventRuntime.Engine.Active.Select(a => TerritoryMap.Maps.ForHunt(a.Id)).Where(m => m is not null).ToList();
+            return _rows.Select(p => new HuntCandidate(p.Key, p.X, p.Z, true, p.Alive, maps.Any(m => Territory.IsClaimed(m, p.X, p.Z)), p.InPvpCombat)).ToList();
+        }
+
+        /// <summary>A revenge instance's focus player's Hunt key (Spawning's FocusKey join), from this check's players.</summary>
+        public long? FocusKey(ActiveEvent a) => HuntPlan.FocusKey((_rows ?? PlayerQuery.Read()).Select(p => (p.Key, p.PlatformId)), a.Focus);
+
+        /// <summary>The lowest grounded walk-check level at (x, z), lowest first, stopping at the first (D3, S-12's fallback);
+        /// LowestY null when no level is grounded there; null when the walk check cannot answer (no tile world, off the
+        /// tile grid). A throwing call throws, which the phase counts as a failed read of that unit only.</summary>
+        public GroundReading? Ground(float x, float z)
+        {
+            if (!WalkCheck.OnGrid(x, z) || Probe() is not { } probe) return null;
+            for (var level = 0; level <= byte.MaxValue; level++)
+                if (probe.IsGrounded(x, z, (byte)level)) return new GroundReading(WalkCheck.HeightOf((byte)level));
+            return new GroundReading(null);
+        }
+
+        /// <summary>Free and grounded at <paramref name="level"/>; throws without a walk check, so no unit lands on unread
+        /// ground and the read failure shows (as the apocalypse's hop).</summary>
+        public bool Walkable(float x, float z, byte level) =>
+            Probe() is { } probe ? probe.IsGrounded(x, z, level) && probe.IsFree(x, z, level)
+            : throw new InvalidOperationException("walk check: none");
+
+        public float HeightOf(byte level) => WalkCheck.HeightOf(level);
+
+        public string RegionOf(float x, float z) =>
+            RegionMap.State.Available ? RegionMap.State.Index.RegionOf(x, z) : throw new InvalidOperationException("regions unavailable");
+
+        /// <summary>Claimed by the event's kept map; with none, or after its latest build failed, every point counts as
+        /// claimed, so no unit lands there (fail closed, as the hunt's).</summary>
+        public bool IsClaimed(string eventId, float x, float z) =>
+            TerritoryMap.Maps.ForHunt(eventId) is not { } map || Territory.IsClaimed(map, x, z);
+
+        public int? HordesRisen(ActiveEvent a) => ApocalypseAction.HordesRisen(a.Id);
+
+        public WalkBudget Budget => WalkCheck.Budget;
+
+        /// <summary>The hidden recovery (D5): <see cref="Move"/> on a unit in <see cref="_entities"/> only, as the region
+        /// hunt's jump (Translation, LastTranslation, PreCombatPosition, SpawnTransform, its path and velocity).</summary>
+        public void Move(WatchMove m)
+        {
+            if (!_entities.TryGetValue(m.Key, out var unit) || !unit.Exists()) return;
+            SpawnTracker.Move(unit, new float3(m.X, m.Y, m.Z));
+        }
+
+        /// <summary>The removal (D6-D8): queued on the staged despawn like any despawn, within MaxDespawnsPerTick; no death
+        /// event follows, so nothing a death raises is raised. False when the ledger no longer tracks it or it is queued.</summary>
+        public bool Despawn(long key) => _entities.ContainsKey(key) && _ledger.IsTracked(key) && _ledger.QueueDespawn(key);
+    }
+
     /// <summary>`.nyar debug here`: one line per tracked unit within <paramref name="radius"/> m of
     /// <paramref name="at"/>, nearest first.</summary>
     internal static IReadOnlyList<string> DebugHere(float3 at, int radius)
@@ -767,6 +1011,9 @@ internal static class SpawnTracker
     {
         _entities.Remove(key);
         _meta.Remove(key);
+        _landed.Remove(key);
+        _spawnSpot.Remove(key);
+        _watch.Gone(key);                                                    // unit-watch D11: a row dies with its unit
         HuntAction.Forget(key);
         if (_stateUnits.Remove(key, out var stateUnit))
         {
@@ -809,6 +1056,7 @@ internal static class SpawnTracker
         var position = new float3(order.X, order.Y, order.Z);
         if (unit.Has<Translation>()) unit.Write(new Translation { Value = position });
         if (unit.Has<LastTranslation>()) unit.Write(new LastTranslation { Value = position });
+        Landed(unit, position, spawn: true);                                 // unit-watch D34: the spawn spot
         if (!unit.AddComponentSafe<DestroyWhenDisabled>()) return Abandon(unit, "DestroyWhenDisabled could not be added", out error);
         // No DontSaveEntity (A9): it kept the unit out of the save but not its child entities, which came back as orphans.
         // The drop table goes unless the event keeps its loot (event-spawns D11).
@@ -856,6 +1104,13 @@ internal static class SpawnTracker
     /// entity is ever left outside the ledger.</summary>
     static void Discard(Entity unit)
     {
+        try
+        {
+            var key = KeyOf(unit);                                         // its put-down records die with it (unit-watch D34)
+            _landed.Remove(key);
+            _spawnSpot.Remove(key);
+        }
+        catch (Exception) { }
         try
         {
             if (!unit.Exists() || unit.DestroySafe()) return;

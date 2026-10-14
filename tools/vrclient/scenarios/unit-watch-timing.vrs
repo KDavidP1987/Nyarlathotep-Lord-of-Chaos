@@ -1,0 +1,98 @@
+# unit-watch-timing.vrs: unit-watch D28 (tick budget with every watch rule running). The dev events.json holds uw-timing-a,
+# uw-timing-b and uw-timing-c (tools/vrclient/fixtures/uw-timing-*.json: waveList SpawnWaves of 12 then 6
+# CHAR_Spider_Forest, wave 2 after 60 s, 30 min; a at the pond (-1880, -1640), b 125 m north (-1880, -1515), c 125 m east
+# (-1755, -1640)) and apo-test (tools/vrclient/fixtures/apo-test.json); together 54 spiders plus the apocalypse's roamers
+# and horde, 50 or more tracked. Chaos stands at uw-a (the pond) within 40 m of the rock mark uw-rock (made by
+# unit-watch.vrs): two spiders are put on the rock (the standing rule, Chaos in view), and one spider each at b and c is
+# sunk 30 m (the off-ground rule; b and c are more than 100 m from Chaos, so those two are recovered, then sunk no more).
+# The roamers find Chaos at the pond and hunt him, so every window has hunt targets. About 12 min after the first health
+# line with 50 or more tracked, every event is stopped; the orchestrator runs `pwsh tools/preflight.ps1 -TimingSpan <log
+# copy> -Windows 10 -MinTracked 50` on the log copy and reads the "watch" phase in the slowest-phase lines.
+#
+# Needs: a Release DLL with unit-watch step 3; the four entries above enabled, every other spawning definition disabled;
+# [Debug] TimingLog = true (VerboseLogging optional); [UnitWatch] Enabled = true, StuckSeconds 90, StallMinutes 10;
+# [Limits] MaxUnitsPerWave 12 or more and MaxTrackedUnits 150 (the default); NyarDevTools (.devtp, .devgo, .devstrand)
+# and DevChatEcho; vrclient with `calc` and `expect-calc`; Chaos invulnerable (`ToggleInvulnerable true`, a Boolean, never
+# false).
+# Run: --var AX=-1880 --var AZ=-1640 --var BX=-1880 --var BZ=-1515 --var CX=-1755 --var CZ=-1640
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .nyar event reload
+expect-log events: reloaded
+chat .nyar status
+expect-reply tracked units: 0 ( timeout=40
+chat .devtp ${AX} ${AZ}
+expect-log \[DEV TP\] to x=(?P<PX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<PZ>-?[0-9.]+)
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .devmarks
+expect-reply uw-rock
+mark
+chat .nyar event start uw-timing-a
+expect-log event uw-timing-a wave 1/2 timeout=30
+chat .nyar event start uw-timing-b
+expect-log event uw-timing-b wave 1/2 timeout=30
+chat .nyar event start uw-timing-c
+expect-log event uw-timing-c wave 1/2 timeout=30
+chat .nyar event start apo-test
+expect-log event apo-test started by manual timeout=20
+wait 10
+# two spiders on the rock, 15-30 m from Chaos (the standing rule)
+chat .devstrand -581295882 mark uw-rock
+expect-log \[DEV STRAND\] moved=1 how=mark
+wait 2
+chat .devstrand -581295882 mark uw-rock
+expect-log \[DEV STRAND\] moved=1 how=mark
+# one spider sunk at b and one at c (the off-ground rule and recovery, out of Chaos's view)
+chat .devtp ${BX} ${BZ}
+expect-log \[DEV TP\] to
+wait 3
+chat .devstrand -581295882 under 30
+expect-log \[DEV STRAND\] moved=1 how=under x=-?[0-9.]+ y=(?P<BY>-?[0-9.]+) z=-?[0-9.]+
+expect-calc ${BY} > -100
+chat .devtp ${CX} ${CZ}
+expect-log \[DEV TP\] to
+wait 3
+chat .devstrand -581295882 under 30
+expect-log \[DEV STRAND\] moved=1 how=under x=-?[0-9.]+ y=(?P<CY>-?[0-9.]+) z=-?[0-9.]+
+expect-calc ${CY} > -100
+chat .devgo uw-a
+expect-log \[DEV TP\] uw-a
+wait 4
+console ToggleInvulnerable true
+wait 2
+expect-seen \[nyar\] unit-watch uw-timing-[bc] stuck: CHAR_Spider_Forest wave 1 \(off-ground\) timeout=30
+expect-seen \[nyar\] unit-watch uw-timing-[bc] recovered: CHAR_Spider_Forest try 1/2 timeout=30
+expect-seen \[nyar\] unit-watch uw-timing-[abc] stuck: CHAR_Spider_Forest wave 1 \(standing\) timeout=120
+chat .nyar status
+expect-log \] tracked units: (?P<T1>[0-9]+) \( timeout=10
+expect-calc ${T1} >= 50
+shot full uw-timing-start
+# the measured span starts at the first health line with 50 or more tracked (every 10 min from boot)
+expect-seen nyar health: 4 events, ([5-9][0-9]|[1-9][0-9][0-9]) tracked timeout=660
+wait 300
+chat .nyar status
+expect-log \] tracked units: (?P<T2>[0-9]+) \( timeout=10
+expect-calc ${T2} >= 50
+wait 360
+chat .nyar status
+expect-log \] tracked units: (?P<T3>[0-9]+) \( timeout=10
+expect-calc ${T3} >= 50
+shot full uw-timing-end
+chat .nyar event stop uw-timing-a
+expect-log event uw-timing-a stopped
+chat .nyar event stop uw-timing-b
+expect-log event uw-timing-b stopped
+chat .nyar event stop uw-timing-c
+expect-log event uw-timing-c stopped
+chat .nyar event stop apo-test
+expect-log event apo-test stopped
+wait 30
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+console TPHome
+wait 3
