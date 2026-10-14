@@ -10,4 +10,12 @@
 - 13.1: wave-sets A7's 176.8 ms Hunt tick did not come back: revenge step 2's timing baseline (24 tracked spiders, 25 min) read "timing span: 10/10 windows under 5 ms, tracked >= 10, targets >= 1, 0 slow ticks"; D29 measures the apocalypse's own load
 - feature doc read: docs/features/OUTBREAK.md (the owner's brief, design §9 D23, D24, D44-D45, D49-D51); docs/features/APOCALYPSE.md created in this step; docs/features/HUNTING_GROUNDS.md (the mover) and docs/features/REVENGE.md (final-wave bosses)
 
+### Step 2 · 2026-10-13 · 515a020
+- git status: clean at 515a020 (Reviews 4-8 dispositioned, review: subagent; the spike tools and scenarios committed)
+- compile: 0 Warning(s), 0 Error(s); tests 3134/3134
+- preflight: fails one check only, "release tags: 13/14 (v0.12.0 not pushed)" (revenge's push waits on the owner)
+- dod status: 0/38 verified; step 1's spike verdicts (D24, D37) are being recorded in parallel: step 2 is the Logic layer only (schema, rules, record, chat) and none of it reads the march or pathing verdict; a usable walk would come back to the owner as a D6 amendment before step 3, and step 2's MarchRule is the front's position and hold rule, the same under hop or relay
+- feature doc read: docs/features/APOCALYPSE.md (Status: step 1 in progress; open questions: the march and pathing verdicts, the faction mixes)
+- built by a builder subagent in its own worktree; the orchestrator reviews, tests and merges
+
 ## Post-audit

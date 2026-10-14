@@ -3,10 +3,11 @@
 # 10 m east every 5 s, 30 times (300 m), anchored on the mark apo-s0 that moves with them, home moved too (a marching
 # horde's return point moves with its front), while Chaos stands 150 m north of the line's middle, so no player is
 # within 100 m of a hop. Then Chaos goes to the end point: alive, within 30 m, heights and engagement are read from the
-# [DEV UNIT] lines. Pathing (design §9 D50): after a purge, 10 fresh units at the pond get their return point moved up to
+# [DEV UNIT] lines. Pathing (design §9 D50): after the marched units are cleared, 10 fresh units at the pond get their return point moved up to
 # 40 m ahead toward apo-s0 (300 m east) every 5 s by `.devwalk` for 120 s, Translation untouched, so the game's own
 # pathing walks them; [DEV WALK] logs arrivals (within 30 m), the farthest and the longest stall.
-# Needs: NyarDevTools with .devhop .devwalk .devunits, DevChatEcho; Chaos invulnerable (true only); no purge cooldown.
+# Needs: NyarDevTools with .devhop (clearPath) .devwalk (Return state) .devunits .devkill, DevChatEcho; Chaos invulnerable
+# (true only); no purge cooldown; [Limits] ManualSpawnLifetimeSeconds 1800 (at 300 the marched units fall due mid-march, run 1).
 ensure
 console ToggleInvulnerable true
 wait 2
@@ -151,14 +152,13 @@ wait 10
 chat .devunits -837329073 60
 expect-log \[DEV UNITS\]
 shot full apo-spike-end-10s
-mark
-chat .nyar purge
-wait 2
-chat .nyar purge confirm
-expect-log purge
-wait 20
+# clear the marched units with .devkill within 30 m (the native Farbane skeletons stand about 50 m off): a purge here
+# would start the 240 s purge cooldown and refuse the probe's spawn (run 2)
+chat .devkill -837329073 30 20
+expect-log \[DEV KILL\] n=
+wait 5
 chat .nyar status
-expect-reply tracked units: 0 timeout=40
+expect-reply tracked units:
 # the pathing probe: 10 fresh units at the pond walk toward apo-s0, Chaos 150 m north of the line
 chat .devgo pond
 expect-log \[DEV TP\] pond

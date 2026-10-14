@@ -124,6 +124,29 @@ summon abilities to the unit they spawn — e.g. Tourok → `CHAR_Bandit_Thug` -
 `BehaviourTreeInstance.Immobile=true` (e.g. Morgana's tail) will not fight on their own — never use them
 as adds.
 
+## Faction compatibility (apocalypse D37)
+
+Checked in game on the dev server with `tools/vrclient/scenarios/faction-mix.vrs` (2026-10-13, runs 1-3; evidence in
+docs/features/APOCALYPSE.md › Test results › Spike). Each mix was spawned with `.nyar spawn` (2 of each unit, 1 boss)
+among natives of its faction, with Chaos 40 m off and invulnerable for 60 s. **Allied** means no mix unit died, every
+mix unit stayed Idle with no target, and the counts held. A template must keep its units and bosses inside one allied
+group (D38).
+
+| Group | Units (guid) | Templates | Verdict |
+|---|---|---|---|
+| Undead | `CHAR_Undead_SkeletonSoldier_Armored_Farbane` -837329073, `CHAR_Undead_ArmoredSkeletonCrossbow_Farbane` -195077008, `CHAR_Undead_Guardian` -1967480038, `CHAR_Undead_GhostMilitia_Light` -1618703048, `CHAR_Undead_GhostBanshee` -1146194149, boss `CHAR_Undead_BishopOfDeath_VBlood` 577478542 (Goreswine, Faction_Undead, level 27) | undead-rising, graveyard-waves, zombie-apocalypse (step 3) | allied: ghosts and skeletons stand together |
+| Spiders | `CHAR_Spider_Forest` -581295882, `CHAR_Spider_Melee` 2136899683, `CHAR_Spider_Range` 2103131615, `CHAR_Spider_Forestling` 574276383, boss `CHAR_Spider_Queen_VBlood` -548489519 | spider-swarm, spider-hunting-grounds | allied |
+| Bandits | `CHAR_Bandit_Thug` -301730941, `CHAR_Bandit_Hunter` -1301144178, `CHAR_Bandit_Deadeye` -1030822544 | bandit-ambush, roaming-hunters, bandit-reprisal, bandit-revenge | allied |
+| Militia | `CHAR_Militia_Crossbow` 956965183, `CHAR_Militia_Light` -63435588 | border-watch | allied |
+
+- **Hostile: Legion shadows with the undead.** `CHAR_Legion_Shadowkin_Lesser` -1200074387 (Faction_Legion) attacked
+  the undead at once: in run 1 it killed a Farbane crossbowman, and the undead killed both Shadowkin; in run 3 a
+  banshee killed one. Never mix Faction_Legion units into an undead template.
+- **Left out: `CHAR_Undead_ShadowSoldier` 678628353.** In run 1 one ShadowSoldier killed the other within seconds of
+  spawning, so it is not used as a standalone unit (probably an ability summon; not investigated further).
+- Natives near a mix keep fighting whoever they aggro on (here Chaos); the native counts in the scenario are logged
+  for the record, not checked, because natives that chased Chaos leash home out of the 80 m read.
+
 ## Do-not-spawn list (known crashers)
 
 - `CHAR_Mount_Horse_Vampire` -1502865710 and `CHAR_Mount_Horse_Gloomrot` — crash the server on spawn
