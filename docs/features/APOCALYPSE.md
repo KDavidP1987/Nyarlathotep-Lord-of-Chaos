@@ -71,8 +71,7 @@ fronts stay well away from the goal while nobody is connected across the restart
 
 ### Spike · 2026-10-13 · step 1 (0.12.0 DLL + NyarDevTools .devhop clearPath, .devwalk) · vrclient as Chaos on the local dev server
 
-Snapshot `tools/dev-snapshot.ps1 -Save apo0` before the first boot; logs copied to %TEMP%
-yar-apo0-logs before each
+Snapshot `tools/dev-snapshot.ps1 -Save apo0` before the first boot; logs copied to %TEMP%\nyar-apo0-logs before each
 stop. Dev cfg for the session: VerboseLogging true (died lines), ManualSpawnLifetimeSeconds 1800 (boot 2; at 300 the
 marched units fell due mid-march in run 1). Chaos was found dead in the restored world and was respawned at his coffin.
 
@@ -120,6 +119,5 @@ leash home out of the 80 m read, with no died line), so it is logged only.
 - [x] militia mix allied (Crossbow, Light)
 - The table: docs/GAME_ASSETS.md › Faction compatibility. D37 waits on the owner's acceptance of this record (rubric 3).
 
-Session close: both logs copied to %TEMP%
-yar-apo0-logs before each stop; log check lines in docs/audits/apocalypse.md;
+Session close: both logs copied to %TEMP%\nyar-apo0-logs before each stop; log check lines in docs/audits/apocalypse.md;
 `tools/dev-snapshot.ps1 -Save apo0` before the first boot, snapshot restored; hashes equal (apo0, both boots).
