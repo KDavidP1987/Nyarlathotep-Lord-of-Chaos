@@ -1284,6 +1284,47 @@
           "control": "PrivateSend"
         }
       ]
+    },
+    "apocalypse": {
+      "categories": [
+        "native-read",
+        "spread-read",
+        "march-read",
+        "resume-read",
+        "state-write"
+      ],
+      "rows": [
+        {
+          "name": "native-read",
+          "kind": "tests",
+          "class": "ApocalypseDependencyFailureTests",
+          "control": "NativeRead"
+        },
+        {
+          "name": "spread-read",
+          "kind": "tests",
+          "class": "ApocalypseDependencyFailureTests",
+          "control": "SpreadRead"
+        },
+        {
+          "name": "march-read",
+          "kind": "tests",
+          "class": "ApocalypseDependencyFailureTests",
+          "control": "MarchRead"
+        },
+        {
+          "name": "resume-read",
+          "kind": "tests",
+          "class": "ApocalypseDependencyFailureTests",
+          "control": "ResumeRead"
+        },
+        {
+          "name": "state-write",
+          "kind": "tests",
+          "class": "ApocalypseDependencyFailureTests",
+          "control": "StateWrite"
+        }
+      ]
     }
   },
   "controlSuites": {

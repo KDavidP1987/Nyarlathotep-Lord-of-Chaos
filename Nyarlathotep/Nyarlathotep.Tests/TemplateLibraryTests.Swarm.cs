@@ -6,7 +6,7 @@ namespace Nyarlathotep.Tests;
 /// <summary>swarm D11: spider-swarm, disabled and valid: an Admin location with an arena, Hunt, the scoreboard and the
 /// K/D winner; the units form with growth on a base wave of Faction_Spiders units only (no V Blood, no `_Summon`, no
 /// Baneling), so the generator makes each wave larger than the one before and none over the default MaxUnitsPerWave of
-/// 20; thirteen templates in all since revenge D14. The shape is read, not the numbers (S-10).</summary>
+/// 20; fourteen templates in all since apocalypse D18. The shape is read, not the numbers (S-10).</summary>
 public partial class TemplateLibraryTests
 {
     /// <summary>Every Faction_Spiders unit of Reference Data/unit_index.tsv, written out here independently of the file.</summary>
@@ -20,7 +20,7 @@ public partial class TemplateLibraryTests
     static List<string> SwarmDifferences(TemplateCatalog c)
     {
         var diffs = new List<string>();
-        if (c.Templates.Count != 13) diffs.Add($"{c.Templates.Count} templates, not 13");
+        if (c.Templates.Count != TemplatesNow) diffs.Add($"{c.Templates.Count} templates, not {TemplatesNow}");
         var t = c.Find("spider-swarm");
         if (t is null) { diffs.Add("spider-swarm missing"); return diffs; }
         if (t.Invalid is { } why) diffs.Add($"invalid: {why}");

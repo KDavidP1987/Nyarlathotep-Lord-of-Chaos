@@ -41,9 +41,8 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        // apocalypse: step 3 builds the template, the factions check, the dependency failures and suite and the tick budget; step 5 the release
-        new(Apocalypse, "D18", 3, "0.13.0"), new(Apocalypse, "D21", 3, "0.13.0"), new(Apocalypse, "D22", 3, "0.13.0"),
-        new(Apocalypse, "D29", 3, "0.13.0"), new(Apocalypse, "D38", 3, "0.13.0"),
+        // apocalypse: step 3's tick budget (an in-game timing span); step 5 the release
+        new(Apocalypse, "D29", 3, "0.13.0"),
         new(Apocalypse, "D32", 5, "0.13.0"), new(Apocalypse, "D33", 5, "0.13.0"), new(Apocalypse, "D34", 5, "0.13.0"), new(Apocalypse, "D35", 5, "0.13.0"),
     ];
 
@@ -64,7 +63,7 @@ public static class ControlCases
         "EndPathTests", "WavePrecedenceTests", "SpawnsDependencyFailureTests", "AutomationTests", "AutomationDependencyFailureTests", "SpawnPlacementTests",
         "WaveSetTests", "ScoreboardTests", "WaveSetDependencyFailureTests", "SwarmTests", "SwarmDependencyFailureTests",
         "HuntingGroundsTests", "HuntingGroundsDependencyFailureTests", "RevengeTests", "BossWaveTests", "RevengeDependencyFailureTests",
-        "ApocalypseTests", "ApocalypseStateTests",
+        "ApocalypseTests", "ApocalypseStateTests", "ApocalypseDependencyFailureTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -765,7 +764,8 @@ public static class ControlCases
         T("D7", "Lines", "ApocalypseTests", ["a_line_is_long_or_misses_a_name"], ["the_four_lines"], ["no_region_the_wilds"]) with { Plan = Apocalypse },
         T("D8", "Outcomes", "ApocalypseTests", ["won_or_lost_is_read_wrongly", "a_run_reads_won_while_a_horde_lives", "an_outcome_sends_other_than_one_event_end"],
             ["won_after_every_horde"], ["none_before_any_rise"]) with { Plan = Apocalypse },
-        T("D9", "EndPaths", "ApocalypseTests", ["a_path_keeps_the_record_or_shows_the_wrong_lines", "a_drain_wait_purge_rebuilds_or_disable_resumes"],
+        T("D9", "EndPaths", "ApocalypseTests", ["a_path_keeps_the_record_or_shows_the_wrong_lines", "a_drain_wait_purge_rebuilds_or_disable_resumes",
+            "the_runtime_skips_an_apocalypse_end_path"],
             ["stop_shows_the_scoreboard_only"], ["restart_keeps_the_record"]) with { Plan = Apocalypse },
         T("D10", "Apocalypse", "ScoreboardTests", ["a_roamer_horde_or_boss_kill_is_not_credited", "a_native_or_an_earlier_instance_counts",
             "an_admin_counts_with_the_key_false", "a_silent_path_shows_the_lines", "restored_counts_differ_from_those_saved"], ["kills_and_deaths_ranked"],
@@ -792,6 +792,23 @@ public static class ControlCases
             ["api_7_and_the_status_row"], ["contract"]) with { Plan = Apocalypse },
         T("D23", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit", "pending_at_release"],
             ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = Apocalypse },
+        T("D18", "Apocalypse", "TemplateLibraryTests", ["the_template_differs"], ["zombie_apocalypse_as_planned"], ["none_in_an_empty_catalogue"])
+            with { Plan = Apocalypse },
+        T("D21", "NativeRead", "ApocalypseDependencyFailureTests", ["a_throwing_read_starts_or_repeats_its_line"], ["good_read_ends_the_streak"],
+            ["no_native_no_hotspot"]) with { Plan = Apocalypse },
+        T("D21", "SpreadRead", "ApocalypseDependencyFailureTests", ["a_throw_skips_the_death_pass", "one_throwing_read_prints_more_than_one_line"],
+            ["good_read_clears_the_entry"], ["no_run_reads_nothing"]) with { Plan = Apocalypse },
+        T("D21", "MarchRead", "ApocalypseDependencyFailureTests", ["a_throwing_read_crashes_or_repeats", "a_throwing_roam_move_crashes_or_repeats"],
+            ["good_read_clears_the_entry"], ["no_horde_no_line"]) with { Plan = Apocalypse },
+        T("D21", "ResumeRead", "ApocalypseDependencyFailureTests", ["a_throwing_read_resumes_or_stops_the_boot"], ["a_good_record_resumes"],
+            ["no_record_nothing_resumes"]) with { Plan = Apocalypse },
+        T("D21", "StateWrite", "ApocalypseDependencyFailureTests", ["a_failed_write_stops_the_run"], ["good_write_saves_the_record"], ["no_run_no_key"])
+            with { Plan = Apocalypse },
+        C("D22", "DependencySuite", "preflight -DependencySuite apocalypse",
+            ["selftest DependencySuite/bad", "selftest DependencySuite/bad-2", "selftest DependencySuite/bad-floor-spawns"], ["selftest DependencySuite/good"],
+            ["selftest DependencySuite/empty"]) with { Plan = Apocalypse },
+        T("D38", "Factions", "TemplateLibraryTests", ["a_template_mixes_two_groups", "an_apocalypse_is_not_of_its_factions_group"],
+            ["every_template_in_one_allied_group"], ["no_template_spawns_units"]) with { Plan = Apocalypse },
         T("D36", "Bosses", "ApocalypseTests", ["a_boss_rises_early_or_a_clamp_drops_it_first", "a_run_ends_won_while_a_boss_lives_or_a_resume_misses_one",
              "a_grown_hordes_count_drops_a_living_boss_from_the_record", "two_entries_of_one_prefab_rebuild_with_the_wrong_modifiers"],
             ["the_last_horde_brings_its_bosses"], ["no_bosses_key"]) with { Plan = Apocalypse },
