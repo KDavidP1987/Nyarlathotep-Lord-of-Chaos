@@ -45,7 +45,7 @@ public class ApocalypseStateTests
     public void Record_fails_when_the_goal_or_the_living_bosses_are_missing()
     {
         var record = Recorded(out var w, out var run);
-        Assert.Equal((-321.5f, 7f, 88f), (record.Goal.X, record.Goal.Y, record.Goal.Z));         // the admin's start position, fixed
+        Assert.Equal((-321.5f, 7f, 88f), (record.Goal!.X, record.Goal.Y, record.Goal.Z));         // the admin's start position, fixed
         Assert.Equal([(0f, 0f), (1000f, 0f)], record.Hotspots.Select(h => (h.X, h.Z)));
         Assert.Equal([1, 2], record.Hordes.Select(h => h.Number));
         var last = record.Hordes[1];

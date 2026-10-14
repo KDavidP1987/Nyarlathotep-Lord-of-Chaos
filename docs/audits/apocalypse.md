@@ -29,3 +29,16 @@
 - verdicts recorded: "march verdict: go — hop", "pathing verdict: walk not usable"; D24 and D37 wait on the owner's acceptance (rubric 3), not checked
 - snapshot restored; hashes equal (apo0); dev cfg back to VerboseLogging false, ManualSpawnLifetimeSeconds 300
 - Codex verdict: deferred to step 5 (Halloween track: once per child before its release)
+
+### Step 2 · 2026-10-13 · merge 038c8c4 + review fixes
+- compile: 0 Warning(s), 0 Error(s); tests 3337/3337 (3332 at the merge, plus 5 from the review fixes)
+- preflight: fails one check only, "release tags: 13/14 (v0.12.0 not pushed)" (revenge's push waits on the owner)
+- /code-review (a fresh read-only subagent on `git diff 4c974d6 038c8c4`): VERDICT: ISSUES (3), all fixed in this pass
+  - M1: the record took bosses only from the current last horde, so raising `hordes.count` after a resume dropped a living boss; each front now keeps the boss prefabs it raised (set at the rise, kept from the record) — ApocalypseTests Bosses `a_grown_hordes_count_drops_a_living_boss_from_the_record`
+  - M2: Engine.Resume skipped the master switch, the pillar and the definition's switch; it takes the controls (the purge cooldown and MaxConcurrentEvents do not apply to a run that never ended) — Resume `a_pillar_or_master_switch_turned_off_while_down_is_ignored`; step 3's boot resume must pass the controls
+  - M3: a purge during the drain wait kept ResumePending, refusing every later apocalypse; CancelAll clears it — Resume `a_purge_in_the_drain_wait_keeps_the_slot`
+  - L1 fixed: a record without its goal key reads as "goal missing" (Goal is nullable) — Resume `a_record_without_its_goal_key_resumes_to_the_origin`
+  - L2 fixed: the rebuild finds a boss's modifiers by entry index first — Bosses `two_entries_of_one_prefab_rebuild_with_the_wrong_modifiers`
+  - L3 (restored totals omit players past the 200-row cap) and L4 (the record-removal test is circular; step 3 tests the real end paths) logged in the plan for step 3
+- planted faults: docs/audits/apocalypse-step2-planted.txt (21 faults, each failing its named test)
+- Codex verdict: deferred to step 5 (Halloween track: once per child before its release)

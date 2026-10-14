@@ -732,7 +732,7 @@ public partial class ApocalypseTests
         var engine = Engine(out var push, admin);
         var record = Record(goal: (-321.5f, 7f, 88f));
         engine.ResumePending = "apo";
-        Assert.Null(engine.Resume("apo", record.StartedUtc, record.EndsUtc, (record.Goal.X, record.Goal.Y, record.Goal.Z), record.HordesRisen));
+        Assert.Null(engine.Resume("apo", record.StartedUtc, record.EndsUtc, (record.Goal!.X, record.Goal.Y, record.Goal.Z), record.HordesRisen));
         var active = engine.Find("apo")!;
         Assert.Equal((-321.5f, 7f, 88f), active.Origin);
         Assert.Equal((T0, T0.AddHours(1)), (active.Instance.StartedUtc, active.Instance.EndsUtc));
@@ -802,6 +802,33 @@ public partial class ApocalypseTests
         Assert.Empty(engine.Active);
         Assert.Null(engine.Resume("apo", T0, T0.AddHours(1), (500, 12, 0)));
         Assert.Equal("an apocalypse is already running: apo", engine.Start("apo2", "interval", T0, Open())!.Human);
+    }
+
+    [Fact]
+    public void Resume_fails_when_a_purge_in_the_drain_wait_keeps_the_slot()
+    {
+        var engine = Engine(out _, Apo.Event(), Apo.Event("apo2", "{ \"type\": \"Interval\", \"minMinutes\": 60, \"maxMinutes\": 90 }"));
+        engine.ResumePending = "apo";
+        engine.CancelAll(240);
+        Assert.Null(engine.ResumePending);
+        Assert.Null(engine.Start("apo2", "interval", T0, Open()));
+    }
+
+    [Fact]
+    public void Resume_fails_when_a_pillar_or_master_switch_turned_off_while_down_is_ignored()
+    {
+        var engine = Engine(out _, Apo.Event());
+        engine.ResumePending = "apo";
+        var noSpawns = new ControlState(false, true, new HashSet<Pillar>(Enum.GetValues<Pillar>().Where(p => p != Pillar.Spawns)), 0, 3);
+        Assert.Equal("pillar spawns is off", engine.Resume("apo", T0, T0.AddHours(1), (500, 12, 0), 0, noSpawns)!.Human);
+        Assert.Null(engine.ResumePending);
+        Assert.Empty(engine.Active);
+        var masterOff = Open() with { GeneralEnabled = false };
+        Assert.Equal("General.Enabled is false", engine.Resume("apo", T0, T0.AddHours(1), (500, 12, 0), 0, masterOff)!.Human);
+        Assert.Empty(engine.Active);
+        // a purge cooldown or a full MaxConcurrentEvents never refuses a run that never ended
+        Assert.Null(engine.Resume("apo", T0, T0.AddHours(1), (500, 12, 0), 0, Open(active: 3, max: 3) with { PurgeCooldownActive = true }));
+        Assert.Single(engine.Active);
     }
 
     // ---- D13 Lifetime
@@ -958,6 +985,43 @@ public partial class ApocalypseTests
         // killing it clears the horde: won
         w.Kill(run, units.Single(u => u.Wave == Apocalypse.BossWave(1, 2)).Key);
         Assert.Equal(ApocalypseResult.Won, run.Outcome(w, _ => [], T0.AddMinutes(3)));
+    }
+
+    [Fact]
+    public void Bosses_fails_when_a_grown_hordes_count_drops_a_living_boss_from_the_record()
+    {
+        // 3 hordes risen, the last one's boss alive; the admin raised hordes.count to 4 while the server was down
+        var def = Apo.Def(Apo.Action(hordes: Apo.Hordes(count: 4), extra: "\"bosses\": [ " + Apo.BossJson() + " ]"));
+        var record = Record(risen: 3, fronts: [(3, 100f, 0f, 3, [(Apo.Tourok, 1)])], roamers: [0, 0]);
+        var now = T0.AddMinutes(12);                                             // horde 4 is due at +16
+        var w = new ApoWorld();
+        var run = ApocalypseRun.Resumed(Apo.Active(def, T0), record, now);
+        run.Rebuild(w, record, now);
+        w.SpawnAll(run, now);
+        var again = run.Record(w, [], now);
+        var horde = Assert.Single(again.Hordes);
+        Assert.Equal((3, 3), (horde.Number, horde.Living));
+        Assert.Equal([(Apo.Tourok, 1)], horde.LivingBosses.Select(b => (b.Prefab, b.Living)));
+    }
+
+    [Fact]
+    public void Bosses_fails_when_two_entries_of_one_prefab_rebuild_with_the_wrong_modifiers()
+    {
+        var def = Apo.Def(Apo.Action(hordes: Apo.Hordes(count: 1), extra: "\"bosses\": [ " + Apo.BossJson(more: "\"modifiers\": { \"level\": 70 }")
+            + ", " + Apo.BossJson(more: "\"modifiers\": { \"level\": 40 }") + " ]"));
+        var record = Record(risen: 1, fronts: [(1, 50f, 0f, 1, [(Apo.Tourok, 0), (Apo.Tourok, 1)])]);
+        var boss = Assert.Single(ResumeRule.Rebuild(record, def.Apocalypse!), o => o.Prefab is not null);
+        Assert.Equal((Apocalypse.BossWave(1, 2), 40), (boss.Wave, boss.Modifiers!.Level));
+    }
+
+    [Fact]
+    public void Resume_fails_when_a_record_without_its_goal_key_resumes_to_the_origin()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(Record());
+        var node = System.Text.Json.Nodes.JsonNode.Parse(json)!.AsObject();
+        Assert.True(node.Remove("Goal") || node.Remove("goal"));
+        var back = System.Text.Json.JsonSerializer.Deserialize<ApocalypseRecord>(node.ToJsonString())!;
+        Assert.Equal("goal missing", back.Problem());
     }
 
     // ---- the good and empty case of each control

@@ -418,6 +418,10 @@ public sealed class Front(int horde, float originX, float originZ, float goalX, 
     public DateTime? LastWatchedUtc { get; internal set; }
 
     internal readonly HashSet<int> Announced = [];
+
+    /// <summary>The prefab of each `bosses` entry this horde raised, by entry index (D11, D36): set when the last horde
+    /// rises and kept from the record at a resume, so a later edit of `hordes.count` never drops a living boss.</summary>
+    public List<string> BossPrefabs { get; internal set; } = [];
     internal bool HeldNoGround;
 
     /// <summary>A front of a resumed run at its recorded point (D12).</summary>
@@ -668,7 +672,9 @@ public static class ResumeRule
             {
                 var b = horde.LivingBosses[j];
                 if (b.Living <= 0) continue;
-                var entry = action.Bosses?.FirstOrDefault(e => e.Prefab == b.Prefab);
+                // by entry index first: two entries may share a prefab with different modifiers (review L2)
+                var entry = action.Bosses is { } list && j < list.Count && list[j].Prefab == b.Prefab ? list[j]
+                    : action.Bosses?.FirstOrDefault(e => e.Prefab == b.Prefab);
                 orders.Add(new RebuildOrder(Apocalypse.BossWave(horde.Number, j + 1), b.Prefab, b.Living, entry?.Modifiers, horde.FrontX, horde.FrontZ));
                 bosses += b.Living;
             }
@@ -914,7 +920,10 @@ public sealed class ApocalypseRun
         }
         Risen = k;
         LastTryUtc = null;
-        _fronts[k] = new Front(k, hotspot.X, hotspot.Z, Goal.X, Goal.Z);
+        _fronts[k] = new Front(k, hotspot.X, hotspot.Z, Goal.X, Goal.Z)
+        {
+            BossPrefabs = units.Any(u => u.Entry > 0) ? (Action.Bosses ?? []).Select(b => b.Prefab).ToList() : [],
+        };
         if (topUp) roamerLines = TopUp(w, utcNow);
         return new HordeRise(k, hotspot.Number, queued, log);
     }
@@ -949,8 +958,7 @@ public sealed class ApocalypseRun
         };
         foreach (var f in _fronts.Values.OrderBy(f => f.Horde))
         {
-            var bosses = (f.Horde == Action.Hordes.Count ? Action.Bosses : null) ?? [];
-            var livingBosses = bosses.Select((b, j) => new RecordBoss { Prefab = b.Prefab, Living = LivingOf(w, Apocalypse.BossWave(f.Horde, j + 1)) }).ToList();
+            var livingBosses = f.BossPrefabs.Select((prefab, j) => new RecordBoss { Prefab = prefab, Living = LivingOf(w, Apocalypse.BossWave(f.Horde, j + 1)) }).ToList();
             var living = LivingOf(w, Apocalypse.HordeWave(f.Horde)) + livingBosses.Sum(b => b.Living);
             if (living == 0) continue;
             record.Hordes.Add(new RecordHorde { Number = f.Horde, FrontX = f.X, FrontZ = f.Z, Living = living, LivingBosses = livingBosses });
@@ -963,12 +971,13 @@ public sealed class ApocalypseRun
     public static ApocalypseRun Resumed(ActiveEvent active, ApocalypseRecord record, DateTime utcNow)
     {
         var spots = record.Hotspots.Select((h, i) => new Hotspot(i + 1, h.X, h.Z, 0, (int)MathF.Floor(h.X / Apocalypse.CellSize), (int)MathF.Floor(h.Z / Apocalypse.CellSize))).ToList();
-        var run = new ApocalypseRun(active, spots, (record.Goal.X, record.Goal.Y, record.Goal.Z)) { Risen = record.HordesRisen };
+        var run = new ApocalypseRun(active, spots, (record.Goal!.X, record.Goal.Y, record.Goal.Z)) { Risen = record.HordesRisen };
         foreach (var h in record.Hordes)
         {
             var origin = spots[HordeSchedule.HotspotOf(h.Number, spots.Count) - 1];
             var front = Front.At(h.Number, origin.X, origin.Z, record.Goal.X, record.Goal.Z, h.FrontX, h.FrontZ);
             foreach (var s in Apocalypse.ProgressSteps) if (front.Percent >= s) front.Announced.Add(s);      // a step is announced once (D7)
+            front.BossPrefabs = h.LivingBosses.Select(b => b.Prefab).ToList();
             run._fronts[h.Number] = front;
         }
         run.Spread.Restore(utcNow, record.SpreadWindow);

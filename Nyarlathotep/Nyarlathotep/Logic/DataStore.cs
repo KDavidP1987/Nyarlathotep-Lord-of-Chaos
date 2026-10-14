@@ -246,7 +246,7 @@ public sealed class ApocalypseRecord
     public string EventId { get; set; } = "";
     public DateTime StartedUtc { get; set; }
     public DateTime EndsUtc { get; set; }
-    public RecordPoint Goal { get; set; } = new();
+    public RecordPoint? Goal { get; set; }
     public List<RecordSpot> Hotspots { get; set; } = [];
     public int HordesRisen { get; set; }
     public List<RecordHorde> Hordes { get; set; } = [];

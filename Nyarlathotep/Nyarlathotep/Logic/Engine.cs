@@ -497,12 +497,18 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
     /// instance keeps the record's <paramref name="startedUtc"/> and <paramref name="endsUtc"/> (the clock ran while the
     /// server was down) and its resolved goal as <paramref name="goal"/>, never re-read from a player. It clears
     /// <see cref="ResumePending"/>; no start push is sent, since the run never ended. <paramref name="hordesRisen"/> becomes
-    /// its WavesSpawned, the status row's `wave=&lt;r&gt;/&lt;c&gt;` (D20). Null on success, else the refusal.</summary>
-    public Outcome? Resume(string id, DateTime startedUtc, DateTime endsUtc, (float X, float Y, float Z) goal, int hordesRisen = 0)
+    /// its WavesSpawned, the status row's `wave=&lt;r&gt;/&lt;c&gt;` (D20). With <paramref name="controls"/>, the master
+    /// switch, the pillar and the definition's own switch still decide (Business rules 1, 10): a cfg changed while the
+    /// server was down is obeyed. Null on success, else the refusal.</summary>
+    public Outcome? Resume(string id, DateTime startedUtc, DateTime endsUtc, (float X, float Y, float Z) goal, int hordesRisen = 0,
+        ControlState? controls = null)
     {
         if (ResumePending == id) ResumePending = null;
         var def = catalog.Current.Find(id);
         if (def?.Apocalypse is null) return AdminLines.UnknownEvent(id);
+        // the purge cooldown and MaxConcurrentEvents are start rules: the run never ended, so only the switches apply
+        if (controls is not null && Precedence.StartBlocker(def, controls with { PurgeCooldownActive = false, ActiveEvents = 0 }) is { } blocked)
+            return blocked;
         if (_active.ContainsKey(id)) return AdminLines.AlreadyActive(id);
         var error = catalog.TryStart(id, startedUtc, out var instance);
         if (error is not null) return error;
@@ -560,6 +566,7 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
     /// one end per event.</summary>
     public IReadOnlyList<ActiveEvent> CancelAll(int cooldownSeconds = 0)
     {
+        ResumePending = null;                             // a purge in the drain wait rebuilds nothing, so the slot is free (D9)
         var all = _active.Values.ToList();
         foreach (var a in all) Remove(a.Id);
         _cleanups.Clear();

@@ -774,7 +774,9 @@ public static class ControlCases
             "a_bad_record_takes_the_rest_of_state_with_it", "a_row_carries_a_name_or_a_position", "an_ended_run_keeps_its_record", "a_record_with_a_bad_field_is_kept"],
             ["a_resumed_run_rebuilds_from_the_saved_file"], ["no_run_no_key"]) with { Plan = Apocalypse },
         T("D12", "Resume", "ApocalypseTests", ["a_changed_or_gone_definition_resumes", "an_admin_goal_run_loses_its_goal", "the_rebuild_skips_the_drain_gate",
-            "missed_hordes_or_the_top_up_go_wrong", "a_pending_resume_lets_a_second_run_start"], ["a_running_record_resumes"], ["no_missed_horde"]) with { Plan = Apocalypse },
+            "missed_hordes_or_the_top_up_go_wrong", "a_pending_resume_lets_a_second_run_start",
+            "a_purge_in_the_drain_wait_keeps_the_slot", "a_pillar_or_master_switch_turned_off_while_down_is_ignored",
+            "a_record_without_its_goal_key_resumes_to_the_origin"], ["a_running_record_resumes"], ["no_missed_horde"]) with { Plan = Apocalypse },
         T("D13", "Lifetime", "ApocalypseTests", ["a_unit_lives_past_two_hours_or_is_missed"], ["renewed_while_the_run_lives"], ["an_ended_run_is_not_renewed"])
             with { Plan = Apocalypse },
         T("D14", "Caps", "ApocalypseTests", ["a_unit_escapes_the_ledger_or_a_cap"], ["one_apocalypse_within_the_caps"], ["no_room_no_order"]) with { Plan = Apocalypse },
@@ -790,7 +792,8 @@ public static class ControlCases
             ["api_7_and_the_status_row"], ["contract"]) with { Plan = Apocalypse },
         T("D23", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit", "pending_at_release"],
             ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = Apocalypse },
-        T("D36", "Bosses", "ApocalypseTests", ["a_boss_rises_early_or_a_clamp_drops_it_first", "a_run_ends_won_while_a_boss_lives_or_a_resume_misses_one"],
+        T("D36", "Bosses", "ApocalypseTests", ["a_boss_rises_early_or_a_clamp_drops_it_first", "a_run_ends_won_while_a_boss_lives_or_a_resume_misses_one",
+             "a_grown_hordes_count_drops_a_living_boss_from_the_record", "two_entries_of_one_prefab_rebuild_with_the_wrong_modifiers"],
             ["the_last_horde_brings_its_bosses"], ["no_bosses_key"]) with { Plan = Apocalypse },
     ];
 }

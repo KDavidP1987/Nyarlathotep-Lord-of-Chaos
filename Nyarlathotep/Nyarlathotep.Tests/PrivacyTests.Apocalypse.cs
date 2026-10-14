@@ -91,7 +91,7 @@ public partial class PrivacyTests
         run.Rise(w, ApoT0.AddMinutes(1), out _);
         MarchRule.Step(run.Fronts[1], 20, 2.0, 10, [(4321.7f, 8765.3f)], (_, _) => true, ApoT0.AddMinutes(2), out _);   // the admin walks off
         var record = run.Record(w, [], ApoT0.AddMinutes(2));
-        Assert.Equal((100f, 5f, 200f), (record.Goal.X, record.Goal.Y, record.Goal.Z));
+        Assert.Equal((100f, 5f, 200f), (record.Goal!.X, record.Goal.Y, record.Goal.Z));
         Assert.Equal((100f, 200f), (run.Fronts[1].GoalX, run.Fronts[1].GoalZ));
         // nothing can move the goal after the start: no setter on the run, the front's goal or the view
         Assert.All(new[] { typeof(ApocalypseRun).GetProperty(nameof(ApocalypseRun.Goal))!, typeof(Front).GetProperty(nameof(Front.GoalX))!, typeof(Front).GetProperty(nameof(Front.GoalZ))! },
