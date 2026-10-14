@@ -18,6 +18,15 @@
 - feature doc read: docs/features/APOCALYPSE.md (Status: step 1 in progress; open questions: the march and pathing verdicts, the faction mixes)
 - built by a builder subagent in its own worktree; the orchestrator reviews, tests and merges
 
+### Step 3 · 2026-10-13 · 1841fee
+- git status: clean at 1841fee (step 2 merged, its review fixed, post-audit written)
+- compile: 0 Warning(s), 0 Error(s); tests 3337/3337
+- preflight: fails one check only, "release tags: 13/14 (v0.12.0 not pushed)" (revenge's push waits on the owner)
+- dod status: 18/38 verified (D1-D8, D10, D11, D13-D17, D19, D20, D36); D9, D12, D23 open until step 3 wires the end paths, the boot resume and the dependency suite; D24, D37 wait on the owner
+- feature doc read: docs/features/APOCALYPSE.md (Status: step 2 merged; open questions: the pathing study is 1.0, D6 keeps the hop with the path cleared)
+- baseline boot: the 0.12.0 DLL booted twice in step 1's session with 0 unhandled (Post-audit › Step 1); the in-game sessions of this step start from a fresh snapshot (apo1)
+- built by a builder subagent in its own worktree; the orchestrator reviews, tests, runs the vrclient sessions and merges
+
 ## Post-audit
 
 ### Step 1 · 2026-10-13 · spike session (boots 1-2, 515a020 tools)
