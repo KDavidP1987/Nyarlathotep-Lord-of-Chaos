@@ -147,6 +147,40 @@ destination. **Unverified — this is Spike S1.**
 servants, and exposed structures under vanilla rules. Structure damage is a later, opt-in phase that must
 respect `CastleDamageMode`/raid windows and **defer to RaidForge** if installed (Decision D3).
 
+## Pathing levers (design §9 D50 recon, 2026-10-14)
+
+The owner asked (2026-10-14) whether units can walk by the game's own pathing to a coordinate, a castle heart, or along
+roads and travelling units' routes. A read-only recon (reference mods plus the server's interop type shapes; no method
+bodies, so behaviour is inferred unless seen) found three untried levers. None of the reference mods walks units:
+TideOfWar, XPRising ambushes, DyWorld sieges and BloodyBoss all spawn next to the target; Bloodcraft familiars follow
+with `Follower` mode 0 and teleport when far (the apocalypse spike's "walk not usable" covered only the return point and
+the Return state).
+
+1. **`MoveTowardsPositionBuff` ("WalkToPos" buffs)**, best for a coordinate or a castle heart: fields DistanceSq,
+   RecalculationFrequency, NextRecalculationTime, Waypoints; systems MoveTowardsPositionSystem_Server_Create/_Update.
+   Ready buffs: AB_Blackfang_Valyr_WalkToPos_WalkToPosBuff (131220609, 6 s, speed x1.6, an AmplifyBuff to strip),
+   AB_Lucie_PickUpPotion_WalkToPotion_WalkToPosBuff (-1341107993, Lucie walks to an entity: the castle-heart pattern),
+   AB_Blackfang_Striker_DefendAlly_SelfBuff (2040321461, re-solves every 0.2 s). Guess: the destination is the buff
+   entity's Translation.
+2. **`Follower` in patrol mode** (`FollowMode.Patrol` = 1; vanilla patrollers ship ModeModifiable 1, e.g.
+   CHAR_Vampire_Cultist_Patrolling): the sieges/apocalypse spikes forced mode 0, so patrol mode is untested. Vanilla
+   patrols move an anchor entity (PatrolState, MovePatrolState, GlobalPatrolState; PatrolMoveSystem) that units follow;
+   17 `UC_*GlobalPatrol*` compositions. Follow links to non-player anchors aborted the server twice before (SIEGES.md).
+3. **`Script_Buff_MoveToBusStop`**, the only road lever: Buff_General_SilverSlaveRun (1793107442, BusStopName
+   SlaveExit) runs freed slaves along the road graph (MoveToPath → FollowingPath → WaitingForDestroy);
+   RoadPathfindingRequest → RoadPathfindingSystem → RoadPathfindingResult. Which bus-stop names exist is unknown (baked
+   into map chunks); castles have none.
+4. Weak: writing PathBuffer directly (the behaviour tree overwrites it); moving SpawnTransform then nudging the unit 1-2 m
+   (hunting-grounds run 1 saw units walk home after a hop) is a cheap probe.
+
+Probes, in order: WalkToPos on 5 bandits 40 m and 120 m from a mark (buff Translation = the mark, LifeTime 180,
+RecalculationFrequency 1; log distance, largest 1 s jump under 6 m, BehaviourTreeState, path length), then with a castle
+heart; patrol-mode follow with a save snapshot first; a road census of GlobalPatrolState entities, then a SlaveRun walk.
+Risks: walking home when the buff ends (write SpawnTransform, PreCombatPosition, path clear on arrival); combat may
+cancel the walk; Pathfinder.MaxExpansions 4000 means short chained legs; buff and patrol entities may outlive the unit
+(save pollution: track and remove them); arriving is not attacking (aggro still needs a target within about 60 m).
+Scheduled with the pathing study in the 1.0 order (design §9 D55) unless the owner moves it.
+
 ## Compatibility watch-list (mods commonly on the same servers)
 
 | Mod | Interaction |
