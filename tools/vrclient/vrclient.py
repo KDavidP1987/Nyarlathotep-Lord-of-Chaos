@@ -346,14 +346,18 @@ class LogCursor:
         self.path = path
         self.pos = 0
         self.pending: list[str] = []
+        self.seen: list[str] = []
         self.mark()
 
     def mark(self) -> None:
         self.pos = os.path.getsize(self.path) if os.path.exists(self.path) else 0
         self.pending = []
+        self.seen = []
 
     def _read(self) -> None:
-        self.pending.extend(self.new_lines())
+        lines = self.new_lines()
+        self.pending.extend(lines)
+        self.seen.extend(lines)
 
     def new_lines(self) -> list[str]:
         if not os.path.exists(self.path):
@@ -379,6 +383,20 @@ class LogCursor:
             for i, line in enumerate(self.pending):
                 if rx.search(line):
                     self.pending = self.pending[i + 1:]
+                    return line
+            if time.time() >= end:
+                return None
+            time.sleep(0.5)
+
+    def seen_since_mark(self, pattern: str, timeout: float = 15, flags: int = 0) -> str | None:
+        """Last line since mark() matching `pattern`, consumed or not (expect-seen): for a line that may come before or
+        after a check that consumes it. Consumes nothing."""
+        rx = re.compile(pattern, flags)
+        end = time.time() + timeout
+        while True:
+            self._read()
+            for line in reversed(self.seen):
+                if rx.search(line):
                     return line
             if time.time() >= end:
                 return None
@@ -651,6 +669,14 @@ class Scenario:
                 m = re.search(pattern, hit)
                 if m:
                     self.captured.update({k: v for k, v in m.groupdict().items() if v is not None})
+            return hit is not None
+        elif op == "expect-seen":
+            # expect-seen <pattern> [timeout=N]: a plugin-log line since the last mark, read already or not
+            pattern, t = self._timeout(rest, 15)
+            hit = self.plugin.seen_since_mark(pattern, t)
+            self.check(f"{op} {pattern}", hit is not None, hit.strip()[:300] if hit else f"no match in {t:.0f}s")
+            if hit and (m := re.search(pattern, hit)):
+                self.captured.update({k: v for k, v in m.groupdict().items() if v is not None})
             return hit is not None
         elif op == "calc":
             # calc NAME = <arithmetic>: the result becomes ${NAME} for later steps (not a check)

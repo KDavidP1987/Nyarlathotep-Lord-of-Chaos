@@ -72,23 +72,26 @@ expect-log (^|\] |\\n )hotspot 1: [A-Za-z' ]+? at (?P<H1X>-?[0-9]+) (?P<H1Z>-?[0
 expect-calc hypot(${PX} - ${H1X}, ${PZ} - ${H1Z}) >= 300
 expect-calc hypot(${PX} - ${H2X}, ${PZ} - ${H2Z}) >= 300
 expect-calc hypot(${PX} + 1188, ${PZ} + 1334) >= 200
-# the roamers came to Chaos (both unit kinds counted): the mover lands them 50-60 m from him, within its 100 m seed reach,
-# and they walk in from there (session 1: counted within 60 m after 10 s, none had arrived yet)
-wait 20
+# the roamers came to Chaos (both unit kinds counted): the mover jumps them 25 m every 5 s while no player is within
+# 100 m, then lands them 50-60 m from him and they walk in (session 1: none had arrived after 10 or 20 s). Horde 1 rises
+# and marches meanwhile, so its lines are read with expect-seen (a matched line consumes the lines before it)
+calc NEAR = min(hypot(${PX} - ${H1X}, ${PZ} - ${H1Z}), hypot(${PX} - ${H2X}, ${PZ} - ${H2Z}))
+calc WR = round((${NEAR} - 100) / 5 + 30)
+wait ${WR}
 chat .devunits -1967480038 100
 expect-log \[DEV UNITS\] n=(?P<RG>[0-9]+)
 chat .devunits -1618703048 100
 expect-log \[DEV UNITS\] n=(?P<RM>[0-9]+)
 expect-calc ${RG} + ${RM} >= 1
-expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
+expect-seen apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
 # each 25 % step with its keep-up line, at least 80 % of the living units within 30 m of the front (D26)
-expect-log horde 1 front (2[5-9]|[34][0-9]) % units (?P<N25>[0-9]+)/(?P<M25>[0-9]+) within 30 m of the front timeout=40
+expect-seen horde 1 front (2[5-9]|[34][0-9]) % units (?P<N25>[0-9]+)/(?P<M25>[0-9]+) within 30 m of the front timeout=40
 expect-calc ${N25} >= 0.8 * ${M25}
-expect-log horde 1 front ([56][0-9]|7[0-4]) % units (?P<N50>[0-9]+)/(?P<M50>[0-9]+) within 30 m of the front timeout=40
+expect-seen horde 1 front ([56][0-9]|7[0-4]) % units (?P<N50>[0-9]+)/(?P<M50>[0-9]+) within 30 m of the front timeout=40
 expect-calc ${N50} >= 0.8 * ${M50}
-expect-log horde 1 front (7[5-9]|[89][0-9]) % units (?P<N75>[0-9]+)/(?P<M75>[0-9]+) within 30 m of the front timeout=40
+expect-seen horde 1 front (7[5-9]|[89][0-9]) % units (?P<N75>[0-9]+)/(?P<M75>[0-9]+) within 30 m of the front timeout=40
 expect-calc ${N75} >= 0.8 * ${M75}
-expect-log event apo-test ended: lost \(1 of 2 hordes risen\) timeout=60
+expect-seen event apo-test ended: lost \(1 of 2 hordes risen\) timeout=60
 expect-chat the test camp has fallen timeout=20
 shot chat apo-lost
 wait 30
