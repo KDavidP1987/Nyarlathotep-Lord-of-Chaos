@@ -705,8 +705,17 @@ public static class SpawnTuning
     /// <summary>The tuning of one queued unit of <paramref name="action"/> (wave-sets D3): its own entry's modifiers for a
     /// waveList, the action's for the units form (one tuning per action, as 0.8.0).</summary>
     /// <remarks>A units-form entry carries no modifiers of its own; a final-wave boss does (revenge D29, BossWave.Units).</remarks>
-    public static UnitTuning For(SpawnWavesAction action, UnitEntry entry) =>
-        TuningFrom(action.WaveList is null ? entry.Modifiers ?? action.Modifiers : entry.Modifiers);
+    public static UnitTuning For(SpawnWavesAction action, UnitEntry entry) => TuningFrom(ModifiersOf(action, entry));
+
+    /// <summary>The modifiers <see cref="For"/> tunes a queued unit of <paramref name="action"/> with.</summary>
+    public static SpawnModifiers? ModifiersOf(SpawnWavesAction action, UnitEntry entry) =>
+        action.WaveList is null ? entry.Modifiers ?? action.Modifiers : entry.Modifiers;
+
+    /// <summary><see cref="For"/> under scaling (scaling D7): the scaled level of wave <paramref name="wave"/> from
+    /// <paramref name="read"/>'s average in place of the configured one, every multiplier as configured; an action without
+    /// the block, or no read, tunes exactly as <see cref="For"/>.</summary>
+    public static UnitTuning For(SpawnWavesAction action, UnitEntry entry, ScalingRead? read, int wave) =>
+        Scaling.Tune(For(action, entry), action.Scaling, read?.Gear, ModifiersOf(action, entry), wave);
 
     /// <summary>maxHealth → MaxHealth; power → PhysicalPower and SpellPower; moveSpeed → MovementSpeed; attackSpeed →
     /// PrimaryAttackSpeed and AbilityAttackSpeed; a multiplier of 1.0 gives no entry.</summary>
@@ -1210,13 +1219,20 @@ public static class WaveGate
     /// <summary><see cref="DecideGroups"/> over picks that keep their entry's modifiers (wave-sets D3): the clamp and the
     /// round-robin deal move whole picks, so every dealt unit keeps its own entry's tuning.</summary>
     public static FanOutDecision DecideGroupEntries(WaveFacts facts, IReadOnlyList<GroupCentre> centres, Func<IReadOnlyList<UnitEntry>> roll,
+        int maxPerWave, int occupied, int maxTracked) =>
+        DecideGroupEntries(facts, centres, _ => roll(), maxPerWave, occupied, maxTracked);
+
+    /// <summary><see cref="DecideGroupEntries(WaveFacts, IReadOnlyList{GroupCentre}, Func{IReadOnlyList{UnitEntry}}, int, int, int)"/>
+    /// with each group rolling its own entries (scaling D4: group i by its own player count, ScaledWave.Entries); the
+    /// clamp and the deal are the same.</summary>
+    public static FanOutDecision DecideGroupEntries(WaveFacts facts, IReadOnlyList<GroupCentre> centres, Func<int, IReadOnlyList<UnitEntry>> rollFor,
         int maxPerWave, int occupied, int maxTracked)
     {
         if (facts.Pick == PickOutcome.Picked && centres.Count == 0) facts = facts with { Pick = PickOutcome.NoEligible };   // no centre, no group
         if (facts.Blocked || facts.MapFailed && facts.NeedsMap || facts.Pick is PickOutcome.NoEligible or PickOutcome.QueryFailed || centres.Count <= 1)
         {
             var centre = centres.Count > 0 ? centres[0] : default;
-            var one = DecideEntries(facts with { CentreClaimed = centres.Count > 0 && centre.Claimed }, roll, maxPerWave, occupied, maxTracked);
+            var one = DecideEntries(facts with { CentreClaimed = centres.Count > 0 && centre.Claimed }, () => rollFor(0), maxPerWave, occupied, maxTracked);
             IReadOnlyList<WaveGroup> groups = one.Outcome == WaveOutcome.Spawn ? [new WaveGroup(0, (centre.X, centre.Y, centre.Z), one.Units)] : [];
             return new(one.Outcome, one.Line, groups, one.CapLines);
         }
@@ -1230,7 +1246,7 @@ public static class WaveGate
                 firstReason ??= WaveLines.CentreClaimed(facts.Wave, facts.EventId);
                 continue;
             }
-            var units = roll().ToList();
+            var units = rollFor(i).ToList();
             if (units.Count == 0) { firstReason ??= WaveLines.ZeroRolledSkip(facts.Wave, facts.EventId); continue; }
             rolled.Add((i, units));
         }
@@ -1240,7 +1256,7 @@ public static class WaveGate
                 : new(WaveOutcome.Skip, firstReason, [], []);
 
         var caps = new List<string>();
-        var allowed = Precedence.WaveSize(rolled.Sum(g => g.Units.Count), maxPerWave, occupied, maxTracked, caps);
+        var allowed = Precedence.WaveSize(rolled.Sum(g => g.Units.Count), maxPerWave, occupied, maxTracked, caps);   // one clamp (scaling D4)
         var dealt = rolled.Select(_ => new List<UnitEntry>()).ToList();
         for (var round = 0; allowed > 0; round++)
         {
@@ -1285,9 +1301,13 @@ public static class BossWave
     public static int Lead(SpawnWavesAction action, int wave) =>
         action.Bosses is { } bosses && IsFinal(action, wave) ? bosses.Sum(b => b.Count) : 0;
 
-    public static IReadOnlyList<UnitEntry> Units(SpawnWavesAction action, int wave)
+    public static IReadOnlyList<UnitEntry> Units(SpawnWavesAction action, int wave) => Units(action, wave, 0);
+
+    /// <summary><see cref="Units(SpawnWavesAction, int)"/> with <paramref name="extra"/> more copies of each of the wave's
+    /// own entries (scaling D3); the bosses are never multiplied (S-8).</summary>
+    public static IReadOnlyList<UnitEntry> Units(SpawnWavesAction action, int wave, int extra)
     {
-        var own = action.UnitsOf(wave);
+        var own = Scaling.ScaleEntries(action.UnitsOf(wave), extra);
         if (action.Bosses is not { Count: > 0 } bosses || !IsFinal(action, wave)) return own;
         var shared = action.WaveList is null ? action.Modifiers : own.Count > 0 ? own[0].Modifiers : null;
         return [.. bosses.Select(b => new UnitEntry(b.Prefab, b.Count, 1.0, b.Modifiers ?? shared)), .. own];

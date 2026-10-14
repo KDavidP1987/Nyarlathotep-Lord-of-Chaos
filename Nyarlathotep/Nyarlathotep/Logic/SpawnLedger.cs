@@ -11,8 +11,10 @@ public enum TuningStat { MaxHealth, PhysicalPower, SpellPower, MovementSpeed, Pr
 public readonly record struct StatScale(TuningStat Stat, float Value);
 
 /// <summary>How a spawned unit is tuned: a level (null keeps the prefab's) and the stat modifiers its marker buff carries
-/// (foundation Design › UX, `.nyar spawn`; event-spawns D9, built by SpawnTuning.TuningFrom).</summary>
-public sealed record UnitTuning(LevelArg? Level, IReadOnlyList<StatScale> Stats)
+/// (foundation Design › UX, `.nyar spawn`; event-spawns D9, built by SpawnTuning.TuningFrom). A <see cref="Scaled"/>
+/// tuning's <see cref="Level"/> is scaling D7's level and <see cref="Own"/> the configured one a V Blood keeps (D8,
+/// Scaling.LevelAtSetup).</summary>
+public sealed record UnitTuning(LevelArg? Level, IReadOnlyList<StatScale> Stats, bool Scaled = false, LevelArg? Own = null)
 {
     public static readonly UnitTuning None = new(null, []);
 

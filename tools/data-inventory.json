@@ -64,7 +64,8 @@
         "hunting-grounds › build outputs",
         "revenge › build outputs",
         "apocalypse › build outputs",
-        "unit-watch › build outputs"
+        "unit-watch › build outputs",
+        "scaling › build outputs"
       ]
     },
     {
@@ -102,7 +103,8 @@
         "revenge › tag and GitHub release v0.11.0",
         "apocalypse › release zip",
         "apocalypse › tag and GitHub release v0.13.0",
-        "unit-watch › release zip, tag and GitHub release v0.13.0"
+        "unit-watch › release zip, tag and GitHub release v0.13.0",
+        "scaling › release zip, tag and GitHub release v0.14.0"
       ]
     },
     {
@@ -196,7 +198,8 @@
         "revenge › events.json Revenge trigger",
         "apocalypse › events.json Apocalypse definitions",
         "apocalypse › state.json `Apocalypse` record",
-        "apocalypse › scoreboard rows in the record"
+        "apocalypse › scoreboard rows in the record",
+        "scaling › `action.scaling` block per definition"
       ]
     },
     {
@@ -393,7 +396,8 @@
         "hunting-grounds › snapshot",
         "revenge › snapshot",
         "apocalypse › snapshot",
-        "unit-watch › snapshot"
+        "unit-watch › snapshot",
+        "scaling › snapshot"
       ],
       "location": "%TEMP%\\nyar-snap-* (saved\\manifest.json plus the copies)",
       "owner": "tools/dev-snapshot.ps1",
@@ -507,9 +511,10 @@
         "nyar-hg*-logs",
         "nyar-rv*-logs",
         "nyar-apo*-logs",
-        "nyar-uw*-logs"
+        "nyar-uw*-logs",
+        "nyar-sc*-logs"
       ],
-      "location": "%TEMP%\\nyar-s<n>-logs (copies of LogOutput.log and NyarDev.log taken by hand during event-library Sessions 4 and 5); %TEMP%\\nyar-ws<n>-logs (wave-sets Session 1); %TEMP%\\nyar-sw<n>-logs (swarm Session 1); %TEMP%\nyar-hg<n>-logs (hunting-grounds Sessions 1-2); %TEMP%\\nyar-rv<n>-logs (revenge sessions); %TEMP%\\nyar-apo<n>-logs (apocalypse spike and sessions); %TEMP%\\nyar-uw<n>-logs (unit-watch spike and sessions)",
+      "location": "%TEMP%\\nyar-s<n>-logs (copies of LogOutput.log and NyarDev.log taken by hand during event-library Sessions 4 and 5); %TEMP%\\nyar-ws<n>-logs (wave-sets Session 1); %TEMP%\\nyar-sw<n>-logs (swarm Session 1); %TEMP%\nyar-hg<n>-logs (hunting-grounds Sessions 1-2); %TEMP%\\nyar-rv<n>-logs (revenge sessions); %TEMP%\\nyar-apo<n>-logs (apocalypse spike and sessions); %TEMP%\\nyar-uw<n>-logs (unit-watch spike and sessions); %TEMP%\\nyar-sc<n>-logs (scaling spike and sessions)",
       "owner": "Claude during a server session",
       "retention": "the session that made them",
       "deletion": "deleted once the session is recorded; later sessions copy to nyar-soak-* instead; a leftover fails -Paths",
@@ -526,7 +531,8 @@
         "hunting-grounds › session log copies",
         "revenge › session log copies",
         "apocalypse › session log copies",
-        "unit-watch › session log copies"
+        "unit-watch › session log copies",
+        "scaling › session log copies"
       ]
     },
     {
@@ -603,7 +609,9 @@
         "apocalypse › review prompts",
         "apocalypse › Claude's scratchpad (Codex prompts and outputs, drafts)",
         "unit-watch › review prompts",
-        "unit-watch › Claude's scratchpad (Codex prompts and outputs, planted-fault copies)"
+        "unit-watch › Claude's scratchpad (Codex prompts and outputs, planted-fault copies)",
+        "scaling › review prompts",
+        "scaling › Claude's scratchpad (Codex prompts and outputs, planted-fault copies)"
       ]
     },
     {
@@ -691,7 +699,8 @@
         "automation › health and failure-streak state",
         "swarm › arena check streak and health entry",
         "hunting-grounds › lock and hunt streaks and health entries",
-        "unit-watch › failure streaks and health entries"
+        "unit-watch › failure streaks and health entries",
+        "scaling › failure streak and health entry"
       ]
     },
     {
@@ -795,7 +804,9 @@
         "apocalypse › vrclient outputs",
         "apocalypse › NyarDevTools hop command (spike)",
         "unit-watch › vrclient outputs",
-        "unit-watch › dev marks"
+        "unit-watch › dev marks",
+        "scaling › vrclient outputs",
+        "scaling › dev marks"
       ]
     },
     {
@@ -886,6 +897,19 @@
         "unit-watch › stall clock per wave",
         "unit-watch › watch counts per instance (stuck now, recovered, removed)",
         "unit-watch › players' positions for one check"
+      ]
+    },
+    {
+      "artifact": "Scaling decisions",
+      "covers": [],
+      "location": "memory (Logic/Scaling.cs ScalingBook: the latest decision per running instance; the players' rows and gear levels inside one decision), in the server process",
+      "owner": "Logic/Scaling.cs (the decision services)",
+      "retention": "the latest decision (players, gear average, level) while its instance runs; players' rows and gear levels for one decision",
+      "deletion": "at every end path of the event or a restart (scaling D15); players' rows at the decision's end; never logged or saved (D11)",
+      "singleCopy": false,
+      "rows": [
+        "scaling › the latest decision per running instance (players, gear, level)",
+        "scaling › players' rows and gear levels"
       ]
     },
     {

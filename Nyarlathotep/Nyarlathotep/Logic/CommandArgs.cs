@@ -197,7 +197,41 @@ public static class CommandArgs
         d[RegionLockField] = ("spawn action", "admin");             // hunting-grounds D14
         d[BossesField] = ("spawn action", "admin");                 // revenge D31; an Apocalypse's too (apocalypse D16)
         foreach (var f in ApocalypseFields) d[f] = ("apocalypse action", "admin");     // apocalypse D16
+        foreach (var f in ScalingFields) d[f] = ("action", "admin");                   // scaling D14: a SpawnWaves or Apocalypse action
         return d;
+    }
+
+    /// <summary>`action.scaling` (scaling D14): none only, which removes the block.</summary>
+    public const string ScalingField = "action.scaling";
+    public const string ScalingNoneRule = "action.scaling takes none (it removes the scaling)";
+
+    /// <summary>The scaling keys (scaling D14): a field on an event without the block creates it.</summary>
+    public static readonly IReadOnlyList<string> ScalingKeyFields =
+        ["action.scaling.unitsPerPlayer", "action.scaling.levelFromPlayers", "action.scaling.levelOffset", "action.scaling.levelPerWave"];
+
+    /// <summary>The five scaling fields (scaling D14).</summary>
+    public static readonly IReadOnlyList<string> ScalingFields = [ScalingField, .. ScalingKeyFields];
+
+    /// <summary>A scaling field's value (scaling D14), each in D1's range and refused with the validator's own reason;
+    /// exactly one word.</summary>
+    static Arg<object> ScalingValue(string field, string? value)
+    {
+        static Arg<object> IntIn(string v, int min, int max, string rule) =>
+            int.TryParse(v, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var i) && i >= min && i <= max ? Arg<object>.Of(i) : Arg<object>.Bad(rule);
+        if (string.IsNullOrWhiteSpace(value)) return Arg<object>.Bad(ValueRequired);
+        return field switch
+        {
+            ScalingField => value == "none" ? Arg<object>.Of(FieldRemoval.Instance) : Arg<object>.Bad(ScalingNoneRule),
+            "action.scaling.unitsPerPlayer" => IntIn(value, 0, EventValidator.MaxUnitsPerPlayer, EventValidator.UnitsPerPlayerRule),
+            "action.scaling.levelOffset" => IntIn(value, -EventValidator.MaxLevelOffset, EventValidator.MaxLevelOffset, EventValidator.LevelOffsetRule),
+            "action.scaling.levelPerWave" => IntIn(value, 0, EventValidator.MaxLevelPerWave, EventValidator.LevelPerWaveRule),
+            _ => value switch
+            {
+                "true" => Arg<object>.Of(true),
+                "false" => Arg<object>.Of(false),
+                _ => Arg<object>.Bad(EventValidator.LevelFromPlayersRule),
+            },
+        };
     }
 
     /// <summary>`action.goal` (apocalypse D16): here only, the admin's x, y and z as a Point goal.</summary>
@@ -692,6 +726,7 @@ public static class CommandArgs
         if (field == RegionLockField) return RegionLockValue(value);
         if (field == BossesField) return BossesValue(value);
         if (ApocalypseFields.Contains(field)) return ApocalypseValue(field, value);
+        if (ScalingFields.Contains(field)) return ScalingValue(field, value);
         if (field == ScoreboardField)
             return value switch { "true" => Arg<object>.Of(true), "false" => Arg<object>.Of(false), _ => Arg<object>.Bad(EventValidator.ScoreboardRule) };
         if (WaveListPath(field) is { } wave) return WaveListValue(field, wave, value);

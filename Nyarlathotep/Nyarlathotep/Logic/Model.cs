@@ -109,12 +109,19 @@ public enum WinnerRule { None, KillDeath }
 /// Logic/Growth.cs.</summary>
 public sealed partial record Growth(int AddUnits, int AddLevels, bool WhenCleared);
 
+/// <summary>How a SpawnWaves or Apocalypse action scales to the players it counts (scaling D1; design §9 D57): each entry
+/// adds <see cref="UnitsPerPlayer"/> units a counted player beyond the first, and with <see cref="LevelFromPlayers"/>
+/// each unit that is not a V Blood takes the players' average gear level + <see cref="LevelOffset"/> +
+/// <see cref="LevelPerWave"/> a wave after the first. Absent keys are 0, false, 0, 0. The rules are Logic/Scaling.cs.</summary>
+public sealed partial record Scaling(int UnitsPerPlayer = 0, bool LevelFromPlayers = false, int LevelOffset = 0, int LevelPerWave = 0);
+
 /// <summary>A SpawnWaves action. <see cref="WaveList"/> is the waveList form's list (wave-sets D1) or, for a units-form
 /// action with <see cref="Growth"/>, the list Growth.Generate made from the base wave (swarm D25): <see cref="Units"/>,
 /// <see cref="Waves"/>, <see cref="IntervalSeconds"/> and <see cref="Modifiers"/> then stay the base the file holds, and
 /// everything after the parser reads the generated list. <see cref="Arena"/> and <see cref="Winner"/> are swarm D1 and
 /// D2. <see cref="RegionLock"/> keeps the units inside the scope regions (hunting-grounds D2, D5); false is 0.10.0's
-/// behaviour. <see cref="Bosses"/> join the final wave only (revenge D28, D29; design §9 D51), null without the key.</summary>
+/// behaviour. <see cref="Bosses"/> join the final wave only (revenge D28, D29; design §9 D51), null without the key.
+/// <see cref="Scaling"/> is scaling D1's block, null without the key.</summary>
 public sealed record SpawnWavesAction(
     IReadOnlyList<UnitEntry> Units,
     int Waves,
@@ -134,7 +141,8 @@ public sealed record SpawnWavesAction(
     WinnerRule Winner = WinnerRule.None,
     Growth? Growth = null,
     bool RegionLock = false,
-    IReadOnlyList<UnitEntry>? Bosses = null)
+    IReadOnlyList<UnitEntry>? Bosses = null,
+    Scaling? Scaling = null)
 {
     /// <summary>The units of wave <paramref name="wave"/> (1-based): its waveList entry's, or <see cref="Units"/> for
     /// every wave of the units form.</summary>
@@ -184,7 +192,7 @@ public sealed record ApocalypseGoal(Location Location, int Radius, string Name);
 /// <summary>An Apocalypse action (apocalypse D1): hotspots found among <see cref="Faction"/>'s natives in
 /// <see cref="Scope"/>, roamers and hordes drawn from <see cref="Units"/> by weight (count) and chance, hordes marching to
 /// <see cref="Goal"/> at <see cref="MarchSpeed"/> m/s; <see cref="Bosses"/> join the last horde only (D36), null without
-/// the key. Its rules are Logic/Apocalypse.cs.</summary>
+/// the key. <see cref="Scaling"/> is scaling D1's block, null without the key. Its rules are Logic/Apocalypse.cs.</summary>
 public sealed record ApocalypseAction(
     string Faction,
     IReadOnlyList<UnitEntry> Units,
@@ -195,7 +203,8 @@ public sealed record ApocalypseAction(
     double MarchSpeed,
     Scope Scope = default,
     bool Scoreboard = true,
-    IReadOnlyList<UnitEntry>? Bosses = null);
+    IReadOnlyList<UnitEntry>? Bosses = null,
+    Scaling? Scaling = null);
 
 public sealed record Announce(IReadOnlyList<string> Start, IReadOnlyList<string> End, bool Warnings)
 {

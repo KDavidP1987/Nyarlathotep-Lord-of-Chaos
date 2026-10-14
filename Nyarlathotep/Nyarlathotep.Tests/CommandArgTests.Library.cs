@@ -113,13 +113,17 @@ public partial class CommandArgTests
         "action.hordes.count" => "4",
         "action.hordes.size" => "20",
         "action.marchSpeed" => "1.5",
+        "action.scaling" => "none",                                      // scaling D14
+        "action.scaling.levelFromPlayers" => "true",
+        "action.scaling.levelOffset" => "-3",
+        _ when field.StartsWith("action.scaling.", StringComparison.Ordinal) => "2",
         _ => "60",
     };
 
     [Fact]
     public void SettableFields_passes_every_table_name()
     {
-        Assert.Equal(71, CommandArgs.SettableFields.Count);      // automation D16: 7 trigger fields and action.fanOut; wave-sets D14: 11; swarm D9: 6; hunting-grounds D14: 1; revenge D11: 3, D31: 1; apocalypse D16: 8
+        Assert.Equal(76, CommandArgs.SettableFields.Count);      // automation D16: 7 trigger fields and action.fanOut; wave-sets D14: 11; swarm D9: 6; hunting-grounds D14: 1; revenge D11: 3, D31: 1; apocalypse D16: 8; scaling D14: 5
         foreach (var (name, (family, who)) in CommandArgs.SettableFields)
         {
             var field = name.Replace(".N.", ".1.", StringComparison.Ordinal).Replace(".M.", ".1.", StringComparison.Ordinal);   // the placeholders

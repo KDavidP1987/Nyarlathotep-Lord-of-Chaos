@@ -374,14 +374,16 @@ public static class HordeSchedule
 
     /// <summary>The units horde <paramref name="k"/> queues: its bosses first when it is the last horde (each entry's own
     /// modifiers), then size + (k − 1) × growth regular units drawn by weight; the whole clamped by MaxUnitsPerWave, then
-    /// by the free tracked slots, cutting regular units before bosses (revenge D29). Each clamp adds its log line.</summary>
+    /// by the free tracked slots, cutting regular units before bosses (revenge D29). Each clamp adds its log line.
+    /// <paramref name="extra"/> is scaling D5's u × max(0, n − 1) more regular units for the whole horde; the bosses are
+    /// never multiplied.</summary>
     public static IReadOnlyList<(UnitEntry Unit, int Entry)> Units(ApocalypseAction action, int k, int maxPerWave, int occupied, int maxTracked,
-        IRandom rng, List<string> log)
+        IRandom rng, List<string> log, int extra = 0)
     {
         var bosses = k == action.Hordes.Count && action.Bosses is { } b
             ? b.Select((e, i) => (Unit: e, Entry: i + 1)).ToList()
             : [];
-        var regular = Size(action.Hordes, k);
+        var regular = Size(action.Hordes, k) + Math.Max(0, extra);
         var bossCount = bosses.Sum(x => x.Unit.Count);
         var room = Precedence.WaveSize(regular + bossCount, maxPerWave, occupied, maxTracked, log);
         var result = new List<(UnitEntry, int)>();
@@ -836,8 +838,9 @@ public interface IApocalypseWorld
     int DrainMarginSeconds { get; }
 }
 
-/// <summary>A rise of horde k (D5, D7): its number, hotspot, queued count, and the clamp lines.</summary>
-public sealed record HordeRise(int Horde, int Hotspot, int Queued, IReadOnlyList<string> Log);
+/// <summary>A rise of horde k (D5, D7): its number, hotspot, queued count, and the clamp lines; <see cref="Scaling"/> is the
+/// scaling line of the rise (scaling D10), logged before the clamp lines, null for an unscaled event.</summary>
+public sealed record HordeRise(int Horde, int Hotspot, int Queued, IReadOnlyList<string> Log, string? Scaling = null);
 
 /// <summary>
 /// One running apocalypse's state (D3-D8, D11, D12, D15, D36): hotspots, the resolved goal, hordes risen, fronts, the spread
@@ -872,13 +875,13 @@ public sealed class ApocalypseRun
 
     UnitLifetime Life(IApocalypseWorld w, DateTime utcNow) => RollingLifetime.Of(utcNow, Active.Instance.EndsUtc, w.GraceSeconds, w.DrainMarginSeconds);
 
-    int Queue(IApocalypseWorld w, UnitEntry unit, int count, int wave, float x, float z, float radius, DateTime utcNow)
+    int Queue(IApocalypseWorld w, UnitEntry unit, int count, int wave, float x, float z, float radius, DateTime utcNow, UnitTuning? tuning = null)
     {
         if (count <= 0) return 0;
         // Each unit hunts from its own position (Services/HuntAction, step 3): a roamer over the seed reach (100 m), a horde
         // unit over huntRange; the tag's centre names its group (SpawnTracker S-14).
         var hunt = new HuntTag(x, z, Apocalypse.HotspotOfWave(wave) is not null ? HuntingGrounds.SeedReach : Action.Roamers.HuntRange);
-        var r = w.Ledger.Request(unit.Prefab, Id, count, Life(w, utcNow), SpawnTuning.TuningFrom(unit.Modifiers), i => w.Place(x, z, radius, i, count),
+        var r = w.Ledger.Request(unit.Prefab, Id, count, Life(w, utcNow), tuning ?? SpawnTuning.TuningFrom(unit.Modifiers), i => w.Place(x, z, radius, i, count),
             hunt: hunt, wave: wave);
         Tally.Add(r.Queued);
         if (r.Queued > 0) _pending[wave] = PendingOf(wave) + r.Queued;
@@ -915,22 +918,42 @@ public sealed class ApocalypseRun
 
     int FreeTracked(IApocalypseWorld w) => Math.Max(0, w.Ledger.Limits.MaxTracked - w.Ledger.Occupied);
 
-    /// <summary>Tops every hotspot up to perHotspot living roamers (D3); returns one line per hotspot that got any.</summary>
-    public IReadOnlyList<string> TopUp(IApocalypseWorld w, DateTime utcNow)
+    /// <summary>Tops every hotspot up to perHotspot living roamers (D3); returns one line per hotspot that got any. Under
+    /// scaling (scaling D5, D7, D10) <paramref name="scale"/> is read afresh: perHotspot and roamers.max rise by the
+    /// players' extra (Scaling.RoamerTargets), each roamer takes the level of wave 1, and the roamers line leads the lines
+    /// when the count changed since the last; a failed read (null) tops up as configured.</summary>
+    public IReadOnlyList<string> TopUp(IApocalypseWorld w, DateTime utcNow, ScalingSource? scale = null)
     {
         TopUps++;
         var lines = new List<string>();
-        var plan = RoamerPlan.TopUp(Action.Roamers.PerHotspot, RoamersPerHotspot(w), Action.Roamers.Max, FreeTracked(w));
+        var (perHotspot, max) = (Action.Roamers.PerHotspot, Action.Roamers.Max);
+        ScalingRead? read = null;
+        if (Action.Scaling is { } block && scale?.Read() is { } r)
+        {
+            read = r;
+            (perHotspot, max) = Scaling.RoamerTargets(Action.Roamers, Hotspots.Count, block.Extra(r.Players));
+            scale.Book.Record(Active, new ScalingView(r.Players, r.Gear, block.LineLevel(r.Gear, 1)));
+            if (scale.Book.RoamersChanged(Active, r.Players)) lines.Add(Scaling.Lines.Roamers(Id, r.Players, perHotspot, max));
+        }
+        var plan = RoamerPlan.TopUp(perHotspot, RoamersPerHotspot(w), max, FreeTracked(w));
         for (var h = 0; h < plan.Length; h++)
         {
             var queued = 0;
             for (var i = 0; i < plan[h]; i++)
-                queued += Queue(w, RoamerPlan.Draw(Action.Units, w.Random), 1, Apocalypse.RoamerWave(Hotspots[h].Number), Hotspots[h].X, Hotspots[h].Z,
-                    Apocalypse.RoamerSpawnRadius, utcNow);
+            {
+                var unit = RoamerPlan.Draw(Action.Units, w.Random);
+                queued += Queue(w, unit, 1, Apocalypse.RoamerWave(Hotspots[h].Number), Hotspots[h].X, Hotspots[h].Z,
+                    Apocalypse.RoamerSpawnRadius, utcNow, Tuning(unit, read, 1));
+            }
             if (queued > 0) lines.Add(RoamerPlan.Line(Id, queued, Hotspots[h].Number));
         }
         return lines;
     }
+
+    /// <summary>A roamer's or horde unit's tuning: its entry's modifiers, the level scaled for wave <paramref name="wave"/>
+    /// (the horde number, 1 for a roamer) when <paramref name="read"/> holds a decision (scaling D7).</summary>
+    UnitTuning Tuning(UnitEntry unit, ScalingRead? read, int wave) =>
+        read is null ? SpawnTuning.TuningFrom(unit.Modifiers) : Scaling.Tune(SpawnTuning.TuningFrom(unit.Modifiers), Action.Scaling, read.Gear, unit.Modifiers, wave);
 
     /// <summary>The spread of one death (D4): for a qualifying kill, up to perKill roamers within 3 m of the victim, each
     /// joining the hotspot nearest its spawn point; returns the spread line, or null when nothing spread.</summary>
@@ -952,23 +975,38 @@ public sealed class ApocalypseRun
     /// <summary>The horde due now, risen (D5, D36): its units queued at its hotspot (its bosses as their own ledger waves);
     /// a horde that queued none has not risen and waits 60 s. A rise tops the roamers up once (D3) unless
     /// <paramref name="topUp"/> is false (a resume's catch-up rises top up once, after the rebuild, D12).</summary>
-    public HordeRise? Rise(IApocalypseWorld w, DateTime utcNow, out IReadOnlyList<string> roamerLines, bool topUp = true)
+    /// <remarks>Under scaling (scaling D5, D7, D10) the rise reads <paramref name="scale"/> afresh: the horde gains the
+    /// players' extra regular units, each unit takes the level of horde k, and the rise carries its scaling line; its
+    /// top-up reads again.</remarks>
+    public HordeRise? Rise(IApocalypseWorld w, DateTime utcNow, out IReadOnlyList<string> roamerLines, bool topUp = true, ScalingSource? scale = null)
     {
         roamerLines = [];
         var k = HordeSchedule.Due(Active.Instance.StartedUtc, Active.Instance.EndsUtc, Action.Hordes, Risen, LastTryUtc, utcNow);
-        return k is { } due ? RiseHorde(w, due, utcNow, out roamerLines, topUp) : null;
+        return k is { } due ? RiseHorde(w, due, utcNow, out roamerLines, topUp, scale) : null;
     }
 
-    HordeRise? RiseHorde(IApocalypseWorld w, int k, DateTime utcNow, out IReadOnlyList<string> roamerLines, bool topUp)
+    HordeRise? RiseHorde(IApocalypseWorld w, int k, DateTime utcNow, out IReadOnlyList<string> roamerLines, bool topUp, ScalingSource? scale = null)
     {
         roamerLines = [];
         var hotspot = Hotspots[HordeSchedule.HotspotOf(k, Hotspots.Count) - 1];
         var log = new List<string>();
-        var units = HordeSchedule.Units(Action, k, w.Ledger.Limits.MaxPerWave, w.Ledger.Occupied, w.Ledger.Limits.MaxTracked, w.Random, log);
+        ScalingRead? read = null;
+        string? scaling = null;
+        var extra = 0;
+        if (Action.Scaling is { } block && scale?.Read() is { } r)
+        {
+            read = r;
+            extra = block.HordeExtra(r.Players);
+            var view = new ScalingView(r.Players, r.Gear, block.LineLevel(r.Gear, k));
+            var before = HordeSchedule.Size(Action.Hordes, k) + (k == Action.Hordes.Count ? Action.Bosses?.Sum(b => b.Count) ?? 0 : 0);
+            scaling = Scaling.Lines.Horde(Id, k, view, before, before + extra);
+            scale.Book.Record(Active, view);
+        }
+        var units = HordeSchedule.Units(Action, k, w.Ledger.Limits.MaxPerWave, w.Ledger.Occupied, w.Ledger.Limits.MaxTracked, w.Random, log, extra);
         var queued = 0;
         foreach (var (unit, entry) in units)
             queued += Queue(w, unit, unit.Count, entry == 0 ? Apocalypse.HordeWave(k) : Apocalypse.BossWave(k, entry), hotspot.X, hotspot.Z,
-                Apocalypse.RoamerSpawnRadius, utcNow);
+                Apocalypse.RoamerSpawnRadius, utcNow, Tuning(unit, read, k));
         if (queued == 0)
         {
             LastTryUtc = utcNow;                          // D5: a full cap never fakes a risen (or defeated) horde
@@ -980,8 +1018,8 @@ public sealed class ApocalypseRun
         {
             BossPrefabs = units.Any(u => u.Entry > 0) ? (Action.Bosses ?? []).Select(b => b.Prefab).ToList() : [],
         };
-        if (topUp) roamerLines = TopUp(w, utcNow);
-        return new HordeRise(k, hotspot.Number, queued, log);
+        if (topUp) roamerLines = TopUp(w, utcNow, scale);
+        return new HordeRise(k, hotspot.Number, queued, log, scaling);
     }
 
     /// <summary>True when horde <paramref name="horde"/> has risen and has no unit and no order left, bosses included.</summary>
@@ -1043,7 +1081,10 @@ public sealed class ApocalypseRun
     /// <summary>The rebuild of a resumed run (D12), once the drain gate proceeds: every <see cref="ResumeRule.Rebuild"/>
     /// order queued through the ledger, then each missed horde risen in order (each once, none topping up), then one roamer
     /// top-up. Returns the units the rebuild queued, the catch-up rises and the top-up's lines.</summary>
-    public (int Rebuilt, IReadOnlyList<HordeRise> CatchUp, IReadOnlyList<string> TopUpLines) Rebuild(IApocalypseWorld w, ApocalypseRecord record, DateTime utcNow)
+    /// <remarks>The rebuilt units are unscaled, in count and level (scaling D5; Review 1 F6); only the catch-up rises and
+    /// the top-up after the resume read <paramref name="scale"/>.</remarks>
+    public (int Rebuilt, IReadOnlyList<HordeRise> CatchUp, IReadOnlyList<string> TopUpLines) Rebuild(IApocalypseWorld w, ApocalypseRecord record, DateTime utcNow,
+        ScalingSource? scale = null)
     {
         var rebuilt = 0;
         foreach (var o in ResumeRule.Rebuild(record, Action))
@@ -1061,12 +1102,12 @@ public sealed class ApocalypseRun
         foreach (var k in ResumeRule.CatchUp(record, Action, utcNow))
         {
             if (k != Risen + 1) break;
-            if (RiseHorde(w, k, utcNow, out _, topUp: false) is { } rise) rises.Add(rise);
+            if (RiseHorde(w, k, utcNow, out _, topUp: false, scale) is { } rise) rises.Add(rise);
             else break;
         }
         // the roamers top up once after the catch-up rises, never when none rose: a plain resume rebuilds exactly the
         // recorded units (D12; session 2 rebuilt 21 and topped up 1 more)
-        IReadOnlyList<string> lines = rises.Count > 0 ? TopUp(w, utcNow) : [];
+        IReadOnlyList<string> lines = rises.Count > 0 ? TopUp(w, utcNow, scale) : [];
         return (rebuilt, rises, lines);
     }
 

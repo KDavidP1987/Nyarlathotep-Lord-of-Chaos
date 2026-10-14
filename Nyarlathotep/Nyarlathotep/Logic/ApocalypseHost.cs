@@ -340,6 +340,7 @@ public sealed class ApocalypseHost
         {
             var (r, roamerLines) = done;
             Safe(game, () => { game.MapTerritory(run.Id); return 0; });
+            if (r.Scaling is { } scaled) Say(game.Log, scaled);                                       // scaling D10: before the clamp lines
             Say(game.Log, string.Create(CultureInfo.InvariantCulture, $"apocalypse {run.Id} horde {r.Horde}/{action.Hordes.Count} rose at hotspot {r.Hotspot}: {r.Queued} units"));
             foreach (var l in r.Log) Say(game.Log, $"apocalypse {run.Id} horde {r.Horde}: {l}");
             foreach (var l in roamerLines) Say(game.Log, l);
@@ -709,6 +710,7 @@ public sealed class ApocalypseHost
             foreach (var r in rises)
             {
                 engine.WaveSpawned(p.EventId, now, r.Queued);
+                if (r.Scaling is { } scaled) Say(game.Log, scaled);
                 Say(game.Log, string.Create(CultureInfo.InvariantCulture, $"apocalypse {p.EventId} horde {r.Horde}/{run.Action.Hordes.Count} rose at hotspot {r.Hotspot}: {r.Queued} units (missed while down)"));
                 var spot = run.Hotspots[r.Hotspot - 1];
                 game.Announce(p.EventId, Messages.ApocalypseRise(active.Definition.Name, r.Queued, Safe(game, () => game.RegionName(spot.X, spot.Z)), run.Action.Goal.Name));

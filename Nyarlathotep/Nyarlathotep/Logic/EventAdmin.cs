@@ -87,6 +87,7 @@ public static class EventsEditor
             return null;
         }
         if (path == CommandArgs.BossesField) return SetBosses(root, ev, actionType, value, out error);
+        if (CommandArgs.ScalingFields.Contains(path)) return SetScaling(root, ev, actionType, path, value, out error);
         if (CommandArgs.ApocalypseFields.Contains(path)) return SetApocalypse(root, ev, actionType, path, value, out error);
         if (CommandArgs.SwarmFields.Contains(path)) return SetSwarm(root, ev, actionType, path, value, out error);
         if (CommandArgs.SpawnKeyFields.Contains(CommandArgs.TableName(path)) || path is CommandArgs.FanOutField or CommandArgs.RegionLockField)
@@ -394,6 +395,37 @@ public static class EventsEditor
         return root.ToJsonString(Write) + Environment.NewLine;
     }
 
+    /// <summary>A scaling field (scaling D14) of a SpawnWaves or Apocalypse action, refused on an Empower one with D1's
+    /// reason: `action.scaling none` removes the block, and a key creates the block when it is missing. Whether the block
+    /// is left as D1 takes it is <see cref="ScalingConflicts"/>'s, through <see cref="SwarmConflicts"/>.</summary>
+    static string? SetScaling(JsonNode root, JsonObject ev, string? actionType, string path, object value, out Outcome? error)
+    {
+        error = null;
+        if (actionType is not ("SpawnWaves" or EventValidator.ApocalypseType) || ev["action"] is not JsonObject action)
+        {
+            error = Invalid(EventValidator.ScalingAction, Reasons.Field);
+            return null;
+        }
+        if (value is FieldRemoval) action.Remove("scaling");
+        else
+        {
+            if (action["scaling"] is not JsonObject scaling) action["scaling"] = scaling = new JsonObject();
+            scaling[path["action.scaling.".Length..]] = ToNode(value);
+        }
+        return root.ToJsonString(Write) + Environment.NewLine;
+    }
+
+    /// <summary>The scaling block's conflicts in the validator's order (scaling D1): an offset or a per-wave step without
+    /// levelFromPlayers, then a block that scales nothing. Values of the wrong type are left to the validator.</summary>
+    static IEnumerable<string> ScalingConflicts(JsonObject action)
+    {
+        static int IntOf(JsonNode? n) => n is JsonValue v && v.TryGetValue<int>(out var i) ? i : 0;
+        if (action["scaling"] is not JsonObject s) yield break;
+        var level = s["levelFromPlayers"] is JsonValue l && l.TryGetValue<bool>(out var on) && on;
+        if (!level && (IntOf(s["levelOffset"]) != 0 || IntOf(s["levelPerWave"]) != 0)) yield return EventValidator.ScalingOffsetNeedsLevel;
+        else if (!level && IntOf(s["unitsPerPlayer"]) == 0) yield return EventValidator.ScalingNothing;
+    }
+
     /// <summary>An Apocalypse field (apocalypse D16), refused on any other action type: `action.goal` writes the admin's
     /// x, y and z as goal.location { "type": "Point", x, y, z }; the other fields write their key into goal, hordes or
     /// roamers (created when missing) or the action. Whether the result fits the duration is
@@ -432,7 +464,9 @@ public static class EventsEditor
         try { root = JsonNode.Parse(text, documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true }); }
         catch (JsonException) { return Array.Empty<string>(); }
         var ev = (root?["events"] as JsonArray)?.OfType<JsonObject>().FirstOrDefault(e => e["id"] is JsonValue v && v.TryGetValue<string>(out var s) && s == id);
-        return ev?["action"] is JsonObject action ? ActionConflicts(action).Concat(DurationConflicts(ev, action)).ToList() : Array.Empty<string>();
+        return ev?["action"] is JsonObject action
+            ? ActionConflicts(action).Concat(DurationConflicts(ev, action)).Concat(ScalingConflicts(action)).ToList()
+            : Array.Empty<string>();
     }
 
     /// <summary>The duration's conflicts (apocalypse D1, D16): an Apocalypse runs 600-604800 s and its last horde rises
@@ -634,8 +668,11 @@ public static class EventLines
     /// tally line; its running line counts hordes risen of hordes.</remarks>
     /// <remarks>A running instance shows <paramref name="watch"/>, the unit watch's line (unit-watch D15,
     /// UnitWatchLines.Info), after its running lines; an event that is not running shows none.</remarks>
+    /// <remarks>A definition whose action carries `scaling` shows "scaling: …" after its action lines (scaling D15,
+    /// Scaling.Lines.Info), and while it runs <paramref name="scaling"/>, the "scaling now: …" line of its latest decision
+    /// (Scaling.Lines.Now over ScalingBook.Latest), after the running lines; an event that is not running shows none.</remarks>
     public static IReadOnlyList<string> Info(EventDefinition d, ActiveEvent? active, DateTime utcNow, DateTime? nextInterval = null,
-        (int Rows, int Due)? revengeCounts = null, ApocalypseView? apocalypse = null, string? watch = null)
+        (int Rows, int Due)? revengeCounts = null, ApocalypseView? apocalypse = null, string? watch = null, string? scaling = null)
     {
         if (d.DisabledReason is { } reason) return [$"{d.Id} disabled: {reason}"];
         var c = d.Conditions;
@@ -703,6 +740,7 @@ public static class EventLines
             if (BossesLine(a) is { } bosses) lines.Add(bosses);
         }
         if (d.Apocalypse is { } apo) lines.AddRange(ApocalypseLines(apo));
+        if ((d.Action?.Scaling ?? d.Apocalypse?.Scaling) is { } block) lines.Add(Scaling.Lines.Info(block));     // scaling D15
         lines.Add($"trigger scope: {d.Trigger.Scope}");                 // regions D9
         lines.Add($"action scope: {d.Action?.Scope ?? d.Empower?.Scope ?? d.Apocalypse?.Scope ?? Scope.Global}");
         lines.Add(active is null
@@ -711,6 +749,7 @@ public static class EventLines
               (d.Apocalypse is { } running ? $", horde {apocalypse?.Risen ?? 0}/{running.Hordes.Count}"
               : d.Empower is null ? $", wave {active.WavesSpawned}/{d.Action?.Waves ?? 0}" : ""));
         if (active is not null && apocalypse is not null) lines.AddRange(ApocalypseRunLines(apocalypse));
+        if (active is not null && scaling is not null && (d.Action?.Scaling ?? d.Apocalypse?.Scaling) is not null) lines.Add(scaling);
         if (active is not null && watch is not null) lines.Add(watch);
         if (d.Trigger.Type == TriggerType.Interval && d.Enabled && NextStartLine(active is not null, nextInterval, utcNow) is { } next) lines.Add(next);
         return lines;

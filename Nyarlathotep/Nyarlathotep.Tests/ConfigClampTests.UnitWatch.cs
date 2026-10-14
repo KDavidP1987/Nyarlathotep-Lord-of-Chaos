@@ -76,9 +76,10 @@ public partial class ConfigClampTests
         Assert.Equal(["Action", "Announce", "Apocalypse", "Conditions", "DisabledReason", "DurationSeconds", "Empower", "Enabled", "Id", "Name", "Pillar",
             "Startable", "Trigger"], Names(typeof(EventDefinition)));
         Assert.Equal(["AllowTerritory", "Arena", "Behaviour", "Bosses", "FanOut", "Growth", "IntervalSeconds", "Location", "Loot", "Modifiers", "Radius",
-            "RegionLock", "Scope", "Scoreboard", "UnitLifetimeSeconds", "Units", "WaveList", "Waves", "Winner"], Names(typeof(SpawnWavesAction)));
+            "RegionLock", "Scaling", "Scope", "Scoreboard", "UnitLifetimeSeconds", "Units", "WaveList", "Waves", "Winner"], Names(typeof(SpawnWavesAction)));   // scaling D1 adds Scaling
         Assert.Equal(["AfterSeconds", "Units", "WaitsForClear", "WhenCleared"], Names(typeof(WaveSpec)));
-        Assert.Equal(["Bosses", "Faction", "Goal", "Hordes", "Hotspots", "MarchSpeed", "Roamers", "Scope", "Scoreboard", "Units"], Names(typeof(ApocalypseAction)));
+        Assert.Equal(["Bosses", "Faction", "Goal", "Hordes", "Hotspots", "MarchSpeed", "Roamers", "Scaling", "Scope", "Scoreboard", "Units"],
+            Names(typeof(ApocalypseAction)));                                                                                   // scaling D1 adds Scaling
         Assert.Equal(["Apocalypse", "DailyBanner", "Instances", "LastFired", "LastStart", "NextInterval", "PurgeUntilUtc", "SchemaVersion", "Units"],
             Names(typeof(StateDocument)));
     }

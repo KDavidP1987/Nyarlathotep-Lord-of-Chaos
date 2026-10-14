@@ -420,6 +420,14 @@ Rules:
   with `code=notfound arg=id` for an unknown id, `code=state arg=id reason=not_active` when the event is not running,
   `code=state arg=id` when it has no live unit, and `code=invalid reason=watch_off` when the server's `[UnitWatch]
   Enabled` is false. The watch's lines never reach the wire, and no line names or locates a player.
+- **Scaling** (0.14.0, scaling): the `event set` twin takes the scaling fields `action.scaling.unitsPerPlayer` (0-5),
+  `action.scaling.levelFromPlayers` (`true` or `false`), `action.scaling.levelOffset` (-20..20),
+  `action.scaling.levelPerWave` (0-5) and `action.scaling none`, answering
+  `[NYAR:ok] cmd=event verb=set id=<id> field=action.scaling.<key> value=<stored value>`, or as for every other field
+  `code=badarg arg=value` for a value out of range and `code=invalid arg=field reason=field` for a set the validator
+  refuses (a block that would scale nothing, an offset without `levelFromPlayers`, a scaling field on an Empower
+  event), the human reply naming the validator's reason; no tag, key, push kind or command is added and the api stays
+  8. Scaling's player counts and gear levels never reach the wire.
 - **Line length:** every line fits 480 bytes. `value`, `verb` and `reason` are cut to 120 bytes on a character
   boundary; an empty echoed word is `-`.
 

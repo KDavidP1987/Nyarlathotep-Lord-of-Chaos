@@ -15,7 +15,8 @@
     "docs/dod/hunting-grounds.md",
     "docs/dod/revenge.md",
     "docs/dod/apocalypse.md",
-    "docs/dod/unit-watch.md"
+    "docs/dod/unit-watch.md",
+    "docs/dod/scaling.md"
   ],
   "sessionsUncounted": {
     "event-spawns": [1]
@@ -37,7 +38,8 @@
     "hunting-grounds": 0,
     "revenge": 1,
     "apocalypse": 0,
-    "unit-watch": 0
+    "unit-watch": 0,
+    "scaling": 0
   },
   "dataTests": {
     "event-spawns": [
@@ -97,6 +99,9 @@
     ],
     "unit-watch": [
       "docs/features/UNIT_WATCH.md"
+    ],
+    "scaling": [
+      "docs/features/SCALING.md"
     ],
     "boss-reinforcements": [
       "docs/features/BOSS_REINFORCEMENTS.md"

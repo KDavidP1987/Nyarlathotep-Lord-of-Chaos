@@ -590,7 +590,8 @@ public static class EventValidator
     static ApocalypseAction ParseApocalypse(JsonElement a, Trigger trigger, IUnitCatalog units, IFactionCatalog factions,
         IRegionCatalog regions, int durationSeconds)
     {
-        OnlyKeys(a, "action", "type", "faction", "units", "hotspots", "roamers", "hordes", "goal", "marchSpeed", "bosses", "scope", "scoreboard");
+        OnlyKeys(a, "action", "type", "faction", "units", "hotspots", "roamers", "hordes", "goal", "marchSpeed", "bosses", "scope", "scoreboard",
+            "scaling");
         var faction = Str(Required(a, "faction", ApocalypseFactionRule), ApocalypseFactionRule);
         if (FactionDenyList.IsDenied(faction)) throw new Fail($"faction{Shown(faction)} is deny-listed");
         if (!faction.StartsWith("Faction_", StringComparison.Ordinal)) throw new Fail(ApocalypseFactionRule);
@@ -628,7 +629,8 @@ public static class EventValidator
         var bosses = a.TryGetProperty("bosses", out var bo) ? ParseBosses(bo, units, null) : null;
         var scope = a.TryGetProperty("scope", out var sc) ? ParseScope(sc, "action.scope", regions) : Scope.Global;
         var scoreboard = !a.TryGetProperty("scoreboard", out var sb) || Bool(sb, ScoreboardRule);      // absent = true (D1)
-        return new ApocalypseAction(faction, list, hotspots, roamers, hordes, goal, march, scope, scoreboard, bosses);
+        var scaling = a.TryGetProperty("scaling", out var sg) ? ParseScaling(sg) : null;
+        return new ApocalypseAction(faction, list, hotspots, roamers, hordes, goal, march, scope, scoreboard, bosses, scaling);
     }
 
     static JsonElement Obj(JsonElement v, string rule) => v.ValueKind == JsonValueKind.Object ? v : throw new Fail(rule);
@@ -680,6 +682,7 @@ public static class EventValidator
 
     static EmpowerAction ParseEmpower(JsonElement a, IUnitCatalog units, IFactionCatalog factions, IRegionCatalog regions)
     {
+        if (a.TryGetProperty("scaling", out _)) throw new Fail(ScalingAction);      // scaling D1: before the unknown-field rule
         OnlyKeys(a, "action", "type", "factions", "includeUnits", "excludeUnits", "includeVBloods", "stats", "scope");
 
         const string factionsRule = "action.factions must be 1-5 distinct Faction_ names";
@@ -736,7 +739,7 @@ public static class EventValidator
     {
         OnlyKeys(a, "action", "type", "units", "waves", "intervalSeconds", "radius", "location", "unitLifetimeSeconds", "scope",
             "modifiers", "loot", "behaviour", "allowTerritory", "fanOut", "waveList", "scoreboard", "arena", "winner", "growth", "regionLock",
-            "bosses");
+            "bosses", "scaling");
 
         IReadOnlyList<UnitEntry> list;
         IReadOnlyList<WaveSpec>? waveList = null;
@@ -788,8 +791,46 @@ public static class EventValidator
             waveList = Growth.Generate(list, modifiers, waves, interval, growth);
         }
         var bosses = a.TryGetProperty("bosses", out var bo) ? ParseBosses(bo, units, fanOut) : null;
+        var scaling = a.TryGetProperty("scaling", out var sg) ? ParseScaling(sg) : null;
         return new SpawnWavesAction(list, waves, interval, radius, location, lifetime, scope, modifiers, loot, behaviour, allowTerritory, fanOut,
-            waveList, scoreboard, arena, winner, growth, regionLock, bosses);
+            waveList, scoreboard, arena, winner, growth, regionLock, bosses, scaling);
+    }
+
+    // ---------------------------------------------------------------- scaling (scaling D1)
+
+    public const int MaxUnitsPerPlayer = 5;
+    public const int MaxLevelOffset = 20;
+    public const int MaxLevelPerWave = 5;
+    public const string ScalingObject = "action.scaling must be an object { unitsPerPlayer, levelFromPlayers, levelOffset, levelPerWave }";
+    public const string UnitsPerPlayerRule = "action.scaling.unitsPerPlayer must be 0-5";
+    public const string LevelOffsetRule = "action.scaling.levelOffset must be -20..20";
+    public const string LevelPerWaveRule = "action.scaling.levelPerWave must be 0-5";
+    public const string LevelFromPlayersRule = "action.scaling.levelFromPlayers must be true or false";
+    public const string ScalingNothing = "action.scaling must scale units or levels";
+    public const string ScalingOffsetNeedsLevel = "action.scaling.levelOffset needs levelFromPlayers true";
+    public const string ScalingAction = "action.scaling needs a SpawnWaves or Apocalypse action";
+
+    /// <summary>Every reason scaling D1 gives, for the 120-byte check (the unknown-field reason is the existing builder's).</summary>
+    public static readonly IReadOnlyList<string> ScalingReasons =
+    [
+        ScalingObject, UnitsPerPlayerRule, LevelOffsetRule, LevelPerWaveRule, LevelFromPlayersRule, ScalingNothing, ScalingOffsetNeedsLevel,
+        ScalingAction, UnknownField("action.scaling", "unitsPerPlayerX"),
+    ];
+
+    /// <summary>`scaling` (scaling D1): { "unitsPerPlayer": 0-5, "levelFromPlayers": bool, "levelOffset": -20..20,
+    /// "levelPerWave": 0-5 }, every key optional (absent 0, false, 0, 0); an offset or a per-wave step needs
+    /// levelFromPlayers true, and a block that scales nothing is refused.</summary>
+    static Scaling ParseScaling(JsonElement v)
+    {
+        if (v.ValueKind != JsonValueKind.Object) throw new Fail(ScalingObject);
+        OnlyKeys(v, "action.scaling", "unitsPerPlayer", "levelFromPlayers", "levelOffset", "levelPerWave");
+        var units = v.TryGetProperty("unitsPerPlayer", out var u) ? Int(u, 0, MaxUnitsPerPlayer, UnitsPerPlayerRule) : 0;
+        var level = v.TryGetProperty("levelFromPlayers", out var l) && Bool(l, LevelFromPlayersRule);
+        var offset = v.TryGetProperty("levelOffset", out var o) ? Int(o, -MaxLevelOffset, MaxLevelOffset, LevelOffsetRule) : 0;
+        var perWave = v.TryGetProperty("levelPerWave", out var p) ? Int(p, 0, MaxLevelPerWave, LevelPerWaveRule) : 0;
+        if (!level && (offset != 0 || perWave != 0)) throw new Fail(ScalingOffsetNeedsLevel);
+        if (units == 0 && !level) throw new Fail(ScalingNothing);
+        return new Scaling(units, level, offset, perWave);
     }
 
     public const int MaxBosses = 3;

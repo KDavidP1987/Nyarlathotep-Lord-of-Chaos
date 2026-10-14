@@ -35,9 +35,10 @@ public static class ControlCases
     public const string Revenge = "revenge";
     public const string Apocalypse = "apocalypse";
     public const string UnitWatch = "unit-watch";
+    public const string Scaling = "scaling";
 
     /// <summary>The plans whose controls the table lists; each is copied to the test output under Resources/.</summary>
-    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm, HuntingGrounds, Revenge, Apocalypse, UnitWatch];
+    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm, HuntingGrounds, Revenge, Apocalypse, UnitWatch, Scaling];
 
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
@@ -46,6 +47,9 @@ public static class ControlCases
         new(Apocalypse, "D33", 5, "0.13.0"), new(Apocalypse, "D34", 5, "0.13.0"), new(Apocalypse, "D35", 5, "0.13.0"),
         // unit-watch: step 5 the release
         new(UnitWatch, "D30", 5, "0.13.0"), new(UnitWatch, "D31", 5, "0.13.0"), new(UnitWatch, "D32", 5, "0.13.0"), new(UnitWatch, "D33", 5, "0.13.0"),
+        // scaling: step 3 the reads and the dependency suite, step 4 the timing run, step 6 the release
+        new(Scaling, "D12", 3, "0.14.0"), new(Scaling, "D13", 3, "0.14.0"), new(Scaling, "D22", 4, "0.14.0"),
+        new(Scaling, "D24", 6, "0.14.0"), new(Scaling, "D25", 6, "0.14.0"), new(Scaling, "D26", 6, "0.14.0"), new(Scaling, "D27", 6, "0.14.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -66,7 +70,7 @@ public static class ControlCases
         "WaveSetTests", "ScoreboardTests", "WaveSetDependencyFailureTests", "SwarmTests", "SwarmDependencyFailureTests",
         "HuntingGroundsTests", "HuntingGroundsDependencyFailureTests", "RevengeTests", "BossWaveTests", "RevengeDependencyFailureTests",
         "ApocalypseTests", "ApocalypseStateTests", "ApocalypseDependencyFailureTests", "UnitWatchTests",
-        "UnitWatchDependencyFailureTests",
+        "UnitWatchDependencyFailureTests", "ScalingTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -891,5 +895,52 @@ public static class ControlCases
             ["tools/preflight-fixtures/TimingSpan/bad-avg", "tools/preflight-fixtures/TimingSpan/bad-slow", "tools/preflight-fixtures/TimingSpan/bad-tracked",
              "tools/preflight-fixtures/TimingSpan/bad-notarget"],
             ["tools/preflight-fixtures/TimingSpan/good"], ["tools/preflight-fixtures/TimingSpan/empty"]) with { Plan = UnitWatch },
+        // ---- scaling (step 2; steps 3, 4 and 6 add D12, D13, D22 and D24-D27, listed in Pending until then)
+        T("D1", "Scaling", "EventValidationTests", ["a_bound_or_an_unknown_key_loads", "a_reason_differs_or_exceeds_120_bytes",
+            "an_empty_or_offset_only_block_loads", "an_empower_action_takes_the_block", "a_definition_without_it_changes",
+            "the_editor_write_drops_or_alters_it"],
+            ["every_key_in_range"], ["keys_take_their_defaults"]) with { Plan = Scaling },
+        T("D2", "Players", "ScalingTests", ["a_dead_offline_or_unusable_player_counts", "a_regional_scope_counts_an_outsider_or_global_misses_one",
+            "an_admin_counts_against_include_admins", "claimed_territory_or_pvp_combat_leaves_a_player_out",
+            "a_count_is_reused_or_a_decision_skips_its_read", "a_throwing_read_scales_the_decision"],
+            ["three_counted_players"], ["no_player_no_extra"]) with { Plan = Scaling },
+        T("D3", "Counts", "ScalingTests", ["three_players_and_u2_do_not_add_four_copies_to_each_entry", "a_boss_entry_gains_copies",
+            "an_extra_copy_skips_its_chance_roll", "one_player_adds_a_copy", "a_scaled_roll_passes_a_cap_without_its_line"],
+            ["scaled_wave_rolls_thirteen"], ["no_block_rolls_as_before"]) with { Plan = Scaling },
+        T("D4", "FanOut", "ScalingTests", ["a_group_with_two_players_gets_no_extra_copy", "a_lone_player_group_gets_one",
+            "a_player_beyond_min_spacing_is_counted", "the_scaled_groups_skip_the_single_clamp_or_the_deal"],
+            ["groups_line"], ["no_origin_one_group"]) with { Plan = Scaling },
+        T("D5", "Apocalypse", "ScalingTests", ["three_players_and_u2_do_not_add_four_regular_units", "a_boss_is_multiplied_or_cut_first",
+            "a_top_up_target_is_not_raised_or_passes_its_caps", "a_spread_queues_more_than_before", "a_resume_rebuilds_more_than_its_record"],
+            ["horde_and_roamer_lines"], ["no_block_reads_nothing"]) with { Plan = Scaling },
+        T("D6", "Gear", "ScalingTests", ["30_9_41_and_50_do_not_average_40", "40_5_does_not_round_to_41",
+            "an_unreadable_player_enters_the_average_or_leaves_the_count", "an_empty_set_gives_a_number"],
+            ["floor_then_half_up"], ["none_in_the_line"]) with { Plan = Scaling },
+        T("D7", "Level", "ScalingTests", ["average_40_offset_2_delta_1_and_per_wave_3_do_not_give_43_and_49",
+            "a_horde_or_a_roamer_takes_another_wave_number", "the_result_leaves_1_to_120", "an_absolute_level_is_replaced", "growth_added_levels_are_lost",
+            "another_modifier_changes", "average_none_changes_a_level"],
+            ["scaled_tuning"], ["no_modifiers_no_average"]) with { Plan = Scaling },
+        T("D8", "VBlood", "ScalingTests", ["a_vblood_unit_gets_the_scaled_level", "a_vblood_loses_its_entry_level", "a_non_vblood_keeps_its_prefab_level"],
+            ["boss_count_follows_its_entry"], ["unscaled_tuning_reads_no_flag"]) with { Plan = Scaling },
+        T("D9", "Caps", "ScalingTests", ["nine_players_and_u5_pass_the_caps", "huge_inputs_wrap_past_the_caps", "a_scaled_unit_bypasses_the_budget_or_the_ledger",
+            "a_purge_or_pillar_off_leaves_a_scaled_wave_running", "a_load_time_ceiling_changes"],
+            ["scaled_wave_within_caps"], ["full_ledger_queues_nothing"]) with { Plan = Scaling },
+        T("D10", "Lines", "ScalingTests", ["a_scaled_decision_logs_no_line_or_two", "an_unchanged_top_up_logs_one", "an_unscaled_event_logs_one",
+            "a_shape_differs"],
+            ["the_three_shapes"], ["unscaled_logs_nothing"]) with { Plan = Scaling },
+        T("D11", "Scaling", "PrivacyTests", ["a_planted_player_reaches_a_line", "a_single_gear_level_is_shown", "state_gains_a_property"],
+            ["lines_carry_counts_and_the_average"], ["no_player_no_gear"]) with { Plan = Scaling },
+        T("D14", "Scaling", "EventAdminTests", ["a_field_outside_its_range_is_stored", "an_empower_definition_takes_a_field",
+            "a_set_leaves_a_block_the_validator_refuses", "none_leaves_the_block", "a_missing_or_surplus_argument_changes_anything",
+            "a_reply_exceeds_480_bytes", "the_design_rows_are_missing"],
+            ["set_creates_the_block"], ["value_gets_value_required"]) with { Plan = Scaling },
+        T("D15", "Scaling", "AuthoringTests", ["a_scaled_definition_lacks_the_line_or_a_value_is_wrong", "an_unscaled_definition_shows_one",
+            "the_running_line_outlives_an_end_path", "a_line_exceeds_480_bytes", "another_line_of_event_info_changes"],
+            ["running_line"], ["not_running_no_line"]) with { Plan = Scaling },
+        T("D16", "Scaling", "ContractDocTests", ["a_field_is_missing_from_5a_or_6", "a_twin_reply_differs", "the_api_differs",
+            "a_tag_key_push_kind_or_command_is_added", "the_sentence_is_missing"],
+            ["contract_and_design"], ["documents"]) with { Plan = Scaling },
+        T("D17", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit", "pending_at_release"],
+            ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = Scaling },
     ];
 }
