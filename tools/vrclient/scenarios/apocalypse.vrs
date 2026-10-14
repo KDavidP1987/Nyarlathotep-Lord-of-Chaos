@@ -1,0 +1,190 @@
+# apocalypse.vrs: apocalypse Session 1, D25 (the outbreak), D26 (won, lost, survived) and D27 (stop, pillar off, purge).
+# apo-test (tools/vrclient/fixtures/apo-test.json, put into the dev events.json): Faction_Undead, units CHAR_Undead_Guardian
+# (-1967480038) and CHAR_Undead_GhostMilitia_Light (-1618703048) so that `.devkill` spares the native Farbane skeletons,
+# 2 hotspots (minNatives 3), roamers 3 per hotspot (+2 per kill, max 12, 4 a minute, huntRange 40), 2 hordes from 1 min
+# every 5 min (D1's floor is 5; D25 says 3, see the step 3 report), size 8 growth 4, a Point goal "the test camp" at
+# (-1188, -1334), 200 m east of the undead site (-1388, -1334), marchSpeed 3.0, 30 min.
+# The hotspots are read from `.nyar event info apo-test` (hotspot <h>: <region> at <x> <z>) into H1X/H1Z.
+# Holding a front: a front holds while a player is within 60 m of it (D6). Chaos at the goal holds every front 60 m out,
+# outside the 30 m goal radius, so a horde that reaches him neither wins nor loses; Chaos at the pond (about 500 m away)
+# holds nothing, so horde 1 reaches the goal in about 70 s (lost).
+# Runs: (1) won, with D25's checks at hotspot 1; (2) lost, Chaos at the pond, with the roam check (D25); (3) stop at
+# horde 2; (4) pillar spawns off at horde 2; (5) survived, Chaos at the goal for the full 30 min; (6) purge at horde 2,
+# last, for its cooldown. Natives: `.devunits ${UNATIVE} 60` at the undead site before run 1 and after run 6 must give the
+# same n (stands in for D25's `.nyar debug natives`, which the mod lacks: see the step 3 report); the state.json read
+# after the purge (no "Apocalypse" key) is done by hand on the server copy.
+# Needs: a Release DLL of step 3; NyarDevTools (.devgo, .devtp, .devmark, .devdie, .devkill, .devunits) and DevChatEcho;
+# apo-test enabled, zombie-apocalypse and every other spawning definition disabled; [Scoreboard] IncludeAdmins = true;
+# no purge cooldown; marks home and pond; Chaos invulnerable (`ToggleInvulnerable true`, never false).
+# Run: --var UX=-1388 --var UZ=-1334 --var UNATIVE=-837329073
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .nyar event reload
+expect-log events: reloaded
+# natives at the undead site before any run
+chat .devtp ${UX} ${UZ}
+expect-log \[DEV TP\] to
+wait 5
+console ToggleInvulnerable true
+wait 2
+chat .devunits ${UNATIVE} 60
+expect-log \[DEV UNITS\] n=(?P<NATIVES>[0-9]+)
+#
+# 1. won, with D25's outbreak checks at hotspot 1
+mark
+chat .nyar event start apo-test
+expect-log event apo-test started by Manual timeout=20
+expect-log apocalypse apo-test hotspots: 2 \( timeout=10
+expect-log apocalypse apo-test roamers: \+3 at hotspot 1 timeout=20
+chat .nyar event info apo-test
+expect-log CHAT> .*hotspot 1: .* at (?P<H1X>-?[0-9]+) (?P<H1Z>-?[0-9]+) timeout=10
+chat .devtp ${H1X} ${H1Z}
+expect-log \[DEV TP\] to
+wait 4
+chat .nyar debug here 60
+expect-reply CHAR_Undead_
+shot full apo-hotspot1
+# D25 spread: a roamer kills Chaos; two roamers rise within 3 m of the death point
+chat .devmark apo-death
+expect-log \[DEV MARK\] apo-death
+mark
+chat .devdie -1967480038 60
+expect-log \[DEV DIE\] timeout=10
+expect-log apocalypse apo-test spread: \+2 \( timeout=20
+chat .devunits -1967480038 6 apo-death
+expect-log \[DEV UNITS\] n=([2-9]|1[0-9])
+console ToggleInvulnerable true
+wait 2
+# horde 1 rises at hotspot 1 one minute in; Chaos holds it there, then takes it to the goal and kills it
+chat .devtp ${H1X} ${H1Z}
+expect-log \[DEV TP\] to
+expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
+expect-chat a horde of 8 rises timeout=20
+shot chat apo-horde1-rise
+# a held front logs no step (the player hold has no line of its own; only "held: no walkable ground ahead" does)
+expect-no-log horde 1 front [0-9]+ % timeout=30
+chat .devtp -1188 -1334
+expect-log \[DEV TP\] to
+wait 40
+chat .devkill -1967480038 80
+chat .devkill -1618703048 80
+wait 5
+chat .devkill -1967480038 80
+chat .devkill -1618703048 80
+expect-log apocalypse apo-test horde 1 of 2 destroyed timeout=30
+expect-chat horde 1 of 2 destroyed timeout=20
+# horde 2 (12 units) rises at hotspot 2 six minutes in and marches on Chaos at the goal
+expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=330
+expect-chat a horde of 12 rises timeout=20
+wait 90
+chat .devkill -1967480038 80
+chat .devkill -1618703048 80
+wait 5
+chat .devkill -1967480038 80
+chat .devkill -1618703048 80
+wait 5
+chat .devkill -1967480038 80
+chat .devkill -1618703048 80
+expect-log event apo-test ended: won \(2 of 2 hordes risen\) timeout=60
+expect-log event apo-test scoreboard: 1 players, [0-9]+ kills timeout=10
+expect-chat the living have won timeout=20
+shot chat apo-won
+wait 30
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+#
+# 2. lost: Chaos at the pond holds nothing; the roamers find him (D25) and horde 1 takes the goal
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+mark
+chat .nyar event start apo-test
+expect-log event apo-test started by Manual timeout=20
+expect-log apocalypse apo-test roam: hotspot [12] on a player timeout=120
+wait 20
+chat .devunits -1967480038 60
+expect-log \[DEV UNITS\] n=[1-9]
+expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
+expect-log horde 1 front (2[5-9]|[3-9][0-9]) % units [0-9]+/[0-9]+ within 30 m of the front timeout=40
+expect-log horde 1 front ([5-9][0-9]) % units [0-9]+/[0-9]+ within 30 m of the front timeout=40
+expect-log horde 1 front (7[5-9]|[89][0-9]) % units [0-9]+/[0-9]+ within 30 m of the front timeout=40
+expect-log event apo-test ended: lost \(1 of 2 hordes risen\) timeout=60
+expect-chat the test camp has fallen timeout=20
+shot chat apo-lost
+wait 30
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+#
+# 3. stop at horde 2 (D27): the scoreboard, then 0 tracked after the grace
+chat .devtp -1188 -1334
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
+mark
+chat .nyar event start apo-test
+expect-log event apo-test started by Manual timeout=20
+expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=400
+wait 10
+chat .nyar event stop apo-test
+expect-log event apo-test stopped
+expect-log event apo-test scoreboard: timeout=10
+shot chat apo-stop
+wait 30
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+#
+# 4. pillar spawns off at horde 2 (D27): no scoreboard, 0 tracked
+mark
+chat .nyar event start apo-test
+expect-log event apo-test started by Manual timeout=20
+expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=400
+wait 10
+chat .nyar pillar spawns off
+expect-reply spawns
+expect-no-log scoreboard: timeout=10
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+chat .nyar pillar spawns on
+expect-reply spawns
+wait 3
+#
+# 5. survived: Chaos at the goal holds both fronts outside the goal radius for the full 30 min, not attacking
+mark
+chat .nyar event start apo-test
+expect-log event apo-test started by Manual timeout=20
+expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
+expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=330
+expect-no-log event apo-test ended: (won|lost) timeout=1300
+expect-log event apo-test ended: survived \(2 of 2 hordes risen\) timeout=300
+expect-chat the living held out timeout=20
+shot chat apo-survived
+wait 30
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+#
+# 6. purge at horde 2 (D27): no scoreboard, 0 tracked, the record gone (state.json read by hand); last, for its cooldown
+mark
+chat .nyar event start apo-test
+expect-log event apo-test started by Manual timeout=20
+expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=400
+wait 10
+chat .nyar purge
+wait 2
+chat .nyar purge confirm
+expect-log purge: 1 events ended, [0-9]+ units queued
+expect-no-log scoreboard: timeout=10
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+# natives at the undead site after the last end: the same n as before run 1
+chat .devtp ${UX} ${UZ}
+expect-log \[DEV TP\] to
+wait 5
+chat .devunits ${UNATIVE} 60
+expect-log \[DEV UNITS\] n=${NATIVES}
+console TPHome

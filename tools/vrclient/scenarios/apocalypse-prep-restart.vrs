@@ -1,0 +1,36 @@
+# apocalypse-prep-restart.vrs: apocalypse D28 (Session 2), before the restart. apo-test runs to horde 2; Chaos stands at
+# the goal (-1188, -1334), so horde 2's front holds 60 m from him (D6), invulnerable and not attacking; one horde unit is
+# killed so the scoreboard holds a kill from before the restart. Then the orchestrator copies both logs, waits for a
+# post-action autosave, closes the client and stops the server (taskkill, no /F) and starts it; apocalypse-boot2.vrs
+# follows. The boot log must show "boot marker sweep: <n> found, <n> queued", "event apo-test kept by restart: its
+# apocalypse resumes after the drain" and then "event apo-test resumed after restart (horde 2/2, <u> units to rebuild)".
+# Needs: what apocalypse.vrs needs; no purge cooldown; the server's state.json read after the stop holds "Apocalypse".
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devtp -1188 -1334
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
+mark
+chat .nyar event start apo-test
+expect-log event apo-test started by Manual timeout=20
+expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
+expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=330
+# horde 2 marches on Chaos and holds 60 m out; one of its units is killed for the scoreboard
+expect-log horde 2 front [0-9]+ % units [0-9]+/[0-9]+ within 30 m of the front timeout=120
+wait 60
+chat .devkill -1618703048 80 1
+expect-log \[DEV KILL\] n=1 timeout=10
+wait 5
+chat .nyar event info apo-test
+expect-reply horde 2 front at
+chat .nyar status
+expect-reply tracked units:
+expect-log CHAT> .*tracked units: (?P<TRACKED>[0-9]+) timeout=10
+shot full apo-prep-restart
+# the record is written every 30 s of a march: wait for the next write before the stop
+wait 40
