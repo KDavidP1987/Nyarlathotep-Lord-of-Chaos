@@ -148,6 +148,9 @@ public class ControlCaseTests
         Assert.Equal(["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12", "D13", "D14", "D15", "D16", "D17",
              "D23", "D24", "D25", "D26", "D27", "D28", "D29", "D30", "D31"],
             PlanControls(PlanText(ControlCases.Revenge)));
+        Assert.Equal(["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12", "D13", "D14", "D15", "D16", "D17", "D18", "D19",
+             "D20", "D21", "D22", "D23", "D29", "D32", "D33", "D34", "D35", "D36", "D38"],
+            PlanControls(PlanText(ControlCases.Apocalypse)));
         Assert.Empty(Problems(ControlCases.Table, AllPlanKeys(), TestMethods, RepoRoot()));
         Assert.Empty(PendingProblems(ControlCases.Pending, ControlCases.Table, AllPlanKeys(), AuditText, ModVersion()));
     }

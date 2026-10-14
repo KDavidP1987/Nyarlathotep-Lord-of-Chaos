@@ -33,12 +33,19 @@ public static class ControlCases
     public const string Swarm = "swarm";
     public const string HuntingGrounds = "hunting-grounds";
     public const string Revenge = "revenge";
+    public const string Apocalypse = "apocalypse";
 
     /// <summary>The plans whose controls the table lists; each is copied to the test output under Resources/.</summary>
-    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm, HuntingGrounds, Revenge];
+    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm, HuntingGrounds, Revenge, Apocalypse];
 
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
-    public static readonly IReadOnlyList<PendingControl> Pending = [];
+    public static readonly IReadOnlyList<PendingControl> Pending =
+    [
+        // apocalypse: step 3 builds the template, the factions check, the dependency failures and suite and the tick budget; step 5 the release
+        new(Apocalypse, "D18", 3, "0.13.0"), new(Apocalypse, "D21", 3, "0.13.0"), new(Apocalypse, "D22", 3, "0.13.0"),
+        new(Apocalypse, "D29", 3, "0.13.0"), new(Apocalypse, "D38", 3, "0.13.0"),
+        new(Apocalypse, "D32", 5, "0.13.0"), new(Apocalypse, "D33", 5, "0.13.0"), new(Apocalypse, "D34", 5, "0.13.0"), new(Apocalypse, "D35", 5, "0.13.0"),
+    ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
         new(control, name, "test", cls, bad.Select(x => $"{name}_fails_when_{x}").ToArray(), good.Select(x => $"{name}_passes_{x}").ToArray(),
@@ -57,6 +64,7 @@ public static class ControlCases
         "EndPathTests", "WavePrecedenceTests", "SpawnsDependencyFailureTests", "AutomationTests", "AutomationDependencyFailureTests", "SpawnPlacementTests",
         "WaveSetTests", "ScoreboardTests", "WaveSetDependencyFailureTests", "SwarmTests", "SwarmDependencyFailureTests",
         "HuntingGroundsTests", "HuntingGroundsDependencyFailureTests", "RevengeTests", "BossWaveTests", "RevengeDependencyFailureTests",
+        "ApocalypseTests", "ApocalypseStateTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -740,5 +748,49 @@ public static class ControlCases
             ["tools/preflight-fixtures/Secrets/bad", "tools/preflight-fixtures/Secrets/bad-sentinel-zip", "tools/preflight-fixtures/Secrets/bad-sentinel-log"],
             ["tools/preflight-fixtures/Secrets/good", "tools/preflight-fixtures/Secrets/good-sentinel"],
             ["tools/preflight-fixtures/Secrets/empty", "tools/preflight-fixtures/Secrets/empty-sentinel"]) with { Plan = Revenge },
+        // ---- apocalypse (step 2; steps 3 and 5 add D18, D21, D22, D29, D32-D35 and D38, listed in Pending until then)
+        T("D1", "Apocalypse", "EventValidationTests", ["a_key_is_out_of_range", "a_bound_is_off_by_one", "a_duration_leaves_its_kind",
+            "the_last_horde_rises_at_or_after_the_end", "an_admin_goal_has_another_trigger", "an_unknown_key_is_named_without_its_path", "a_reason_exceeds_120_bytes"],
+            ["every_key_and_pillar_spawns"], ["optional_keys_absent"]) with { Plan = Apocalypse },
+        T("D2", "Hotspots", "ApocalypseTests", ["a_small_cell_or_a_close_pair_is_picked", "an_outside_native_or_ours_counts", "the_scan_misses_a_planted_write"],
+            ["one_cluster_one_hotspot"], ["world_refuses_the_start", "scan_set_fails"]) with { Plan = Apocalypse },
+        T("D3", "Roamers", "ApocalypseTests", ["a_top_up_passes_perHotspot_or_max", "a_spread_roamer_is_left_out_of_its_nearest_hotspot",
+            "a_target_is_other_than_the_nearest_eligible", "a_jump_breaks_a_landing_rule"], ["top_up_and_hunt_the_nearest"], ["no_player_they_stay"]) with { Plan = Apocalypse },
+        T("D4", "Spread", "ApocalypseTests", ["a_native_or_another_events_kill_spreads", "the_window_or_max_lets_more_through", "a_chain_escapes_a_cap"],
+            ["a_roamer_kill_spreads_at_the_victim"], ["perKill_zero_spreads_nothing"]) with { Plan = Apocalypse },
+        T("D5", "Hordes", "ApocalypseTests", ["a_horde_rises_at_another_time_or_hotspot", "a_size_ignores_growth_or_a_clamp", "a_zero_queued_horde_counts_as_risen",
+            "a_rise_past_the_end_spawns"], ["three_hordes_on_time"], ["no_horde_before_its_time"]) with { Plan = Apocalypse },
+        T("D6", "March", "ApocalypseTests", ["the_front_moves_at_another_speed_or_overshoots", "a_player_holds_it_wrongly", "the_held_line_repeats_within_one_hold",
+            "steps_repeat_or_stragglers_move_while_watched"], ["the_front_reaches_the_goal"], ["no_time_no_move"]) with { Plan = Apocalypse },
+        T("D7", "Lines", "ApocalypseTests", ["a_line_is_long_or_misses_a_name"], ["the_four_lines"], ["no_region_the_wilds"]) with { Plan = Apocalypse },
+        T("D8", "Outcomes", "ApocalypseTests", ["won_or_lost_is_read_wrongly", "a_run_reads_won_while_a_horde_lives", "an_outcome_sends_other_than_one_event_end"],
+            ["won_after_every_horde"], ["none_before_any_rise"]) with { Plan = Apocalypse },
+        T("D9", "EndPaths", "ApocalypseTests", ["a_path_keeps_the_record_or_shows_the_wrong_lines", "a_drain_wait_purge_rebuilds_or_disable_resumes"],
+            ["stop_shows_the_scoreboard_only"], ["restart_keeps_the_record"]) with { Plan = Apocalypse },
+        T("D10", "Apocalypse", "ScoreboardTests", ["a_roamer_horde_or_boss_kill_is_not_credited", "a_native_or_an_earlier_instance_counts",
+            "an_admin_counts_with_the_key_false", "a_silent_path_shows_the_lines", "restored_counts_differ_from_those_saved"], ["kills_and_deaths_ranked"],
+            ["no_credit_no_participant"]) with { Plan = Apocalypse },
+        T("D11", "Record", "ApocalypseStateTests", ["the_record_does_not_round_trip", "the_goal_or_the_living_bosses_are_missing",
+            "a_bad_record_takes_the_rest_of_state_with_it", "a_row_carries_a_name_or_a_position", "an_ended_run_keeps_its_record", "a_record_with_a_bad_field_is_kept"],
+            ["a_resumed_run_rebuilds_from_the_saved_file"], ["no_run_no_key"]) with { Plan = Apocalypse },
+        T("D12", "Resume", "ApocalypseTests", ["a_changed_or_gone_definition_resumes", "an_admin_goal_run_loses_its_goal", "the_rebuild_skips_the_drain_gate",
+            "missed_hordes_or_the_top_up_go_wrong", "a_pending_resume_lets_a_second_run_start"], ["a_running_record_resumes"], ["no_missed_horde"]) with { Plan = Apocalypse },
+        T("D13", "Lifetime", "ApocalypseTests", ["a_unit_lives_past_two_hours_or_is_missed"], ["renewed_while_the_run_lives"], ["an_ended_run_is_not_renewed"])
+            with { Plan = Apocalypse },
+        T("D14", "Caps", "ApocalypseTests", ["a_unit_escapes_the_ledger_or_a_cap"], ["one_apocalypse_within_the_caps"], ["no_room_no_order"]) with { Plan = Apocalypse },
+        T("D15", "Tally", "ApocalypseTests", ["a_unit_is_unaccounted"], ["every_bucket_balances"], ["a_new_run_is_all_zero"]) with { Plan = Apocalypse },
+        T("D16", "Apocalypse", "CommandArgTests", ["a_field_accepts_a_value_the_validator_refuses", "a_valid_bosses_value_is_refused", "goal_here_drops_the_height",
+            "a_reply_exceeds_480_bytes", "a_field_is_let_through_on_another_kind", "the_table_and_settable_fields_differ"], ["each_field_at_its_bounds"],
+            ["value_required"]) with { Plan = Apocalypse },
+        T("D17", "Apocalypse", "AuthoringTests", ["the_player_line_carries_a_coordinate", "the_admin_info_misses_a_hotspot_or_a_front", "a_line_exceeds_480_bytes"],
+            ["definition_lines"], ["no_bosses_no_line"]) with { Plan = Apocalypse },
+        T("D19", "Apocalypse", "PrivacyTests", ["a_planted_name_reaches_a_line_or_the_record", "the_goal_follows_a_player_after_the_start", "state_gains_any_other_property"],
+            ["names_only_on_the_scoreboard"], ["no_apocalypse_no_line"]) with { Plan = Apocalypse },
+        T("D20", "Apocalypse", "ContractDocTests", ["the_api_changes_or_the_contract_lacks_a_sentence", "a_push_kind_is_added", "an_outcome_sends_anything_but_one_event_end"],
+            ["api_7_and_the_status_row"], ["contract"]) with { Plan = Apocalypse },
+        T("D23", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit", "pending_at_release"],
+            ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = Apocalypse },
+        T("D36", "Bosses", "ApocalypseTests", ["a_boss_rises_early_or_a_clamp_drops_it_first", "a_run_ends_won_while_a_boss_lives_or_a_resume_misses_one"],
+            ["the_last_horde_brings_its_bosses"], ["no_bosses_key"]) with { Plan = Apocalypse },
     ];
 }
