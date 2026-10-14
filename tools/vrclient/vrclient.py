@@ -728,7 +728,9 @@ class Scenario:
                 if not ok:
                     time.sleep(1)
             p = shot(region, f"{self.name}-{op}")
-            self.check(f"{op} {text}", ok, f"ocr={'match' if ok else 'no match'} shot={p}")
+            # a miss carries what the OCR read, so the next run says whether the line was there at all
+            read = "" if ok else " read=" + re.sub(r"\s+", " ", seen or "")[-240:]
+            self.check(f"{op} {text}", ok, f"ocr={'match' if ok else 'no match'} shot={p}{read}")
             return ok
         elif op == "shot":
             parts = rest.split()
