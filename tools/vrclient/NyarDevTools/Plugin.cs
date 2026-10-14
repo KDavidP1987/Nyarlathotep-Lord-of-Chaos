@@ -24,7 +24,7 @@ namespace NyarDevTools;
 //   .devkill <prefabGuid> [radius]  kill the living units of that one prefab within radius (default 30) with the
 //                          sender's character as the killer, so a kill feed credits the player; log [DEV KILL] n=<count>.
 //                          The prefab is required: an open query also killed castle and world units (Session 1).
-//   .devdie <prefabGuid> [radius]  the sender is killed by the nearest living unit of that prefab within radius, so a
+//   .devdie <prefabGuid[,guid…]> [radius]  the sender is killed by the nearest living unit of those prefabs within radius, so a
 //                          kill feed reads that unit as the killer; log [DEV DIE] found=<0|1> distance=<m>
 //   .devhop <prefabGuid> <dx> <dz> [radius] [mark] [home] [clearPath]  move the living units of that prefab within radius (default 30) of
 //                          the sender, or of the named mark, by dx and dz (Translation, LastTranslation, PreCombatPosition;
@@ -155,8 +155,13 @@ static class DevCommands
     });
 
     [Command("devdie", adminOnly: true)]
-    public static void DevDie(ChatCommandContext ctx, int prefab, float radius = 30f)
+    public static void DevDie(ChatCommandContext ctx, string prefabs, float radius = 30f)
     {
+        // one guid or a comma list (an event that spawns two kinds kills with whichever stands nearest)
+        var wanted = new HashSet<int>();
+        foreach (var part in prefabs.Split(','))
+            if (int.TryParse(part.Trim(), out var g)) wanted.Add(g);
+        if (wanted.Count == 0) { ctx.Reply("devdie: no prefab guid"); return; }
         var p = Where(ctx);
         if (p is null) { ctx.Reply("devdie: no position"); return; }
         var em = Em;
@@ -168,7 +173,7 @@ static class DevCommands
         {
             foreach (var u in units)
             {
-                if (em.GetComponentData<PrefabGUID>(u).GuidHash != prefab || em.GetComponentData<Health>(u).IsDead) continue;
+                if (!wanted.Contains(em.GetComponentData<PrefabGUID>(u).GuidHash) || em.GetComponentData<Health>(u).IsDead) continue;
                 var d = math.distance(em.GetComponentData<Translation>(u).Value, p.Value);
                 if (d <= radius && d < bestD) { best = u; bestD = d; }
             }

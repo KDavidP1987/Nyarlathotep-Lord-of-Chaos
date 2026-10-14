@@ -137,7 +137,7 @@ shot full apo-hotspot1
 chat .devmark apo-death
 expect-log \[DEV MARK\] apo-death
 mark
-chat .devdie -1967480038 60
+chat .devdie -1967480038,-1618703048 60
 expect-log \[DEV DIE\] found=1 timeout=10
 expect-log apocalypse apo-test spread: \+2 \( timeout=20
 wait 2
