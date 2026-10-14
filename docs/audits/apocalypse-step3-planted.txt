@@ -27,3 +27,5 @@ D38 · Logic/FactionGroups.cs:Holds (review L4) prefix matching again: an unchec
 - D6 stragglers spend the fronts' reserve (HopRule.Land without its FrontReserve check) → ApocalypseTests.March_fails_when_a_spent_budget_crosses_unread_ground fails 0/1, restored 1/1 (post-fix review M1)
 - D6 a step reaching an off-axis goal stops a float step short (MarchRule.Toward without its goal snap) → ApocalypseTests.March_fails_when_a_goal_off_the_axis_is_reached_short fails 0/1, restored 1/1 (post-fix review L1)
 - D12 a failed resume keeps its restored scoreboard rows (ApocalypseHost.Resume's catch without board.End) → ApocalypseTests.Resume_fails_when_a_failed_resume_leaves_orders_queued fails 0/1, restored 1/1 (post-fix review L2)
+- D29 a slow apocalypse step logs no part (Tick without its StepParts line) → ApocalypseTests.Timing_fails_when_a_slow_step_names_no_part fails 0/1, restored 1/1 (Session 3: a 2.3 s slow tick named only the apocalypse phase)
+- D29 the read part goes unmarked (StepParts.Mark("read") removed) → ApocalypseTests.Timing_fails_when_a_slow_step_names_no_part fails 0/1, restored 1/1

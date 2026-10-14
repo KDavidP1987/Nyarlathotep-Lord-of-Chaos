@@ -214,6 +214,48 @@ public partial class ApocalypseTests
         Assert.False(HopRule.Ground(100, 0, 3, (_, _, _) => false, new WalkBudget()));
     }
 
+    // ---- D29 (Session 3: a 2.3 s slow tick inside the apocalypse phase named no part): a slow step names its parts
+
+    [Fact]
+    public void Timing_fails_when_a_slow_step_names_no_part()
+    {
+        // every clock read advances 40 ms: a whole step passes the 250 ms threshold and its line names the parts, slowest first
+        var rig = ApocalypseDependencyFailureTests.Running();
+        long t = 0;
+        rig.Host.Parts.Frequency = 1000;
+        rig.Host.Parts.Clock = () => t += 40;
+        rig.Tick(T0.AddMinutes(1));
+        var line = Assert.Single(rig.Game.Logs, l => l.Contains(" slow step: ", StringComparison.Ordinal));
+        Assert.Matches(new Regex(@"^apocalypse apo slow step: \d+ ms \((rise|read|hops|march|roam|renew|outcome|record) \d+ ms(, \w+ \d+ ms)*; units \d+, walk calls \d+\)$"), line);
+        Assert.Contains("read 40 ms", line);
+    }
+
+    [Fact]
+    public void Timing_passes_the_slow_step_line()
+    {
+        long t = 0;
+        var parts = new StepParts { Frequency = 1000, Clock = () => t };
+        parts.Start();
+        t = 200; parts.Mark("march");
+        t = 260; parts.Mark("hops");
+        t = 261; parts.Mark("roam");
+        t = 300;
+        Assert.Equal("apocalypse apo slow step: 300 ms (march 200 ms, hops 60 ms, roam 1 ms; units 7, walk calls 40)", parts.Line("apo", 7, 40));
+    }
+
+    [Fact]
+    public void Timing_empty_a_fast_step_logs_nothing()
+    {
+        var rig = ApocalypseDependencyFailureTests.Running();
+        rig.Tick(T0.AddMinutes(1));                                             // the real clock: a step of a few ms
+        Assert.DoesNotContain(rig.Game.Logs, l => l.Contains(" slow step: ", StringComparison.Ordinal));
+        long t = 0;
+        var parts = new StepParts { Frequency = 1000, Clock = () => t };
+        parts.Start();
+        t = 249;
+        Assert.Null(parts.Line("apo", 0, 0));
+    }
+
     // ---- D6 (post-fix review M1, L1): a spent walk budget never crosses unread ground; a step reaching the goal lands on it
 
     [Fact]

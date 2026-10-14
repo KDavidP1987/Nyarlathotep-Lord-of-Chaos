@@ -66,6 +66,47 @@ public sealed record ApocalypseStep(ApocalypseResult Result, int? Rose = null, i
 /// <summary>One death's spread read, taken before SpawnTracker.Died (D4): its ledger sides and the victim's x and z.</summary>
 public readonly record struct SpreadRead(ScoreSides Sides, (float X, float Z) Victim);
 
+/// <summary>
+/// The parts of one apocalypse step, timed (D29's tick budget; Session 3 logged a 2.3 s "slow tick" inside the apocalypse
+/// phase with no part named): a step of <see cref="SlowTickLog.ThresholdMs"/> or more gives "apocalypse &lt;id&gt; slow step:
+/// &lt;t&gt; ms (&lt;part&gt; &lt;ms&gt; ms, …; units &lt;n&gt;, walk calls &lt;c&gt;)", its parts slowest first, so the next one names
+/// where the time went.
+/// </summary>
+public sealed class StepParts
+{
+    /// <summary>The timestamp source and its ticks per second (a test sets a fake).</summary>
+    public Func<long> Clock { get; set; } = System.Diagnostics.Stopwatch.GetTimestamp;
+    public long Frequency { get; set; } = System.Diagnostics.Stopwatch.Frequency;
+
+    readonly Dictionary<string, double> _ms = [];
+    long _start, _mark;
+
+    public void Start()
+    {
+        _ms.Clear();
+        _start = _mark = Clock();
+    }
+
+    /// <summary>Adds the time since the last mark to <paramref name="part"/>.</summary>
+    public void Mark(string part)
+    {
+        var now = Clock();
+        _ms[part] = (_ms.TryGetValue(part, out var was) ? was : 0) + (now - _mark) * 1000.0 / Frequency;
+        _mark = now;
+    }
+
+    /// <summary>The slow-step line, or null below the threshold.</summary>
+    public string? Line(string eventId, int units, int walkCalls)
+    {
+        var total = (Clock() - _start) * 1000.0 / Frequency;
+        if (total < SlowTickLog.ThresholdMs) return null;
+        var parts = string.Join(", ", _ms.Where(p => p.Value >= SlowTickLog.MinPhaseMs).OrderByDescending(p => p.Value)
+            .Select(p => FormattableString.Invariant($"{p.Key} {p.Value:0} ms")));
+        if (parts.Length == 0) parts = "no part of 1 ms";
+        return FormattableString.Invariant($"apocalypse {eventId} slow step: {total:0} ms ({parts}; units {units}, walk calls {walkCalls})");
+    }
+}
+
 /// <summary>A straggler's hop landing (D6, the step-1 verdict "go — hop"): a walkable point within
 /// <see cref="Radius"/> m of a spot <see cref="Lead"/> m ahead of the front, at the unit's own level or a neighbouring one,
 /// then the wide levels.</summary>
@@ -265,6 +306,23 @@ public sealed class ApocalypseHost
     public ApocalypseStep Tick(ActiveEvent active, IApocalypseGame game, StateStore state, Scoreboard board, DateTime now)
     {
         if (_run is not { } run || !ReferenceEquals(run.Active, active)) return ApocalypseStep.None;
+        Parts.Start();
+        var budgetLeft = Safe(game, () => game.Budget.Left);
+        _stepUnits = 0;
+        try { return Step(run, active, game, state, board, now); }
+        finally
+        {
+            var walkCalls = Math.Max(0, budgetLeft - Safe(game, () => game.Budget.Left));
+            if (Parts.Line(run.Id, _stepUnits, walkCalls) is { } slow) Say(game.Log, slow);
+        }
+    }
+
+    /// <summary>The timed parts of the last step (D29).</summary>
+    public StepParts Parts { get; } = new();
+    int _stepUnits;
+
+    ApocalypseStep Step(ApocalypseRun run, ActiveEvent active, IApocalypseGame game, StateStore state, Scoreboard board, DateTime now)
+    {
         var action = run.Action;
         var forced = false;
         int? rose = null;
@@ -277,6 +335,7 @@ public sealed class ApocalypseHost
             _rise.Ok();
         }
         catch (Exception e) { if (_rise.Fail()) Say(game.Warn, $"apocalypse: rise skipped: {e.Message}"); }
+        Parts.Mark("rise");
         if (rise is { } done)
         {
             var (r, roamerLines) = done;
@@ -306,6 +365,8 @@ public sealed class ApocalypseHost
             players = game.Players();
             foreach (var u in game.Ledger.Units.Where(u => Apocalypse.Ours(u, active)).ToList())
                 if (game.Read(u) is { } read) units.Add(read);
+            _stepUnits = units.Count;
+            Parts.Mark("read");
             var online = players.Where(p => p.Online && PlayerPosition.Usable(p.X, p.Z)).Select(p => (p.X, p.Z)).ToList();
             foreach (var front in run.Fronts.Values.Where(f => !_defeated.Contains(f.Horde)).ToList())
             {
@@ -329,6 +390,7 @@ public sealed class ApocalypseHost
                     }
                     var sum = _hops.TryGetValue(front.Horde, out var h0) ? h0 : (Moved: 0, Stragglers: 0);
                     _hops[front.Horde] = (sum.Moved + moved, sum.Stragglers + stragglers.Count);
+                    Parts.Mark("hops");
                 }
                 byte? level = horde.Count == 0 ? null : horde.OrderBy(u => Apocalypse.Distance(u.X, u.Z, front.X, front.Z)).First().Level;
                 var step = MarchRule.Step(front, action.Goal.Radius, action.MarchSpeed, seconds, online,
@@ -347,6 +409,7 @@ public sealed class ApocalypseHost
                     _hops[front.Horde] = (0, 0);
                     Say(game.Log, $"apocalypse {run.Id} horde {front.Horde} hops: {hops.Moved} of {hops.Stragglers} stragglers moved since the last line");
                 }
+                Parts.Mark("march");
             }
             _march.Ok();
         }
@@ -357,12 +420,14 @@ public sealed class ApocalypseHost
         }
 
         if (moveDue && players is not null) Roam(run, game, players, units);
+        Parts.Mark("roam");
 
         if (_lastRenew is not { } lr || now - lr >= RenewEvery)
         {
             _lastRenew = now;
             Renew(run, game, now);
         }
+        Parts.Mark("renew");
 
         // defeats (D7): a risen horde with nothing left, bosses included, once
         foreach (var k in run.Fronts.Keys.OrderBy(k => k).ToList())
@@ -376,8 +441,10 @@ public sealed class ApocalypseHost
 
         var living = units.GroupBy(u => Apocalypse.HordeOfWave(u.Wave) ?? 0).ToDictionary(g => g.Key, g => (IReadOnlyList<(float X, float Z)>)g.Select(u => (u.X, u.Z)).ToList());
         var result = Safe(game, () => run.Outcome(game, k => living.TryGetValue(k, out var l) ? l : [], now));
+        Parts.Mark("outcome");
         if (result is ApocalypseResult.Won or ApocalypseResult.Lost) return new ApocalypseStep(result, rose, queued);
         if (RecordClock.Due(_lastRecord, now, marching, forced)) WriteRecord(game, state, board, now);
+        Parts.Mark("record");
         return new ApocalypseStep(ApocalypseResult.None, rose, queued);
     }
 

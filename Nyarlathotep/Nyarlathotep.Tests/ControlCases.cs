@@ -811,6 +811,7 @@ public static class ControlCases
         T("D38", "Factions", "TemplateLibraryTests", ["a_template_mixes_two_groups", "an_apocalypse_is_not_of_its_factions_group",
             "an_unlisted_variant_joins_a_group"],
             ["every_template_in_one_allied_group"], ["no_template_spawns_units"]) with { Plan = Apocalypse },
+        T("D29", "Timing", "ApocalypseTests", ["a_slow_step_names_no_part"], ["the_slow_step_line"], ["a_fast_step_logs_nothing"]) with { Plan = Apocalypse },
         C("D29", "TimingSpan", "preflight -TimingSpan -Windows 10 -MinTracked 50 › Test-CheckTimingSpan",
             ["tools/preflight-fixtures/TimingSpan/bad-avg", "tools/preflight-fixtures/TimingSpan/bad-slow", "tools/preflight-fixtures/TimingSpan/bad-tracked",
              "tools/preflight-fixtures/TimingSpan/bad-notarget"],

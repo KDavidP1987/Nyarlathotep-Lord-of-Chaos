@@ -513,3 +513,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-14 · note · re-review A13 · Review 9 REVISE (F1 fixed under A13), Review 10 READY
 - 2026-10-14 · note · deferred · Review 10 F1 · step 5 names pair-apocalypse-short in Rollout › Paths walked when it adds the fixture
 - 2026-10-14 · note · deferred · Review 10 F2 · rollback-drill.ps1 says beside the duration reason that it is accepted only because N raises the limit for Apocalypse alone
+- 2026-10-14 · note · Session 3 diagnostic, a fix that keeps every promise: one "slow tick: 2298 ms (apocalypse 2294 ms …)" 13 min into the soak named no part of the step; a step of 250 ms or more now logs "apocalypse <id> slow step: <t> ms (<part> <ms> ms, …; units <n>, walk calls <c>)" (Logic/ApocalypseHost.cs StepParts; tests ApocalypseTests Timing; planted in docs/audits/apocalypse-step3-planted.txt)
