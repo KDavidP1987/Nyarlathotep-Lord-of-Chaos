@@ -20,7 +20,7 @@
 | [revenge](revenge.md) | Revenge — per-player faction heat, private warnings, a faction alert and ambush tiers around the player | in-progress | L | 26/32 | 27 | 100 % | nyarlathotep |
 | [spikes](spikes.md) | Spikes S1-S3, march, restart marker, carrier buff | done ⚠ 1 | M | 20/20 | 20 | 50 % | nyarlathotep |
 | [swarm](swarm.md) | Swarm — a contained arena of growing spider waves with a kill-to-death winner | done | L | 25/25 | 25 | 96 % | nyarlathotep |
-| [unit-watch](unit-watch.md) | Unit watch — stuck units recovered unseen, then removed, so a wave never hangs | in-progress | L | 0/33 | 33 | 100 % | nyarlathotep |
+| [unit-watch](unit-watch.md) | Unit watch — stuck units recovered unseen, then removed, so a wave never hangs | in-progress | L | 0/34 | 33 | 100 % | nyarlathotep |
 | [walkable-spawns](walkable-spawns.md) | Walkable spawns — the walk probe, walkable spawn points and release 0.5.1 | done | M | 12/12 | 12 | 41 % | nyarlathotep |
 | [wave-sets](wave-sets.md) | Wave sets — per-wave units and stats, waves that wait to be cleared, the event scoreboard | done | L | 27/27 | 27 | 68 % | nyarlathotep |
 
