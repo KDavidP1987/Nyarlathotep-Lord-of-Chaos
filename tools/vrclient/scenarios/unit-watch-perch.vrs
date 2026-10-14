@@ -1,0 +1,25 @@
+# unit-watch-perch.vrs: finds a rock top for unit-watch.vrs (the standing rule needs a spider on a spot it cannot walk
+# down from, 15-30 m from Chaos). `.devperch` scans the walk data around a few spots; the log lines are read afterwards.
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 5
+chat .devperch 15 30 2
+expect-log \[DEV PERCH\] scan
+chat .devperch 10 50 2
+expect-log \[DEV PERCH\] scan
+chat .devgo ravine
+expect-log \[DEV TP\] ravine
+wait 5
+chat .devperch 15 30 2
+expect-log \[DEV PERCH\] scan
+chat .devperch 10 50 2
+expect-log \[DEV PERCH\] scan
+console TPHome
+wait 5
+chat .devperch 15 30 2
+expect-log \[DEV PERCH\] scan

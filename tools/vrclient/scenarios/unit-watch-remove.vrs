@@ -1,16 +1,14 @@
-# unit-watch-remove.vrs: unit-watch D24 (Session 1), the off-ground rule, two tries, the removal and the next wave in game.
-# uw-wave at the mark uw-a (made by unit-watch.vrs; set again here): Chaos kills three of wave 1's four spiders with
-# `.devkill` (max 3), so the one left is the only wave-1 spider and every strand finds it again; `.devstrand <guid> under
-# 30` sinks it 30 m under the pond's ground (ground y about 0, so -30 stays above the watch's -100) while Chaos stands 150 m
-# away. Within 25 s the log reads "stuck: … (off-ground)" then "recovered: … try 1/2"; the strand repeated after each
-# recovery gives "try failed: … try 1/2 (still stuck)", "recovered: … try 2/2", "try failed: … try 2/2 (still stuck)" and
-# "removed: … after 2 tries, no kill credit"; wave 1 is then cleared by the removal's staged despawn and "event uw-wave
-# wave 2/2" follows within 10 s of it; `event info` shows "1 removed"; the admin stop's scoreboard holds Chaos's three
-# `.devkill` kills only, one fewer than wave 1's count.
+# unit-watch-remove.vrs: unit-watch D24 (Session 1), two tries, the removal and the next wave in game. uw-wave at the mark
+# uw-a: Chaos kills three of wave 1's four spiders with `.devkill` (max 3), so one is left, and goes 150 m away;
+# `.nyar event unstick uw-wave` marks the lone spider ("admin"). A3: the game's height correction lifts a unit sunk by
+# `.devstrand under` back to its level within a frame, so the off-ground mark cannot be made in game; the off-ground rule
+# itself is D3's unit test. An admin mark clears only by a fight, so with Chaos away each try fails StuckSeconds (90 s)
+# after its move: "recovered: … try 1/2", "try failed: … try 1/2 (still stuck)", then try 2 (a second move, or with Chaos
+# within 100 m of a player landing "try failed: … try 2/2 (seen)") and "removed: … after 2 tries, no kill credit"; wave 1 is then cleared by the removal's staged
+# despawn and "event uw-wave wave 2/2" follows within 10 s of it; `event info` shows "1 removed"; the admin stop's
+# scoreboard holds Chaos's three `.devkill` kills only, one fewer than wave 1's count.
 #
-# Needs: what unit-watch.vrs needs (StallMinutes 10: a 1-minute backstop would mark the lone spider first); the strand
-# radius 200 reaches the lone spider from the far spot. A native CHAR_Spider_Forest nearer the far spot than uw-a would be
-# picked instead: check the first DEV STRAND line's x and z are within 20 m of uw-a.
+# Needs: what unit-watch.vrs needs (StallMinutes 10: a 1-minute backstop would mark the lone spider first).
 # Run: --var AX=-1880 --var AZ=-1640 --var FX=-1730 --var FZ=-1640
 ensure
 console ToggleInvulnerable true
@@ -27,7 +25,7 @@ wait 2
 chat .devmark uw-a
 expect-log \[DEV MARK\] uw-a
 chat .nyar event set uw-wave location here
-expect-reply uw-wave location =
+expect-reply uw-wave action.location =
 mark
 chat .nyar event start uw-wave
 expect-log event uw-wave started by manual timeout=20
@@ -35,35 +33,30 @@ expect-log event uw-wave wave 1/2 timeout=30
 wait 8
 chat .devkill -581295882 40 3
 expect-log \[DEV KILL\] n=3
-# Chaos 150 m away, then the lone spider sunk 30 m
+# Chaos 150 m away, then the lone spider marked by `.nyar event unstick` (A3: a sunk unit does not stay sunk)
 chat .devtp ${FX} ${FZ}
 expect-log \[DEV TP\] to
 wait 4
 console ToggleInvulnerable true
 wait 2
-chat .devstrand -581295882 under 30 200
-expect-log \[DEV STRAND\] moved=1 how=under x=(?P<SX>-?[0-9.]+) y=(?P<SY>-?[0-9.]+) z=(?P<SZ>-?[0-9.]+)
-expect-calc hypot(${SX} - ${PX}, ${SZ} - ${PZ}) <= 20 and ${SY} > -100
-expect-log \[nyar\] unit-watch uw-wave stuck: CHAR_Spider_Forest wave 1 \(off-ground\) timeout=25
+chat .nyar event unstick uw-wave
+expect-reply unstick uw-wave: 1 units marked, 0 fighting left alone
+expect-log \[nyar\] unit-watch uw-wave stuck: CHAR_Spider_Forest wave 1 \(admin\) timeout=10
 expect-log \[nyar\] unit-watch uw-wave recovered: CHAR_Spider_Forest try 1/2, [0-9]+ m \((group|player|anchor)\) timeout=10
 chat .nyar event info uw-wave
 expect-reply unit watch: 1 stuck now, 1 recovered, 0 removed
-# the strand again: still stuck after the move is a failed try, then the second try
-wait 3
-chat .devstrand -581295882 under 30 200
-expect-log \[DEV STRAND\] moved=1 how=under
-expect-log \[nyar\] unit-watch uw-wave try failed: CHAR_Spider_Forest try 1/2 \(still stuck\) timeout=25
-expect-log \[nyar\] unit-watch uw-wave recovered: CHAR_Spider_Forest try 2/2, [0-9]+ m \((group|player|anchor)\) timeout=10
-wait 3
-chat .devstrand -581295882 under 30 200
-expect-log \[DEV STRAND\] moved=1 how=under
-expect-log \[nyar\] unit-watch uw-wave try failed: CHAR_Spider_Forest try 2/2 \(still stuck\) timeout=25
-expect-log \[nyar\] unit-watch uw-wave removed: CHAR_Spider_Forest wave 1 after 2 tries, no kill credit timeout=10
+# no fight within StuckSeconds after the move: an admin mark's try fails, then the second try, then the removal
+expect-log \[nyar\] unit-watch uw-wave try failed: CHAR_Spider_Forest try 1/2 \(still stuck\) timeout=100
+# try 1 lands it 50-60 m from Chaos (a player landing), so try 2 sees a player within 100 m: it waits, fails "(seen)" after
+# StuckSeconds, and the removal waits at most StuckSeconds more, then goes ahead even in view (D6, S-10); a group or
+# anchor landing out of view gives a second move instead
+expect-log \[nyar\] unit-watch uw-wave (recovered: CHAR_Spider_Forest try 2/2, [0-9]+ m|try failed: CHAR_Spider_Forest try 2/2 \(seen\)) timeout=100
+expect-log \[nyar\] unit-watch uw-wave removed: CHAR_Spider_Forest wave 1 after 2 tries, no kill credit timeout=200
 # the removal cleared wave 1: the next wave comes
 expect-log event uw-wave wave 1 cleared timeout=10
 expect-log event uw-wave wave 2/2 timeout=10
 chat .nyar event info uw-wave
-expect-reply unit watch: 0 stuck now, 2 recovered, 1 removed
+expect-reply 1 removed
 shot full uw-removed-info
 # the scoreboard: Chaos's three kills, no credit for the removal
 chat .nyar event stop uw-wave

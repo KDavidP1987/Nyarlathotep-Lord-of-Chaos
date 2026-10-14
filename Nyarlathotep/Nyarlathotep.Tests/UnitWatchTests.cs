@@ -173,13 +173,18 @@ public partial class UnitWatchTests
     static readonly DateTime Spawned = T0.AddSeconds(1);
 
     /// <summary>One uw unit at (500, 500), 1 m from its spawn spot (it walked off it, so D34's still check is not what
-    /// marks it), and one player <paramref name="playerAt"/> m east of it.</summary>
-    static (WatchRig R, long Key) Standing(float? playerAt = 39f)
+    /// marks it), and one player <paramref name="playerAt"/> m east of it, held as its aggro target unless
+    /// <paramref name="aim"/> is false (A2: only a unit targeting a player is stuck by standing).</summary>
+    static (WatchRig R, long Key) Standing(float? playerAt = 39f, bool aim = true)
     {
         var (r, _) = Watch.Rig();
         var key = r.W.Add("uw", Spawned, 500, 500);
         r.W.Landing(key, 500, 501, Spawned);
-        if (playerAt is { } d) r.W.Player(500 + d, 500);
+        if (playerAt is { } d)
+        {
+            r.W.Player(500 + d, 500);
+            if (aim) r.W.Aim(key, d);
+        }
         return (r, key);
     }
 
@@ -189,7 +194,7 @@ public partial class UnitWatchTests
     // ---- D2 Standing
 
     [Fact]
-    public void Standing_fails_when_a_unit_standing_with_a_player_at_39_m_is_not_stuck()
+    public void Standing_fails_when_a_unit_holding_a_player_target_and_standing_91_s_is_not_stuck()
     {
         var (r, key) = Standing(39f);
         r.For(90);                                                 // the window starts at the first check (5 s): 85 s so far
@@ -200,12 +205,21 @@ public partial class UnitWatchTests
     }
 
     [Fact]
-    public void Standing_fails_when_a_unit_with_the_nearest_player_at_41_m_is_stuck()
+    public void Standing_fails_when_a_unit_with_a_player_at_10_m_and_no_target_is_stuck()
     {
-        var (r, key) = Standing(41f);
+        var (r, key) = Standing(10f, aim: false);                  // idle beside a player (Session 1): not trying to reach one
         r.For(600);
         Assert.Null(r.P.MarkOf(key));
         Assert.Empty(r.Log);
+        var (q, lost) = Standing(39f);                             // the target dropped at 50 s: the window starts afresh
+        q.For(50);
+        q.W.Aim(lost, null);
+        q.For(20);
+        q.W.Aim(lost, 39f);
+        q.For(85);
+        Assert.Null(q.P.MarkOf(lost));
+        q.For(10);
+        Assert.Equal(StuckReason.Standing, q.P.MarkOf(lost));
     }
 
     [Fact]
@@ -274,6 +288,8 @@ public partial class UnitWatchTests
         r.W.Landing(horde, 900, 501, Spawned);
         r.W.Player(530, 500);
         r.W.Player(930, 500, key: 2);
+        r.W.Aim(roamer, 30f);                                      // each hunting its player (A2)
+        r.W.Aim(horde, 30f);
         r.For(95);
         Assert.Equal(StuckReason.Standing, r.P.MarkOf(roamer));
         Assert.Equal(StuckReason.Standing, r.P.MarkOf(horde));

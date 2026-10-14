@@ -1,6 +1,6 @@
 # unit-watch-ends-off.vrs: unit-watch D27 part 2, the watch off. Run after unit-watch-ends.vrs and a restart with
 # [UnitWatch] Enabled = false in the dev cfg (set it back to true after this run). uw-wave runs at uw-a with Chaos there
-# and one spider sunk 30 m under the pond's ground: no "[nyar] unit-watch" line in 2 x StuckSeconds (180 s at the default
+# (A3: no sunk spider, a sunk unit does not stay sunk; with the watch off nothing would mark one anyway): no "[nyar] unit-watch" line in 2 x StuckSeconds (180 s at the default
 # 90), `event info` shows "unit watch: off", and `.nyar event unstick uw-wave` replies "unit watch is off: [UnitWatch]
 # Enabled" and changes nothing. The previous boot's uw-wave instance was cancelled by the restart: no unit-watch line for it
 # is read from this boot's log (checked by hand from the log copy, as the run starts after the boot).
@@ -22,8 +22,6 @@ mark
 chat .nyar event start uw-wave
 expect-log event uw-wave wave 1/2 timeout=30
 wait 8
-chat .devstrand -581295882 under 30
-expect-log \[DEV STRAND\] moved=1 how=under
 expect-no-log \[nyar\] unit-watch timeout=180
 chat .nyar event info uw-wave
 expect-reply unit watch: off

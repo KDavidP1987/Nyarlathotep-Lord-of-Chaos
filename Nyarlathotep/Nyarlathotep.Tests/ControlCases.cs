@@ -830,7 +830,7 @@ public static class ControlCases
         // unit-watch step 2
         T("D1", "UnitWatch", "ConfigClampTests", ["a_default_differs", "an_out_of_range_value_is_taken", "stall_zero_leaves_the_backstop_on",
             "a_definition_or_state_gains_a_property"], ["cfg_keys_as_planned"], ["in_range_values_pass_silently"]) with { Plan = UnitWatch },
-        T("D2", "Standing", "UnitWatchTests", ["a_unit_standing_with_a_player_at_39_m_is_not_stuck", "a_unit_with_the_nearest_player_at_41_m_is_stuck",
+        T("D2", "Standing", "UnitWatchTests", ["a_unit_holding_a_player_target_and_standing_91_s_is_not_stuck", "a_unit_with_a_player_at_10_m_and_no_target_is_stuck",
             "a_unit_that_fought_at_80_s_is_stuck_at_91_s", "a_unit_that_moved_5_5_m_is_stuck", "a_unit_moved_by_a_jump_is_stuck",
             "a_unit_holding_a_player_target_is_not_stuck", "a_roamer_or_horde_unit_is_skipped", "a_spawn_or_earlier_instance_unit_is_checked"],
             ["wave_unit_beside_a_player_marked_once"], ["no_player_no_mark"]) with { Plan = UnitWatch },
@@ -874,8 +874,8 @@ public static class ControlCases
         T("D21", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit", "pending_at_release"],
             ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = UnitWatch },
         // unit-watch step 3
-        T("D34", "Still", "UnitWatchTests", ["a_unit_0_4_m_from_its_spawn_spot_with_a_player_at_30_m_is_not_stuck", "a_unit_that_moved_0_6_m_is_stuck",
-            "a_unit_checked_before_spawn_still_seconds_is_stuck", "a_unit_with_no_player_within_40_m_and_no_target_is_stuck", "a_unit_that_fought_is_stuck",
+        T("D34", "Still", "UnitWatchTests", ["a_unit_0_4_m_from_its_spawn_spot_holding_a_player_target_is_not_stuck", "a_unit_that_moved_0_6_m_is_stuck",
+            "a_unit_checked_before_spawn_still_seconds_is_stuck", "a_unit_with_a_player_at_10_m_and_no_target_is_stuck", "a_unit_that_fought_is_stuck",
             "a_unit_put_down_by_a_jump_is_not_checked_from_its_landing", "a_default_outside_5_60_is_accepted"],
             ["unit_at_its_spawn_spot_beside_a_player_marked_still_once"], ["no_player_no_mark"]) with { Plan = UnitWatch },
         T("D18", "WatchRead", "UnitWatchDependencyFailureTests", ["one_throwing_unit_stops_the_check", "a_failed_read_marks_a_unit",

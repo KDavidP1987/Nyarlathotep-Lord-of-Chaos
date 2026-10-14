@@ -768,7 +768,6 @@ internal static class SpawnTracker
         if (_spawnSpot.Count == 0) return;
         try
         {
-            List<(float X, float Z)> players = null;
             foreach (var (key, spot) in _spawnSpot.ToList())
             {
                 if (!_entities.TryGetValue(key, out var unit) || !unit.Exists() || !unit.TryGetComponent<Translation>(out var pos))
@@ -781,10 +780,11 @@ internal static class SpawnTracker
                 if (!moved && age < FirstMoveCapSeconds) continue;
                 _spawnSpot.Remove(key);
                 if (_ledger.Find(key) is not { EventId: { } eventId } t) continue;
-                players ??= PlayerQuery.Read().Select(p => (p.X, p.Z)).ToList();
-                var near = players.Any(p => math.distance(new float2(p.X, p.Z), pos.Value.xz) <= UnitWatch.PlayerReach);
+                // A2: the measurement counts units trying to reach a player, the units D34 checks.
+                var aimed = unit.TryGetComponent<AggroConsumer>(out var aggro) && aggro.AggroTarget._Entity is var e && e.Exists()
+                    && e.Has<PlayerCharacter>();
                 var after = moved ? age.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "none";
-                Core.Log.LogInfo($"[nyar watch] first-move event={eventId} prefab={t.Prefab} after={after} player={(near ? "near" : "none")}");
+                Core.Log.LogInfo($"[nyar watch] first-move event={eventId} prefab={t.Prefab} after={after} player={(aimed ? "target" : "none")}");
             }
         }
         catch (Exception ex) { _spawnSpot.Clear(); Core.Log.LogWarning($"[nyar watch] first-move read failed: {ex.Message}"); }
@@ -906,6 +906,10 @@ internal static class SpawnTracker
                 && e.TryGetComponent<Translation>(out var tp))
                 target = math.distance(tp.Value.xz, p.xz);
             var range = unit.TryGetComponent<GenericCombatMovementData>(out var combat) && float.IsFinite(combat.MaxDistance) ? combat.MaxDistance : 0f;
+            // Diagnostic (Session 1, A3: the game lifts a unit sunk by a dev write back to its level): a unit 5 m or more below its
+            // anchor, under VerboseLogging.
+            if (Settings.VerboseLogging.Value && ay - p.y >= 5f)
+                Core.Log.LogInfo($"[nyar watch] low event={t.EventId} prefab={t.Prefab} y={p.y:0.0} anchor={ay:0.0} level={LevelOf(unit, p.y)}");
             return new WatchUnit(t.Key, p.x, p.y, p.z, LevelOf(unit, p.y), known ? meta.Group : 0, (ax, ay, az, LevelAt(ay)), target, range,
                 _landed.TryGetValue(t.Key, out var landed) ? landed : null);
         }

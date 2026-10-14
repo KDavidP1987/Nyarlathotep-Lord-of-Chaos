@@ -1,6 +1,6 @@
 # unit-watch-stall.vrs: unit-watch D25 (Session 1), the stall backstop and unstick in game. uw-stall (tools/vrclient/fixtures/
 # uw-stall.json: uw-wave's shape, wave 1 of 4 CHAR_Spider_Forest, wave 2 of 2 waiting for its clear) at the mark uw-b, Chaos
-# 150 m away and never fighting: no player within 40 m, so the standing rule never marks, and the spiders stand on open
+# 150 m away and never fighting: no player target (A2), so the standing rule never marks, and the spiders stand on open
 # ground, so only the backstop does. "[nyar] unit-watch uw-stall stall: wave 1 quiet 1 min, 4 leftovers marked" comes
 # 60-70 s after wave 1 queued (the clock starts at the first check after the wave is decided), then four "stuck: … (stall)"
 # and four "recovered: … (player|group|anchor)" lines. Then uw-stall is restarted: `.nyar event unstick uw-stall` replies
@@ -28,7 +28,7 @@ wait 2
 chat .devmark uw-b
 expect-log \[DEV MARK\] uw-b
 chat .nyar event set uw-stall location here
-expect-reply uw-stall location =
+expect-reply uw-stall action.location =
 chat .devtp ${FX} ${FZ}
 expect-log \[DEV TP\] to x=(?P<QX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<QZ>-?[0-9.]+)
 expect-calc hypot(${QX} - ${PX}, ${QZ} - ${PZ}) >= 140

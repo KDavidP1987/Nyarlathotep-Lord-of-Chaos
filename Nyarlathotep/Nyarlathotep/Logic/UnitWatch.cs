@@ -694,17 +694,19 @@ public sealed class UnitWatchPhase
             foreach (var a in active) Stall(a, tracked);
         }
 
-        bool PlayerNear(WatchUnit u) => u.TargetDistance is not null || UnitWatch.Nearest(_online, u.X, u.Z) is { } d && d <= UnitWatch.PlayerReach;
+        /// <summary>A unit trying to reach a player (A2, design §9 D56): only a unit holding a player as its aggro target can be
+        /// stuck by standing or still; an idle unit near a player is not stuck, however near.</summary>
+        bool TargetsPlayer(WatchUnit u) => u.TargetDistance is not null;
 
         bool Seen(WatchUnit u) => UnitWatch.Nearest(_online, u.X, u.Z) is { } d && d <= UnitWatch.WatchRange;
 
         /// <summary>The standing window (D2): a fight since its start, a move of more than 5 m (whoever moved the unit) or a
-        /// moment with no player near and no player target starts it afresh.</summary>
+        /// moment with no player target starts it afresh.</summary>
         void Window(Row row, WatchUnit u)
         {
             if (row.LastFight is { } f && f >= row.WindowStart) Fresh(row, u, now);
             else if (HuntingGrounds.Distance(row.WindowX, row.WindowZ, u.X, u.Z) > UnitWatch.StandStill) Fresh(row, u, now);
-            else if (!PlayerNear(u)) Fresh(row, u, now);
+            else if (!TargetsPlayer(u)) Fresh(row, u, now);
         }
 
         /// <summary>One off-ground reading (D3, S-12's fallback): true below WalkHeight.MinY, more than 10 m below the lowest
@@ -745,8 +747,8 @@ public sealed class UnitWatchPhase
         }
 
         /// <summary>The still-at-spawn check (D34, A1): SpawnStillSeconds after the unit's spawn or its latest landing by one
-        /// of our movers, a unit that moved no more than 0.5 m on x and z from that spot, did not fight, and had an online
-        /// player within 40 m or a player target at some check in that time, is stuck at once. Decided once per spot; a newer
+        /// of our movers, a unit that moved no more than 0.5 m on x and z from that spot, did not fight, and held a player
+        /// target at some check in that time (A2), is stuck at once. Decided once per spot; a newer
         /// landing starts it again from the landing.</summary>
         bool Still(Row row, WatchUnit u)
         {
@@ -758,7 +760,7 @@ public sealed class UnitWatchPhase
                 row.StillDone = true;
                 return false;
             }
-            if (PlayerNear(u)) row.StillNear = true;
+            if (TargetsPlayer(u)) row.StillNear = true;
             if (now - row.StillSince < s.SpawnStill) return false;
             row.StillDone = true;
             return row.StillNear;

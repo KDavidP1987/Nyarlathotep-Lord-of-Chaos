@@ -18,6 +18,10 @@ namespace NyarDevTools;
 //       Translation set to the mark, its lifetime to seconds (default 120), re-solving every second and its AmplifyBuff
 //       removed; log [DEV WALKTO] put=<n> buff=<guid> mark=<name> d=<mean metres to the mark>
 //       Progress is read with `.devunits <prefabGuid> <radius> <mark>`. Never in the mod; dev server only.
+//   .devbuff <prefabGuid> <buffGuid> <seconds> [radius] [max]
+//       puts that buff on the max (default 1) living units of that prefab nearest the sender within radius (default 30),
+//       its lifetime set to seconds (unit-watch Session 1: Buff_General_Immobilize -1548063130 roots a spider so the
+//       standing rule can be seen); log [DEV BUFF] put=<n> buff=<guid> seconds=<s> d=<metres of the nearest>
 static class WalkToCommands
 {
     static World ServerWorld()
@@ -71,5 +75,40 @@ static class WalkToCommands
         var mean = put > 0 ? sum / put : 0f;
         Plugin.Logger.LogInfo($"[DEV WALKTO] put={put} nobuff={noBuff} buff={buff} mark={mark} d={F(mean)}");
         ctx.Reply($"devwalkto put={put} d={F(mean)}");
+    }
+
+    [Command("devbuff", adminOnly: true)]
+    public static void DevBuff(ChatCommandContext ctx, int prefab, int buff, float seconds, float radius = 30f, int max = 1)
+    {
+        var me = DevCommands.Where(ctx);
+        if (me is null) { ctx.Reply("devbuff: no position"); return; }
+        var em = DevCommands.Em;
+        var des = ServerWorld().GetExistingSystemManaged<DebugEventsSystem>();
+        var query = DevCommands.LivingUnits(em);
+        var units = query.ToEntityArray(Allocator.Temp);
+        var found = new List<(Entity U, float D)>();
+        try
+        {
+            foreach (var u in units)
+            {
+                if (em.GetComponentData<PrefabGUID>(u).GuidHash != prefab || em.GetComponentData<Health>(u).IsDead) continue;
+                var d = math.distance(em.GetComponentData<Translation>(u).Value.xz, me.Value.xz);
+                if (d <= radius) found.Add((u, d));
+            }
+        }
+        finally { units.Dispose(); query.Dispose(); }
+        found.Sort((a, b) => a.D.CompareTo(b.D));
+        var put = 0;
+        var guid = new PrefabGUID(buff);
+        foreach (var (u, _) in found.Take(max))
+        {
+            des.ApplyBuff(new FromCharacter { User = ctx.Event.SenderUserEntity, Character = u }, new ApplyBuffDebugEvent { BuffPrefabGUID = guid });
+            if (!BuffUtility.TryGetBuff(em, u, guid, out var b)) continue;
+            if (em.HasComponent<LifeTime>(b)) { var lt = em.GetComponentData<LifeTime>(b); lt.Duration = seconds; em.SetComponentData(b, lt); }
+            put++;
+        }
+        var near = found.Count > 0 ? found[0].D : 0f;
+        Plugin.Logger.LogInfo($"[DEV BUFF] put={put} buff={buff} seconds={F(seconds)} d={F(near)}");
+        ctx.Reply($"devbuff put={put}");
     }
 }

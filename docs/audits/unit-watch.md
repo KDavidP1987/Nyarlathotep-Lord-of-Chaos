@@ -59,3 +59,21 @@
   ConfigClampTests, EventAdminTests, ApiTwinTests made partial; FakeStores.cs FakeAdminOps gains the watch fields and
   OpUnstick; ControlCases.cs and ControlCaseTests.cs rows for unit-watch
 - dod status: 0/33 verified (step 2's items are checked once the services exist and D21's control rows run green in step 3's post-audit)
+
+### Step 3 · 2026-10-14 · (this commit)
+- compile / preflight: 0 errors, 0 warnings; PREFLIGHT OK; full suite 3560/3560; NyarDevTools builds (dev only, never shipped)
+- /code-review: step 3's services diff reviewed at 5e4659f (fresh read-only subagent; findings fixed before that commit);
+  A2's change (TargetsPlayer replacing the 40 m rule, the first-move line's player field, the `low` diagnostic under
+  VerboseLogging) read in full here: the rule reads only the unit's own aggro target, no name in any line. Planted
+  faults for A2 in docs/audits/unit-watch-step3-planted.txt (old 40 m rule → 2/19 fail; always-true → 4/19 fail)
+- change reviews: A2 and A3 each reviewed by a fresh read-only subagent (REVISE; every finding dispositioned in the plan's Log)
+- Codex verdict: not run for this step (Halloween track D34: once per child, before its release, step 5)
+- in-game (docs/features/UNIT_WATCH.md › Test results › Session 1): unit-watch.vrs 23/23, unit-watch-remove.vrs 23/23,
+  unit-watch-stall.vrs 25/25, unit-watch-ends.vrs 28/33 + tail 7/7 + ends-off 10/10, unit-watch-apocalypse.vrs 15/16
+  (removal timeout, raised) with the restart's resume line read, unit-watch-timing.vrs run 3 27/27 with D28's span 10/10.
+  The positive standing and still cases and D34's first-move measurement need a vulnerable player: test weekend (A3)
+- logs: boots a- to p- in %TEMP%\nyar-uw1-logs read in full for [Error/[Warning: no [Error] line; warnings are the known
+  example-empowerment, Il2CppInterop, Beelzebub TUNE, event stop/purge summaries, and HarmonyX type-load warnings from the
+  dev-only DevHold type scan (boots f- on); NyarDev.log has the same 226 boot-time missing-prefab traces in every boot
+- server: snapshot uw1 restored ("snapshot restored; hashes equal"), then the current DLL redeployed (hash equal to the build)
+- dod status: 4/34 verified (D18, D20, D22, D28); D24-D27 ready for the owner's acceptance; D23 and D34's measurement at the test weekend (A3)

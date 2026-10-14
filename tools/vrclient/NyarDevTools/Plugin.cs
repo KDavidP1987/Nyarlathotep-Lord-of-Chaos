@@ -60,6 +60,7 @@ public class Plugin : BasePlugin
         CommandRegistry.RegisterAll();
         _harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         _harmony.PatchAll(typeof(FightPatches));                         // unit-watch spike: idle unless .devfight runs
+        StrandHold.Patch(_harmony);                                      // unit-watch Session 1: holds a stranded unit under
         Log.LogInfo("NyarDevTools loaded: .devwhere .devtp .devmark .devgo .devmarks .devkill .devdie .devhop .devjump .devwalk .devunits .devfight .devstrand .devground");
     }
 
@@ -477,6 +478,7 @@ static class DevCommands
         var to = spot ?? new float3(at.x, at.y - down, at.z);
         em.SetComponentData(best, new Translation { Value = to });
         if (em.HasComponent<LastTranslation>(best)) em.SetComponentData(best, new LastTranslation { Value = to });
+        if (how == "under") StrandHold.Add(best, to);                    // the game lifts it back otherwise (DevHold.cs)
         var (ground, level) = Ground.Read(em, to);
         Plugin.Logger.LogInfo($"[DEV STRAND] moved=1 how={how} x={F(to.x)} y={F(to.y)} z={F(to.z)} level={level} ground={ground}");
         ctx.Reply($"devstrand moved=1 ground={ground}");

@@ -147,10 +147,10 @@ static class Fight
 
 static class Ground
 {
-    const float UnitRadius = 0.5f;
-    static int TileIndex(float v) => (int)math.floor(v * 2) + 6400;
+    internal const float UnitRadius = 0.5f;
+    internal static int TileIndex(float v) => (int)math.floor(v * 2) + 6400;
 
-    static TileWorld? Live(EntityManager em)
+    internal static TileWorld? Live(EntityManager em)
     {
         var q = em.CreateEntityQuery(new EntityQueryDesc
         {
