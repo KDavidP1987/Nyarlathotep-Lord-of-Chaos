@@ -6,7 +6,8 @@ using VampireCommandFramework;
 namespace Nyarlathotep.Commands;
 
 /// <summary>The admin wire twins and reads of api 4 (raphael-api-admin D3-D7, D11; docs/RAPHAEL_INTEGRATION_CONTRACT.md
-/// §5a): `.nyar api event|template|pillar|purge …` answer one `[NYAR:ok]` or `[NYAR:err]` line each, and
+/// §5a): `.nyar api event|template|pillar|purge …` answer one `[NYAR:ok]` or `[NYAR:err]` line each (`event unstick`, api 8,
+/// unit-watch D13), and
 /// `templates`, `template info`, `pillar list` and `killswitch` answer rows. Each method is a shim over
 /// <see cref="Gateway.Flows"/>, where the rate gate, the argument checks and the flows live (Logic, where the tests reach
 /// them). Every one is admin-only and answers "still loading" before the world is ready. The trailing `extra` parameter

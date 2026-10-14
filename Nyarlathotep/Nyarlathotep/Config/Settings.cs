@@ -41,6 +41,9 @@ internal static class Settings
     /// <summary>Announcements.DailyBannerTime as loaded, server-local.</summary>
     public static System.TimeOnly DailyBannerTime { get; private set; } = new(20, 0);
 
+    // ---- Unit watch (unit-watch D1, design §9 D54): a safety rail on, unlike the pillars (S-3) ----
+    public static ConfigEntry<bool> UnitWatchEnabled { get; private set; }
+
     // ---- Scoreboard (wave-sets D9, design §9 D38) ----
     public static ConfigEntry<bool> ScoreboardIncludeAdmins { get; private set; }
 
@@ -117,6 +120,13 @@ internal static class Settings
 
         ScoreboardIncludeAdmins = config.Bind("Scoreboard", "IncludeAdmins", false,
             "Count admins on an event's scoreboard (events.json action.scoreboard true). Off: an admin's kills and deaths are left out.");
+
+        UnitWatchEnabled = config.Bind("UnitWatch", "Enabled", true,
+            "Watch event units for being stuck: a unit that stands still beside a player, or under the ground, is moved back unseen; after 2 failed tries it is removed with no kill credit.");
+        BindLimit(config, Limits.StuckSeconds,
+            "Seconds a unit stands still with a player near, or stays off the ground, before it counts as stuck.");
+        BindLimit(config, Limits.StallMinutes,
+            "Minutes with no death and no fight before the leftovers of a wave the event waits on are treated as stuck. 0 turns this off.");
 
         VerboseLogging = config.Bind("Debug", "VerboseLogging", false,
             "Log each unit spawned and despawned, and each announcement sent.");

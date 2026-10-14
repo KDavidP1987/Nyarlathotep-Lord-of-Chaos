@@ -43,12 +43,14 @@ public static class Reasons
     public const string Template = "template";
     public const string NoPlayerInRegion = "no_player_in_region";
     public const string OutOfRegion = "out_of_region";
+    /// <summary>`event unstick` with [UnitWatch] Enabled false (unit-watch D13).</summary>
+    public const string WatchOff = "watch_off";
 
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal)
     {
         General, PillarOff, MaxConcurrent, Disabled, AlreadyActive, EmpowerClash, AdminLocation, NoPosition, Condition,
         NotActive, Field, Value, Trigger, Stats, Read, Parse, Stale, ReadOnly, Size, WriteUncertain, Count, Running, Save,
-        NothingToPurge, Internal, Template, NoPlayerInRegion, OutOfRegion,
+        NothingToPurge, Internal, Template, NoPlayerInRegion, OutOfRegion, WatchOff,
     };
 }
 

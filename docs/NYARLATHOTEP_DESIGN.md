@@ -116,6 +116,7 @@ it. **Who:** *anyone*, or *admin* (VCF `adminOnly`, Epic D5). **Child:** the chi
 | `.nyar event list [page]` / `info <id>` | admin | Definitions, 10 per page, each with its readiness (`ready`, `off (purge\|mod\|pillar\|event)`, `full (cap)`, `invalid: <reason>`) and running (readiness: event-library); one event's trigger, action and time left | foundation |
 | `.nyar event start <id>` / `stop <id>` | admin | Manual trigger (an `Admin` location spawns around you) / early end, units despawned | foundation |
 | `.nyar event enable\|disable <id>` | admin | Toggle without editing JSON | foundation |
+| `.nyar event unstick <id>` | admin | Mark a running event's units that have not fought lately as stuck: each is moved back unseen, and after 2 failed tries removed with no kill credit. The unit watch's cfg keys, section `[UnitWatch]`: `Enabled` (true), `StuckSeconds` (90, 30-600), `StallMinutes` (10, 0-60, 0 turns the backstop off) | unit-watch |
 | `.nyar event set <id> <field> <value>` | admin | Edit one validated field of the settable-field table below; `location here` takes your position | foundation; event-library (trigger, action and location fields) |
 | `.nyar event new <id> <pillar>` | admin | A disabled skeleton definition of that pillar, Manual trigger, 600 s | event-library |
 | `.nyar event copy <id> <newId>` | admin | A disabled verbatim copy under a new id | event-library |

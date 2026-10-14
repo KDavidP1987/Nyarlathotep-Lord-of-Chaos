@@ -7,15 +7,15 @@ using VampireCommandFramework;
 namespace Nyarlathotep.Commands;
 
 /// <summary>`.nyar event list|info|start|stop|enable|disable|set|reload` (foundation Design › UX; D6, D22, D23, D29) and
-/// `new|copy|delete` (event-library D6-D8; their forms checked by Logic's CommandForms, A7).
+/// `new|copy|delete` (event-library D6-D8; their forms checked by Logic's CommandForms, A7) and `unstick` (unit-watch D12).
 /// Admin-only; every mutation runs through Logic/AdminFlows and the gateway (D10, D11; raphael-api-admin D3), and the
 /// reply is the flow's Human text. One command with a verb, as `.nyar debug here` is,
 /// so VCF routes `.nyar event &lt;verb&gt;` here. A value with spaces is quoted: `.nyar event set raid name "Night raid"`.</summary>
 [CommandGroup("nyar")]
 internal static class EventCommands
 {
-    [Command("event", usage: "list [page] | info|start|stop|enable|disable ID | set ID FIELD VALUE | reload | new ID PILLAR | copy ID NEWID | delete ID [confirm]",
-        description: "List, inspect, start, stop, enable, disable, edit, reload, create, copy or delete event definitions.", adminOnly: true)]
+    [Command("event", usage: "list [page] | info|start|stop|enable|disable|unstick ID | set ID FIELD VALUE | reload | new ID PILLAR | copy ID NEWID | delete ID [confirm]",
+        description: "List, inspect, start, stop, enable, disable, edit, reload, create, copy or delete event definitions, or unstick a running event's units.", adminOnly: true)]
     public static void Event(ChatCommandContext ctx, string verb = "", string id = "", string field = "", string value = "")
     {
         if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }
@@ -47,6 +47,9 @@ internal static class EventCommands
             case "set":
                 ctx.Reply(flows.Set(who, id, field, value).Human);
                 return;
+            case "unstick":
+                ctx.Reply(flows.Unstick(who, id, field + value).Human);         // unit-watch D12: a surplus word answers the usage line
+                return;
             case "list":
             {
                 var page = CommandArgs.Page(id, EventLines.Pages(set.All.Count));
@@ -67,7 +70,9 @@ internal static class EventCommands
                 if (def is null) { ctx.Reply(AdminLines.UnknownEvent(id).Human); return; }
                 Reply(ctx, EventLines.Info(def, active, now, TriggerBus.NextInterval(def.Id),
                     RevengeRule.IsRevenge(def) ? TriggerBus.RevengeCounts(def.Id) : null,   // revenge D12
-                    apocalypse: def.Apocalypse is not null ? Services.ApocalypseAction.View(def.Id) : null));   // apocalypse D17
+                    apocalypse: def.Apocalypse is not null ? Services.ApocalypseAction.View(def.Id) : null,   // apocalypse D17
+                    watch: def.Action is not null || def.Apocalypse is not null                                 // unit-watch D15; the
+                        ? UnitWatchLines.Info(Config.Settings.UnitWatchEnabled.Value, default) : null));        // counts come with step 3's phase
                 return;
             }
             default:

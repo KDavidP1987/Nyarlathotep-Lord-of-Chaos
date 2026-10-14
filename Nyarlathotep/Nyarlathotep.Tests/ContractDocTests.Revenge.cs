@@ -11,6 +11,9 @@ public partial class ContractDocTests
     /// <summary>Wire.Api at the release before this child (hunting-grounds, 0.11.0).</summary>
     const int RevengePreviousApi = 6;
 
+    /// <summary>The api revenge shipped in; a later child (unit-watch D13, api 8) may raise Wire.Api past it.</summary>
+    const int RevengeApi = RevengePreviousApi + 1;
+
     static EventDefinition RevengeDefinition()
     {
         var r = EventValidator.Parse(Json.File(Json.Event("rv", Json.RevengeTrigger, action: Json.RevengeAction)), FakeUnits.Default(), regions: FakeRegions.All());
@@ -27,13 +30,13 @@ public partial class ContractDocTests
     internal static List<string> RevengeProblems(string contract, int api, IReadOnlyList<string> rows, IEnumerable<string> pushKinds)
     {
         var p = new List<string>();
-        if (api != RevengePreviousApi + 1) p.Add($"Wire.Api is {api}, not {RevengePreviousApi + 1}");
+        if (api < RevengeApi) p.Add($"Wire.Api is {api}, below {RevengeApi}");
         foreach (var row in rows.Where(r => !r.Contains(" trigger=revenge ", StringComparison.Ordinal))) p.Add($"a row carries another trigger: {row}");
         if (!pushKinds.OrderBy(t => t, StringComparer.Ordinal).SequenceEqual(PushKinds)) p.Add("the push kinds changed");
         if (!contract.Contains($"> **Current api:** {api}", StringComparison.Ordinal)) p.Add("the contract's header names another api");
-        if (!contract.Contains($"`revenge` from api {api}", StringComparison.Ordinal)) p.Add("the §3 trigger list misses revenge");
-        if (!contract.Contains($"| {api} | 0.12.0 (revenge) |", StringComparison.Ordinal)) p.Add("the change history misses the revenge row");
-        if (!contract.Contains($"api {api} ships with the `revenge` release", StringComparison.Ordinal)) p.Add("the header note misses revenge");
+        if (!contract.Contains($"`revenge` from api {RevengeApi}", StringComparison.Ordinal)) p.Add("the §3 trigger list misses revenge");
+        if (!contract.Contains($"| {RevengeApi} | 0.12.0 (revenge) |", StringComparison.Ordinal)) p.Add("the change history misses the revenge row");
+        if (!contract.Contains($"api {RevengeApi} ships with the `revenge` release", StringComparison.Ordinal)) p.Add("the header note misses revenge");
         return p;
     }
 
@@ -52,8 +55,7 @@ public partial class ContractDocTests
     public void Revenge_fails_when_a_row_carries_another_value_or_the_contract_lags()
     {
         var rows = RevengeRows(RevengeDefinition());
-        Assert.Equal(["Wire.Api is 6, not 7", "the contract's header names another api", "the §3 trigger list misses revenge",
-                "the change history misses the revenge row", "the header note misses revenge"],
+        Assert.Equal(["Wire.Api is 6, below 7", "the contract's header names another api"],   // unit-watch D13: api 8 keeps revenge's rows
             RevengeProblems(Contract, 6, rows, PushTypes()));
         var other = rows.Select(r => r.Replace(" trigger=revenge ", " trigger=factionkills ", StringComparison.Ordinal)).ToList();
         Assert.Equal(2, RevengeProblems(Contract, Wire.Api, other, PushTypes()).Count);

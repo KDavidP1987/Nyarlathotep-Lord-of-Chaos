@@ -632,8 +632,10 @@ public static class EventLines
     /// <remarks>An Apocalypse (apocalypse D17) shows its definition's lines (<see cref="ApocalypseLines"/>), and while it
     /// runs <paramref name="apocalypse"/>'s: each hotspot's region and x, z, each living horde's front and progress, and the
     /// tally line; its running line counts hordes risen of hordes.</remarks>
+    /// <remarks>A running instance shows <paramref name="watch"/>, the unit watch's line (unit-watch D15,
+    /// UnitWatchLines.Info), after its running lines; an event that is not running shows none.</remarks>
     public static IReadOnlyList<string> Info(EventDefinition d, ActiveEvent? active, DateTime utcNow, DateTime? nextInterval = null,
-        (int Rows, int Due)? revengeCounts = null, ApocalypseView? apocalypse = null)
+        (int Rows, int Due)? revengeCounts = null, ApocalypseView? apocalypse = null, string? watch = null)
     {
         if (d.DisabledReason is { } reason) return [$"{d.Id} disabled: {reason}"];
         var c = d.Conditions;
@@ -709,6 +711,7 @@ public static class EventLines
               (d.Apocalypse is { } running ? $", horde {apocalypse?.Risen ?? 0}/{running.Hordes.Count}"
               : d.Empower is null ? $", wave {active.WavesSpawned}/{d.Action?.Waves ?? 0}" : ""));
         if (active is not null && apocalypse is not null) lines.AddRange(ApocalypseRunLines(apocalypse));
+        if (active is not null && watch is not null) lines.Add(watch);
         if (d.Trigger.Type == TriggerType.Interval && d.Enabled && NextStartLine(active is not null, nextInterval, utcNow) is { } next) lines.Add(next);
         return lines;
     }

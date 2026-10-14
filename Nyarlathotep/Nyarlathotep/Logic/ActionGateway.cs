@@ -24,6 +24,8 @@ public enum ActionKind
     DeleteEvent,
     /// <summary>`.nyar pillar &lt;name&gt; on|off`, saved to the cfg (event-library D14, D17).</summary>
     SetPillar,
+    /// <summary>`.nyar event unstick &lt;id&gt;`: marks a running instance's idle units stuck (unit-watch D12).</summary>
+    UnstickUnits,
 }
 
 /// <summary>Who asks (Design › Permissions): an admin in game, the operator's files (loaded at boot), the scheduler
@@ -55,6 +57,7 @@ public static class ActionTable
         [ActionKind.CreateEvent] = Set(Actor.Admin),
         [ActionKind.DeleteEvent] = Set(Actor.Admin),
         [ActionKind.SetPillar] = Set(Actor.Admin),
+        [ActionKind.UnstickUnits] = Set(Actor.Admin),
     };
 
     /// <summary>True when <paramref name="actor"/> may run <paramref name="kind"/>. System's grant holds only for an

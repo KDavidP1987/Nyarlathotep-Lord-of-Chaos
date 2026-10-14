@@ -3,7 +3,7 @@ using Nyarlathotep.Logic;
 namespace Nyarlathotep.Tests;
 
 /// <summary>foundation D5: cfg values above the hard ceilings clamp with a log line.</summary>
-public class ConfigClampTests
+public partial class ConfigClampTests
 {
     [Theory]
     [InlineData("MaxTrackedUnits", 500)]

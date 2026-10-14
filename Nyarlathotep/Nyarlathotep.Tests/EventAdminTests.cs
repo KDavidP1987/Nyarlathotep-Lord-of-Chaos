@@ -4,7 +4,7 @@ namespace Nyarlathotep.Tests;
 
 /// <summary>regions D9: the scope in `.nyar event info` and `list`, and `event set trigger.scope|action.scope` through
 /// the existing editor (A28).</summary>
-public class EventAdminTests
+public partial class EventAdminTests
 {
     static readonly DateTime T0 = Zones.Utc(2026, 9, 28, 20, 0);
 

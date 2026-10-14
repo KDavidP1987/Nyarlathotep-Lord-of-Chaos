@@ -2,15 +2,15 @@ using Nyarlathotep.Logic;
 
 namespace Nyarlathotep.Tests;
 
-/// <summary>apocalypse D20: the wire is unchanged: Wire.Api stays 7, no push kind is added, an apocalypse's status row
+/// <summary>apocalypse D20: the wire is unchanged by an apocalypse: Wire.Api is 7 or later (unit-watch D13 made it 8), no push kind is added, an apocalypse's status row
 /// counts hordes risen of hordes as `wave=`, every outcome sends one `event-end`, and the contract says so in its two
 /// sentences.</summary>
 public partial class ContractDocTests
 {
-    /// <summary>Wire.Api at the release before this child (revenge, 0.12.0); an apocalypse keeps it.</summary>
+    /// <summary>Wire.Api at the release before this child (revenge, 0.12.0); an apocalypse adds nothing past it.</summary>
     const int ApocalypseApi = 7;
 
-    const string ApocalypseNoChange = "An apocalypse (0.13.0, `\"type\": \"Apocalypse\"`) adds no tag, key, push kind or command: Wire.Api stays 7";
+    const string ApocalypseNoChange = "An apocalypse (0.13.0, `\"type\": \"Apocalypse\"`) adds no tag, key, push kind or command of its own";
     const string ApocalypseStatusRow = "Its status row is `kind=waves` with `wave=<hordes risen>/<hordes>`, and every outcome (won, lost, survived) sends the usual `event-end`.";
 
     static readonly DateTime ApoT0 = Zones.Utc(2026, 10, 31, 20, 0);
@@ -19,7 +19,7 @@ public partial class ContractDocTests
     internal static List<string> ApocalypseProblems(string contract, int api, IEnumerable<string> pushKinds, IReadOnlyList<string> status)
     {
         var p = new List<string>();
-        if (api != ApocalypseApi) p.Add($"Wire.Api is {api}, not {ApocalypseApi}");
+        if (api < ApocalypseApi) p.Add($"Wire.Api is {api}, below {ApocalypseApi}");
         if (!pushKinds.OrderBy(t => t, StringComparer.Ordinal).SequenceEqual(PushKinds)) p.Add("the push kinds changed");
         if (!contract.Contains(ApocalypseNoChange, StringComparison.Ordinal)) p.Add("the contract misses the no-change sentence");
         if (!contract.Contains(ApocalypseStatusRow, StringComparison.Ordinal)) p.Add("the contract misses the status sentence");
@@ -46,7 +46,7 @@ public partial class ContractDocTests
     [Fact]
     public void Apocalypse_fails_when_the_api_changes_or_the_contract_lacks_a_sentence()
     {
-        Assert.Equal(["Wire.Api is 8, not 7"], ApocalypseProblems(Contract, 8, PushTypes(), ApocalypseStatus()));
+        Assert.Equal(["Wire.Api is 6, below 7"], ApocalypseProblems(Contract, 6, PushTypes(), ApocalypseStatus()));
         Assert.Equal(["the contract misses the no-change sentence"],
             ApocalypseProblems(Contract.Replace(ApocalypseNoChange, "", StringComparison.Ordinal), Wire.Api, PushTypes(), ApocalypseStatus()));
         Assert.Equal(["the contract misses the status sentence"],

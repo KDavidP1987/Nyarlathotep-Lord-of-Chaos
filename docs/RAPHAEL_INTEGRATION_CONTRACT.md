@@ -10,7 +10,7 @@
 > **IMPLEMENTED (api N)**. Build against IMPLEMENTED only. A PLANNED shape can still change before it ships;
 > once it is IMPLEMENTED it only grows (§7).
 >
-> **Current api:** 7
+> **Current api:** 8
 >
 > api 1 shipped with the `foundation` release (0.2.0): the handshake. api 2 ships with the `raphael-api-core`
 > release (0.3.0): `status`, `events` and the push subscription. `me`, `top` and `zones` stay PLANNED until the
@@ -30,8 +30,11 @@
 >
 > api 7 ships with the `revenge` release (0.12.0): a new value of `trigger` on `[NYAR:def]` and `[NYAR:tpl]` rows,
 > `revenge` (§3). It adds no tag, key, push kind or command, and no heat, player or position reaches the wire; an api 6
-> client may show the unknown `trigger` value wrongly. api 8 and later are PLANNED in §10, the rows each later child
-> adds. Nothing in §10 is sent yet.
+> client may show the unknown `trigger` value wrongly.
+>
+> api 8 ships with the 0.13.0 release (`unit-watch`): the twin `event unstick` (§5a) and the reason `watch_off`. It
+> adds no tag, key or push kind. api 9 and later are PLANNED in §10, the rows each later child adds. Nothing in §10 is
+> sent yet.
 
 ### Tags and commands
 
@@ -147,7 +150,7 @@ All live under `.nyar api …`. Paged commands take an optional 1-based `[page]`
 - A wave set's scoreboard (0.9.0) is a server chat line only: player names never reach the wire, and an event that ends with all its waves defeated sends the usual `event-end`.
 - A swarm (0.10.0, `action.arena`, `action.winner`, `action.growth`) adds nothing to the wire: an event's arena and winner never reach the wire, and names never do. A growth event's `wave` total is its `action.waves`.
 - Hunting grounds (0.11.0, a Region location, `action.regionLock`, the RegionHunt behaviour) add nothing to the wire: a Region location, the region lock and the region hunt never reach the wire, and a hunt target is never named or located.
-- An apocalypse (0.13.0, `"type": "Apocalypse"`) adds no tag, key, push kind or command: Wire.Api stays 7, and hotspots, roamers, fronts and the goal never reach the wire. Its status row is `kind=waves` with `wave=<hordes risen>/<hordes>`, and every outcome (won, lost, survived) sends the usual `event-end`.
+- An apocalypse (0.13.0, `"type": "Apocalypse"`) adds no tag, key, push kind or command of its own (0.13.0's api 8 is unit watch's `event unstick` twin, §5a), and hotspots, roamers, fronts and the goal never reach the wire. Its status row is `kind=waves` with `wave=<hordes risen>/<hordes>`, and every outcome (won, lost, survived) sends the usual `event-end`.
 - An empower row (api 3) carries `faction=<names joined by ','>`: each faction of the event without its `Faction_`
   prefix, e.g. `faction=Legion,Bandits`; its `wave` is `-`, and its admin `units` is the number of NPCs holding the
   event's empowerment. An empower event has no `ending` row.
@@ -337,6 +340,7 @@ Raphael sends the **human** commands below and then re-reads state (`api events`
 | New / copy / delete an event | `.nyar event new <id> <pillar>` / `.nyar event copy <id> <newId>` / `.nyar event delete <id>` then `… confirm` | admin |
 | Set an event's location to the admin's position | `.nyar event set <id> location here` | admin |
 | Create an event from a template | `.nyar template list [pillar] [page]` / `.nyar template info <template>` / `.nyar template use <template> [as <id>]` | admin |
+| Unstick a running event's units | `.nyar event unstick <id>` | admin |
 | Switch a pillar (saved to the cfg) | `.nyar pillar list` / `.nyar pillar <name> on\|off` | admin |
 | Test spawn | `.nyar spawn <unit> [count] [level] [hp×] [power×]` | admin |
 | Kill switch | `.nyar purge` then `.nyar purge confirm` (two presses, with a confirmation dialog) | admin |
@@ -374,6 +378,7 @@ refuses a non-admin with its own human line, and before the world is ready a twi
 | `.nyar api event copy <id> <newId>` | `[NYAR:ok] cmd=event verb=copy id=<newId> from=<id>`; the copy is disabled |
 | `.nyar api event delete <id>`, then `… delete <id> confirm` | `… verb=delete id=<id> confirm=30`, then `… verb=delete id=<id> done=1` |
 | `.nyar api template use <template> [as <id>]` | `[NYAR:ok] cmd=template verb=use id=<id> tpl=<template>` |
+| `.nyar api event unstick <id>` | `[NYAR:ok] cmd=event verb=unstick id=<id> marked=<n> fighting=<f>` (api 8) |
 | `.nyar api pillar <name> on\|off` | `[NYAR:ok] cmd=pillar verb=set id=<name> on=<0\|1> changed=<0\|1>`, plus `ended=<n>` when `off` ended running events; saved to the cfg |
 | `.nyar api purge`, then `.nyar api purge confirm` | `[NYAR:ok] cmd=purge verb=ask id=- confirm=30`, then `[NYAR:ok] cmd=purge verb=confirm id=- events=<ended> units=<to despawn> secs=<cooldown>` |
 
@@ -409,7 +414,12 @@ Rules:
   `read`, `parse`, `stale`, `read_only`, `size`, `write_uncertain`, `count`, `running`, `save`, `nothing_to_purge`,
   `internal`, `template`; from api 5, `no_player_in_region` (`code=state arg=scope`: no online player is in the event's
   trigger regions) and `out_of_region` (`code=state arg=scope`: the kill is outside the trigger regions; `code=badarg
-  arg=location`: the admin stands outside the action regions).
+  arg=location`: the admin stands outside the action regions); from api 8, `watch_off` (`code=invalid`: unit watch is off).
+- **Unstick** (api 8, 0.13.0, unit-watch): `event unstick` marks every live unit of the event's running instance that
+  has not fought in the last StuckSeconds as stuck; `marked` counts them and `fighting` the units left alone. It refuses
+  with `code=notfound arg=id` for an unknown id, `code=state arg=id reason=not_active` when the event is not running,
+  `code=state arg=id` when it has no live unit, and `code=invalid reason=watch_off` when the server's `[UnitWatch]
+  Enabled` is false. The watch's lines never reach the wire, and no line names or locates a player.
 - **Line length:** every line fits 480 bytes. `value`, `verb` and `reason` are cut to 120 bytes on a character
   boundary; an empty echoed word is `-`.
 
@@ -490,10 +500,11 @@ Gate the panels on the handshake:
 | 5 | 0.6.0 (regions) | The `regions` read and tag `region` (§3); `region=` last on `[NYAR:def]` and `[NYAR:event]` rows and after `secs` on `event-start` and `event-end` pushes; reasons `no_player_in_region` and `out_of_region` (§5a). |
 | 6 | 0.8.0 (automation) | `trigger` values `interval`, `regionentered` and `factionkills` on `[NYAR:def]` rows (§3). No new tag, key, push kind or command. |
 | 7 | 0.12.0 (revenge) | `trigger` value `revenge` on `[NYAR:def]` and `[NYAR:tpl]` rows (§3). No new tag, key, push kind or command. |
+| 8 | 0.13.0 (unit-watch) | The twin `event unstick` (§5a) and the reason `watch_off`; no new tag, key or push kind. |
 
 ---
 
-## 10. api 8 and later — PLANNED
+## 10. api 9 and later — PLANNED
 
 Nothing in this section is sent yet. Every shape is PLANNED under the child named with it, and can change until that
 child ships. The Tags and commands table carries one row per new tag and command. A child that grows the wire bumps

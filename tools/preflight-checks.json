@@ -14,7 +14,8 @@
     "docs/dod/swarm.md",
     "docs/dod/hunting-grounds.md",
     "docs/dod/revenge.md",
-    "docs/dod/apocalypse.md"
+    "docs/dod/apocalypse.md",
+    "docs/dod/unit-watch.md"
   ],
   "sessionsUncounted": {
     "event-spawns": [1]
@@ -35,7 +36,8 @@
     "swarm": 1,
     "hunting-grounds": 0,
     "revenge": 1,
-    "apocalypse": 0
+    "apocalypse": 0,
+    "unit-watch": 0
   },
   "dataTests": {
     "event-spawns": [
@@ -92,6 +94,9 @@
     ],
     "apocalypse": [
       "docs/features/APOCALYPSE.md"
+    ],
+    "unit-watch": [
+      "docs/features/UNIT_WATCH.md"
     ],
     "boss-reinforcements": [
       "docs/features/BOSS_REINFORCEMENTS.md"

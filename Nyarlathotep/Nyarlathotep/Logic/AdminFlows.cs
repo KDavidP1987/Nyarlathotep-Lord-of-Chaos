@@ -35,6 +35,10 @@ public interface IAdminOps
     Outcome OpDelete(ulong adminId, string id, bool confirm);
     Outcome OpUseTemplate(string template, string? asId);
     Outcome OpSetPillar(string name, string state);
+
+    /// <summary>`event unstick &lt;id&gt;` (unit-watch D12): the watch phase's Unstick over the running instance. Services/AdminOps
+    /// wires it to the watch phase with step 3; until then the watch is not running and the verb refuses.</summary>
+    Outcome OpUnstick(string id) => Outcome.Refused("unit watch is not running", RefusalCode.State, "id");
 }
 
 /// <summary>Who runs an admin flow: the admin's SteamID and name (for the admin log line) and a reader of their
@@ -71,6 +75,7 @@ public sealed class AdminFlows(IAdminOps ops, ActionGateway gateway, PurgeArming
         ["pillar set"] = ActionKind.SetPillar,
         ["purge ask"] = ActionKind.Purge,
         ["purge confirm"] = ActionKind.PurgeConfirm,
+        ["event unstick"] = ActionKind.UnstickUnits,
     };
 
     /// <summary>`event start &lt;id&gt;`: an event whose location is Admin spawns around the admin, whose position must
@@ -196,6 +201,18 @@ public sealed class AdminFlows(IAdminOps ops, ActionGateway gateway, PurgeArming
         }, ActionGateway.Denied);
     }
 
+    /// <summary>`event unstick &lt;id&gt;` (unit-watch D12): a missing id or a surplus word answers the usage line, as VCF
+    /// binds the other verbs; then the id rule, the admin log line and the watch's own refusals (the watch off, an unknown
+    /// id, an event not running or without a live unit).</summary>
+    public Outcome Unstick(AdminCaller who, string id, string extra = "")
+    {
+        if (id.Length == 0) return Outcome.Refused(UnitWatchLines.Usage, RefusalCode.BadArg, "id");
+        if (extra.Length > 0) return Outcome.Refused(UnitWatchLines.Usage, RefusalCode.BadArg, "extra");
+        if (BadId(id) is { } bad) return bad;
+        LogAdmin(who, $"event unstick {id}");
+        return gateway.Run<Outcome>(Kinds["event unstick"], Actor.Admin, () => ops.OpUnstick(id), ActionGateway.Denied);
+    }
+
     static Outcome? BadId(string id) =>
         CommandArgs.EventId(id).Error is { } error ? Outcome.Refused(error, RefusalCode.BadArg, "id") : null;
 
@@ -208,7 +225,7 @@ public sealed class AdminFlows(IAdminOps ops, ActionGateway gateway, PurgeArming
     // ---- the wire twins (raphael-api-admin D3-D7, D12): one line per twin ----
 
     /// <summary>The event twin's verbs; any other, list and info included, is badarg arg=verb.</summary>
-    public static readonly IReadOnlyList<string> EventVerbs = ["start", "stop", "enable", "disable", "set", "reload", "new", "copy", "delete"];
+    public static readonly IReadOnlyList<string> EventVerbs = ["start", "stop", "enable", "disable", "set", "reload", "new", "copy", "delete", "unstick"];
 
     /// <summary>`.nyar api event &lt;verb&gt; …`: the rate gate, the verb, the argument count, then the verb's flow.</summary>
     public string ApiEvent(AdminCaller who, string verb, string id, string field, string value, string extra)
@@ -218,7 +235,7 @@ public sealed class AdminFlows(IAdminOps ops, ActionGateway gateway, PurgeArming
         if (!EventVerbs.Contains(verb)) return BadArg(cmd, verb, "verb");
         var bad = verb switch
         {
-            "start" or "stop" or "enable" or "disable" => Need(("id", id)) ?? Surplus(field, value, extra),
+            "start" or "stop" or "enable" or "disable" or "unstick" => Need(("id", id)) ?? Surplus(field, value, extra),
             "set" => Need(("id", id), ("field", field), ("value", value)) ?? Surplus(extra),
             "reload" => Surplus(id, field, value, extra),
             "new" => Need(("id", id), ("pillar", field)) ?? Surplus(value, extra),
@@ -238,6 +255,7 @@ public sealed class AdminFlows(IAdminOps ops, ActionGateway gateway, PurgeArming
             "reload" => Twin(cmd, verb, () => ReloadEvents(api), o => Wire.Done(cmd, verb, "-", Keys(o, "count"))),
             "new" => Twin(cmd, verb, () => New(api, id, field), o => Wire.Done(cmd, verb, id, Keys(o, "pillar"))),
             "copy" => Twin(cmd, verb, () => Copy(api, id, field), _ => Wire.Done(cmd, verb, field, ("from", id))),
+            "unstick" => Twin(cmd, verb, () => Unstick(api, id), o => ApiLines.Unstick(id, o)),                     // unit-watch D13
             _ => Twin(cmd, verb, () => DeleteEvent(api, id, field == "confirm"), o => Wire.Done(cmd, verb, id, Keys(o, "confirm", "done"))),
         };
     }

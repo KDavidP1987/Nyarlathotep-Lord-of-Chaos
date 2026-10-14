@@ -393,4 +393,18 @@ sealed class FakeAdminOps : IAdminOps
         Call($"pillar {name} {state}");
         return After($"pillar {name} {state}", PillarCommand.Switch(name, state));
     }
+
+    /// <summary>The unit watch `event unstick` drives (unit-watch D12), as Services/AdminOps reaches it: the phase, its
+    /// world (null: no watch wired, the interface's default refusal) and the cfg keys.</summary>
+    public UnitWatchPhase Watch { get; } = new();
+    public IUnitWatchWorld? WatchWorld { get; set; }
+    public WatchSettings WatchSettings { get; set; } = WatchSettings.Default;
+
+    public Outcome OpUnstick(string id)
+    {
+        Call($"unstick {id}");
+        return WatchWorld is { } w
+            ? Watch.Unstick(id, Definitions.Find(id) is not null, Engine.Find(id), w, WatchSettings, Now, Lib.Log.Add)
+            : Outcome.Refused("unit watch is not running", RefusalCode.State, "id");
+    }
 }

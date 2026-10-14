@@ -40,6 +40,11 @@ public static class ApiLines
         _ => "manual",
     };
 
+    /// <summary>`.nyar api event unstick &lt;id&gt;`'s ok line (unit-watch D13): `[NYAR:ok] cmd=event verb=unstick id=&lt;id&gt;
+    /// marked=&lt;n&gt; fighting=&lt;f&gt;`, the counts from the flow's outcome.</summary>
+    public static string Unstick(string id, Outcome done) =>
+        Wire.Done("event", "unstick", id, ("marked", done.Field("marked") ?? "0"), ("fighting", done.Field("fighting") ?? "0"));
+
     /// <summary>`api status`: one row per active event, then one per event whose units still wait out the grace
     /// (state=ending), then `[NYAR:end] cmd=status count=`. <paramref name="unitsByEvent"/> counts, per event id, the
     /// tracked units of a waves event and the NPCs holding an Empower event's carrier; the count is shown only when

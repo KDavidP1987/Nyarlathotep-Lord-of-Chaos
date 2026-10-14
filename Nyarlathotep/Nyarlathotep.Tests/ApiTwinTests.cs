@@ -7,7 +7,7 @@ namespace Nyarlathotep.Tests;
 /// <summary>raphael-api-admin D3-D6: the `.nyar api` twins over the flows and the fakes. Each twin answers one line; it
 /// reaches the fake op only after the gateway ran its verb's kind (the rig's gateway records "gate &lt;kind&gt;" into
 /// Ops.Calls); its log line is the human command's with "api " in front; the rate gate runs before everything.</summary>
-public class ApiTwinTests
+public partial class ApiTwinTests
 {
     static string Event(Rig r, string verb, string id = "", string field = "", string value = "", string extra = "") =>
         r.Flows.ApiEvent(r.Who, verb, id, field, value, extra);

@@ -31,7 +31,7 @@ public partial class ContractDocTests
         var m = Regex.Match(Contract, @"\*\*Current api:\*\* (\d+)");
         Assert.True(m.Success);
         Assert.Equal(Wire.Api, int.Parse(m.Groups[1].Value));
-        Assert.Equal(7, Wire.Api);   // faction-empowerment D11, raphael-api-admin D10, regions D10, automation D17, revenge D15
+        Assert.Equal(8, Wire.Api);   // faction-empowerment D11, raphael-api-admin D10, regions D10, automation D17, revenge D15, unit-watch D13
     }
 
     [Theory]

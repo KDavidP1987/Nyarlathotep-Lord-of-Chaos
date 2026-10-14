@@ -63,7 +63,8 @@
         "swarm › build outputs",
         "hunting-grounds › build outputs",
         "revenge › build outputs",
-        "apocalypse › build outputs"
+        "apocalypse › build outputs",
+        "unit-watch › build outputs"
       ]
     },
     {
@@ -100,7 +101,8 @@
         "revenge › release zip",
         "revenge › tag and GitHub release v0.11.0",
         "apocalypse › release zip",
-        "apocalypse › tag and GitHub release v0.13.0"
+        "apocalypse › tag and GitHub release v0.13.0",
+        "unit-watch › release zip, tag and GitHub release v0.13.0"
       ]
     },
     {
@@ -155,7 +157,8 @@
       "singleCopy": true,
       "rows": [
         "event-library › Pillar switches",
-        "wave-sets › cfg Scoreboard.IncludeAdmins"
+        "wave-sets › cfg Scoreboard.IncludeAdmins",
+        "unit-watch › [UnitWatch] Enabled, StuckSeconds, StallMinutes"
       ]
     },
     {
@@ -389,7 +392,8 @@
         "swarm › snapshot",
         "hunting-grounds › snapshot",
         "revenge › snapshot",
-        "apocalypse › snapshot"
+        "apocalypse › snapshot",
+        "unit-watch › snapshot"
       ],
       "location": "%TEMP%\\nyar-snap-* (saved\\manifest.json plus the copies)",
       "owner": "tools/dev-snapshot.ps1",
@@ -502,9 +506,10 @@
         "nyar-sw*-logs",
         "nyar-hg*-logs",
         "nyar-rv*-logs",
-        "nyar-apo*-logs"
+        "nyar-apo*-logs",
+        "nyar-uw*-logs"
       ],
-      "location": "%TEMP%\\nyar-s<n>-logs (copies of LogOutput.log and NyarDev.log taken by hand during event-library Sessions 4 and 5); %TEMP%\\nyar-ws<n>-logs (wave-sets Session 1); %TEMP%\\nyar-sw<n>-logs (swarm Session 1); %TEMP%\nyar-hg<n>-logs (hunting-grounds Sessions 1-2); %TEMP%\\nyar-rv<n>-logs (revenge sessions); %TEMP%\\nyar-apo<n>-logs (apocalypse spike and sessions)",
+      "location": "%TEMP%\\nyar-s<n>-logs (copies of LogOutput.log and NyarDev.log taken by hand during event-library Sessions 4 and 5); %TEMP%\\nyar-ws<n>-logs (wave-sets Session 1); %TEMP%\\nyar-sw<n>-logs (swarm Session 1); %TEMP%\nyar-hg<n>-logs (hunting-grounds Sessions 1-2); %TEMP%\\nyar-rv<n>-logs (revenge sessions); %TEMP%\\nyar-apo<n>-logs (apocalypse spike and sessions); %TEMP%\\nyar-uw<n>-logs (unit-watch spike and sessions)",
       "owner": "Claude during a server session",
       "retention": "the session that made them",
       "deletion": "deleted once the session is recorded; later sessions copy to nyar-soak-* instead; a leftover fails -Paths",
@@ -520,7 +525,8 @@
         "swarm › session log copies",
         "hunting-grounds › session log copies",
         "revenge › session log copies",
-        "apocalypse › session log copies"
+        "apocalypse › session log copies",
+        "unit-watch › session log copies"
       ]
     },
     {
@@ -595,7 +601,9 @@
         "revenge › review prompts",
         "revenge › Claude's scratchpad (Codex prompts and outputs, drafts, isolated dry-run copies)",
         "apocalypse › review prompts",
-        "apocalypse › Claude's scratchpad (Codex prompts and outputs, drafts)"
+        "apocalypse › Claude's scratchpad (Codex prompts and outputs, drafts)",
+        "unit-watch › review prompts",
+        "unit-watch › Claude's scratchpad (Codex prompts and outputs, planted-fault copies)"
       ]
     },
     {
@@ -682,7 +690,8 @@
         "event-spawns › health and failure-streak state",
         "automation › health and failure-streak state",
         "swarm › arena check streak and health entry",
-        "hunting-grounds › lock and hunt streaks and health entries"
+        "hunting-grounds › lock and hunt streaks and health entries",
+        "unit-watch › failure streaks and health entries"
       ]
     },
     {
@@ -784,7 +793,9 @@
         "hunting-grounds › dev marks",
         "revenge › vrclient outputs",
         "apocalypse › vrclient outputs",
-        "apocalypse › NyarDevTools hop command (spike)"
+        "apocalypse › NyarDevTools hop command (spike)",
+        "unit-watch › vrclient outputs",
+        "unit-watch › dev marks"
       ]
     },
     {
@@ -859,6 +870,22 @@
       "singleCopy": false,
       "rows": [
         "revenge › heat rows, warning states, due players, cooldowns"
+      ]
+    },
+    {
+      "artifact": "Unit watch records",
+      "covers": [],
+      "location": "memory (Logic/UnitWatch.cs UnitWatchPhase and its FightBook), in the server process",
+      "owner": "Logic/UnitWatch.cs (the watch phase and the fight read)",
+      "retention": "a watch row while its unit and event live; a fight time while the unit is tracked; a stall clock while its wave waits; the counts while the instance runs; players' positions for one check",
+      "deletion": "at the unit's death or despawn, the wave's clear, the event's end (unit-watch D11), a purge or pillar off (D10), the next check for players' positions, or a restart; never logged or saved (D17)",
+      "singleCopy": false,
+      "rows": [
+        "unit-watch › watch row per unit (window start position and time, last fight time, mark reason, tries, last try time)",
+        "unit-watch › fight time per unit",
+        "unit-watch › stall clock per wave",
+        "unit-watch › watch counts per instance (stuck now, recovered, removed)",
+        "unit-watch › players' positions for one check"
       ]
     }
   ]

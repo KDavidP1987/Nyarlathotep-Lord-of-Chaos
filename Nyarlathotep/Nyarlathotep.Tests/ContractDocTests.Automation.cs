@@ -31,7 +31,7 @@ public partial class ContractDocTests
         foreach (var (_, wire) in AutomationTriggers)
             Assert.Contains($"the trigger values lack {wire}", AutomationProblems(Regex.Replace(Contract, $@"(?<![a-z]){wire}(?![a-z])", "x")));
         Assert.Contains("the change log has no api 6 row", AutomationProblems(Contract.Replace("| 6 | 0.8.0 (automation) |", "| 6 | 0.8.0 |")));
-        Assert.Contains("the current api is below 6", AutomationProblems(Contract.Replace("**Current api:** 7", "**Current api:** 5")));
+        Assert.Contains("the current api is below 6", AutomationProblems(Contract.Replace("**Current api:** 8", "**Current api:** 5")));
     }
 
     [Fact]

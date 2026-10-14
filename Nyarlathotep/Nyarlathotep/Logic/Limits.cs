@@ -35,11 +35,18 @@ public static partial class Limits
     public const int ScoreboardPlayers = 200;
     public static readonly IntLimit ShareCooldownSeconds = new("Announcements", "ShareCooldownSeconds", 300, 10, 86400);
     public static readonly IntLimit ShareMaxPerMinute = new("Announcements", "ShareMaxPerMinute", 3, 1, 20);
+    /// <summary>[UnitWatch] (unit-watch D1, design §9 D54): how long a unit stands, or stays off the ground, before the
+    /// watch marks it stuck; each recovery try waits at most this long for an unseen moment (S-10).</summary>
+    public static readonly IntLimit StuckSeconds = new("UnitWatch", "StuckSeconds", 90, 30, 600);
+    /// <summary>[UnitWatch]: the quiet minutes before the stall backstop marks a waits-for-clear wave's leftovers (D9); 0
+    /// turns the backstop off.</summary>
+    public static readonly IntLimit StallMinutes = new("UnitWatch", "StallMinutes", 10, 0, 60);
 
     public static readonly IReadOnlyList<IntLimit> All =
     [
         MaxTrackedUnits, MaxUnitsPerWave, MaxConcurrentEvents, MaxSpawnsPerTick, MaxDespawnsPerTick,
         GraceSeconds, PurgeCooldownSeconds, ManualSpawnLifetimeSeconds, EmpowerBatchPerTick, ShareCooldownSeconds, ShareMaxPerMinute,
+        StuckSeconds, StallMinutes,
     ];
 
     /// <summary>Announcements.WarningOffsets: 1–5 integers of 5–3600 s, deduplicated, sorted descending.

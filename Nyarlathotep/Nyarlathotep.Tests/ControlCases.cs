@@ -34,15 +34,19 @@ public static class ControlCases
     public const string HuntingGrounds = "hunting-grounds";
     public const string Revenge = "revenge";
     public const string Apocalypse = "apocalypse";
+    public const string UnitWatch = "unit-watch";
 
     /// <summary>The plans whose controls the table lists; each is copied to the test output under Resources/.</summary>
-    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm, HuntingGrounds, Revenge, Apocalypse];
+    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm, HuntingGrounds, Revenge, Apocalypse, UnitWatch];
 
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
         // apocalypse: step 5 the release
         new(Apocalypse, "D33", 5, "0.13.0"), new(Apocalypse, "D34", 5, "0.13.0"), new(Apocalypse, "D35", 5, "0.13.0"),
+        // unit-watch: step 3 the services and the dependency suite, step 5 the release
+        new(UnitWatch, "D18", 3, "0.13.0"), new(UnitWatch, "D20", 3, "0.13.0"), new(UnitWatch, "D28", 3, "0.13.0"),
+        new(UnitWatch, "D30", 5, "0.13.0"), new(UnitWatch, "D31", 5, "0.13.0"), new(UnitWatch, "D32", 5, "0.13.0"), new(UnitWatch, "D33", 5, "0.13.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -62,7 +66,7 @@ public static class ControlCases
         "EndPathTests", "WavePrecedenceTests", "SpawnsDependencyFailureTests", "AutomationTests", "AutomationDependencyFailureTests", "SpawnPlacementTests",
         "WaveSetTests", "ScoreboardTests", "WaveSetDependencyFailureTests", "SwarmTests", "SwarmDependencyFailureTests",
         "HuntingGroundsTests", "HuntingGroundsDependencyFailureTests", "RevengeTests", "BossWaveTests", "RevengeDependencyFailureTests",
-        "ApocalypseTests", "ApocalypseStateTests", "ApocalypseDependencyFailureTests",
+        "ApocalypseTests", "ApocalypseStateTests", "ApocalypseDependencyFailureTests", "UnitWatchTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -823,5 +827,51 @@ public static class ControlCases
         T("D36", "Bosses", "ApocalypseTests", ["a_boss_rises_early_or_a_clamp_drops_it_first", "a_run_ends_won_while_a_boss_lives_or_a_resume_misses_one",
              "a_grown_hordes_count_drops_a_living_boss_from_the_record", "two_entries_of_one_prefab_rebuild_with_the_wrong_modifiers"],
             ["the_last_horde_brings_its_bosses"], ["no_bosses_key"]) with { Plan = Apocalypse },
+        // unit-watch step 2
+        T("D1", "UnitWatch", "ConfigClampTests", ["a_default_differs", "an_out_of_range_value_is_taken", "stall_zero_leaves_the_backstop_on",
+            "a_definition_or_state_gains_a_property"], ["cfg_keys_as_planned"], ["in_range_values_pass_silently"]) with { Plan = UnitWatch },
+        T("D2", "Standing", "UnitWatchTests", ["a_unit_standing_with_a_player_at_39_m_is_not_stuck", "a_unit_with_the_nearest_player_at_41_m_is_stuck",
+            "a_unit_that_fought_at_80_s_is_stuck_at_91_s", "a_unit_that_moved_5_5_m_is_stuck", "a_unit_moved_by_a_jump_is_stuck",
+            "a_unit_holding_a_player_target_is_not_stuck", "a_roamer_or_horde_unit_is_skipped", "a_spawn_or_earlier_instance_unit_is_checked"],
+            ["wave_unit_beside_a_player_marked_once"], ["no_player_no_mark"]) with { Plan = UnitWatch },
+        T("D3", "OffGround", "UnitWatchTests", ["below_min_y_or_far_below_ground_is_not_stuck", "no_grounded_level_is_not_stuck", "one_reading_marks",
+            "two_readings_5_s_apart_mark", "grounded_at_a_neighbouring_level_marks", "a_unit_that_fought_is_marked", "an_unanswered_or_throwing_read_marks",
+            "a_roamer_or_horde_unit_is_skipped"], ["sunk_unit_marked_after_10_s"], ["grounded_units_never_read_off"]) with { Plan = UnitWatch },
+        T("D4", "Fight", "UnitWatchTests", ["a_hit_with_a_player_is_not_reported", "a_hit_between_npcs_is_a_fight", "an_untracked_unit_gets_a_row",
+            "a_row_outlives_its_unit", "a_row_holds_a_player", "a_target_at_5_5_m_counts_as_fought"], ["hit_or_close_target_both_fight"], ["no_hit_no_row"])
+            with { Plan = UnitWatch },
+        T("D5", "Landing", "UnitWatchTests", ["a_unit_moves_with_a_player_at_99_m", "a_landing_is_within_50_m_of_a_player", "a_landing_is_in_territory_or_out_of_scope",
+            "a_landing_leaves_the_arena", "a_landing_is_not_walkable", "the_order_is_not_group_player_anchor", "a_player_landing_misses_the_ring",
+            "the_return_point_stays_behind", "an_untracked_or_other_unit_moves", "a_check_moves_an_eleventh_unit"], ["group_landing_unseen"],
+            ["nothing_marked_nothing_moved"]) with { Plan = UnitWatch },
+        T("D6", "Tries", "UnitWatchTests", ["a_third_try_is_made", "one_failed_try_removes", "a_failed_landing_or_seen_wait_is_not_counted",
+            "a_unit_that_fought_keeps_its_count", "a_stall_mark_clears_by_walking", "a_removal_skips_the_despawn_budget", "a_removal_waits_past_stuck_seconds",
+            "a_try_queues_a_spawn", "a_seen_marked_unit_that_fought_is_removed", "a_throwing_landing_halts_the_watch"], ["two_tries_then_removal"], ["a_cleared_unit_starts_over"]) with { Plan = UnitWatch },
+        T("D7", "Gone", "UnitWatchTests", ["the_next_wave_waits_for_a_removed_unit", "the_last_wave_is_not_defeated", "a_removed_horde_unit_keeps_its_horde",
+            "the_record_counts_a_removed_unit"], ["removal_clears_the_wave"], ["no_removal_wave_waits"]) with { Plan = UnitWatch },
+        T("D8", "NoCredit", "UnitWatchTests", ["a_removal_credits_a_kill", "a_killed_marked_unit_loses_its_credit"], ["removal_says_no_kill_credit"],
+            ["no_removal_no_line"]) with { Plan = UnitWatch },
+        T("D9", "Stall", "UnitWatchTests", ["it_fires_before_stall_minutes", "it_fires_after_a_death_or_a_fight", "an_after_seconds_growth_or_units_wave_is_watched",
+            "an_apocalypse_fires_before_its_last_horde", "zero_minutes_fires"], ["quiet_wave_marked_at_ten_minutes"], ["no_decided_wave_no_clock"])
+            with { Plan = UnitWatch },
+        T("D10", "Controls", "UnitWatchTests", ["watch_off_marks_moves_or_removes", "a_purge_or_pillar_off_leaves_a_row", "a_check_spends_a_121st_walk_check",
+            "a_removal_skips_the_despawn_budget", "an_untracked_unit_is_touched"], ["watch_within_its_caps"], ["no_event_no_check"]) with { Plan = UnitWatch },
+        T("D11", "EndPaths", "UnitWatchTests", ["a_record_outlives_the_end", "a_line_follows_the_end", "a_resumed_unit_keeps_its_row"], ["stop_leaves_nothing"],
+            ["no_event_no_record"]) with { Plan = UnitWatch },
+        T("D12", "UnitWatch", "EventAdminTests", ["a_fighting_unit_is_marked", "an_idle_unit_is_not_marked", "a_reply_exceeds_480_bytes",
+            "a_refusal_changes_anything", "a_missing_id_or_surplus_word_runs", "the_design_row_is_missing"], ["unstick_marks_the_idle_units"],
+            ["all_fighting_marks_none"]) with { Plan = UnitWatch },
+        T("D13", "UnitWatch", "ApiTwinTests", ["the_ok_line_differs", "a_refusal_answers_ok_or_changes_a_unit", "a_code_or_reason_differs",
+            "the_twin_skips_the_rate", "a_push_kind_is_added_or_the_api_is_not_8"], ["ok_line"], ["unwired_watch_refuses_with_state"]) with { Plan = UnitWatch },
+        T("D14", "UnitWatch", "ContractDocTests", ["a_row_or_the_sentence_is_missing", "the_api_differs", "the_design_rows_differ"], ["contract_and_design"],
+            ["documents"]) with { Plan = UnitWatch },
+        T("D15", "UnitWatch", "AuthoringTests", ["a_running_event_lacks_the_line_or_a_count_is_wrong", "an_idle_event_shows_one", "a_line_exceeds_480_bytes",
+            "watch_off_shows_counts", "another_line_changes"], ["running_line"], ["not_running_no_line"]) with { Plan = UnitWatch },
+        T("D16", "Lines", "UnitWatchTests", ["a_change_logs_no_line_or_two", "a_quiet_check_logs_a_line", "the_waiting_line_repeats", "a_shape_differs",
+            "an_in_view_removal_lacks_in_view"], ["the_six_shapes"], ["a_quiet_check_logs_nothing"]) with { Plan = UnitWatch },
+        T("D17", "UnitWatch", "PrivacyTests", ["a_planted_player_reaches_a_line", "state_gains_a_property"], ["lines_carry_our_units_only"], ["no_watch_no_line"])
+            with { Plan = UnitWatch },
+        T("D21", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit", "pending_at_release"],
+            ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = UnitWatch },
     ];
 }
