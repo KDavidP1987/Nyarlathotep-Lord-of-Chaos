@@ -184,13 +184,18 @@ public partial class ApocalypseTests
     [Fact]
     public void March_fails_when_a_hop_gives_up_after_one_unwalkable_point()
     {
-        // only ground 15 m east of the front is walkable: the hop still lands there, within 25 m of the front
+        // only one point of the 15 m ring around the landing centre (7.5 m ahead of the front) is walkable: the hop still lands
+        // there, within 25 m of the centre
         var front = new Front(1, 0, 0, 500, 0);
+        Assert.Equal((7.5f, 0f), HopRule.Ahead(front));
         var unit = new RegionUnit(42, "apo", T0, 0, 0, 300, 3);
-        bool Walkable(float x, float z, byte level) => Math.Abs(x - 15) < 0.5 && Math.Abs(z) < 0.5;
+        var (gx, gz) = HopRule.Rings(7.5f, 0f, 0).ElementAt(1 + 8 + 3);
+        bool Walkable(float x, float z, byte level) => Math.Abs(x - gx) < 0.5 && Math.Abs(z - gz) < 0.5;
         var hop = HopRule.Land(unit, front, 0, 1, Walkable, _ => 0f, new WalkBudget());
         Assert.NotNull(hop);
-        Assert.True(Apocalypse.Distance(hop!.Value.X, hop.Value.Z, front.X, front.Z) <= 25);
+        Assert.True(Apocalypse.Distance(hop!.Value.X, hop.Value.Z, 7.5f, 0f) <= 25);
+        // near the goal the centre is the goal itself, never past it
+        Assert.Equal((500f, 0f), HopRule.Ahead(new Front(1, 0, 0, 500, 0) { X = 495 }));
         // nothing walkable within 25 m: no hop, and the budget bounds the search
         var budget = new WalkBudget(1000);
         Assert.Null(HopRule.Land(unit, front, 0, 1, (_, _, _) => false, _ => 0f, budget));
@@ -205,6 +210,28 @@ public partial class ApocalypseTests
         Assert.True(HopRule.Ground(100, 0, 3, Walkable, new WalkBudget()));
         // no ground at any level within reach: held
         Assert.False(HopRule.Ground(100, 0, 3, (_, _, _) => false, new WalkBudget()));
+    }
+
+    [Fact]
+    public void March_fails_when_frozen_units_fall_behind_between_hops()
+    {
+        // the game disables NPCs with no player near, so between hops a unit stands still (session 1: 4-6 of 8 kept up);
+        // ticked each second for two minutes of march, at least 80 % of the horde is within 30 m of the front at every tick
+        var rig = ApocalypseDependencyFailureTests.Running();
+        Assert.Equal(1, rig.Tick(T0.AddMinutes(1)).Rose);
+        rig.Game.SpawnAll(rig.Host, T0.AddMinutes(1));
+        var front = rig.Host.Run!.Fronts[1];
+        var horde = rig.Game.Ledger.Units.Where(u => Apocalypse.HordeOfWave(u.Wave) == 1).Select(u => u.Key).ToList();
+        var worst = 1.0;
+        for (var s = 1; s <= 120; s++)
+        {
+            var now = T0.AddMinutes(1).AddSeconds(s);
+            rig.Tick(now);
+            if (s < 11 || front.Percent >= 100) continue;                    // the 10 s unobserved window first
+            var near = horde.Count(k => Apocalypse.Distance(rig.Game.Positions[k].X, rig.Game.Positions[k].Z, front.X, front.Z) <= Apocalypse.KeepUpRange);
+            worst = Math.Min(worst, near / (double)horde.Count);
+        }
+        Assert.True(worst >= Apocalypse.KeepUpShare, $"worst keep-up share {worst:0.00}");
     }
 
     // ---- D15 (review L1): an outcome's cancelled orders count as failed, not pending

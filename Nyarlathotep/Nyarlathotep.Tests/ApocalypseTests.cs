@@ -510,6 +510,34 @@ public partial class ApocalypseTests
     }
 
     [Fact]
+    public void March_fails_when_an_unobserved_front_holds_for_good_before_a_river()
+    {
+        // the front at x 0 heading for (500, 0); x 2..60 is water: unobserved, it crosses to the first walkable point (A12)
+        bool Dry(float x, float z) => x < 1 || x > 60;
+        var f = FrontAt();
+        Assert.Equal(MarchStep.Moved, MarchRule.Step(f, 20, 2.0, 1, [], Dry, T0, out var line));
+        Assert.Equal(62f, f.X, 3);                                              // 2 m of step + 15 m strides: 17, 32, 47, 62
+        Assert.Equal("horde 1 crossed 62 m of unwalkable ground", line);
+        // watched (a player within 100 m in the last 10 s): it holds as before
+        var w = FrontAt();
+        w.LastWatchedUtc = T0.AddSeconds(-5);
+        Assert.Equal(MarchStep.HeldNoGround, MarchRule.Step(w, 20, 2.0, 1, [], Dry, T0, out line));
+        Assert.Equal("horde 1 held: no walkable ground ahead", line);
+        Assert.Equal(0f, w.X, 3);
+        // a player within 100 m right now: held
+        var p = FrontAt();
+        Assert.Equal(MarchStep.HeldNoGround, MarchRule.Step(p, 20, 2.0, 1, [(-90f, 0f)], Dry, T0, out _));
+        // nothing walkable within 120 m: held
+        var far = FrontAt();
+        Assert.Equal(MarchStep.HeldNoGround, MarchRule.Step(far, 20, 2.0, 1, [], (x, _) => x < 1 || x > 130, T0, out line));
+        Assert.Equal("horde 1 held: no walkable ground ahead", line);
+        // never past the goal: 40 m short of it with only the goal dry, it lands on the goal
+        var g = FrontAt(460);
+        Assert.Equal(MarchStep.AtGoal, MarchRule.Step(g, 20, 2.0, 1, [], (x, _) => x >= 500, T0, out _));
+        Assert.Equal(500f, g.X, 3);
+    }
+
+    [Fact]
     public void March_fails_when_steps_repeat_or_stragglers_move_while_watched()
     {
         var f = FrontAt();

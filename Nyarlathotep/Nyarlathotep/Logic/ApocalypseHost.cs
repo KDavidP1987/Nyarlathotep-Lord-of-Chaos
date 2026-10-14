@@ -67,23 +67,38 @@ public sealed record ApocalypseStep(ApocalypseResult Result, int? Rose = null, i
 public readonly record struct SpreadRead(ScoreSides Sides, (float X, float Z) Victim);
 
 /// <summary>A straggler's hop landing (D6, the step-1 verdict "go — hop"): a walkable point within
-/// <see cref="Radius"/> m of the front at the unit's own level or a neighbouring one, then the wide levels.</summary>
+/// <see cref="Radius"/> m of a spot <see cref="Lead"/> m ahead of the front, at the unit's own level or a neighbouring one,
+/// then the wide levels.</summary>
 public static class HopRule
 {
-    public const float Radius = 10f;
+    public const float Radius = 8f;
+
+    /// <summary>How far ahead of the front a landing is centred, towards the goal and never past it: the front walks on until
+    /// the next hop, so units landed a little ahead stay within 30 m of it longest (session 1).</summary>
+    public const float Lead = 7.5f;
+
+    /// <summary>The landing centre: <see cref="Lead"/> m from the front towards the goal, or the goal when it is nearer.</summary>
+    public static (float X, float Z) Ahead(Front front)
+    {
+        var left = Apocalypse.Distance(front.X, front.Z, front.GoalX, front.GoalZ);
+        if (left <= Lead) return (front.GoalX, front.GoalZ);
+        var t = Lead / left;
+        return (front.X + (front.GoalX - front.X) * t, front.Z + (front.GoalZ - front.Z) * t);
+    }
 
     public static RegionJump? Land(RegionUnit u, Front front, int i, int n, Func<float, float, byte, bool> walkable, Func<byte, float> heightOf,
         WalkBudget budget)
     {
         // the unit's own slot first, at every level; then the front point and rings of 8 points out to 25 m at the unit's
         // level and its neighbours (session 1: one point per unit left 9 of 16 hops unlanded on rough ground)
-        var (x, z) = SpawnLedger.Around(front.X, front.Z, Radius, i, n, 0.0);
+        var (cx, cz) = Ahead(front);
+        var (x, z) = SpawnLedger.Around(cx, cz, Radius, i, n, 0.0);
         foreach (var level in WalkLevels.Spot(u.Level).Concat(WalkLevels.Wide(u.Level)))
         {
             if (!budget.TryTake(2)) return null;
             if (walkable(x, z, level)) return new RegionJump(u.Key, x, heightOf(level), z, level, float.MaxValue);
         }
-        foreach (var (px, pz) in Rings(front.X, front.Z, i))
+        foreach (var (px, pz) in Rings(cx, cz, i))
             foreach (var level in WalkLevels.Spot(u.Level))
             {
                 if (!budget.TryTake(2)) return null;

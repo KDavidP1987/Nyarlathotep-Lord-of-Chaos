@@ -31,6 +31,16 @@ public static class Apocalypse
     public const float KeepUpRange = 30f;
     /// <summary>The share of a horde's living units that keeps up with its front while unobserved (D6).</summary>
     public const double KeepUpShare = 0.8;
+
+    /// <summary>How far from the front a unit stands before a hop moves it (D6's mechanism): half the keep-up range, so a
+    /// unit the game leaves standing still (no player near) is re-hopped long before it falls 30 m back (session 1: 4-6 of 8
+    /// kept up when units were re-hopped only past 30 m).</summary>
+    public const float HopGap = 15f;
+
+    /// <summary>How far ahead an unobserved front looks for walkable ground before it holds (D6, A12), in steps of
+    /// <see cref="CrossStep"/> m: a straight line to the goal crosses rivers and cliffs.</summary>
+    public const float CrossReach = 120f;
+    public const float CrossStep = 15f;
     /// <summary>A horde is unobserved after no player stood within <see cref="WatchRange"/> m of it for this long (D6).</summary>
     public static readonly TimeSpan Unobserved = TimeSpan.FromSeconds(10);
     public const float WatchRange = 100f;
@@ -458,6 +468,23 @@ public static class MarchRule
         var nz = front.Z + (front.GoalZ - front.Z) / left * step;
         if (!walkable(nx, nz))
         {
+            // unobserved, the front crosses to the next walkable point on its line within 120 m, never past the goal (A12)
+            if (IsUnobserved(front, utcNow))
+            {
+                var reach = Math.Min(step + Apocalypse.CrossReach, left);
+                for (var d = step + Apocalypse.CrossStep; d - Apocalypse.CrossStep < reach - 1e-3; d += Apocalypse.CrossStep)
+                {
+                    var far = Math.Min(d, reach);
+                    var cx = front.X + (front.GoalX - front.X) / left * far;
+                    var cz = front.Z + (front.GoalZ - front.Z) / left * far;
+                    if (!walkable(cx, cz)) continue;
+                    line = CrossedLine(front.Horde, far);
+                    front.HeldNoGround = false;
+                    front.X = cx;
+                    front.Z = cz;
+                    return Apocalypse.Distance(cx, cz, front.GoalX, front.GoalZ) <= 0 ? MarchStep.AtGoal : MarchStep.Moved;
+                }
+            }
             if (!front.HeldNoGround) line = HeldLine(front.Horde);
             front.HeldNoGround = true;
             return MarchStep.HeldNoGround;
@@ -470,6 +497,9 @@ public static class MarchRule
 
     /// <summary>"horde &lt;k&gt; held: no walkable ground ahead" (D6).</summary>
     public static string HeldLine(int horde) => $"horde {horde} held: no walkable ground ahead";
+
+    /// <summary>"horde &lt;k&gt; crossed &lt;d&gt; m of unwalkable ground" (D6, A12).</summary>
+    public static string CrossedLine(int horde, float metres) => $"horde {horde} crossed {metres:0} m of unwalkable ground";
 
     /// <summary>The 25 % steps <paramref name="front"/> crossed since the last call, each once (D7).</summary>
     public static IReadOnlyList<int> NewSteps(Front front)
@@ -500,13 +530,13 @@ public static class MarchRule
         if (Near(front.X, front.Z) || units.Any(u => Near(u.X, u.Z))) front.LastWatchedUtc = utcNow;
     }
 
-    /// <summary>The units more than 30 m from the front, the ones a hop moves while the horde is unobserved; none while it is
+    /// <summary>The units more than <see cref="Apocalypse.HopGap"/> (15 m) from the front, the ones a hop moves while the horde is unobserved; none while it is
     /// observed, and never one with a player within 100 m of it (D6, S-9: our own units only, never while a player is
     /// near).</summary>
     public static IReadOnlyList<long> Stragglers(Front front, IEnumerable<(long Key, float X, float Z)> units, IReadOnlyList<(float X, float Z)> players,
         DateTime utcNow) =>
         !IsUnobserved(front, utcNow) ? []
-        : units.Where(u => Apocalypse.Distance(u.X, u.Z, front.X, front.Z) > Apocalypse.KeepUpRange
+        : units.Where(u => Apocalypse.Distance(u.X, u.Z, front.X, front.Z) > Apocalypse.HopGap
                            && !players.Any(p => Apocalypse.Distance(p.X, p.Z, u.X, u.Z) <= Apocalypse.WatchRange))
             .Select(u => u.Key).ToList();
 
