@@ -181,6 +181,17 @@ cancel the walk; Pathfinder.MaxExpansions 4000 means short chained legs; buff an
 (save pollution: track and remove them); arriving is not attacking (aggro still needs a target within about 60 m).
 Scheduled with the pathing study in the 1.0 order (design §9 D55) unless the owner moves it.
 
+**Probe 1, 2026-10-14** (tools/vrclient/scenarios/pathing-walkto.vrs, NyarDevTools `.devwalkto`; logs
+%TEMP%
+yar-uw0-logs\walkto-*): Valyr's WalkToPos buff (131220609, Translation = the ravine mark, lifetime 120 s,
+re-solve every 1 s, AmplifyBuff removed) on 5 tracked CHAR_Spider_Forest at the pond, Chaos 70 m away so they stayed idle.
+**3 of 5 walked the 110 m to the mark** (intermediate readings 86-95 m at 5 s, so a walk, not a jump; at the mark within
+0-4 m by 20 s) and stayed there for the next 60 s without walking home (state Idle, SpawnTransform still the pond);
+**2 of 5 never moved** (109 m and 114 m at every reading; cause unproven: a path the solver could not find from the
+water's edge, or the buff's spell target). Lucie's buff was not reached (the purge cooldown refused part (b)'s spawn;
+the scenario now kills instead). -LogCheck 0 unhandled. Verdict: **WalkToPos is a usable walk lever** for a coordinate;
+next probes: why 2 of 5 stood, a 300 m+ leg, a castle-heart target, combat on the way.
+
 ## Compatibility watch-list (mods commonly on the same servers)
 
 | Mod | Interaction |

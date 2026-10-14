@@ -1,0 +1,67 @@
+# pathing-walkto.vrs: the pathing probe (design §9 D50, docs/RESEARCH_NOTES.md › Pathing levers). Does the game's own
+# "walk to a position" buff make our spawned units walk (not jump) to a mark about 110 m away? Two buffs: Valyr's
+# WalkToPos (131220609) and Lucie's WalkToPotion (-1341107993). Evidence only: the distances are read from the
+# [DEV UNIT] lines afterwards (a walk shrinks the distance a few metres a second; a jump moves more than 6 m a second).
+#
+# Needs: NyarDevTools with .devwalkto; Chaos invulnerable (`ToggleInvulnerable true` only); marks pond and ravine.
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+# (a) Valyr's WalkToPos: 5 spiders at the pond, Chaos 70 m east so they stay idle and enabled
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+chat .nyar spawn CHAR_Spider_Forest 5
+expect-reply spawned 5 CHAR_Spider_Forest
+wait 8
+chat .devtp -1810 -1640
+expect-log \[DEV TP\]
+wait 6
+chat .devunits -581295882 200 ravine
+expect-log \[DEV UNITS\] n=(?P<N0>[0-9]+)
+chat .devwalkto -581295882 ravine 131220609 120 100 5
+expect-log \[DEV WALKTO\] put=(?P<PUT>[0-9]+) nobuff=(?P<NOBUFF>[0-9]+) buff=131220609 mark=ravine d=(?P<D0>[0-9.]+)
+wait 5
+chat .devunits -581295882 200 ravine
+wait 10
+chat .devunits -581295882 200 ravine
+wait 15
+chat .devunits -581295882 200 ravine
+wait 30
+chat .devunits -581295882 200 ravine
+wait 30
+chat .devunits -581295882 200 ravine
+shot full walkto-valyr
+# a purge would start the 240 s purge cooldown and refuse part (b)'s spawn (run 1): the units are killed instead
+chat .devkill -581295882 200
+expect-log \[DEV KILL\] n=
+wait 10
+# (b) Lucie's WalkToPotion, the same set-up
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+chat .nyar spawn CHAR_Spider_Forest 5
+expect-reply spawned 5 CHAR_Spider_Forest
+wait 8
+chat .devtp -1810 -1640
+wait 6
+chat .devwalkto -581295882 ravine -1341107993 120 100 5
+expect-log \[DEV WALKTO\] put=(?P<PUT2>[0-9]+) nobuff=(?P<NOBUFF2>[0-9]+) buff=-1341107993 mark=ravine d=(?P<D2>[0-9.]+)
+wait 5
+chat .devunits -581295882 200 ravine
+wait 25
+chat .devunits -581295882 200 ravine
+wait 30
+chat .devunits -581295882 200 ravine
+wait 30
+chat .devunits -581295882 200 ravine
+shot full walkto-lucie
+chat .nyar purge
+wait 2
+chat .nyar purge confirm
+wait 10
+console TPHome
+wait 3

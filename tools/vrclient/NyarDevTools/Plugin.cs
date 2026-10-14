@@ -73,7 +73,7 @@ static class DevCommands
     static readonly string MarksPath = Path.Combine(Paths.ConfigPath, "NyarDevTools", "marks.json");
     static string F(float v) => v.ToString("0.0", CultureInfo.InvariantCulture);
 
-    static EntityManager Em
+    internal static EntityManager Em
     {
         get
         {
@@ -82,7 +82,7 @@ static class DevCommands
         }
     }
 
-    static float3? Where(ChatCommandContext ctx)
+    internal static float3? Where(ChatCommandContext ctx)
     {
         var em = Em;
         var c = ctx.Event.SenderCharacterEntity;
@@ -100,7 +100,7 @@ static class DevCommands
         ctx.Reply($"devtp {label} x={F(to.x)} y={F(to.y)} z={F(to.z)}");
     }
 
-    static Dictionary<string, float[]> LoadMarks()
+    internal static Dictionary<string, float[]> LoadMarks()
     {
         try { return File.Exists(MarksPath) ? JsonSerializer.Deserialize<Dictionary<string, float[]>>(File.ReadAllText(MarksPath)) ?? new() : new(); }
         catch { return new(); }
@@ -151,7 +151,7 @@ static class DevCommands
     }
 
     // disabled: also the units of chunks far from every player (devunits' worldwide scouting)
-    static EntityQuery LivingUnits(EntityManager em, bool disabled = false) => em.CreateEntityQuery(new EntityQueryDesc
+    internal static EntityQuery LivingUnits(EntityManager em, bool disabled = false) => em.CreateEntityQuery(new EntityQueryDesc
     {
         All = new[] { ComponentType.ReadOnly<Health>(), ComponentType.ReadOnly<Translation>(), ComponentType.ReadOnly<UnitLevel>(),
             ComponentType.ReadOnly<PrefabGUID>() },
