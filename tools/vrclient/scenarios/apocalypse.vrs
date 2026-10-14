@@ -154,7 +154,7 @@ respawn-coffin 15
 wait 10
 console ToggleInvulnerable true
 wait 2
-expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
+expect-seen apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
 chat .devtp ${H1X} ${H1Z}
 expect-log \[DEV TP\] to
 expect-chat a horde of 8 rises timeout=20
@@ -173,14 +173,14 @@ chat .nyar event info apo-test
 expect-log (^|\] |\\n )horde 1 front at -?[0-9]+ -?[0-9]+, (?P<B1B>[0-9]+) % timeout=10
 # held where Chaos stands; it may have marched while he respawned, but not to the goal margin (200 m, 90 m margin)
 expect-calc ${B1B} == ${B1A} and ${B1A} <= 50
-chat .devkill -1967480038 120
-chat .devkill -1618703048 120
+chat .devkill -1967480038 400
+chat .devkill -1618703048 400
 wait 5
-chat .devkill -1967480038 120
-chat .devkill -1618703048 120
+chat .devkill -1967480038 400
+chat .devkill -1618703048 400
 wait 5
-chat .devkill -1967480038 120
-chat .devkill -1618703048 120
+chat .devkill -1967480038 400
+chat .devkill -1618703048 400
 expect-log apocalypse apo-test horde 1 of 2 destroyed timeout=30
 expect-chat horde 1 of 2 destroyed timeout=20
 # horde 2 (12 units) rises at hotspot 2 six minutes in and marches at Chaos at hotspot 1, holding 60 m short of him
@@ -196,14 +196,17 @@ wait 15
 chat .nyar event info apo-test
 expect-log (^|\] |\\n )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<B2B>[0-9]+) % timeout=10
 expect-calc ${B2B} == ${B2A}
-chat .devkill -1967480038 120
-chat .devkill -1618703048 120
+chat .devkill -1967480038 400
+chat .devkill -1618703048 400
 wait 5
-chat .devkill -1967480038 120
-chat .devkill -1618703048 120
+chat .devkill -1967480038 400
+chat .devkill -1618703048 400
 wait 5
-chat .devkill -1967480038 120
-chat .devkill -1618703048 120
+chat .devkill -1967480038 400
+chat .devkill -1618703048 400
+# any unit left (a straggler the game keeps disabled far from players is out of .devkill's reach): logged for the record
+chat .devunits -1967480038 2000
+chat .devunits -1618703048 2000
 expect-log event apo-test ended: won \(2 of 2 hordes risen\) timeout=60
 expect-log event apo-test scoreboard: 1 players, [0-9]+ kills timeout=10
 expect-chat the living have won timeout=20
