@@ -75,7 +75,9 @@
 - dependency suite: "dependency suite: apocalypse 5/5 (native-read, spread-read, march-read, resume-read, state-write)"
 - in game: Session 1 (D25-D27) apocalypse.vrs run 8 105/106, the miss being chat OCR of a line the server log shows sent;
   Session 2 (D28) prep-restart 34/34 and boot2 23/23; D29 timing run 3 22/22 and "timing span: 10/10 windows under 5 ms"
-  (docs/features/APOCALYPSE.md › Test results); Session 3 (D30) below
+  (docs/features/APOCALYPSE.md › Test results); Session 3 (D30) the 3 h soak: rises on schedule, renewals for all 65 tracked,
+  record gaps at most 60.6 s, -LogCheck "0 unhandled, 3467 nyar lines, 0 orphan errors, 0 unity errors", one slow tick
+  of ours (2298 ms, cause unproven, none in the 2 h 50 min after) — D30 waits on the owner
 - every [Error]/[Warning] of Sessions 1-2 read: ours are the stop, purge and pillar-off end lines and example-empowerment's known pillar
   warning; Beelzebub's TUNE warning and Il2CppInterop's Class::Init warning are not ours
 - dod: D9, D12, D18, D21, D22, D23, D29, D38 verified; D25-D28 wait on the owner's acceptance (rubric 3)
@@ -91,4 +93,8 @@
     unread ground; the march-read category records it (D21), as hunting-grounds' mover does
   - M2 rejected: `game.Announce` only enqueues a line in memory (Services/Announcer.Apocalypse) and cannot fail on the game
 - compile: 0 Warning(s), 0 Error(s); tests 3395/3395
+- in game on the 6e0b901 DLL: apocalypse-timing.vrs SCENARIO PASS 22/22 (apocalypse-timing-20261014-063516.json); no
+  "walk check: none" or read-failing line, horde hops "56 of 59 stragglers moved", 6 roam lines; `-TimingSpan` → "timing span:
+  10/10 windows under 5 ms, tracked >= 50, targets >= 1, 0 slow ticks"; every [Warning] known (stop line, example-empowerment,
+  Beelzebub, Il2CppInterop), no [Error], 0 exceptions in the Unity log
 - Codex runs once more on the release diff only if code changes after the test weekend

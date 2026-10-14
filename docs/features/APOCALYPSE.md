@@ -194,6 +194,30 @@ tracked >= 50, targets >= 1, 0 slow ticks"; the worst window averaged 0.645 ms (
 the scenario, not the mod: a regex read the `event info` list's `\n` as a newline, the span began at the first 10-minute
 health line with 50 tracked so 15 min left only 6 windows, and a castle hop over a window's sample read 0 targets.
 
+### Session 3 · 2026-10-14 · step 3 DLL (the mod at 2b4d93e) · no player near the hordes
+
+**A run of hours (D30)**: apo-soak from `tools/vrclient/fixtures/apo-soak.json` (zombie-apocalypse with a Point goal 6 km
+off the map at (6000, -1334), marchSpeed 0.5, 14400 s), [Limits] MaxUnitsPerWave 20 and MaxTrackedUnits 150,
+Debug.TimingLog on, VerboseLogging off. `apocalypse-soak-start.vrs` SCENARIO PASS 5/5 started it at 07:07:54 UTC; the
+client was then closed and the server ran alone for 3 h 2 min. Log copies: soak-LogOutput.log, soak-NyarDev.log; the
+record's write times sampled every 20 s by `tools/vrclient/soak-sampler.ps1` (soak-state-writes.txt).
+
+- [x] hotspots 3; the four hordes rose 7, 11, 15 and 20 units, each three 10-minute health lines
+  after the one before, so on the 30-minute schedule. The log has no timestamps, so "within 60 s" is read from that
+  spacing, not measured to the second
+- [x] lifetime renewals: eight "renewed <n> lifetimes" lines, alternating 12 (the roamers) and each horde's count, the
+  last "renewed 53 lifetimes", which with the 12 roamers covers all 65 tracked
+- [x] the record: 322 distinct writes from 07:07:56 to 10:09:36, the longest gap 60.6 s (38 gaps over 60 s by under
+  1 s, the write riding on the 60 s state flush)
+- [x] tracked: the health line rose 12, 19, 30, 45, 65 and stayed at 65 (cap 150); "degraded: none" throughout
+- [x] `pwsh tools/preflight.ps1 -LogCheck -ServerPath <dev server>` → "0 unhandled, 3467 nyar lines, 0 orphan errors,
+  0 unity errors, regions 10 polygons"; no [Error] in either log
+- [ ] warnings of ours: example-empowerment's known pillar warning, and one "slow tick: 2298 ms (apocalypse 2294 ms,
+  state flush 4 ms; outside phases 0 ms)" about 13 min in, between horde 1's rise and the next health line; none in the
+  2 h 50 min after. The cause is not proven (the Unity log shows the client's disconnect and the server reconnecting to Steam near then). The DLL from
+  d88dbbc on logs the step's parts ("slow step: …") when a step takes 250 ms or more, so a repeat names its part
+- D30 waits on the owner's acceptance of this record (rubric 3), the slow tick included.
+
 ### Test weekend · about 2026-10-24/25 · the owner with the players (D31)
 
 **Sheet.** Install the Release build of the step-3 commit (`Nyarlathotep.dll` from `Nyarlathotep/Nyarlathotep/bin/Release/net6.0/`)
