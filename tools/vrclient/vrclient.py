@@ -28,8 +28,11 @@ VR_ADDR, VR_CHARACTER, VR_APPID, VR_OUT.
 from __future__ import annotations
 
 import argparse
+import ast
 import difflib
 import json
+import math
+import operator
 import os
 import re
 import shlex
@@ -484,6 +487,52 @@ def close_client() -> None:
         time.sleep(2)
 
 
+# ---------------------------------------------------------------------------------------------------- arithmetic
+_CALC_FUNCS = {"sqrt": math.sqrt, "hypot": math.hypot, "abs": abs, "min": min, "max": max, "round": round,
+               "floor": math.floor, "ceil": math.ceil, "atan2": math.atan2, "cos": math.cos, "sin": math.sin}
+
+
+def calc(expr: str):
+    """Evaluates arithmetic on numbers only (+ - * / // % **, comparisons, and/or/not, the functions in _CALC_FUNCS),
+    for `calc` and `expect-calc` steps: geometry from captured coordinates, bounds on captured counts. No names, no
+    attributes, nothing else is accepted."""
+    def ev(n):
+        if isinstance(n, ast.Expression):
+            return ev(n.body)
+        if isinstance(n, ast.Constant) and isinstance(n.value, (int, float)) and not isinstance(n.value, bool):
+            return n.value
+        if isinstance(n, ast.UnaryOp) and isinstance(n.op, (ast.USub, ast.UAdd, ast.Not)):
+            v = ev(n.operand)
+            return -v if isinstance(n.op, ast.USub) else (+v if isinstance(n.op, ast.UAdd) else not v)
+        if isinstance(n, ast.BinOp):
+            ops = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv,
+                   ast.FloorDiv: operator.floordiv, ast.Mod: operator.mod, ast.Pow: operator.pow}
+            if type(n.op) in ops:
+                return ops[type(n.op)](ev(n.left), ev(n.right))
+        if isinstance(n, ast.BoolOp):
+            vals = [ev(v) for v in n.values]
+            return all(vals) if isinstance(n.op, ast.And) else any(vals)
+        if isinstance(n, ast.Compare):
+            ops = {ast.Lt: operator.lt, ast.LtE: operator.le, ast.Gt: operator.gt, ast.GtE: operator.ge,
+                   ast.Eq: operator.eq, ast.NotEq: operator.ne}
+            left = ev(n.left)
+            for op, right in zip(n.ops, n.comparators):
+                r = ev(right)
+                if type(op) not in ops or not ops[type(op)](left, r):
+                    return False
+                left = r
+            return True
+        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in _CALC_FUNCS and not n.keywords:
+            return _CALC_FUNCS[n.func.id](*[ev(a) for a in n.args])
+        raise ValueError(f"not arithmetic: {ast.dump(n)[:80]}")
+    return ev(ast.parse(expr.strip(), mode="eval"))
+
+
+def _num(v) -> str:
+    """A calc result as a step argument: an integer without a point, else one decimal."""
+    return str(int(v)) if float(v).is_integer() else f"{v:.1f}"
+
+
 # ---------------------------------------------------------------------------------------------------- scenarios
 class Scenario:
     """Runs a .vrs file: one step per line, `#` comments, ${VAR} substitution. Each expect-* is a check; the run
@@ -583,6 +632,23 @@ class Scenario:
                 if m:
                     self.captured.update({k: v for k, v in m.groupdict().items() if v is not None})
             return hit is not None
+        elif op == "calc":
+            # calc NAME = <arithmetic>: the result becomes ${NAME} for later steps (not a check)
+            name, eq, expr = rest.partition("=")
+            name = name.strip()
+            if not eq or not re.fullmatch(r"\w+", name):
+                raise ValueError("calc needs NAME = <expression>")
+            self.captured[name] = _num(calc(expr))
+            log(f"  calc {name} = {self.captured[name]}")
+        elif op == "expect-calc":
+            # expect-calc <comparison>: a check that the arithmetic (after ${VAR} substitution) is true
+            try:
+                ok = bool(calc(rest))
+                detail = "true" if ok else "false"
+            except Exception as e:
+                ok, detail = False, f"not evaluated: {e}"
+            self.check(f"expect-calc {rest}", ok, detail)
+            return ok
         elif op == "expect-no-log":
             pattern, t = self._timeout(rest, 3)
             time.sleep(t)

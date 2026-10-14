@@ -1,21 +1,34 @@
 # apocalypse.vrs: apocalypse Session 1, D25 (the outbreak), D26 (won, lost, survived) and D27 (stop, pillar off, purge).
 # apo-test (tools/vrclient/fixtures/apo-test.json, put into the dev events.json): Faction_Undead, units CHAR_Undead_Guardian
 # (-1967480038) and CHAR_Undead_GhostMilitia_Light (-1618703048) so that `.devkill` spares the native Farbane skeletons,
-# 2 hotspots (minNatives 3), roamers 3 per hotspot (+2 per kill, max 12, 4 a minute, huntRange 40), 2 hordes from 1 min
-# every 5 min (D1's floor is 5; D25 says 3, see the step 3 report), size 8 growth 4, a Point goal "the test camp" at
-# (-1188, -1334), 200 m east of the undead site (-1388, -1334), marchSpeed 3.0, 30 min.
-# The hotspots are read from `.nyar event info apo-test` (hotspot <h>: <region> at <x> <z>) into H1X/H1Z.
-# Holding a front: a front holds while a player is within 60 m of it (D6). Chaos at the goal holds every front 60 m out,
-# outside the 30 m goal radius, so a horde that reaches him neither wins nor loses; Chaos at the pond (about 500 m away)
-# holds nothing, so horde 1 reaches the goal in about 70 s (lost).
-# Runs: (1) won, with D25's checks at hotspot 1; (2) lost, Chaos at the pond, with the roam check (D25); (3) stop at
-# horde 2; (4) pillar spawns off at horde 2; (5) survived, Chaos at the goal for the full 30 min; (6) purge at horde 2,
-# last, for its cooldown. Natives: `.devunits ${UNATIVE} 60` at the undead site before run 1 and after run 6 must give the
-# same n (stands in for D25's `.nyar debug natives`, which the mod lacks: see the step 3 report); the state.json read
-# after the purge (no "Apocalypse" key) is done by hand on the server copy.
-# Needs: a Release DLL of step 3; NyarDevTools (.devgo, .devtp, .devmark, .devdie, .devkill, .devunits) and DevChatEcho;
-# apo-test enabled, zombie-apocalypse and every other spawning definition disabled; [Scoreboard] IncludeAdmins = true;
-# no purge cooldown; marks home and pond; Chaos invulnerable (`ToggleInvulnerable true`, never false).
+# 2 hotspots (minNatives 3, minSpacing 300), roamers 3 per hotspot (+2 per kill, max 12, 4 a minute, huntRange 40), 2 hordes
+# from 1 min every 5 min (D1's floor is 5; D25 says 3, see the step 3 report), size 8 growth 4, marchSpeed 3.0, 30 min, and
+# a Point goal "the test camp" at (-1188, -1334), 200 m east of the undead site (-1388, -1334).
+#
+# Holding a front (D6): a front holds while a player stands within 60 m of it, but no hold applies while the front is
+# within goal.radius + 60 = 90 m of the goal (so an AFK player at the goal cannot block a loss). Chaos therefore never
+# holds at the goal: he stands on a front that is more than 90 m from the goal. A front starts at its hotspot, so Chaos at
+# hotspot 1 (`.nyar event info`: "hotspot 1: <region> at <x> <z>") when horde 1 rises holds it at its origin. Hotspot 2 is
+# 300 m or more from hotspot 1, and Chaos is in one place only, so for every run but the lost one the goal is moved with
+# `.nyar event set apo-test action.goal here` (D16) to G* = hotspot 1 + 200 m along the line from hotspot 2 through
+# hotspot 1 (computed with `calc` from run A's hotspots): still 200 m from hotspot 1, as D25 asks, on the far side of it
+# from hotspot 2. Horde 1 then holds at its origin, 200 m from G*, and horde 2 marches from hotspot 2 straight at Chaos and
+# holds 60 m short of him, 260 m from G*: both fronts held from one place, which is what lets the survived run last its
+# 30 min. Each run checks the hotspots are still run A's (within 30 m) and reads the fronts' x, z and % from
+# `event info` ("horde <k> front at <x> <z>, <p> %"): a held front keeps its %. G* only has to be a point Chaos can
+# teleport to; no unit ever goes there. The lost run keeps the fixture goal: Chaos at the pond holds nothing (checked: 300 m
+# or more from both hotspots, 200 m or more from the goal) and horde 1 reaches the goal in about 70 s. The fixture goal and
+# speed are set at the start and the goal is set back at the end.
+#
+# Runs: (A) lost, with the roam check (D25); (B) won, with D25's hotspot, debug and spread checks at hotspot 1; (C) stop at
+# horde 2; (D) pillar spawns off at horde 2; (E) survived, Chaos at hotspot 1 for the full 30 min, not attacking; (F) purge
+# at horde 2, last, for its cooldown. Natives: `.devunits ${UNATIVE} 60` at the undead site before run A and after run F
+# must give the same n (stands in for D25's `.nyar debug natives`, which the mod lacks: see the step 3 report); the
+# state.json read after the purge (no "Apocalypse" key) is done by hand on the server copy. About 80 min.
+# Needs: a Release DLL with the step 3 review fixes; NyarDevTools (.devgo, .devtp, .devmark, .devdie, .devkill, .devunits)
+# and DevChatEcho; vrclient with `calc` and `expect-calc`; apo-test enabled, zombie-apocalypse and every other spawning
+# definition disabled; [Scoreboard] IncludeAdmins = true; no purge cooldown; the pond mark; Chaos invulnerable
+# (`ToggleInvulnerable true`, never false; a death resets it, so it is set again after each respawn).
 # Run: --var UX=-1388 --var UZ=-1334 --var UNATIVE=-837329073
 ensure
 console ToggleInvulnerable true
@@ -24,6 +37,14 @@ console TPHome
 wait 3
 chat .nyar event reload
 expect-log events: reloaded
+# the fixture goal and speed, whatever an earlier run left
+chat .devtp -1188 -1334
+expect-log \[DEV TP\] to
+wait 3
+chat .nyar event set apo-test action.goal here
+expect-reply apo-test action.goal =
+chat .nyar event set apo-test action.marchSpeed 3.0
+expect-reply apo-test action.marchSpeed =
 # natives at the undead site before any run
 chat .devtp ${UX} ${UZ}
 expect-log \[DEV TP\] to
@@ -33,61 +54,149 @@ wait 2
 chat .devunits ${UNATIVE} 60
 expect-log \[DEV UNITS\] n=(?P<NATIVES>[0-9]+)
 #
-# 1. won, with D25's outbreak checks at hotspot 1
+# A. lost (D26): Chaos at the pond holds nothing; the roamers find him (D25) and horde 1 takes the fixture goal
+chat .devgo pond
+expect-log \[DEV TP\] pond x=(?P<PX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<PZ>-?[0-9.]+)
+wait 4
+console ToggleInvulnerable true
+wait 2
+mark
+chat .nyar event start apo-test
+expect-log event apo-test started by Manual timeout=20
+expect-log apocalypse apo-test hotspots: 2 \( timeout=10
+expect-log apocalypse apo-test roam: hotspot [12] on a player timeout=120
+chat .nyar event info apo-test
+expect-log (^|\] )hotspot 1: .* at (?P<H1X>-?[0-9]+) (?P<H1Z>-?[0-9]+) timeout=10
+expect-log (^|\] )hotspot 2: .* at (?P<H2X>-?[0-9]+) (?P<H2Z>-?[0-9]+) timeout=10
+# D25's roam condition and an unobserved march: the pond is 300 m or more from both hotspots and 200 m or more from the goal
+expect-calc hypot(${PX} - ${H1X}, ${PZ} - ${H1Z}) >= 300
+expect-calc hypot(${PX} - ${H2X}, ${PZ} - ${H2Z}) >= 300
+expect-calc hypot(${PX} + 1188, ${PZ} + 1334) >= 200
+wait 10
+# the roamers came to Chaos (both unit kinds counted)
+chat .devunits -1967480038 60
+expect-log \[DEV UNITS\] n=(?P<RG>[0-9]+)
+chat .devunits -1618703048 60
+expect-log \[DEV UNITS\] n=(?P<RM>[0-9]+)
+expect-calc ${RG} + ${RM} >= 1
+expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
+# each 25 % step with its keep-up line, at least 80 % of the living units within 30 m of the front (D26)
+expect-log horde 1 front (2[5-9]|[34][0-9]) % units (?P<N25>[0-9]+)/(?P<M25>[0-9]+) within 30 m of the front timeout=40
+expect-calc ${N25} >= 0.8 * ${M25}
+expect-log horde 1 front ([56][0-9]|7[0-4]) % units (?P<N50>[0-9]+)/(?P<M50>[0-9]+) within 30 m of the front timeout=40
+expect-calc ${N50} >= 0.8 * ${M50}
+expect-log horde 1 front (7[5-9]|[89][0-9]) % units (?P<N75>[0-9]+)/(?P<M75>[0-9]+) within 30 m of the front timeout=40
+expect-calc ${N75} >= 0.8 * ${M75}
+expect-log event apo-test ended: lost \(1 of 2 hordes risen\) timeout=60
+expect-chat the test camp has fallen timeout=20
+shot chat apo-lost
+wait 30
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+#
+# G*: 200 m beyond hotspot 1 on the line from hotspot 2, the goal of every later run
+calc DX = ${H1X} - ${H2X}
+calc DZ = ${H1Z} - ${H2Z}
+calc SPACING = hypot(${DX}, ${DZ})
+expect-calc ${SPACING} >= 290
+calc GX = ${H1X} + 200 * ${DX} / ${SPACING}
+calc GZ = ${H1Z} + 200 * ${DZ} / ${SPACING}
+# the wait for horde 2 to march from hotspot 2 to 60 m short of hotspot 1 at 3 m/s, plus 20 s
+calc W2 = round((${SPACING} - 60) / 3 + 20)
+chat .devtp ${GX} ${GZ}
+expect-log \[DEV TP\] to
+wait 4
+chat .nyar event set apo-test action.goal here
+expect-reply apo-test action.goal =
+#
+# B. won (D26), with D25's checks at hotspot 1: Chaos holds horde 1 at its origin and kills it, then holds horde 2 60 m
+# short of him and kills it
+chat .devtp ${H1X} ${H1Z}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
 mark
 chat .nyar event start apo-test
 expect-log event apo-test started by Manual timeout=20
 expect-log apocalypse apo-test hotspots: 2 \( timeout=10
 expect-log apocalypse apo-test roamers: \+3 at hotspot 1 timeout=20
 chat .nyar event info apo-test
-expect-log CHAT> .*hotspot 1: .* at (?P<H1X>-?[0-9]+) (?P<H1Z>-?[0-9]+) timeout=10
-chat .devtp ${H1X} ${H1Z}
-expect-log \[DEV TP\] to
-wait 4
+expect-log (^|\] )hotspot 1: .* at (?P<B1X>-?[0-9]+) (?P<B1Z>-?[0-9]+) timeout=10
+expect-log (^|\] )hotspot 2: .* at (?P<B2X>-?[0-9]+) (?P<B2Z>-?[0-9]+) timeout=10
+expect-calc hypot(${B1X} - ${H1X}, ${B1Z} - ${H1Z}) <= 30 and hypot(${B2X} - ${H2X}, ${B2Z} - ${H2Z}) <= 30
+wait 3
 chat .nyar debug here 60
 expect-reply CHAR_Undead_
 shot full apo-hotspot1
-# D25 spread: a roamer kills Chaos; two roamers rise within 3 m of the death point
+# D25 spread: a roamer kills Chaos; two roamers rise within 3 m of the death point, counted at once (6 m, both kinds)
+# before the roam can move them
 chat .devmark apo-death
 expect-log \[DEV MARK\] apo-death
 mark
 chat .devdie -1967480038 60
-expect-log \[DEV DIE\] timeout=10
+expect-log \[DEV DIE\] found=1 timeout=10
 expect-log apocalypse apo-test spread: \+2 \( timeout=20
+wait 2
 chat .devunits -1967480038 6 apo-death
-expect-log \[DEV UNITS\] n=([2-9]|1[0-9])
+expect-log \[DEV UNITS\] n=(?P<SG>[0-9]+)
+chat .devunits -1618703048 6 apo-death
+expect-log \[DEV UNITS\] n=(?P<SM>[0-9]+)
+expect-calc ${SG} + ${SM} >= 2
+# the respawn is a held space; back to hotspot 1 before horde 1 rises (a minute in)
+hold space 1.5
+wait 10
 console ToggleInvulnerable true
 wait 2
-# horde 1 rises at hotspot 1 one minute in; Chaos holds it there, then takes it to the goal and kills it
 chat .devtp ${H1X} ${H1Z}
 expect-log \[DEV TP\] to
 expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
 expect-chat a horde of 8 rises timeout=20
 shot chat apo-horde1-rise
-# a held front logs no step (the player hold has no line of its own; only "held: no walkable ground ahead" does)
-expect-no-log horde 1 front [0-9]+ % timeout=30
-chat .devtp -1188 -1334
+# Chaos stands on horde 1's front (re-read, in case it moved while he respawned) and it holds: its % does not change
+wait 3
+chat .nyar event info apo-test
+expect-log (^|\] )horde 1 front at (?P<F1X>-?[0-9]+) (?P<F1Z>-?[0-9]+), [0-9]+ % timeout=10
+chat .devtp ${F1X} ${F1Z}
 expect-log \[DEV TP\] to
-wait 40
-chat .devkill -1967480038 80
-chat .devkill -1618703048 80
+wait 4
+chat .nyar event info apo-test
+expect-log (^|\] )horde 1 front at -?[0-9]+ -?[0-9]+, (?P<B1A>[0-9]+) % timeout=10
+wait 20
+chat .nyar event info apo-test
+expect-log (^|\] )horde 1 front at -?[0-9]+ -?[0-9]+, (?P<B1B>[0-9]+) % timeout=10
+expect-calc ${B1B} == ${B1A} and ${B1A} <= 30
+chat .devkill -1967480038 120
+chat .devkill -1618703048 120
 wait 5
-chat .devkill -1967480038 80
-chat .devkill -1618703048 80
+chat .devkill -1967480038 120
+chat .devkill -1618703048 120
+wait 5
+chat .devkill -1967480038 120
+chat .devkill -1618703048 120
 expect-log apocalypse apo-test horde 1 of 2 destroyed timeout=30
 expect-chat horde 1 of 2 destroyed timeout=20
-# horde 2 (12 units) rises at hotspot 2 six minutes in and marches on Chaos at the goal
+# horde 2 (12 units) rises at hotspot 2 six minutes in and marches at Chaos at hotspot 1, holding 60 m short of him
+chat .devtp ${H1X} ${H1Z}
+expect-log \[DEV TP\] to
 expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=330
 expect-chat a horde of 12 rises timeout=20
-wait 90
-chat .devkill -1967480038 80
-chat .devkill -1618703048 80
+wait ${W2}
+chat .nyar event info apo-test
+expect-log (^|\] )horde 2 front at (?P<F2X>-?[0-9]+) (?P<F2Z>-?[0-9]+), (?P<B2A>[0-9]+) % timeout=10
+expect-calc hypot(${F2X} - ${H1X}, ${F2Z} - ${H1Z}) <= 61
+wait 15
+chat .nyar event info apo-test
+expect-log (^|\] )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<B2B>[0-9]+) % timeout=10
+expect-calc ${B2B} == ${B2A}
+chat .devkill -1967480038 120
+chat .devkill -1618703048 120
 wait 5
-chat .devkill -1967480038 80
-chat .devkill -1618703048 80
+chat .devkill -1967480038 120
+chat .devkill -1618703048 120
 wait 5
-chat .devkill -1967480038 80
-chat .devkill -1618703048 80
+chat .devkill -1967480038 120
+chat .devkill -1618703048 120
 expect-log event apo-test ended: won \(2 of 2 hordes risen\) timeout=60
 expect-log event apo-test scoreboard: 1 players, [0-9]+ kills timeout=10
 expect-chat the living have won timeout=20
@@ -96,41 +205,16 @@ wait 30
 chat .nyar status
 expect-reply tracked units: 0 timeout=40
 #
-# 2. lost: Chaos at the pond holds nothing; the roamers find him (D25) and horde 1 takes the goal
-chat .devgo pond
-expect-log \[DEV TP\] pond
-wait 4
+# C. stop at horde 2 (D27): Chaos at hotspot 1 holds horde 1; the stop comes 5 s after horde 2 rises; the scoreboard,
+# then 0 tracked after the grace
 console ToggleInvulnerable true
 wait 2
 mark
 chat .nyar event start apo-test
 expect-log event apo-test started by Manual timeout=20
-expect-log apocalypse apo-test roam: hotspot [12] on a player timeout=120
-wait 20
-chat .devunits -1967480038 60
-expect-log \[DEV UNITS\] n=[1-9]
 expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
-expect-log horde 1 front (2[5-9]|[3-9][0-9]) % units [0-9]+/[0-9]+ within 30 m of the front timeout=40
-expect-log horde 1 front ([5-9][0-9]) % units [0-9]+/[0-9]+ within 30 m of the front timeout=40
-expect-log horde 1 front (7[5-9]|[89][0-9]) % units [0-9]+/[0-9]+ within 30 m of the front timeout=40
-expect-log event apo-test ended: lost \(1 of 2 hordes risen\) timeout=60
-expect-chat the test camp has fallen timeout=20
-shot chat apo-lost
-wait 30
-chat .nyar status
-expect-reply tracked units: 0 timeout=40
-#
-# 3. stop at horde 2 (D27): the scoreboard, then 0 tracked after the grace
-chat .devtp -1188 -1334
-expect-log \[DEV TP\] to
-wait 4
-console ToggleInvulnerable true
-wait 2
-mark
-chat .nyar event start apo-test
-expect-log event apo-test started by Manual timeout=20
-expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=400
-wait 10
+expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=330
+wait 5
 chat .nyar event stop apo-test
 expect-log event apo-test stopped
 expect-log event apo-test scoreboard: timeout=10
@@ -139,12 +223,13 @@ wait 30
 chat .nyar status
 expect-reply tracked units: 0 timeout=40
 #
-# 4. pillar spawns off at horde 2 (D27): no scoreboard, 0 tracked
+# D. pillar spawns off at horde 2 (D27): no scoreboard, 0 tracked
 mark
 chat .nyar event start apo-test
 expect-log event apo-test started by Manual timeout=20
-expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=400
-wait 10
+expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
+expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=330
+wait 5
 chat .nyar pillar spawns off
 expect-reply spawns
 expect-no-log scoreboard: timeout=10
@@ -154,26 +239,55 @@ chat .nyar pillar spawns on
 expect-reply spawns
 wait 3
 #
-# 5. survived: Chaos at the goal holds both fronts outside the goal radius for the full 30 min, not attacking
+# E. survived (D26): Chaos stays at hotspot 1, invulnerable and not attacking, for the full 30 min; horde 1 holds at its
+# origin and horde 2 holds 60 m short of him, both more than 90 m from G*
+chat .devtp ${H1X} ${H1Z}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
 mark
 chat .nyar event start apo-test
 expect-log event apo-test started by Manual timeout=20
+chat .nyar event info apo-test
+expect-log (^|\] )hotspot 1: .* at (?P<E1X>-?[0-9]+) (?P<E1Z>-?[0-9]+) timeout=10
+expect-log (^|\] )hotspot 2: .* at (?P<E2X>-?[0-9]+) (?P<E2Z>-?[0-9]+) timeout=10
+expect-calc hypot(${E1X} - ${H1X}, ${E1Z} - ${H1Z}) <= 30 and hypot(${E2X} - ${H2X}, ${E2Z} - ${H2Z}) <= 30
 expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
+wait 10
+chat .nyar event info apo-test
+expect-log (^|\] )horde 1 front at -?[0-9]+ -?[0-9]+, (?P<E1A>[0-9]+) % timeout=10
+expect-calc ${E1A} <= 5
 expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=330
-expect-no-log event apo-test ended: (won|lost) timeout=1300
-expect-log event apo-test ended: survived \(2 of 2 hordes risen\) timeout=300
+wait ${W2}
+chat .nyar event info apo-test
+expect-log (^|\] )horde 1 front at -?[0-9]+ -?[0-9]+, (?P<E1B>[0-9]+) % timeout=10
+expect-log (^|\] )horde 2 front at (?P<EF2X>-?[0-9]+) (?P<EF2Z>-?[0-9]+), (?P<E2A>[0-9]+) % timeout=10
+expect-calc ${E1B} == ${E1A}
+expect-calc hypot(${EF2X} - ${H1X}, ${EF2Z} - ${H1Z}) <= 61
+wait 60
+chat .nyar event info apo-test
+expect-log (^|\] )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<E2B>[0-9]+) % timeout=10
+expect-calc ${E2B} == ${E2A}
+shot full apo-survive-held
+# 15 min with neither a win nor a loss (it ends before the 30 min are up, so the survived line is not drained here)
+expect-no-log event apo-test ended: (won|lost) timeout=900
+expect-log event apo-test ended: survived \(2 of 2 hordes risen\) timeout=700
 expect-chat the living held out timeout=20
 shot chat apo-survived
 wait 30
 chat .nyar status
 expect-reply tracked units: 0 timeout=40
 #
-# 6. purge at horde 2 (D27): no scoreboard, 0 tracked, the record gone (state.json read by hand); last, for its cooldown
+# F. purge at horde 2 (D27): no scoreboard, 0 tracked, the record gone (state.json read by hand); last, for its cooldown
+console ToggleInvulnerable true
+wait 2
 mark
 chat .nyar event start apo-test
 expect-log event apo-test started by Manual timeout=20
-expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=400
-wait 10
+expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
+expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=330
+wait 5
 chat .nyar purge
 wait 2
 chat .nyar purge confirm
@@ -181,10 +295,16 @@ expect-log purge: 1 events ended, [0-9]+ units queued
 expect-no-log scoreboard: timeout=10
 chat .nyar status
 expect-reply tracked units: 0 timeout=40
-# natives at the undead site after the last end: the same n as before run 1
+# natives at the undead site after the last end: the same n as before run A
 chat .devtp ${UX} ${UZ}
 expect-log \[DEV TP\] to
 wait 5
 chat .devunits ${UNATIVE} 60
-expect-log \[DEV UNITS\] n=${NATIVES}
+expect-log \[DEV UNITS\] n=${NATIVES}( |$)
+# the fixture goal back
+chat .devtp -1188 -1334
+expect-log \[DEV TP\] to
+wait 3
+chat .nyar event set apo-test action.goal here
+expect-reply apo-test action.goal =
 console TPHome

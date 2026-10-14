@@ -1,39 +1,63 @@
-# apocalypse-boot2.vrs: apocalypse D28 (Session 2), after the restart that apocalypse-prep-restart.vrs set up. The boot
-# log holds "boot marker sweep: <n> found, <n> queued" and "event apo-test resumed after restart (horde 2/2, <u> units to
-# rebuild)" (checked on the log copy). In game: tracked units back to u within 5 min, horde 2's front continuing from
-# its saved progress (event info), and the final scoreboard holding the kills from before and after the restart (at
-# least 2: the one from before and one here). Then a purge, and a second restart by the orchestrator: that boot logs no
-# resume ("resumed after restart" absent, state.json without "Apocalypse") and `.nyar status` reads 0 tracked, read by
-# hand after that boot (the last lines of this file say what).
-# Run: --var UNITS=<u from the resume line>
+# apocalypse-boot2.vrs: apocalypse D28 (Session 2), after the restart that apocalypse-prep-restart.vrs set up (goal at G*,
+# 200 m beyond hotspot 1, march at 0.5 m/s, horde 2's front held far from the goal). The boot log holds "boot marker
+# sweep: <n> found, <n> queued" and "event apo-test resumed after restart (horde 2/2, <u> units to rebuild)" (checked on
+# the log copy). In game: tracked units back to exactly u within 5 min, horde 2's front at or past its saved % (it may
+# have marched while nobody was connected), held again once Chaos stands on it (D6: within 60 m of the front, more than
+# 90 m from the goal), and the final scoreboard holding the kills from before the restart plus the one here. Then the
+# fixture goal and speed are set back, and a second run is started and purged; the orchestrator restarts the server once
+# more: that boot logs no resume ("resumed after restart" absent, state.json without "Apocalypse") and `.nyar status`
+# reads 0 tracked, read by hand after that boot.
+# Run: --var UNITS=<u from the resume line> --var PREP_PCT=<PREP_PCT from prep> --var KILLS_BEFORE=<KILLS_BEFORE from prep>
 ensure
 console ToggleInvulnerable true
 wait 2
 console TPHome
 wait 3
-chat .devtp -1188 -1334
+# tracked units back to exactly u (the whole number, so 12 does not pass for 120); the rebuild runs through the spawn
+# queue during the boot, so a minute after joining it is done
+wait 60
+chat .nyar status
+expect-log \] tracked units: (?P<TRACKED>[0-9]+) \( timeout=10
+expect-calc ${TRACKED} == ${UNITS}
+# horde 2's front continues from its saved progress
+chat .nyar event info apo-test
+expect-log (^|\] )horde 2 front at (?P<F2X>-?[0-9]+) (?P<F2Z>-?[0-9]+), (?P<F2P>[0-9]+) % timeout=10
+expect-calc ${F2P} >= ${PREP_PCT}
+shot chat apo-boot2-info
+chat .devtp ${F2X} ${F2Z}
 expect-log \[DEV TP\] to
 wait 4
 console ToggleInvulnerable true
 wait 2
+# held again: its % does not change in 20 s
 chat .nyar event info apo-test
-expect-reply horde 2 front at
-shot chat apo-boot2-info
-chat .nyar status
-expect-reply tracked units: ${UNITS} timeout=300
-# the rebuilt horde holds 60 m from Chaos; kill it for a scoreboard with kills from before and after the restart
-wait 30
-chat .devkill -1618703048 80 1
-expect-log \[DEV KILL\] n=1 timeout=10
+expect-log (^|\] )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<PA>[0-9]+) % timeout=10
+wait 20
+chat .nyar event info apo-test
+expect-log (^|\] )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<PB>[0-9]+) % timeout=10
+expect-calc ${PB} == ${PA}
+# one rebuilt horde unit killed, then the stop: the scoreboard holds the kills from before the restart and this one
+chat .devkill -1967480038 120 1
+expect-log \[DEV KILL\] n=(?P<K6>[0-9]+) timeout=10
+expect-calc ${K6} == 1
 mark
 chat .nyar event stop apo-test
 expect-log event apo-test stopped
-expect-log event apo-test scoreboard: 1 players, ([2-9]|[1-9][0-9]+) kills timeout=10
+expect-log event apo-test scoreboard: 1 players, (?P<KILLS>[0-9]+) kills timeout=10
+expect-calc ${KILLS} >= ${KILLS_BEFORE} + 1
 expect-chat Apocalypse test scoreboard timeout=20
 shot chat apo-boot2-scoreboard
 wait 30
 chat .nyar status
-expect-reply tracked units: 0 timeout=40
+expect-reply tracked units: 0 ( timeout=40
+# the fixture goal and speed back
+chat .devtp -1188 -1334
+expect-log \[DEV TP\] to
+wait 3
+chat .nyar event set apo-test action.goal here
+expect-reply apo-test action.goal =
+chat .nyar event set apo-test action.marchSpeed 3.0
+expect-reply apo-test action.marchSpeed =
 # second half (D28): start apo-test again, purge at once, then the orchestrator restarts the server; after that boot
 # `.nyar status` must read "tracked units: 0" and the boot log must not hold "apo-test resumed after restart"
 mark
@@ -45,5 +69,5 @@ wait 2
 chat .nyar purge confirm
 expect-log purge: 1 events ended, [0-9]+ units queued
 chat .nyar status
-expect-reply tracked units: 0 timeout=40
+expect-reply tracked units: 0 ( timeout=40
 console TPHome
