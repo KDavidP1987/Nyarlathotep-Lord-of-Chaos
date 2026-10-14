@@ -4,15 +4,20 @@ Where work stands between sessions. Overwrite this file at the end of a session;
 The plans (`docs/dod/`), audits (`docs/audits/`) and feature docs stay the source of truth. This file only points
 into them.
 
-**Written 2026-10-14**, apocalypse step 3 finished, the 3 h soak run (Session 3) and Codex's early cross-inspection done. The repo is
+**Written 2026-10-14**, v0.12.0 pushed and pre-released; apocalypse step 3 done (soak, early Codex); unit-watch (stuck
+units, design D54) planned, approved and started: step 1 spike done, step 2 (Logic) under way. The repo is
 `C:\dev\projects\Games\V Rising\Nyarlathotep Lord of Chaos`.
 
 ## Where we are
 
 - **0.11.0 (hunting-grounds) is pushed** with its GitHub pre-release.
-- **0.12.0 (revenge + final-wave bosses) is committed and tagged locally, NOT pushed.** Tag v0.12.0, zip
-  `Nyarlathotep/Nyarlathotep/build/kdpen-Nyarlathotep-0.12.0.zip`. Every commit since (apocalypse) is local too: push
-  waits on the owner's OK.
+- **0.12.0 (revenge + final-wave bosses) is pushed** with its GitHub pre-release (release-verify hashes equal). Every
+  commit after 246fe9e is local: push waits on the owner's OK. `dod close revenge` (partial) waits on the owner's sign-off.
+- **Unit watch** (`docs/dod/unit-watch.md`, 33 items, Review 2 READY, in progress; ships WITH apocalypse as 0.13.0):
+  - Step 1 spike done (`docs/features/UNIT_WATCH.md` › Spike): fight verdict = the apply signal (StatChangeSystem
+    ApplyStatChanges) plus S-9's player-target clause; off-ground verdict not usable, so S-12's fallback. D19 waits on the
+    owner.
+  - Step 2 (Logic/UnitWatch.cs, unstick, wire api 8, tests) next or under way; then step 3 (services, vrclient Sessions 1-2).
 - **Apocalypse 0.13.0** (`docs/dod/apocalypse.md`, in progress, Reviews 4-10 READY):
   - Steps 1-3 done. Step 3 post-audit in `docs/audits/apocalypse.md` (two code reviews, all findings fixed with tests and
     planted faults in `docs/audits/apocalypse-step3-planted.txt`). Tests 3395.
@@ -32,15 +37,14 @@ into them.
 
 ## Next, in order
 
-1. On the owner's push OK: privacy greps (`git grep -n -E "7656119|kdpenland"`, `git log -p origin/main..main`), push
-   main and v0.12.0, verify HEAD = `git ls-remote origin main`, `gh release view v0.12.0`, the pre-release with the zip,
-   `pwsh tools/release-verify.ps1 -Tag v0.12.0 -Asset kdpen-Nyarlathotep-0.12.0.zip`, then `dod close revenge` (partial).
-2. Step 4: the owner runs the test weekend (~10-24/25) from the sheet; changes asked for become amendments first.
-3. Step 5: Codex again only if code changed after the weekend, the six surfaces (Rollout reads 0.12.0), name pair-apocalypse-short in Paths
+1. On the owner's sign-off of revenge D18-D22, D32: `dod close revenge` (partial).
+2. Unit watch steps 2-3, then its step 4 sheet joins apocalypse's test weekend.
+3. Apocalypse step 4: the owner runs the test weekend (~10-24/25) from the sheet; changes asked for become amendments first.
+4. Joint step 5 (apocalypse + unit watch, 0.13.0): Codex once for unit watch, again for apocalypse only if code changed after the weekend, the six surfaces (Rollout reads 0.12.0), name pair-apocalypse-short in Paths
    walked (Review 10 F1), tag v0.13.0, `pwsh tools/rollback-gate.ps1 -From v0.12.0 -To v0.13.0 -Plan apocalypse`,
    release by 10-31.
 
-## After Halloween (1.0), owner decisions D52, D53
+## After Halloween (1.0), owner decisions D52, D53, D55 (order: scaling first)
 
 - Scale unit counts and levels to the players in the region (their number and average level).
 - Replace a unit that dies before it has hit a player, within a per-event budget; border play is left to the honor system.
