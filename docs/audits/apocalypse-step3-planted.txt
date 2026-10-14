@@ -9,3 +9,10 @@ D11 · Logic/ApocalypseHost.cs:Ended an admin stop keeps the record · Apocalyps
 D18 · Resources/templates.json:zombie-apocalypse the template ships enabled · TemplateLibraryTests.Apocalypse_ · failed 1/11 → restored, 11/11 pass
 D38 · Logic/FactionGroups.cs:Problem two groups mixed pass · TemplateLibraryTests.Factions_ · failed 3/7 → restored, 7/7 pass
 D2 · Services/ApocalypseAction.cs:Game.Natives the game-side native read writes a Translation · ApocalypseTests.Hotspots_ · failed 1/6 → restored, 6/6 pass
+D9 · Services/ApocalypseAction.cs:Tick (review M1) the tick swallows its throw again (catch → ApocalypseStep.None), so the fault guard never counts it · ApocalypseTests.EndPaths_ · failed 1/6 → restored, 6/6 pass
+D12 · Logic/ApocalypseHost.cs:Resume (review M2) a failed resume leaves the rebuild's orders queued (Ledger.EndEvent removed from the catch) · ApocalypseTests.Resume_ · failed 1/12 → restored, 12/12 pass
+D12 · Logic/Engine.cs:Resume (review M4) the resumed instance is a with-copy and the catalog keeps start + duration as its end · ApocalypseTests.Resume_ · failed 1/12 → restored, 12/12 pass
+D6 · Logic/ApocalypseHost.cs:Tick (review M3) no MarchRule.Watch before the hop decision: a unit next to a player, or a front a player just reached, hops · ApocalypseTests.March_ · failed 1/7 → restored, 7/7 pass
+D15 · Logic/ApocalypseHost.cs:Ended (review L1) the cancelled orders of an outcome are dropped from the tally (left pending) · ApocalypseTests.Tally_ · failed 1/4 → restored, 4/4 pass
+D21 · Logic/ApocalypseHost.cs:EntryGuard.Prepare (review L5) a throwing prepare returns null and lets the start through without its run · ApocalypseDependencyFailureTests.NativeRead_ · failed 1/4 → restored, 4/4 pass
+D38 · Logic/FactionGroups.cs:Holds (review L4) prefix matching again: an unchecked _Summon or longer variant joins a group · TemplateLibraryTests.Factions_ · failed 4/11 → restored, 11/11 pass

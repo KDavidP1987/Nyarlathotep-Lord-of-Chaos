@@ -53,7 +53,11 @@ for the Halloween release; the record gains no totals field (step 3, L3).
 The step 3 dev fixture is `tools/vrclient/fixtures/apo-test.json` (put into the dev events.json). Its hordes rise every
 5 minutes, not every 3 as D25 says, because D1's lower bound for `everyMinutes` is 5. Its units are Guardians and light
 ghost militia, so `.devkill` spares the native Farbane skeletons at the hotspots. The Session 1 and 2 scenarios are
-`apocalypse.vrs`, `apocalypse-prep-restart.vrs` and `apocalypse-boot2.vrs`.
+`apocalypse.vrs`, `apocalypse-prep-restart.vrs` and `apocalypse-boot2.vrs`. Since no hold applies within goal.radius +
+60 m of the goal (D6), Chaos holds a front by standing on it, never at the goal: for every run but the lost one the
+scenarios move the goal (`event set … action.goal here`) to 200 m beyond hotspot 1 on the line from hotspot 2, so Chaos at
+hotspot 1 holds horde 1 at its origin and horde 2 60 m short of him; Session 2 also slows the march to 0.5 m/s, so the
+fronts stay well away from the goal while nobody is connected across the restart.
 
 ## Open questions
 

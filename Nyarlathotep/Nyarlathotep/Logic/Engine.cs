@@ -512,9 +512,9 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
         if (controls is not null && Precedence.StartBlocker(def, controls with { PurgeCooldownActive = false, ActiveEvents = 0 }) is { } blocked)
             return blocked;
         if (_active.ContainsKey(id)) return AdminLines.AlreadyActive(id);
-        var error = catalog.TryStart(id, startedUtc, out var instance);
+        var error = catalog.TryStart(id, startedUtc, out var instance, endsUtc);   // the catalog's instance carries the record's end (review M4)
         if (error is not null) return error;
-        _active[id] = new ActiveEvent(instance! with { EndsUtc = endsUtc }, "resume", goal) { WavesSpawned = Math.Max(0, hordesRisen) };
+        _active[id] = new ActiveEvent(instance!, "resume", goal) { WavesSpawned = Math.Max(0, hordesRisen) };
         Starts[id] = startedUtc;
         return null;
     }

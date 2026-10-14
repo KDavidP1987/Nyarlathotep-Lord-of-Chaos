@@ -21,9 +21,9 @@ public partial class ApocalypseTests
         if (!Body("internal static Outcome Purge()").Contains("ApocalypseAction.Purged();", StringComparison.Ordinal)) gaps.Add("purge");
         if (!Body("internal static IReadOnlyList<string> EndPillar(Pillar pillar)").Contains("ApocalypseAction.PillarOff(pillar);", StringComparison.Ordinal))
             gaps.Add("pillar off in the drain wait");
-        if (!Body("internal static void Tick(DateTime now)").Contains("ApocalypseAction.Ended(ended.Id, ApocalypseEnd.Survived)", StringComparison.Ordinal))
+        if (!Body("internal static void Tick(DateTime now)").Contains("ApocalypseAction.Ended(ended.Id, ApocalypseEnd.Survived, cancelled)", StringComparison.Ordinal))
             gaps.Add("survived");
-        if (!Body("static void TickApocalypse(ActiveEvent active, DateTime now)").Contains("ApocalypseAction.Ended(ended.Id, EndRule.Of(step.Result))", StringComparison.Ordinal))
+        if (!Body("static void TickApocalypse(ActiveEvent active, DateTime now)").Contains("ApocalypseAction.Ended(ended.Id, EndRule.Of(step.Result), cancelled)", StringComparison.Ordinal))
             gaps.Add("won or lost");
         var init = Body("internal static void Initialize()");
         if (!init.Contains("ApocalypseAction.Boot(", StringComparison.Ordinal) || !init.Contains("instance.EventId == resuming", StringComparison.Ordinal))
@@ -45,8 +45,8 @@ public partial class ApocalypseTests
                      ("EndPath.Fault => ApocalypseEnd.Fault", "fault"),
                      ("ApocalypseAction.Purged();", "purge"),
                      ("ApocalypseAction.PillarOff(pillar);", "pillar off in the drain wait"),
-                     ("ApocalypseAction.Ended(ended.Id, ApocalypseEnd.Survived)", "survived"),
-                     ("ApocalypseAction.Ended(ended.Id, EndRule.Of(step.Result))", "won or lost"),
+                     ("ApocalypseAction.Ended(ended.Id, ApocalypseEnd.Survived, cancelled)", "survived"),
+                     ("ApocalypseAction.Ended(ended.Id, EndRule.Of(step.Result), cancelled)", "won or lost"),
                      ("instance.EventId == resuming", "restart keeps the record"),
                      ("RemoveAll(i => i.EventId != resuming)", "restart cancels the others"),
                  })

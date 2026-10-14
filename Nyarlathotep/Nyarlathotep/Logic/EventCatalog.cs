@@ -28,14 +28,16 @@ public sealed class EventCatalog
         return null;
     }
 
-    /// <summary>Starts the current definition <paramref name="id"/>: "unknown event", "already active" or null.</summary>
-    public Outcome? TryStart(string id, DateTime utcNow, out RunningInstance? instance)
+    /// <summary>Starts the current definition <paramref name="id"/>: "unknown event", "already active" or null. A resumed
+    /// apocalypse passes its record's <paramref name="endsUtc"/> (apocalypse D12), so every reader of the running instance
+    /// sees the same end (step 3 code review M4).</summary>
+    public Outcome? TryStart(string id, DateTime utcNow, out RunningInstance? instance, DateTime? endsUtc = null)
     {
         instance = null;
         var def = Current.Find(id);
         if (def is null) return AdminLines.UnknownEvent(id);
         if (_running.ContainsKey(id)) return AdminLines.AlreadyActive(id);
-        instance = new RunningInstance(def, utcNow, utcNow.AddSeconds(def.DurationSeconds));
+        instance = new RunningInstance(def, utcNow, endsUtc ?? utcNow.AddSeconds(def.DurationSeconds));
         _running.Add(id, instance);
         return null;
     }

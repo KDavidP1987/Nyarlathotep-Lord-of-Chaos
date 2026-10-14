@@ -19,12 +19,15 @@ namespace Nyarlathotep.Services;
 /// players, our own units' positions and the walk check, and writes only units SpawnTracker tracks for the run: the hop of
 /// a straggler and the roam jump (the step-1 verdict "go — hop": SpawnTracker.MoveOwn), and the rolling lifetime
 /// (SpawnTracker.RenewOwn, D13). Every unit is queued through SpawnTracker's ledger (D14). Each public entry runs on the
-/// server main thread and never throws; its walk probe is opened at first use and disposed when the entry returns.
+/// server main thread; every entry but the tick never throws (Logic/EntryGuard, logged once per streak), while a tick's
+/// throw reaches EventRuntime's fault guard (D9's fault cancel, step 3 code review M1). Its walk probe is opened at first
+/// use and disposed when the entry returns.
 /// </summary>
 internal static class ApocalypseAction
 {
     static ApocalypseHost _host = new();
     static readonly Game _game = new();
+    static readonly EntryGuard _guard = new(line => Core.Log.LogError($"[nyar] {line}"));
 
     internal static ApocalypseHost Host => _host;
 
@@ -39,35 +42,45 @@ internal static class ApocalypseAction
     internal static string Boot(EventEngine engine, DateTime now)
     {
         _host = new ApocalypseHost();
-        return Run(() => _host.Boot(() => Persistence.State.Document.Apocalypse, () => EventStore.Catalog.Current, engine, _game,
+        return Run("boot", () => _host.Boot(() => Persistence.State.Document.Apocalypse, () => EventStore.Catalog.Current, engine, _game,
             Persistence.State, now));
     }
 
-    /// <summary>Engine.Start's last gate for an apocalypse: its hotspots (D2), or the refusal.</summary>
-    internal static Outcome Prepare(EventDefinition def) => Run(() => _host.Prepare(def, _game));
+    /// <summary>Engine.Start's last gate for an apocalypse: its hotspots (D2), or the refusal; a throw refuses the start too
+    /// (code review L5), so no instance ever starts without its run.</summary>
+    internal static Outcome Prepare(EventDefinition def)
+    {
+        try { return _guard.Prepare(def.Id, () => _host.Prepare(def, _game)); }
+        finally { _game.Close(); }
+    }
 
-    /// <summary>EventRuntime.StartEvent, once the instance started: the run begins (D3, D11).</summary>
-    internal static void Begin(ActiveEvent active, DateTime now) =>
-        Run(() => _host.Begin(active, _game, Persistence.State, EventRuntime.Board, now));
+    /// <summary>EventRuntime.StartEvent, once the instance started: the run begins (D3, D11). False when it did not (the
+    /// caller logs it).</summary>
+    internal static bool Begin(ActiveEvent active, DateTime now) =>
+        Run("begin", () => _host.Begin(active, _game, Persistence.State, EventRuntime.Board, now));
 
-    /// <summary>The events phase, per running apocalypse (inside EventRuntime's per-event try/catch).</summary>
-    internal static ApocalypseStep Tick(ActiveEvent active, DateTime now) =>
-        Run(() => _host.Tick(active, _game, Persistence.State, EventRuntime.Board, now)) ?? ApocalypseStep.None;
+    /// <summary>The apocalypse phase, per running apocalypse, inside EventRuntime.Guarded: not caught here, so a throw counts
+    /// a fault and the FaultLimit-th in a row cancels the run (D9, D25; code review M1).</summary>
+    internal static ApocalypseStep Tick(ActiveEvent active, DateTime now)
+    {
+        try { return _host.Tick(active, _game, Persistence.State, EventRuntime.Board, now); }
+        finally { _game.Close(); }
+    }
 
-    /// <summary>The events phase, before the running events: a resume waiting on the drain gate (D12).</summary>
+    /// <summary>The apocalypse phase, before the running events: a resume waiting on the drain gate (D12).</summary>
     internal static ActiveEvent Resume(EventEngine engine, ControlState controls, DateTime now) =>
-        Run(() => _host.Resume(engine, controls, _game, Persistence.State, EventRuntime.Board, now));
+        Run("resume", () => _host.Resume(engine, controls, _game, Persistence.State, EventRuntime.Board, now));
 
     /// <summary>Every end path of an apocalypse (D9): see ApocalypseHost.Ended.</summary>
     internal static void Ended(string id, ApocalypseEnd path, int cancelled = 0) =>
-        Run(() => { _host.Ended(id, path, _game, Persistence.State, cancelled); return 0; });
+        Run("end", () => { _host.Ended(id, path, _game, Persistence.State, cancelled); return 0; });
 
     /// <summary>`.nyar purge confirm` (D9).</summary>
-    internal static void Purged() => Run(() => { _host.Purged(_game, Persistence.State); return 0; });
+    internal static void Purged() => Run("purge", () => { _host.Purged(_game, Persistence.State); return 0; });
 
     /// <summary>`.nyar pillar &lt;p&gt; off` (D9): a pending resume of that pillar is cancelled.</summary>
     internal static void PillarOff(Pillar pillar) =>
-        Run(() => _host.PillarOff(pillar, EventStore.Catalog.Current, EventRuntime.Engine, _game, Persistence.State));
+        Run("pillar off", () => _host.PillarOff(pillar, EventStore.Catalog.Current, EventRuntime.Engine, _game, Persistence.State));
 
     /// <summary>The spread read of one death, before SpawnTracker.Died (D4, D21 spread-read).</summary>
     internal static SpreadRead? BeforeDeath(Entity killer, Entity died)
@@ -81,7 +94,7 @@ internal static class ApocalypseAction
     internal static void AfterDeath(SpreadRead? read)
     {
         if (read is null) return;
-        Run(() => { _host.After(read, _game, DateTime.UtcNow); return 0; });
+        Run("spread", () => { _host.After(read, _game, DateTime.UtcNow); return 0; });
     }
 
     /// <summary>SpawnTracker: an order settled (D15).</summary>
@@ -106,16 +119,13 @@ internal static class ApocalypseAction
     }
 
     /// <summary>`event info`'s run view, or null.</summary>
-    internal static ApocalypseView View(string id) => Run(() => _host.View(id, _game));
+    internal static ApocalypseView View(string id) => Run("info", () => _host.View(id, _game));
 
-    static T Run<T>(Func<T> work)
+    /// <summary>An entry other than the tick: a throw is logged once per streak of that entry (Logic/EntryGuard) and gives
+    /// the default.</summary>
+    static T Run<T>(string entry, Func<T> work)
     {
-        try { return work(); }
-        catch (Exception ex)
-        {
-            Core.Log.LogError($"[nyar] apocalypse: {ex.Message}");
-            return default;
-        }
+        try { return _guard.Run(entry, work); }
         finally { _game.Close(); }
     }
 

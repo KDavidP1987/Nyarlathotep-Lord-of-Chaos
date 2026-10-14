@@ -167,6 +167,21 @@ public partial class TemplateLibraryTests
         Assert.Equal("z mixes the undead and bandits groups", FactionGroups.Problem("z", ["CHAR_Undead_Guardian", "CHAR_Bandit_Deadeye"], "Faction_Undead"));
     }
 
+    /// <summary>Code review L4: a group holds its checked names exactly; an unchecked variant of one (a "_Summon" twin, a
+    /// longer name sharing its start) belongs to no group until it is listed.</summary>
+    [Theory]
+    [InlineData("CHAR_Undead_Guardian_Summon")]
+    [InlineData("CHAR_Spider_Forest_Summon")]
+    [InlineData("CHAR_Bandit_Thug_Summon")]
+    [InlineData("CHAR_Militia_Light_Farbane")]
+    public void Factions_fails_when_an_unlisted_variant_joins_a_group(string variant)
+    {
+        Assert.Empty(FactionGroups.Of(variant));
+        Assert.Equal($"z: {variant} is in no allied group", FactionGroups.Problem("z", [variant]));
+        var listed = variant[..variant.LastIndexOf('_')];
+        Assert.Single(FactionGroups.Of(listed));                               // the checked name itself is held
+    }
+
     [Fact]
     public void Factions_empty_no_template_spawns_units() =>
         Assert.Equal(["no template spawns units"], FactionProblems(TemplateCatalog.Load(Bytes("{\"SchemaVersion\":1,\"events\":[]}"), Units(), Units())));

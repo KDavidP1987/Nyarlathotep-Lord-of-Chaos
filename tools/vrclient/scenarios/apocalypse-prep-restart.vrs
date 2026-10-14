@@ -1,16 +1,63 @@
-# apocalypse-prep-restart.vrs: apocalypse D28 (Session 2), before the restart. apo-test runs to horde 2; Chaos stands at
-# the goal (-1188, -1334), so horde 2's front holds 60 m from him (D6), invulnerable and not attacking; one horde unit is
-# killed so the scoreboard holds a kill from before the restart. Then the orchestrator copies both logs, waits for a
-# post-action autosave, closes the client and stops the server (taskkill, no /F) and starts it; apocalypse-boot2.vrs
-# follows. The boot log must show "boot marker sweep: <n> found, <n> queued", "event apo-test kept by restart: its
-# apocalypse resumes after the drain" and then "event apo-test resumed after restart (horde 2/2, <u> units to rebuild)".
+# apocalypse-prep-restart.vrs: apocalypse D28 (Session 2), before the restart. apo-test runs to horde 2 with a front that
+# is held and far from the goal; horde 1 and one horde 2 unit are killed so the scoreboard holds kills from before the
+# restart. Then the orchestrator copies both logs, waits for a post-action autosave, closes the client and stops the server
+# (taskkill, no /F) and starts it; apocalypse-boot2.vrs follows. The boot log must show "boot marker sweep: <n> found, <n>
+# queued", "event apo-test kept by restart: its apocalypse resumes after the drain" and then "event apo-test resumed after
+# restart (horde 2/2, <u> units to rebuild)".
+#
+# Holding (D6): a front holds while a player is within 60 m of it, but not within goal.radius + 60 = 90 m of the goal, so
+# Chaos holds by standing on the front, never at the goal. A short first run reads the hotspots; the goal is then moved
+# (`.nyar event set apo-test action.goal here`, D16) to G* = hotspot 1 + 200 m along the line from hotspot 2 through
+# hotspot 1, and the march slowed to 0.5 m/s, so that horde 2 (rising at hotspot 2, 490 m or more from G*) is still far
+# from the goal when Chaos stands on its front a minute after it rises, and stays far while nobody is connected across
+# the restart (230 m or more of march at 0.5 m/s is over 7 min). Horde 1 rises at hotspot 1 with Chaos on it and is
+# killed there. apocalypse-boot2.vrs sets the fixture goal and speed back.
 # Needs: what apocalypse.vrs needs; no purge cooldown; the server's state.json read after the stop holds "Apocalypse".
+# Prints for apocalypse-boot2.vrs: PREP_PCT (horde 2's held %) and KILLS_BEFORE (the units killed here), in the calc lines.
 ensure
 console ToggleInvulnerable true
 wait 2
 console TPHome
 wait 3
+chat .nyar event reload
+expect-log events: reloaded
+# the fixture goal and speed for the short run
 chat .devtp -1188 -1334
+expect-log \[DEV TP\] to
+wait 3
+chat .nyar event set apo-test action.goal here
+expect-reply apo-test action.goal =
+chat .nyar event set apo-test action.marchSpeed 3.0
+expect-reply apo-test action.marchSpeed =
+# a short run for the hotspots
+mark
+chat .nyar event start apo-test
+expect-log event apo-test started by Manual timeout=20
+expect-log apocalypse apo-test hotspots: 2 \( timeout=10
+chat .nyar event info apo-test
+expect-log (^|\] )hotspot 1: .* at (?P<H1X>-?[0-9]+) (?P<H1Z>-?[0-9]+) timeout=10
+expect-log (^|\] )hotspot 2: .* at (?P<H2X>-?[0-9]+) (?P<H2Z>-?[0-9]+) timeout=10
+chat .nyar event stop apo-test
+expect-log event apo-test stopped
+wait 30
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+# G*, and the slow march
+calc DX = ${H1X} - ${H2X}
+calc DZ = ${H1Z} - ${H2Z}
+calc SPACING = hypot(${DX}, ${DZ})
+expect-calc ${SPACING} >= 290
+calc GX = ${H1X} + 200 * ${DX} / ${SPACING}
+calc GZ = ${H1Z} + 200 * ${DZ} / ${SPACING}
+chat .devtp ${GX} ${GZ}
+expect-log \[DEV TP\] to
+wait 4
+chat .nyar event set apo-test action.goal here
+expect-reply apo-test action.goal =
+chat .nyar event set apo-test action.marchSpeed 0.5
+expect-reply apo-test action.marchSpeed =
+# the run that crosses the restart: Chaos on hotspot 1 for horde 1
+chat .devtp ${H1X} ${H1Z}
 expect-log \[DEV TP\] to
 wait 4
 console ToggleInvulnerable true
@@ -18,19 +65,49 @@ wait 2
 mark
 chat .nyar event start apo-test
 expect-log event apo-test started by Manual timeout=20
-expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
-expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=330
-# horde 2 marches on Chaos and holds 60 m out; one of its units is killed for the scoreboard
-expect-log horde 2 front [0-9]+ % units [0-9]+/[0-9]+ within 30 m of the front timeout=120
-wait 60
-chat .devkill -1618703048 80 1
-expect-log \[DEV KILL\] n=1 timeout=10
-wait 5
 chat .nyar event info apo-test
-expect-reply horde 2 front at
+expect-log (^|\] )hotspot 1: .* at (?P<R1X>-?[0-9]+) (?P<R1Z>-?[0-9]+) timeout=10
+expect-log (^|\] )hotspot 2: .* at (?P<R2X>-?[0-9]+) (?P<R2Z>-?[0-9]+) timeout=10
+expect-calc hypot(${R1X} - ${H1X}, ${R1Z} - ${H1Z}) <= 30 and hypot(${R2X} - ${H2X}, ${R2Z} - ${H2Z}) <= 30
+expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
+wait 5
+chat .devkill -1967480038 120
+expect-log \[DEV KILL\] n=(?P<K1>[0-9]+) timeout=10
+chat .devkill -1618703048 120
+expect-log \[DEV KILL\] n=(?P<K2>[0-9]+) timeout=10
+wait 5
+chat .devkill -1967480038 120
+expect-log \[DEV KILL\] n=(?P<K3>[0-9]+) timeout=10
+chat .devkill -1618703048 120
+expect-log \[DEV KILL\] n=(?P<K4>[0-9]+) timeout=10
+expect-log apocalypse apo-test horde 1 of 2 destroyed timeout=30
+# horde 2 rises at hotspot 2; a minute later its front is still near there, far from G*, and Chaos stands on it
+expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=330
+wait 60
+chat .nyar event info apo-test
+expect-log (^|\] )horde 2 front at (?P<F2X>-?[0-9]+) (?P<F2Z>-?[0-9]+), [0-9]+ % timeout=10
+expect-calc hypot(${F2X} - ${GX}, ${F2Z} - ${GZ}) > 150
+chat .devtp ${F2X} ${F2Z}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
+# held: its % does not change in 30 s
+chat .nyar event info apo-test
+expect-log (^|\] )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<PA>[0-9]+) % timeout=10
+wait 30
+chat .nyar event info apo-test
+expect-log (^|\] )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<PREP_PCT>[0-9]+) % timeout=10
+expect-calc ${PREP_PCT} == ${PA}
+# one horde 2 unit for the scoreboard
+chat .devkill -1967480038 120 1
+expect-log \[DEV KILL\] n=(?P<K5>[0-9]+) timeout=10
+expect-calc ${K5} == 1
+calc KILLS_BEFORE = ${K1} + ${K2} + ${K3} + ${K4} + ${K5}
+calc PREP_PCT = ${PREP_PCT}
+wait 5
 chat .nyar status
-expect-reply tracked units:
-expect-log CHAT> .*tracked units: (?P<TRACKED>[0-9]+) timeout=10
+expect-log \] tracked units: (?P<TRACKED>[0-9]+) \( timeout=10
 shot full apo-prep-restart
-# the record is written every 30 s of a march: wait for the next write before the stop
-wait 40
+# the record is written every 60 s while the front holds: wait for the next write before the stop
+wait 70

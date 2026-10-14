@@ -129,6 +129,8 @@ regex group captured by an earlier `expect-log`. Ending a step with `timeout=N` 
 | `expect-reply <text>` | A command reply contains the text (exact, case-insensitive; needs DevChatEcho) | yes |
 | `expect-chat <text>` | The chat box shows the text (OCR, fuzzy; use 15+ characters) | yes |
 | `expect-screen <text>` / `expect-bar <text>` | The screen or the ability bar shows the text (OCR, fuzzy) | yes |
+| `calc NAME = <expr>` | Arithmetic on numbers (`+ - * / ** %`, `sqrt hypot abs min max round floor ceil`); the result becomes `${NAME}` | no |
+| `expect-calc <expr>` | A comparison (`>= == <` …, `and`/`or`) over numbers and `${VARS}` is true | yes |
 | `shot <region> [name]` | Save a screenshot | no |
 | `leave` | Back to the main menu | no |
 
