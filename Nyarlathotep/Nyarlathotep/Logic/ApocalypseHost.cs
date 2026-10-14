@@ -86,9 +86,14 @@ public static class HopRule
         return (front.X + (front.GoalX - front.X) * t, front.Z + (front.GoalZ - front.Z) * t);
     }
 
+    /// <summary>The walk calls a tick keeps for the fronts' ground checks and crossings: a straggler's landing search stops
+    /// below it, so many unlandable stragglers cannot spend the budget the march reads its ground with (code review M1).</summary>
+    public const int FrontReserve = 700;
+
     public static RegionJump? Land(RegionUnit u, Front front, int i, int n, Func<float, float, byte, bool> walkable, Func<byte, float> heightOf,
         WalkBudget budget)
     {
+        if (budget.Left < FrontReserve) return null;
         // the unit's own slot first, at every level; then the front point and rings of 8 points out to 25 m at the unit's
         // level and its neighbours (session 1: one point per unit left 9 of 16 hops unlanded on rough ground)
         var (cx, cz) = Ahead(front);
@@ -101,7 +106,7 @@ public static class HopRule
         foreach (var (px, pz) in Rings(cx, cz, i))
             foreach (var level in WalkLevels.Spot(u.Level))
             {
-                if (!budget.TryTake(2)) return null;
+                if (budget.Left < FrontReserve || !budget.TryTake(2)) return null;
                 if (walkable(px, pz, level)) return new RegionJump(u.Key, px, heightOf(level), pz, level, float.MaxValue);
             }
         return null;
@@ -120,16 +125,21 @@ public static class HopRule
     /// <summary>The front's next point has walkable ground within 30 m (D6): the point itself, then four points 15 m and
     /// four 30 m off, at <paramref name="level"/> and its neighbours. With no level known (no living unit read) or the
     /// tick's walk budget spent the ground is taken as there, so a budget never holds a march.</summary>
-    public static bool Ground(float x, float z, byte? level, Func<float, float, byte, bool> walkable, WalkBudget budget)
+    public static bool Ground(float x, float z, byte? level, Func<float, float, byte, bool> walkable, WalkBudget budget) =>
+        level is null || GroundRead(x, z, level, walkable, budget) != false;
+
+    /// <summary><see cref="Ground"/> as read: null when it could not be read (no level, or the budget spent before an
+    /// answer), which a crossing treats as no ground to cross to (code review M1).</summary>
+    public static bool? GroundRead(float x, float z, byte? level, Func<float, float, byte, bool> walkable, WalkBudget budget)
     {
-        if (level is not { } h) return true;
+        if (level is not { } h) return null;
         foreach (var r in new[] { 0f, 15f, 30f })
             for (var k = 0; k < (r == 0 ? 1 : 4); k++)
             {
                 var (px, pz) = r == 0 ? (x, z) : SpawnLedger.Around(x, z, r, k, 4, 0.0);
                 foreach (var level2 in WalkLevels.Spot(h))
                 {
-                    if (!budget.TryTake(2)) return true;
+                    if (!budget.TryTake(2)) return null;
                     if (walkable(px, pz, level2)) return true;
                 }
             }
@@ -137,7 +147,7 @@ public static class HopRule
         // for good at 12 % where the ground rose); hops land the units there the same way
         foreach (var level3 in WalkLevels.Wide(h))
         {
-            if (!budget.TryTake(2)) return true;
+            if (!budget.TryTake(2)) return null;
             if (walkable(x, z, level3)) return true;
         }
         return false;
@@ -322,7 +332,8 @@ public sealed class ApocalypseHost
                 }
                 byte? level = horde.Count == 0 ? null : horde.OrderBy(u => Apocalypse.Distance(u.X, u.Z, front.X, front.Z)).First().Level;
                 var step = MarchRule.Step(front, action.Goal.Radius, action.MarchSpeed, seconds, online,
-                    (x, z) => HopRule.Ground(x, z, level, game.Walkable, game.Budget), now, out var held);
+                    (x, z) => HopRule.Ground(x, z, level, game.Walkable, game.Budget), now, out var held,
+                    (x, z) => HopRule.GroundRead(x, z, level, game.Walkable, game.Budget));
                 if (held is not null) Say(game.Log, $"apocalypse {run.Id} {held}");
                 if (step == MarchStep.Moved) marching = true;
                 var crossed = MarchRule.NewSteps(front);
@@ -645,6 +656,8 @@ public sealed class ApocalypseHost
             if (engine.Find(p.EventId) is not null) engine.Cancel(p.EventId);
             // the rebuild's, catch-up's and top-up's orders go with it, and any unit already spawned (code review M2)
             Safe(game, () => game.Ledger.EndEvent(p.EventId, DateTime.MaxValue));
+            // and the restored scoreboard rows, so a later run of the same id starts from zero (code review L2)
+            board.End(p.EventId);
             Reset(null);
             RemoveRecord(state, p.EventId);
             return null;

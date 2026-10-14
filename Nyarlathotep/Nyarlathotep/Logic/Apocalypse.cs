@@ -453,9 +453,11 @@ public static class MarchRule
 {
     /// <summary>One step of <paramref name="front"/> over <paramref name="seconds"/>. <paramref name="players"/> are the
     /// online players' x and z; <paramref name="walkable"/> says whether the next point has walkable ground within 30 m.
-    /// <paramref name="line"/> is the held line, once per hold.</summary>
+    /// <paramref name="line"/> is the held line, once per hold. <paramref name="cross"/> probes the crossing's points: null
+    /// when the ground could not be read (the tick's walk budget spent), which ends the crossing and holds the front, so an
+    /// unread point is never crossed to (code review M1); without it the crossing probes with <paramref name="walkable"/>.</summary>
     public static MarchStep Step(Front front, int goalRadius, double speed, double seconds, IReadOnlyList<(float X, float Z)> players,
-        Func<float, float, bool> walkable, DateTime utcNow, out string? line)
+        Func<float, float, bool> walkable, DateTime utcNow, out string? line, Func<float, float, bool?>? cross = null)
     {
         line = null;
         if (players.Any(p => Apocalypse.Distance(p.X, p.Z, front.X, front.Z) <= Apocalypse.WatchRange)) front.LastWatchedUtc = utcNow;
@@ -464,8 +466,7 @@ public static class MarchRule
         var nearGoal = left <= goalRadius + Apocalypse.GoalHoldMargin;
         if (!nearGoal && players.Any(p => Apocalypse.Distance(p.X, p.Z, front.X, front.Z) <= Apocalypse.HoldRange)) return MarchStep.HeldByPlayer;
         var step = (float)Math.Min(speed * Math.Max(0, seconds), left);
-        var nx = front.X + (front.GoalX - front.X) / left * step;
-        var nz = front.Z + (front.GoalZ - front.Z) / left * step;
+        var (nx, nz) = Toward(front, left, step);
         if (!walkable(nx, nz))
         {
             // unobserved, the front crosses to the next walkable point on its line within 120 m, never past the goal (A12)
@@ -475,14 +476,15 @@ public static class MarchRule
                 for (var d = step + Apocalypse.CrossStep; d - Apocalypse.CrossStep < reach - 1e-3; d += Apocalypse.CrossStep)
                 {
                     var far = Math.Min(d, reach);
-                    var cx = front.X + (front.GoalX - front.X) / left * far;
-                    var cz = front.Z + (front.GoalZ - front.Z) / left * far;
-                    if (!walkable(cx, cz)) continue;
+                    var (cx, cz) = Toward(front, left, far);
+                    var known = cross is null ? walkable(cx, cz) : cross(cx, cz);
+                    if (known is null) break;
+                    if (known == false) continue;
                     line = CrossedLine(front.Horde, far);
                     front.HeldNoGround = false;
                     front.X = cx;
                     front.Z = cz;
-                    return Apocalypse.Distance(cx, cz, front.GoalX, front.GoalZ) <= 0 ? MarchStep.AtGoal : MarchStep.Moved;
+                    return cx == front.GoalX && cz == front.GoalZ ? MarchStep.AtGoal : MarchStep.Moved;
                 }
             }
             if (!front.HeldNoGround) line = HeldLine(front.Horde);
@@ -492,8 +494,15 @@ public static class MarchRule
         front.HeldNoGround = false;
         front.X = nx;
         front.Z = nz;
-        return Apocalypse.Distance(nx, nz, front.GoalX, front.GoalZ) <= 0 ? MarchStep.AtGoal : MarchStep.Moved;
+        return nx == front.GoalX && nz == front.GoalZ ? MarchStep.AtGoal : MarchStep.Moved;
     }
+
+    /// <summary>The point <paramref name="metres"/> along the front's line to the goal, <paramref name="left"/> m away; the
+    /// goal itself from 1 mm short of it, so a step that reaches the goal lands on it exactly (code review L1: a goal off
+    /// the axis left a float gap and took ticks more).</summary>
+    static (float X, float Z) Toward(Front front, float left, float metres) =>
+        metres >= left - 1e-3f ? (front.GoalX, front.GoalZ)
+            : (front.X + (front.GoalX - front.X) / left * metres, front.Z + (front.GoalZ - front.Z) / left * metres);
 
     /// <summary>"horde &lt;k&gt; held: no walkable ground ahead" (D6).</summary>
     public static string HeldLine(int horde) => $"horde {horde} held: no walkable ground ahead";

@@ -82,6 +82,7 @@ public partial class ApocalypseTests
     public void Resume_fails_when_a_failed_resume_leaves_orders_queued()
     {
         var (_, rig) = ApocalypseDependencyFailureTests.Restarted();
+        rig.State.Document.Apocalypse!.Scores = [new RecordScore { PlatformId = "76561190000000001", Kills = 4, Deaths = 1, First = 1 }];
         Assert.Equal("apo", rig.Host.Boot(() => rig.State.Document.Apocalypse, () => Apo.Set(Apo.Event()), rig.Engine, rig.Game, rig.State,
             T0.AddMinutes(2)));
         rig.Game.PlaceThrow = new InvalidOperationException("ground unreadable");
@@ -92,6 +93,7 @@ public partial class ApocalypseTests
         Assert.Equal(0, rig.Game.Ledger.PendingSpawns);
         Assert.Empty(rig.Game.Ledger.Units);
         Assert.Empty(rig.Game.Ledger.TakeSpawns());
+        Assert.Empty(rig.Board.Export("apo"));                                // the restored rows go too (post-fix review L2)
     }
 
     [Fact]
@@ -210,6 +212,45 @@ public partial class ApocalypseTests
         Assert.True(HopRule.Ground(100, 0, 3, Walkable, new WalkBudget()));
         // no ground at any level within reach: held
         Assert.False(HopRule.Ground(100, 0, 3, (_, _, _) => false, new WalkBudget()));
+    }
+
+    // ---- D6 (post-fix review M1, L1): a spent walk budget never crosses unread ground; a step reaching the goal lands on it
+
+    [Fact]
+    public void March_fails_when_a_spent_budget_crosses_unread_ground()
+    {
+        static bool Open(float x, float z, byte level) => true;
+        // unobserved, the next point unwalkable and every crossing point unread (the budget spent): held, not crossed
+        var f = FrontAt();
+        Assert.Equal(MarchStep.HeldNoGround, MarchRule.Step(f, 20, 2.0, 1, [], (x, _) => x < 1, T0, out var line, (_, _) => null));
+        Assert.Equal(0f, f.X, 3);
+        Assert.Equal("horde 1 held: no walkable ground ahead", line);
+        // the read: a spent budget is "unread" for a crossing and "there" for an ordinary step (a budget never holds a march)
+        var spent = new WalkBudget(0);
+        Assert.Null(HopRule.GroundRead(100, 0, 3, Open, spent));
+        Assert.True(HopRule.Ground(100, 0, 3, Open, spent));
+        Assert.Null(HopRule.GroundRead(100, 0, null, Open, new WalkBudget()));
+        Assert.False(HopRule.GroundRead(100, 0, 3, (_, _, _) => false, new WalkBudget()));
+        // stragglers stop searching below the fronts' reserve, so they cannot spend it
+        var u = new RegionUnit(1, "apo", T0, 0, 0, 0, 3);
+        var low = new WalkBudget(HopRule.FrontReserve - 1);
+        Assert.Null(HopRule.Land(u, FrontAt(), 0, 1, Open, _ => 0f, low));
+        Assert.Equal(HopRule.FrontReserve - 1, low.Left);
+        Assert.NotNull(HopRule.Land(u, FrontAt(), 0, 1, Open, _ => 0f, new WalkBudget()));
+    }
+
+    [Fact]
+    public void March_fails_when_a_goal_off_the_axis_is_reached_short()
+    {
+        // a goal off both axes: a step that reaches it lands on it exactly and reports AtGoal at once
+        var f = new Front(1, -1462.5f, 1389.7f, 1055.1f, -979.7f);           // x + dx / left * left misses it by a float step
+        Assert.Equal(MarchStep.AtGoal, MarchRule.Step(f, 20, 2.0, 10000, [], (_, _) => true, T0, out _));
+        Assert.Equal(1055.1f, f.X);
+        Assert.Equal(-979.7f, f.Z);
+        // the crossing too: only the goal dry, it lands on the goal exactly
+        var c = new Front(1, 300.1f, 160.2f, 333.3f, 177.7f);
+        Assert.Equal(MarchStep.AtGoal, MarchRule.Step(c, 0, 2.0, 1, [], (x, z) => x == 333.3f && z == 177.7f, T0, out _));
+        Assert.Equal(333.3f, c.X);
     }
 
     [Fact]
