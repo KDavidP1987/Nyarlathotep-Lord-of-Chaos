@@ -196,6 +196,17 @@ public partial class ApocalypseTests
     static string Source() => File.ReadAllText(Path.Combine(ControlCaseTests.RepoRoot(), "Nyarlathotep", "Nyarlathotep", "Logic", "Apocalypse.cs"));
 
     [Fact]
+    public void Hotspots_fails_when_the_native_read_skips_disabled_natives()
+    {
+        // the game disables NPCs with no player near; a read without IncludeDisabled finds no hotspot away from players
+        var source = File.ReadAllText(Path.Combine(ControlCaseTests.RepoRoot(), "Nyarlathotep", "Nyarlathotep", "Services", "ApocalypseAction.cs"));
+        var open = source.IndexOf(NativeScan.Open, StringComparison.Ordinal);
+        var close = source.IndexOf("// </native-read>", StringComparison.Ordinal);
+        Assert.True(open >= 0 && close > open);
+        Assert.Contains("EntityQueryOptions.IncludeDisabled", source[open..close]);
+    }
+
+    [Fact]
     public void Hotspots_fails_when_the_scan_misses_a_planted_write()
     {
         var source = Source();

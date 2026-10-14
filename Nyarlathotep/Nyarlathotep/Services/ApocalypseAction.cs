@@ -221,6 +221,8 @@ internal static class ApocalypseAction
                     ComponentType.ReadOnly(Il2CppType.Of<Health>()), ComponentType.ReadOnly(Il2CppType.Of<Translation>()),
                 },
                 None = new[] { ComponentType.ReadOnly(Il2CppType.Of<PlayerCharacter>()) },
+                // the game disables an NPC with no player near; a hotspot far from every player is still a hotspot (session 1)
+                Options = EntityQueryOptions.IncludeDisabled | EntityQueryOptions.IncludeSpawnTag,
             });
             try
             {
