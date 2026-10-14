@@ -62,7 +62,8 @@
         "wave-sets › build outputs",
         "swarm › build outputs",
         "hunting-grounds › build outputs",
-        "revenge › build outputs"
+        "revenge › build outputs",
+        "apocalypse › build outputs"
       ]
     },
     {
@@ -97,7 +98,9 @@
         "hunting-grounds › release zip",
         "hunting-grounds › tag and GitHub release v0.11.0",
         "revenge › release zip",
-        "revenge › tag and GitHub release v0.11.0"
+        "revenge › tag and GitHub release v0.11.0",
+        "apocalypse › release zip",
+        "apocalypse › tag and GitHub release v0.13.0"
       ]
     },
     {
@@ -136,7 +139,8 @@
         "wave-sets › templates.json graveyard-waves",
         "swarm › templates.json spider-swarm",
         "hunting-grounds › templates.json spider-hunting-grounds",
-        "revenge › templates.json bandit-revenge"
+        "revenge › templates.json bandit-revenge",
+        "apocalypse › templates.json zombie-apocalypse"
       ]
     },
     {
@@ -186,7 +190,10 @@
         "wave-sets › events.json waveList and scoreboard",
         "swarm › events.json arena, winner and growth",
         "hunting-grounds › events.json Region location, regionLock, RegionHunt",
-        "revenge › events.json Revenge trigger"
+        "revenge › events.json Revenge trigger",
+        "apocalypse › events.json Apocalypse definitions",
+        "apocalypse › state.json `Apocalypse` record",
+        "apocalypse › scoreboard rows in the record"
       ]
     },
     {
@@ -381,7 +388,8 @@
         "wave-sets › snapshot",
         "swarm › snapshot",
         "hunting-grounds › snapshot",
-        "revenge › snapshot"
+        "revenge › snapshot",
+        "apocalypse › snapshot"
       ],
       "location": "%TEMP%\\nyar-snap-* (saved\\manifest.json plus the copies)",
       "owner": "tools/dev-snapshot.ps1",
@@ -493,9 +501,10 @@
         "nyar-ws*-logs",
         "nyar-sw*-logs",
         "nyar-hg*-logs",
-        "nyar-rv*-logs"
+        "nyar-rv*-logs",
+        "nyar-apo*-logs"
       ],
-      "location": "%TEMP%\\nyar-s<n>-logs (copies of LogOutput.log and NyarDev.log taken by hand during event-library Sessions 4 and 5); %TEMP%\\nyar-ws<n>-logs (wave-sets Session 1); %TEMP%\\nyar-sw<n>-logs (swarm Session 1); %TEMP%\nyar-hg<n>-logs (hunting-grounds Sessions 1-2); %TEMP%\\nyar-rv<n>-logs (revenge sessions)",
+      "location": "%TEMP%\\nyar-s<n>-logs (copies of LogOutput.log and NyarDev.log taken by hand during event-library Sessions 4 and 5); %TEMP%\\nyar-ws<n>-logs (wave-sets Session 1); %TEMP%\\nyar-sw<n>-logs (swarm Session 1); %TEMP%\nyar-hg<n>-logs (hunting-grounds Sessions 1-2); %TEMP%\\nyar-rv<n>-logs (revenge sessions); %TEMP%\\nyar-apo<n>-logs (apocalypse spike and sessions)",
       "owner": "Claude during a server session",
       "retention": "the session that made them",
       "deletion": "deleted once the session is recorded; later sessions copy to nyar-soak-* instead; a leftover fails -Paths",
@@ -510,7 +519,8 @@
         "wave-sets › session log copies",
         "swarm › session log copies",
         "hunting-grounds › session log copies",
-        "revenge › session log copies"
+        "revenge › session log copies",
+        "apocalypse › session log copies"
       ]
     },
     {
@@ -583,7 +593,9 @@
         "hunting-grounds › review prompts",
         "hunting-grounds › Claude's scratchpad (Codex prompts and outputs, the v0.10.0 archive)",
         "revenge › review prompts",
-        "revenge › Claude's scratchpad (Codex prompts and outputs, drafts, isolated dry-run copies)"
+        "revenge › Claude's scratchpad (Codex prompts and outputs, drafts, isolated dry-run copies)",
+        "apocalypse › review prompts",
+        "apocalypse › Claude's scratchpad (Codex prompts and outputs, drafts)"
       ]
     },
     {
@@ -719,7 +731,8 @@
       "singleCopy": false,
       "rows": [
         "automation › focus",
-        "revenge › the running revenge's focus"
+        "revenge › the running revenge's focus",
+        "apocalypse › resolved goal, hotspots, fronts, spread window"
       ]
     },
     {
@@ -769,7 +782,9 @@
         "swarm › vrclient outputs",
         "hunting-grounds › vrclient outputs",
         "hunting-grounds › dev marks",
-        "revenge › vrclient outputs"
+        "revenge › vrclient outputs",
+        "apocalypse › vrclient outputs",
+        "apocalypse › NyarDevTools hop command (spike)"
       ]
     },
     {

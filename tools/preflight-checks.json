@@ -13,7 +13,8 @@
     "docs/dod/wave-sets.md",
     "docs/dod/swarm.md",
     "docs/dod/hunting-grounds.md",
-    "docs/dod/revenge.md"
+    "docs/dod/revenge.md",
+    "docs/dod/apocalypse.md"
   ],
   "sessionsUncounted": {
     "event-spawns": [1]
@@ -33,7 +34,8 @@
     "wave-sets": 1,
     "swarm": 1,
     "hunting-grounds": 0,
-    "revenge": 1
+    "revenge": 1,
+    "apocalypse": 0
   },
   "dataTests": {
     "event-spawns": [
@@ -87,6 +89,9 @@
     ],
     "revenge": [
       "docs/features/REVENGE.md"
+    ],
+    "apocalypse": [
+      "docs/features/APOCALYPSE.md"
     ],
     "boss-reinforcements": [
       "docs/features/BOSS_REINFORCEMENTS.md"
