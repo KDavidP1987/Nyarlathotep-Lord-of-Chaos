@@ -2,6 +2,7 @@
 
 **Status:** shipped in 0.9.0 (2026-10-11). Steps 1 and 2 done (Sessions 1 and 2, D20-D23 pass); step 3 is the release
 (docs/dod/wave-sets.md, audit docs/audits/wave-sets.md).
+Counts and levels that follow the players in scope (an opt-in `scaling` block) are docs/features/SCALING.md (0.14.0).
 
 ## Goal
 

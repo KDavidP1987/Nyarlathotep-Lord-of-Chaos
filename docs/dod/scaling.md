@@ -5,7 +5,7 @@ profile: full
 id: dod-20261014-scl1
 slug: scaling
 title: Scaling to the players — wave and horde sizes and levels follow the players in scope
-status: ready
+status: in-progress
 size: L
 parent: nyarlathotep
 kind: feature
@@ -397,3 +397,8 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-14 · note · deferred · Review 1 F8 · D4's players within fanOut.minSpacing are counted by D2's rule (alive, in scope, IncludeAdmins); the builder's D4 test adds an admin with IncludeAdmins false inside minSpacing
 - 2026-10-14 · note · deferred · Review 1 F9 · D25's README Scaling section gains one line advising a regional scope on player-aimed events (revenge, AroundPlayer) that should scale only to nearby players, since a Global event counts every online player (D57)
 - 2026-10-14 · status → ready · approve
+- 2026-10-14 · status → in-progress · start
+- 2026-10-14 · note · method · built on the git branch `scaling` until v0.13.0 (apocalypse and unit-watch) is tagged on main, then merged; step 1's "starts after v0.13.0 is tagged" exists so no scaling code reaches the 0.13.0 release, which the branch keeps (the owner set D55's order: scaling first after unit-watch, and the 0.13.0 release waits on the test weekend); step 1's spike touches only the dev tool
+- 2026-10-14 · note · spike · `python tools/vrclient/vrclient.py run scenarios/scaling-spike.vrs --var GEAR=48 --var GEAR2=39 …` → "SCENARIO PASS scaling-spike 14/14"; Equipment sum = the screen's Gear Level 5 of 5 (30, 39, 48, 48, 39), IsAdmin true, V Blood flag yes/no as expected, one read 0.006-0.008 ms; gear verdict: floor (S-6 kept)
+- 2026-10-14 · note · spike ran narrower than step 1 named in one way: the cost was timed by a Stopwatch around the whole player read in `.devgear` (User, character, position, Equipment: 3.81 ms cold, 0.027 ms warm; re-run 14/14 after the Codex cross-inspection), not under Debug.TimingLog (one read is far below its per-tick resolution; D22 measures the mod's read inside its tick)
+- 2026-10-14 · note · D19 ready for the owner's acceptance (vrclient evidence: scaling-spike.vrs SCENARIO PASS 14/14, docs/features/SCALING.md › Test results › Spike); not checked by the builder (rubric 3)

@@ -3,6 +3,7 @@
 > **Status:** step 1 spikes recorded (march go — hop, pathing walk not usable, faction mixes); step 2 (Logic) merged. Plan `docs/dod/apocalypse.md` (0.13.0, the Halloween release). The
 > owner's brief and the settled questions are in docs/features/OUTBREAK.md.
 > Stuck hordes and roamers are handled by unit watch (docs/features/UNIT_WATCH.md, released with this in 0.13.0).
+> Horde and roamer sizes and levels that follow the players (an opt-in `scaling` block) are docs/features/SCALING.md (0.14.0).
 
 ## Design summary
 

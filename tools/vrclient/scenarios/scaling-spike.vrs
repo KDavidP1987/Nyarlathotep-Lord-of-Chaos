@@ -1,0 +1,60 @@
+# scaling-spike.vrs: scaling D19 (Spike), what the game reports as a player's gear level and a unit's V Blood flag.
+# (a) `.devgear` (tools/vrclient/NyarDevTools/DevGear.cs, dev server only) logs Chaos's Equipment ArmorLevel, SpellLevel
+# and WeaponLevel, their sum, GetFullLevel, floor and round; the character screen (Tab) is shot before and after one
+# equipped armour piece is taken off with a right click, and the screen's "Gear Level" is compared with the sum by eye
+# (shots sc-gear-before, sc-gear-after); (b) the same line carries User.IsAdmin; (c) one V Blood and one bandit thug
+# spawned at the mark sc-a, `.devgear units 20` reports vblood=yes on the first and no on the second; (d) the line's ms
+# is the cost of one player read as the mod will make it (User, character, position, Equipment; a Stopwatch around it,
+# since one read is far below Debug.TimingLog's per-tick resolution).
+#
+# Needs: NyarDevTools with .devgear; Chaos wearing two working armour pieces (the chest piece at the character screen's
+# second equipment slot, CHEST_DX/CHEST_DY below, measured on 3440x1440); no purge cooldown; Chaos invulnerable
+# (`ToggleInvulnerable true`, a Boolean, never false).
+# Run: --var GEAR=48 --var GEAR2=39 --var CHEST_DX=-0.651 --var CHEST_DY=-0.106 --var AX=-1880 --var AZ=-1640
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+mark
+chat .devgear
+expect-log \[DEV GEAR\] armor=(?P<A1>[0-9.]+) spell=(?P<S1>[0-9.]+) weapon=(?P<W1>[0-9.]+) sum=(?P<SUM1>[0-9.]+) full=(?P<F1>[0-9.]+) floor=(?P<FL1>[0-9]+) round=[0-9]+ admin=true ms=(?P<MS1>[0-9.]+)
+expect-calc ${FL1} == ${GEAR} and ${SUM1} == ${F1}
+key tab
+wait 2
+shot full sc-gear-before
+# one armour piece off: a right click on the equipped chest piece moves it to the inventory
+cast rmb ${CHEST_DX} ${CHEST_DY}
+wait 2
+shot full sc-gear-after
+key tab
+wait 2
+chat .devgear
+expect-log \[DEV GEAR\] armor=[0-9.]+ spell=[0-9.]+ weapon=[0-9.]+ sum=(?P<SUM2>[0-9.]+) full=(?P<F2>[0-9.]+) floor=(?P<FL2>[0-9]+) round=[0-9]+ admin=true ms=(?P<MS2>[0-9.]+)
+expect-calc ${FL2} == ${GEAR2} and ${SUM2} == ${F2}
+expect-calc ${MS2} < 1
+# (c) a V Blood and a thug: the V Blood flag
+chat .devtp ${AX} ${AZ}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .devmark sc-a
+expect-log \[DEV MARK\] sc-a
+chat .nyar spawn CHAR_Bandit_Foreman_VBlood 1
+expect-log spawn batch: .* 0 waiting timeout=30
+chat .nyar spawn CHAR_Bandit_Thug 1
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 3
+chat .devgear units 20
+expect-seen \[DEV GEAR\] unit=2122229952 vblood=yes lvl=[0-9]+
+expect-seen \[DEV GEAR\] unit=-301730941 vblood=no lvl=[0-9]+
+shot full sc-units
+chat .nyar purge
+wait 2
+chat .nyar purge confirm
+expect-log purge: [0-9]+ events ended, 2 units queued
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+console TPHome
+wait 3

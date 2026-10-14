@@ -61,7 +61,7 @@ public class Plugin : BasePlugin
         _harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         _harmony.PatchAll(typeof(FightPatches));                         // unit-watch spike: idle unless .devfight runs
         StrandHold.Patch(_harmony);                                      // unit-watch Session 1: holds a stranded unit under
-        Log.LogInfo("NyarDevTools loaded: .devwhere .devtp .devmark .devgo .devmarks .devkill .devdie .devhop .devjump .devwalk .devunits .devfight .devstrand .devground");
+        Log.LogInfo("NyarDevTools loaded: .devwhere .devtp .devmark .devgo .devmarks .devkill .devdie .devhop .devjump .devwalk .devunits .devfight .devstrand .devground .devgear");
     }
 
     static Harmony _harmony;

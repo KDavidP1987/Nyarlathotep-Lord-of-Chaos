@@ -4,6 +4,7 @@
 passed with hidden jumps, and the logic and services passed their Session 2 scenarios (Test results). The owner's
 live checks (D26, D27) are recorded under Test results when done.
 Units stuck where players cannot reach them are recovered or removed by unit watch (docs/features/UNIT_WATCH.md, 0.13.0).
+Wave sizes and levels that follow the players in the region (an opt-in `scaling` block) are docs/features/SCALING.md (0.14.0).
 
 ## Goal
 
