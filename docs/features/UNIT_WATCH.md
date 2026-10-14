@@ -28,19 +28,22 @@ apocalypse roamers and hordes. A unit spawned with `.nyar spawn` belongs to no e
 
 ### Detection (every 5 s, the behaviour cadence)
 
-A watched unit is **stuck** when either holds:
+A watched unit is **stuck** when either holds (distances are on x and z unless stated):
 
 1. **Standing:** it has not moved more than 5 m and has not fought for StuckSeconds (default 90 s), and during that time
    a player stood within 40 m of it or it held a player as its aggro target. A unit of a stationary design (a Point
    wave at its anchor, a waiting hunter) with no player near is not stuck merely for standing still.
 2. **Off the ground:** on two checks at least 10 s apart, the walk check finds no free, grounded tile at its position
    at its own height level or a neighbouring one (under the map, inside a rock, on a roof the walk data does not
-   cover). This applies whether or not a player is near.
+   cover), or its height is below WalkHeight.MinY (-100) or below the lowest grounded level at its x and z. This
+   applies whether or not a player is near.
 
 A unit that **fought** inside the window — it hit a player, or a player hit it — is never stuck by either rule. A
 unit moved by another mover of ours (a hidden jump, an apocalypse hop, an arena or region return, a regroup) has
 moved. "Fought" comes from one guarded read the 1.0 replacement rule (design §9 D53) will reuse; which game signal
-answers it (a damage event, or a health sample with the aggro target) is decided by the step 1 spike.
+answers it (a damage event, or a health sample with the aggro target) is decided by the step 1 spike; a signal
+averaging 0.5 ms a tick or more is not usable. Without a usable signal, fought means the unit's own health fell in the
+window or it holds a player target within 5 m, so a melee unit on a rock above a player is still stuck at about 90 s.
 
 ### Recovery (2 tries)
 
@@ -52,8 +55,8 @@ a horde's front, a roamer's hotspot). Every landing:
 - lies 50 m or more from every online player, and the move happens only while no player is within 100 m of the unit
   (hunting-grounds' hidden-jump rules);
 - is never inside claimed castle territory (hunting-grounds A6);
-- stays inside the event's scope regions for a region-locked or scoped event, and inside the arena circle for a swarm
-  arena.
+- stays inside the event's scope regions for a region-locked or scoped event (hunting-grounds), and inside the arena
+  circle for a swarm arena; for revenge the only eligible player is its focus player.
 
 A try that finds no landing, or no unseen moment within StuckSeconds, is a failed try. After a move the unit has
 another StuckSeconds: a unit that fights, or is no longer stuck by either rule, is cleared and starts over with no
@@ -98,7 +101,8 @@ RecoveryTries is fixed at 2. No events.json key is added.
 - `[nyar] unit-watch <event> stuck: <prefab> wave <k> (standing|off-ground|stall|admin)`
 - `[nyar] unit-watch <event> recovered: <prefab> try <t>/2, <d> m (group|player|anchor)`
 - `[nyar] unit-watch <event> try failed: <prefab> try <t>/2 (no landing|seen|still stuck)`
-- `[nyar] unit-watch <event> removed: <prefab> wave <k> after 2 tries, no kill credit`
+- `[nyar] unit-watch <event> removed: <prefab> wave <k> after 2 tries, no kill credit`, ending ` (in view)` when a player
+  stood within 100 m at the removal
 - `[nyar] unit-watch <event> cleared: <prefab> (fought|moving)`
 - `[nyar] unit-watch <event> stall: wave <k> quiet <m> min, <n> leftovers marked`
 - failures once per streak, with a health entry: `[nyar] unit-watch: read failed: <message>`,
