@@ -197,6 +197,16 @@ public partial class ApocalypseTests
         Assert.True(budget.Left > 0);
     }
 
+    [Fact]
+    public void March_fails_when_a_front_holds_for_good_where_the_ground_climbs_two_levels()
+    {
+        // the next point is walkable only two levels above the horde's: the march goes on (session 1: held at 12 % for good)
+        bool Walkable(float x, float z, byte level) => level == 5 && Math.Abs(x - 100) < 0.5 && Math.Abs(z) < 0.5;
+        Assert.True(HopRule.Ground(100, 0, 3, Walkable, new WalkBudget()));
+        // no ground at any level within reach: held
+        Assert.False(HopRule.Ground(100, 0, 3, (_, _, _) => false, new WalkBudget()));
+    }
+
     // ---- D15 (review L1): an outcome's cancelled orders count as failed, not pending
 
     [Fact]

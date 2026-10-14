@@ -118,6 +118,13 @@ public static class HopRule
                     if (walkable(px, pz, level2)) return true;
                 }
             }
+        // a slope that climbs past the neighbouring levels: the wide levels at the point itself (session 1: a horde held
+        // for good at 12 % where the ground rose); hops land the units there the same way
+        foreach (var level3 in WalkLevels.Wide(h))
+        {
+            if (!budget.TryTake(2)) return true;
+            if (walkable(x, z, level3)) return true;
+        }
         return false;
     }
 }
