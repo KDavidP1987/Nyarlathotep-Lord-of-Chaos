@@ -887,6 +887,28 @@
         "unit-watch › watch counts per instance (stuck now, recovered, removed)",
         "unit-watch › players' positions for one check"
       ]
+    },
+    {
+      "artifact": "Tester packages and returned workbooks",
+      "covers": [
+        "REFERENCE DOCUMENTATION/**"
+      ],
+      "location": "REFERENCE DOCUMENTATION/TESTING DOCUMENTATION/, git-ignored (built by tools/tester-package/build.py)",
+      "owner": "project owner",
+      "retention": "the current round at the top; closed rounds under RESOLVED/",
+      "deletion": "by the owner; returned workbooks hold tester names and machine details and are never committed",
+      "singleCopy": true
+    },
+    {
+      "artifact": "Tester package proof builds",
+      "covers": [
+        "nyar-tp-prove-*"
+      ],
+      "location": "%TEMP%\nyar-tp-prove-<random> (build.py --prove)",
+      "owner": "build.py --prove",
+      "retention": "while --prove runs",
+      "deletion": "removed by --prove when it finishes; a leftover fails -Paths",
+      "singleCopy": true
     }
   ]
 }

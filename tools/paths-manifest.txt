@@ -40,6 +40,8 @@ tracked: tools/*.ps1
 tracked: tools/*.json
 tracked: tools/*.txt
 tracked: tools/vrclient/**
+# the tester package generator (tools/tester-package/README.md, _shared/TESTING-STANDARDS.md)
+tracked: tools/tester-package/**
 tracked: tools/preflight-fixtures/**
 tracked: tools/rollback-drill-fixtures/**
 tracked: tools/soak-report-fixtures/**
@@ -49,6 +51,8 @@ tracked: tools/ingame/**
 ignored: Reference Data/**
 ignored: Learning Mods/**
 ignored: artwork/**
+# built tester packages and returned workbooks (tester details; tools/tester-package/README.md)
+ignored: REFERENCE DOCUMENTATION/**
 ignored: .claude/**
 # the dod skill's per-session records (its own .gitignore keeps them out of git; revenge step 3)
 ignored: docs/dod/.session/**
@@ -107,6 +111,8 @@ external: config/config.vdf
 # declares the folder, it does not permit it to remain: `-Paths` fails on every %TEMP%\nyar-* folder it finds,
 # declared or not ("paths: leftover temp <name>"). Each temp glob has an entry in tools/data-inventory.json.
 temp: nyar-snap-*
+# tools/tester-package/build.py --prove's scratch builds; removed when it finishes
+temp: nyar-tp-prove-*
 temp: nyar-rel-*
 temp: nyar-rollback-*
 temp: nyar-drill-*

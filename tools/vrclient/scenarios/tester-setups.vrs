@@ -1,0 +1,125 @@
+# tester-setups.vrs: types every setup command of the tester package (tools/tester-package/rows.py) as a tester would,
+# and checks each reply: each template is added, each edit is accepted, each event enables and its info reads back.
+# It starts nothing. Needs: the dev server with no copies of these templates in events.json (run on a snapshot, restored
+# after); NyarDevTools DevChatEcho; Chaos invulnerable (`ToggleInvulnerable true` only).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .nyar event reload
+expect-log events: reloaded
+chat .nyar
+expect-reply template
+chat .nyar status
+expect-reply tracked units:
+chat .nyar template list
+expect-reply undead-nightfall
+chat .nyar pillar list
+expect-reply empowerment
+chat .nyar pillar empowerment on
+expect-reply empowerment
+chat .nyar pillar spawns on
+expect-reply spawns
+chat .nyar template use undead-nightfall
+expect-reply template undead-nightfall added as undead-nightfall (disabled)
+chat .nyar event enable undead-nightfall
+expect-reply undead-nightfall
+chat .nyar template use legion-weekend-surge
+expect-reply template legion-weekend-surge added as legion-weekend-surge (disabled)
+chat .nyar event enable legion-weekend-surge
+expect-reply legion-weekend-surge
+chat .nyar template use bandit-vengeance
+expect-reply template bandit-vengeance added as bandit-vengeance (disabled)
+chat .nyar event enable bandit-vengeance
+expect-reply bandit-vengeance
+chat .nyar template use bandit-ambush
+expect-reply template bandit-ambush added as bandit-ambush (disabled)
+chat .nyar event enable bandit-ambush
+expect-reply bandit-ambush
+chat .nyar template use graveyard-waves
+expect-reply template graveyard-waves added as graveyard-waves (disabled)
+chat .nyar event enable graveyard-waves
+expect-reply graveyard-waves
+chat .nyar template use roaming-hunters
+expect-reply template roaming-hunters added as roaming-hunters (disabled)
+chat .nyar event enable roaming-hunters
+expect-reply roaming-hunters
+chat .nyar template use border-watch
+expect-reply template border-watch added as border-watch (disabled)
+chat .nyar event enable border-watch
+expect-reply border-watch
+chat .nyar template use bandit-reprisal
+expect-reply template bandit-reprisal added as bandit-reprisal (disabled)
+chat .nyar event enable bandit-reprisal
+expect-reply bandit-reprisal
+chat .nyar template use spider-swarm
+expect-reply template spider-swarm added as spider-swarm (disabled)
+chat .nyar event enable spider-swarm
+expect-reply spider-swarm
+chat .nyar template use spider-hunting-grounds
+expect-reply template spider-hunting-grounds added as spider-hunting-grounds (disabled)
+chat .nyar event enable spider-hunting-grounds
+expect-reply spider-hunting-grounds
+chat .nyar template use bandit-revenge
+expect-reply template bandit-revenge added as bandit-revenge (disabled)
+chat .nyar event enable bandit-revenge
+expect-reply bandit-revenge
+chat .nyar template use zombie-apocalypse
+expect-reply template zombie-apocalypse added as zombie-apocalypse (disabled)
+chat .nyar event enable zombie-apocalypse
+expect-reply zombie-apocalypse
+chat .nyar template use graveyard-waves as farbane-ambush
+expect-reply template graveyard-waves added as farbane-ambush (disabled)
+chat .nyar event enable farbane-ambush
+expect-reply farbane-ambush
+chat .nyar template use spider-swarm as stuck-test
+expect-reply template spider-swarm added as stuck-test (disabled)
+chat .nyar event enable stuck-test
+expect-reply stuck-test
+chat .nyar event set legion-weekend-surge trigger.days Wed
+expect-reply legion-weekend-surge trigger.days =
+chat .nyar event set legion-weekend-surge trigger.times 21:35
+expect-reply legion-weekend-surge trigger.times =
+chat .nyar event set roaming-hunters trigger.minMinutes 5
+expect-reply roaming-hunters trigger.minMinutes =
+chat .nyar event set roaming-hunters trigger.maxMinutes 5
+expect-reply roaming-hunters trigger.maxMinutes =
+chat .nyar event set bandit-reprisal trigger.kills 10
+expect-reply bandit-reprisal trigger.kills =
+chat .nyar event set bandit-reprisal trigger.windowSeconds 600
+expect-reply bandit-reprisal trigger.windowSeconds =
+chat .nyar event set farbane-ambush action.scope FarbaneWoods
+expect-reply farbane-ambush action.scope =
+chat .nyar event set farbane-ambush action.regionLock true
+expect-reply farbane-ambush action.regionLock =
+chat .nyar event set bandit-revenge trigger.warnAt 4,8
+expect-reply bandit-revenge trigger.warnAt =
+chat .nyar event set bandit-revenge trigger.heat 12
+expect-reply bandit-revenge trigger.heat =
+chat .nyar event set zombie-apocalypse durationSeconds 7200
+expect-reply zombie-apocalypse durationSeconds =
+chat .nyar event info legion-weekend-surge
+expect-reply legion-weekend-surge
+chat .nyar event info roaming-hunters
+expect-reply roaming-hunters
+chat .nyar event info spider-swarm
+expect-reply spider-swarm
+chat .nyar region here
+expect-reply you are in
+# E-01: a new event built from chat
+chat .nyar event new my-event spawns
+expect-reply my-event
+chat .nyar event set my-event action.units CHAR_Forest_Wolf:4
+expect-reply my-event action.units =
+chat .nyar event set my-event location here
+expect-reply my-event action.location =
+chat .nyar event set my-event action.modifiers.level 30
+expect-reply my-event action.modifiers.level =
+chat .nyar event enable my-event
+expect-reply my-event
+chat .nyar event info my-event
+expect-reply my-event
+shot full tester-setups-info
+chat .nyar event list 2
+expect-reply my-event

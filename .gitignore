@@ -45,3 +45,6 @@ __pycache__/
 
 # ---- vrclient runtime ----
 __pycache__/
+
+# Tester packages: returned workbooks carry tester details (generator: tools/tester-package/)
+REFERENCE DOCUMENTATION/
