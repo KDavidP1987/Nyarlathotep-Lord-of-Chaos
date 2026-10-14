@@ -59,6 +59,7 @@ internal static class EventScheduler
         Phase("interval", () => TriggerBus.PollIntervals(now));            // automation D2
         Phase("player triggers", () => TriggerBus.ScanPlayers(now));        // automation D9
         Phase("events", () => EventRuntime.Tick(now));
+        Phase("apocalypse", () => EventRuntime.ApocalypseTick(now));       // apocalypse step 3: a resume behind the drain gate, then the run's second
         Phase("hunt", () => HuntAction.Tick(now));                         // event-spawns D13, every 5 s; its own phase (A70)
         try
         {

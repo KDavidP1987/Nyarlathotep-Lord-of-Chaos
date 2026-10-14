@@ -209,6 +209,15 @@ public sealed class SpawnLedger(LedgerLimits limits)
         return true;
     }
 
+    /// <summary>A tracked unit's new due time and LifeTime (apocalypse D13's rolling renewal): false when the ledger does
+    /// not track <paramref name="key"/> or it is already queued for despawn, which a renewal never takes back.</summary>
+    public bool Renew(long key, UnitLifetime life)
+    {
+        if (!_tracked.TryGetValue(key, out var u) || _queued.Contains(key)) return false;
+        _tracked[key] = u with { DueUtc = life.DueUtc, LifetimeSeconds = life.LifetimeSeconds };
+        return true;
+    }
+
     /// <summary>The kill switch's unit half (D20): cancels every waiting spawn and queues every tracked unit that is
     /// not already queued. A purge during a drain adds only what the drain does not hold. Returns the number of units
     /// the drain will release (queued before plus newly queued) and the number of cancelled orders.</summary>

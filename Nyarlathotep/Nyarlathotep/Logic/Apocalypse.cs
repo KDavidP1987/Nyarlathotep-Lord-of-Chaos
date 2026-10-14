@@ -823,7 +823,11 @@ public sealed class ApocalypseRun
     int Queue(IApocalypseWorld w, UnitEntry unit, int count, int wave, float x, float z, float radius, DateTime utcNow)
     {
         if (count <= 0) return 0;
-        var r = w.Ledger.Request(unit.Prefab, Id, count, Life(w, utcNow), SpawnTuning.TuningFrom(unit.Modifiers), i => w.Place(x, z, radius, i, count), wave: wave);
+        // Each unit hunts from its own position (Services/HuntAction, step 3): a roamer over the seed reach (100 m), a horde
+        // unit over huntRange; the tag's centre names its group (SpawnTracker S-14).
+        var hunt = new HuntTag(x, z, Apocalypse.HotspotOfWave(wave) is not null ? HuntingGrounds.SeedReach : Action.Roamers.HuntRange);
+        var r = w.Ledger.Request(unit.Prefab, Id, count, Life(w, utcNow), SpawnTuning.TuningFrom(unit.Modifiers), i => w.Place(x, z, radius, i, count),
+            hunt: hunt, wave: wave);
         Tally.Add(r.Queued);
         if (r.Queued > 0) _pending[wave] = PendingOf(wave) + r.Queued;
         return r.Queued;

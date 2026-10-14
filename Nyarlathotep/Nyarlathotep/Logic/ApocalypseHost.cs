@@ -1,0 +1,643 @@
+#nullable enable
+using System.Collections.Generic;
+using System.Globalization;
+
+namespace Nyarlathotep.Logic;
+
+// The apocalypse's driver (docs/dod/apocalypse.md D3-D15, D21; step 3): the one run, its tick (rise, march, hop, roam,
+// renewals, defeats, outcome, record), the spread feed, every end path's record removal and the boot resume behind the
+// drain gate. Services/ApocalypseAction implements IApocalypseGame over SpawnTracker, PlayerQuery and the walk check and
+// calls in on the server main thread; nothing here throws into a tick: each game call sits in the try/catch of its
+// dependency category (native-read, spread-read, march-read, resume-read, state-write), logged once per streak.
+
+/// <summary>The game side of the apocalypse (step 3). Every member may throw; <see cref="ApocalypseHost"/> guards each by
+/// its D21 category. Writes reach our own tracked units only (<see cref="Move"/>, <see cref="Renew"/>).</summary>
+public interface IApocalypseGame : IApocalypseWorld
+{
+    /// <summary>The native NPCs the hotspot reader sees (D2): read only.</summary>
+    IEnumerable<HotspotNative> Natives();
+
+    /// <summary>Every connected character, memory only (the march, the hold and the roam).</summary>
+    IReadOnlyList<HuntCandidate> Players();
+
+    /// <summary>One tracked unit's position and level; null when it is gone since the ledger listed it.</summary>
+    RegionUnit? Read(TrackedUnit unit);
+
+    /// <summary>The point lies in claimed territory by the run's kept map (fail closed: true without one).</summary>
+    bool IsClaimed(string eventId, float x, float z);
+
+    /// <summary>Free and grounded at <paramref name="level"/>.</summary>
+    bool Walkable(float x, float z, byte level);
+
+    float HeightOf(byte level);
+
+    WalkBudget Budget { get; }
+
+    /// <summary>Moves one of our own units to the jump's landing at once (the step-1 verdict "go — hop"): Translation,
+    /// LastTranslation, its return point, its path cleared and its velocity zeroed.</summary>
+    void Move(RegionJump jump);
+
+    /// <summary>A tracked unit's new due time and LifeTime (D13), through SpawnTracker.</summary>
+    void Renew(long key, UnitLifetime life);
+
+    /// <summary>The display name of the region at a point, null in none.</summary>
+    string? RegionName(float x, float z);
+
+    /// <summary>Builds the run's claimed-territory map for its hunt and roam (TerritoryMap.ForWave); never throws.</summary>
+    void MapTerritory(string eventId);
+
+    /// <summary>The boot sweep's despawns still queued (the drain gate, D12).</summary>
+    int LeftToDrain { get; }
+
+    void Log(string line);
+    void Warn(string line);
+
+    /// <summary>Queues a player line (AnnounceQueue, Info, as the scoreboard does, D7).</summary>
+    void Announce(string eventId, string line);
+}
+
+/// <summary>What one apocalypse tick did: the outcome (won or lost end the run; survived is the engine's expiry) and the
+/// horde that rose, with its queued count, for the engine's wave count (D20).</summary>
+public sealed record ApocalypseStep(ApocalypseResult Result, int? Rose = null, int Queued = 0)
+{
+    public static readonly ApocalypseStep None = new(ApocalypseResult.None);
+}
+
+/// <summary>One death's spread read, taken before SpawnTracker.Died (D4): its ledger sides and the victim's x and z.</summary>
+public readonly record struct SpreadRead(ScoreSides Sides, (float X, float Z) Victim);
+
+/// <summary>A straggler's hop landing (D6, the step-1 verdict "go — hop"): a walkable point within
+/// <see cref="Radius"/> m of the front at the unit's own level or a neighbouring one, then the wide levels.</summary>
+public static class HopRule
+{
+    public const float Radius = 10f;
+
+    public static RegionJump? Land(RegionUnit u, Front front, int i, int n, Func<float, float, byte, bool> walkable, Func<byte, float> heightOf,
+        WalkBudget budget)
+    {
+        var (x, z) = SpawnLedger.Around(front.X, front.Z, Radius, i, n, 0.0);
+        foreach (var level in WalkLevels.Spot(u.Level).Concat(WalkLevels.Wide(u.Level)))
+        {
+            if (!budget.TryTake(2)) return null;
+            if (walkable(x, z, level)) return new RegionJump(u.Key, x, heightOf(level), z, level, float.MaxValue);
+        }
+        return null;
+    }
+
+    /// <summary>The front's next point has walkable ground within 30 m (D6): the point itself, then four points 15 m and
+    /// four 30 m off, at <paramref name="level"/> and its neighbours. With no level known (no living unit read) or the
+    /// tick's walk budget spent the ground is taken as there, so a budget never holds a march.</summary>
+    public static bool Ground(float x, float z, byte? level, Func<float, float, byte, bool> walkable, WalkBudget budget)
+    {
+        if (level is not { } h) return true;
+        foreach (var r in new[] { 0f, 15f, 30f })
+            for (var k = 0; k < (r == 0 ? 1 : 4); k++)
+            {
+                var (px, pz) = r == 0 ? (x, z) : SpawnLedger.Around(x, z, r, k, 4, 0.0);
+                foreach (var level2 in WalkLevels.Spot(h))
+                {
+                    if (!budget.TryTake(2)) return true;
+                    if (walkable(px, pz, level2)) return true;
+                }
+            }
+        return false;
+    }
+}
+
+/// <summary>
+/// The running apocalypse and its resume (D3-D15, D21). One run at a time (D14). Every member returns normally: a game call
+/// that throws is caught in its category, logged once per streak, and its health entry (spread, march, roam move) shows
+/// until a call of that category succeeds.
+/// </summary>
+public sealed class ApocalypseHost
+{
+    public const string SpreadFailing = "apocalypse: spread read failing";
+    public const string MarchFailing = "apocalypse: march read failing";
+    public const string RoamFailing = "apocalypse: roam move failing";
+
+    /// <summary>Hops, roam moves and the keep-up line every 5 s (the hunt's interval); the keep-up line each 30 s of a march
+    /// (D6, D26); renewals each 60 s (D13).</summary>
+    public static readonly TimeSpan MoveEvery = TimeSpan.FromSeconds(HuntingGrounds.CheckSeconds);
+    public static readonly TimeSpan KeepUpEvery = TimeSpan.FromSeconds(30);
+    public static readonly TimeSpan RenewEvery = TimeSpan.FromSeconds(60);
+    /// <summary>A march step never covers more than this, so a held tick (a failed read) is never made up later (D21).</summary>
+    public const double MaxStepSeconds = 2.0;
+
+    readonly FailureStreak _native = new(), _spread = new(), _march = new(), _roam = new(), _resume = new(), _record = new(), _renew = new(), _rise = new();
+    ApocalypseRun? _run;
+    (string Id, IReadOnlyList<Hotspot> Spots, string Line)? _prepared;
+    RoamTargets _roamTargets = new();
+    readonly HashSet<int> _defeated = [];
+    readonly Dictionary<int, DateTime> _keepUp = [];
+    DateTime? _lastMarch, _lastMove, _lastRenew, _lastRecord;
+    ApocalypseRecord? _pending;
+    DateTime _sweptUtc;
+    bool _drainWarned;
+
+    /// <summary>The running apocalypse, null with none.</summary>
+    public ApocalypseRun? Run => _run;
+
+    /// <summary>The record a boot resume waits on behind the drain gate, null with none (D12).</summary>
+    public ApocalypseRecord? Pending => _pending;
+
+    public IReadOnlyList<string> Health
+    {
+        get
+        {
+            var h = new List<string>();
+            if (_spread.Count > 0) h.Add(SpreadFailing);
+            if (_march.Count > 0) h.Add(MarchFailing);
+            if (_roam.Count > 0) h.Add(RoamFailing);
+            return h;
+        }
+    }
+
+    void Reset(ApocalypseRun? run)
+    {
+        _run = run;
+        _roamTargets = new RoamTargets();
+        _defeated.Clear();
+        _keepUp.Clear();
+        _lastMarch = _lastMove = _lastRenew = _lastRecord = null;
+        _march.Ok();
+        _roam.Ok();
+        _spread.Ok();
+    }
+
+    // ---- the start (D2, D21 native-read)
+
+    /// <summary>The hotspots of <paramref name="def"/>, read just before its instance starts (Engine.Start's last gate):
+    /// null to go on, or the refusal. A throwing native read refuses with "no hotspot: native read failed: &lt;message&gt;",
+    /// logged once per streak; fewer than one hotspot with "no hotspot: …", logged. Kept for <see cref="Begin"/>.</summary>
+    public Outcome? Prepare(EventDefinition def, IApocalypseGame game)
+    {
+        _prepared = null;
+        if (def.Apocalypse is not { } action) return null;
+        var pick = Hotspots.Pick(def.Id, action, game.Natives);
+        if (pick.Refusal is { } refusal)
+        {
+            var failed = refusal.StartsWith(Hotspots.ReadFailed(""), StringComparison.Ordinal);
+            if (failed) { if (_native.Fail()) Say(game.Warn, pick.Line); }
+            else { _native.Ok(); Say(game.Log, pick.Line); }
+            return Outcome.Refused(refusal, RefusalCode.State, "id", reason: failed ? Reasons.Read : Reasons.Condition);
+        }
+        _native.Ok();
+        _prepared = (def.Id, pick.Spots, pick.Line);
+        return null;
+    }
+
+    /// <summary>The run of <paramref name="active"/>, started with the hotspots <see cref="Prepare"/> found: its goal fixed
+    /// now (an Admin goal at the starting admin), its territory map built, every hotspot topped up (D3) and the record
+    /// written (D11). False when nothing was prepared for it.</summary>
+    public bool Begin(ActiveEvent active, IApocalypseGame game, StateStore state, Scoreboard board, DateTime now)
+    {
+        if (_prepared is not { } p || p.Id != active.Id || active.Definition.Apocalypse is not { } action) return false;
+        _prepared = null;
+        var goal = Apocalypse.ResolveGoal(action.Goal, active.Origin) ?? (0f, 0f, 0f);
+        Reset(new ApocalypseRun(active, p.Spots, goal));
+        Say(game.Log, p.Line);
+        Guard(_record, game, "start", () =>
+        {
+            game.MapTerritory(active.Id);
+            foreach (var line in _run!.TopUp(game, now)) Say(game.Log, line);
+        });
+        WriteRecord(game, state, board, now);
+        return true;
+    }
+
+    // ---- the tick
+
+    /// <summary>One second of the run of <paramref name="active"/> (D3-D8, D11, D13): the due horde rises, the fronts march
+    /// (holding for players, D6), every 5 s the stragglers hop while unobserved and the roamers roam map-wide, every 60 s the
+    /// lifetimes roll, defeats are announced, and the outcome is decided; the record is written by its clock.</summary>
+    public ApocalypseStep Tick(ActiveEvent active, IApocalypseGame game, StateStore state, Scoreboard board, DateTime now)
+    {
+        if (_run is not { } run || !ReferenceEquals(run.Active, active)) return ApocalypseStep.None;
+        var action = run.Action;
+        var forced = false;
+        int? rose = null;
+        var queued = 0;
+
+        (HordeRise, IReadOnlyList<string>)? rise = null;
+        try
+        {
+            if (run.Rise(game, now, out var roamerLines) is { } risen) rise = (risen, roamerLines);
+            _rise.Ok();
+        }
+        catch (Exception e) { if (_rise.Fail()) Say(game.Warn, $"apocalypse: rise skipped: {e.Message}"); }
+        if (rise is { } done)
+        {
+            var (r, roamerLines) = done;
+            Safe(game, () => { game.MapTerritory(run.Id); return 0; });
+            Say(game.Log, string.Create(CultureInfo.InvariantCulture, $"apocalypse {run.Id} horde {r.Horde}/{action.Hordes.Count} rose at hotspot {r.Hotspot}: {r.Queued} units"));
+            foreach (var l in r.Log) Say(game.Log, $"apocalypse {run.Id} horde {r.Horde}: {l}");
+            foreach (var l in roamerLines) Say(game.Log, l);
+            Say(game.Log, run.Tally.Line(run.Id, Alive(game, run)));
+            var spot = run.Hotspots[r.Hotspot - 1];
+            var region = Safe(game, () => game.RegionName(spot.X, spot.Z));
+            game.Announce(run.Id, Messages.ApocalypseRise(active.Definition.Name, r.Queued, region, action.Goal.Name));
+            forced = true;
+            rose = r.Horde;
+            queued = r.Queued;
+        }
+
+        // the march-read category: the players and the run's units, then the hops, then the fronts
+        var seconds = _lastMarch is { } last ? Math.Clamp((now - last).TotalSeconds, 0, MaxStepSeconds) : 0;
+        _lastMarch = now;
+        var moveDue = _lastMove is not { } lm || now - lm >= MoveEvery;
+        if (moveDue) _lastMove = now;
+        IReadOnlyList<HuntCandidate>? players = null;
+        List<RegionUnit> units = [];
+        var marching = false;
+        try
+        {
+            players = game.Players();
+            foreach (var u in game.Ledger.Units.Where(u => Apocalypse.Ours(u, active)).ToList())
+                if (game.Read(u) is { } read) units.Add(read);
+            var online = players.Where(p => p.Online && PlayerPosition.Usable(p.X, p.Z)).Select(p => (p.X, p.Z)).ToList();
+            foreach (var front in run.Fronts.Values.Where(f => !_defeated.Contains(f.Horde)).ToList())
+            {
+                var horde = units.Where(u => Apocalypse.HordeOfWave(u.Wave) == front.Horde).ToList();
+                if (moveDue)
+                {
+                    var stragglers = MarchRule.Stragglers(front, horde.Select(u => (u.Key, u.X, u.Z)), now);
+                    for (var i = 0; i < stragglers.Count; i++)
+                    {
+                        var u = horde.First(h => h.Key == stragglers[i]);
+                        if (HopRule.Land(u, front, i, stragglers.Count, game.Walkable, game.HeightOf, game.Budget) is { } hop) game.Move(hop);
+                    }
+                }
+                byte? level = horde.Count == 0 ? null : horde.OrderBy(u => Apocalypse.Distance(u.X, u.Z, front.X, front.Z)).First().Level;
+                var step = MarchRule.Step(front, action.Goal.Radius, action.MarchSpeed, seconds, online,
+                    (x, z) => HopRule.Ground(x, z, level, game.Walkable, game.Budget), now, out var held);
+                if (held is not null) Say(game.Log, $"apocalypse {run.Id} {held}");
+                if (step == MarchStep.Moved) marching = true;
+                var crossed = MarchRule.NewSteps(front);
+                foreach (var pct in crossed) game.Announce(run.Id, Messages.ApocalypseProgress(active.Definition.Name, pct, action.Goal.Name));
+                if (step is MarchStep.Moved or MarchStep.HeldNoGround && MarchRule.IsUnobserved(front, now)
+                    && (crossed.Count > 0 || !_keepUp.TryGetValue(front.Horde, out var kept) || now - kept >= KeepUpEvery))
+                {
+                    _keepUp[front.Horde] = now;
+                    Say(game.Log, $"apocalypse {run.Id} " + MarchRule.KeepUpLine(front.Horde, front.Percent, MarchRule.KeepUp(front, horde.Select(u => (u.X, u.Z)).ToList())));
+                }
+            }
+            _march.Ok();
+        }
+        catch (Exception e)
+        {
+            players = null;
+            if (_march.Fail()) Say(game.Warn, $"apocalypse: march skipped: {e.Message}");
+        }
+
+        if (moveDue && players is not null) Roam(run, game, players, units);
+
+        if (_lastRenew is not { } lr || now - lr >= RenewEvery)
+        {
+            _lastRenew = now;
+            Renew(run, game, now);
+        }
+
+        // defeats (D7): a risen horde with nothing left, bosses included, once
+        foreach (var k in run.Fronts.Keys.OrderBy(k => k).ToList())
+        {
+            if (_defeated.Contains(k) || !Safe(game, () => run.Cleared(game, k))) continue;
+            _defeated.Add(k);
+            Say(game.Log, $"apocalypse {run.Id} horde {k} of {action.Hordes.Count} destroyed");
+            game.Announce(run.Id, Messages.ApocalypseDefeat(active.Definition.Name, k, action.Hordes.Count));
+            forced = true;
+        }
+
+        var living = units.GroupBy(u => Apocalypse.HordeOfWave(u.Wave) ?? 0).ToDictionary(g => g.Key, g => (IReadOnlyList<(float X, float Z)>)g.Select(u => (u.X, u.Z)).ToList());
+        var result = Safe(game, () => run.Outcome(game, k => living.TryGetValue(k, out var l) ? l : [], now));
+        if (result is ApocalypseResult.Won or ApocalypseResult.Lost) return new ApocalypseStep(result, rose, queued);
+        if (RecordClock.Due(_lastRecord, now, marching, forced)) WriteRecord(game, state, board, now);
+        return new ApocalypseStep(ApocalypseResult.None, rose, queued);
+    }
+
+    /// <summary>The roam (D3, A2): each hotspot's roamers go after the eligible player nearest their mean position, anywhere
+    /// outside claimed territory, by JumpRule's plan; the roam line once per hotspot and target change. A throwing move
+    /// leaves the roamers where they stand, logs once per streak and holds <see cref="RoamFailing"/> until a move succeeds.</summary>
+    void Roam(ApocalypseRun run, IApocalypseGame game, IReadOnlyList<HuntCandidate> players, IReadOnlyList<RegionUnit> units)
+    {
+        try
+        {
+            var candidates = players.Select(p => p with { InTerritory = game.IsClaimed(run.Id, p.X, p.Z) }).ToList();
+            foreach (var spot in run.Hotspots)
+            {
+                var roamers = units.Where(u => Apocalypse.HotspotOfWave(u.Wave) == spot.Number).ToList();
+                if (roamers.Count == 0) { _roamTargets.Seen(run.Id, spot.Number, null); continue; }
+                var mean = ((float)roamers.Average(u => (double)u.X), (float)roamers.Average(u => (double)u.Z));
+                var target = RoamRule.Target(candidates, mean);
+                if (_roamTargets.Seen(run.Id, spot.Number, target?.Key) is { } line) Say(game.Log, line);
+                if (target is not { } t) continue;
+                foreach (var u in roamers)
+                {
+                    var (kind, jump) = RoamRule.Plan(u, (t.X, t.Z), players, (x, z) => game.IsClaimed(run.Id, x, z), game.Walkable, game.HeightOf, game.Budget);
+                    if (kind == JumpKind.Jump && jump is { } j) game.Move(j);
+                }
+            }
+            _roam.Ok();
+        }
+        catch (Exception e)
+        {
+            if (_roam.Fail()) Say(game.Warn, $"apocalypse: roam move skipped: {e.Message}");
+        }
+    }
+
+    /// <summary>The rolling lifetime (D13): every living unit of the run with less than 90 min left is renewed to now + 2 h
+    /// (never past the run's end + grace); one line when any was.</summary>
+    void Renew(ApocalypseRun run, IApocalypseGame game, DateTime now)
+    {
+        try
+        {
+            var renewed = 0;
+            foreach (var u in game.Ledger.Units.Where(u => Apocalypse.Ours(u, run.Active)).ToList())
+                if (RollingLifetime.Renew(u, true, now, run.Active.Instance.EndsUtc, game.GraceSeconds, game.DrainMarginSeconds) is { } life)
+                {
+                    game.Renew(u.Key, life);
+                    renewed++;
+                }
+            if (renewed > 0) Say(game.Log, RollingLifetime.Line(run.Id, renewed));
+            _renew.Ok();
+        }
+        catch (Exception e)
+        {
+            if (_renew.Fail()) Say(game.Warn, $"apocalypse: renewal skipped: {e.Message}");
+        }
+    }
+
+    /// <summary>The record now (D11), into state.json through Persistence's dirty flag: a failed write is the store's own
+    /// streak, the run goes on (D21 state-write); a throw building it is logged once per streak.</summary>
+    void WriteRecord(IApocalypseGame game, StateStore state, Scoreboard board, DateTime now)
+    {
+        if (_run is not { } run) return;
+        try
+        {
+            state.Document.Apocalypse = run.Record(game, board.Export(run.Id), now);
+            state.MarkDirty();
+            _lastRecord = now;
+            _record.Ok();
+        }
+        catch (Exception e)
+        {
+            if (_record.Fail()) Say(game.Warn, $"apocalypse: record write skipped: {e.Message}");
+        }
+    }
+
+    static int Alive(IApocalypseWorld w, ApocalypseRun run) => w.Ledger.Units.Count(u => Apocalypse.Ours(u, run.Active));
+
+    // ---- the spread (D4, D21 spread-read)
+
+    /// <summary>The spread read of one death, before SpawnTracker.Died: null with no run, or when the read throws (logged
+    /// "apocalypse: spread skipped: &lt;message&gt;" once per streak, <see cref="SpreadFailing"/> held).</summary>
+    public SpreadRead? Before(Func<ScoreSides> sides, Func<(float X, float Z)> victim, IApocalypseGame game)
+    {
+        if (_run is null) return null;
+        try { return new SpreadRead(sides(), victim()); }
+        catch (Exception e) { SpreadFailed(game, e); return null; }
+    }
+
+    /// <summary>After SpawnTracker.Died: a qualifying kill queues its spread roamers (D4). A good read ends the streak.</summary>
+    public void After(SpreadRead? read, IApocalypseGame game, DateTime now)
+    {
+        if (read is not { } r || _run is not { } run) return;
+        try
+        {
+            if (run.SpreadOn(game, r.Sides, r.Victim, now) is { } line) Say(game.Log, line);
+            _spread.Ok();
+        }
+        catch (Exception e) { SpreadFailed(game, e); }
+    }
+
+    void SpreadFailed(IApocalypseGame game, Exception e)
+    {
+        if (_spread.Fail()) Say(game.Warn, $"apocalypse: spread skipped: {e.Message}");
+    }
+
+    // ---- the tally (D15): SpawnTracker's confirmations, failures and departures
+
+    /// <summary>An order of <paramref name="eventId"/> settled: spawned or failed.</summary>
+    public void Settled(string? eventId, int wave, bool spawned)
+    {
+        if (_run is not { } run || eventId != run.Id) return;
+        if (spawned) run.Spawned(wave);
+        else run.FailedToSpawn(wave);
+    }
+
+    /// <summary>A unit of <paramref name="eventId"/> spawned at <paramref name="spawnedUtc"/> left the game.</summary>
+    public void Left(string? eventId, DateTime spawnedUtc, UnitDeparture how)
+    {
+        if (_run is not { } run || eventId != run.Id || spawnedUtc < run.Active.Instance.StartedUtc) return;
+        switch (how)
+        {
+            case UnitDeparture.Died: run.Tally.Death(); break;
+            case UnitDeparture.Despawned: run.Tally.Despawn(); break;
+            default: run.Tally.Removal(); break;
+        }
+    }
+
+    // ---- the end paths (D8, D9)
+
+    /// <summary>Every end path of <paramref name="id"/>: an end that ends the run drops it and logs its tally line (D15);
+    /// every path but restart and disable removes the resume record (D9), a pending resume's included, so a purge or pillar
+    /// off in the drain wait rebuilds nothing. <paramref name="cancelled"/> orders an end cancelled count as failed.</summary>
+    public void Ended(string id, ApocalypseEnd path, IApocalypseGame game, StateStore state, int cancelled = 0)
+    {
+        if (!EndRule.EndsRun(path)) return;
+        if (_run is { } run && run.Id == id)
+        {
+            if (cancelled > 0) run.Tally.FailedToSpawn(cancelled);
+            Say(game.Log, run.Tally.Line(id, Safe(game, () => Alive(game, run))));
+            Reset(null);
+        }
+        if (_pending is { } p && p.EventId == id)
+        {
+            _pending = null;
+            Say(game.Log, $"apocalypse {id} not resumed: {path.ToString().ToLowerInvariant()} in the drain wait");
+        }
+        if (EndRule.RemovesRecord(path) && state.Document.Apocalypse is { } record && record.EventId == id)
+        {
+            state.Document.Apocalypse = null;
+            state.MarkDirty();
+        }
+    }
+
+    /// <summary>`.nyar purge confirm` (D9): whatever runs or waits to resume goes, and so does the record.</summary>
+    public void Purged(IApocalypseGame game, StateStore state)
+    {
+        if (_run is { } run) Ended(run.Id, ApocalypseEnd.Purge, game, state);
+        if (_pending is { } p) Ended(p.EventId, ApocalypseEnd.Purge, game, state);
+        if (state.Document.Apocalypse is not null)
+        {
+            state.Document.Apocalypse = null;
+            state.MarkDirty();
+        }
+    }
+
+    /// <summary>`.nyar pillar &lt;p&gt; off` during a resume's drain wait (D9): a pending resume of that pillar is cancelled,
+    /// its record removed and its slot freed; true when one was.</summary>
+    public bool PillarOff(Pillar pillar, DefinitionSet set, EventEngine engine, IApocalypseGame game, StateStore state)
+    {
+        if (_pending is not { } p || set.Find(p.EventId) is not { } def || def.Pillar != pillar) return false;
+        if (engine.ResumePending == p.EventId) engine.ResumePending = null;
+        Ended(p.EventId, ApocalypseEnd.PillarOff, game, state);
+        return true;
+    }
+
+    // ---- the resume (D12, D21 resume-read)
+
+    /// <summary>At boot, after every other instance was cancelled: the record (<paramref name="read"/>) resumes when
+    /// ResumeRule.Verdict says so, holding the one-apocalypse slot behind the drain gate; any other verdict logs
+    /// "apocalypse &lt;id&gt; not resumed: &lt;reason&gt;" (an EndsUtc past also "event &lt;id&gt; ended: survived …") and
+    /// removes the record. A throwing read logs "not resumed: resume read failed: …" and returns, so every other boot step
+    /// runs. Returns the id that waits to resume, or null.</summary>
+    public string? Boot(Func<ApocalypseRecord?> read, Func<DefinitionSet> set, EventEngine engine, IApocalypseGame game, StateStore state, DateTime now)
+    {
+        Reset(null);
+        _pending = null;
+        _drainWarned = false;
+        string? id = null;
+        try
+        {
+            var record = read();
+            if (record is null) { _resume.Ok(); return null; }
+            id = record.EventId;
+            var defs = set();
+            var verdict = ResumeRule.Verdict(record, defs, now);
+            _resume.Ok();
+            if (verdict != ResumeVerdict.Resume)
+            {
+                Say(game.Log, ResumeRule.NotResumedLine(id, verdict));
+                if (verdict == ResumeVerdict.EndedWhileDown)
+                    Say(game.Log, ApocalypseOutcome.Line(id, ApocalypseResult.Survived, record.HordesRisen, defs.Find(id)?.Apocalypse?.Hordes.Count ?? record.HordesRisen));
+                state.Document.Apocalypse = null;
+                state.MarkDirty();
+                return null;
+            }
+            _pending = record;
+            _sweptUtc = now;
+            engine.ResumePending = id;
+            return id;
+        }
+        catch (Exception e)
+        {
+            if (_resume.Fail()) Say(game.Warn, $"apocalypse {id ?? "-"} not resumed: resume read failed: {e.Message}");
+            _pending = null;
+            if (id is not null && engine.ResumePending == id) engine.ResumePending = null;
+            try
+            {
+                state.Document.Apocalypse = null;
+                state.MarkDirty();
+            }
+            catch { /* the record goes with the next write */ }
+            return null;
+        }
+    }
+
+    /// <summary>Each tick while a resume waits (D12): the drain gate; once it proceeds (with its one warning after 5 min),
+    /// the engine resumes the instance under the live <paramref name="controls"/> (a switch turned off while down refuses
+    /// it, logged, the record removed), the scoreboard comes back, the units are rebuilt through the ledger, missed hordes
+    /// rise once each and the roamers are topped up once. Returns the resumed instance, or null.</summary>
+    public ActiveEvent? Resume(EventEngine engine, ControlState controls, IApocalypseGame game, StateStore state, Scoreboard board, DateTime now)
+    {
+        if (_pending is not { } p) return null;
+        var step = ResumeRule.Drain(_sweptUtc, now, Safe(game, () => game.LeftToDrain), cancelled: engine.ResumePending != p.EventId);
+        if (step == DrainStep.Wait) return null;
+        _pending = null;
+        if (step == DrainStep.Cancelled)
+        {
+            Say(game.Log, $"apocalypse {p.EventId} not resumed: cancelled in the drain wait");
+            RemoveRecord(state, p.EventId);
+            return null;
+        }
+        if (step == DrainStep.ProceedWithWarning && !_drainWarned)
+        {
+            _drainWarned = true;
+            Say(game.Warn, ResumeRule.DrainWarning(p.EventId, Safe(game, () => game.LeftToDrain)));
+        }
+        try
+        {
+            var refused = engine.Resume(p.EventId, p.StartedUtc, p.EndsUtc, (p.Goal!.X, p.Goal.Y, p.Goal.Z), p.HordesRisen, controls);
+            if (refused is not null)
+            {
+                Say(game.Log, $"apocalypse {p.EventId} not resumed: {refused.Human}");
+                RemoveRecord(state, p.EventId);
+                return null;
+            }
+            var active = engine.Find(p.EventId)!;
+            board.Restore(p.EventId, p.Scores.Select(s => new ApocalypseScore(s.PlatformId, s.Kills, s.Deaths, s.First)));
+            var run = ApocalypseRun.Resumed(active, p, now);
+            Reset(run);
+            foreach (var k in Enumerable.Range(1, p.HordesRisen).Where(k => p.Hordes.All(h => h.Number != k))) _defeated.Add(k);   // destroyed before the restart
+            Safe(game, () => { game.MapTerritory(p.EventId); return 0; });
+            var (rebuilt, rises, topUp) = run.Rebuild(game, p, now);
+            Say(game.Log, ResumeRule.ResumedLine(p.EventId, p.HordesRisen, run.Action.Hordes.Count, rebuilt));
+            foreach (var r in rises)
+            {
+                engine.WaveSpawned(p.EventId, now, r.Queued);
+                Say(game.Log, string.Create(CultureInfo.InvariantCulture, $"apocalypse {p.EventId} horde {r.Horde}/{run.Action.Hordes.Count} rose at hotspot {r.Hotspot}: {r.Queued} units (missed while down)"));
+                var spot = run.Hotspots[r.Hotspot - 1];
+                game.Announce(p.EventId, Messages.ApocalypseRise(active.Definition.Name, r.Queued, Safe(game, () => game.RegionName(spot.X, spot.Z)), run.Action.Goal.Name));
+            }
+            foreach (var line in topUp) Say(game.Log, line);
+            WriteRecord(game, state, board, now);
+            return active;
+        }
+        catch (Exception e)
+        {
+            if (_resume.Fail()) Say(game.Warn, $"apocalypse {p.EventId} not resumed: resume read failed: {e.Message}");
+            if (engine.Find(p.EventId) is not null) engine.Cancel(p.EventId);
+            Reset(null);
+            RemoveRecord(state, p.EventId);
+            return null;
+        }
+    }
+
+    static void RemoveRecord(StateStore state, string id)
+    {
+        if (state.Document.Apocalypse is { } r && r.EventId == id)
+        {
+            state.Document.Apocalypse = null;
+            state.MarkDirty();
+        }
+    }
+
+    // ---- what admins and players see (D17)
+
+    /// <summary>`.nyar status`'s line for the running apocalypse (no position), or null for any other instance.</summary>
+    public string? StatusLine(RunningInstance instance, IApocalypseWorld w, DateTime now)
+    {
+        if (_run is not { } run || !ReferenceEquals(run.Active.Instance, instance)) return null;
+        var view = run.View(w, (_, _) => "");
+        var minutes = instance.EndsUtc > now ? (int)Math.Ceiling((instance.EndsUtc - now).TotalMinutes) : 0;
+        return Messages.ApocalypseStatus(instance.Definition.Name, view.Risen, run.Action.Hordes.Count, view.Percent, run.Action.Goal.Name, view.Roamers, minutes);
+    }
+
+    /// <summary>`event info`'s run view of <paramref name="id"/> (admins only), or null when it is not the running one.</summary>
+    public ApocalypseView? View(string id, IApocalypseGame game) =>
+        _run is { } run && run.Id == id ? run.View(game, (x, z) => Safe(game, () => game.RegionName(x, z)) ?? Messages.Wilds) : null;
+
+    // ---- guards
+
+    static void Say(Action<string> sink, string line)
+    {
+        try { sink(line); }
+        catch { /* a log line never breaks the run */ }
+    }
+
+    /// <summary>A read outside the five categories (a ledger count, a region name): its default when it throws.</summary>
+    static T? Safe<T>(IApocalypseGame game, Func<T> read)
+    {
+        try { return read(); }
+        catch { return default; }
+    }
+
+    static void Guard(FailureStreak streak, IApocalypseGame game, string what, Action work)
+    {
+        try { work(); streak.Ok(); }
+        catch (Exception e) { if (streak.Fail()) Say(game.Warn, $"apocalypse: {what} skipped: {e.Message}"); }
+    }
+}
+
+/// <summary>How a tracked unit left the game (D15's buckets).</summary>
+public enum UnitDeparture { Died, Despawned, Removed }

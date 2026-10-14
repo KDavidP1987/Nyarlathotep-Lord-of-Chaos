@@ -14,7 +14,7 @@ internal static class StatusCommands
     public static void Status(ChatCommandContext ctx)
     {
         if (!Core.IsReady) { ctx.Reply(Messages.StillLoading); return; }
-        foreach (var line in Messages.Status(EventStore.Catalog.Running, DateTime.UtcNow)) ctx.Reply(line);
+        foreach (var line in Messages.Status(EventStore.Catalog.Running, DateTime.UtcNow, Services.ApocalypseAction.StatusLine)) ctx.Reply(line);   // apocalypse D17
         if (ctx.IsAdmin)
         {
             var ledger = SpawnTracker.Ledger;

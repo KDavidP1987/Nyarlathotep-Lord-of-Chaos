@@ -206,6 +206,10 @@ internal static class HuntAction
         if (map is null) return null;
         var candidates = players.Select(p => Candidate(p, map));
         var active = EventRuntime.Engine.Active.FirstOrDefault(a => a.Id == eventId);
+        // apocalypse D3, D5: its units march and roam, so each seeds from its own position over its tag's range among the
+        // eligible players anywhere (RoamRule.Eligible), and is rehomed to its nearest seeded player
+        if (active?.Definition.Apocalypse is not null)
+            return new EventTargeting(candidates.Where(RoamRule.Eligible).ToList(), null, null, OwnPosition: true);
         var action = active?.Definition.Action;
         if (action is null) return new EventTargeting(candidates.ToList(), null, null);
         var focusOnly = WaveFacts.IsFocusOnly(active.Definition);
@@ -221,7 +225,7 @@ internal static class HuntAction
     /// scope and the region lookup its units are seeded by from their own positions, and for a Revenge instance its focus
     /// key (revenge D6).</summary>
     sealed record EventTargeting(List<HuntCandidate> Pool, Scope? RegionHuntScope, Func<float, float, string> RegionOf,
-        bool FocusOnly = false, long? FocusKey = null);
+        bool FocusOnly = false, long? FocusKey = null, bool OwnPosition = false);
 
     /// <summary>The players to seed for one unit: a Hunt unit's within its range of its wave's centre (HuntPlan.Targets); a
     /// RegionHunt unit's within 100 m (A4) of its own position among the eligible players inside the scope regions
@@ -229,6 +233,8 @@ internal static class HuntAction
     static List<long> TargetsOf(Entity unit, HuntTag tag, EventTargeting targeting)
     {
         if (targeting is null) return new List<long>();
+        if (targeting.OwnPosition)
+            return unit.TryGetComponent<Translation>(out var own) ? HuntPlan.Targets(targeting.Pool, (own.Value.x, own.Value.z), tag.Range) : new List<long>();
         if (targeting.RegionHuntScope is not { } scope)
             return HuntPlan.TargetsFor(targeting.Pool, (tag.X, tag.Z), tag.Range, targeting.FocusOnly, targeting.FocusKey);
         return unit.TryGetComponent<Translation>(out var at)
@@ -263,7 +269,7 @@ internal static class HuntAction
             _seeds.Removed(key, target);
         }
         foreach (var target in targets) if (inBuffer.ContainsKey(target) && !removes.Contains(target)) held.Add(target);
-        if (targeting?.RegionHuntScope is not null) Rehome(unit, targets, targeting.Pool, players);
+        if (targeting?.RegionHuntScope is not null || targeting?.OwnPosition == true) Rehome(unit, targets, targeting.Pool, players);
         foreach (var target in adds)
         {
             var player = players.FirstOrDefault(p => p.Key == target);

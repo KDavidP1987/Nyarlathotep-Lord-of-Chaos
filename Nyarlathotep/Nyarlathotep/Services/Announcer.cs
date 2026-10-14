@@ -83,6 +83,12 @@ internal static class Announcer
         foreach (var line in lines) _queue.Enqueue(new QueuedLine(line, LineKind.Info, eventId, Named: true), DateTime.UtcNow);
     }
 
+    /// <summary>ApocalypseAction: a horde's rise, a march's 25 % step, a horde's defeat or the outcome (apocalypse D7, D8),
+    /// queued as an informational line whatever EventBanners says, as the scoreboard is. No line names or locates a
+    /// player, so its text may be logged.</summary>
+    internal static void Apocalypse(string eventId, string line) =>
+        _queue.Enqueue(new QueuedLine(line, LineKind.Info, eventId), DateTime.UtcNow);
+
     /// <summary>The purge ends every event without banners; unsent warnings go.</summary>
     internal static void Purged() => _queue.DropWarnings();
 
