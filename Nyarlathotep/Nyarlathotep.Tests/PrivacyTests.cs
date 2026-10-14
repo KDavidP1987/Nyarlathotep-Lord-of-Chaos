@@ -62,6 +62,14 @@ public partial class PrivacyTests
         [nameof(Messages.RevengeWarning)] = () => Enumerable.Range(1, 3).Select(k => Messages.RevengeWarning(k, 3, "Bandits, Legion")),
         [nameof(Messages.RevengeStart)] = () => [Messages.RevengeStart("Bandits, Legion")],
         [nameof(Messages.RevengeEnd)] = () => [Messages.RevengeEnd("Bandits, Legion")],
+        // apocalypse D7, D8, D17: the apocalypse lines (PrivacyTests.Apocalypse.cs plants a name into them)
+        [nameof(Messages.Wilds)] = () => [Messages.Wilds],
+        [nameof(Messages.ApocalypseRise)] = () => [Messages.ApocalypseRise("Night of the dead", 25, "Farbane Woods", "Brighthaven"), Messages.ApocalypseRise("Night of the dead", 25, null, "the castle")],
+        [nameof(Messages.ApocalypseProgress)] = () => new[] { 25, 50, 75 }.Select(p => Messages.ApocalypseProgress("Night of the dead", p, "Brighthaven")),
+        [nameof(Messages.ApocalypseDefeat)] = () => [Messages.ApocalypseDefeat("Night of the dead", 2, 4)],
+        [nameof(Messages.ApocalypseOutcome)] = () => new[] { ApocalypseResult.Won, ApocalypseResult.Lost, ApocalypseResult.Survived }
+            .Select(r => Messages.ApocalypseOutcome("Night of the dead", r, "Brighthaven")),
+        [nameof(Messages.ApocalypseStatus)] = () => [Messages.ApocalypseStatus("Night of the dead", 2, 4, 50, "Brighthaven", 12, 90)],
     };
 
     static IEnumerable<string> Members() =>

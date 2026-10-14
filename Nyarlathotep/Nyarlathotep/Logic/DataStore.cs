@@ -118,8 +118,15 @@ public sealed class StateDocument
     [JsonConverter(typeof(NextIntervalConverter))]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, DateTime>? NextInterval { get; set; }
+    /// <summary>The running apocalypse's resume record (apocalypse D11), written `Apocalypse`, left out of the file while no
+    /// apocalypse runs, and read alone: a record that does not parse comes back as one whose
+    /// <see cref="ApocalypseRecord.Unreadable"/> says why, and the rest of state.json loads (StateStore drops it).</summary>
+    [JsonPropertyName("Apocalypse")]
+    [JsonConverter(typeof(ApocalypseRecordConverter))]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ApocalypseRecord? Apocalypse { get; set; }
 
-    static readonly JsonSerializerOptions Options = new()
+    internal static readonly JsonSerializerOptions Options = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,
@@ -187,6 +194,128 @@ public sealed class NextIntervalConverter : JsonConverter<Dictionary<string, Dat
     }
 }
 
+/// <summary>A map point of an apocalypse's record (apocalypse D11): the resolved goal, fixed at the start.</summary>
+public sealed class RecordPoint
+{
+    public float X { get; set; }
+    public float Y { get; set; }
+    public float Z { get; set; }
+}
+
+/// <summary>A hotspot of an apocalypse's record: its x and z (a map location, D2, D11).</summary>
+public sealed class RecordSpot
+{
+    public float X { get; set; }
+    public float Z { get; set; }
+}
+
+/// <summary>One living count of a `bosses` entry in the last horde (apocalypse D11, D36, A11; Review 7 F2): the entry's
+/// prefab beside its living count, by entry index.</summary>
+public sealed class RecordBoss
+{
+    public string Prefab { get; set; } = "";
+    public int Living { get; set; }
+}
+
+/// <summary>A living horde of an apocalypse's record (apocalypse D11): its number, front x and z, living units (bosses
+/// included) and its living bosses per `bosses` entry.</summary>
+public sealed class RecordHorde
+{
+    public int Number { get; set; }
+    public float FrontX { get; set; }
+    public float FrontZ { get; set; }
+    public int Living { get; set; }
+    public List<RecordBoss> LivingBosses { get; set; } = [];
+}
+
+/// <summary>A scoreboard row of an apocalypse's record (design §9 D45): platform id, kills, deaths and first credit, no
+/// name and no position.</summary>
+public sealed class RecordScore
+{
+    public string PlatformId { get; set; } = "";
+    public int Kills { get; set; }
+    public int Deaths { get; set; }
+    public long First { get; set; }
+}
+
+/// <summary>state.json's `Apocalypse` (apocalypse D11, D19): what a restart needs to resume the run. Map locations only
+/// (the resolved goal fixed at the start, the hotspots, the fronts) and platform ids with counts; no name and no tracked
+/// player position.</summary>
+public sealed class ApocalypseRecord
+{
+    public string EventId { get; set; } = "";
+    public DateTime StartedUtc { get; set; }
+    public DateTime EndsUtc { get; set; }
+    public RecordPoint Goal { get; set; } = new();
+    public List<RecordSpot> Hotspots { get; set; } = [];
+    public int HordesRisen { get; set; }
+    public List<RecordHorde> Hordes { get; set; } = [];
+    /// <summary>The living roamers per hotspot, in hotspot order.</summary>
+    public List<int> Roamers { get; set; } = [];
+    public int SpreadWindow { get; set; }
+    public List<RecordScore> Scores { get; set; } = [];
+
+    /// <summary>Set by the reader on a record that does not parse (memory only): why, for the boot log line.</summary>
+    [JsonIgnore] public string? Unreadable { get; set; }
+
+    /// <summary>"[nyar] apocalypse record unreadable: &lt;reason&gt;; nothing resumes" without the prefix (D11).</summary>
+    public static string UnreadableLine(string reason) => $"apocalypse record unreadable: {reason}; nothing resumes";
+
+    /// <summary>Why the record cannot resume a run, or null: an event id, StartedUtc before EndsUtc, 1-5 hotspots with one
+    /// roamer count each, at most 10 living hordes numbered within the hordes risen, counts never negative, at most
+    /// <see cref="Limits.ScoreboardPlayers"/> rows each with a platform id.</summary>
+    public string? Problem()
+    {
+        if (string.IsNullOrEmpty(EventId) || EventId.Length > 32) return "eventId missing";
+        if (StartedUtc >= EndsUtc) return "startedUtc is not before endsUtc";
+        if (Goal is null) return "goal missing";
+        if (Hotspots is not { Count: >= ApocalypseLimits.MinHotspots and <= ApocalypseLimits.MaxHotspots }) return "hotspots must hold 1-5 entries";
+        if (Roamers is null || Roamers.Count != Hotspots.Count || Roamers.Any(r => r < 0)) return "roamers must hold one count per hotspot";
+        if (HordesRisen is < 0 or > ApocalypseLimits.MaxHordes) return "hordesRisen must be 0-10";
+        if (Hordes is null || Hordes.Count > ApocalypseLimits.MaxHordes) return "hordes must hold 0-10 entries";
+        foreach (var h in Hordes)
+        {
+            if (h is null || h.Number < 1 || h.Number > HordesRisen || h.Living < 0) return "a horde's number or living count is out of range";
+            if (h.LivingBosses is null || h.LivingBosses.Count > EventValidator.MaxBosses
+                || h.LivingBosses.Any(b => b is null || string.IsNullOrEmpty(b.Prefab) || b.Living < 0) || h.LivingBosses.Sum(b => b.Living) > h.Living)
+                return "a horde's living bosses are out of range";
+        }
+        if (Hordes.Select(h => h.Number).Distinct().Count() != Hordes.Count) return "a horde is listed twice";
+        if (SpreadWindow < 0) return "spreadWindow is negative";
+        if (Scores is null || Scores.Count > Limits.ScoreboardPlayers || Scores.Any(s => s is null || string.IsNullOrEmpty(s.PlatformId) || s.Kills < 0 || s.Deaths < 0))
+            return "scores are out of range";
+        return null;
+    }
+}
+
+/// <summary>state.json's `Apocalypse` (apocalypse D11): a record that is not an object, does not deserialize or fails
+/// <see cref="ApocalypseRecord.Problem"/> reads as a record holding only <see cref="ApocalypseRecord.Unreadable"/>, so
+/// System.Text.Json never rejects the whole file for it.</summary>
+public sealed class ApocalypseRecordConverter : JsonConverter<ApocalypseRecord?>
+{
+    public override ApocalypseRecord? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.Null) return null;
+        using var doc = JsonDocument.ParseValue(ref reader);
+        if (doc.RootElement.ValueKind != JsonValueKind.Object) return new ApocalypseRecord { Unreadable = "not an object" };
+        ApocalypseRecord? record;
+        try { record = doc.RootElement.Deserialize<ApocalypseRecord>(options); }
+        catch (JsonException e) { return new ApocalypseRecord { Unreadable = Short(e.Message) }; }
+        catch (NotSupportedException e) { return new ApocalypseRecord { Unreadable = Short(e.Message) }; }
+        if (record is null) return new ApocalypseRecord { Unreadable = "empty" };
+        return record.Problem() is { } problem ? new ApocalypseRecord { Unreadable = problem } : record;
+    }
+
+    public override void Write(Utf8JsonWriter writer, ApocalypseRecord? value, JsonSerializerOptions options) =>
+        JsonSerializer.Serialize(writer, value!, options);
+
+    static string Short(string message)
+    {
+        var first = message.Split('\n')[0].Trim();
+        return first.Length <= 120 ? first : first[..120];
+    }
+}
+
 /// <summary>Owns state.json: loads it (a corrupt file is renamed .corrupt, replacing an earlier one, and an
 /// empty state is used), and writes it at most once per second while it has changes, retrying a failed write
 /// every second with one log line per failure streak (D8, D9).</summary>
@@ -245,6 +374,13 @@ public sealed class StateStore(DataStore store, Func<DateTime> utcNow, Action<st
                 break;
         }
         Document = doc;
+        if (doc.Apocalypse?.Unreadable is { } reason)
+        {
+            // apocalypse D11: the bad record is dropped alone; the next write leaves it out.
+            log(ApocalypseRecord.UnreadableLine(reason));
+            doc.Apocalypse = null;
+            Dirty = !ReadOnly;
+        }
     }
 
     public void MarkDirty() => Dirty = true;

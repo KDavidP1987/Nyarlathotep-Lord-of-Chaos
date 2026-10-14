@@ -22,6 +22,8 @@ tracked: docs/*.md
 tracked: docs/features/*.md
 tracked: docs/audits/*.md
 tracked: docs/audits/spikes-compile-base.txt
+# the planted-fault runs of apocalypse step 2, copied into its post-audit (apocalypse Build plan step 2)
+tracked: docs/audits/apocalypse-step2-planted.txt
 tracked: docs/img/*
 tracked: docs/dod/*.md
 tracked: docs/dod/*.html
@@ -114,6 +116,8 @@ temp: nyar-sw*-logs
 temp: nyar-hg*-logs
 # the session log copies of the revenge sessions (revenge D26); deleted the same session
 temp: nyar-rv*-logs
+# the session log copies of the apocalypse spike and sessions (apocalypse D34); deleted the same session
+temp: nyar-apo*-logs
 # the self-test scratch folders (event-library A14): preflight -SelfTest, preflight -DependencySuite, dev-snapshot -SelfTest
 # and rollback-drill -SelfTest create one and remove it before they exit
 temp: nyar-selftest-*

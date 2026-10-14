@@ -18,7 +18,7 @@ public sealed record IntLimit(string Section, string Key, int Default, int Min, 
     }
 }
 
-public static class Limits
+public static partial class Limits
 {
     public static readonly IntLimit MaxTrackedUnits = new("Limits", "MaxTrackedUnits", 150, 1, 500);
     public static readonly IntLimit MaxUnitsPerWave = new("Limits", "MaxUnitsPerWave", 20, 1, 50);
@@ -99,4 +99,40 @@ public static class TriggerLimits
     public const int CountersInAll = 2000;
     /// <summary>RegionEntered cooldown rows over all definitions; the stalest goes first (D9).</summary>
     public const int CooldownRows = 2000;
+}
+
+/// <summary>The bounds of an Apocalypse action (apocalypse D1, D13): each key's range, inclusive, and the rolling unit
+/// lifetime. Every other event kind keeps its duration of 30-7200 s.</summary>
+public static class ApocalypseLimits
+{
+    public const int MinDurationSeconds = 600;
+    public const int MaxDurationSeconds = 604800;                       // 7 days
+    public const int OtherMinDurationSeconds = 30;
+    public const int OtherMaxDurationSeconds = 7200;
+    /// <summary>No roamer or horde unit carries a LifeTime more than this (plus the drain margin) ahead; the ceiling of
+    /// every other event's unitLifetimeSeconds (D13).</summary>
+    public const int UnitLifetimeSeconds = 7200;
+    public const int MaxUnits = 10;
+    public const int MinHotspots = 1, MaxHotspots = 5;
+    public const int MinNatives = 3, MaxNatives = 50;
+    public const int MinSpacing = 100, MaxSpacing = 3000;
+    public const int MinPerHotspot = 1, MaxPerHotspot = 10;
+    public const int MinPerKill = 0, MaxPerKill = 2;
+    public const int MinRoamers = 1, MaxRoamers = 100;
+    public const int MinPerMinute = 1, MaxPerMinute = 30;
+    public const int MinHuntRange = 20, MaxHuntRange = 60;
+    public const int MinHordes = 1, MaxHordes = 10;
+    public const int MinFirstAfter = 0, MaxFirstAfter = 1440;
+    public const int MinEvery = 5, MaxEvery = 1440;
+    public const int MinSize = 5, MaxSize = 50;
+    public const int MinGrowth = 0, MaxGrowth = 20;
+    public const int MinGoalRadius = 10, MaxGoalRadius = 100;
+    public const int MaxGoalName = 32;
+    public const double MinMarchSpeed = 0.5, MaxMarchSpeed = 5.0;
+}
+
+public static partial class Limits
+{
+    /// <summary>The rolling LifeTime of an apocalypse's units (apocalypse D13).</summary>
+    public const int ApocalypseUnitLifetimeSeconds = ApocalypseLimits.UnitLifetimeSeconds;
 }

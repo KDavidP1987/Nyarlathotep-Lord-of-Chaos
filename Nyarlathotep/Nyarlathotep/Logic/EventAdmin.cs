@@ -87,6 +87,7 @@ public static class EventsEditor
             return null;
         }
         if (path == CommandArgs.BossesField) return SetBosses(root, ev, actionType, value, out error);
+        if (CommandArgs.ApocalypseFields.Contains(path)) return SetApocalypse(root, ev, actionType, path, value, out error);
         if (CommandArgs.SwarmFields.Contains(path)) return SetSwarm(root, ev, actionType, path, value, out error);
         if (CommandArgs.SpawnKeyFields.Contains(CommandArgs.TableName(path)) || path is CommandArgs.FanOutField or CommandArgs.RegionLockField)
             return SetSpawnKey(root, ev, actionType, path, value, out error);
@@ -118,7 +119,11 @@ public static class EventsEditor
         }
         var isStat = path.StartsWith("action.stats.", StringComparison.Ordinal);
         if (isStat && actionType != "Empower") { error = Invalid($"{path} is not a field of a {actionType ?? "missing"} action", Reasons.Field); return null; }
-        if (CommandArgs.WaveFields.Contains(path) && actionType == "Empower") { error = Invalid($"{path} is not a field of an Empower action", Reasons.Field); return null; }
+        if (CommandArgs.WaveFields.Contains(path) && actionType is "Empower" or EventValidator.ApocalypseType)
+        {
+            error = Invalid($"{path} is not a field of {Article(actionType)} action", Reasons.Field);
+            return null;
+        }
 
         var parts = path.Split('.');
         JsonObject target = ev;
@@ -178,7 +183,7 @@ public static class EventsEditor
     static string? SetBosses(JsonNode root, JsonObject ev, string? actionType, object value, out Outcome? error)
     {
         error = null;
-        if (actionType != "SpawnWaves" || ev["action"] is not JsonObject action)
+        if (actionType is not ("SpawnWaves" or EventValidator.ApocalypseType) || ev["action"] is not JsonObject action)      // apocalypse D16
         {
             error = Invalid($"{CommandArgs.BossesField} is not {Article(actionType)} field", Reasons.Field);
             return null;
@@ -389,6 +394,31 @@ public static class EventsEditor
         return root.ToJsonString(Write) + Environment.NewLine;
     }
 
+    /// <summary>An Apocalypse field (apocalypse D16), refused on any other action type: `action.goal` writes the admin's
+    /// x, y and z as goal.location { "type": "Point", x, y, z }; the other fields write their key into goal, hordes or
+    /// roamers (created when missing) or the action. Whether the result fits the duration is
+    /// <see cref="SwarmConflicts"/>'s, as for every other kind.</summary>
+    static string? SetApocalypse(JsonNode root, JsonObject ev, string? actionType, string path, object value, out Outcome? error)
+    {
+        error = null;
+        if (actionType != EventValidator.ApocalypseType || ev["action"] is not JsonObject action)
+        {
+            error = Invalid($"{path} is not {Article(actionType)} field", Reasons.Field);
+            return null;
+        }
+        var node = ToNode(value);
+        if (node is null) { error = Invalid($"{path} has an unsupported value", Reasons.Value); return null; }
+        var parts = (path == CommandArgs.GoalField ? "action.goal.location" : path).Split('.')[1..];
+        var target = action;
+        for (var i = 0; i < parts.Length - 1; i++)
+        {
+            if (target[parts[i]] is not JsonObject child) target[parts[i]] = child = new JsonObject();
+            target = child;
+        }
+        target[parts[^1]] = node;
+        return root.ToJsonString(Write) + Environment.NewLine;
+    }
+
     /// <summary>The validator's reason for the first conflict among the swarm keys of event <paramref name="id"/>'s action
     /// in <paramref name="text"/> (swarm D1, D2, D24), or null: what the reload would disable it for. Values of the wrong
     /// type are left to the validator.</summary>
@@ -402,7 +432,25 @@ public static class EventsEditor
         try { root = JsonNode.Parse(text, documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true }); }
         catch (JsonException) { return Array.Empty<string>(); }
         var ev = (root?["events"] as JsonArray)?.OfType<JsonObject>().FirstOrDefault(e => e["id"] is JsonValue v && v.TryGetValue<string>(out var s) && s == id);
-        return ev?["action"] is JsonObject action ? ActionConflicts(action).ToList() : Array.Empty<string>();
+        return ev?["action"] is JsonObject action ? ActionConflicts(action).Concat(DurationConflicts(ev, action)).ToList() : Array.Empty<string>();
+    }
+
+    /// <summary>The duration's conflicts (apocalypse D1, D16): an Apocalypse runs 600-604800 s and its last horde rises
+    /// before the end; every other kind keeps 30-7200 s.</summary>
+    static IEnumerable<string> DurationConflicts(JsonObject ev, JsonObject action)
+    {
+        static int? IntOf(JsonNode? n) => n is JsonValue v && v.TryGetValue<int>(out var i) ? i : null;
+        if (IntOf(ev["durationSeconds"]) is not { } d) yield break;
+        var apocalypse = action["type"] is JsonValue t && t.TryGetValue<string>(out var type) && type == EventValidator.ApocalypseType;
+        if (!apocalypse)
+        {
+            if (d < ApocalypseLimits.OtherMinDurationSeconds || d > ApocalypseLimits.OtherMaxDurationSeconds) yield return EventValidator.DurationRule;
+            yield break;
+        }
+        if (d < ApocalypseLimits.MinDurationSeconds || d > ApocalypseLimits.MaxDurationSeconds) yield return EventValidator.ApocalypseDurationRule;
+        if (action["hordes"] is JsonObject h && IntOf(h["count"]) is { } count && IntOf(h["firstAfterMinutes"]) is { } first && IntOf(h["everyMinutes"]) is { } every
+            && HordeSchedule.LastRiseSeconds(new ApocalypseHordes(count, first, every, 0, 0)) >= d)
+            yield return EventValidator.LastHordeLate;
     }
 
     static IEnumerable<string> ActionConflicts(JsonObject action)
@@ -459,6 +507,7 @@ public static class EventsEditor
     {
         null => "a missing",
         "Empower" => "an Empower",
+        EventValidator.ApocalypseType => "an Apocalypse",
         _ => $"a {type}",
     };
 
@@ -580,8 +629,11 @@ public static class EventLines
     /// <remarks>A Revenge definition (revenge D12) names its trigger "revenge" in the first line and gives it a line of its
     /// own, "trigger: revenge &lt;factions&gt; heat &lt;h&gt; in &lt;w&gt; s, …", shortened as FactionKills' is, then the admin
     /// counts line of <paramref name="revengeCounts"/> (heat rows and due players of the definition) when given.</remarks>
+    /// <remarks>An Apocalypse (apocalypse D17) shows its definition's lines (<see cref="ApocalypseLines"/>), and while it
+    /// runs <paramref name="apocalypse"/>'s: each hotspot's region and x, z, each living horde's front and progress, and the
+    /// tally line; its running line counts hordes risen of hordes.</remarks>
     public static IReadOnlyList<string> Info(EventDefinition d, ActiveEvent? active, DateTime utcNow, DateTime? nextInterval = null,
-        (int Rows, int Due)? revengeCounts = null)
+        (int Rows, int Due)? revengeCounts = null, ApocalypseView? apocalypse = null)
     {
         if (d.DisabledReason is { } reason) return [$"{d.Id} disabled: {reason}"];
         var c = d.Conditions;
@@ -648,12 +700,15 @@ public static class EventLines
             lines.AddRange(HuntingGroundsLines(a));
             if (BossesLine(a) is { } bosses) lines.Add(bosses);
         }
+        if (d.Apocalypse is { } apo) lines.AddRange(ApocalypseLines(apo));
         lines.Add($"trigger scope: {d.Trigger.Scope}");                 // regions D9
-        lines.Add($"action scope: {d.Action?.Scope ?? d.Empower?.Scope ?? Scope.Global}");
+        lines.Add($"action scope: {d.Action?.Scope ?? d.Empower?.Scope ?? d.Apocalypse?.Scope ?? Scope.Global}");
         lines.Add(active is null
             ? "not running"
             : $"running: started by {active.Trigger}, {Math.Max(0, (int)Math.Ceiling((active.Instance.EndsUtc - utcNow).TotalSeconds))}s left" +
-              (d.Empower is null ? $", wave {active.WavesSpawned}/{d.Action?.Waves ?? 0}" : ""));
+              (d.Apocalypse is { } running ? $", horde {apocalypse?.Risen ?? 0}/{running.Hordes.Count}"
+              : d.Empower is null ? $", wave {active.WavesSpawned}/{d.Action?.Waves ?? 0}" : ""));
+        if (active is not null && apocalypse is not null) lines.AddRange(ApocalypseRunLines(apocalypse));
         if (d.Trigger.Type == TriggerType.Interval && d.Enabled && NextStartLine(active is not null, nextInterval, utcNow) is { } next) lines.Add(next);
         return lines;
     }
@@ -665,6 +720,42 @@ public static class EventLines
         if (a.Bosses is not { Count: > 0 } bosses) return null;
         var full = "final wave adds: " + string.Join(", ", bosses.Select(b => $"{b.Prefab} x{b.Count}"));
         return System.Text.Encoding.UTF8.GetByteCount(full) <= Wire.MaxBytes ? full : $"final wave adds: {bosses.Sum(b => b.Count)} bosses";
+    }
+
+    /// <summary>An Apocalypse definition's `event info` lines (apocalypse D17), one per D1 key group, each within
+    /// Wire.MaxBytes: the action, the hotspots, the roamers, the hordes, the goal (a Point goal's x, z and height, an
+    /// Admin goal "at the starting admin"), the units (packed when long), the last horde's bosses and the scoreboard.</summary>
+    public static IEnumerable<string> ApocalypseLines(ApocalypseAction a)
+    {
+        yield return FormattableString.Invariant($"action: apocalypse of the {Apocalypse.FactionText(a.Faction)}, march {a.MarchSpeed:0.##} m/s");
+        yield return $"hotspots: {a.Hotspots.Count}, at least {a.Hotspots.MinNatives} natives each, {a.Hotspots.MinSpacing} m apart";
+        yield return $"roamers: {a.Roamers.PerHotspot} per hotspot, +{a.Roamers.PerKill} per kill, max {a.Roamers.Max}, " +
+                     $"{a.Roamers.PerMinute} spread per minute, hunt range {a.Roamers.HuntRange}";
+        yield return $"hordes: {a.Hordes.Count}, first after {a.Hordes.FirstAfterMinutes} min, every {a.Hordes.EveryMinutes} min, " +
+                     $"size {a.Hordes.Size} +{a.Hordes.Growth} each";
+        var at = a.Goal.Location.Type == LocationType.Admin ? "at the starting admin"
+            : FormattableString.Invariant($"at {a.Goal.Location.X:0.#} {a.Goal.Location.Z:0.#}") +
+              (a.Goal.Location.Y is { } h ? FormattableString.Invariant($" height {h:0.#}") : "");
+        yield return $"goal: {a.Goal.Name}, radius {a.Goal.Radius}, {at}";
+        foreach (var line in PackList("units: ", a.Units.Select(EntryText).ToList())) yield return line;
+        if (a.Bosses is { Count: > 0 } bosses)
+        {
+            var full = "last horde adds: " + string.Join(", ", bosses.Select(b => $"{b.Prefab} x{b.Count}"));
+            yield return Fits(full) ? full : $"last horde adds: {bosses.Sum(b => b.Count)} bosses";
+        }
+        yield return $"scoreboard: {(a.Scoreboard ? "on" : "off")}";
+    }
+
+    /// <summary>A live apocalypse's admin lines (apocalypse D17): "hotspot &lt;h&gt;: &lt;region&gt; at &lt;x&gt; &lt;z&gt;", "horde
+    /// &lt;k&gt; front at &lt;x&gt; &lt;z&gt;, &lt;p&gt; %", the living roamers, then the tally line. Admins only: map locations,
+    /// never a player's.</summary>
+    public static IEnumerable<string> ApocalypseRunLines(ApocalypseView v)
+    {
+        foreach (var h in v.Hotspots)
+            yield return TextSink.CutToBytes(FormattableString.Invariant($"hotspot {h.Number}: {(string.IsNullOrEmpty(h.Region) ? Messages.Wilds : h.Region)} at {h.X:0} {h.Z:0}"), Wire.MaxBytes);
+        foreach (var f in v.Fronts) yield return FormattableString.Invariant($"horde {f.Horde} front at {f.X:0} {f.Z:0}, {f.Percent} %");
+        yield return $"roamers: {v.Roamers} living";
+        yield return TextSink.CutToBytes(v.TallyLine, Wire.MaxBytes);
     }
 
     public const string RegionLocationLine = "location: anywhere in the scope regions";

@@ -1,0 +1,21 @@
+D1 · Logic/Validation.cs:ParseApocalypse hotspots.count upper bound MaxHotspots + 1 · EventValidationTests.Apocalypse_ · failed 1/81 → restored, 81/81 pass
+D2 · Logic/Apocalypse.cs:Hotspots.Pick minSpacing check removed · ApocalypseTests.Hotspots_ · failed 1/6 → restored, 6/6 pass
+D3 · Logic/Apocalypse.cs:RoamerPlan.TopUp perHotspot cap removed (n = room) · ApocalypseTests.Roamers_ · failed 3/6 → restored, 6/6 pass
+D4 · Logic/Apocalypse.cs:SpreadGate.Qualifies victim-not-ours check removed · ApocalypseTests.Spread_ · failed 1/5 → restored, 5/5 pass
+D5 · Logic/Apocalypse.cs:HordeSchedule.Size growth ignored · ApocalypseTests.Hordes_ · failed 2/6 → restored, 6/6 pass
+D6 · Logic/Apocalypse.cs:MarchRule.Step hold applied inside goal.radius + 60 m · ApocalypseTests.March_ · failed 1/6 → restored, 6/6 pass
+D7 · Logic/Apocalypse.cs:MarchRule.NewSteps announces a step again · ApocalypseTests.Lines_ · failed 1/3 → restored, 3/3 pass
+D8 · Logic/Apocalypse.cs:ApocalypseOutcome.Decide won read before lost on one tick · ApocalypseTests.Outcomes_ · failed 1/5 → restored, 5/5 pass
+D9 · Logic/Apocalypse.cs:EndRule.RemovesRecord purge keeps the record · ApocalypseTests.EndPaths_ · failed 1/4 → restored, 4/4 pass
+D10 · Logic/Scoreboard.cs:Scoreboard.Counts apocalypse not counted · ScoreboardTests.Apocalypse_ · failed 4/7 → restored, 7/7 pass
+D11 · Logic/DataStore.cs:ApocalypseRecord.Problem duplicate-horde check removed · ApocalypseStateTests · failed 1/8 → restored, 8/8 pass
+D12 · Logic/Apocalypse.cs:ResumeRule.Changed missing boss prefab not a change · ApocalypseTests.Resume_ · failed 1/7 → restored, 7/7 pass
+D13 · Logic/Apocalypse.cs:RollingLifetime.Renew renews an ended run · ApocalypseTests.Lifetime_ · failed 2/3 → restored, 3/3 pass
+D14 · Logic/Engine.cs:EventActions.ApocalypseClash second apocalypse allowed · ApocalypseTests.Caps_ · failed 1/3 → restored, 3/3 pass
+D15 · Logic/Apocalypse.cs:ApocalypseRun.FailedToSpawn tally not fed · ApocalypseTests.Tally_ · failed 1/3 → restored, 3/3 pass
+D16 · Logic/CommandArgs.cs:ApocalypseValue goal.radius upper bound + 1 · CommandArgTests.Apocalypse_ · failed 1/26 → restored, 26/26 pass
+D17 · Logic/EventAdmin.cs:EventLines.ApocalypseRunLines first front left out · AuthoringTests.Apocalypse_ · failed 1/5 → restored, 5/5 pass
+D19 · Logic/Apocalypse.cs:ApocalypseRun.SpreadOn line carries the victim's x and z · PrivacyTests.Apocalypse_ · failed 1/5 → restored, 5/5 pass
+D20 · Logic/Engine.cs:EventEngine.Resume hordes risen not carried to WavesSpawned · ContractDocTests.Apocalypse_ · failed 4/5 → restored, 5/5 pass
+D23 · Nyarlathotep.Tests/ControlCases.cs:Table apocalypse D15 row removed · ControlCaseTests · failed 1/20 → restored, 20/20 pass
+D36 · Logic/Apocalypse.cs:HordeSchedule.Units bosses join every horde · ApocalypseTests.Bosses_ · failed 1/4 → restored, 4/4 pass

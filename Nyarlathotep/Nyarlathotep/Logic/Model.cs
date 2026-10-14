@@ -162,6 +162,41 @@ public sealed record EmpowerAction(
     EmpowerStats Stats,
     Scope Scope = default);
 
+/// <summary>Where an apocalypse's natives cluster (apocalypse D2): up to <see cref="Count"/> 100 m cells of at least
+/// <see cref="MinNatives"/> eligible natives, each at least <see cref="MinSpacing"/> metres from the others.</summary>
+public sealed record ApocalypseHotspots(int Count, int MinNatives, int MinSpacing);
+
+/// <summary>An apocalypse's roamers (apocalypse D3, D4): <see cref="PerHotspot"/> topped up at each hotspot,
+/// <see cref="PerKill"/> spread on each qualifying kill, at most <see cref="Max"/> alive and <see cref="PerMinute"/> spread
+/// in any 60 s. <see cref="HuntRange"/> is the Hunt behaviour's range once the mover has seeded aggro (Review 5 F2).</summary>
+public sealed record ApocalypseRoamers(int PerHotspot, int PerKill, int Max, int PerMinute, int HuntRange);
+
+/// <summary>An apocalypse's hordes (apocalypse D5): <see cref="Count"/> hordes, the first <see cref="FirstAfterMinutes"/>
+/// after the start and one every <see cref="EveryMinutes"/> after it, horde k holding <see cref="Size"/> + (k − 1) ×
+/// <see cref="Growth"/> units.</summary>
+public sealed record ApocalypseHordes(int Count, int FirstAfterMinutes, int EveryMinutes, int Size, int Growth);
+
+/// <summary>Where the hordes march (apocalypse D6, D8): a Point location, or Admin (the starting admin's position, read
+/// once at the start; Manual trigger only). A front within <see cref="Radius"/> m loses the run; <see cref="Name"/> is the
+/// place's name in the chat lines.</summary>
+public sealed record ApocalypseGoal(Location Location, int Radius, string Name);
+
+/// <summary>An Apocalypse action (apocalypse D1): hotspots found among <see cref="Faction"/>'s natives in
+/// <see cref="Scope"/>, roamers and hordes drawn from <see cref="Units"/> by weight (count) and chance, hordes marching to
+/// <see cref="Goal"/> at <see cref="MarchSpeed"/> m/s; <see cref="Bosses"/> join the last horde only (D36), null without
+/// the key. Its rules are Logic/Apocalypse.cs.</summary>
+public sealed record ApocalypseAction(
+    string Faction,
+    IReadOnlyList<UnitEntry> Units,
+    ApocalypseHotspots Hotspots,
+    ApocalypseRoamers Roamers,
+    ApocalypseHordes Hordes,
+    ApocalypseGoal Goal,
+    double MarchSpeed,
+    Scope Scope = default,
+    bool Scoreboard = true,
+    IReadOnlyList<UnitEntry>? Bosses = null);
+
 public sealed record Announce(IReadOnlyList<string> Start, IReadOnlyList<string> End, bool Warnings)
 {
     public static readonly Announce None = new([], [], false);
@@ -169,7 +204,8 @@ public sealed record Announce(IReadOnlyList<string> Start, IReadOnlyList<string>
 
 /// <summary>One definition as loaded. <see cref="DisabledReason"/> is set when validation disabled it;
 /// the definition is then kept for `.nyar event list` but never started. A valid definition carries exactly one action:
-/// a SpawnWaves <see cref="Action"/> or an <see cref="Empower"/> (faction-empowerment D1, D2).</summary>
+/// a SpawnWaves <see cref="Action"/>, an <see cref="Empower"/> (faction-empowerment D1, D2) or an
+/// <see cref="Apocalypse"/> (apocalypse D1).</summary>
 public sealed record EventDefinition(
     string Id,
     string Name,
@@ -181,7 +217,8 @@ public sealed record EventDefinition(
     SpawnWavesAction? Action,
     Announce Announce,
     string? DisabledReason = null,
-    EmpowerAction? Empower = null)
+    EmpowerAction? Empower = null,
+    ApocalypseAction? Apocalypse = null)
 {
     public bool Startable => Enabled && DisabledReason is null;
 }
