@@ -42,8 +42,7 @@ Setup: `pwsh tools/dev-snapshot.ps1 -Save sw1` first; the Release build of 0865d
 Scoreboard.IncludeAdmins true (false for boot 3) and Debug.TimingLog on; the dev events.json gained sw-arena and
 sw-timing (the entries in swarm.vrs and swarm-timing.vrs); dev marks pond (-1880, -1640), sw-near (+10 m east),
 sw-far (+60 m east) and sw-far2 (60 m west). Chaos invulnerable throughout (`ToggleInvulnerable true`). Three boots;
-both logs copied to %TEMP%
-yar-sw1-logsoot<n> before each stop.
+both logs copied to %TEMP%\nyar-sw1-logs\boot<n> before each stop.
 Restored after: "snapshot restored; hashes equal (sw1, …)".
 
 - D15, kept inside (partly): sw-arena at the pond spawned its 8 CHAR_Spider_Forest at the spot (`.nyar debug here 8`:
@@ -89,8 +88,7 @@ Restored after: "snapshot restored; hashes equal (sw1, …)".
 ### Session 2 · 2026-10-11 · D15 chase probe (0865d32, dev world nyardev, Claude via vrclient)
 
 Setup: `pwsh tools/dev-snapshot.ps1 -Save sw2`; the Release build deployed; sw-arena added back to the dev events.json. One boot.
-Logs copied to %TEMP%
-yar-sw2-logs before the stop. Restored after: "snapshot restored; hashes equal (sw2, …)".
+Logs copied to %TEMP%\nyar-sw2-logs before the stop. Restored after: "snapshot restored; hashes equal (sw2, …)".
 
 - swarm-chase.vrs SCENARIO PASS 18/18 (results swarm-chase-20261011-220828.json), but the probe failed at its purpose.
   The three held-D legs never moved Chaos ([DEV WHERE] read -1880, -1640 every time, and again after a teleport

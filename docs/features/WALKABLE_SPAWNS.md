@@ -107,8 +107,7 @@ not at the Session 7 point (-912.9, -828.8).
   so it reads the same without colour.
 - Setup (Claude): `pwsh tools/dev-snapshot.ps1 -Save ws1` before the step 1 DLL was deployed; stopped after the autosave
   that followed the last reading (13:45:43); -LogCheck "0 unhandled, 158 nyar lines, 0 orphan errors, 0 unity errors".
-  Then `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (ws1, …
-yar-snap-ws1 deleted)".
+  Then `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (ws1, …\nyar-snap-ws1 deleted)".
 
 ### Session 2 · 2026-09-28 · waves at a pond shore (owner, 0.5.0+7f02abb, snapshot ws2)
 The owner stood on the shore of event-library's Session 7 pond, 3-5 m from the water, where `.nyar debug walk` replied

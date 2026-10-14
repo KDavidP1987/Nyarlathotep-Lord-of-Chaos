@@ -95,13 +95,11 @@ and one under "## Post-audit"; every post-audit entry carries a "Codex verdict:"
 - Codex verdict: REVISE (round 4) — F1 (medium) step 11's ba-new delete was not pasted → rejected with reason: D13 asks for each twin, and step 10 quotes the delete twin whole (ask, the read, confirm, the read) on ba-copy; step 11 repeats the same twin (the log and the reload count confirm it); the record says so
 - Codex verdict: READY (round 5) — "No findings. Round 4's disposition holds: D13 requires evidence for each distinct D3/D4 twin, not every repeated invocation … Sessions 1 and 2 jointly satisfy D13, and the audit evidence is consistent."
 - privacy grep (7656119, kdpenland): none in the added lines of the step 3 diff
-- tcli build: kdpen-Nyarlathotep-0.5.2.zip (324350 bytes), built in a detached worktree (%TEMP%
-yar-rel-052) at the release commit 32cc082 (0 warnings, 0 errors); the zip's DLL equals that build's DLL; the zip's CHANGELOG is 32cc082's, so the reads wording the step 3 reviews corrected (aa5a479) ships in the next release's package changelog
+- tcli build: kdpen-Nyarlathotep-0.5.2.zip (324350 bytes), built in a detached worktree (%TEMP%\nyar-rel-052) at the release commit 32cc082 (0 warnings, 0 errors); the zip's DLL equals that build's DLL; the zip's CHANGELOG is 32cc082's, so the reads wording the step 3 reviews corrected (aa5a479) ships in the next release's package changelog
 - zip sha256: kdpen-Nyarlathotep-0.5.2.zip EEFE3F4F245FEF2F10EB15E05D43BF5C9864C20E6D67C4F089AFD81A3E7F2902
 - tag: v0.5.2 annotated at 32cc082 (the release-tags check places a tag on its chore(release) commit); a first local tag at da24c74 was deleted before any push
 - Rollout › Rollback reworded to the gate's route phrases ("after data is written", "withdrawn by retitling"); the first gate run failed on them and on the tag's commit
 - rollback gate before the push: `pwsh tools/rollback-gate.ps1 -From v0.5.1 -To v0.5.2 -Plan raphael-api-admin` → "rollback gate: 4/4" (repository drill with -BeforePush; N-1 boot drill "events.json: v0.5.2 '6 valid, 0 disabled', v0.5.1 '6 valid, 0 disabled'", v0.5.1 initialized on v0.5.2's files; snapshot selftest; "rollback routes: raphael-api-admin 5/5")
 - release: v0.5.2 tagged at 32cc082 and pushed with main; GitHub pre-release https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.5.2 with the zip; `pwsh tools/release-verify.ps1 -Tag v0.5.2 -Asset kdpen-Nyarlathotep-0.5.2.zip` → "release verify: hashes equal"; no tcli publish (the owner publishes)
-- Paths: the v0.5.2 remote tag and release added to tools/paths-manifest.txt (`remote-tag:`, `remote-release:`), as Paths walked step 3 declares; the worktree %TEMP%
-yar-rel-052 removed
+- Paths: the v0.5.2 remote tag and release added to tools/paths-manifest.txt (`remote-tag:`, `remote-release:`), as Paths walked step 3 declares; the worktree %TEMP%\nyar-rel-052 removed
 
