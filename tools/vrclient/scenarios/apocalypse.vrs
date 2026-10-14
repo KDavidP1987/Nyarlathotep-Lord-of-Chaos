@@ -72,11 +72,12 @@ expect-log (^|\] |\\n )hotspot 1: [A-Za-z' ]+? at (?P<H1X>-?[0-9]+) (?P<H1Z>-?[0
 expect-calc hypot(${PX} - ${H1X}, ${PZ} - ${H1Z}) >= 300
 expect-calc hypot(${PX} - ${H2X}, ${PZ} - ${H2Z}) >= 300
 expect-calc hypot(${PX} + 1188, ${PZ} + 1334) >= 200
-wait 10
-# the roamers came to Chaos (both unit kinds counted)
-chat .devunits -1967480038 60
+# the roamers came to Chaos (both unit kinds counted): the mover lands them 50-60 m from him, within its 100 m seed reach,
+# and they walk in from there (session 1: counted within 60 m after 10 s, none had arrived yet)
+wait 20
+chat .devunits -1967480038 100
 expect-log \[DEV UNITS\] n=(?P<RG>[0-9]+)
-chat .devunits -1618703048 60
+chat .devunits -1618703048 100
 expect-log \[DEV UNITS\] n=(?P<RM>[0-9]+)
 expect-calc ${RG} + ${RM} >= 1
 expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
@@ -142,16 +143,17 @@ expect-log \[DEV UNITS\] n=(?P<SG>[0-9]+)
 chat .devunits -1618703048 6 apo-death
 expect-log \[DEV UNITS\] n=(?P<SM>[0-9]+)
 expect-calc ${SG} + ${SM} >= 2
-# the respawn is a held space; back to hotspot 1 before horde 1 rises (a minute in)
+# the respawn is a held space; horde 1 rises a minute in, often while Chaos respawns, so its line is read before the
+# teleport's (a matched line consumes the lines before it: session 1 missed it after the teleport)
 hold space 1.5
 wait 3
 respawn-coffin 15
 wait 10
 console ToggleInvulnerable true
 wait 2
+expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
 chat .devtp ${H1X} ${H1Z}
 expect-log \[DEV TP\] to
-expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
 expect-chat a horde of 8 rises timeout=20
 shot chat apo-horde1-rise
 # Chaos stands on horde 1's front (re-read, in case it moved while he respawned) and it holds: its % does not change
@@ -166,7 +168,8 @@ expect-log (^|\] |\\n )horde 1 front at -?[0-9]+ -?[0-9]+, (?P<B1A>[0-9]+) % tim
 wait 20
 chat .nyar event info apo-test
 expect-log (^|\] |\\n )horde 1 front at -?[0-9]+ -?[0-9]+, (?P<B1B>[0-9]+) % timeout=10
-expect-calc ${B1B} == ${B1A} and ${B1A} <= 30
+# held where Chaos stands; it may have marched while he respawned, but not to the goal margin (200 m, 90 m margin)
+expect-calc ${B1B} == ${B1A} and ${B1A} <= 50
 chat .devkill -1967480038 120
 chat .devkill -1618703048 120
 wait 5
