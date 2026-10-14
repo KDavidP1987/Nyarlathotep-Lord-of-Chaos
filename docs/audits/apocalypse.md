@@ -83,7 +83,7 @@
 - dod: D9, D12, D18, D21, D22, D23, D29, D38 verified; D25-D28 wait on the owner's acceptance (rubric 3)
 - Codex verdict: deferred to step 5 (Halloween track: once per child before its release)
 
-### Step 5 (Codex cross-inspection, early) · 2026-10-14 · d88dbbc + fixes
+### Codex cross-inspection, early (before step 4; step 5 keeps its own post-audit) · 2026-10-14 · d88dbbc + fixes
 - Codex (`codex exec -s read-only`, prompt via stdin) on `git diff v0.12.0..HEAD -- . ':!tools/vrclient' ':!docs'`, run before
   the test weekend so its fixes are in the weekend DLL: VERDICT: ISSUES (3)
   - H1 fixed: a resume record whose living counts exceed the tracked-unit cap's maximum (500) is refused as unreadable

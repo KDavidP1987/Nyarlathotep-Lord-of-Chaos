@@ -24,6 +24,8 @@ tracked: docs/audits/*.md
 tracked: docs/audits/spikes-compile-base.txt
 # the planted-fault runs of apocalypse step 2, copied into its post-audit (apocalypse Build plan step 2)
 tracked: docs/audits/apocalypse-step2-planted.txt
+# the planted-fault runs of apocalypse step 3 and its review fixes (apocalypse Build plan step 3)
+tracked: docs/audits/apocalypse-step3-planted.txt
 tracked: docs/img/*
 tracked: docs/dod/*.md
 tracked: docs/dod/*.html
