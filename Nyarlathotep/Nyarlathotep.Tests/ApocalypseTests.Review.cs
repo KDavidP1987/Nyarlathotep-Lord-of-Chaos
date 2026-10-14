@@ -163,6 +163,24 @@ public partial class ApocalypseTests
         Assert.Equal(T0, g.LastWatchedUtc);                                    // nobody within 100 m: unchanged
     }
 
+    [Fact]
+    public void March_fails_when_the_keep_up_line_counts_a_hopped_unit_where_it_stood()
+    {
+        // every unit of horde 1 300 m off the front, nobody near: the hop tick lands them all, and the keep-up line of that
+        // tick counts them at their landings (session 1: it read the positions from before the hops)
+        var rig = ApocalypseDependencyFailureTests.Running();
+        Assert.Equal(1, rig.Tick(T0.AddMinutes(1)).Rose);
+        rig.Game.SpawnAll(rig.Host, T0.AddMinutes(1));
+        var front = rig.Host.Run!.Fronts[1];
+        var horde = rig.Game.Ledger.Units.Where(u => Apocalypse.HordeOfWave(u.Wave) == 1).Select(u => u.Key).ToList();
+        foreach (var k in horde) rig.Game.Positions[k] = (front.X, front.Z + 300);
+        rig.Game.Logs.Clear();
+        rig.Tick(T0.AddMinutes(1).AddSeconds(30));                             // a hop tick and a keep-up tick at once
+        var keep = Assert.Single(rig.Game.Logs, l => l.Contains(" % units ", StringComparison.Ordinal));
+        Assert.EndsWith($"units {horde.Count}/{horde.Count} within 30 m of the front", keep);
+        Assert.Contains(rig.Game.Logs, l => l == $"apocalypse apo horde 1 hops: {horde.Count} of {horde.Count} stragglers moved since the last line");
+    }
+
     // ---- D15 (review L1): an outcome's cancelled orders count as failed, not pending
 
     [Fact]

@@ -129,6 +129,7 @@ public sealed class ApocalypseHost
     RoamTargets _roamTargets = new();
     readonly HashSet<int> _defeated = [];
     readonly Dictionary<int, DateTime> _keepUp = [];
+    readonly Dictionary<int, (int Moved, int Stragglers)> _hops = [];
     DateTime? _lastMarch, _lastMove, _lastRenew, _lastRecord;
     ApocalypseRecord? _pending;
     DateTime _sweptUtc;
@@ -158,6 +159,7 @@ public sealed class ApocalypseHost
         _roamTargets = new RoamTargets();
         _defeated.Clear();
         _keepUp.Clear();
+        _hops.Clear();
         _lastMarch = _lastMove = _lastRenew = _lastRecord = null;
         _march.Ok();
         _roam.Ok();
@@ -264,11 +266,19 @@ public sealed class ApocalypseHost
                 if (moveDue)
                 {
                     var stragglers = MarchRule.Stragglers(front, horde.Select(u => (u.Key, u.X, u.Z)), online, now);
+                    var moved = 0;
                     for (var i = 0; i < stragglers.Count; i++)
                     {
-                        var u = horde.First(h => h.Key == stragglers[i]);
-                        if (HopRule.Land(u, front, i, stragglers.Count, game.Walkable, game.HeightOf, game.Budget) is { } hop) game.Move(hop);
+                        var at = horde.FindIndex(h => h.Key == stragglers[i]);
+                        var u = horde[at];
+                        if (HopRule.Land(u, front, i, stragglers.Count, game.Walkable, game.HeightOf, game.Budget) is not { } hop) continue;
+                        game.Move(hop);
+                        moved++;
+                        // the keep-up count reads the unit where it landed, not where it stood before the hop (session 1)
+                        horde[at] = u with { X = hop.X, Y = hop.Y, Z = hop.Z, Level = hop.Level };
                     }
+                    var sum = _hops.TryGetValue(front.Horde, out var h0) ? h0 : (Moved: 0, Stragglers: 0);
+                    _hops[front.Horde] = (sum.Moved + moved, sum.Stragglers + stragglers.Count);
                 }
                 byte? level = horde.Count == 0 ? null : horde.OrderBy(u => Apocalypse.Distance(u.X, u.Z, front.X, front.Z)).First().Level;
                 var step = MarchRule.Step(front, action.Goal.Radius, action.MarchSpeed, seconds, online,
@@ -282,6 +292,9 @@ public sealed class ApocalypseHost
                 {
                     _keepUp[front.Horde] = now;
                     Say(game.Log, $"apocalypse {run.Id} " + MarchRule.KeepUpLine(front.Horde, front.Percent, MarchRule.KeepUp(front, horde.Select(u => (u.X, u.Z)).ToList())));
+                    var hops = _hops.TryGetValue(front.Horde, out var hp) ? hp : (Moved: 0, Stragglers: 0);
+                    _hops[front.Horde] = (0, 0);
+                    Say(game.Log, $"apocalypse {run.Id} horde {front.Horde} hops: {hops.Moved} of {hops.Stragglers} stragglers moved since the last line");
                 }
             }
             _march.Ok();

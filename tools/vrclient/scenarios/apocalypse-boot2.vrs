@@ -21,7 +21,7 @@ expect-log \] tracked units: (?P<TRACKED>[0-9]+) \( timeout=10
 expect-calc ${TRACKED} == ${UNITS}
 # horde 2's front continues from its saved progress
 chat .nyar event info apo-test
-expect-log (^|\] )horde 2 front at (?P<F2X>-?[0-9]+) (?P<F2Z>-?[0-9]+), (?P<F2P>[0-9]+) % timeout=10
+expect-log (^|\] |\\n )horde 2 front at (?P<F2X>-?[0-9]+) (?P<F2Z>-?[0-9]+), (?P<F2P>[0-9]+) % timeout=10
 expect-calc ${F2P} >= ${PREP_PCT}
 shot chat apo-boot2-info
 chat .devtp ${F2X} ${F2Z}
@@ -31,10 +31,10 @@ console ToggleInvulnerable true
 wait 2
 # held again: its % does not change in 20 s
 chat .nyar event info apo-test
-expect-log (^|\] )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<PA>[0-9]+) % timeout=10
+expect-log (^|\] |\\n )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<PA>[0-9]+) % timeout=10
 wait 20
 chat .nyar event info apo-test
-expect-log (^|\] )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<PB>[0-9]+) % timeout=10
+expect-log (^|\] |\\n )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<PB>[0-9]+) % timeout=10
 expect-calc ${PB} == ${PA}
 # one rebuilt horde unit killed, then the stop: the scoreboard holds the kills from before the restart and this one
 chat .devkill -1967480038 120 1
@@ -62,7 +62,7 @@ expect-reply apo-test action.marchSpeed =
 # `.nyar status` must read "tracked units: 0" and the boot log must not hold "apo-test resumed after restart"
 mark
 chat .nyar event start apo-test
-expect-log event apo-test started by Manual timeout=20
+expect-log event apo-test started by manual timeout=20
 expect-log apocalypse apo-test roamers: \+3 at hotspot 1 timeout=30
 chat .nyar purge
 wait 2

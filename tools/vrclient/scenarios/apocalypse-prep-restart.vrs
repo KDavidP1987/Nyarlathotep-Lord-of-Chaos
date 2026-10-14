@@ -32,11 +32,11 @@ expect-reply apo-test action.marchSpeed =
 # a short run for the hotspots
 mark
 chat .nyar event start apo-test
-expect-log event apo-test started by Manual timeout=20
+expect-log event apo-test started by manual timeout=20
 expect-log apocalypse apo-test hotspots: 2 \( timeout=10
 chat .nyar event info apo-test
-expect-log (^|\] )hotspot 1: .* at (?P<H1X>-?[0-9]+) (?P<H1Z>-?[0-9]+) timeout=10
-expect-log (^|\] )hotspot 2: .* at (?P<H2X>-?[0-9]+) (?P<H2Z>-?[0-9]+) timeout=10
+expect-log (^|\] |\\n )hotspot 1: [A-Za-z' ]+? at (?P<H1X>-?[0-9]+) (?P<H1Z>-?[0-9]+) timeout=10
+expect-log (^|\] |\\n )hotspot 2: [A-Za-z' ]+? at (?P<H2X>-?[0-9]+) (?P<H2Z>-?[0-9]+) timeout=10
 chat .nyar event stop apo-test
 expect-log event apo-test stopped
 wait 30
@@ -64,10 +64,10 @@ console ToggleInvulnerable true
 wait 2
 mark
 chat .nyar event start apo-test
-expect-log event apo-test started by Manual timeout=20
+expect-log event apo-test started by manual timeout=20
 chat .nyar event info apo-test
-expect-log (^|\] )hotspot 1: .* at (?P<R1X>-?[0-9]+) (?P<R1Z>-?[0-9]+) timeout=10
-expect-log (^|\] )hotspot 2: .* at (?P<R2X>-?[0-9]+) (?P<R2Z>-?[0-9]+) timeout=10
+expect-log (^|\] |\\n )hotspot 1: [A-Za-z' ]+? at (?P<R1X>-?[0-9]+) (?P<R1Z>-?[0-9]+) timeout=10
+expect-log (^|\] |\\n )hotspot 2: [A-Za-z' ]+? at (?P<R2X>-?[0-9]+) (?P<R2Z>-?[0-9]+) timeout=10
 expect-calc hypot(${R1X} - ${H1X}, ${R1Z} - ${H1Z}) <= 30 and hypot(${R2X} - ${H2X}, ${R2Z} - ${H2Z}) <= 30
 expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
 wait 5
@@ -85,7 +85,7 @@ expect-log apocalypse apo-test horde 1 of 2 destroyed timeout=30
 expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=330
 wait 60
 chat .nyar event info apo-test
-expect-log (^|\] )horde 2 front at (?P<F2X>-?[0-9]+) (?P<F2Z>-?[0-9]+), [0-9]+ % timeout=10
+expect-log (^|\] |\\n )horde 2 front at (?P<F2X>-?[0-9]+) (?P<F2Z>-?[0-9]+), [0-9]+ % timeout=10
 expect-calc hypot(${F2X} - ${GX}, ${F2Z} - ${GZ}) > 150
 chat .devtp ${F2X} ${F2Z}
 expect-log \[DEV TP\] to
@@ -94,10 +94,10 @@ console ToggleInvulnerable true
 wait 2
 # held: its % does not change in 30 s
 chat .nyar event info apo-test
-expect-log (^|\] )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<PA>[0-9]+) % timeout=10
+expect-log (^|\] |\\n )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<PA>[0-9]+) % timeout=10
 wait 30
 chat .nyar event info apo-test
-expect-log (^|\] )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<PREP_PCT>[0-9]+) % timeout=10
+expect-log (^|\] |\\n )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<PREP_PCT>[0-9]+) % timeout=10
 expect-calc ${PREP_PCT} == ${PA}
 # one horde 2 unit for the scoreboard
 chat .devkill -1967480038 120 1

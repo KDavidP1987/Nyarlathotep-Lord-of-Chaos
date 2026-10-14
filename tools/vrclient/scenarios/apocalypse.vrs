@@ -54,20 +54,21 @@ wait 2
 chat .devunits ${UNATIVE} 60
 expect-log \[DEV UNITS\] n=(?P<NATIVES>[0-9]+)
 #
-# A. lost (D26): Chaos at the pond holds nothing; the roamers find him (D25) and horde 1 takes the fixture goal
-chat .devgo pond
-expect-log \[DEV TP\] pond x=(?P<PX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<PZ>-?[0-9.]+)
+# A. lost (D26): Chaos at the wait spot (--var WX WZ, e.g. -1690 -1400, the stalker camp; the pond is too near a
+# Farbane hotspot) holds nothing; the roamers find him (D25) and horde 1 takes the fixture goal
+chat .devtp ${WX} ${WZ}
+expect-log \[DEV TP\] to x=(?P<PX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<PZ>-?[0-9.]+)
 wait 4
 console ToggleInvulnerable true
 wait 2
 mark
 chat .nyar event start apo-test
-expect-log event apo-test started by Manual timeout=20
+expect-log event apo-test started by manual timeout=20
 expect-log apocalypse apo-test hotspots: 2 \( timeout=10
 expect-log apocalypse apo-test roam: hotspot [12] on a player timeout=120
 chat .nyar event info apo-test
-expect-log (^|\] )hotspot 1: .* at (?P<H1X>-?[0-9]+) (?P<H1Z>-?[0-9]+) timeout=10
-expect-log (^|\] )hotspot 2: .* at (?P<H2X>-?[0-9]+) (?P<H2Z>-?[0-9]+) timeout=10
+expect-log (^|\] |\\n )hotspot 1: [A-Za-z' ]+? at (?P<H1X>-?[0-9]+) (?P<H1Z>-?[0-9]+) timeout=10
+expect-log (^|\] |\\n )hotspot 2: [A-Za-z' ]+? at (?P<H2X>-?[0-9]+) (?P<H2Z>-?[0-9]+) timeout=10
 # D25's roam condition and an unobserved march: the pond is 300 m or more from both hotspots and 200 m or more from the goal
 expect-calc hypot(${PX} - ${H1X}, ${PZ} - ${H1Z}) >= 300
 expect-calc hypot(${PX} - ${H2X}, ${PZ} - ${H2Z}) >= 300
@@ -118,12 +119,12 @@ console ToggleInvulnerable true
 wait 2
 mark
 chat .nyar event start apo-test
-expect-log event apo-test started by Manual timeout=20
+expect-log event apo-test started by manual timeout=20
 expect-log apocalypse apo-test hotspots: 2 \( timeout=10
 expect-log apocalypse apo-test roamers: \+3 at hotspot 1 timeout=20
 chat .nyar event info apo-test
-expect-log (^|\] )hotspot 1: .* at (?P<B1X>-?[0-9]+) (?P<B1Z>-?[0-9]+) timeout=10
-expect-log (^|\] )hotspot 2: .* at (?P<B2X>-?[0-9]+) (?P<B2Z>-?[0-9]+) timeout=10
+expect-log (^|\] |\\n )hotspot 1: [A-Za-z' ]+? at (?P<B1X>-?[0-9]+) (?P<B1Z>-?[0-9]+) timeout=10
+expect-log (^|\] |\\n )hotspot 2: [A-Za-z' ]+? at (?P<B2X>-?[0-9]+) (?P<B2Z>-?[0-9]+) timeout=10
 expect-calc hypot(${B1X} - ${H1X}, ${B1Z} - ${H1Z}) <= 30 and hypot(${B2X} - ${H2X}, ${B2Z} - ${H2Z}) <= 30
 wait 3
 chat .nyar debug here 60
@@ -156,15 +157,15 @@ shot chat apo-horde1-rise
 # Chaos stands on horde 1's front (re-read, in case it moved while he respawned) and it holds: its % does not change
 wait 3
 chat .nyar event info apo-test
-expect-log (^|\] )horde 1 front at (?P<F1X>-?[0-9]+) (?P<F1Z>-?[0-9]+), [0-9]+ % timeout=10
+expect-log (^|\] |\\n )horde 1 front at (?P<F1X>-?[0-9]+) (?P<F1Z>-?[0-9]+), [0-9]+ % timeout=10
 chat .devtp ${F1X} ${F1Z}
 expect-log \[DEV TP\] to
 wait 4
 chat .nyar event info apo-test
-expect-log (^|\] )horde 1 front at -?[0-9]+ -?[0-9]+, (?P<B1A>[0-9]+) % timeout=10
+expect-log (^|\] |\\n )horde 1 front at -?[0-9]+ -?[0-9]+, (?P<B1A>[0-9]+) % timeout=10
 wait 20
 chat .nyar event info apo-test
-expect-log (^|\] )horde 1 front at -?[0-9]+ -?[0-9]+, (?P<B1B>[0-9]+) % timeout=10
+expect-log (^|\] |\\n )horde 1 front at -?[0-9]+ -?[0-9]+, (?P<B1B>[0-9]+) % timeout=10
 expect-calc ${B1B} == ${B1A} and ${B1A} <= 30
 chat .devkill -1967480038 120
 chat .devkill -1618703048 120
@@ -183,11 +184,11 @@ expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=330
 expect-chat a horde of 12 rises timeout=20
 wait ${W2}
 chat .nyar event info apo-test
-expect-log (^|\] )horde 2 front at (?P<F2X>-?[0-9]+) (?P<F2Z>-?[0-9]+), (?P<B2A>[0-9]+) % timeout=10
+expect-log (^|\] |\\n )horde 2 front at (?P<F2X>-?[0-9]+) (?P<F2Z>-?[0-9]+), (?P<B2A>[0-9]+) % timeout=10
 expect-calc hypot(${F2X} - ${H1X}, ${F2Z} - ${H1Z}) <= 61
 wait 15
 chat .nyar event info apo-test
-expect-log (^|\] )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<B2B>[0-9]+) % timeout=10
+expect-log (^|\] |\\n )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<B2B>[0-9]+) % timeout=10
 expect-calc ${B2B} == ${B2A}
 chat .devkill -1967480038 120
 chat .devkill -1618703048 120
@@ -211,7 +212,7 @@ console ToggleInvulnerable true
 wait 2
 mark
 chat .nyar event start apo-test
-expect-log event apo-test started by Manual timeout=20
+expect-log event apo-test started by manual timeout=20
 expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
 expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=330
 wait 5
@@ -226,7 +227,7 @@ expect-reply tracked units: 0 timeout=40
 # D. pillar spawns off at horde 2 (D27): no scoreboard, 0 tracked
 mark
 chat .nyar event start apo-test
-expect-log event apo-test started by Manual timeout=20
+expect-log event apo-test started by manual timeout=20
 expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
 expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=330
 wait 5
@@ -248,26 +249,26 @@ console ToggleInvulnerable true
 wait 2
 mark
 chat .nyar event start apo-test
-expect-log event apo-test started by Manual timeout=20
+expect-log event apo-test started by manual timeout=20
 chat .nyar event info apo-test
-expect-log (^|\] )hotspot 1: .* at (?P<E1X>-?[0-9]+) (?P<E1Z>-?[0-9]+) timeout=10
-expect-log (^|\] )hotspot 2: .* at (?P<E2X>-?[0-9]+) (?P<E2Z>-?[0-9]+) timeout=10
+expect-log (^|\] |\\n )hotspot 1: [A-Za-z' ]+? at (?P<E1X>-?[0-9]+) (?P<E1Z>-?[0-9]+) timeout=10
+expect-log (^|\] |\\n )hotspot 2: [A-Za-z' ]+? at (?P<E2X>-?[0-9]+) (?P<E2Z>-?[0-9]+) timeout=10
 expect-calc hypot(${E1X} - ${H1X}, ${E1Z} - ${H1Z}) <= 30 and hypot(${E2X} - ${H2X}, ${E2Z} - ${H2Z}) <= 30
 expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
 wait 10
 chat .nyar event info apo-test
-expect-log (^|\] )horde 1 front at -?[0-9]+ -?[0-9]+, (?P<E1A>[0-9]+) % timeout=10
+expect-log (^|\] |\\n )horde 1 front at -?[0-9]+ -?[0-9]+, (?P<E1A>[0-9]+) % timeout=10
 expect-calc ${E1A} <= 5
 expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=330
 wait ${W2}
 chat .nyar event info apo-test
-expect-log (^|\] )horde 1 front at -?[0-9]+ -?[0-9]+, (?P<E1B>[0-9]+) % timeout=10
-expect-log (^|\] )horde 2 front at (?P<EF2X>-?[0-9]+) (?P<EF2Z>-?[0-9]+), (?P<E2A>[0-9]+) % timeout=10
+expect-log (^|\] |\\n )horde 1 front at -?[0-9]+ -?[0-9]+, (?P<E1B>[0-9]+) % timeout=10
+expect-log (^|\] |\\n )horde 2 front at (?P<EF2X>-?[0-9]+) (?P<EF2Z>-?[0-9]+), (?P<E2A>[0-9]+) % timeout=10
 expect-calc ${E1B} == ${E1A}
 expect-calc hypot(${EF2X} - ${H1X}, ${EF2Z} - ${H1Z}) <= 61
 wait 60
 chat .nyar event info apo-test
-expect-log (^|\] )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<E2B>[0-9]+) % timeout=10
+expect-log (^|\] |\\n )horde 2 front at -?[0-9]+ -?[0-9]+, (?P<E2B>[0-9]+) % timeout=10
 expect-calc ${E2B} == ${E2A}
 shot full apo-survive-held
 # 15 min with neither a win nor a loss (it ends before the 30 min are up, so the survived line is not drained here)
@@ -284,7 +285,7 @@ console ToggleInvulnerable true
 wait 2
 mark
 chat .nyar event start apo-test
-expect-log event apo-test started by Manual timeout=20
+expect-log event apo-test started by manual timeout=20
 expect-log apocalypse apo-test horde 1/2 rose at hotspot 1: 8 units timeout=90
 expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=330
 wait 5
