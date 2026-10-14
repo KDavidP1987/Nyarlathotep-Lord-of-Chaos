@@ -51,3 +51,24 @@
   - L3 (restored totals omit players past the 200-row cap) and L4 (the record-removal test is circular; step 3 tests the real end paths) logged in the plan for step 3
 - planted faults: docs/audits/apocalypse-step2-planted.txt (21 faults, each failing its named test)
 - Codex verdict: deferred to step 5 (Halloween track: once per child before its release)
+
+### Step 3 · 2026-10-14 · merge 3f607e4 + review and session fixes (be6af26)
+- compile: 0 Warning(s), 0 Error(s); tests 3392/3392 (3373 at the merge)
+- preflight: fails one check only, "release tags: 13/14 (v0.12.0 not pushed)" (revenge's push waits on the owner)
+- /code-review 1 (a fresh read-only subagent on `git diff 7390a68 3f607e4`): VERDICT: ISSUES (5) — H1 scenario fronts
+  held from the goal, M1 the tick's fault guard could not fire, M2 a failed resume left its orders queued, M3 a straggler
+  could be hopped beside a player, M4 a resumed run's status line, L1-L5; fixed in fe94add with tests
+- /code-review 2 (a fresh read-only subagent on `git diff 3f607e4 5bda54f -- Nyarlathotep/`, the review and session fixes):
+  VERDICT: ISSUES (3) — M1 a spent walk budget let an unobserved front cross to an unread point (the crossing holds on an
+  unread point; stragglers stop below HopRule.FrontReserve), L1 a step reaching an off-axis goal stopped a float step
+  short, L2 a failed resume kept its restored scoreboard rows; all fixed in 2b4d93e with tests
+- planted faults: docs/audits/apocalypse-step3-planted.txt (11 at the merge, then one per session finding and review fix,
+  each failing its named test); the roam-move guard planted alone fails D22's march-read category (Review 6 F2)
+- dependency suite: "dependency suite: apocalypse 5/5 (native-read, spread-read, march-read, resume-read, state-write)"
+- in game: Session 1 (D25-D27) apocalypse.vrs run 8 105/106, the miss being chat OCR of a line the server log shows sent;
+  Session 2 (D28) prep-restart 34/34 and boot2 23/23; D29 timing run 3 22/22 and "timing span: 10/10 windows under 5 ms"
+  (docs/features/APOCALYPSE.md › Test results); Session 3 (D30) below
+- every [Error]/[Warning] of Sessions 1-2 read: ours are the stop, purge and pillar-off end lines and example-empowerment's known pillar
+  warning; Beelzebub's TUNE warning and Il2CppInterop's Class::Init warning are not ours
+- dod: D9, D12, D18, D21, D22, D23, D29, D38 verified; D25-D28 wait on the owner's acceptance (rubric 3)
+- Codex verdict: deferred to step 5 (Halloween track: once per child before its release)
