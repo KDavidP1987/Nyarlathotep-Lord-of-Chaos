@@ -41,9 +41,8 @@ public static class ControlCases
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
     [
-        // apocalypse: step 3's tick budget (an in-game timing span); step 5 the release
-        new(Apocalypse, "D29", 3, "0.13.0"),
-        new(Apocalypse, "D32", 5, "0.13.0"), new(Apocalypse, "D33", 5, "0.13.0"), new(Apocalypse, "D34", 5, "0.13.0"), new(Apocalypse, "D35", 5, "0.13.0"),
+        // apocalypse: step 5 the release
+        new(Apocalypse, "D33", 5, "0.13.0"), new(Apocalypse, "D34", 5, "0.13.0"), new(Apocalypse, "D35", 5, "0.13.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -747,7 +746,7 @@ public static class ControlCases
             ["tools/preflight-fixtures/Secrets/bad", "tools/preflight-fixtures/Secrets/bad-sentinel-zip", "tools/preflight-fixtures/Secrets/bad-sentinel-log"],
             ["tools/preflight-fixtures/Secrets/good", "tools/preflight-fixtures/Secrets/good-sentinel"],
             ["tools/preflight-fixtures/Secrets/empty", "tools/preflight-fixtures/Secrets/empty-sentinel"]) with { Plan = Revenge },
-        // ---- apocalypse (step 2; steps 3 and 5 add D18, D21, D22, D29, D32-D35 and D38, listed in Pending until then)
+        // ---- apocalypse (step 2; steps 3 and 5 add D18, D21, D22, D29, D32-D35 and D38; D33-D35 stay in Pending until step 5)
         T("D1", "Apocalypse", "EventValidationTests", ["a_key_is_out_of_range", "a_bound_is_off_by_one", "a_duration_leaves_its_kind",
             "the_last_horde_rises_at_or_after_the_end", "an_admin_goal_has_another_trigger", "an_unknown_key_is_named_without_its_path", "a_reason_exceeds_120_bytes"],
             ["every_key_and_pillar_spawns"], ["optional_keys_absent"]) with { Plan = Apocalypse },
@@ -812,6 +811,14 @@ public static class ControlCases
         T("D38", "Factions", "TemplateLibraryTests", ["a_template_mixes_two_groups", "an_apocalypse_is_not_of_its_factions_group",
             "an_unlisted_variant_joins_a_group"],
             ["every_template_in_one_allied_group"], ["no_template_spawns_units"]) with { Plan = Apocalypse },
+        C("D29", "TimingSpan", "preflight -TimingSpan -Windows 10 -MinTracked 50 › Test-CheckTimingSpan",
+            ["tools/preflight-fixtures/TimingSpan/bad-avg", "tools/preflight-fixtures/TimingSpan/bad-slow", "tools/preflight-fixtures/TimingSpan/bad-tracked",
+             "tools/preflight-fixtures/TimingSpan/bad-notarget"],
+            ["tools/preflight-fixtures/TimingSpan/good"], ["tools/preflight-fixtures/TimingSpan/empty"]) with { Plan = Apocalypse },
+        C("D32", "RollbackDrill", "rollback-drill.ps1 -SelfTest (pairs and fixtures under tools/rollback-drill-fixtures)",
+            ["tools/rollback-drill-fixtures/pair-otheraction", "tools/rollback-drill-fixtures/pair-othertrigger2"],
+            ["tools/rollback-drill-fixtures/pair-apocalypse", "tools/rollback-drill-fixtures/pair-apocalypse-short"],
+            ["tools/rollback-drill-fixtures/empty"]) with { Plan = Apocalypse },
         T("D36", "Bosses", "ApocalypseTests", ["a_boss_rises_early_or_a_clamp_drops_it_first", "a_run_ends_won_while_a_boss_lives_or_a_resume_misses_one",
              "a_grown_hordes_count_drops_a_living_boss_from_the_record", "two_entries_of_one_prefab_rebuild_with_the_wrong_modifiers"],
             ["the_last_horde_brings_its_bosses"], ["no_bosses_key"]) with { Plan = Apocalypse },

@@ -27,6 +27,14 @@
 - baseline boot: the 0.12.0 DLL booted twice in step 1's session with 0 unhandled (Post-audit › Step 1); the in-game sessions of this step start from a fresh snapshot (apo1)
 - built by a builder subagent in its own worktree; the orchestrator reviews, tests, runs the vrclient sessions and merges
 
+### Step 5 (drill part) · 2026-10-14 · 334df0d
+- git status: clean at 334df0d (A13 Review 10 READY; the D30 soak running on the dev server with the 2b4d93e DLL)
+- compile: 0 Warning(s), 0 Error(s); tests 3392/3392
+- preflight: fails one check only, "release tags: 13/14 (v0.12.0 not pushed)" (revenge's push waits on the owner)
+- dod status: 26/38 verified; D32's drill selftest is built now, its rollback gate (-From v0.12.0 -To v0.13.0) waits on the v0.13.0 tag after the test weekend
+- feature doc read: docs/features/APOCALYPSE.md (Sessions 1-2 recorded, the test weekend sheet written, Session 3 running)
+- the rest of step 5 (Codex, surfaces, release) waits on step 4 (the owner's test weekend)
+
 ## Post-audit
 
 ### Step 1 · 2026-10-13 · spike session (boots 1-2, 515a020 tools)

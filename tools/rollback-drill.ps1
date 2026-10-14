@@ -25,7 +25,7 @@
          action.units.chance", "action.location must be …" for an AroundPlayer location (event-spawns D25), "unknown
          field action.fanOut", or a trigger type added after N-1: "unknown trigger type Interval|RegionEntered|
          FactionKills" (automation D23), printed as "events.json: <N> '<a> valid, <b> disabled', <N-1> '<c> valid, <d>
-         disabled' (<t> newer action types, <k> newer keys, <r> newer trigger types)"; state.json: "(<n> listed in state.json)" with n ≥ 1; stats.json:
+         disabled' (<t> newer action types, <k> newer keys, <r> newer trigger types, <l> newer limits)"; state.json: "(<n> listed in state.json)" with n ≥ 1; stats.json:
          reported absent while no release writes it); and "marker sweep".
       After each boot it runs `preflight.ps1 -LogCheck` on that boot's logs and prints the "log check:" line.
       6. Always (finally): stops the server if the drill started one (a refusal never stops a running server), puts
@@ -56,7 +56,10 @@
     action.regionLock"), pair-regionhunt ("unknown behaviour type RegionHunt") and pair-regionlocation (0.10.0's
     three-type location rule, for a Region location): pass, pair-colourkey still failing; three for revenge (D24):
     pair-revenge ("unknown trigger type Revenge") and pair-bosses ("unknown field action.bosses"): pass, and
-    pair-othertrigger2 ("unknown trigger type Swarmz", a type no release has): fail → "drill selftest: 29/29".
+    pair-othertrigger2 ("unknown trigger type Swarmz", a type no release has): fail; three for apocalypse (D32, A13):
+    pair-apocalypse ("durationSeconds must be 30-7200", 0.12.0's refusal of a 14400 s Apocalypse) and pair-apocalypse-short
+    ("unknown action type Apocalypse"): pass, and pair-otheraction ("unknown action type Ritual", a type no release has):
+    fail → "drill selftest: 32/32".
 
     -LogsTo <dir> keeps the logs of N's drill-mark boot and N-1's boot there as N.txt and N-1.txt.
 #>
@@ -118,6 +121,16 @@ $script:NewerKeyReasons = '^(unknown field action\.(modifiers|loot|behaviour|all
 # The trigger types automation added (D23): 0.7.0 refuses each with "unknown trigger type <T>".
 $script:NewerTriggerReasons = '^unknown trigger type (Interval|RegionEntered|FactionKills|Revenge)$'
 
+# The action types a later release added (apocalypse D32, A13): an older release refuses each with "unknown action type
+# <T>"; a type no release has is another reason (pair-otheraction).
+$script:NewerActionReasons = '^unknown action type (Empower|Apocalypse)$'
+
+# The limits a later release raised (apocalypse D32, A13): 0.12.0 reads durationSeconds (30-7200) before the action, so it
+# refuses an Apocalypse over 7200 s with this text. Accepted only because N raises the limit for Apocalypse alone (N
+# refuses any other definition over 7200 s with the same text, so it is never an extra); a release raising it for
+# another action type must narrow this (Review 10 F2).
+$script:NewerLimitReasons = '^durationSeconds must be 30-7200$'
+
 function Test-EventsReadback([string]$LogN, [string]$LogN1, [string]$TagN, [string]$TagN1) {
     $rx = 'events: reloaded: (\d+) valid, (\d+) disabled'
     $readN = [regex]::Matches("$LogN", $rx) | Select-Object -Last 1
@@ -132,11 +145,12 @@ function Test-EventsReadback([string]$LogN, [string]$LogN1, [string]$TagN, [stri
     $idsN = @(Get-DisabledLines "$LogN" | ForEach-Object { ($_ -split "`t", 2)[0] })
     $extra = @(Get-DisabledLines "$LogN1" | Where-Object { $idsN -notcontains ($_ -split "`t", 2)[0] })
     if ($extra.Count -ne $d - $b) { return @{ Why = "$TagN1 logged $($extra.Count) newly disabled definitions for a difference of $($d - $b)"; Line = $line } }
-    $types = @($extra | Where-Object { ($_ -split "`t", 2)[1] -match '^unknown action type \S+$' })
+    $types = @($extra | Where-Object { ($_ -split "`t", 2)[1] -match $script:NewerActionReasons })
     $keys = @($extra | Where-Object { ($_ -split "`t", 2)[1] -match $script:NewerKeyReasons })
     $triggers = @($extra | Where-Object { ($_ -split "`t", 2)[1] -match $script:NewerTriggerReasons })
-    $line += " ($($types.Count) newer action types, $($keys.Count) newer keys, $($triggers.Count) newer trigger types)"
-    $other = @($extra | Where-Object { $types -notcontains $_ -and $keys -notcontains $_ -and $triggers -notcontains $_ })
+    $limits = @($extra | Where-Object { ($_ -split "`t", 2)[1] -match $script:NewerLimitReasons })
+    $line += " ($($types.Count) newer action types, $($keys.Count) newer keys, $($triggers.Count) newer trigger types, $($limits.Count) newer limits)"
+    $other = @($extra | Where-Object { $types -notcontains $_ -and $keys -notcontains $_ -and $triggers -notcontains $_ -and $limits -notcontains $_ })
     if ($other) { return @{ Why = "$TagN1 disabled for another reason: $(($other | ForEach-Object { $_ -replace "`t", ': ' }) -join '; ')"; Line = $line } }
     return @{ Why = $null; Line = $line }
 }
@@ -199,7 +213,8 @@ if ($SelfTest) {
         @{ Name = 'pair-wavelist'; Pass = $true }, @{ Name = 'pair-scoreboard'; Pass = $true }, @{ Name = 'pair-colourkey'; Pass = $false },
         @{ Name = 'pair-arena'; Pass = $true }, @{ Name = 'pair-winner'; Pass = $true }, @{ Name = 'pair-growth'; Pass = $true },
         @{ Name = 'pair-regionlock'; Pass = $true }, @{ Name = 'pair-regionhunt'; Pass = $true }, @{ Name = 'pair-regionlocation'; Pass = $true },
-        @{ Name = 'pair-revenge'; Pass = $true }, @{ Name = 'pair-bosses'; Pass = $true }, @{ Name = 'pair-othertrigger2'; Pass = $false })
+        @{ Name = 'pair-revenge'; Pass = $true }, @{ Name = 'pair-bosses'; Pass = $true }, @{ Name = 'pair-othertrigger2'; Pass = $false },
+        @{ Name = 'pair-apocalypse'; Pass = $true }, @{ Name = 'pair-apocalypse-short'; Pass = $true }, @{ Name = 'pair-otheraction'; Pass = $false })
     foreach ($pair in $pairs) {
         $pn = Join-Path $fx "$($pair.Name)\N.txt"; $pn1 = Join-Path $fx "$($pair.Name)\N-1.txt"
         $r = if ((Test-Path -LiteralPath $pn) -and (Test-Path -LiteralPath $pn1)) {
