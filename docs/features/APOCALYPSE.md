@@ -161,3 +161,35 @@ point 7.5 m ahead of the front); a straight line crossed water and cliffs and ho
 unobserved front crosses up to 120 m, seen in game as "horde 2 crossed 18 m of unwalkable ground"). vrclient gained
 `expect-seen` (a line read by an earlier check), `respawn-coffin`, the System-menu close in `launch`, the OCR text on an
 `expect-chat` miss, and `.devdie` with a guid list.
+
+### Session 2 · 2026-10-14 · step 3 DLL (the mod at 5bda54f) · vrclient as Chaos on the local dev server
+
+Same snapshot (apo1) and log folder (s2b-prep-, s2b-boot2-, s2-boot3-, s2-timing2-, s2-timing3-). The first attempt ran
+on the DLL before 5bda54f: the resume rebuilt 21, then topped up 1 roamer and spread 2 (24 tracked), which found the
+top-up defect (a resume with no missed horde must not top up, D12); fixed with a test and a planted fault, then rerun.
+
+**Resume (D28)**: `tools/vrclient/scenarios/apocalypse-prep-restart.vrs` SCENARIO PASS 34/34 (horde 2 marching, Chaos
+holding its front, 16 kills credited, 17 tracked; the scenario ends with `console TPHome`), logs copied, the server stopped
+after an autosave and started again; `apocalypse-boot2.vrs --var UNITS=17` SCENARIO PASS 23/23.
+
+- [x] boot: "boot marker sweep: 17 found, 17 queued for despawn (17 listed in state.json)", then "event apo-test resumed
+  after restart (horde 2/2, 17 units to rebuild)"; `.nyar status` read "tracked units: 17" within the first minute
+- [x] the front went on from its saved progress: the last line before the stop read "horde 2 front 15 % units 11/11", the
+  first after the resume "front 16 %", then 17 %, 19 % … 28 %, each "units 11/11 within 30 m of the front"
+- [x] scoreboard across the restart: "event apo-test scoreboard: 1 players, 17 kills, 0 deaths" (16 before the restart, 1
+  after), tracked 0 after the end
+- [x] a restart after `.nyar purge confirm`: "boot marker sweep: 0 found", no resume line, state.json has no `Apocalypse`,
+  and the timing scenario's first read was "tracked units: 0"
+- D28 waits on the owner's acceptance of this record (rubric 3).
+
+**Tick budget (D29)**: `tools/vrclient/scenarios/apocalypse-timing.vrs --var WX=-1690 --var WZ=-1400 --var RX=-1880
+--var RZ=-1640` run 3 SCENARIO PASS 22/22 (`apocalypse-timing-20261014-030415.json`), apo-test from
+tools/vrclient/fixtures/apo-test-timing.json (3 hotspots × 10 roamers, max 30, one 24-unit horde marching unobserved),
+[Limits] MaxUnitsPerWave 24, Debug.TimingLog on, 54 tracked. Chaos waited 331 m from the nearest hotspot ("roam: hotspot
+3 on a player"), and inside the span stepped into his castle for 12 s just after a window's sample and came back 306 m
+away, so all three hotspots' roamers jumped towards him again ("roam: hotspot 1/2/3 on a player" at lines 48-50 of the
+334-line span). The log copy cut at the run's start (s2-timing3-run.log) gives
+`pwsh tools/preflight.ps1 -TimingSpan <copy> -Windows 10 -MinTracked 50` → "timing span: 10/10 windows under 5 ms,
+tracked >= 50, targets >= 1, 0 slow ticks"; the worst window averaged 0.645 ms (max tick 4.1 ms). Runs 1-2 failed on
+the scenario, not the mod: a regex read the `event info` list's `\n` as a newline, the span began at the first 10-minute
+health line with 50 tracked so 15 min left only 6 windows, and a castle hop over a window's sample read 0 targets.
