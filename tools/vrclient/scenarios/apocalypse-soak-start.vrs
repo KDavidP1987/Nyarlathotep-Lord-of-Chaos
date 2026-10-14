@@ -1,0 +1,16 @@
+# apocalypse-soak-start.vrs: apocalypse D30 (a run of hours), its start. The dev events.json holds apo-soak from
+# fixtures/apo-soak.json: zombie-apocalypse with a Point goal 6 km off the map's east edge and marchSpeed 0.5, so no
+# horde can reach it in 3 h and no player is needed for the hordes to march. Chaos starts it from his castle and leaves;
+# the orchestrator closes the client, samples state.json's write time every 20 s, and after at least 3 h copies the
+# logs, stops the event and reads them (renewal per living unit, rises on time, no [Error]/[Warning] of ours, caps).
+console TPHome
+ensure
+console ToggleInvulnerable true
+wait 2
+chat .nyar status
+expect-reply tracked units: 0 ( timeout=40
+mark
+chat .nyar event start apo-soak
+expect-log event apo-soak started by manual timeout=20
+expect-log apocalypse apo-soak hotspots: 3 \( timeout=10
+expect-log apocalypse apo-soak roamers: \+[0-9]+ at hotspot 3 timeout=60
