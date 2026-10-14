@@ -616,6 +616,20 @@ class Scenario:
             time.sleep(float(rest))
         elif op == "mark":
             self.plugin.mark(); self.server.mark()
+        elif op == "respawn-coffin":
+            # after a death and a held space: the respawn map; click the Wooden Coffin's icon (just under its label)
+            t = float(rest) if rest.strip() else 15
+            end, ok = time.time() + t, False
+            while time.time() < end and not ok:
+                l = find_text("Wooden Coffin", "full", False)
+                if l:
+                    click(int(l["x"] + l["w"] / 2), int(l["y"] + l["h"] + 22), 1.0)
+                    ok = True
+                else:
+                    time.sleep(1.0)
+            here = ok or in_world()
+            self.check("respawn-coffin", here, "clicked" if ok else ("already in world" if here else "no respawn map"))
+            return True
         elif op == "click-text":
             label, t = self._timeout(rest, 10)
             ok = click_text(label, timeout=t)

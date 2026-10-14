@@ -144,6 +144,8 @@ expect-log \[DEV UNITS\] n=(?P<SM>[0-9]+)
 expect-calc ${SG} + ${SM} >= 2
 # the respawn is a held space; back to hotspot 1 before horde 1 rises (a minute in)
 hold space 1.5
+wait 3
+respawn-coffin 15
 wait 10
 console ToggleInvulnerable true
 wait 2
