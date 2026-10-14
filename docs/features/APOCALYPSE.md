@@ -121,3 +121,43 @@ leash home out of the 80 m read, with no died line), so it is logged only.
 
 Session close: both logs copied to %TEMP%\nyar-apo0-logs before each stop; log check lines in docs/audits/apocalypse.md;
 `tools/dev-snapshot.ps1 -Save apo0` before the first boot, snapshot restored; hashes equal (apo0, both boots).
+
+
+### Session 1 · 2026-10-13/14 · step 3 DLL (the mod at 847bcc5 for runs A-F) · vrclient as Chaos on the local dev server
+
+Snapshot `tools/dev-snapshot.ps1 -Save apo1` before the first boot; both logs copied to %TEMP%\nyar-apo1-logs before every
+stop (pre-, boot1-…boot4-, run6-, run7-, s2prep-, s2boot2-). Dev cfg: [Scoreboard] IncludeAdmins true, TimingLog true;
+apo-test from tools/vrclient/fixtures/apo-test.json, every other spawning definition disabled.
+
+**Runs A-F (D25, D26, D27)**: `tools/vrclient/scenarios/apocalypse.vrs` run 8 SCENARIO FAIL 105/106
+(`apocalypse-20261014-005028.json`; `--var UX=-1388 --var UZ=-1334 --var UNATIVE=-837329073 --var WX=-1690 --var WZ=-1400`).
+The one miss is the chat OCR of the won line; the won-chat check below shows the line was sent.
+
+- [x] outbreak (D25): "hotspots: 2 (36 at -1360 -1356, 23 at -1951 -1830)", "roamers: +3 at hotspot 1", "roam: hotspot 1 on a
+  player" with Chaos 333 m from the nearer hotspot; 77 s later 4 Guardians and 1 ghost militia stood within 100 m of him
+- [x] spread (D25): a roamer killed Chaos ("[DEV DIE] found=1"), "spread: +2 (8/12, 2/4 this minute)", 5 of our units within
+  6 m of the death point
+- [x] lost (D26): Chaos at the wait spot; each 25 % step's keep-up line read 8/8, 8/8 and 8/8 within 30 m of the front;
+  "event apo-test ended: lost (1 of 2 hordes risen)", chat "the test camp has fallen", tracked 0 after the grace
+- [x] won (D26): horde 1 held at its origin by Chaos (15 % then 15 %), killed, "horde 1 of 2 destroyed" in log and chat;
+  horde 2 marched from hotspot 2 to 60 m short of Chaos (the front 46 m from him, 73 % then 73 %: held), killed;
+  "event apo-test ended: won (2 of 2 hordes risen)", "scoreboard: 1 players, 33 kills, 1 deaths", tracked 0
+- [x] won announcement: `tools/vrclient/scenarios/apocalypse-won-chat.vrs` (one horde) with Debug.VerboseLogging on logged
+  "announced to 1: Apocalypse test: the living have won" after "horde 1 of 1 destroyed"; the chat OCR missed it in both
+  runs because Beelzebub posts one system line per kill and the game's chat history shows about 8 lines
+- [x] survived (D26): Chaos at hotspot 1 for the 30 min held horde 1 (0 %, 0 %) and horde 2 (72 %, 72 %, its front 59 m from
+  him); 15 min with no win or loss, then "ended: survived (2 of 2 hordes risen)", chat "the living held out", tracked 0
+- [x] stop at horde 2 (D27): "stopped: 30 units queued", "scoreboard: 0 players, 0 kills, 0 deaths", tracked 0
+- [x] pillar spawns off at horde 2 (D27): "event apo-test ended (pillar off)", no scoreboard line, tracked 0
+- [x] purge at horde 2 (D27): "purge: 1 events ended, 28 units queued", no scoreboard line, tracked 0; natives at the undead
+  site 5 before run A and 5 after run F
+- D25, D26 and D27 wait on the owner's acceptance of this record (rubric 3).
+
+Findings fixed during the session (each with a test and a planted fault in docs/audits/apocalypse-step3-planted.txt):
+the native read skipped the natives the game disables far from players ("no hotspot"); the keep-up line counted hopped
+units where they stood; a hop gave up after one unwalkable point; a front held for good where the ground climbed two levels;
+units the game leaves standing still fell 25-40 m behind the front (keep-up 4-6 of 8: stragglers now hop past 15 m to a
+point 7.5 m ahead of the front); a straight line crossed water and cliffs and horde 2 held for good 70 m out (A12: an
+unobserved front crosses up to 120 m, seen in game as "horde 2 crossed 18 m of unwalkable ground"). vrclient gained
+`expect-seen` (a line read by an earlier check), `respawn-coffin`, the System-menu close in `launch`, the OCR text on an
+`expect-chat` miss, and `.devdie` with a guid list.

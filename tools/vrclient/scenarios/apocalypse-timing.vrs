@@ -1,0 +1,61 @@
+# apocalypse-timing.vrs: apocalypse D29 (tick budget at apocalypse size). The dev events.json holds apo-test from
+# fixtures/apo-test-timing.json: 3 hotspots (minSpacing 200) x 10 roamers (max 30), horde 1 of 24 units after 1 min
+# marching at 0.5 m/s on a Point goal 860 m east of the undead site (no loss inside the measured span), 30 min; the dev cfg
+# has [Limits] MaxUnitsPerWave = 24 and Debug.TimingLog = true. Chaos waits at the wait spot (--var WX WZ), 300 m or more
+# from every hotspot for the first windows, so the roamers jump towards him and then hunt him (the "hunt targets" lines
+# the span needs), invulnerable and not attacking; the horde marches unobserved. About 12 min after the first health line the event is stopped; the
+# orchestrator runs `pwsh tools/preflight.ps1 -TimingSpan <log copy> -Windows 10 -MinTracked 50` on the log copy.
+# Also the first read after a restart with no record (apocalypse D28's last step): tracked units 0.
+# Run: --var WX=-1690 --var WZ=-1400 --var RX=-1880 --var RZ=-1640 (the far spot is the pond mark)
+ensure
+console ToggleInvulnerable true
+wait 2
+chat .nyar status
+expect-reply tracked units: 0 ( timeout=40
+chat .devtp ${WX} ${WZ}
+expect-log \[DEV TP\] to x=(?P<PX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<PZ>-?[0-9.]+)
+wait 4
+console ToggleInvulnerable true
+wait 2
+mark
+chat .nyar event start apo-test
+expect-log event apo-test started by manual timeout=20
+expect-log apocalypse apo-test hotspots: 3 \( timeout=10
+chat .nyar event info apo-test
+expect-log hotspot 1: [A-Za-z' ]+? at (?P<H1X>-?[0-9]+) (?P<H1Z>-?[0-9]+) \\n hotspot 2: [A-Za-z' ]+? at (?P<H2X>-?[0-9]+) (?P<H2Z>-?[0-9]+) \\n hotspot 3: [A-Za-z' ]+? at (?P<H3X>-?[0-9]+) (?P<H3Z>-?[0-9]+) timeout=10
+expect-calc min(hypot(${PX} - ${H1X}, ${PZ} - ${H1Z}), hypot(${PX} - ${H2X}, ${PZ} - ${H2Z}), hypot(${PX} - ${H3X}, ${PZ} - ${H3Z})) >= 300
+expect-seen apocalypse apo-test roam: hotspot [123] on a player timeout=120
+expect-seen apocalypse apo-test horde 1/2 rose at hotspot 1: 24 units timeout=90
+# 50 or more tracked once the horde has spawned
+wait 30
+chat .nyar status
+expect-log \] tracked units: (?P<T1>[0-9]+) \( timeout=10
+expect-calc ${T1} >= 50
+# the measured span starts at the first health line with 50 or more tracked (every 10 min from boot)
+expect-seen nyar health: 1 events, ([5-9][0-9]|[1-9][0-9][0-9]) tracked timeout=660
+# two windows in, Chaos steps into his castle (territory: no target, the roam targets reset) and comes back at the
+# far spot (--var RX RZ, 300 m or more from the wait spot), so the roamers jump towards him inside the span
+wait 100
+console TPHome
+wait 20
+mark
+chat .devtp ${RX} ${RZ}
+expect-log \[DEV TP\] to x=(?P<QX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<QZ>-?[0-9.]+)
+expect-calc hypot(${QX} - ${PX}, ${QZ} - ${PZ}) >= 300
+wait 4
+console ToggleInvulnerable true
+expect-log apocalypse apo-test roam: hotspot [123] on a player timeout=120
+wait 300
+chat .nyar status
+expect-log \] tracked units: (?P<T2>[0-9]+) \( timeout=10
+expect-calc ${T2} >= 50
+wait 330
+chat .nyar status
+expect-log \] tracked units: (?P<T3>[0-9]+) \( timeout=10
+expect-calc ${T3} >= 50
+chat .nyar event stop apo-test
+expect-log event apo-test stopped
+wait 30
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+console TPHome
