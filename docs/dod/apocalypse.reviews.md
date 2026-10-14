@@ -397,3 +397,34 @@ VERDICT: REVISE
 - F2 · accepted · fixed in D32's text: the selftest fixtures carry the apocalypse rollback (definition and record); the live drill's seed has no Apocalypse
 - F3 · accepted · fixed now (step 5 preparation): Rollout reads 0.12.0
 - UF1 · accepted · D32 (both 0.12.0 reasons, each with its own selftest pair: pair-apocalypse, pair-apocalypse-short)
+
+## Review 10 · 2026-10-14 · subagent · plan commit e265651 · plan 122525 B · 38 items · files 0 · e3b0c44298fc · prompt 96364a864e02 · scope A13
+Scope: A13 after Review 9 (both 0.12.0 refusals, the drill's named action types and duration limit).
+
+L1 · Considered · no finding
+L2 · Considered · no finding
+L3 · Considered · no finding
+L4 · Considered · no finding
+L5 · Considered · no finding
+L6 · Considered · no finding
+L7 · Considered · no finding
+L8 · Considered · no finding
+L9 · Considered · no finding
+L10 · Considered · no finding
+L11 · Considered · no finding
+L12 · Considered · no finding
+L13 · Considered · no finding
+L14 · Considered · F1, F2
+L15 · Considered · no finding
+
+F1 · advisory · 14.4: Rollout › Paths walked › Step 5 lists tools/rollback-drill-fixtures/{pair-apocalypse,pair-otheraction}/**, but A13 and Build plan step 5 add pair-apocalypse-short; the path manifest check would miss that folder. Fix: name it in Paths walked in the same edit that adds the fixture.
+F2 · advisory · 14.3: the duration reason counts as a newer limit by its text alone; safe because N refuses a non-Apocalypse over 7200 s too, unsafe if a later release raised the limit for another action type. Fix (optional): a comment in rollback-drill.ps1 or a note in the D32 ControlCases row.
+
+missing components: none
+undeclared families: none
+15/15 layers · 50/50 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · deferred to the Log (advice on a READY review, no plan text edited): `note · deferred · Review 10 F1`, step 5 names pair-apocalypse-short in Paths walked when it adds the fixture
+- F2 · accepted · deferred to the Log: `note · deferred · Review 10 F2`, rollback-drill.ps1 says beside the duration reason that it is accepted only because N raises the limit for Apocalypse alone

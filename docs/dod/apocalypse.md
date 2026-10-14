@@ -15,7 +15,7 @@ closed: none
 recon_commit: e4f0594
 coverage_author: 15/15 layers · 50/50 probes
 coverage_reviewer: 15/15 layers · 50/50 probes
-review: pending
+review: subagent
 ---
 
 # DoD: Apocalypse — hotspots, spreading roamers, marching hordes, win or lose, the scoreboard, resume after a restart
@@ -510,3 +510,6 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-14 · D38 · pass · test: dotnet test Nyarlathotep/Nyarlathotep.Tests --filter "FullyQualifiedName~TemplateLibraryTests.Factions" → Passed! 11/11 · 2b4d93e · claude
 - 2026-10-14 · D22 · pass · cmd: pwsh tools/preflight.ps1 -DependencySuite apocalypse → "dependency suite: apocalypse 5/5 (native-read, spread-read, march-read, resume-read, state-write)" · 2b4d93e · claude
 - 2026-10-14 · D29 · pass · cmd: pwsh tools/preflight.ps1 -TimingSpan %TEMP%/nyar-apo1-logs/s2-timing3-run.log -Windows 10 -MinTracked 50 → "timing span: 10/10 windows under 5 ms, tracked >= 50, targets >= 1, 0 slow ticks" (apocalypse-timing.vrs run 3 PASS 22/22, roam lines inside the span; docs/features/APOCALYPSE.md › Session 2) · 5bda54f · claude
+- 2026-10-14 · note · re-review A13 · Review 9 REVISE (F1 fixed under A13), Review 10 READY
+- 2026-10-14 · note · deferred · Review 10 F1 · step 5 names pair-apocalypse-short in Rollout › Paths walked when it adds the fixture
+- 2026-10-14 · note · deferred · Review 10 F2 · rollback-drill.ps1 says beside the duration reason that it is accepted only because N raises the limit for Apocalypse alone
