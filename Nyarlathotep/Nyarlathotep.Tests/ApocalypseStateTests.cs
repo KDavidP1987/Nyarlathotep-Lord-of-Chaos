@@ -140,6 +140,8 @@ public class ApocalypseStateTests
                      (r => r.Hordes[1].LivingBosses[0].Prefab = "", "a horde's living bosses are out of range"),
                      (r => r.Hordes[1].Number = 1, "a horde is listed twice"),
                      (r => r.SpreadWindow = -1, "spreadWindow is negative"),
+                     (r => r.Roamers[0] = 100_000, "the living counts exceed the tracked-unit cap"),
+                     (r => r.Hordes[0].Living = int.MaxValue, "the living counts exceed the tracked-unit cap"),
                      (r => r.Scores[0].PlatformId = "", "scores are out of range"),
                  })
         {

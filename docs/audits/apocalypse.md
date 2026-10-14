@@ -80,3 +80,15 @@
   warning; Beelzebub's TUNE warning and Il2CppInterop's Class::Init warning are not ours
 - dod: D9, D12, D18, D21, D22, D23, D29, D38 verified; D25-D28 wait on the owner's acceptance (rubric 3)
 - Codex verdict: deferred to step 5 (Halloween track: once per child before its release)
+
+### Step 5 (Codex cross-inspection, early) · 2026-10-14 · d88dbbc + fixes
+- Codex (`codex exec -s read-only`, prompt via stdin) on `git diff v0.12.0..HEAD -- . ':!tools/vrclient' ':!docs'`, run before
+  the test weekend so its fixes are in the weekend DLL: VERDICT: ISSUES (3)
+  - H1 fixed: a resume record whose living counts exceed the tracked-unit cap's maximum (500) is refused as unreadable
+    ("the living counts exceed the tracked-unit cap"), and the roamer rebuild stops at the first unit the caps refuse —
+    ApocalypseStateTests `Record_fails_when_a_record_with_a_bad_field_is_kept` (planted: the bound removed → it fails)
+  - M1 fixed: without a walk check, Walkable throws instead of answering walkable, so no hop, jump or front step lands on
+    unread ground; the march-read category records it (D21), as hunting-grounds' mover does
+  - M2 rejected: `game.Announce` only enqueues a line in memory (Services/Announcer.Apocalypse) and cannot fail on the game
+- compile: 0 Warning(s), 0 Error(s); tests 3395/3395
+- Codex runs once more on the release diff only if code changes after the test weekend

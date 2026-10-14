@@ -281,6 +281,9 @@ public sealed class ApocalypseRecord
                 return "a horde's living bosses are out of range";
         }
         if (Hordes.Select(h => h.Number).Distinct().Count() != Hordes.Count) return "a horde is listed twice";
+        // a resume never rebuilds more than the tracked-unit cap can ever hold (Codex cross-inspection H1: a hand-edited
+        // count of millions looped the rebuild on one tick)
+        if (Roamers.Sum(r => (long)r) + Hordes.Sum(h => (long)h.Living) > Limits.MaxTrackedUnits.Max) return "the living counts exceed the tracked-unit cap";
         if (SpreadWindow < 0) return "spreadWindow is negative";
         if (Scores is null || Scores.Count > Limits.ScoreboardPlayers || Scores.Any(s => s is null || string.IsNullOrEmpty(s.PlatformId) || s.Kills < 0 || s.Deaths < 0))
             return "scores are out of range";

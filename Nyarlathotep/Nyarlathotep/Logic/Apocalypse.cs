@@ -1051,7 +1051,11 @@ public sealed class ApocalypseRun
             if (o.Prefab is { } prefab) rebuilt += Queue(w, new UnitEntry(prefab, o.Count, 1.0, o.Modifiers), o.Count, o.Wave, o.X, o.Z, Apocalypse.RoamerSpawnRadius, utcNow);
             else
                 for (var i = 0; i < o.Count; i++)
-                    rebuilt += Queue(w, RoamerPlan.Draw(Action.Units, w.Random) with { Count = 1 }, 1, o.Wave, o.X, o.Z, Apocalypse.RoamerSpawnRadius, utcNow);
+                {
+                    var one = Queue(w, RoamerPlan.Draw(Action.Units, w.Random) with { Count = 1 }, 1, o.Wave, o.X, o.Z, Apocalypse.RoamerSpawnRadius, utcNow);
+                    if (one == 0) break;                                       // the caps refused it: the rest would be refused too
+                    rebuilt += one;
+                }
         }
         var rises = new List<HordeRise>();
         foreach (var k in ResumeRule.CatchUp(record, Action, utcNow))

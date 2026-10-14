@@ -159,8 +159,11 @@ internal static class ApocalypseAction
             return _check.Value.Walk.Probe;
         }
 
+        /// <summary>Throws without a walk check (Codex cross-inspection M1): no hop, jump or front step lands on unread
+        /// ground; the march-read category records the failure (D21), as hunting-grounds' mover does.</summary>
         public bool Walkable(float x, float z, byte level) =>
-            Probe() is not { } probe || (probe.IsGrounded(x, z, level) && probe.IsFree(x, z, level));
+            Probe() is { } probe ? probe.IsGrounded(x, z, level) && probe.IsFree(x, z, level)
+            : throw new InvalidOperationException("walk check: none");
 
         public float HeightOf(byte level) => WalkCheck.HeightOf(level);
 
