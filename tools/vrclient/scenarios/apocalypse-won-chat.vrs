@@ -1,0 +1,36 @@
+# apocalypse-won-chat.vrs: D26's won announcement on its own (Session 1 run 8 read the won log and scoreboard but its chat
+# OCR missed the line). apo-test with one horde: Chaos at hotspot 1 holds horde 1 at its origin (the fixture goal is 200 m
+# away, past the 90 m margin), kills it, and the chat shows "the living have won" at once. hordes.count goes back to 2.
+# Needs: apocalypse.vrs's setup (apo-test in events.json, fixture goal); no purge cooldown (wait 240 s after a purge).
+# Run: --var H1X=-1360 --var H1Z=-1354
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .nyar event set apo-test action.hordes.count 1
+expect-reply apo-test action.hordes.count =
+chat .devtp ${H1X} ${H1Z}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
+mark
+chat .nyar event start apo-test
+expect-log event apo-test started by manual timeout=20
+expect-log apocalypse apo-test horde 1/1 rose at hotspot 1: 8 units timeout=90
+wait 5
+chat .devkill -1967480038 400
+chat .devkill -1618703048 400
+wait 5
+chat .devkill -1967480038 400
+chat .devkill -1618703048 400
+expect-log event apo-test ended: won \(1 of 1 hordes risen\) timeout=60
+expect-chat the living have won timeout=20
+shot chat apo-won-chat
+wait 30
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+chat .nyar event set apo-test action.hordes.count 2
+expect-reply apo-test action.hordes.count =
+console TPHome

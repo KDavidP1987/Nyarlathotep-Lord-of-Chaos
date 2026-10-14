@@ -78,7 +78,8 @@ chat .devkill -1967480038 120
 expect-log \[DEV KILL\] n=(?P<K3>[0-9]+) timeout=10
 chat .devkill -1618703048 120
 expect-log \[DEV KILL\] n=(?P<K4>[0-9]+) timeout=10
-expect-log apocalypse apo-test horde 1 of 2 destroyed timeout=30
+# read with expect-seen: the line can fall between two kill reads, which consume it
+expect-seen apocalypse apo-test horde 1 of 2 destroyed timeout=30
 # horde 2 rises at hotspot 2; a minute later its front is still near there, far from G*, and Chaos stands on it
 expect-log apocalypse apo-test horde 2/2 rose at hotspot 2: 12 units timeout=330
 wait 60

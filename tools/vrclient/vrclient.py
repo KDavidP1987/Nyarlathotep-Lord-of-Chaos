@@ -422,6 +422,11 @@ def launch(timeout: float = 120) -> bool:
         os.startfile(f"steam://rungameid/{CONFIG['appid']}")
     end = time.time() + timeout
     while time.time() < end:
+        # the in-game System menu (an Esc too many) hides the HUD that in_world() reads: close it first
+        if client_running() and not started and find_text("RESUME GAME"):
+            log("launch: closing the in-game System menu")
+            click_text("RESUME GAME", timeout=5)
+            time.sleep(1)
         if client_running() and (find_text("PLAY") or find_text("Online Play") or in_world()):
             # A fresh client's menu still animates when PLAY first reads: a click then can land on CONTINUE, which
             # times out on a local server (swarm Session 1, 2026-10-11). Let it settle first.
