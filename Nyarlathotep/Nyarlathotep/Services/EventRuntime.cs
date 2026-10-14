@@ -49,18 +49,21 @@ internal static class EventRuntime
         Engine = new EventEngine(EventStore.Catalog, () => Persistence.State.Document.LastStart);
         _degraded.Clear();
         Board.Clear();                                                       // a restart shows no scoreboard (wave-sets D11)
+        // apocalypse D12: the record's verdict; a resuming run waits behind the drain gate, every other instance is cancelled
+        var resuming = ApocalypseAction.Boot(Engine, DateTime.UtcNow);
         var doc = Persistence.State.Document;
         foreach (var instance in doc.Instances)
         {
+            if (instance.EventId == resuming)
+            {
+                Core.Log.LogInfo($"[nyar] event {instance.EventId} kept by restart: its apocalypse resumes after the drain");
+                continue;
+            }
             Core.Log.LogInfo($"[nyar] event {instance.EventId} cancelled by restart (it was due to end {instance.EndsUtc:u})");
             if (EventStore.Catalog.Current.Find(instance.EventId) is { } def && RevengeRule.IsRevenge(def))
                 Core.Log.LogInfo($"[nyar] {RevengeRule.EndedLine(def.Id, RevengeEndPath.Restart)}");   // revenge D8: silent
         }
-        if (doc.Instances.Count > 0)
-        {
-            doc.Instances.Clear();
-            Persistence.State.MarkDirty();
-        }
+        if (doc.Instances.RemoveAll(i => i.EventId != resuming) > 0) Persistence.State.MarkDirty();
     }
 
     /// <summary>The controls in force now (Business rules 1).</summary>
@@ -138,10 +141,12 @@ internal static class EventRuntime
             }
         }
 
-        var refused = Engine.Start(id, trigger, now, controls, origin, kill, focus);
+        var refused = Engine.Start(id, trigger, now, controls, origin, kill, focus, gate: ApocalypseAction.Prepare);
         if (refused is not null)
         {
-            refusal(AdminLines.StartRefusedLog(id, trigger, refused, actor == Actor.System, def?.Trigger.Scope ?? Scope.Global));
+            // a failed native read is logged by the host once per streak (apocalypse D21); every other refusal here
+            if (!(def?.Apocalypse is not null && refused.Reason == Reasons.Read))
+                refusal(AdminLines.StartRefusedLog(id, trigger, refused, actor == Actor.System, def?.Trigger.Scope ?? Scope.Global));
             // The admin is told how long the purge cooldown still runs (A7, D30).
             return AdminLines.StartRefused(refused, actor == Actor.Admin, Persistence.State.Document.PurgeUntilUtc, now);
         }
@@ -150,6 +155,7 @@ internal static class EventRuntime
         Persistence.State.MarkDirty();
         Core.Log.LogInfo($"[nyar] event {id} started by {trigger} (ends {active.Instance.EndsUtc:u})");
         if (EventActions.ActionKindOf(active.Definition) == EventActionKind.Empower) EmpowerAction.StartCarriers(active);
+        if (EventActions.ActionKindOf(active.Definition) == EventActionKind.Apocalypse) ApocalypseAction.Begin(active, now);   // D3, D11
         Announcer.EventStarted(active.Instance);
         if (RevengeRule.StartPrivate(active) is { } start) TriggerBus.Tell(start.Player, start.Line);   // revenge D7
         return AdminLines.Started(id);
@@ -176,6 +182,7 @@ internal static class EventRuntime
         }
         TriggerBus.ClearRevenge();                                           // revenge D8: no heat outlives the purge
         HuntAction.Clear();                                                  // seeds and kept maps go too
+        ApocalypseAction.Purged();                                           // apocalypse D9: the run, a pending resume and the record
         SpawnTracker.RegionPurged();                                         // hunting-grounds D12: every lock and hunt record
         TerritoryMap.Clear();
         WalkCheck.Health.Purged();                                           // every streak, `.nyar spawn`'s "manual" too (A61, A71)
@@ -211,10 +218,14 @@ internal static class EventRuntime
                 // cleanup after the grace keeps waiting orders, which then belong to a restart of the same event.
                 SpawnTracker.EndEventUnits(ended.Id, DateTime.MinValue);
                 EndSpawnState(ended.Id);
-                Core.Log.LogInfo($"[nyar] event {ended.Id} ended ({ended.WavesSpawned} of {ended.Definition.Action?.Waves ?? 0} waves)");
+                if (ended.Definition.Apocalypse is { } apo)
+                    ApocalypseEnded(ended, ApocalypseResult.Survived, apo);   // D8: the duration ran out first
+                else
+                    Core.Log.LogInfo($"[nyar] event {ended.Id} ended ({ended.WavesSpawned} of {ended.Definition.Action?.Waves ?? 0} waves)");
             }
-            Announcer.EventEnded(ended.Definition);
+            if (ended.Definition.Apocalypse is null) Announcer.EventEnded(ended.Definition);
             EndScoreboard(EndPath.Natural, ended);
+            if (ended.Definition.Apocalypse is not null) ApocalypseAction.Ended(ended.Id, ApocalypseEnd.Survived);
             RevengeEnded(ended, RevengeEndPath.NaturalEnd);
         }
         foreach (var (id, wave) in Engine.NewlyCleared(Cleared)) Core.Log.LogInfo($"[nyar] event {id} wave {wave} cleared");   // D20
@@ -239,6 +250,7 @@ internal static class EventRuntime
         EmpowerAction.BeginCarrierTick();
         foreach (var active in Engine.Active.ToList())
         {
+            if (EventActions.ActionKindOf(active.Definition) == EventActionKind.Apocalypse) continue;   // its own phase, ApocalypseTick
             try
             {
 #if DEBUG
@@ -263,6 +275,51 @@ internal static class EventRuntime
         }
     }
 
+    /// <summary>The scheduler's "apocalypse" phase, after the events phase (apocalypse step 3): a resume waiting behind the
+    /// drain gate, under the live controls (D12), then the running apocalypse's second inside the same fault guard as every
+    /// event's tick (D25).</summary>
+    [Mutating]
+    internal static void ApocalypseTick(DateTime now)
+    {
+        // apocalypse D12: a resume waiting behind the drain gate, under the live controls
+        if (ApocalypseAction.PendingId is { } waiting)
+        {
+            var resumed = ApocalypseAction.Resume(Engine, Controls(), now);
+            if (resumed is not null || ApocalypseAction.PendingId is null) RemoveInstance(waiting);   // refused or cancelled: its row goes
+            if (resumed is not null)
+            {
+                Persistence.State.Document.Instances.Add(new StateInstance(resumed.Id, resumed.Instance.StartedUtc, resumed.Instance.EndsUtc, "active"));
+                Persistence.State.MarkDirty();
+            }
+        }
+        else if (Engine.ResumePending is null) DropStaleResume();
+        foreach (var active in Engine.Active.Where(a => EventActions.ActionKindOf(a.Definition) == EventActionKind.Apocalypse).ToList())
+            Guarded(active, () => TickApocalypse(active, now));
+    }
+
+    /// <summary>The apocalypse's tick inside its own try/catch, as <see cref="Tick"/>'s loop: three faults in a row cancel
+    /// it and mark its pillar degraded while the others keep running (D25).</summary>
+    static void Guarded(ActiveEvent active, Action work)
+    {
+        try
+        {
+#if DEBUG
+            if (Settings.FaultInjection.Value == active.Id) throw new InvalidOperationException("Debug.FaultInjection");
+#endif
+            work();
+            Engine.Healthy(active.Id);
+        }
+        catch (Exception ex)
+        {
+            var limit = Engine.Fault(active.Id);
+            Core.Log.LogError($"[nyar] event {active.Id} tick failed ({active.Faults}/{EventEngine.FaultLimit}): {ex.Message}");
+            if (!limit) return;
+            End(active.Id, $"cancelled after {EventEngine.FaultLimit} faults", EndPath.Fault);
+            var note = $"{active.Definition.Pillar.ToString().ToLowerInvariant()} (event {active.Id} faulted)";
+            if (!_degraded.Contains(note)) _degraded.Add(note);
+        }
+    }
+
     /// <summary>An event's spawn state beyond its units (event-spawns D13, D30, D33): its hunt seeds, its kept territory
     /// map and its open failure streaks, the arena check's included (swarm D4), go with the event, and so do its region
     /// lock and hunt records and streaks (hunting-grounds D12). Every end path but a restart runs it; a restart starts with
@@ -282,6 +339,9 @@ internal static class EventRuntime
     {
         var ended = Engine.Active.Where(a => a.Definition.Pillar == pillar).Select(a => a.Id).OrderBy(x => x, StringComparer.Ordinal).ToList()
             .Where(id => End(id, "ended (pillar off)", EndPath.PillarOff)).ToList();
+        var waiting = ApocalypseAction.PendingId;
+        ApocalypseAction.PillarOff(pillar);                                  // apocalypse D9: a resume in its drain wait too
+        if (waiting is not null && ApocalypseAction.PendingId is null) RemoveInstance(waiting);
         TriggerBus.PruneRevenge(DateTime.UtcNow);                           // revenge D8: the pillar's heat goes now
         return ended;
     }
@@ -302,6 +362,7 @@ internal static class EventRuntime
             var (queued, cancelled) = SpawnTracker.EndEventUnits(id, DateTime.MaxValue);
             EndSpawnState(id);
             Core.Log.LogWarning($"[nyar] event {id} {why}: {queued} units queued, {cancelled} spawns cancelled");
+            if (ended.Definition.Apocalypse is not null) ApocalypseAction.Ended(id, ApocalypseEndOf(path), cancelled);   // D9
         }
         Announcer.EventEnded(ended.Definition);
         EndScoreboard(path, ended);
@@ -309,6 +370,50 @@ internal static class EventRuntime
         else if (path == EndPath.PillarOff) RevengeEnded(ended, RevengeEndPath.PillarOff);
         else if (path == EndPath.Fault) RevengeEnded(ended, RevengeEndPath.Fault);           // logged, silent to the player
         return true;
+    }
+
+    /// <summary>The apocalypse end of a cancel path (D9): stop, pillar off, fault; anything else is a stop.</summary>
+    static ApocalypseEnd ApocalypseEndOf(EndPath path) => path switch
+    {
+        EndPath.PillarOff => ApocalypseEnd.PillarOff,
+        EndPath.Fault => ApocalypseEnd.Fault,
+        _ => ApocalypseEnd.Stop,
+    };
+
+    /// <summary>One second of a running apocalypse (D3-D8): a risen horde is a spawned wave (the status row's `wave`); won
+    /// or lost ends it now, as a natural end with its grace cleanup, the outcome line and then the scoreboard (D8, D9).</summary>
+    static void TickApocalypse(ActiveEvent active, DateTime now)
+    {
+        var step = ApocalypseAction.Tick(active, now);
+        if (step.Rose is not null) Engine.WaveSpawned(active.Id, now, step.Queued);
+        if (step.Result is not (ApocalypseResult.Won or ApocalypseResult.Lost)) return;
+        var ended = Engine.Complete(active.Id, now, Settings.Limit(Limits.GraceSeconds));
+        if (ended is null) return;
+        RemoveInstance(ended.Id);
+        SpawnTracker.EndEventUnits(ended.Id, DateTime.MinValue);
+        EndSpawnState(ended.Id);
+        ApocalypseEnded(ended, step.Result, ended.Definition.Apocalypse!);
+        EndScoreboard(ApocalypseOutcome.PathOf(step.Result), ended);
+        ApocalypseAction.Ended(ended.Id, EndRule.Of(step.Result));
+    }
+
+    /// <summary>The outcome line, logged and announced (D8): "event &lt;id&gt; ended: &lt;won|lost|survived&gt; (&lt;r&gt; of
+    /// &lt;c&gt; hordes risen)"; it takes the end banner's place.</summary>
+    static void ApocalypseEnded(ActiveEvent ended, ApocalypseResult result, Logic.ApocalypseAction apo)
+    {
+        Core.Log.LogInfo($"[nyar] {ApocalypseOutcome.Line(ended.Id, result, ended.WavesSpawned, apo.Hordes.Count)}");
+        Announcer.Apocalypse(ended.Id, Messages.ApocalypseOutcome(ended.Definition.Name, result, apo.Goal.Name));
+    }
+
+    /// <summary>A record left with nothing to resume and no run (a run that ended while the write failed) goes (D9).</summary>
+    static void DropStaleResume()
+    {
+        var doc = Persistence.State.Document;
+        if (doc.Apocalypse is { } r && Engine.Find(r.EventId) is null)
+        {
+            doc.Apocalypse = null;
+            Persistence.State.MarkDirty();
+        }
     }
 
     /// <summary>A Revenge instance's end (revenge D8): one "revenge &lt;id&gt; ended: &lt;path&gt;" line, and the private

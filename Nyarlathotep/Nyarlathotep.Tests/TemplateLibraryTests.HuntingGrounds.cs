@@ -5,14 +5,14 @@ namespace Nyarlathotep.Tests;
 
 /// <summary>hunting-grounds D16: spider-hunting-grounds, disabled and valid: a Region location over a regional scope, the
 /// region lock and RegionHunt, the scoreboard on; the units form on a base wave of Faction_Spiders units only (no V Blood,
-/// no `_Summon`, no Baneling), no wave over the default MaxUnitsPerWave of 20; thirteen templates in all since revenge D14. The shape is
+/// no `_Summon`, no Baneling), no wave over the default MaxUnitsPerWave of 20; fourteen templates in all since apocalypse D18. The shape is
 /// read, not the numbers or the region (S-13).</summary>
 public partial class TemplateLibraryTests
 {
     static List<string> HuntingGroundsDifferences(TemplateCatalog c)
     {
         var diffs = new List<string>();
-        if (c.Templates.Count != 13) diffs.Add($"{c.Templates.Count} templates, not 13");
+        if (c.Templates.Count != TemplatesNow) diffs.Add($"{c.Templates.Count} templates, not {TemplatesNow}");
         var t = c.Find("spider-hunting-grounds");
         if (t is null) { diffs.Add("spider-hunting-grounds missing"); return diffs; }
         if (t.Invalid is { } why) diffs.Add($"invalid: {why}");

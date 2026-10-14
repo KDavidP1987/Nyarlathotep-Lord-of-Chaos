@@ -270,6 +270,33 @@
         "scoreboard": true
       },
       "announce": { "start": [ "The {faction} want revenge: {event}." ], "end": [ "The {faction} give up the hunt. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "zombie-apocalypse",
+      "name": "Zombie apocalypse",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 14400,
+      "action": {
+        "type": "Apocalypse",
+        "faction": "Faction_Undead",
+        "units": [
+          { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 3, "modifiers": { "level": 22 } },
+          { "prefab": "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "count": 2, "modifiers": { "level": 24 } },
+          { "prefab": "CHAR_Undead_GhostMilitia_Light", "count": 2, "modifiers": { "level": 28 } },
+          { "prefab": "CHAR_Undead_GhostBanshee", "count": 1, "modifiers": { "level": 32 } },
+          { "prefab": "CHAR_Undead_Guardian", "count": 1, "modifiers": { "level": 38, "maxHealth": 2.0 } }
+        ],
+        "hotspots": { "count": 3, "minNatives": 5, "minSpacing": 300 },
+        "roamers": { "perHotspot": 4, "perKill": 1, "max": 30, "perMinute": 6, "huntRange": 40 },
+        "hordes": { "count": 4, "firstAfterMinutes": 10, "everyMinutes": 30, "size": 7, "growth": 4 },
+        "goal": { "location": { "type": "Admin" }, "radius": 30, "name": "the living" },
+        "marchSpeed": 2.0,
+        "bosses": [ { "prefab": "CHAR_Undead_BishopOfDeath_VBlood", "count": 1, "modifiers": { "level": 40 } } ],
+        "scoreboard": true
+      },
+      "announce": { "start": [ "The dead rise: {event}." ], "end": [ "The dead lie still again. {event} is over." ], "warnings": false }
     }
   ]
 }

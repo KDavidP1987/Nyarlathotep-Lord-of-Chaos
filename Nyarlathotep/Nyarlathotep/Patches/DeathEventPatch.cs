@@ -24,6 +24,7 @@ internal static class DeathEventPatch
     static readonly Logic.FailureStreak Faults = new();
     static readonly Logic.FailureStreak KillFaults = new();
     static readonly Logic.FailureStreak VBloodFaults = new();
+    static readonly Logic.FailureStreak SpreadFaults = new();
 
     static void ScoreLog(string line) => Core.Log.LogError($"[nyar] {line}");
 
@@ -34,6 +35,7 @@ internal static class DeathEventPatch
         public Exception OursFault;
         public Logic.ScoreSides? Sides;
         public Logic.VBloodPass.Read VBlood;                                        // revenge D30: read before Died
+        public Logic.SpreadRead? Spread;                                            // apocalypse D4: read before Died
     }
 
     [HarmonyPostfix]
@@ -67,6 +69,9 @@ internal static class DeathEventPatch
                         catch (Exception ex) { read.OursFault = ex; }                     // the kill feed counts it as a failed read
                     }
                     if (wantsScore) read.Sides = feed.Before(() => ScoreReader.Sides(death.Killer, death.Died), ScoreLog);
+                    // apocalypse D4, D21 spread-read: the host guards its read (once per streak); this guards the rest
+                    try { read.Spread = ApocalypseAction.BeforeDeath(death.Killer, death.Died); }
+                    catch (Exception ex) { if (SpreadFaults.Fail()) Core.Log.LogError($"[nyar] apocalypse: spread skipped: {ex.Message}"); }
                     try
                     {
                         var died = death.Died;
@@ -115,6 +120,14 @@ internal static class DeathEventPatch
                     if (wantsScore)
                         feed.After(read.Sides, _ => ScoreReader.Players(death.Killer, death.Died), id => EventRuntime.Engine.Find(id),
                             EventRuntime.Board, includeAdmins, ScoreLog);
+                    // apocalypse D4: the spread after SpawnTracker.Died, in its own try/catch, so nothing it throws skips a
+                    // later death's SpawnTracker.Died
+                    try
+                    {
+                        ApocalypseAction.AfterDeath(read.Spread);
+                        SpreadFaults.Ok();
+                    }
+                    catch (Exception ex) { if (SpreadFaults.Fail()) Core.Log.LogError($"[nyar] apocalypse: spread skipped: {ex.Message}"); }
                 });
             }
             finally

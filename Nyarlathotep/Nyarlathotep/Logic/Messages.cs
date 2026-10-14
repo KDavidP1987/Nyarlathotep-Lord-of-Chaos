@@ -137,11 +137,15 @@ public static class Messages
 
     /// <summary>`.nyar status` for anyone: one line per running event, name and minutes left, or "No active
     /// events.".</summary>
-    public static IReadOnlyList<string> Status(IEnumerable<RunningInstance> running, DateTime utcNow)
+    public static IReadOnlyList<string> Status(IEnumerable<RunningInstance> running, DateTime utcNow) => Status(running, utcNow, _ => null);
+
+    /// <summary>As <see cref="Status(IEnumerable{RunningInstance}, DateTime)"/>, with an instance's own line where
+    /// <paramref name="own"/> gives one (a running apocalypse's <see cref="ApocalypseStatus"/>, apocalypse D17).</summary>
+    public static IReadOnlyList<string> Status(IEnumerable<RunningInstance> running, DateTime utcNow, Func<RunningInstance, string?> own)
     {
         var lines = running
             .OrderBy(r => r.EndsUtc)
-            .Select(r => $"{r.Definition.Name}: {MinutesLeft(r.EndsUtc, utcNow)} min left")
+            .Select(r => own(r) ?? $"{r.Definition.Name}: {MinutesLeft(r.EndsUtc, utcNow)} min left")
             .ToList();
         return lines.Count == 0 ? [NoActiveEvents] : lines;
     }

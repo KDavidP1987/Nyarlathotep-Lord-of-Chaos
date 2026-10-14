@@ -66,7 +66,8 @@ internal static class EventCommands
                 var def = set.Find(id) ?? active?.Definition;
                 if (def is null) { ctx.Reply(AdminLines.UnknownEvent(id).Human); return; }
                 Reply(ctx, EventLines.Info(def, active, now, TriggerBus.NextInterval(def.Id),
-                    RevengeRule.IsRevenge(def) ? TriggerBus.RevengeCounts(def.Id) : null));   // revenge D12
+                    RevengeRule.IsRevenge(def) ? TriggerBus.RevengeCounts(def.Id) : null,   // revenge D12
+                    apocalypse: def.Apocalypse is not null ? Services.ApocalypseAction.View(def.Id) : null));   // apocalypse D17
                 return;
             }
             default:

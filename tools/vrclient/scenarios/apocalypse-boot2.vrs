@@ -1,0 +1,49 @@
+# apocalypse-boot2.vrs: apocalypse D28 (Session 2), after the restart that apocalypse-prep-restart.vrs set up. The boot
+# log holds "boot marker sweep: <n> found, <n> queued" and "event apo-test resumed after restart (horde 2/2, <u> units to
+# rebuild)" (checked on the log copy). In game: tracked units back to u within 5 min, horde 2's front continuing from
+# its saved progress (event info), and the final scoreboard holding the kills from before and after the restart (at
+# least 2: the one from before and one here). Then a purge, and a second restart by the orchestrator: that boot logs no
+# resume ("resumed after restart" absent, state.json without "Apocalypse") and `.nyar status` reads 0 tracked, read by
+# hand after that boot (the last lines of this file say what).
+# Run: --var UNITS=<u from the resume line>
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devtp -1188 -1334
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar event info apo-test
+expect-reply horde 2 front at
+shot chat apo-boot2-info
+chat .nyar status
+expect-reply tracked units: ${UNITS} timeout=300
+# the rebuilt horde holds 60 m from Chaos; kill it for a scoreboard with kills from before and after the restart
+wait 30
+chat .devkill -1618703048 80 1
+expect-log \[DEV KILL\] n=1 timeout=10
+mark
+chat .nyar event stop apo-test
+expect-log event apo-test stopped
+expect-log event apo-test scoreboard: 1 players, ([2-9]|[1-9][0-9]+) kills timeout=10
+expect-chat Apocalypse test scoreboard timeout=20
+shot chat apo-boot2-scoreboard
+wait 30
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+# second half (D28): start apo-test again, purge at once, then the orchestrator restarts the server; after that boot
+# `.nyar status` must read "tracked units: 0" and the boot log must not hold "apo-test resumed after restart"
+mark
+chat .nyar event start apo-test
+expect-log event apo-test started by Manual timeout=20
+expect-log apocalypse apo-test roamers: \+3 at hotspot 1 timeout=30
+chat .nyar purge
+wait 2
+chat .nyar purge confirm
+expect-log purge: 1 events ended, [0-9]+ units queued
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+console TPHome

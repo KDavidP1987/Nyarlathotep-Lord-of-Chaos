@@ -208,6 +208,17 @@ public partial class ApocalypseTests
             Assert.NotEmpty(NativeScan.Problems([("Apocalypse.cs", planted)]));
         }
         Assert.Contains("is not closed", Assert.Single(NativeScan.Problems([("x.cs", "// <native-read>\n read();")])));
+        // step 3: every source file of the plugin, the game-side reader of Services/ApocalypseAction.cs marked among them
+        var plugin = Path.Combine(ControlCaseTests.RepoRoot(), "Nyarlathotep", "Nyarlathotep");
+        var all = Directory.GetFiles(plugin, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+                && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .Select(f => (Path.GetRelativePath(plugin, f), File.ReadAllText(f))).ToList();
+        var action = all.Single(f => f.Item1 == Path.Combine("Services", "ApocalypseAction.cs"));
+        Assert.Contains(NativeScan.Open, action.Item2);
+        Assert.Empty(NativeScan.Problems(all));
+        var at = action.Item2.IndexOf(NativeScan.Open, StringComparison.Ordinal) + NativeScan.Open.Length;
+        Assert.NotEmpty(NativeScan.Problems([(action.Item1, action.Item2.Insert(at, "\n            unit.Write(new Health());"))]));
     }
 
     [Fact]

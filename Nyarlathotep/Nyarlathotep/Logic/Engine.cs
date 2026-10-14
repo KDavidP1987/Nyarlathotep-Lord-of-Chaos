@@ -374,9 +374,10 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
     /// <see cref="Precedence.StartBlocker"/>, one empowerment per faction (<see cref="EventActions.EmpowerClash"/>), one
     /// apocalypse at a time (<see cref="EventActions.ApocalypseClash"/>), the Admin-location checks (an Admin goal's
     /// included), then the trigger scope (regions D4, A18): a start carrying <paramref name="kill"/> (only the VBloodKilled
-    /// route passes one) needs the kill in a named region, every other start needs an online player in one.</summary>
+    /// route passes one) needs the kill in a named region, every other start needs an online player in one. Last,
+    /// <paramref name="gate"/> (an apocalypse's hotspot read, apocalypse D2, D21) may refuse it once every rule passed.</summary>
     public Outcome? Start(string id, string trigger, DateTime utcNow, ControlState controls, (float X, float Y, float Z)? origin = null,
-        (float X, float Z)? kill = null, string? focus = null)
+        (float X, float Z)? kill = null, string? focus = null, Func<EventDefinition, Outcome?>? gate = null)
     {
         var def = catalog.Current.Find(id);
         if (def is null) return AdminLines.UnknownEvent(id);
@@ -393,8 +394,9 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
             return Outcome.Refused($"event {id} marches on the admin: start it with .nyar event start", RefusalCode.BadArg, "location", reason: Reasons.AdminLocation);
         var outside = ScopeGate.AdminOutside(def, origin, controls);
         if (outside is not null) return outside;
-        var gate = ScopeGate.TriggerBlocker(def, controls, kill);
-        if (gate is not null) return gate;
+        var scoped = ScopeGate.TriggerBlocker(def, controls, kill);
+        if (scoped is not null) return scoped;
+        if (gate?.Invoke(def) is { } held) return held;
         var error = catalog.TryStart(id, utcNow, out var instance);
         if (error is not null) return error;
         _active[id] = new ActiveEvent(instance!, trigger, origin, focus);

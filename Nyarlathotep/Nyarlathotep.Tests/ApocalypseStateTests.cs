@@ -103,13 +103,24 @@ public class ApocalypseStateTests
     [Fact]
     public void Record_fails_when_an_ended_run_keeps_its_record()
     {
+        // step 2 review L4: the real end path (Logic/ApocalypseHost.Ended, which EventRuntime calls on every path, checked by
+        // ApocalypseTests.EndPaths_fails_when_the_runtime_skips_an_apocalypse_end_path) over the real state store and file
         foreach (var path in Enum.GetValues<ApocalypseEnd>())
         {
-            var doc = new StateDocument { Apocalypse = Recorded(out _, out _) };
-            if (EndRule.RemovesRecord(path)) doc.Apocalypse = null;
-            var json = Encoding.UTF8.GetString(doc.Serialize());
-            Assert.Equal(path is ApocalypseEnd.Restart or ApocalypseEnd.Disable, json.Contains("\"Apocalypse\"", StringComparison.Ordinal));
+            var rig = ApocalypseDependencyFailureTests.Running();
+            Assert.Equal("apo", rig.State.Document.Apocalypse?.EventId);         // Begin wrote it
+            rig.Host.Ended("apo", path, rig.Game, rig.State);
+            rig.Files.Now = T0.AddSeconds(5);
+            rig.State.Flush();
+            var json = Encoding.UTF8.GetString(rig.Files.Read(DataFile.State, FileVariant.Main)!);
+            var kept = path is ApocalypseEnd.Restart or ApocalypseEnd.Disable;
+            Assert.True(kept == json.Contains("\"Apocalypse\"", StringComparison.Ordinal), $"{path}: record kept {!kept}");
+            Assert.True(kept == (rig.Host.Run is not null), $"{path}: run kept {!kept}");
         }
+        // the purge and a pillar off in the drain wait remove a pending resume's record too
+        var purged = ApocalypseDependencyFailureTests.Running();
+        purged.Host.Purged(purged.Game, purged.State);
+        Assert.Null(purged.State.Document.Apocalypse);
     }
 
     [Fact]

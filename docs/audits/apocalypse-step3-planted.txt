@@ -1,0 +1,11 @@
+D21 · Logic/ApocalypseHost.cs:Prepare a failed native read logs every time · ApocalypseDependencyFailureTests.NativeRead_ · failed 1/3 → restored, 3/3 pass
+D21 · Logic/ApocalypseHost.cs:Before a throwing spread read escapes into the death pass · ApocalypseDependencyFailureTests.SpreadRead_ · failed 3/4 → restored, 4/4 pass
+D21 · Logic/ApocalypseHost.cs:Tick a failed march read logs every tick · ApocalypseDependencyFailureTests.MarchRead_ · failed 1/4 → restored, 4/4 pass
+D21 · Logic/ApocalypseHost.cs:Roam a throwing roam move logs every check (the roam-move guard alone, A8) · ApocalypseDependencyFailureTests.MarchRead_ · failed 1/4 → restored, 4/4 pass · preflight -DependencySuite apocalypse: dependency suite: apocalypse 4/5 — FAILED   - march-read: ApocalypseDependencyFailureTests.MarchRead_ 1 failed
+D21 · Logic/ApocalypseHost.cs:Boot a throwing resume read keeps the record · ApocalypseDependencyFailureTests.ResumeRead_ · failed 1/3 → restored, 3/3 pass
+D21 · Logic/ApocalypseHost.cs:Tick a failed state write stops the run · ApocalypseDependencyFailureTests.StateWrite_ · failed 1/3 → restored, 3/3 pass
+D9 · Services/EventRuntime.cs:Purge the purge skips ApocalypseAction.Purged · ApocalypseTests.EndPaths_ · failed 1/5 → restored, 5/5 pass
+D11 · Logic/ApocalypseHost.cs:Ended an admin stop keeps the record · ApocalypseStateTests.Record_ · failed 1/8 → restored, 8/8 pass
+D18 · Resources/templates.json:zombie-apocalypse the template ships enabled · TemplateLibraryTests.Apocalypse_ · failed 1/11 → restored, 11/11 pass
+D38 · Logic/FactionGroups.cs:Problem two groups mixed pass · TemplateLibraryTests.Factions_ · failed 3/7 → restored, 7/7 pass
+D2 · Services/ApocalypseAction.cs:Game.Natives the game-side native read writes a Translation · ApocalypseTests.Hotspots_ · failed 1/6 → restored, 6/6 pass

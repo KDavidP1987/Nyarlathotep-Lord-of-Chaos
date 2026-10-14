@@ -46,6 +46,15 @@ credits, spread window and front progress, and a horde defeated inside that inte
 restart loses nothing. The unit tally (D15) is per boot: it restarts at the resume, the units from before the restart
 are accounted by the boot sweep's line, and the rebuilt units are queued into the new tally.
 
+The record keeps the scoreboard's top 200 rows. After a resume, the scoreboard's totals (players, kills, deaths) count
+only those 200 rows, so a run with more than 200 scoring players shows lower totals after a restart. This is accepted
+for the Halloween release; the record gains no totals field (step 3, L3).
+
+The step 3 dev fixture is `tools/vrclient/fixtures/apo-test.json` (put into the dev events.json). Its hordes rise every
+5 minutes, not every 3 as D25 says, because D1's lower bound for `everyMinutes` is 5. Its units are Guardians and light
+ghost militia, so `.devkill` spares the native Farbane skeletons at the hotspots. The Session 1 and 2 scenarios are
+`apocalypse.vrs`, `apocalypse-prep-restart.vrs` and `apocalypse-boot2.vrs`.
+
 ## Open questions
 
 - Answered by the step 1 spike (owner acceptance pending): the march hops (path cleared, height from the walk

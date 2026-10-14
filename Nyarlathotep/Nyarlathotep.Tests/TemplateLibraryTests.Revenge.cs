@@ -6,7 +6,7 @@ namespace Nyarlathotep.Tests;
 /// <summary>revenge D14: bandit-revenge, disabled and valid: the default revenge trigger (Faction_Bandits, heat 30, window
 /// 900 s, warnings at 10 and 20, vbloodHeat 10, cooldown 30 min), 900 s, a waveList of three Faction_Bandits tiers (4 at
 /// the start, 6 and 8 when cleared or after 120 s, the last led by a CHAR_Bandit_Deadeye at maxHealth 2.0, levelDelta +0,
-/// +1, +2), AroundPlayer 20-40 m, Hunt 45, the scoreboard on; thirteen templates in all, one more than 0.11.0's twelve.
+/// +1, +2), AroundPlayer 20-40 m, Hunt 45, the scoreboard on; thirteen templates then, one more than 0.11.0's twelve (fourteen since apocalypse D18).
 /// revenge D31: spider-swarm and spider-hunting-grounds end on a CHAR_Spider_Queen_VBlood boss at or above the final wave's
 /// level (spider-swarm's final wave: level 30 + 4 x 3 = 42; spider-hunting-grounds': 30).</summary>
 public partial class TemplateLibraryTests
@@ -18,7 +18,7 @@ public partial class TemplateLibraryTests
     static List<string> RevengeDifferences(TemplateCatalog c)
     {
         var diffs = new List<string>();
-        if (c.Templates.Count != TemplatesBefore + 1) diffs.Add($"{c.Templates.Count} templates, not {TemplatesBefore + 1}");
+        if (c.Templates.Count != TemplatesNow) diffs.Add($"{c.Templates.Count} templates, not {TemplatesNow}");
         var t = c.Find("bandit-revenge");
         if (t is null) { diffs.Add("bandit-revenge missing"); return diffs; }
         if (t.Invalid is { } why) diffs.Add($"invalid: {why}");
@@ -56,7 +56,7 @@ public partial class TemplateLibraryTests
     {
         var c = Real();
         Assert.Empty(RevengeDifferences(c));
-        Assert.Equal(TemplatesBefore + 1, c.ValidCount);
+        Assert.Equal(TemplatesNow, c.ValidCount);
     }
 
     [Theory]

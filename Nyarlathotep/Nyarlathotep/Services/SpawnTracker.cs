@@ -189,7 +189,7 @@ internal static class SpawnTracker
         var key = KeyOf(unit);
         if (!_ledger.Forget(key)) return;
         try { Left(key, Settings.VerboseLogging.Value ? "died" + KillerText(killer) : "died"); }
-        finally { Release(key); }
+        finally { Departed(key, UnitDeparture.Died); Release(key); }
     }
 
     /// <summary>" (killer &lt;prefab&gt;[ player][, owner &lt;prefab&gt;[ player]])" for the died line (wave-sets A6), or
@@ -238,6 +238,7 @@ internal static class SpawnTracker
             if (!unit.Exists())
             {
                 _ledger.Fail(order);
+                ApocalypseAction.Settled(order.EventId, order.Wave, false);
                 if (WalkCheck.Health.Failing(SpawnFailure.UnitSetup, streak)) Core.Log.LogWarning($"[nyar] spawn of {order.Prefab} failed: {error}");
                 continue;
             }
@@ -246,8 +247,10 @@ internal static class SpawnTracker
             if (!_ledger.Confirm(order, key, now))
             {
                 Discard(unit);
+                ApocalypseAction.Settled(order.EventId, order.Wave, false);
                 continue;
             }
+            ApocalypseAction.Settled(order.EventId, order.Wave, true);
             _entities[key] = unit;
             if (order.Hunt is { } hunt && order.EventId is { } huntEvent) HuntAction.Track(key, unit, huntEvent, hunt);
             if (order.EventId is { } ev) _meta[key] = new UnitMeta(order.Wave, GroupOf(ev, order), (order.X, order.Y, order.Z));   // S-14
@@ -269,7 +272,7 @@ internal static class SpawnTracker
         {
             _ledger.Forget(gone);
             try { Left(gone, "removed by the game"); }
-            finally { Release(gone); }
+            finally { Departed(gone, UnitDeparture.Removed); Release(gone); }
         }
 
         // Units past their due time join the budgeted queue here; LifeTime stays the backstop (A21).
@@ -281,7 +284,7 @@ internal static class SpawnTracker
         var retried = 0;
         foreach (var key in despawns)
         {
-            if (!_entities.TryGetValue(key, out var unit) || !unit.Exists()) { Release(key); continue; }
+            if (!_entities.TryGetValue(key, out var unit) || !unit.Exists()) { Departed(key, UnitDeparture.Despawned); Release(key); continue; }
             bool ok;
             try { ok = unit.DestroySafe(); }
             catch (Exception ex)
@@ -295,6 +298,7 @@ internal static class SpawnTracker
                 destroyed++;
                 if (Settings.VerboseLogging.Value && _stateUnits.TryGetValue(key, out var gone))
                     Core.Log.LogInfo($"[nyar] despawned {gone.Prefab} of {gone.EventId}");
+                Departed(key, UnitDeparture.Despawned);
                 Release(key);
             }
             else
@@ -531,6 +535,36 @@ internal static class SpawnTracker
         if (unit.Has<Velocity>()) unit.Write(new Velocity());
     }
 
+    /// <summary>One tracked unit's position and level (apocalypse step 3), null when it is not ours or gone.</summary>
+    internal static RegionUnit? ReadOwn(TrackedUnit t)
+    {
+        if (!_entities.TryGetValue(t.Key, out var unit) || !unit.Exists() || !unit.TryGetComponent<Translation>(out var pos)) return null;
+        var p = pos.Value;
+        // deconstructed, so this reader names no writing member of the class (preflight's entity-write check)
+        var (group, home) = _meta.TryGetValue(t.Key, out var meta) && meta is var (_, g, at) ? (g, ((float, float, float)?)at) : (0, null);
+        return new RegionUnit(t.Key, t.EventId, t.SpawnedUtc, p.x, p.y, p.z, LevelOf(unit, p.y), t.Wave, group, home);
+    }
+
+    /// <summary>The apocalypse's hop and roam jump (step-1 verdict "go — hop"): <see cref="Move"/> on a unit in
+    /// <see cref="_entities"/> only; any other key is ignored. A throw reaches the caller's streak.</summary>
+    [Mutating]
+    internal static void MoveOwn(long key, float3 to)
+    {
+        if (!_entities.TryGetValue(key, out var unit) || !unit.Exists()) return;
+        Move(unit, to);
+    }
+
+    /// <summary>The apocalypse's rolling lifetime (D13): the ledger's due time and the unit's LifeTime (its Age plus the new
+    /// seconds, so it ends at the same moment), on a unit in <see cref="_entities"/> only and only when the ledger renews it
+    /// (a unit queued for despawn is never renewed). A throw reaches the caller's streak.</summary>
+    [Mutating]
+    internal static void RenewOwn(long key, UnitLifetime life)
+    {
+        if (!_entities.TryGetValue(key, out var unit) || !unit.Exists() || !_ledger.Renew(key, life)) return;
+        var age = unit.TryGetComponent<Age>(out var a) ? a.Value : 0f;
+        if (unit.Has<LifeTime>()) unit.Write(new LifeTime { Duration = age + life.LifetimeSeconds, EndAction = LifeTimeEndAction.Destroy });
+    }
+
     /// <summary>The game side of the lock and the hunt. Reads only the ledger's own units and writes only units in
     /// <see cref="_entities"/> (CLAUDE.md › Spawn &amp; buff safety), which Logic/LockPhase and HuntPhase have already
     /// filtered to the running instance's own (HuntingGrounds.Ours). The players are read once per tick and the walk
@@ -721,6 +755,12 @@ internal static class SpawnTracker
         var report = AdminLines.DebugReport(lines.OrderBy(l => l.Distance).Select(l => l.Line).ToList(), radius);
         // faction-empowerment D14: then at most 10 native NPCs, read back from the live unit and its carrier.
         return [.. report, .. EmpowerAction.DebugNatives(at, radius, 10)];
+    }
+
+    /// <summary>The apocalypse's tally hears a tracked unit leave (D15), before <see cref="Release"/> forgets it. Never throws.</summary>
+    static void Departed(long key, UnitDeparture how)
+    {
+        if (_stateUnits.TryGetValue(key, out var u)) ApocalypseAction.Left(u.EventId, u.SpawnedUtc, how);
     }
 
     static void Release(long key)

@@ -45,7 +45,7 @@ public class TemplateCommandTests
         Assert.Equal("legion-weekend-surge empowerment schedule Sat 20:00 \"Legion weekend surge\"", lines[0]);
         Assert.Equal("bandit-ambush spawns manual \"Bandit ambush\" (in events.json)", lines[4]);
         Assert.DoesNotContain(lines, l => l.Contains("[NYAR:", StringComparison.Ordinal));
-        Assert.Equal(["bandit-ambush", "undead-rising", "roaming-hunters", "border-watch", "bandit-reprisal", "graveyard-waves", "spider-swarm", "spider-hunting-grounds", "bandit-revenge"], Ids(List(c, "spawns")));
+        Assert.Equal(["bandit-ambush", "undead-rising", "roaming-hunters", "border-watch", "bandit-reprisal", "graveyard-waves", "spider-swarm", "spider-hunting-grounds", "bandit-revenge", "zombie-apocalypse"], Ids(List(c, "spawns")));
         Assert.Equal(["no templates for pillar zones"], List(c, "zones"));
         Assert.Equal(EventLines.Info(c.Find("bandit-ambush")!.Definition, null, Now), TemplateLines.Info(c, "bandit-ambush", Now));
     }
@@ -91,7 +91,7 @@ public class TemplateCommandTests
         var units = TemplateLibraryTests.Units();
         units.Factions.Remove("Faction_Legion");
         var c = TemplateCatalog.Load(TemplateLibraryTests.Bytes(TemplateLibraryTests.RealText), units, units);
-        Assert.Equal(12, c.ValidCount);
+        Assert.Equal(13, c.ValidCount);
         Assert.EndsWith(" invalid: unknown faction Faction_Legion", List(c)[0]);
         Assert.Equal(["legion-weekend-surge disabled: unknown faction Faction_Legion"], TemplateLines.Info(c, "legion-weekend-surge", Now));
     }
