@@ -182,8 +182,7 @@ cancel the walk; Pathfinder.MaxExpansions 4000 means short chained legs; buff an
 Scheduled with the pathing study in the 1.0 order (design §9 D55) unless the owner moves it.
 
 **Probe 1, 2026-10-14** (tools/vrclient/scenarios/pathing-walkto.vrs, NyarDevTools `.devwalkto`; logs
-%TEMP%
-yar-uw0-logs\walkto-*): Valyr's WalkToPos buff (131220609, Translation = the ravine mark, lifetime 120 s,
+%TEMP%\nyar-uw0-logs\walkto-*): Valyr's WalkToPos buff (131220609, Translation = the ravine mark, lifetime 120 s,
 re-solve every 1 s, AmplifyBuff removed) on 5 tracked CHAR_Spider_Forest at the pond, Chaos 70 m away so they stayed idle.
 **3 of 5 walked the 110 m to the mark** (intermediate readings 86-95 m at 5 s, so a walk, not a jump; at the mark within
 0-4 m by 20 s) and stayed there for the next 60 s without walking home (state Idle, SpawnTransform still the pond);
