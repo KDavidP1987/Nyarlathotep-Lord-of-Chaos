@@ -120,6 +120,8 @@ temp: nyar-hg*-logs
 temp: nyar-rv*-logs
 # the session log copies of the apocalypse spike and sessions (apocalypse D34); deleted the same session
 temp: nyar-apo*-logs
+# the session log copies of the unit-watch spike and sessions (unit-watch step 1, 3); deleted after the release
+temp: nyar-uw*-logs
 # the self-test scratch folders (event-library A14): preflight -SelfTest, preflight -DependencySuite, dev-snapshot -SelfTest
 # and rollback-drill -SelfTest create one and remove it before they exit
 temp: nyar-selftest-*

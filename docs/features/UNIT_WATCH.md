@@ -130,3 +130,34 @@ a restart drops them (the boot sweep despawns our units, apocalypse's resumed un
   off-ground readings on hill, ravine and water spots before the rule is trusted.
 
 ## Test results
+
+### Spike (D19) · 2026-10-14 · step 1 (the mod at 6e0b901 + NyarDevTools .devfight/.devstrand/.devground) · vrclient as Chaos on the local dev server
+
+`tools/vrclient/scenarios/unit-watch-spike.vrs`: **SCENARIO PASS 14/14** (unit-watch-spike-20261014-082645.json). Logs in
+%TEMP%\nyar-uw0-logs (spike-*). -LogCheck: 0 unhandled, 51 nyar lines, 0 orphan errors, 0 unity errors. Warnings: only the
+known ones (Il2CppInterop substitute, Beelzebub baked writes, example-empowerment pillar, the purge line, and the 226
+boot-time missing-prefab warnings every run since 0.11.0 has).
+
+- (a) Fight signal, 75 s window, 6 CHAR_Spider_Forest beside Chaos (invulnerable), Chaos swinging:
+  - **apply** (StatChangeSystem.ApplyStatChanges postfix, reason DealDamageSystem_0; Entity = the unit hit, Source = the
+    attacker): 7 lines on our spiders `hit=npc by=player`, 0 between them; cost 0.083 ms a call averaged in the fight,
+    0.008 ms idle. The line names the prefab, not the unit, so the per-unit split (n/6) is not readable.
+  - **taken** (StatChangeSystem.OnUpdate, DamageTakenEvent): the same hits, but 54.8 ms a call as measured (the
+    diagnostic's health sweep runs inside it, so its own cost is not isolated): not usable as built.
+  - **deal** (DealDamageSystem.DealDamage postfix): 0 lines, not usable.
+  - **health** sample: 9 lines, no attacker (by=-).
+  - Hits **on** a player: none seen. Chaos is invulnerable, so no damage reaches the stat change, and the scenario had no
+    vulnerable test target (plan step 1 named one). This direction is not observable this way.
+- (b) Staged despawn: `.nyar purge confirm` queued 6 tracked units; during the 40 s window deal/taken/apply/health =
+  0/0/0/0 and no death, spread or scoreboard line: **6/6 silent**.
+- (c) Walk check at standing units: the pond shore (open, flat ground beside water) read 4 grounded and 3 none for the
+  spiders' readings, and Chaos's own spot there read none; the ravine mark read grounded. **3 false off-ground readings in
+  7**, far past S-12's 1 in 80, so the full four-spot, 80-unit count was not needed for the verdict.
+- (d) `.devstrand -581295882 under 30` at the pond (ground y 0, so -30 stays above -100): moved=1 to y=-30.0, read
+  ground=free (not grounded); `.nyar debug here 40` listed it at -1882,-1642 with the five other spiders.
+
+**fight verdict: apply** (StatChangeSystem.ApplyStatChanges, DealDamageSystem reason) for a player hitting our unit,
+under 0.5 ms; a hit on a player is not seen by it, so the fight read also counts S-9's fallback clause (a player target
+within 5 m on x and z, or within the unit's attack range for a ranged unit, plan Review 2 F2).
+**off-ground verdict: not usable**, so S-12's fallback: off-ground reads only a unit more than 10 m below the lowest
+grounded level at its position, or with no grounded level at all.

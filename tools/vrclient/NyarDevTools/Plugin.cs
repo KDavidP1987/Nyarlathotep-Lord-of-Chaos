@@ -3,6 +3,7 @@ using System.Text.Json;
 using BepInEx;
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP;
+using HarmonyLib;
 using ProjectM;
 using ProjectM.Behaviours;
 using ProjectM.Network;
@@ -57,10 +58,14 @@ public class Plugin : BasePlugin
         if (Application.productName != "VRisingServer") return;
         Logger = Log;
         CommandRegistry.RegisterAll();
-        Log.LogInfo("NyarDevTools loaded: .devwhere .devtp .devmark .devgo .devmarks .devkill .devdie .devhop .devjump .devwalk .devunits");
+        _harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
+        _harmony.PatchAll(typeof(FightPatches));                         // unit-watch spike: idle unless .devfight runs
+        Log.LogInfo("NyarDevTools loaded: .devwhere .devtp .devmark .devgo .devmarks .devkill .devdie .devhop .devjump .devwalk .devunits .devfight .devstrand .devground");
     }
 
-    public override bool Unload() { CommandRegistry.UnregisterAssembly(); return true; }
+    static Harmony _harmony;
+
+    public override bool Unload() { _harmony?.UnpatchSelf(); CommandRegistry.UnregisterAssembly(); return true; }
 }
 
 static class DevCommands
@@ -406,5 +411,74 @@ static class DevCommands
         finally { units.Dispose(); query.Dispose(); }
         Plugin.Logger.LogInfo($"[DEV WALK] set={set} arrived={arrived} farthest={F(farthest)} stall={F((float)stall)} target={targetMark}");
         ctx.Reply($"devwalk set={set} arrived={arrived} farthest={F(farthest)}");
+    }
+
+    [Command("devfight", adminOnly: true)]
+    public static void DevFight(ChatCommandContext ctx, float seconds = 60f, float radius = 40f)
+    {
+        var p = Where(ctx);
+        if (p is null) { ctx.Reply("devfight: no position"); return; }
+        Fight.Start(p.Value, seconds, radius);
+        Plugin.Logger.LogInfo($"[DEV FIGHT] start seconds={F(seconds)} radius={F(radius)}");
+        ctx.Reply($"devfight {F(seconds)} s");
+    }
+
+    [Command("devground", adminOnly: true)]
+    public static void DevGround(ChatCommandContext ctx, string mark = "")
+    {
+        float3 at;
+        if (mark.Length > 0)
+        {
+            if (!LoadMarks().TryGetValue(mark, out var m) || m.Length != 3) { ctx.Reply($"devground: no mark {mark}"); return; }
+            at = new float3(m[0], m[1], m[2]);
+        }
+        else
+        {
+            var p = Where(ctx);
+            if (p is null) { ctx.Reply("devground: no position"); return; }
+            at = p.Value;
+        }
+        var (ground, level) = Ground.Read(Em, at);
+        Plugin.Logger.LogInfo($"[DEV GROUND] x={F(at.x)} y={F(at.y)} z={F(at.z)} level={level} ground={ground}");
+        ctx.Reply($"devground {ground} level={level}");
+    }
+
+    [Command("devstrand", adminOnly: true)]
+    public static void DevStrand(ChatCommandContext ctx, int prefab, string how, string arg, float radius = 30f)
+    {
+        var p = Where(ctx);
+        if (p is null) { ctx.Reply("devstrand: no position"); return; }
+        float3? spot = null;
+        var down = 0f;
+        if (how == "mark")
+        {
+            if (!LoadMarks().TryGetValue(arg, out var m) || m.Length != 3) { ctx.Reply($"devstrand: no mark {arg}"); return; }
+            spot = new float3(m[0], m[1], m[2]);
+        }
+        else if (how != "under" || !float.TryParse(arg, NumberStyles.Float, CultureInfo.InvariantCulture, out down) || down <= 0)
+        { ctx.Reply("devstrand: under <metres> | mark <name>"); return; }
+        var em = Em;
+        var query = LivingUnits(em);
+        var units = query.ToEntityArray(Allocator.Temp);
+        var best = Entity.Null;
+        var bestD = float.MaxValue;
+        try
+        {
+            foreach (var u in units)
+            {
+                if (em.GetComponentData<PrefabGUID>(u).GuidHash != prefab || em.GetComponentData<Health>(u).IsDead) continue;
+                var d = math.distance(em.GetComponentData<Translation>(u).Value.xz, p.Value.xz);
+                if (d <= radius && d < bestD) { best = u; bestD = d; }
+            }
+        }
+        finally { units.Dispose(); query.Dispose(); }
+        if (best == Entity.Null) { Plugin.Logger.LogInfo("[DEV STRAND] moved=0"); ctx.Reply("devstrand moved=0"); return; }
+        var at = em.GetComponentData<Translation>(best).Value;
+        var to = spot ?? new float3(at.x, at.y - down, at.z);
+        em.SetComponentData(best, new Translation { Value = to });
+        if (em.HasComponent<LastTranslation>(best)) em.SetComponentData(best, new LastTranslation { Value = to });
+        var (ground, level) = Ground.Read(em, to);
+        Plugin.Logger.LogInfo($"[DEV STRAND] moved=1 how={how} x={F(to.x)} y={F(to.y)} z={F(to.z)} level={level} ground={ground}");
+        ctx.Reply($"devstrand moved=1 ground={ground}");
     }
 }

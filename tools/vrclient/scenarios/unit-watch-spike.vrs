@@ -1,0 +1,74 @@
+# unit-watch-spike.vrs: unit-watch step 1, the spike (D19). Which game signal says "a unit of ours hit a player, or a
+# player hit it" (deal, taken, apply or health, NyarDevTools .devfight), what each costs a tick, whether a purge's
+# staged despawn raises any of them, and what the walk check reads at our units on open ground and under the ground
+# (.devstrand, .devground). Evidence only: the verdict is read from the log copy afterwards, so most checks are
+# expect-log on the dev tools' own lines.
+#
+# Needs: NyarDevTools (with .devfight/.devstrand/.devground) and DevChatEcho; Chaos invulnerable (`ToggleInvulnerable
+# true`, a Boolean, never false); marks pond (ground y about 0, so 30 m under stays above the walk check's -100) and
+# ravine; Debug.TimingLog on in the dev cfg.
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .devwhere
+expect-log \[DEV WHERE\] x=(?P<PX>-?[0-9.]+) y=(?P<PY>-?[0-9.]+) z=(?P<PZ>-?[0-9.]+)
+# (a) six spiders beside an invulnerable Chaos: they attack him (by=npc hit=player); Chaos swings back (by=player)
+chat .devfight 75 40
+expect-log \[DEV FIGHT\] start seconds=75
+chat .nyar spawn CHAR_Spider_Forest 6
+expect-reply spawned 6 CHAR_Spider_Forest
+wait 20
+cast lmb 60 0
+wait 1
+cast lmb -60 0
+wait 1
+cast lmb 0 60
+wait 1
+cast lmb 0 -60
+wait 1
+cast lmb 60 0
+wait 1
+cast lmb -60 0
+wait 1
+cast lmb 0 60
+wait 1
+cast lmb 0 -60
+wait 10
+shot full spike-fight
+expect-log \[DEV FIGHT\] done deal=(?P<DEAL>[0-9]+) taken=(?P<TAKEN>[0-9]+) apply=(?P<APPLY>[0-9]+) health=(?P<HEALTH>[0-9]+) timeout=60
+# (c) the walk check at the spiders on open ground, then (d) one sunk 30 m under the pond's ground
+chat .devground
+expect-log \[DEV GROUND\] .* ground=(?P<G0>[a-z:A-Z]+)
+chat .devstrand -581295882 under 30
+expect-log \[DEV STRAND\] moved=1 how=under .* ground=(?P<G1>[a-z:A-Z]+)
+wait 12
+chat .nyar debug here 40
+shot full spike-strand
+# (b) the purge's staged despawn: no fight signal and no kill credit while the units go
+chat .devfight 40 60
+expect-log \[DEV FIGHT\] start seconds=40
+chat .nyar purge
+wait 2
+chat .nyar purge confirm
+expect-log purged: timeout=20
+expect-log \[DEV FIGHT\] done deal=(?P<PDEAL>[0-9]+) taken=(?P<PTAKEN>[0-9]+) apply=(?P<PAPPLY>[0-9]+) health=(?P<PHEALTH>[0-9]+) timeout=60
+expect-calc ${PDEAL} + ${PTAKEN} + ${PAPPLY} + ${PHEALTH} == 0
+# (c) the ravine: twenty spiders on rough ground, the walk check at the mark
+chat .devgo ravine
+expect-log \[DEV TP\] ravine
+wait 4
+chat .devground
+expect-log \[DEV GROUND\] .* ground=(?P<G2>[a-z:A-Z]+)
+chat .nyar purge
+wait 2
+chat .nyar purge confirm
+wait 5
+console TPHome
+wait 3

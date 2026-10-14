@@ -3,6 +3,7 @@
 **Status:** released in 0.11.0 (docs/dod/hunting-grounds.md, audit docs/audits/hunting-grounds.md). The mover spike
 passed with hidden jumps, and the logic and services passed their Session 2 scenarios (Test results). The owner's
 live checks (D26, D27) are recorded under Test results when done.
+Units stuck where players cannot reach them are recovered or removed by unit watch (docs/features/UNIT_WATCH.md, 0.13.0).
 
 ## Goal
 
