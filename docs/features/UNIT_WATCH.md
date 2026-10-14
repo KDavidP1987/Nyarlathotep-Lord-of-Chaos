@@ -227,3 +227,48 @@ stall run, Enabled false for the watch-off run, all restored.
   under 5 ms, tracked >= 50, targets >= 1, 0 slow ticks"; window averages 0.53-1.57 ms with 78 then 60 tracked; uw-timing-d's
   18 marked spiders recovered and were removed inside the span and the event ended "all waves defeated". One tick's watch
   phase reached 7.5 ms (Session 1's earlier run: 14.6 ms); the promise is the window average.
+
+### Test weekend · about 2026-10-24/25 · the owner with the players (D23, D29, D34's measurement)
+
+**Sheet.** Unit watch rides apocalypse's test weekend (docs/features/APOCALYPSE.md › Test weekend): install one Release
+build that holds both, commit 0f90351 or later (`Nyarlathotep.dll` from `Nyarlathotep/Nyarlathotep/bin/Release/net6.0/`),
+with the server stopped. Before starting it, in `BepInEx/config/kdpen.Nyarlathotep.cfg` set `[Debug] VerboseLogging = true`
+for the weekend (it writes the first-move lines below); leave `[UnitWatch]` at its defaults (Enabled true, StuckSeconds 90,
+StallMinutes 10, SpawnStillSeconds 10). Add the `uw-wave` entry of `tools/vrclient/fixtures/uw-wave.json` to the
+`events` array of `BepInEx/config/Nyarlathotep/events.json`, then start the server.
+
+What a stuck unit is: a unit of ours that holds a player as its target but has not moved for 90 s (or has not left its
+spawn spot within 10 s) and has not fought, or one under the ground or stuck in the air. It is moved out of sight up to
+twice; if it still cannot reach anyone it is removed with no kill credit, and its wave counts it as cleared.
+
+1. **Standing (D23).** Find a spot a spider cannot reach: the top of a tall rock or ledge, or a small island across deep
+   water. Stand at its foot and type `.nyar event set uw-wave location here`, then `.nyar event start uw-wave`. As soon
+   as the spiders appear, climb (or cross) to the unreachable spot and stay within about 20 m of them. Do not hit them:
+   a fight resets the watch. PASS: within about 100 s the server log reads
+   `[nyar] unit-watch uw-wave stuck: CHAR_Spider_Forest wave 1 (standing)` (or `(still)`) and
+   `[nyar] unit-watch uw-wave waiting: …, a player near`, and no spider vanishes while you can see it.
+2. **Recovery (D23).** Walk at least 150 m away. PASS: within about 10 s the log reads
+   `[nyar] unit-watch uw-wave recovered: CHAR_Spider_Forest try 1/2, <m> m (<group|player|anchor>)`; go back, and the
+   spider is where the line says (beside its mates, 50-60 m from a player, or at the event's spot), not where it was stuck.
+3. **The admin view.** `.nyar event info uw-wave`. PASS: the reply's line reads `unit watch: <n> stuck now, <n> recovered,
+   <n> removed`. Then kill the spiders; wave 2 comes; `.nyar event stop uw-wave` shows the scoreboard.
+4. **Unstick by hand.** Start uw-wave again, walk 150 m away, then `.nyar event unstick uw-wave`. PASS: the reply reads
+   `unstick uw-wave: <n> units marked, 0 fighting left alone`; within 10 s the "recovered" lines follow.
+5. **Turning it off.** Any time: `[UnitWatch] Enabled = false` in the cfg and a restart. Start uw-wave, then
+   `.nyar event unstick uw-wave`. PASS: it is refused with "unit watch is off: [UnitWatch] Enabled", `.nyar event info
+   uw-wave` reads "unit watch: off", and no `[nyar] unit-watch` line appears. Set it back to true and restart.
+6. **Normal play (D29).** Run the wave events and zombie-apocalypse as planned for the weekend. Watch for: a wave that
+   never ends because a unit is out of reach; a unit seen vanishing, or appearing right beside a player (other than a
+   removal after its wait); a recovered unit that does not rejoin the fight believably.
+
+**After the weekend (Claude, from the server's `BepInEx/LogOutput.log`, sent by the owner):**
+- D34's measurement: the `[nyar watch] first-move … after=<s> player=<name>` lines with a player target (at least 10);
+  SpawnStillSeconds becomes the slowest `after` plus 5 s (5-60), as a dod Log note and a Config default change.
+- D26's landing beside its horde: any `[nyar] unit-watch zombie-apocalypse recovered: … (group)` line.
+- Every `[nyar] unit-watch` line with its reason, read against what the players saw.
+
+Note for the verdict: whether the stuck rule (only a unit holding a player as its target, design §9 D56) catches the
+units that really were stuck and leaves alone the ones that were not; the owner also accepts D19 (the Spike above) and
+D24-D27 (Session 1 above) here, or names what to change.
+
+Verdict: waiting on the owner.

@@ -31,9 +31,9 @@ weekend sheet. Every commit after 246fe9e (v0.12.0) is local: push waits on the 
 
 ## Next, in order
 
-1. Unit watch step 4: add the test weekend sheet to `docs/features/UNIT_WATCH.md` (a vulnerable player near a stuck
-   unit that then moves 150 m (D23); D34's first-move measurement → SpawnStillSeconds; a horde unit landing beside its
-   horde (D26); D19 acceptance), joined to apocalypse's weekend (~10-24/25).
+1. Unit watch step 4 sheet is written (`docs/features/UNIT_WATCH.md` › Test results › Test weekend); it rides apocalypse's
+   weekend (~10-24/25) on one Release build (0f90351 or later). After it, read the owner's log for D34's first-move
+   measurement (sets SpawnStillSeconds) and D26's group landing.
 2. On the owner's sign-off of revenge D18-D22, D32: `dod close revenge` (partial).
 3. The owner runs the test weekend; changes asked for become amendments first.
 4. Joint step 5 (apocalypse + unit watch, 0.13.0): Codex once for unit watch (and apocalypse if its code changed), the six
