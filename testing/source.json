@@ -1,0 +1,10 @@
+{
+  "round": "dev-round-01-production-setups",
+  "build": "test build 0.13.0-rc.1 (apocalypse and unit watch, before release)",
+  "download": "https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.0-rc.1",
+  "files": [
+    "nyarlathotep-dev-round-01-production-setups.xlsx",
+    "nyarlathotep-dev-round-01-production-setups.pdf"
+  ],
+  "source_sha256": "02dc5476324e4de1956e41ae431fa72d0b1eaf17957666601dd7851f1ec77afe"
+}

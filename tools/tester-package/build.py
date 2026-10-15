@@ -10,7 +10,7 @@ usage:
 Output: REFERENCE DOCUMENTATION/TESTING DOCUMENTATION/<product>-<round>.{xlsx,pdf,csv,html} (gitignored: returned
 workbooks carry tester details). Send the tester the .xlsx and the .pdf only.
 """
-import copy, csv, html, math, os, re, sys, zipfile
+import copy, csv, hashlib, html, json, math, os, re, sys, zipfile
 import xml.etree.ElementTree as ET
 
 from openpyxl import Workbook, load_workbook
@@ -22,6 +22,9 @@ from openpyxl.worksheet.datavalidation import DataValidation
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 OUT = os.path.join(REPO, "REFERENCE DOCUMENTATION", "TESTING DOCUMENTATION")
+# the blank workbook and reading copy, committed so testers and the other machine can download the current round;
+# returned workbooks never go here (they stay in OUT, gitignored)
+PUBLISHED = os.path.join(REPO, "testing")
 sys.path.insert(0, HERE)
 import rows as R  # noqa: E402
 
@@ -145,6 +148,11 @@ def build_workbook(rows, path):
         ws.column_dimensions[col].width = w
     r = prose(ws, 1, R.ROUND["title"], bold=True, size=14)
     r = prose(ws, r, f"Build: {R.ROUND['build']}. Prepared {R.ROUND['date']}.")
+    r = prose(ws, r, f"Download: {R.ROUND['download']}")
+    r += 1
+    r = prose(ws, r, "Installing the build on the test server (once, by whoever runs that server)", bold=True)
+    for i, s in enumerate(R.INSTALL, 1):
+        r = prose(ws, r, f"{i}. {s}")
     r += 1
     r = prose(ws, r, "Tester details — one column each. The line under each field says why we ask.", bold=True)
     hdr = ["Field"] + R.TESTERS + ["Why we ask"]
@@ -393,7 +401,9 @@ def build_html(rows, path):
              "<style>body{font-family:system-ui;max-width:900px;margin:2rem auto;padding:0 1rem;line-height:1.45}"
              "h2{border-bottom:2px solid #1d4ed8}.row{border:1px solid #ddd;padding:.6rem 1rem;margin:.8rem 0}"
              ".meta{color:#555;font-size:.9em}</style>",
-             f"<h1>{e(R.ROUND['title'])}</h1><p>{e(R.ROUND['build'])}</p>"]
+             f"<h1>{e(R.ROUND['title'])}</h1><p>{e(R.ROUND['build'])}</p><p>Download: {e(R.ROUND['download'])}</p>",
+             "<h2>Installing the build on the test server</h2><ol>" + "".join(f"<li>{e(s)}</li>" for s in R.INSTALL)
+             + "</ol>"]
     for cat in CAT_ORDER:
         group = [x for x in rows if x["status"] == cat]
         if not group:
@@ -424,7 +434,10 @@ def build_pdf(rows, path):
     h1, h2, h3 = ss["Title"], ss["Heading2"], ss["Heading3"]
     n_admin = sum(1 for r in rows if "admin" in (r.get("needs") or "").lower())
     story = [Paragraph(x_(R.ROUND["title"]), h1), Paragraph(x_(f"Build: {R.ROUND['build']}. Prepared {R.ROUND['date']}."), body),
+             Paragraph(x_(f"Download: {R.ROUND['download']}"), body),
              Paragraph("This is the reading copy. Fill in your results in the workbook (.xlsx).", body), Spacer(1, 6),
+             Paragraph("Installing the build on the test server (once, by whoever runs that server)", h2),
+             ListFlowable([ListItem(Paragraph(x_(s), body)) for s in R.INSTALL], bulletType="1"),
              Paragraph("Where your last round's findings went", h2), Paragraph(x_(R.LAST_ROUND), body),
              Paragraph("What we could not check ourselves, and why", h2),
              ListFlowable([ListItem(Paragraph(x_(t), body)) for t in R.COULD_NOT_CHECK], bulletType="bullet"),
@@ -514,6 +527,13 @@ def check_workbook(xlsx, rows):
 
 
 def check_coverage(rows, texts):
+    install = [R.ROUND["download"]] + [s.split("->")[0] for s in R.INSTALL] +               [s.split("->")[1] for s in R.INSTALL if "->" in s]
+    for name, t in texts.items():
+        if name == "csv":                                      # the csv carries the rows only
+            continue
+        for p in install:
+            if norm(p) not in t:
+                raise BuildError(f"{name}: the install steps are missing {p[:60]!r}")
     for x in rows:
         probes = [x["id"], x["title"]] + [s.split("->")[0] for s in x["howToTest"]] + \
                  [s.split("->")[1] for s in x["howToTest"] if "->" in s]
@@ -543,6 +563,45 @@ def build(rows_in, out_dir):
              "csv": norm(open(base + ".csv", encoding="utf-8").read())}
     check_coverage(rows, texts)
     return base, rows
+
+
+def source_hash(source=None):
+    """sha256 of rows.py then build.py, line endings normalised (the C# test computes the same)."""
+    h = hashlib.sha256()
+    rows_src = source if source is not None else open(os.path.join(HERE, "rows.py"), "rb").read()
+    for data in (rows_src, open(os.path.join(HERE, "build.py"), "rb").read()):
+        h.update(data.replace(b"\r\n", b"\n"))
+    return h.hexdigest()
+
+
+def publish(base, out_dir=PUBLISHED):
+    """Copy the blank .xlsx and .pdf (the two files a tester gets) to the committed folder with a source stamp."""
+    import shutil
+    os.makedirs(out_dir, exist_ok=True)
+    name = os.path.basename(base)
+    for old in os.listdir(out_dir):                           # only the current round is kept; git keeps the rest
+        if old.endswith((".xlsx", ".pdf")) and not old.startswith(name + "."):
+            os.remove(os.path.join(out_dir, old))
+    for ext in (".xlsx", ".pdf"):
+        shutil.copyfile(base + ext, os.path.join(out_dir, name + ext))
+    stamp = {"round": R.ROUND["slug"], "build": R.ROUND["build"], "download": R.ROUND["download"],
+             "files": [name + ".xlsx", name + ".pdf"], "source_sha256": source_hash()}
+    with open(os.path.join(out_dir, "source.json"), "w", encoding="utf-8", newline="\n") as f:
+        json.dump(stamp, f, indent=2)
+        f.write("\n")
+
+
+def check_published(out_dir=PUBLISHED, source=None):
+    path = os.path.join(out_dir, "source.json")
+    if not os.path.exists(path):
+        raise BuildError("no published copy: run python tools/tester-package/build.py")
+    stamp = json.load(open(path, encoding="utf-8"))
+    if stamp["source_sha256"] != source_hash(source):
+        raise BuildError("the published workbook is older than rows.py/build.py: run python tools/tester-package/build.py")
+    for f in stamp["files"]:
+        if not os.path.exists(os.path.join(out_dir, f)):
+            raise BuildError(f"published file missing: {f}")
+    return stamp
 
 
 def prove():
@@ -592,6 +651,13 @@ def prove():
     # a step missing from one artefact
     texts = {"pdf": pdf_text(base + ".pdf").replace(norm(rows[0]["howToTest"][1].split("->")[0]), "")}
     expect("a step missing from the PDF", lambda: check_coverage(rows, texts))
+    texts = {"pdf": pdf_text(base + ".pdf").replace(norm(R.INSTALL[2].split("->")[0]), "")}
+    expect("an install step missing from the PDF", lambda: check_coverage(rows, texts))
+    pub = os.path.join(tmp, "published")
+    publish(base, pub)
+    saved_rows = open(os.path.join(HERE, "rows.py"), "rb").read()
+    expect("published copy older than rows.py",
+           lambda: check_published(pub, source=saved_rows + b"\n# edited"))
     ok = all(c[1] for c in cases)
     for name, went_red, msg in cases:
         print(f"  {'RED (good)' if went_red else 'STAYED GREEN (bad)'}: {name} — {msg[:110]}")
@@ -604,7 +670,16 @@ def prove():
 if __name__ == "__main__":
     if "--prove" in sys.argv:
         sys.exit(prove())
+    if "--check-published" in sys.argv:
+        try:
+            s = check_published()
+        except BuildError as ex:
+            print(f"published: STALE — {ex}")
+            sys.exit(1)
+        print(f"published: current ({s['round']}, {', '.join(s['files'])})")
+        sys.exit(0)
     base, rows = build(R.ROWS, OUT)
+    publish(base)
     steps = sum(len(x["howToTest"]) for x in rows)
     print(f"built {len(rows)} rows, {steps} steps -> {base}.xlsx / .pdf / .csv / .html; verified (coverage in all four, "
           f"schema order, merged heights, dropdowns, formulas)")
