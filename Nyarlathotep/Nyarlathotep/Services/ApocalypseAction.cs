@@ -300,6 +300,8 @@ internal static class ApocalypseAction
 
         public void MapTerritory(string eventId) => TerritoryMap.ForWave(eventId);
 
+        public void ResumeCancelled(string eventId) => EventRuntime.EndSpawnState(eventId);
+
         public void Log(string line) => Core.Log.LogInfo($"[nyar] {line}");
 
         public void Warn(string line) => Core.Log.LogWarning($"[nyar] {line}");
@@ -307,9 +309,5 @@ internal static class ApocalypseAction
         public void Announce(string eventId, string line) => Announcer.Apocalypse(eventId, line);
 
         /// <summary>The run's scaling source (scaling D5, D12): Services/ScalingReads, null without the block.</summary>
-        public ScalingSource Scaling(ActiveEvent active) => ScalingReads.Source(active);
-
-        /// <summary>A failed resume's cancel (scaling D12, D15): the run's scaling rows and streak go.</summary>
-        public void ResumeCancelled(string eventId) => ScalingReads.EventEnded(eventId);
-    }
+        public ScalingSource Scaling(ActiveEvent active) => ScalingReads.Source(active);    }
 }

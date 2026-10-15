@@ -289,7 +289,7 @@ public class ScalingDependencyFailureTests
         ("WaveAction", "SpawnTuning.For(action, entry, read, due.Wave)", "wave without the scaled level"),
         ("WaveAction", "i => WaveRoll.ExpandEntries(scaled.Entries(i), _rng)", "groups without their own entries"),
         ("ApocalypseAction", "public ScalingSource Scaling(ActiveEvent active) => ScalingReads.Source(active);", "apocalypse without a source"),
-        ("ApocalypseAction", "public void ResumeCancelled(string eventId) => ScalingReads.EventEnded(eventId);", "failed resume keeps its rows"),
+        ("ApocalypseAction", "public void ResumeCancelled(string eventId) => EventRuntime.EndSpawnState(eventId);", "failed resume keeps its rows"),   // EndSpawnState drops the scaling rows (AuthoringTests.Scaling)
         ("HealthMonitor", ".Concat(ScalingReads.Health)", "no health entry"),
     ];
 

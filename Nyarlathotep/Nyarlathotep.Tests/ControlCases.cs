@@ -323,7 +323,7 @@ public static class ControlCases
         T("D24", "TickTimer", "EngineTests", ["slowest_names_another_tick"], ["top_three_phases_of_the_slowest_tick"], ["window_without_phases"]) with { Plan = EventSpawns },
         T("D32", "ChatBytes", "CommandArgTests", ["line_exceeds_480", "line_holds_markup", "usage_holds_markup"], ["new_lines_at_maximum_lengths"], ["fields"]) with { Plan = EventSpawns },
         T("D33", "EndPaths", "EndPathTests",
-            ["natural_end_leaves_state", "event_stop_leaves_state", "fault_cancel_leaves_state", "purge_leaves_state", "purge_leaves_a_streak_open", "event_end_leaves_its_streaks", "runtime_skips_a_streak_close", "restart_keeps_state",
+            ["natural_end_leaves_state", "event_stop_leaves_state", "fault_cancel_leaves_state", "purge_leaves_state", "purge_leaves_a_streak_open", "event_end_leaves_its_streaks", "runtime_skips_a_streak_close", "a_failed_resume_keeps_spawn_state", "restart_keeps_state",
              "stopping_one_touches_the_other"],
             ["every_path_empties_all_three"], ["event_without_units"]) with { Plan = EventSpawns },
         C("D22", "Authorization", "preflight -AuthSuite (the real tree) and -SelfTest (these fixture batteries) › Test-CheckGatewayOnly, Test-CheckMutatingFloor and Test-CheckAuthSuite",

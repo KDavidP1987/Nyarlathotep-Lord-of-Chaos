@@ -382,6 +382,7 @@ public class ApocalypseDependencyFailureTests
         Assert.Null(rig.Engine.ResumePending);
         Assert.Null(rig.State.Document.Apocalypse);
         Assert.Equal(["apocalypse - not resumed: resume read failed: record unreadable"], rig.Game.Warns);
+        Assert.Empty(rig.Game.Cancelled);                                    // nothing resumed, nothing to drop
         // a throw in the rebuild after the drain: not resumed, nothing left running, the record gone, one line
         var (_, again) = Restarted();
         Assert.Equal("apo", again.Host.Boot(() => again.State.Document.Apocalypse, () => Apo.Set(Apo.Event()), again.Engine, again.Game,
@@ -400,6 +401,7 @@ public class ApocalypseDependencyFailureTests
         Assert.Null(again.State.Document.Apocalypse);
         Assert.Null(again.Host.Run);
         Assert.Equal(["apocalypse apo not resumed: resume read failed: ground unreadable"], again.Game.Warns);
+        Assert.Equal(["apo"], again.Game.Cancelled);                         // its hunt seeds, territory map, streaks and watch rows go too
         Assert.Null(again.Host.Resume(again.Engine, Open(), again.Game, again.State, again.Board, T0.AddMinutes(2).AddSeconds(1)));
         Assert.Single(again.Game.Warns);
     }

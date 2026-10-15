@@ -46,6 +46,11 @@ public interface IApocalypseGame : IApocalypseWorld
     /// <summary>Builds the run's claimed-territory map for its hunt and roam (TerritoryMap.ForWave); never throws.</summary>
     void MapTerritory(string eventId);
 
+    /// <summary>A resume that failed after the engine resumed the run cancels it outside EventRuntime's end paths: the
+    /// event's spawn state beyond its units goes here (hunt seeds, territory map, failure streaks, region and unit-watch
+    /// rows, scaling decision rows and read streak; EventRuntime.EndSpawnState; scaling D12, D15). Never throws.</summary>
+    void ResumeCancelled(string eventId);
+
     /// <summary>The boot sweep's despawns still queued (the drain gate, D12).</summary>
     int LeftToDrain { get; }
 
@@ -59,10 +64,6 @@ public interface IApocalypseGame : IApocalypseWorld
     /// read at each horde rise and roamer top-up, null when the read failed; null for a run without the block. Never
     /// throws.</summary>
     ScalingSource? Scaling(ActiveEvent active) => null;
-
-    /// <summary>A resume that failed after the engine resumed the run cancels it here, outside EventRuntime's end paths: its
-    /// scaling decision rows and read streak go too (scaling D12, D15; Services: ScalingReads.EventEnded). Never throws.</summary>
-    void ResumeCancelled(string eventId) { }
 }
 
 /// <summary>What one apocalypse tick did: the outcome (won or lost end the run; survived is the engine's expiry) and the
@@ -736,7 +737,9 @@ public sealed class ApocalypseHost
             Safe(game, () => game.Ledger.EndEvent(p.EventId, DateTime.MaxValue));
             // and the restored scoreboard rows, so a later run of the same id starts from zero (code review L2)
             board.End(p.EventId);
-            Safe(game, () => { game.ResumeCancelled(p.EventId); return 0; });   // scaling D12, D15: no decision row or streak outlives it
+            // and its spawn state beyond the units, as every other end path drops it (hunt seeds, territory map, streaks, watch
+            // rows, scaling decision rows; scaling D12, D15)
+            Safe(game, () => { game.ResumeCancelled(p.EventId); return 0; });
             Reset(null);
             RemoveRecord(state, p.EventId);
             return null;
