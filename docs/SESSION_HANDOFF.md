@@ -4,6 +4,20 @@ Where work stands between sessions. Overwrite this file at the end of a session;
 The plans (`docs/dod/`), audits (`docs/audits/`) and feature docs stay the source of truth. This file only points
 into them.
 
+**Written 2026-10-15 (session close)**: a docs-only session, pushed to main.
+- **Raphael:** `docs/RAPHAEL_HANDOFF_API8.md` is the new handoff for the Raphael workspace (api 8 panels, refresh
+  schedule, notifications, the player overlay, a test checklist). Contract §10.5-§10.9 specify the proposed live-ops
+  and communications wire.
+- **Decisions:** the owner settled them as design §9 D59 (L1-L8): exact coordinates of every spawned unit for admins,
+  per event or in bulk; a player view with countdowns and personal alerts, without unit details.
+- **Epic:** A41 adds children live-ops (next, beside the test weekend, before scaling) and communications (after
+  replacements). Neither has a plan yet; `/dod plan live-ops` is the next planning step.
+- **Uriel:** `docs/lessons/SPAWNING_LESSONS_FOR_URIEL.md` is rewritten as unit lessons for Uriel's castle events.
+- **GitHub pages:** the root README was rewritten, `docs/README.md` indexes the docs, the Thunderstore README's feature
+  blocks were regrouped by pillar (moves only), and the repo description and topics were updated.
+
+The 2026-10-14 close below still describes the build state.
+
 **Written 2026-10-14 (session close)**: the coming 0.13.0 passed Codex's pre-release review after four fixes (b1e3cdc);
 the replacements plan (D58) is approved; the tester package is in GitHub (`testing/`) with install steps, and test
 build **v0.13.0-rc.1** is a GitHub pre-release (mod zip + blank workbook + PDF, booted on the dev server first). main
@@ -46,6 +60,8 @@ and `scaling` are pushed and equal to origin. The repo is
 
 ## Next, in order
 
+0. `/dod plan live-ops` (parent nyarlathotep; contract §10.5-§10.7, D59), one subagent review round; build on its own
+   branch beside the test weekend.
 1. A row edit in `tools/tester-package/rows.py` needs `python tools/tester-package/build.py` (TesterPackageTests fails
    otherwise); a new test build is a new `v0.13.0-rc.<n>` pre-release (DLL built with `-p:Version=0.13.0-rc.<n>`,
    tag and release declared in tools/paths-manifest.txt, `ROUND["download"]` updated).

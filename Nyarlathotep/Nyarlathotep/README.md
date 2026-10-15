@@ -15,6 +15,32 @@ Every feature is an *event*: a trigger starts an action for a set time, and ever
 removed after it ends. Features not yet released are marked *in development*.
 
 <details>
+<summary><b>Faction empowerment</b> · <i>0.4.0</i></summary>
+
+Every NPC of up to five factions is buffed for the event's duration, on a schedule, at nightfall or daybreak,
+after a V Blood kill, or by command: a Blood Moon for the NPCs. Physical and spell power, max health, attack speed
+and move speed each take a multiplier from 1.0 to 3.0. The buff is a timed effect that expires on its own, so no
+NPC stays changed after the event, even if the mod is removed mid-event. NPCs that respawn or load in during the
+event are buffed within about 15 s. Players' servants, traders, Bloodcraft familiars and the mod's own units are
+never buffed, and V Bloods only when `includeVBloods` is true. One empowerment per faction runs at a time. Turn it on
+with `[Pillars] FactionEmpowerment = true`.
+
+The seeded `example-empowerment` (off by default) looks like this; `{faction}` in a message names the factions:
+
+```json
+{ "id": "example-empowerment", "name": "Bandits rally after a V Blood falls", "enabled": false,
+  "pillar": "empowerment", "trigger": { "type": "VBloodKilled", "bosses": ["any"] },
+  "conditions": { "minPlayers": 1, "cooldownMinutes": 60 }, "durationSeconds": 600,
+  "action": { "type": "Empower", "factions": ["Faction_Bandits"],
+    "stats": { "physicalPower": 1.3, "spellPower": 1.3, "maxHealth": 1.5, "attackSpeed": 1.15, "moveSpeed": 1.1 } },
+  "announce": { "start": ["The {faction} rally: {event}."], "end": ["The {faction} lose heart. {event} is over."], "warnings": false } }
+```
+
+Optional action keys: `includeUnits` / `excludeUnits` (unit names such as `CHAR_Bandit_Thug`) and
+`includeVBloods` (default `false`). Faction names are the game's `Faction_*` names.
+</details>
+
+<details>
 <summary><b>Event spawns</b> · <i>0.2.0; strength, Hunt and AroundPlayer 0.7.0</i></summary>
 
 Waves of chosen units appear at a map point, around the admin, or around a random player: up to 10 unit types, up
@@ -194,54 +220,6 @@ disables the events that use these keys.
 </details>
 
 <details>
-<summary><b>Announcements</b> · <i>0.2.0</i></summary>
-
-Wave warnings before each wave (by default 5 min, 1 min and 10 s ahead), start and end banners with your own
-text or a stock line, and a daily banner naming the events still due that day, each behind its own switch.
-Admins can also broadcast on demand with `.nyar announce`.
-</details>
-
-<details>
-<summary><b>Raphael companion panel</b> · <i>0.3.0 (server side)</i></summary>
-
-The optional client mod [Raphael](https://thunderstore.io/c/v-rising/p/TheShadowRealm/Raphael/) can show a live
-events board with wave countdowns, and give admins an events list and a kill-switch button. From 0.3.0 the server
-answers Raphael's reads (active events, event definitions for admins) and pushes updates when an event starts or
-ends, a wave comes or is warned, the kill switch fires or the definitions change. The pushes never tell a player
-more than chat or `.nyar status` does, and no line carries a position. From 0.5.2 the admin buttons (start or
-stop an event, use a template, switch a pillar, purge) have machine-readable versions that answer one line each.
-From 0.8.0 (api 6) an event's trigger can also read `interval`, `regionentered` or `factionkills`; a Raphael built
-for api 5 may show those events' trigger wrongly until it is updated.
-The panels arrive with a Raphael update.
-</details>
-
-<details>
-<summary><b>Faction empowerment</b> · <i>0.4.0</i></summary>
-
-Every NPC of up to five factions is buffed for the event's duration, on a schedule, at nightfall or daybreak,
-after a V Blood kill, or by command: a Blood Moon for the NPCs. Physical and spell power, max health, attack speed
-and move speed each take a multiplier from 1.0 to 3.0. The buff is a timed effect that expires on its own, so no
-NPC stays changed after the event, even if the mod is removed mid-event. NPCs that respawn or load in during the
-event are buffed within about 15 s. Players' servants, traders, Bloodcraft familiars and the mod's own units are
-never buffed, and V Bloods only when `includeVBloods` is true. One empowerment per faction runs at a time. Turn it on
-with `[Pillars] FactionEmpowerment = true`.
-
-The seeded `example-empowerment` (off by default) looks like this; `{faction}` in a message names the factions:
-
-```json
-{ "id": "example-empowerment", "name": "Bandits rally after a V Blood falls", "enabled": false,
-  "pillar": "empowerment", "trigger": { "type": "VBloodKilled", "bosses": ["any"] },
-  "conditions": { "minPlayers": 1, "cooldownMinutes": 60 }, "durationSeconds": 600,
-  "action": { "type": "Empower", "factions": ["Faction_Bandits"],
-    "stats": { "physicalPower": 1.3, "spellPower": 1.3, "maxHealth": 1.5, "attackSpeed": 1.15, "moveSpeed": 1.1 } },
-  "announce": { "start": ["The {faction} rally: {event}."], "end": ["The {faction} lose heart. {event} is over."], "warnings": false } }
-```
-
-Optional action keys: `includeUnits` / `excludeUnits` (unit names such as `CHAR_Bandit_Thug`) and
-`includeVBloods` (default `false`). Faction names are the game's `Faction_*` names.
-</details>
-
-<details>
 <summary><b>Event templates and chat authoring</b> · <i>0.5.0; three automatic templates 0.8.0; a wave set 0.9.0; a swarm 0.10.0; hunting grounds 0.11.0; revenge 0.12.0</i></summary>
 
 Thirteen ready-made events ship inside the mod. `.nyar template use <id>` copies one into your `events.json`,
@@ -286,6 +264,28 @@ names), or in game with `.nyar event set <id> action.scope FarbaneWoods,DunleyFa
 
 `.nyar region here` names the region you stand in; `.nyar region list` shows how many events use each region.
 Announcements can say `{region}`. If the map cannot be read, regional events are disabled and the rest run.
+</details>
+
+<details>
+<summary><b>Announcements</b> · <i>0.2.0</i></summary>
+
+Wave warnings before each wave (by default 5 min, 1 min and 10 s ahead), start and end banners with your own
+text or a stock line, and a daily banner naming the events still due that day, each behind its own switch.
+Admins can also broadcast on demand with `.nyar announce`.
+</details>
+
+<details>
+<summary><b>Raphael companion panel</b> · <i>0.3.0 (server side)</i></summary>
+
+The optional client mod [Raphael](https://thunderstore.io/c/v-rising/p/TheShadowRealm/Raphael/) can show a live
+events board with wave countdowns, and give admins an events list and a kill-switch button. From 0.3.0 the server
+answers Raphael's reads (active events, event definitions for admins) and pushes updates when an event starts or
+ends, a wave comes or is warned, the kill switch fires or the definitions change. The pushes never tell a player
+more than chat or `.nyar status` does, and no line carries a position. From 0.5.2 the admin buttons (start or
+stop an event, use a template, switch a pillar, purge) have machine-readable versions that answer one line each.
+From 0.8.0 (api 6) an event's trigger can also read `interval`, `regionentered` or `factionkills`; a Raphael built
+for api 5 may show those events' trigger wrongly until it is updated.
+The panels arrive with a Raphael update.
 </details>
 
 <details>

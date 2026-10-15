@@ -2,125 +2,133 @@
 
 <p align="center"><img src="docs/img/nyarlathotep-cover.jpg" alt="Nyarlathotep, Lord of Chaos" width="512"></p>
 
-A server-side BepInEx IL2CPP plugin for V Rising that adds admin-configured, event-driven NPC behaviour. Events
-start on a schedule, at nightfall or daybreak, after a V Blood kill, or by command, and either empower whole factions
-or send waves of units that can be levelled, strengthened, set to hunt nearby players, and placed around a random
-player, outside claimed castle territory unless the event allows it. Events can also start themselves: on a random
-interval, when a player enters a region, or when a player kills enough of a faction, and a wave can spread over
-several players. Each wave can have its own units and stats, waves can grow by themselves, an event can be held
-inside an arena or bound to map regions, where its units roam and hunt the players inside, and an event can end
-with a scoreboard and a kill-to-death winner. A faction can take revenge on a player who kills too many of its
-units, and an event's last wave can carry bosses. Thirteen built-in templates,
-in-game authoring, regional scope, warnings and banners, and a kill switch come with it. The companion client Raphael reads a machine-readable API (api 7).
+A server-side BepInEx IL2CPP plugin for V Rising that stages NPC events the base game doesn't have: empowered
+factions, hunting waves, swarms in an arena, region-bound hunting grounds and faction revenge. Admins build events
+from templates or in chat. Each event starts on a schedule, at nightfall, after a V Blood kill, on its own, or by
+command, and everything it spawned is removed when it ends.
 
-0.12.x is a public beta. Every pillar and automatic announcement starts disabled; admins opt in.
+Public beta. Every pillar and every automatic announcement starts disabled; admins opt in.
 
 ## Status
 
-**v0.12.0.** See [`CHANGELOG.md`](CHANGELOG.md) for what ships and [`docs/dod/`](docs/dod/) for the
-build plan. Next, for Halloween: the apocalypse event.
+| Build | What it is |
+|---|---|
+| [**v0.12.0**](https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.12.0) | Current release: revenge and final-wave bosses. |
+| [**v0.13.0-rc.1**](https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.0-rc.1) | Test build for the Halloween release: the apocalypse event and unit watch. The test round's workbook is in [`testing/`](testing/). |
+
+What each version shipped: [`CHANGELOG.md`](CHANGELOG.md). What comes next: the Epic plan,
+[`docs/dod/nyarlathotep.md`](docs/dod/nyarlathotep.md).
 
 ## Quick start
 
-Install the package on a dedicated server and start it once. Then, in game as an admin, no file edits needed:
+Install the package on a dedicated server and start it once. Then, in game as an admin, with no file edits:
 
-1. `.nyar template list`
-2. `.nyar template use undead-nightfall`
-3. `.nyar pillar empowerment on`
-4. `.nyar event enable undead-nightfall`
-5. `.nyar status`: at the next nightfall the undead are empowered for 20 minutes, and this shows it running.
+```
+.nyar template list
+.nyar template use undead-nightfall
+.nyar pillar empowerment on
+.nyar event enable undead-nightfall
+.nyar status
+```
 
-`.nyar purge` then `.nyar purge confirm` is the kill switch.
+At the next nightfall the undead are empowered for 20 minutes, and `.nyar status` shows the event running.
+`.nyar purge`, then `.nyar purge confirm`, is the kill switch.
 
 ## How it works
 
-Every feature is an **event**: a *trigger* (schedule, interval, V Blood kill, a player entering a region or
-killing a faction, boss health phase, zone activity, admin command) fires an *action* (empower a faction, spawn waves with a behaviour) for a *duration*, after
-which everything the event created is reverted or despawned. Four services carry the load: `TriggerBus`,
-`EventScheduler`, `SpawnTracker`, and the per-pillar action services.
+Every feature is an **event**: a *trigger* fires an *action* for a *duration*. When the duration ends, everything
+the event created is reverted or despawned.
 
-Waves spawn only on walkable ground and never in claimed castle territory unless the event sets `allowTerritory`.
-Territory is read once per wave, so a castle claimed during a wave counts from the next one.
+| Triggers | Actions |
+|---|---|
+| Schedule (days and times), nightfall or daybreak, a V Blood kill, a random interval, a player entering a region, a player killing a faction, faction revenge, an admin command | Empower factions with timed carrier buffs, or spawn waves of units, with levels, stat multipliers and a behaviour (hunt nearby players, roam a region, hold an arena) |
 
-**Scale.** The tick budget (under 5 ms average per one-minute window) is measured and promised at the default caps:
-150 tracked units, Hunt, fan-out, the player-trigger scan and the kill feed included. Raising `MaxTrackedUnits` to 151–500 is best effort; the 250 ms slow-tick warning
-names the slowest phase if a tick runs long.
+Safety rules hold for every event:
+
+- **Tracked:** every spawned unit is registered and found again by a boot-time sweep, so a crash or restart leaves
+  nothing behind.
+- **Reversible:** empowerment rides on buffs that expire by themselves. Direct stat writes touch only units the mod
+  spawned.
+- **Budgeted:** spawns and despawns are staged a few per tick under configurable caps, and one command ends
+  everything.
+- **Placed with care:** waves spawn on walkable ground, and outside claimed castle territory unless the event allows
+  it.
+
+**Scale.** The tick budget, under 5 ms average per one-minute window, is measured at the default caps: 150 tracked
+units, with hunting, fan-out, the player-trigger scan and the kill feed included. Raising `MaxTrackedUnits` to
+151-500 is best effort. A 250 ms slow-tick warning names the slowest phase.
 
 ## Features
 
-| Feature | State | Design doc |
-|---|---|---|
-| Event engine, spawn-wave events, kill switch | 0.2.0 | [`docs/features/FOUNDATION.md`](docs/features/FOUNDATION.md) |
-| Announcements (warnings, banners, daily banner) | 0.2.0 | [`docs/features/FOUNDATION.md`](docs/features/FOUNDATION.md) |
-| Raphael handshake (`.nyar api version`) | 0.2.0 | [`docs/RAPHAEL_INTEGRATION_CONTRACT.md`](docs/RAPHAEL_INTEGRATION_CONTRACT.md) |
-| Raphael api 2: `api status`, `api events`, `api sub` pushes | 0.3.0 | [`docs/features/RAPHAEL_API.md`](docs/features/RAPHAEL_API.md) |
-| Faction empowerment: the `Empower` action (five stats ×1.0–3.0 on up to five factions, timed carrier buffs), api 3 empower rows | 0.4.0 | [`docs/features/FACTION_EMPOWERMENT.md`](docs/features/FACTION_EMPOWERMENT.md) |
-| Event library: six built-in templates, chat authoring (`template`, `event new/copy/delete/set`, `pillar`), readiness column | 0.5.0 | [`docs/features/EVENT_LIBRARY.md`](docs/features/EVENT_LIBRARY.md) |
-| Walkable spawn points: wave units moved off water, cliffs and walls by the game's tile collision | 0.5.1 | [`docs/features/WALKABLE_SPAWNS.md`](docs/features/WALKABLE_SPAWNS.md) |
-| Raphael api 4: admin action twins (`api event`, `api template use`, `api pillar`, `api purge`) that answer one line each, at most 5 per admin per second, and reads (`api templates`, `api template info`, `api pillar list`, `api killswitch`) that answer rows and an end line | 0.5.2 | [`docs/features/RAPHAEL_API_ADMIN.md`](docs/features/RAPHAEL_API_ADMIN.md) |
-| Regions: `scope` on triggers and actions (the game's world regions), `.nyar region list\|here`, `{region}`, api 5 (`api regions`, `region=` keys); 0.5.x disables, after a rollback, a definition carrying `scope` (unknown key) or an announcement using `{region}` (unknown placeholder) | 0.6.0 | [`docs/features/REGIONS.md`](docs/features/REGIONS.md) |
-| Event spawns: per-unit `chance`, `modifiers` (level or levelDelta, four stat multipliers), `loot`, the `Hunt` behaviour, the `AroundPlayer` location, the claimed-territory rule and `allowTerritory`, their chat fields | 0.7.0 | [`docs/features/EVENT_SPAWNS.md`](docs/features/EVENT_SPAWNS.md) |
-| Automation: the `Interval`, `RegionEntered` and `FactionKills` triggers, `fanOut` on AroundPlayer waves, reachable spawn points (a walkable line from the player), three templates, their chat fields, api 6; 0.7.0 disables, after a rollback, a definition using them | 0.8.0 | [`docs/features/AUTOMATION.md`](docs/features/AUTOMATION.md) |
-| Wave sets: `waveList` (per-wave units, per-entry level and stats, `afterSeconds` / `whenCleared` starts, "all waves defeated"), the per-event `scoreboard` and `[Scoreboard] IncludeAdmins`, the `graveyard-waves` template, their chat fields; 0.8.0 disables, after a rollback, a definition using them | 0.9.0 | [`docs/features/WAVE_SETS.md`](docs/features/WAVE_SETS.md) |
-| Swarm: `arena` (units kept in a 15-60 m circle around the spot or the starting admin), `growth` (waves generated from one base wave, larger and stronger each time), `winner: "KillDeath"` (the best kill-to-death ratio after the scoreboard), the `spider-swarm` template, their chat fields; 0.9.0 disables, after a rollback, a definition using them | 0.10.0 | [`docs/features/SWARM.md`](docs/features/SWARM.md) |
-| Hunting grounds: the `Region` location (waves spread over the scope regions), `regionLock` (units kept inside), the `RegionHunt` behaviour (groups hunt the nearest player inside, hidden jumps beyond 60 m), region ambush, the `spider-hunting-grounds` template, their chat fields; 0.10.0 disables, after a rollback, a definition using them | 0.11.0 | [`docs/features/HUNTING_GROUNDS.md`](docs/features/HUNTING_GROUNDS.md) |
-| Revenge: the `Revenge` trigger (per-player heat from a faction's kills and V Blood kills, private warnings, a faction alert that names no one, tiers around the target only, never in claimed territory, heat in memory only), `bosses` on a wave event's last wave, the `bandit-revenge` template and Ungoro on the spider templates, their chat fields, api 7; 0.11.0 disables, after a rollback, a definition using them | 0.12.0 | [`docs/features/REVENGE.md`](docs/features/REVENGE.md) |
-| Boss reinforcements | in development | [`docs/features/BOSS_REINFORCEMENTS.md`](docs/features/BOSS_REINFORCEMENTS.md) |
-| Defended zones | in development | [`docs/features/DEFENDED_ZONES.md`](docs/features/DEFENDED_ZONES.md) |
-| Sieges | in development | [`docs/features/SIEGES.md`](docs/features/SIEGES.md) |
-| Stats and leaderboards | in development | Epic plan Business rules 11–12 ([`docs/dod/nyarlathotep.md`](docs/dod/nyarlathotep.md)) |
+| Feature | What it adds | Since | Design doc |
+|---|---|---|---|
+| Event engine | Triggers, durations, conditions, the kill switch, announcements (wave warnings, banners, a daily banner) | 0.2.0 | [FOUNDATION](docs/features/FOUNDATION.md) |
+| Faction empowerment | Five stats ×1.0-3.0 on up to five factions, through timed carrier buffs | 0.4.0 | [FACTION_EMPOWERMENT](docs/features/FACTION_EMPOWERMENT.md) |
+| Event library | Built-in templates and chat authoring: create, copy, edit and delete events, switch pillars | 0.5.0 | [EVENT_LIBRARY](docs/features/EVENT_LIBRARY.md) |
+| Walkable spawns | Units moved off water, cliffs and walls using the game's tile collision | 0.5.1 | [WALKABLE_SPAWNS](docs/features/WALKABLE_SPAWNS.md) |
+| Regions | Triggers and actions scoped to the game's world regions | 0.6.0 | [REGIONS](docs/features/REGIONS.md) |
+| Event spawns | Per-unit chance, level and stat modifiers, loot, the Hunt behaviour, waves around a random player | 0.7.0 | [EVENT_SPAWNS](docs/features/EVENT_SPAWNS.md) |
+| Automation | Interval, region-entered and faction-kill triggers; one wave spread over several players | 0.8.0 | [AUTOMATION](docs/features/AUTOMATION.md) |
+| Wave sets | Each wave with its own units and stats, timed or started when the last is cleared; an event scoreboard | 0.9.0 | [WAVE_SETS](docs/features/WAVE_SETS.md) |
+| Swarm | Arenas, waves that grow on their own, a kill-to-death winner | 0.10.0 | [SWARM](docs/features/SWARM.md) |
+| Hunting grounds | Waves spread over regions, units kept inside them, groups that hunt the players there | 0.11.0 | [HUNTING_GROUNDS](docs/features/HUNTING_GROUNDS.md) |
+| Revenge | A faction hunts a player who kills too many of its units; bosses on an event's last wave | 0.12.0 | [REVENGE](docs/features/REVENGE.md) |
+| Apocalypse | A map-wide outbreak of one faction: hotspots, roamers that spread, hordes marching on a goal | 0.13.0 (rc) | [APOCALYPSE](docs/features/APOCALYPSE.md) |
+| Unit watch | Stuck units moved back to walkable ground, or removed after two tries | 0.13.0 (rc) | [UNIT_WATCH](docs/features/UNIT_WATCH.md) |
+| Raphael API | A machine-readable `[NYAR:*]` wire for the Raphael client: status, admin actions, pushes | 0.3.0, api 8 in 0.13.0 | [Contract](docs/RAPHAEL_INTEGRATION_CONTRACT.md) |
+| Scaling, replacements, boss reinforcements, live operations, stats, sieges | Planned | — | [Epic plan](docs/dod/nyarlathotep.md) |
 
 ## Architecture
 
-`Logic/` holds the rules with no game dependency (validation, precedence, schedules, the spawn ledger, the
-announcer, wire format) and is unit-tested. `Services/` drive it from the game: `EventStore` and `Persistence`
-(JSON files under `BepInEx/config/Nyarlathotep/`), `TriggerBus` (hooks), `EventScheduler` (one main-thread
-tick in phases), `EventRuntime`, `SpawnTracker` (budgeted spawns and despawns, the boot sweep), `WaveAction`,
-`TerritoryMap` (claimed castle blocks) and `HuntAction` (aggro seeds every 5 s), `EmpowerAction`
-(carrier buffs applied and removed through a budgeted ledger) and `Announcer`.
+| Folder | Holds |
+|---|---|
+| `Logic/` | The rules, with no game dependency: validation, precedence, schedules, the spawn ledger, the announcer, the wire format. Unit-tested. |
+| `Services/` | The game side: `EventStore` and `Persistence` (JSON under `BepInEx/config/Nyarlathotep/`), `TriggerBus` (hooks), `EventScheduler` (one main-thread tick in phases), `EventRuntime`, `SpawnTracker` (budgeted spawns and despawns, the boot sweep), `WaveAction`, `HuntAction`, `EmpowerAction`, `ApocalypseAction`, `TerritoryMap`, `Announcer` |
+| `Patches/` | Harmony patches, one file per patched system |
+| `Commands/` | The `.nyar` chat commands, and the `.nyar api` reads and admin twins Raphael uses |
+
 Every mutating operation goes through `Logic/ActionGateway`, and every entity write stays in `Services/` or
 `Patches/`; `tools/preflight.ps1` checks both statically.
 
-## Layout
+## Repository layout
 
 ```
-Nyarlathotep/Nyarlathotep/        C# project (Plugin, Core, Patches, Services, Commands, Config, Logic, Resources)
+Nyarlathotep/Nyarlathotep/        the C# project (Plugin, Core, Patches, Services, Commands, Config, Logic, Resources)
 Nyarlathotep/Nyarlathotep.Tests/  xUnit tests over Logic/ (no game needed)
-docs/                             design, DoD plans, audits, feature docs, research, asset guide
-tools/preflight.ps1               release-surface sync and safety checks (-SelfTest, -LogCheck, -Paths, ...)
-tools/rollback-gate.ps1           a release's rollback checks in one command (repository revert, N-1 boot drill, snapshot)
-tools/dev-snapshot.ps1            saves and restores the dev server's plugins and config around a test session
-tools/ingame/                     helpers for in-game test sessions on a development world
+docs/                             design, feature docs, plans, audits, Raphael contract (index: docs/README.md)
+testing/                          the current tester workbook and its PDF
+tools/preflight.ps1               release-surface sync and safety checks
+tools/rollback-gate.ps1           a release's rollback checks in one command
+tools/vrclient/                   automated in-game tests that drive the real client
+tools/tester-package/             builds the tester workbook
 ```
 
 ## Building
 
 ```powershell
 cd Nyarlathotep
-dotnet build Nyarlathotep.sln -c Release                                        # build + deploy to local server
+dotnet build Nyarlathotep.sln -c Release                                        # build and deploy to a local server
 dotnet build Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__  # compile check only
 dotnet test Nyarlathotep.sln                                                    # unit tests
 ```
 
-Targets `net6.0` with `BepInEx.Unity.IL2CPP` 6.0.0-be.733, `VampireReferenceAssemblies` 1.1.12, and
-VampireCommandFramework 0.10.
+Targets `net6.0` with `BepInEx.Unity.IL2CPP` 6.0.0-be.733, `VampireReferenceAssemblies` 1.1.12 and
+VampireCommandFramework 0.10. Stop the dedicated server before a deploying build; it locks the DLL.
 
 ## Release discipline
 
-Six surfaces move together in one `chore(release): vX.Y.Z` commit (csproj + toml versions, both
-changelogs, both READMEs). Run `pwsh tools/preflight.ps1` first, and `pwsh tools/rollback-gate.ps1 -From <previous
-tag> -To <new tag>` on the local tag before pushing.
+Six surfaces move together in one `chore(release): vX.Y.Z` commit: the csproj and toml versions, both changelogs and
+both READMEs. Run `pwsh tools/preflight.ps1` first, and `pwsh tools/rollback-gate.ps1 -From <previous tag> -To <new
+tag>` on the local tag before pushing.
 
-## Docs
+## Documentation
 
-- [`docs/NYARLATHOTEP_DESIGN.md`](docs/NYARLATHOTEP_DESIGN.md) — architecture, config, the command reference (§6), build order, decisions
-- [`docs/RAPHAEL_INTEGRATION_CONTRACT.md`](docs/RAPHAEL_INTEGRATION_CONTRACT.md) — the `[NYAR:*]` wire contract for Raphael
-- [`docs/RAPHAEL_HANDOFF.md`](docs/RAPHAEL_HANDOFF.md) — what the Raphael client builds against api 2 and 3
-- [`docs/RAPHAEL_HANDOFF_API4.md`](docs/RAPHAEL_HANDOFF_API4.md) — the api 4 admin twins for the Raphael client
-- [`docs/dod/`](docs/dod/) — Definition-of-Done plans, reviews and progress
-- [`docs/RESEARCH_NOTES.md`](docs/RESEARCH_NOTES.md) — what we learned from sibling mods, reference mods, and Thunderstore
-- [`docs/GAME_ASSETS.md`](docs/GAME_ASSETS.md) — using the prefab dump; factions, buffs, units
-- [`docs/DEV_REMINDERS.md`](docs/DEV_REMINDERS.md) — IL2CPP/ECS gotchas with sources
+Start at [`docs/README.md`](docs/README.md). The most used:
+
+- [Design](docs/NYARLATHOTEP_DESIGN.md): architecture, configuration, the command reference (§6), decisions (§9)
+- [Feature docs](docs/features/): one per feature, each with its test results
+- [Raphael contract](docs/RAPHAEL_INTEGRATION_CONTRACT.md) and the [api 8 handoff](docs/RAPHAEL_HANDOFF_API8.md)
+- [Plans](docs/dod/): the Definition-of-Done plans that track every feature
 
 ## License
 
