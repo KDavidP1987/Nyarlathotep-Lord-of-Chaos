@@ -4,47 +4,43 @@ Where work stands between sessions. Overwrite this file at the end of a session;
 The plans (`docs/dod/`), audits (`docs/audits/`) and feature docs stay the source of truth. This file only points
 into them.
 
-**Written 2026-10-14 (evening)**: unit-watch step 3 done (code, A2/A3, in-game Session 1); the next step is the test
-weekend sheet. Every commit after 246fe9e (v0.12.0) is local: push waits on the owner's OK. The repo is
+**Written 2026-10-14 (night)**: scaling (the first 1.0 child) has steps 1-4 done on the git branch `scaling`; step 5
+needs real players. main gained a fix to apocalypse's failed-resume cleanup (6f9f75c). Push waits on the owner's OK:
+main has b8d21d1, 5b6ad38, 6f9f75c unpushed; the branch `scaling` is local only. The repo is
 `C:\dev\projects\Games\V Rising\Nyarlathotep Lord of Chaos`.
 
 ## Where we are
 
 - **0.12.0 (revenge + final-wave bosses)** pushed with its GitHub pre-release. `dod close revenge` (partial) waits on the
   owner's sign-off.
-- **Unit watch** (`docs/dod/unit-watch.md`, 34 items, 4 verified; ships WITH apocalypse as 0.13.0):
-  - Steps 1-3 done. A2 (design §9 D56): the standing and still checks mark only a unit holding a player as its aggro
-    target. A3: NPCs drop a forced target on invulnerable Chaos and the game's height correction lifts a sunk unit, so the
-    in-game sessions use `.nyar event unstick` marks; positive standing/still cases and D34's first-move measurement
-    (which sets SpawnStillSeconds) move to the test weekend.
-  - Session 1 results: `docs/features/UNIT_WATCH.md` › Test results › Session 1 (watch 23/23, remove 23/23, stall 25/25,
-    ends 28/33 + 7/7 + 10/10, apocalypse 15/16 + resume read, timing run 3 27/27 with D28 10/10 windows). Post-audit:
-    `docs/audits/unit-watch.md` › Post-audit › Step 3.
-  - Verified: D18, D20, D22, D28. Ready for the owner's acceptance (manual, rubric 3): D19, D24-D27.
-  - Dev-only NyarDevTools additions: `.devaggro`/`.devaggroread` (DevAggro.cs), the strand hold (DevHold.cs), `.devbuff`,
-    `.devperch`. The DevHold type scan logs HarmonyX type-load warnings at boot (dev server only).
-- **Apocalypse 0.13.0** (`docs/dod/apocalypse.md`, 26/38): steps 1-3 done; step 4 sheet in `docs/features/APOCALYPSE.md`
-  › Test weekend; step 5's drill part built.
+- **Apocalypse + unit watch → 0.13.0** (`docs/dod/apocalypse.md` 26/38, `docs/dod/unit-watch.md`): steps 1-3 of both
+  done; their test weekend sheets are in `docs/features/APOCALYPSE.md` and `docs/features/UNIT_WATCH.md`. New on main:
+  6f9f75c — a resume that fails after the engine resumed an apocalypse run now drops the run's hunt seeds, territory
+  map, streaks and unit-watch rows (`IApocalypseGame.ResumeCancelled` → `EventRuntime.EndSpawnState`); Codex APPROVED;
+  Log notes in both plans. The deployed dev DLL (md5 6345be3f…) predates it.
+- **Scaling** (`docs/dod/scaling.md`, 18/27 verified, design §9 D52/D57; built on branch `scaling` so nothing reaches
+  0.13.0; merge after v0.13.0 is tagged; release 0.14.0):
+  - Step 1 spike (ff1a1b7): gear level = floor of the Equipment sum, equal to the character screen 7/7.
+  - Step 2 Logic (faf64fb), step 3 Services (abe8020; reads only in `Services/ScalingReads.cs`; Debug-only phantom
+    players `[Debug] FaultInjection = scaleplayers:<n>@<gear>`), merge of main's resume fix (0421b64).
+  - Step 4 (642d376): vrclient Sessions 1-3 — scaling.vrs 19/19, scaling-admins-off.vrs 10/10, scaling-phantoms.vrs 22/22
+    (Debug), scaling-timing.vrs 25/25 with D22 10/10 windows under 5 ms at 126 tracked. Results:
+    `docs/features/SCALING.md` › Test results; audit `docs/audits/scaling.md`.
+  - D1-D17 and D22 verified. Ready for the owner's acceptance: D19 (spike), D20 (Session 1), D21 (Session 2).
+  - Step 5 sheet for real players: `docs/features/SCALING.md` › Owner test sheet (D23).
+- **Tester package** `tools/tester-package` (round 1, 20 production-setup rows); built output is gitignored.
 - **Owner acceptance still open (rubric 3, never Claude):** revenge D18-D21, D32, D22; apocalypse D24, D37, D25-D28,
-  D30, D31; unit-watch D19, D24-D27 (and D23, D29 at the weekend).
-- **Dev server:** stopped; snapshot uw1 restored, current DLL deployed (hash equal to the build).
+  D30, D31; unit-watch D19, D24-D27 (and D23, D29 at the weekend); scaling D19, D20, D21 (and D23 with real players).
+- **Dev server:** stopped; snapshot sc4 restored (hashes equal). Chaos wears two working Dracula's Grim pieces (gear 48)
+  since the scaling spike; the snapshot holds BepInEx trees, not the world save.
 
 ## Next, in order
 
-1. Unit watch step 4 sheet is written (`docs/features/UNIT_WATCH.md` › Test results › Test weekend); it rides apocalypse's
-   weekend (~10-24/25) on one Release build (0f90351 or later). After it, read the owner's log for D34's first-move
-   measurement (sets SpawnStillSeconds) and D26's group landing.
-2. On the owner's sign-off of revenge D18-D22, D32: `dod close revenge` (partial).
-3. The owner runs the test weekend; changes asked for become amendments first.
-4. Joint step 5 (apocalypse + unit watch, 0.13.0): Codex once for unit watch (and apocalypse if its code changed), the six
-   surfaces, tag v0.13.0, `pwsh tools/rollback-gate.ps1 -From v0.12.0 -To v0.13.0 -Plan apocalypse` (and unit-watch),
-   release by 10-31.
-
-## After Halloween (1.0), owner decisions D52, D53, D55 (order: scaling first)
-
-- Scale unit counts and levels to the players in the region (their number and average level).
-- Replace a unit that dies before it has hit a player, within a per-event budget; border play is left to the honor system.
-- Bosses for other wave types, after the faction-compatibility checks.
-- An ambush at a hemmed-in spot comes in close; a wider search before shortening.
-- The pathing study (units walking instead of hidden hops in busy areas).
-- Stragglers left disabled far from every player can keep a horde alive, so a win needs players to find them.
+1. The owner's OK to push main (b8d21d1, 5b6ad38, 6f9f75c) and the branch `scaling`; privacy greps first, then
+   `git rev-parse HEAD` = `git ls-remote origin <branch>`.
+2. The test weekend (~10-24/25) on one Release build of main with 6f9f75c: apocalypse and unit-watch sheets; scaling's
+   step 5 sheet can run the same weekend on a build of the branch.
+3. Joint 0.13.0 release (apocalypse + unit watch): Codex once each, six surfaces, tag, rollback gate
+   `-From v0.12.0 -To v0.13.0`, by 10-31. Then merge main into `scaling`, step 6 → 0.14.0.
+4. After scaling (D55 order): replacements (D53), other boss types + faction compatibility, ambush spacing, the pathing
+   study (D50).
