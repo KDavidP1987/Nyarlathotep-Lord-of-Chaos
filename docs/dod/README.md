@@ -18,7 +18,7 @@
 | [raphael-api-core](raphael-api-core.md) | Raphael api 2 — status, events, push subscription, paging, contract check | done | L | 22/22 | 22 | 63 % | nyarlathotep |
 | [regions](regions.md) | Regions — global or regional scope for triggers and actions, and release 0.6.0 | done | L | 16/16 | 16 | 31 % | nyarlathotep |
 | [revenge](revenge.md) | Revenge — per-player faction heat, private warnings, a faction alert and ambush tiers around the player | in-progress | L | 26/32 | 27 | 100 % | nyarlathotep |
-| [scaling](scaling.md) | Scaling to the players — wave and horde sizes and levels follow the players in scope | in-progress | L | 1/27 | 27 | 96 % | nyarlathotep |
+| [scaling](scaling.md) | Scaling to the players — wave and horde sizes and levels follow the players in scope | in-progress | L | 18/27 | 27 | 96 % | nyarlathotep |
 | [spikes](spikes.md) | Spikes S1-S3, march, restart marker, carrier buff | done ⚠ 1 | M | 20/20 | 20 | 50 % | nyarlathotep |
 | [swarm](swarm.md) | Swarm — a contained arena of growing spider waves with a kill-to-death winner | done | L | 25/25 | 25 | 96 % | nyarlathotep |
 | [unit-watch](unit-watch.md) | Unit watch — stuck units recovered unseen, then removed, so a wave never hangs | in-progress | L | 4/34 | 33 | 77 % | nyarlathotep |
