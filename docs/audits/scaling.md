@@ -25,6 +25,14 @@
 - feature doc read: docs/features/SCALING.md (no blocking open question)
 - baseline boot: not an in-game step (Services wiring and tests; the in-game sessions are step 4)
 
+### Step 4 · 2026-10-14 · 0421b64 (branch scaling)
+- git status: clean but for the step's own drafts (scaling.vrs, scaling-admins-off.vrs, fixtures/sc-wave.json)
+- compile: Release and Debug 0 errors, 0 warnings; tests 3696/3696
+- preflight: exit 0, PREFLIGHT OK
+- dod status: 0/27 verified (D19 waits on the owner)
+- feature doc read: docs/features/SCALING.md (no blocking open question)
+- baseline boot: the deployed DLL before the session was main's (md5 6345be3f…); its last boot's logs backed up to %TEMP%/nyar-sc4-logs/a-*; dev snapshot sc4 saved before any change
+
 ## Post-audit
 ### Step 1 · 2026-10-14 · (this commit, branch scaling)
 - compile / preflight: no mod code changed (mod 0 errors, 0 warnings); NyarDevTools builds 0 errors (dev server only, never shipped); preflight OK; -Paths flags only this session's temp folders (nyar-sc0-logs and older), left for release-time cleanup
@@ -51,3 +59,18 @@
 - plan: 14 planted faults logged (docs/audits/scaling-step3-planted.txt and the Log); method notes for the reads' place and the D15 approach
 - in-game: none (step 4)
 - dod status: 0/27 verified; D12, D13, D15, D18 have their tests, checked at status time
+
+### Step 4 · 2026-10-14 · (this commit, branch scaling)
+- compile / preflight: no mod code changed; PREFLIGHT OK; -Paths -DeclaredOf scaling flags only this session's temp log folders (release-time cleanup) and the files merged in from main (6f9f75c), which belong to apocalypse and unit-watch
+- sessions (each boot's logs backed up to %TEMP%/nyar-sc4-logs b..e before the stop; client closed first; stops without /F, each within 60 s):
+  - boot 1, Release md5 52205b02…, IncludeAdmins false: scaling-admins-off.vrs PASS 10/10
+  - boot 2, IncludeAdmins true: scaling.vrs PASS 19/19
+  - boot 3, MaxUnitsPerWave 24, StallMinutes 30, TimingLog on, MaxConcurrentEvents 5: scaling-timing.vrs PASS 25/25; -TimingSpan 10/10 windows under 5 ms
+  - boot 4, Debug md5 240cc002…, FaultInjection scaleplayers:3@40, MaxUnitsPerWave 8: scaling-phantoms.vrs 21/22 (the script's status check came during the staged despawn), then PASS 22/22 after a 30 s wait was added
+- log checks per boot (`preflight.ps1 -LogCheck -ServerPath` on each boot's copies, taken before the next restart): boot 1 "log check: 0 unhandled, 48 nyar lines, 0 orphan errors, 0 unity errors"; boot 2 "0 unhandled, 62 nyar lines, 0 orphan errors, 0 unity errors"; boot 3 "0 unhandled, 317 nyar lines, 0 orphan errors, 0 unity errors"; boot 4 "0 unhandled, 191 nyar lines, 0 orphan errors, 0 unity errors"
+- sessions as docs/features/SCALING.md names them: Session 1 = boots 1-2, Session 2 = boot 4 (phantoms), Session 3 = boot 3 (the timing run)
+- logs: every [Error and [Warning read in both logs of all four boots: no [Error line; warnings are the known boot warnings, the stop lines ("units queued") and the expected cap lines; the Unity log's 226 missing-prefab lines are the same as the boot before the change
+- restore: `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (sc4 …)": the cfg (IncludeAdmins false, MaxUnitsPerWave 20, StallMinutes 10, no FaultInjection key), events.json and the deployed DLL (md5 6345be3f…) are back as before the session
+- /code-review: the diff is scenarios, fixtures and docs; read in full; no findings beyond Codex's
+- Codex verdict: REVISE — refusal check too loose (fixed), D22 wording broader than the log (fixed), restore and log-check records missing (this entry), named marks and TPHome-first (rejected as method; see the plan's Log). Round 2 REVISE: per-boot log checks and the timing session heading (both fixed). Round 3: APPROVED, no new finding
+- dod status: D22 verified (pass line); D20, D21 ready for the owner's acceptance; D19 waits on the owner

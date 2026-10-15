@@ -1,0 +1,64 @@
+# scaling.vrs: scaling D20 (Session 1), one player in game. sc-wave (tools/vrclient/fixtures/sc-wave.json: wave 1 of 4
+# CHAR_Bandit_Thug -301730941, wave 2 of 4 thugs with the boss CHAR_Bandit_Foreman_VBlood 2122229952 (prefab level 20,
+# Reference Data/unit_index.tsv), scaling unitsPerPlayer 2, levelFromPlayers true, levelOffset 2, levelPerWave 1) at sc-a.
+# Part A (IncludeAdmins true): Chaos counts, so wave 1 logs "players 1, gear <g>, level <g+2>, units 4 -> 4" (one player
+# adds nothing) and its thugs stand at level g+2; wave 2 (after `.devkill` of wave 1) logs level g+3, its thugs at g+3 and
+# the V Blood at its own level 20. `.nyar event info sc-wave` shows both scaling lines; a set out of range replies D1's
+# reason. Part B is run separately with IncludeAdmins false (--var PART=B is not a branch: run scaling-admins-off.vrs).
+#
+# Needs: a Release DLL with scaling step 3; sc-wave (fixture above) enabled, every other spawning definition disabled;
+# [Scoreboard] IncludeAdmins = true; NyarDevTools (.devtp, .devgear, .devkill) and DevChatEcho; no purge cooldown; Chaos
+# invulnerable (`ToggleInvulnerable true`, a Boolean, never false).
+# Run: --var AX=-1880 --var AZ=-1640
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .nyar event reload
+expect-log events: reloaded
+chat .devtp ${AX} ${AZ}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
+mark
+chat .devgear
+expect-log \[DEV GEAR\] armor=[0-9.]+ spell=[0-9.]+ weapon=[0-9.]+ sum=[0-9.]+ full=[0-9.]+ floor=(?P<G>[0-9]+)
+calc L1 = ${G} + 2
+calc L2 = ${G} + 3
+chat .nyar event info sc-wave
+expect-reply scaling: +2 units a player beyond the first, level players' gear +2, +1 a wave
+mark
+chat .nyar event start sc-wave
+expect-log event sc-wave started by manual timeout=20
+expect-log event sc-wave wave 1/2 timeout=30
+expect-seen \[nyar\] scaling sc-wave wave 1: players 1, gear ${G}, level ${L1}, units 4 -> 4
+wait 8
+chat .nyar debug here 40
+expect-log CHAR_Bandit_Thug sc-wave left [0-9]+s lvl ${L1}
+chat .nyar event info sc-wave
+expect-reply scaling now: 1 players, gear ${G}, level ${L1}
+shot full sc-info-running
+# wave 2: wave 1 killed, the boss keeps its own level
+chat .devkill -301730941 40
+expect-log \[DEV KILL\] n=4
+expect-log event sc-wave wave 2/2 timeout=60
+expect-seen \[nyar\] scaling sc-wave wave 2: players 1, gear ${G}, level ${L2}, units 5 -> 5
+wait 8
+chat .nyar debug here 40
+expect-log CHAR_Bandit_Thug sc-wave left [0-9]+s lvl ${L2}
+expect-seen CHAR_Bandit_Foreman_VBlood sc-wave left [0-9]+s lvl 20
+shot full sc-wave2
+# a value out of range: D1's reason in real chat
+chat .nyar event set sc-wave action.scaling.unitsPerPlayer 6
+expect-reply action.scaling.unitsPerPlayer must be 0-5
+shot full sc-set-refused
+chat .nyar event stop sc-wave
+expect-log event sc-wave stopped
+chat .nyar event info sc-wave
+expect-no-log scaling now: timeout=5
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+console TPHome
+wait 3

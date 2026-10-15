@@ -1,0 +1,78 @@
+# scaling-phantoms.vrs: scaling D21 (Session 2), several players in game. A Debug build with [Debug] FaultInjection
+# `scaleplayers:3@40` adds three phantom counted players of gear level 40 beside Chaos at each scaled read (Debug builds
+# only, S-13), so with [Scoreboard] IncludeAdmins = true every decision counts 4 players at an average of
+# round((g + 120) / 4). [Limits] MaxUnitsPerWave = 8 for this run, so the scaled waves are also clamped.
+# (a) sc-wave (tools/vrclient/fixtures/sc-wave.json) at sc-a logs "players 4, gear A, level A+2, units 4 -> 10" and
+#     "clamped by MaxUnitsPerWave: 10 -> 8"; `.nyar debug here 40` lists 8 thugs at level A+2.
+# (b) sc-region (fixtures/sc-region.json: a Region location over FarbaneWoods, 4 CHAR_Spider_Forest) logs its scaled
+#     count "units 4 -> 10" before its "in <g> groups over FarbaneWoods" line.
+# (c) apo-test with the block (fixtures/sc-apo.json: apo-test plus scaling 2/true/2/0) logs at its start
+#     "scaling apo-test roamers: players 4, per hotspot 9, max …" (3 + 6) and, at horde 1 (1 min in),
+#     "scaling apo-test horde 1: players 4, gear A, level A+2, units 8 -> 14" (size 8 + 6 regular units).
+# The cfg and the FaultInjection value are restored after the session (snapshot restore).
+#
+# Needs: a Debug DLL with scaling step 3; sc-wave, sc-region and apo-test (sc-apo.json) enabled, every other spawning
+# definition disabled; [Debug] FaultInjection = scaleplayers:3@40; [Scoreboard] IncludeAdmins = true; [Limits]
+# MaxUnitsPerWave = 8; NyarDevTools (.devtp, .devgear, .devkill) and DevChatEcho; no purge cooldown; Chaos invulnerable
+# (`ToggleInvulnerable true`, a Boolean, never false).
+# Run: --var AX=-1880 --var AZ=-1640
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .nyar event reload
+expect-log events: reloaded
+chat .devtp ${AX} ${AZ}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .devgear
+expect-log \[DEV GEAR\] armor=[0-9.]+ spell=[0-9.]+ weapon=[0-9.]+ sum=[0-9.]+ full=[0-9.]+ floor=(?P<G>[0-9]+)
+calc A = floor((${G} + 120) / 4 + 0.5)
+calc L1 = ${A} + 2
+# (a) sc-wave: 4 players, 10 asked, 8 by the cap
+mark
+chat .nyar event start sc-wave
+expect-log event sc-wave wave 1/2 timeout=30
+expect-seen scaling phantoms: 3 of 3 at gear 40
+expect-seen \[nyar\] scaling sc-wave wave 1: players 4, gear ${A}, level ${L1}, units 4 -> 10
+expect-seen clamped by MaxUnitsPerWave: 10 -> 8
+wait 8
+chat .nyar debug here 40
+expect-log CHAR_Bandit_Thug sc-wave left [0-9]+s lvl ${L1}
+chat .nyar status
+expect-reply tracked units: 8 (
+chat .nyar event info sc-wave
+expect-reply scaling now: 4 players, gear ${A}, level ${L1}
+shot full sc-phantoms-wave
+chat .nyar event stop sc-wave
+expect-log event sc-wave stopped
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+# (b) sc-region: the scaled count before the groups
+mark
+chat .nyar event start sc-region
+expect-log in [0-9]+ groups over FarbaneWoods timeout=30
+expect-seen \[nyar\] scaling sc-region wave 1: players 4, gear ${A}, level ${L1}, units 4 -> 10
+shot full sc-phantoms-region
+chat .nyar event stop sc-region
+expect-log event sc-region stopped
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+# (c) apo-test with the block: roamers at the start, horde 1 a minute in
+mark
+chat .nyar event start apo-test
+expect-log event apo-test started by manual timeout=20
+expect-seen \[nyar\] scaling apo-test roamers: players 4, per hotspot 9, max [0-9]+ timeout=30
+expect-log \[nyar\] scaling apo-test horde 1: players 4, gear ${A}, level ${L1}, units 8 -> 14 timeout=120
+shot full sc-phantoms-apo
+chat .nyar event stop apo-test
+expect-log event apo-test stopped
+# the stop's despawns are staged through the per-tick budget
+wait 30
+chat .nyar status
+expect-reply tracked units: 0 timeout=60
+console TPHome
+wait 3

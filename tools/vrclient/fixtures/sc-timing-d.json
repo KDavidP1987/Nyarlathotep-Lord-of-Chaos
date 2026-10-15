@@ -1,0 +1,54 @@
+{
+  "id": "sc-timing-d",
+  "name": "Scaling timing D",
+  "enabled": true,
+  "pillar": "spawns",
+  "trigger": {
+    "type": "Manual"
+  },
+  "durationSeconds": 1800,
+  "action": {
+    "type": "SpawnWaves",
+    "waveList": [
+      {
+        "units": [
+          {
+            "prefab": "CHAR_Spider_Forest",
+            "count": 12
+          }
+        ]
+      },
+      {
+        "units": [
+          {
+            "prefab": "CHAR_Spider_Forest",
+            "count": 6
+          }
+        ],
+        "afterSeconds": 60
+      }
+    ],
+    "radius": 8,
+    "location": {
+      "type": "Point",
+      "x": -1880,
+      "z": -1765
+    },
+    "scoreboard": true,
+    "scaling": {
+      "unitsPerPlayer": 2,
+      "levelFromPlayers": true,
+      "levelOffset": 2,
+      "levelPerWave": 1
+    }
+  },
+  "announce": {
+    "start": [
+      "Spiders gather: {event}."
+    ],
+    "end": [
+      "{event} is over."
+    ],
+    "warnings": false
+  }
+}

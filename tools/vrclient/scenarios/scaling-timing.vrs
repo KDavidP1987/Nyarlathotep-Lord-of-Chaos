@@ -1,0 +1,74 @@
+# scaling-timing.vrs: scaling D22 (tick budget with every scaled read running). The dev events.json holds sc-timing-a,
+# sc-timing-b, sc-timing-c and sc-timing-d (tools/vrclient/fixtures/sc-timing-*.json: unit-watch's uw-timing-* waveLists
+# of 12 then 6 CHAR_Spider_Forest, wave 2 after 60 s, at the pond (-1880, -1640) and 125 m north, east and south, each with
+# the scaling block 2/true/2/1) and apo-test from fixtures/sc-apo-timing.json (apocalypse's D29 timing apo-test: 3
+# hotspots x 10 roamers, max 30, horde 1 of 24 after 1 min marching slowly on a far goal, with the scaling block 2/true/2/0).
+# Every wave, horde and roamer top-up reads the players and their gear (Chaos counted, IncludeAdmins true), so the span
+# measures the reads inside the real tick. About 12 min after the first health line with 50 or more tracked, every event
+# is stopped; the orchestrator runs `pwsh tools/preflight.ps1 -TimingSpan <log copy> -Windows 10 -MinTracked 50`.
+#
+# Needs: a Release DLL with scaling step 3; the five entries above enabled, every other spawning definition disabled;
+# [Debug] TimingLog = true; [Scoreboard] IncludeAdmins = true; [General] MaxConcurrentEvents 5 or more (Review 1 F2);
+# [UnitWatch] StallMinutes 30 for this run only (the 10-minute backstop would clear the quiet last waves inside the span);
+# [Limits] MaxUnitsPerWave 24 or more and MaxTrackedUnits 150; NyarDevTools (.devtp) and DevChatEcho; Chaos invulnerable
+# (`ToggleInvulnerable true`, a Boolean, never false).
+# Run: --var AX=-1880 --var AZ=-1640
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .nyar event reload
+expect-log events: reloaded
+chat .nyar status
+expect-reply tracked units: 0 ( timeout=40
+chat .devtp ${AX} ${AZ}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
+mark
+chat .nyar event start sc-timing-a
+expect-log event sc-timing-a wave 1/2 timeout=30
+chat .nyar event start sc-timing-b
+expect-log event sc-timing-b wave 1/2 timeout=30
+chat .nyar event start sc-timing-c
+expect-log event sc-timing-c wave 1/2 timeout=30
+chat .nyar event start sc-timing-d
+expect-log event sc-timing-d wave 1/2 timeout=30
+chat .nyar event start apo-test
+expect-log event apo-test started by manual timeout=20
+expect-seen \[nyar\] scaling sc-timing-d wave 1: players 1, gear [0-9]+, level [0-9]+, units 12 -> 12
+expect-seen \[nyar\] scaling apo-test roamers: players 1, per hotspot 10, max 30 timeout=30
+expect-seen \[nyar\] scaling apo-test horde 1: players 1, gear [0-9]+, level [0-9]+, units 24 -> 24 timeout=120
+wait 30
+chat .nyar status
+expect-log \] tracked units: (?P<T1>[0-9]+) \( timeout=10
+expect-calc ${T1} >= 50
+shot full sc-timing-start
+# the measured span starts at the first health line with 50 or more tracked (every 10 min from boot)
+expect-seen nyar health: 5 events, ([5-9][0-9]|[1-9][0-9][0-9]) tracked timeout=660
+wait 360
+chat .nyar status
+expect-log \] tracked units: (?P<T2>[0-9]+) \( timeout=10
+expect-calc ${T2} >= 50
+wait 360
+chat .nyar status
+expect-log \] tracked units: (?P<T3>[0-9]+) \( timeout=10
+expect-calc ${T3} >= 50
+shot full sc-timing-end
+chat .nyar event stop sc-timing-a
+expect-log event sc-timing-a stopped
+chat .nyar event stop sc-timing-b
+expect-log event sc-timing-b stopped
+chat .nyar event stop sc-timing-c
+expect-log event sc-timing-c stopped
+chat .nyar event stop sc-timing-d
+expect-log event sc-timing-d stopped
+chat .nyar event stop apo-test
+expect-log event apo-test stopped
+wait 30
+chat .nyar status
+expect-reply tracked units: 0 timeout=60
+console TPHome
+wait 3

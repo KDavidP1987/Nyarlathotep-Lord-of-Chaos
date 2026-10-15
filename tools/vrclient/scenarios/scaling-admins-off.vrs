@@ -1,0 +1,35 @@
+# scaling-admins-off.vrs: scaling D20 (Session 1), part B. With [Scoreboard] IncludeAdmins = false the admin Chaos is not
+# counted, so sc-wave (tools/vrclient/fixtures/sc-wave.json) logs "players 0, gear none, level own, units 4 -> 4" and
+# its thugs keep their prefab level 16 (Reference Data/unit_index.tsv).
+#
+# Needs: what scaling.vrs needs, with [Scoreboard] IncludeAdmins = false (restored after).
+# Run: --var AX=-1880 --var AZ=-1640
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .nyar event reload
+expect-log events: reloaded
+chat .devtp ${AX} ${AZ}
+expect-log \[DEV TP\] to
+wait 4
+console ToggleInvulnerable true
+wait 2
+mark
+chat .nyar event start sc-wave
+expect-log event sc-wave started by manual timeout=20
+expect-log event sc-wave wave 1/2 timeout=30
+expect-seen \[nyar\] scaling sc-wave wave 1: players 0, gear none, level own, units 4 -> 4
+wait 8
+chat .nyar debug here 40
+expect-log CHAR_Bandit_Thug sc-wave left [0-9]+s lvl 16
+chat .nyar event info sc-wave
+expect-reply scaling now: 0 players, gear none, level own
+shot full sc-admins-off
+chat .nyar event stop sc-wave
+expect-log event sc-wave stopped
+chat .nyar status
+expect-reply tracked units: 0 timeout=40
+console TPHome
+wait 3

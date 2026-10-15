@@ -1,0 +1,69 @@
+{
+  "id": "apo-test",
+  "name": "Apocalypse test",
+  "enabled": true,
+  "pillar": "spawns",
+  "trigger": {
+    "type": "Manual"
+  },
+  "durationSeconds": 1800,
+  "action": {
+    "type": "Apocalypse",
+    "faction": "Faction_Undead",
+    "units": [
+      {
+        "prefab": "CHAR_Undead_Guardian",
+        "count": 3
+      },
+      {
+        "prefab": "CHAR_Undead_GhostMilitia_Light",
+        "count": 1
+      }
+    ],
+    "hotspots": {
+      "count": 3,
+      "minNatives": 3,
+      "minSpacing": 200
+    },
+    "roamers": {
+      "perHotspot": 10,
+      "perKill": 2,
+      "max": 30,
+      "perMinute": 4,
+      "huntRange": 40
+    },
+    "hordes": {
+      "count": 2,
+      "firstAfterMinutes": 1,
+      "everyMinutes": 20,
+      "size": 24,
+      "growth": 0
+    },
+    "goal": {
+      "location": {
+        "type": "Point",
+        "x": -500,
+        "z": -1334
+      },
+      "radius": 30,
+      "name": "the test camp"
+    },
+    "marchSpeed": 0.5,
+    "scoreboard": true,
+    "scaling": {
+      "unitsPerPlayer": 2,
+      "levelFromPlayers": true,
+      "levelOffset": 2,
+      "levelPerWave": 0
+    }
+  },
+  "announce": {
+    "start": [
+      "The dead rise: {event}."
+    ],
+    "end": [
+      "{event} is over."
+    ],
+    "warnings": false
+  }
+}

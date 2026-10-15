@@ -3,7 +3,7 @@
 **Status:** building (docs/dod/scaling.md, in progress; design §9 D52, D55, D57, owner 2026-10-14), on the git branch
 `scaling` until 0.13.0 is tagged. Step 1 (the gear spike) done, waiting on the owner's acceptance of D19; step 2 (Logic) and step 3 (the Services
 wiring: the reads, the guard with its "scaling: player read failing" health entry, Debug.FaultInjection
-`scaleplayers:<n>@<gear>` in a Debug build) built; step 4 (the vrclient sessions) next. Planned release 0.14.0, the first 1.0 child.
+`scaleplayers:<n>@<gear>` in a Debug build) built; step 4 (the vrclient sessions) done (Sessions 1 and 2 and the timing run passed; D20, D21 wait on the owner, D22 10/10); step 5 (real players, the owner) next. Planned release 0.14.0, the first 1.0 child.
 
 ## Goal
 
@@ -71,3 +71,42 @@ ticks, and one read is far below its resolution; D22's timing run measures the m
 Snapshot sc1 before, restored after; -LogCheck 0 unhandled; only the known boot warnings. The dev snapshot holds the
 BepInEx trees, not the world save: Chaos keeps the two working Dracula's Grim pieces (chest, leggings) the spike put on in
 place of the broken Dread pieces, which cannot be put back on (gear 48 instead of 30).
+
+### Session 1 · 2026-10-14 · step 4 (branch scaling at 0421b64, Release DLL md5 52205b02…) · vrclient as Chaos (gear 48)
+
+sc-wave (tools/vrclient/fixtures/sc-wave.json) at the pond (-1880, -1640). Snapshot sc4 before; logs in %TEMP%/nyar-sc4-logs.
+
+| Run | Result | What the log and chat showed |
+|---|---|---|
+| scaling-admins-off.vrs, IncludeAdmins false | **SCENARIO PASS 10/10** (scaling-admins-off-20261014-203139.json) | "scaling sc-wave wave 1: players 0, gear none, level own, units 4 -> 4"; thugs at their prefab lvl 16; `event info` "scaling now: 0 players, gear none, level own" (shot sc-admins-off) |
+| scaling.vrs, IncludeAdmins true | **SCENARIO PASS 19/19** (scaling-20261014-203653.json) | `.devgear` 48; "wave 1: players 1, gear 48, level 50, units 4 -> 4", thugs lvl 50 (hp 121, pp 34: the game scales their stats with the level); after `.devkill` "wave 2: players 1, gear 48, level 51, units 5 -> 5", thugs lvl 51, Rufus the Foreman (V Blood) at his own lvl 20; `event info` shows both scaling lines (shot sc-info-running); `.nyar event set sc-wave action.scaling.unitsPerPlayer 6` replied "action.scaling.unitsPerPlayer must be 0-5" in real chat (shot sc-set-refused; the run checked the word unitsPerPlayer, the scenario now checks the whole reply); after the stop no "scaling now" line and 0 tracked |
+
+Both boots: no [Error line; the only warnings are the known boot warnings and the stop's "units queued" line; the
+Unity log's 226 missing-prefab lines are the same as the boot before the change. D20 is ready for the owner's acceptance.
+
+### Session 2 · 2026-10-14 · step 4 (branch scaling at 0421b64, Debug DLL md5 240cc002…) · D21
+
+[Debug] FaultInjection `scaleplayers:3@40` (three phantom counted players of gear 40 beside Chaos, Debug builds only),
+IncludeAdmins true, [Limits] MaxUnitsPerWave 8. scaling-phantoms.vrs: **SCENARIO PASS 22/22**
+(scaling-phantoms-20261014-211254.json; the first run was 21/22 on the script asking `.nyar status` once while the
+apocalypse stop's staged despawns were still running, "6 (despawning 6)"; a 30 s wait was added as in the other scenarios).
+
+| Check | Log |
+|---|---|
+| phantoms placed | "scaling phantoms: 3 of 3 at gear 40" |
+| sc-wave | "scaling sc-wave wave 1: players 4, gear 42, level 44, units 4 -> 10" (round((48 + 120) / 4) = 42, + 2), then "clamped by MaxUnitsPerWave: 10 -> 8"; `.nyar debug here 40` 8 thugs at lvl 44; 8 tracked; `event info` "scaling now: 4 players, gear 42, level 44" (shot sc-phantoms-wave) |
+| sc-region (Region location, FarbaneWoods) | "scaling sc-region wave 1: players 4, gear 42, level 44, units 4 -> 10" logged before "wave 1/1 in 2 groups over FarbaneWoods: 8 units queued" (clamped 10 -> 8) |
+| apo-test with the block (fixtures/sc-apo.json) | "scaling apo-test roamers: players 4, per hotspot 9, max 24" (3 + 6) at the start; a minute in "scaling apo-test horde 1: players 4, gear 42, level 44, units 8 -> 14" (size 8 + 6) |
+
+No [Error line; warnings only the stop lines and the two cap lines; `-LogCheck`: 0 unhandled, 0 orphan errors, 0 unity
+errors. Snapshot sc4 restored after (hashes equal; the cfg, events.json and the deployed DLL back as before the session).
+D21 is ready for the owner's acceptance.
+
+### Session 3 · 2026-10-14 · step 4, the timing run (Release DLL md5 52205b02…) · D22
+
+scaling-timing.vrs: **SCENARIO PASS 25/25** (scaling-timing-20261014-210128.json). sc-timing-a..d (fixtures/sc-timing-*.json:
+12 then 6 CHAR_Spider_Forest each, scaled) and apo-test from fixtures/sc-apo-timing.json (3 hotspots × 10 roamers, horde of
+24, scaled) together; 126 tracked; the log copy holds a scaling line for each of the eight waves (players 1, gear 48, level 50, wave 2
+level 51), for the roamers (per hotspot 10, max 30; the line is written when the count changes) and for horde 1 (units 24 -> 24). `pwsh tools/preflight.ps1 -TimingSpan <%TEMP%/nyar-sc4-logs/d-LogOutput.log> -Windows 10 -MinTracked 50`:
+**timing span: 10/10 windows under 5 ms, tracked >= 50, targets >= 1, 0 slow ticks**. [UnitWatch] StallMinutes 30 and
+[Limits] MaxUnitsPerWave 24 for this run only. No [Error line; warnings only the five stop lines.

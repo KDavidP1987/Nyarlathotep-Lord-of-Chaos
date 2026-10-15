@@ -1,0 +1,46 @@
+{
+  "id": "sc-region",
+  "name": "Scaling region",
+  "enabled": true,
+  "pillar": "spawns",
+  "trigger": {
+    "type": "Manual"
+  },
+  "durationSeconds": 900,
+  "action": {
+    "type": "SpawnWaves",
+    "waveList": [
+      {
+        "units": [
+          {
+            "prefab": "CHAR_Spider_Forest",
+            "count": 4
+          }
+        ]
+      }
+    ],
+    "radius": 8,
+    "location": {
+      "type": "Region"
+    },
+    "scope": [
+      "FarbaneWoods"
+    ],
+    "scoreboard": true,
+    "scaling": {
+      "unitsPerPlayer": 2,
+      "levelFromPlayers": true,
+      "levelOffset": 2,
+      "levelPerWave": 1
+    }
+  },
+  "announce": {
+    "start": [
+      "Spiders spread: {event}."
+    ],
+    "end": [
+      "{event} is over."
+    ],
+    "warnings": false
+  }
+}

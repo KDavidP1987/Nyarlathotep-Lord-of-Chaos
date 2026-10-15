@@ -1,0 +1,59 @@
+{
+  "id": "sc-wave",
+  "name": "Scaling wave",
+  "enabled": true,
+  "pillar": "spawns",
+  "trigger": {
+    "type": "Manual"
+  },
+  "durationSeconds": 900,
+  "action": {
+    "type": "SpawnWaves",
+    "waveList": [
+      {
+        "units": [
+          {
+            "prefab": "CHAR_Bandit_Thug",
+            "count": 4
+          }
+        ]
+      },
+      {
+        "units": [
+          {
+            "prefab": "CHAR_Bandit_Thug",
+            "count": 4
+          }
+        ]
+      }
+    ],
+    "bosses": [
+      {
+        "prefab": "CHAR_Bandit_Foreman_VBlood",
+        "count": 1
+      }
+    ],
+    "radius": 8,
+    "location": {
+      "type": "Point",
+      "x": -1880,
+      "z": -1640
+    },
+    "scoreboard": true,
+    "scaling": {
+      "unitsPerPlayer": 2,
+      "levelFromPlayers": true,
+      "levelOffset": 2,
+      "levelPerWave": 1
+    }
+  },
+  "announce": {
+    "start": [
+      "Bandits gather: {event}."
+    ],
+    "end": [
+      "{event} is over."
+    ],
+    "warnings": false
+  }
+}
