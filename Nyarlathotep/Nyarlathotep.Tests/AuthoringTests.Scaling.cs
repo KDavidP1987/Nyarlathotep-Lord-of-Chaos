@@ -36,7 +36,7 @@ public partial class AuthoringTests
         string Body(string signature) => EndPathTests.Body(runtime, signature);
         var gaps = new List<string>();
         if (!Body("static void EndSpawnState(string id)").Contains("ScalingReads.EventEnded(id);", StringComparison.Ordinal)) gaps.Add("every path (EndSpawnState)");
-        if (!Body("static bool End(string id, string why, EndPath path)").Contains("EndSpawnState(id);", StringComparison.Ordinal)) gaps.Add("stop, pillar off, fault cancel (End)");
+        if (!Body("static bool End(string id, string why, EndPath path, bool announce = true)").Contains("EndSpawnState(id);", StringComparison.Ordinal)) gaps.Add("stop, pillar off, fault cancel (End)");
         var tick = Body("internal static void Tick(DateTime now)");
         if (!tick.Contains("EndSpawnState(ended.Id);", StringComparison.Ordinal)
             || !Body("static void TickApocalypse(ActiveEvent active, DateTime now)").Contains("EndSpawnState(ended.Id);", StringComparison.Ordinal))
