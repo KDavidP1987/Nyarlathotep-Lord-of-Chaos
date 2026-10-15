@@ -5,8 +5,9 @@ The plans (`docs/dod/`), audits (`docs/audits/`) and feature docs stay the sourc
 into them.
 
 **Written 2026-10-14 (late night)**: the coming 0.13.0 passed Codex's pre-release review after four fixes (b1e3cdc);
-the replacements plan (D58) is approved; main is merged into `scaling` again. Push waits on the owner's OK: main has
-b1e3cdc, b51d520, f7dbe74 and this handoff unpushed; `scaling` has the merges on top. The repo is
+the replacements plan (D58) is approved; the tester package is in GitHub (`testing/`) with install steps, and test
+build **v0.13.0-rc.1** is a GitHub pre-release (mod zip + blank workbook + PDF, booted on the dev server first). main
+and `scaling` are pushed and equal to origin. The repo is
 `C:\dev\projects\Games\V Rising\Nyarlathotep Lord of Chaos`.
 
 ## Where we are
@@ -37,9 +38,10 @@ b1e3cdc, b51d520, f7dbe74 and this handoff unpushed; `scaling` has the merges on
 
 ## Next, in order
 
-1. The owner's OK to push main and `scaling`; privacy greps were clean on 2026-10-14; verify
-   `git rev-parse HEAD` = `git ls-remote origin <branch>` after.
-2. Test weekend (~10-24/25) on a Release build of main: apocalypse and unit-watch sheets; scaling's step 5 sheet on a
+1. A row edit in `tools/tester-package/rows.py` needs `python tools/tester-package/build.py` (TesterPackageTests fails
+   otherwise); a new test build is a new `v0.13.0-rc.<n>` pre-release (DLL built with `-p:Version=0.13.0-rc.<n>`,
+   tag and release declared in tools/paths-manifest.txt, `ROUND["download"]` updated).
+2. Test weekend (~10-24/25) on v0.13.0-rc.1 (or a later rc): apocalypse and unit-watch sheets; scaling's step 5 sheet on a
    build of `scaling`.
 3. Joint 0.13.0 release (apocalypse + unit watch): six surfaces, tag, rollback gate `-From v0.12.0 -To v0.13.0`, by
    10-31. Then merge main into `scaling`, scaling step 6 → 0.14.0.
