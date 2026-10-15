@@ -47,8 +47,7 @@ public static class ControlCases
         new(Apocalypse, "D33", 5, "0.13.0"), new(Apocalypse, "D34", 5, "0.13.0"), new(Apocalypse, "D35", 5, "0.13.0"),
         // unit-watch: step 5 the release
         new(UnitWatch, "D30", 5, "0.13.0"), new(UnitWatch, "D31", 5, "0.13.0"), new(UnitWatch, "D32", 5, "0.13.0"), new(UnitWatch, "D33", 5, "0.13.0"),
-        // scaling: step 4 the timing run, step 6 the release
-        new(Scaling, "D22", 4, "0.14.0"),
+        // scaling: step 6 the release
         new(Scaling, "D24", 6, "0.14.0"), new(Scaling, "D25", 6, "0.14.0"), new(Scaling, "D26", 6, "0.14.0"), new(Scaling, "D27", 6, "0.14.0"),
     ];
 
@@ -950,5 +949,9 @@ public static class ControlCases
         C("D13", "DependencySuite", "preflight -DependencySuite scaling",
             ["selftest DependencySuite/bad", "selftest DependencySuite/bad-2", "selftest DependencySuite/bad-floor-spawns"], ["selftest DependencySuite/good"],
             ["selftest DependencySuite/empty"]) with { Plan = Scaling },
+        C("D22", "TimingSpan", "preflight -TimingSpan -Windows 10 -MinTracked 50 › Test-CheckTimingSpan",
+            ["tools/preflight-fixtures/TimingSpan/bad-avg", "tools/preflight-fixtures/TimingSpan/bad-slow", "tools/preflight-fixtures/TimingSpan/bad-tracked",
+             "tools/preflight-fixtures/TimingSpan/bad-notarget"],
+            ["tools/preflight-fixtures/TimingSpan/good"], ["tools/preflight-fixtures/TimingSpan/empty"]) with { Plan = Scaling },
     ];
 }
