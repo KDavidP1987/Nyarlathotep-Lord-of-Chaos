@@ -503,7 +503,7 @@ public class WaveSetTests
             gaps.Add("victory");
         if (!tick.Contains("EndPath.Fault)", StringComparison.Ordinal)) gaps.Add("fault");
         if (!tick.Contains("Board.Keep(", StringComparison.Ordinal)) gaps.Add("keep");
-        if (!Body("static bool End(string id, string why, EndPath path)").Contains("EndScoreboard(path, ended)", StringComparison.Ordinal)) gaps.Add("end");
+        if (!Body("static bool End(string id, string why, EndPath path").Contains("EndScoreboard(path, ended)", StringComparison.Ordinal)) gaps.Add("end");
         if (!source.Contains("End(id, \"stopped\", EndPath.Stop)", StringComparison.Ordinal)) gaps.Add("stop");
         if (!source.Contains("EndPath.PillarOff)", StringComparison.Ordinal)) gaps.Add("pillar off");
         if (!Body("internal static Outcome Purge()").Contains("ScoreboardRule.End(EndPath.Purge, e, Board)", StringComparison.Ordinal)) gaps.Add("purge");

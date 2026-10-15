@@ -23,7 +23,7 @@ sealed class FaultyWatchWorld(WatchWorld inner) : IUnitWatchWorld
 
     public IReadOnlyList<HuntCandidate> Players() => ThrowPlayers ? throw new InvalidOperationException("player query down") : Inner.Players();
     public long? FocusKey(ActiveEvent a) => Inner.FocusKey(a);
-    public GroundReading? Ground(float x, float z) => Inner.Ground(x, z);
+    public bool? Grounded(float x, float z, byte level) => Inner.Grounded(x, z, level);
     public bool Walkable(float x, float z, byte level) => Inner.Walkable(x, z, level);
     public float HeightOf(byte level) => Inner.HeightOf(level);
     public string RegionOf(float x, float z) => Inner.RegionOf(x, z);

@@ -156,8 +156,15 @@ internal static class EventRuntime
         Persistence.State.MarkDirty();
         Core.Log.LogInfo($"[nyar] event {id} started by {trigger} (ends {active.Instance.EndsUtc:u})");
         if (EventActions.ActionKindOf(active.Definition) == EventActionKind.Empower) EmpowerAction.StartCarriers(active);
-        if (EventActions.ActionKindOf(active.Definition) == EventActionKind.Apocalypse && !ApocalypseAction.Begin(active, now))   // D3, D11
-            Core.Log.LogWarning($"[nyar] apocalypse {id}: started without its run (begin failed); `.nyar event stop {id}` ends it");   // review L5
+        // apocalypse D3, D9, D11: the run begins before the start is announced (its hotspots line follows the started
+        // line); a Begin that fails rolls the instance back through the fault cancel path (its slot, orders, units, spawn
+        // state and record go), unannounced, and the start is refused (Codex pre-release M2)
+        if (EventActions.ActionKindOf(active.Definition) == EventActionKind.Apocalypse && !ApocalypseAction.Begin(active, now))
+        {
+            Core.Log.LogWarning($"[nyar] {EntryGuard.BeginFailedLine(id)}");
+            End(id, "rolled back (begin failed)", EndPath.Fault, announce: false);
+            return EntryGuard.BeginFailed;
+        }
         Announcer.EventStarted(active.Instance);
         if (RevengeRule.StartPrivate(active) is { } start) TriggerBus.Tell(start.Player, start.Line);   // revenge D7
         return AdminLines.Started(id);
@@ -175,6 +182,8 @@ internal static class EventRuntime
     {
         var cooldown = Settings.Limit(Limits.PurgeCooldownSeconds);
         var events = Engine.CancelAll(cooldown);
+        // apocalypse D15: the run's waiting orders count failed in its final tally, as on every other end path
+        var apocalypseCancelled = events.Where(e => e.Definition.Apocalypse is not null).Sum(e => SpawnTracker.WaitingOrders(e.Id));
         var (queued, cancelled) = SpawnTracker.PurgeUnits();
         foreach (var e in events)
         {
@@ -184,7 +193,7 @@ internal static class EventRuntime
         }
         TriggerBus.ClearRevenge();                                           // revenge D8: no heat outlives the purge
         HuntAction.Clear();                                                  // seeds and kept maps go too
-        ApocalypseAction.Purged();                                           // apocalypse D9: the run, a pending resume and the record
+        ApocalypseAction.Purged(apocalypseCancelled);                        // apocalypse D9: the run, a pending resume and the record
         SpawnTracker.RegionPurged();                                         // hunting-grounds D12: every lock and hunt record
         SpawnTracker.WatchPurged();                                          // unit-watch D10, D11: every watch row, try, clock and streak
         ScalingReads.Clear();                                                // scaling D12, D15: every decision row and streak
@@ -350,7 +359,7 @@ internal static class EventRuntime
         return ended;
     }
 
-    static bool End(string id, string why, EndPath path)
+    static bool End(string id, string why, EndPath path, bool announce = true)
     {
         var ended = Engine.Cancel(id);
         if (ended is null) return false;
@@ -368,7 +377,7 @@ internal static class EventRuntime
             Core.Log.LogWarning($"[nyar] event {id} {why}: {queued} units queued, {cancelled} spawns cancelled");
             if (ended.Definition.Apocalypse is not null) ApocalypseAction.Ended(id, ApocalypseEndOf(path), cancelled);   // D9
         }
-        Announcer.EventEnded(ended.Definition);
+        if (announce) Announcer.EventEnded(ended.Definition);                // a rolled-back start was never announced
         EndScoreboard(path, ended);
         if (path == EndPath.Stop) RevengeEnded(ended, RevengeEndPath.AdminStop);
         else if (path == EndPath.PillarOff) RevengeEnded(ended, RevengeEndPath.PillarOff);

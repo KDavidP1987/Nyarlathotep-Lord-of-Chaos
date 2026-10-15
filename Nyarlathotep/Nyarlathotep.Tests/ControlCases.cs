@@ -788,7 +788,7 @@ public static class ControlCases
         T("D13", "Lifetime", "ApocalypseTests", ["a_unit_lives_past_two_hours_or_is_missed"], ["renewed_while_the_run_lives"], ["an_ended_run_is_not_renewed"])
             with { Plan = Apocalypse },
         T("D14", "Caps", "ApocalypseTests", ["a_unit_escapes_the_ledger_or_a_cap"], ["one_apocalypse_within_the_caps"], ["no_room_no_order"]) with { Plan = Apocalypse },
-        T("D15", "Tally", "ApocalypseTests", ["a_unit_is_unaccounted", "an_outcome_drops_the_cancelled_orders"], ["every_bucket_balances"], ["a_new_run_is_all_zero"]) with { Plan = Apocalypse },
+        T("D15", "Tally", "ApocalypseTests", ["a_unit_is_unaccounted", "an_outcome_drops_the_cancelled_orders", "a_purge_drops_the_cancelled_orders"], ["every_bucket_balances"], ["a_new_run_is_all_zero"]) with { Plan = Apocalypse },
         T("D16", "Apocalypse", "CommandArgTests", ["a_field_accepts_a_value_the_validator_refuses", "a_valid_bosses_value_is_refused", "goal_here_drops_the_height",
             "a_reply_exceeds_480_bytes", "a_field_is_let_through_on_another_kind", "the_table_and_settable_fields_differ"], ["each_field_at_its_bounds"],
             ["value_required"]) with { Plan = Apocalypse },
@@ -802,7 +802,7 @@ public static class ControlCases
             ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = Apocalypse },
         T("D18", "Apocalypse", "TemplateLibraryTests", ["the_template_differs"], ["zombie_apocalypse_as_planned"], ["none_in_an_empty_catalogue"])
             with { Plan = Apocalypse },
-        T("D21", "NativeRead", "ApocalypseDependencyFailureTests", ["a_throwing_read_starts_or_repeats_its_line", "a_throwing_prepare_lets_the_start_through"], ["good_read_ends_the_streak"],
+        T("D21", "NativeRead", "ApocalypseDependencyFailureTests", ["a_throwing_read_starts_or_repeats_its_line", "a_throwing_prepare_lets_the_start_through", "a_failed_begin_keeps_its_instance"], ["good_read_ends_the_streak"],
             ["no_native_no_hotspot"]) with { Plan = Apocalypse },
         T("D21", "SpreadRead", "ApocalypseDependencyFailureTests", ["a_throw_skips_the_death_pass", "one_throwing_read_prints_more_than_one_line"],
             ["good_read_clears_the_entry"], ["no_run_reads_nothing"]) with { Plan = Apocalypse },
@@ -841,7 +841,7 @@ public static class ControlCases
             "two_readings_5_s_apart_mark", "grounded_at_a_neighbouring_level_marks", "a_unit_that_fought_is_marked", "an_unanswered_or_throwing_read_marks",
             "a_roamer_or_horde_unit_is_skipped"], ["sunk_unit_marked_after_10_s"], ["grounded_units_never_read_off"]) with { Plan = UnitWatch },
         T("D4", "Fight", "UnitWatchTests", ["a_hit_with_a_player_is_not_reported", "a_hit_between_npcs_is_a_fight", "an_untracked_unit_gets_a_row",
-            "a_row_outlives_its_unit", "a_row_holds_a_player", "a_target_at_5_5_m_counts_as_fought"], ["hit_or_close_target_both_fight"], ["no_hit_no_row"])
+            "a_row_outlives_its_unit", "a_row_holds_a_player", "a_target_at_5_5_m_counts_as_fought", "a_player_three_owner_links_away_is_missed"], ["hit_or_close_target_both_fight"], ["no_hit_no_row"])
             with { Plan = UnitWatch },
         T("D5", "Landing", "UnitWatchTests", ["a_unit_moves_with_a_player_at_99_m", "a_landing_is_within_50_m_of_a_player", "a_landing_is_in_territory_or_out_of_scope",
             "a_landing_leaves_the_arena", "a_landing_is_not_walkable", "the_order_is_not_group_player_anchor", "a_player_landing_misses_the_ring",
@@ -857,7 +857,7 @@ public static class ControlCases
         T("D9", "Stall", "UnitWatchTests", ["it_fires_before_stall_minutes", "it_fires_after_a_death_or_a_fight", "an_after_seconds_growth_or_units_wave_is_watched",
             "an_apocalypse_fires_before_its_last_horde", "zero_minutes_fires"], ["quiet_wave_marked_at_ten_minutes"], ["no_decided_wave_no_clock"])
             with { Plan = UnitWatch },
-        T("D10", "Controls", "UnitWatchTests", ["watch_off_marks_moves_or_removes", "a_purge_or_pillar_off_leaves_a_row", "a_check_spends_a_121st_walk_check",
+        T("D10", "Controls", "UnitWatchTests", ["watch_off_marks_moves_or_removes", "a_purge_or_pillar_off_leaves_a_row", "a_check_spends_a_121st_walk_check", "a_ground_read_probes_past_the_walk_cap",
             "a_removal_skips_the_despawn_budget", "an_untracked_unit_is_touched"], ["watch_within_its_caps"], ["no_event_no_check"]) with { Plan = UnitWatch },
         T("D11", "EndPaths", "UnitWatchTests", ["a_record_outlives_the_end", "a_line_follows_the_end", "a_resumed_unit_keeps_its_row"], ["stop_leaves_nothing"],
             ["no_event_no_record"]) with { Plan = UnitWatch },

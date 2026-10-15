@@ -76,7 +76,7 @@ internal static class ApocalypseAction
         Run("end", () => { _host.Ended(id, path, _game, Persistence.State, cancelled); return 0; });
 
     /// <summary>`.nyar purge confirm` (D9).</summary>
-    internal static void Purged() => Run("purge", () => { _host.Purged(_game, Persistence.State); return 0; });
+    internal static void Purged(int cancelled = 0) => Run("purge", () => { _host.Purged(_game, Persistence.State, cancelled); return 0; });
 
     /// <summary>`.nyar pillar &lt;p&gt; off` (D9): a pending resume of that pillar is cancelled.</summary>
     internal static void PillarOff(Pillar pillar) =>

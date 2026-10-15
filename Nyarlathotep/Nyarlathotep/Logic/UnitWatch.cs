@@ -45,6 +45,42 @@ public static class UnitWatch
     /// <summary>Walk checks in one check across all events (S-11), each two <see cref="WalkBudget"/> calls.</summary>
     public const int WalkCap = 120;
     public const int WalkCapCalls = 2 * WalkCap;
+    /// <summary>Budget calls one ground probe (one height level) takes: a whole walk check, so an off-ground read never spends
+    /// past <see cref="WalkCap"/> checks however many levels it examines (D10; Codex pre-release M1).</summary>
+    public const int ProbeCalls = 2;
+
+    /// <summary>The off-ground scan at one unit (D3 with S-12's fallback, D10): the levels at or below
+    /// <paramref name="y"/> + <see cref="BelowGround"/> and at or above WalkHeight.MinY are examined, the unit's own level
+    /// and its neighbours first (WalkLevels.Near), then the rest from the top down; each probe takes
+    /// <see cref="ProbeCalls"/> from <paramref name="budget"/> first. The first grounded level answers with its height (so
+    /// the unit is not more than 10 m below the lowest grounded level); none in range answers LowestY null (off the ground).
+    /// Null, no reading, when the budget runs out mid-scan, a probe cannot answer, or no level lies in range. A throwing
+    /// probe throws. <paramref name="heightOf"/> rises with the level (TileLayerUtility.GetHeightForLevel).</summary>
+    public static GroundReading? GroundScan(float y, byte own, Func<byte, bool?> grounded, Func<byte, float> heightOf, WalkBudget budget)
+    {
+        var reach = y + BelowGround;
+        if (heightOf(0) > reach) return null;
+        int lo = 0, hi = byte.MaxValue;                                   // top: the highest level at or below the reach
+        while (lo < hi)
+        {
+            var mid = (lo + hi + 1) / 2;
+            if (heightOf((byte)mid) <= reach) lo = mid; else hi = mid - 1;
+        }
+        var top = lo;
+        var bottom = 0;
+        while (bottom < top && heightOf((byte)bottom) < WalkHeight.MinY) bottom++;
+        var near = WalkLevels.Near(own).Where(l => l >= bottom && l <= top).ToList();
+        foreach (var level in near.Concat(Enumerable.Range(bottom, top - bottom + 1).Reverse().Select(l => (byte)l).Where(l => !near.Contains(l))))
+        {
+            if (!budget.TryTake(ProbeCalls)) return null;
+            switch (grounded(level))
+            {
+                case null: return null;
+                case true: return new GroundReading(heightOf(level));
+            }
+        }
+        return new GroundReading(null);
+    }
 
     /// <summary>The refusal of `unstick` with the watch off (D12, D13: invalid watch_off).</summary>
     public const string Off = "unit watch is off: [UnitWatch] Enabled";
@@ -91,8 +127,9 @@ public readonly record struct WatchUnit(long Key, float X, float Y, float Z, byt
     (float X, float Y, float Z, byte Level) Anchor, float? TargetDistance = null, float AttackRange = 0f,
     (DateTime At, float X, float Z)? PutDown = null);
 
-/// <summary>The walk check's answer at a unit's x and z (D3, S-12's fallback): the height of the lowest grounded level
-/// there, or null when no level is grounded at all.</summary>
+/// <summary>The walk check's answer at a unit's x and z (D3, S-12's fallback; UnitWatch.GroundScan): the height of a
+/// grounded level no more than 10 m above the unit (so the lowest grounded level is no higher), or null when no level up
+/// to that height is grounded.</summary>
 public readonly record struct GroundReading(float? LowestY);
 
 /// <summary>One recovery move (D5): the landing, its level, the landing kind, how far the unit moved (its own distance,
@@ -122,8 +159,9 @@ public interface IUnitWatchWorld
     /// <summary>The Hunt key of a revenge instance's focus player, or null (Spawning's FocusKey join).</summary>
     long? FocusKey(ActiveEvent a);
 
-    /// <summary>The walk check's lowest grounded level at (x, z) (one walk check, D3); null when it cannot answer there.</summary>
-    GroundReading? Ground(float x, float z);
+    /// <summary>The walk check's grounded answer at (x, z) on one height level (one game call, D3); null when it cannot answer
+    /// there (no tile world, off the tile grid). The watch scans the levels itself, each probe from its walk budget (D10).</summary>
+    bool? Grounded(float x, float z, byte level);
 
     /// <summary>The walk check at a point and level: free and grounded (two game calls).</summary>
     bool Walkable(float x, float z, byte level);
@@ -716,10 +754,10 @@ public sealed class UnitWatchPhase
         {
             failed = false;
             if (u.Y < WalkHeight.MinY) return true;
-            if (WalkHeight.Problem(u.Y) is not null || !_budget.TryTake(2)) return null;
+            if (WalkHeight.Problem(u.Y) is not null || _budget.Left < UnitWatch.ProbeCalls) return null;
             row.GroundRead = now;
             GroundReading? g;
-            try { g = w.Ground(u.X, u.Z); }
+            try { g = UnitWatch.GroundScan(u.Y, u.Level, level => w.Grounded(u.X, u.Z, level), w.HeightOf, _budget); }
             catch (Exception e)
             {
                 ReadFailed(e);

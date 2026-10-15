@@ -165,7 +165,7 @@ public class EndPathTests
         var gaps = new List<string>();
         if (!Body(source, "internal static Outcome Purge()").Contains("Health.Purged()", StringComparison.Ordinal)) gaps.Add("Purge");
         if (!Body(source, "static void EndSpawnState(string id)").Contains("Health.EventEnded(id)", StringComparison.Ordinal)) gaps.Add("EndSpawnState");
-        if (!Body(source, "static bool End(string id, string why, EndPath path)").Contains("EndSpawnState(id)", StringComparison.Ordinal)) gaps.Add("End");
+        if (!Body(source, "static bool End(string id, string why, EndPath path").Contains("EndSpawnState(id)", StringComparison.Ordinal)) gaps.Add("End");
         if (!Body(source, "internal static void Tick(DateTime now)").Contains("EndSpawnState(ended.Id)", StringComparison.Ordinal)) gaps.Add("Tick");
         return gaps;
     }

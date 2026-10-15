@@ -231,6 +231,10 @@ public sealed class SpawnLedger(LedgerLimits limits)
         return (_despawnQueue.Count, cancelled);
     }
 
+    /// <summary>The waiting orders of <paramref name="eventId"/> that a <see cref="Purge"/> would cancel now (apocalypse
+    /// D15: the run's tally counts them failed).</summary>
+    public int Waiting(string eventId) => _spawnQueue.Count(o => o.EventId == eventId);
+
     /// <summary>An event's end (Business rules 2): queues its tracked units spawned before <paramref name="spawnedBefore"/>
     /// and, with <paramref name="cancelOrders"/>, cancels its waiting orders. Returns the units newly queued and the orders
     /// cancelled. The despawn after the grace passes false: a restart of the same event inside the grace owns the
