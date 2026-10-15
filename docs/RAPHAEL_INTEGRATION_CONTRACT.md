@@ -71,6 +71,32 @@ is listed here as IMPLEMENTED with the api that added it.
 | `purge` | command | IMPLEMENTED | 4 |
 | `killswitch` | command | IMPLEMENTED | 4 |
 | `regions` | command | IMPLEMENTED | 5 |
+| `field` | tag | PLANNED (live-ops) | — |
+| `run` | tag | PLANNED (live-ops) | — |
+| `spot` | tag | PLANNED (live-ops) | — |
+| `unit` | tag | PLANNED (live-ops) | — |
+| `usum` | tag | PLANNED (live-ops) | — |
+| `next` | tag | PLANNED (live-ops) | — |
+| `health` | tag | PLANNED (live-ops) | — |
+| `mine` | tag | PLANNED (live-ops) | — |
+| `ann` | tag | PLANNED (communications) | — |
+| `msg` | tag | PLANNED (communications) | — |
+| `note` | tag | PLANNED (communications) | — |
+| `fields` | command | PLANNED (live-ops) | — |
+| `run` | command | PLANNED (live-ops) | — |
+| `units` | command | PLANNED (live-ops) | — |
+| `unit` | command | PLANNED (live-ops) | — |
+| `schedule` | command | PLANNED (live-ops) | — |
+| `health` | command | PLANNED (live-ops) | — |
+| `mine` | command | PLANNED (live-ops) | — |
+| `announce` | command | PLANNED (communications) | — |
+| `ann` | command | PLANNED (communications) | — |
+| `messages` | command | PLANNED (communications) | — |
+| `message` | command | PLANNED (communications) | — |
+| `notices` | command | PLANNED (communications) | — |
+
+The live-ops and communications rows were proposed on 2026-10-15 (§10.5-§10.8), and the owner settled their decisions
+the same day (§10.9 L1-L8, design §9 D59). Neither child has a dod plan yet.
 
 `zone` and `zones` keep their defended-zones label: the anti-farming child absorbs defended-zones (Epic, 2026-09-28)
 and relabels both rows when it is planned (§10.4).
@@ -344,7 +370,7 @@ Raphael sends the **human** commands below and then re-reads state (`api events`
 | Switch a pillar (saved to the cfg) | `.nyar pillar list` / `.nyar pillar <name> on\|off` | admin |
 | Test spawn | `.nyar spawn <unit> [count] [level] [hp×] [power×]` | admin |
 | Kill switch | `.nyar purge` then `.nyar purge confirm` (two presses, with a confirmation dialog) | admin |
-| Broadcast now | `.nyar announce <text>` / `.nyar announce digest` (text 1-200 characters, no `<`, `>` or control characters; otherwise `badarg`) | admin |
+| Broadcast now | `.nyar announce <text>` (text 1-200 characters, no `<`, `>` or control characters; quote text of more than 16 words). No wire twin yet (§10.6). `announce digest` is not built: the word `digest` is broadcast as text until the stats child adds the digest | admin |
 | Add / remove a zone at the admin's position | `.nyar zone add <name> <radius>` / `.nyar zone remove <name>` | admin |
 | Reset stats | `.nyar stats reset <player\|all>` then `… confirm` | admin |
 | Hide / show me on boards | `.nyar stats hide` / `.nyar stats show` | anyone |
@@ -464,6 +490,10 @@ The panels:
 - **From api 4 (§3, §5a):** Admin › Templates and Admin › Pillars.
 - **From api 5 (§3):** a region picker fed by `api regions`, and the region of each event on the status board and in
   Admin › Events (`region=`); later (§10) a live horde and anti-farming readout.
+- **From api 8 (§5a):** an Unstick button on each running event in Admin › Events.
+- **When live-ops and communications ship (§10.5-§10.8, PLANNED):** Admin › Live (one event in detail), Admin › Units
+  (global unit lookup), Admin › Schedule, Admin › Health, Admin › Messages, a field editor that shows stored values,
+  My events (`mine`), and toasts from `notice` pushes. `docs/RAPHAEL_HANDOFF_API8.md` describes each panel.
 
 Gate the panels on the handshake:
 - A pillar tab shows only when its switch is 1.
@@ -519,6 +549,11 @@ them stay valid.
 | boss-reinforcements | 0.8.0 | the push `boss-adds` |
 | anti-farming | 0.9.0 | the push `farm-tier`; `zones` and `zone`, relabelled from defended-zones, which it absorbs |
 | outbreak | 0.10.0 | the pushes `horde-wave`, `horde-boss-down` and `horde-spread` |
+| live-ops (proposed 2026-10-15, no plan yet) | planned next, beside the 0.13.0 test weekend (L7) | the reads `fields`, `run`, `units`, `unit`, `schedule`, `health`, `mine`; the twins `unit despawn\|unstick\|goto`; `next=` on status rows; the pushes `progress`, `wave-cleared`, `health`; `what=` on `config-changed` (§10.5-§10.7) |
+| communications (proposed 2026-10-15, no plan yet) | after the 0.13.0 release (L7) | the login event notice, start warnings, editable announce text, scheduled and recurring messages; the reads `ann`, `messages`, `notices`; the twins `announce`, `message`; the pushes `notice` and `event-soon` (§10.6-§10.8) |
+
+The release numbers of the first four rows are the Epic's old order; those children have not shipped and keep their
+rows until they are planned.
 
 The sieges and castle-takeover child adds its rows when it is planned. Siege pushes keep §3's rule: they go only to
 members of the target clan and to admins.
@@ -553,3 +588,227 @@ Privacy:
 [NYAR:ev] type=horde-wave id=undead-nightfall secs=0 wave=3 count=60 region=-
 [NYAR:ev] type=farm-tier id=anti-farm secs=0 tier=2 region=FarbaneWoods
 ```
+
+### 10.5 Live operations reads — PLANNED (live-ops, proposed 2026-10-15)
+
+The reads an admin console needs to see what the mod is doing right now: a definition's stored fields (so the field
+editor shows current values), one running event in detail, every unit the mod spawned or empowered, what starts next,
+and the server's health. All are admin-only except `mine` and the player form of `schedule`. None changes anything, and
+none counts against §5a's twin rate. Rows are built from the server's own ledgers; a read touches the game only for the
+rows of the page it sends.
+
+**`.nyar api fields event <id> [page]`** and **`.nyar api fields template <tpl> [page]`** — every field the
+definition or template holds, one row per field of design §6's settable-field table that is set, then
+`[NYAR:end] cmd=fields page= count=`:
+```
+[NYAR:field] id=ashfall key=durationSeconds value=900 part=1/1
+[NYAR:field] id=ashfall key=action.units value=CHAR_Undead_SkeletonSoldier_Base*6,CHAR_Undead_Priest*2 part=1/1
+[NYAR:field] id=ashfall key=announce.start value=The_dead_walk_on_Ashfall part=1/1
+```
+- `value` is the stored value in the form `event set` takes, wire-safe (§1; `announce.*` text uses §10.8's escape). A
+  value longer than 300 bytes is split over rows `part=<k>/<n>` with the same `key`; the client joins them in order.
+- An unset optional field sends no row. An unknown id or template answers `code=notfound arg=id` / `arg=template`.
+
+**`.nyar api run <id>`** — one running event in detail, then `[NYAR:end] cmd=run count=<n>`:
+```
+[NYAR:run] id=ashfall kind=waves state=active trigger=schedule age=488 left=412 wave=2/3 next=95 clear=0 alive=14 queued=4 killed=22 expired=0 stuck=1 recovered=3 removed=0 region=-
+[NYAR:run] id=legion-surge kind=empower state=active trigger=vbloodkilled age=300 left=1500 holding=42 pending=6 region=CursedForest
+[NYAR:run] id=night-of-the-dead kind=apocalypse state=active trigger=manual age=1200 left=2400 hordes=2/4 next=600 roamers=37 hotspots=3 alive=88 killed=140 region=-
+[NYAR:spot] id=night-of-the-dead kind=hotspot n=1 x=-1520.0 y=0.0 z=-460.0 region=FarbaneWoods pct=-
+[NYAR:spot] id=night-of-the-dead kind=front n=2 x=-1310.4 y=2.5 z=-505.1 region=FarbaneWoods pct=40
+[NYAR:spot] id=night-of-the-dead kind=goal n=1 x=-912.9 y=0.0 z=-828.8 region=DunleyFarmlands pct=-
+```
+- `age` is seconds since the start. `next` is seconds until the next wave or horde, or `-` when the next waits for a
+  clear (`clear=1`) or none is left. `alive` counts live tracked units, `queued` spawn orders waiting, `killed` units
+  killed, `expired` units that timed out; `stuck`, `recovered` and `removed` are unit watch's counts (`-` when unit
+  watch is off).
+- `kind=empower` sends `holding` (NPCs holding the carrier) and `pending` (carriers still to apply); `kind=apocalypse`
+  sends `hordes=<risen>/<total>`, `roamers` and `hotspots`.
+- `trigger` names how the instance started (a trigger type or `manual`). It never names the player whose action
+  started it.
+- `[NYAR:spot]` rows follow: our event's map spots (hotspots, horde fronts, the goal, a Point location), with exact
+  coordinates (L1). They never carry a player's position or a hunt target; an Admin or AroundPlayer location sends no
+  spot row, because it is a player's position.
+- An event that is not running answers `code=state arg=id reason=not_active`.
+
+**`.nyar api units [filter …] [page]`** — every unit the mod tracks or empowers, then
+`[NYAR:end] cmd=units page= count=`:
+```
+[NYAR:unit] key=4294967361 src=spawn prefab=CHAR_Undead_SkeletonSoldier_Base event=ashfall wave=2 lvl=42 hp=610 maxhp=900 left=380 watch=fighting x=-1500.2 y=0.0 z=-470.9 region=FarbaneWoods
+[NYAR:unit] key=8589934722 src=empower prefab=CHAR_Militia_Guard event=legion-surge wave=- lvl=38 hp=1200 maxhp=1200 left=1500 watch=- x=-901.0 y=5.0 z=-812.4 region=DunleyFarmlands
+```
+- `src` ∈ `spawn` (a unit SpawnTracker registered: waves, bosses, roamers, `.nyar spawn`) | `empower` (a native NPC
+  holding an empowerment carrier). `event=-` marks a test spawn.
+- `key` is stable while the unit lives and is the handle for `unit` and the unit twins (§10.6).
+- `watch` ∈ `fighting | moving | stuck | waiting | -` (unit watch's view; `-` when it is off, and for `src=empower`).
+- `x`, `y` and `z` are the unit's exact position, read when the row is built, one decimal (L1). Positions of our units,
+  never of a player. `api units` with no `event=` filter is the bulk view across every event and test spawn;
+  `api units event=<id>` is one event's units.
+- Filters are `key=value` words before the page, in any order, all optional: `event=<id>`, `src=spawn|empower`,
+  `prefab=<text>` (case-insensitive substring), `region=<id>`, `watch=<state>`, `near=<metres>` (around the requesting
+  admin, 1-500). An unknown filter answers `code=badarg arg=filter`.
+- Rows are ordered by event, then wave, then key.
+
+**`.nyar api units summary [page]`** — one row per event, source and prefab, then `[NYAR:end] cmd=units page= count=`:
+```
+[NYAR:usum] event=ashfall src=spawn prefab=CHAR_Undead_SkeletonSoldier_Base alive=10 stuck=1
+```
+
+**`.nyar api unit <key>`** — the one `[NYAR:unit]` row, then `[NYAR:end] cmd=unit count=1`; `code=notfound arg=key`
+once the unit is gone.
+
+**`.nyar api schedule [page]`** — what can start next, one row per enabled definition, soonest first, then
+`[NYAR:end] cmd=schedule page= count=`:
+```
+[NYAR:next] id=ashfall trigger=schedule in=3540 at=1792101600 cooldown=0 why=scheduled
+[NYAR:next] id=undead-nightfall trigger=ingame in=- at=- cooldown=0 why=night
+[NYAR:next] id=revenge-legion trigger=revenge in=- at=- cooldown=1200 why=armed
+```
+- `in` is seconds until the start and `at` its Unix time (UTC), for `schedule` and `interval` triggers; both are `-`
+  for triggers that wait on the world. `cooldown` is the seconds left of `conditions.cooldownMinutes`.
+- `why` ∈ `scheduled | interval | night | day | armed | running | cooldown | disabled | pillar_off | killswitch |
+  max_concurrent`.
+- A player who sends it gets only the `trigger=schedule` rows due today, which the daily banner already tells everyone
+  (§3's fairness rule), and only while `DailyBanner` is on; otherwise `code=disabled`.
+
+**`.nyar api health`** — one row, then `[NYAR:end] cmd=health count=1`:
+```
+[NYAR:health] tracked=212 max=600 spawnq=0 despawnq=12 empowered=42 carrierq=0 events=2 maxevents=3 announceq=1 pushq=0 subs=4 ks=0 degraded=-
+```
+- `degraded` lists HealthMonitor's degraded parts joined by `,`, or `-`.
+
+**`.nyar api mine`** (anyone) — what concerns the requester alone, then `[NYAR:end] cmd=mine count=<n>`. Two row types:
+```
+[NYAR:mine] type=standing id=ashfall kills=12 deaths=1 rank=2 of=6
+[NYAR:mine] type=alert id=revenge-legion kind=revenge state=warned faction=Legion left=- wave=-
+[NYAR:mine] type=alert id=revenge-legion kind=revenge state=active faction=Legion left=540 wave=1/3
+[NYAR:mine] type=alert id=bandit-ambush kind=hunted state=active faction=Bandits left=300 wave=2/2
+```
+- `type=standing`: one row per running event that keeps a scoreboard and counts the requester. `rank` is their place as
+  it stands now, `of` the players on it (L4).
+- `type=alert` (L8): an event that is about the requester personally.
+  - `kind=revenge`: `state=warned` once a revenge definition's heat on them has passed a `warnAt` step (the private
+    chat warning they already got), until that heat cools or the event starts; `state=active` while a revenge event
+    runs with them as its focus.
+  - `kind=hunted`: `state=active` while a running event's wave was aimed at them (an AroundPlayer wave that picked
+    them, or its fan-out) or its hunting units hold them as their target.
+  - `faction` names the faction behind it (without `Faction_`); `left` and `wave` are the event's, as on its status row,
+    or `-` before it starts.
+  - An alert never carries a heat number, a unit count, a unit's or player's position, a direction or a distance, and
+    never names another player. It reaches only the player it is about.
+- A player with nothing gets `[NYAR:end] cmd=mine count=0`.
+
+**Status rows gain `next`.** From live-ops, `[NYAR:event]` rows end with `next=<seconds until the next wave or horde,
+or ->`: for admins always; for players only when the event's `announce.warnings` is true and `WaveWarnings` is on,
+  since the chat warnings already tell them, and `-` otherwise (L2). A new last key, so an api 8 parser skips it.
+
+### 10.6 Twins — PLANNED (live-ops, communications)
+
+§5a's rules hold for every new twin: one `ok` or `err` line, the same flow and log line as the human command, and the
+5-per-second rate.
+
+| Twin | Child | Success line |
+|---|---|---|
+| `.nyar api unit despawn <key>` | live-ops | `[NYAR:ok] cmd=unit verb=despawn id=<key> queued=1`. The despawn goes through SpawnTracker's per-tick budget like any other. A `src=empower` unit answers `code=state reason=not_ours`: empowerment ends by stopping the event, never by killing a native NPC |
+| `.nyar api unit unstick <key>` | live-ops | `[NYAR:ok] cmd=unit verb=unstick id=<key> marked=<0\|1>`; `code=invalid reason=watch_off` as `event unstick` |
+| `.nyar api unit goto <key>` | live-ops | `[NYAR:ok] cmd=unit verb=goto id=<key>`; teleports only the requesting admin beside the unit (L3); `code=notfound arg=key` once the unit is gone |
+| `.nyar api announce "<text>"` | communications | `[NYAR:ok] cmd=announce verb=send id=- queued=<lines ahead>`; §5's text rules |
+| `.nyar api message add <id> <when> <target> "<text>"` | communications | `[NYAR:ok] cmd=message verb=add id=<id>`; created disabled |
+| `.nyar api message set <id> <field> <value>` | communications | `[NYAR:ok] cmd=message verb=set id=<id> field=<field> value=<stored>`; fields `when`, `target`, `text` |
+| `.nyar api message enable\|disable <id>` | communications | `[NYAR:ok] cmd=message verb=enable id=<id> changed=<0\|1>` |
+| `.nyar api message delete <id>`, then `… confirm` | communications | as `event delete` |
+| `.nyar api message test <id>` | communications | `[NYAR:ok] cmd=message verb=test id=<id>`; sends the message to the requesting admin only |
+
+Communications also makes four event fields settable through the existing `event set` twin: `announce.start` and
+`announce.end` (1-5 lines joined by `|`, each with §5's text rules), `announce.warnings` (`true|false`) and
+`announce.soon` (`true|false`, §10.8). They add no tag.
+
+### 10.7 Push events — PLANNED (live-ops, communications)
+
+§3's fairness rule holds: a push never tells a subscriber more than chat or `.nyar status` tells every player. A key
+marked admin-only is sent to players as `-`.
+
+| Type or key | Child | Payload |
+|---|---|---|
+| `progress` | live-ops | `id=<event> secs=<left> wave=<spawned>/<total> next=<secs\|-> alive=<n\|->`. Sent when a wave or horde spawns, on every clear, and at most once per 15 s per event while `alive` changes. `alive` is admin-only; `next` follows the status rows' rule (L2) |
+| `wave-cleared` | live-ops | `id=<event> secs=0 wave=<n>`; the push twin of wave-sets' "wave n cleared" chat line, sent to whoever that line reaches |
+| `health` | live-ops | `id=- secs=0 degraded=<list\|->`; admins only, when the degraded set changes |
+| `personal` | live-ops | `id=<event> secs=0 kind=revenge\|hunted state=warned\|active\|ended`; only to the player the alert is about, when one of their `mine` alerts appears, changes state or ends (L8). The client then re-reads `api mine` |
+| `what=` on `config-changed` | live-ops | `events \| pillars \| messages \| announce`, after `secs`; the client re-reads only that part. An api 8 client ignores it and re-reads everything |
+| `notice` | communications | `id=<event\|-> secs=0 kind=<kind> to=<all\|you\|clan\|admins> text=<escaped>`; the push twin of every chat line the server sends to that player, public or private (§10.8). The chat line is still sent: the push is a copy (L5) |
+| `event-soon` | communications | `id=<event> secs=<until start>`, at the start-warning offsets before a `schedule` trigger's start when `announce.soon` is on |
+
+`notice` `kind` ∈ `start | end | warn | cleared | horde | march | outcome | scoreboard | revenge | daily | admin |
+message | login | soon | degraded`. `to=you` marks a private line (a revenge warning, a login notice, the admin
+degraded notice). A scoreboard notice carries the player names its chat line already shows everyone (wave-sets D12).
+No notice carries a position.
+
+```
+[NYAR:ev] type=progress id=ashfall secs=412 wave=2/3 next=95 alive=14
+[NYAR:ev] type=notice id=ashfall secs=0 kind=warn to=all text=Wave_2_of_Ashfall_Raid_in_60_seconds!
+[NYAR:ev] type=event-soon id=ashfall secs=300
+[NYAR:ev] type=config-changed id=- secs=0 what=messages
+```
+
+### 10.8 Communications server features — PLANNED (communications, proposed 2026-10-15)
+
+These are server behaviour, not only wire. Each has its own switch, off by default, and the twins above.
+
+- **Login event notice** (`[Announcements] LoginEvents`): a player who connects while events are active gets one
+  private line per event they may see (at most 3), 10 s after connecting, and not again on a reconnect within 60 s
+  (the existing LoginGate): "Ashfall Raid is under way: 7 min left, wave 2 of 3". A siege goes only to the target clan.
+  Pushed as `notice kind=login to=you`. A Raphael client can already build its own login toast from `api status` after
+  the handshake, on api 8 today; this feature reaches players without Raphael.
+- **Start warnings** (`[Announcements] StartWarnings`, per event `announce.soon`): for `schedule` triggers only (no
+  other trigger can be predicted), a server-wide line at `StartWarningOffsets` (default `600,60`) before the start:
+  "Ashfall Raid begins in 10 minutes". Pushed as `event-soon` and `notice kind=soon`.
+- **Editable announce text**: `announce.start`, `announce.end`, `announce.warnings` and `announce.soon` become
+  settable (§10.6).
+- **Scheduled and recurring messages** (`messages.json`, written only by Persistence; at most 50 messages, each 1-200
+  characters with §5's text rules), sent through the announcement queue (one line a second):
+  - `when` ∈ `every:<minutes>` (5-1440) | `daily:<HH:mm>` | `days:<Mon,Tue,…>@<HH:mm>` | `login` (each player once per
+    connect, after the login notice) | `event-start:<id>` | `event-end:<id>` | `while:<id>:<minutes>` (repeats while
+    that event runs).
+  - `target` ∈ `all` (connected players) | `admins`.
+  - Tokens in the text: `{events}` (the active events with time left), `{next}` (the next `schedule` start and its
+    time), `{event}` and `{left}` (for the event-bound `when` values). A token expands to player-safe facts only.
+- **Text escape** (`notice` text, `announce.*` values, `msg` text and `when`): a space becomes `_`; `%`, `_`, `=`, `;`,
+  `:`, `,` and `|` become `%25`, `%5F`, `%3D`, `%3B`, `%3A`, `%2C` and `%7C`. The client turns `_` back into a space,
+  then decodes the `%XX` codes. Text is cut on a character boundary before it is escaped, so the line still fits 480
+  bytes.
+
+Reads:
+
+**`.nyar api ann`** (admin) — the announcement settings, one row, then `[NYAR:end] cmd=ann count=1`:
+```
+[NYAR:ann] warnings=300,60,10 daily=20:00 tzmin=-240 soon=600,60 loginevents=0 startwarnings=0 queue=0
+```
+- `tzmin` is the server's UTC offset in minutes, so the client can show `daily` and message times in the player's
+  own time.
+
+**`.nyar api messages [page]`** (admin) — then `[NYAR:end] cmd=messages page= count=`:
+```
+[NYAR:msg] id=welcome enabled=1 when=login target=all next=- text=Welcome%2C_events_tonight%3A_{next}
+[NYAR:msg] id=raid-reminder enabled=1 when=while%3Aashfall%3A5 target=all next=180 text=Ashfall_Raid%3A_{left}_left
+```
+- `next` is seconds until the message is next due, or `-` for an event-bound or `login` message that is not due.
+
+**`.nyar api notices`** (anyone) — the public notices of the events still active, oldest first, at most 10, as
+`[NYAR:note]` rows with `notice`'s keys, then `[NYAR:end] cmd=notices count=<n>`. A client that has just logged in
+reads it to show what it missed.
+
+### 10.9 Decisions — Resolved (owner, 2026-10-15; design §9 D59)
+
+L8 came from the owner's follow-up message the same day; the others were asked as options.
+
+
+| # | Decision | Answer |
+|---|---|---|
+| L1 | Map positions for admins | Admins get exact coordinates (x, y, z) of every unit the mod spawned, per event (`api units event=<id>`) or across all events (`api units`), of the event's map spots (`[NYAR:spot]`), and of native NPCs holding an empowerment carrier (`src=empower`). Never a player's position or a hunt target; players never get coordinates (§1). For admins only, this amends the apocalypse (0.13.0) and hunting-grounds (0.11.0) rule that hotspots, fronts, the goal and hunts never reach the wire. |
+| L2 | Next-wave countdown | Admins always; players only for an event whose chat wave warnings are on. |
+| L3 | `unit goto` | Built: it teleports only the requesting admin. |
+| L4 | `mine` | Kills, deaths and rank, the requester's own row only. |
+| L5 | `notice` push | A copy: the chat line is still sent. A quiet mode can follow if players ask. |
+| L6 | Scheduled messages | In Nyarlathotep, with event placeholders; off by default, at most 50. |
+| L7 | Order | Live-ops is planned next, beside the 0.13.0 test weekend, on its own branch; communications after the 0.13.0 release. Scaling and replacements keep their places after live-ops. |
+| L8 | The player's own view | Every player can read the global board (status rows with time left, wave count and, per L2, the next-wave countdown; today's scheduled starts; the public notices) and their own `mine` rows: their standing and personal alerts, a revenge that warned them or runs against them, an event whose units are after them. No unit count, position, direction or distance, and never another player. For the requester only, this amends revenge's rule (0.12.0) that the hunted player never reaches the wire and automation D13's rule that the focus player stays in memory. Raphael may poll these reads for an overlay (handoff §5). |
