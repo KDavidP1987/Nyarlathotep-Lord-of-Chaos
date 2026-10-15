@@ -46,6 +46,11 @@ public interface IApocalypseGame : IApocalypseWorld
     /// <summary>Builds the run's claimed-territory map for its hunt and roam (TerritoryMap.ForWave); never throws.</summary>
     void MapTerritory(string eventId);
 
+    /// <summary>A resume that failed after the engine resumed the run cancels it outside EventRuntime's end paths: the
+    /// event's spawn state beyond its units goes here (hunt seeds, territory map, failure streaks, region and unit-watch
+    /// rows; EventRuntime.EndSpawnState). Never throws.</summary>
+    void ResumeCancelled(string eventId);
+
     /// <summary>The boot sweep's despawns still queued (the drain gate, D12).</summary>
     int LeftToDrain { get; }
 
@@ -725,6 +730,8 @@ public sealed class ApocalypseHost
             Safe(game, () => game.Ledger.EndEvent(p.EventId, DateTime.MaxValue));
             // and the restored scoreboard rows, so a later run of the same id starts from zero (code review L2)
             board.End(p.EventId);
+            // and its spawn state beyond the units, as every other end path drops it (hunt seeds, territory map, streaks, watch rows)
+            Safe(game, () => { game.ResumeCancelled(p.EventId); return 0; });
             Reset(null);
             RemoveRecord(state, p.EventId);
             return null;

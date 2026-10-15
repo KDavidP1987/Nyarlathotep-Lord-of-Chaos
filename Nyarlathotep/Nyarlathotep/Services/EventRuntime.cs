@@ -321,8 +321,9 @@ internal static class EventRuntime
     /// <summary>An event's spawn state beyond its units (event-spawns D13, D30, D33): its hunt seeds, its kept territory
     /// map and its open failure streaks, the arena check's included (swarm D4), go with the event, and so do its region
     /// lock and hunt records and streaks (hunting-grounds D12) and its unit watch rows, tries, clocks and counts (unit-watch
-    /// D11). Every end path but a restart runs it; a restart starts with none (SpawnTracker.Initialize).</summary>
-    static void EndSpawnState(string id)
+    /// D11). Every end path but a restart runs it, apocalypse's failed resume through ApocalypseAction.ResumeCancelled; a
+    /// restart starts with none (SpawnTracker.Initialize).</summary>
+    internal static void EndSpawnState(string id)
     {
         HuntAction.EndEvent(id);
         TerritoryMap.Forget(id);

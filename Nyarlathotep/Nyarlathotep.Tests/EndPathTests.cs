@@ -177,6 +177,21 @@ public class EndPathTests
         return File.ReadAllText(Path.Combine(dir!.FullName, "Nyarlathotep", "Nyarlathotep", "Services", "EventRuntime.cs"));
     }
 
+    /// <summary>Apocalypse's failed resume cancels its run outside EventRuntime's end paths; the live game's ResumeCancelled
+    /// must run EndSpawnState, or the run's hunt seeds, territory map, streaks and watch rows outlive it.</summary>
+    [Fact]
+    public void EndPaths_fails_when_a_failed_resume_keeps_spawn_state()
+    {
+        static bool Drops(string s) => System.Text.RegularExpressions.Regex.Replace(s, @"//[^\n]*", "")
+            .Contains("public void ResumeCancelled(string eventId) => EventRuntime.EndSpawnState(eventId);", StringComparison.Ordinal);
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "tools", "preflight.ps1"))) dir = dir.Parent;
+        var source = File.ReadAllText(Path.Combine(dir!.FullName, "Nyarlathotep", "Nyarlathotep", "Services", "ApocalypseAction.cs")).Replace("\r\n", "\n");
+        Assert.True(Drops(source));
+        Assert.False(Drops(source.Replace("=> EventRuntime.EndSpawnState(eventId);", "{ }")));
+        Assert.False(Drops(source.Replace("public void ResumeCancelled", "// public void ResumeCancelled")));
+    }
+
     [Theory]
     [InlineData("WalkCheck.Health.Purged();", "Purge")]
     [InlineData("WalkCheck.Health.EventEnded(id);", "EndSpawnState")]

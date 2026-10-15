@@ -300,6 +300,8 @@ internal static class ApocalypseAction
 
         public void MapTerritory(string eventId) => TerritoryMap.ForWave(eventId);
 
+        public void ResumeCancelled(string eventId) => EventRuntime.EndSpawnState(eventId);
+
         public void Log(string line) => Core.Log.LogInfo($"[nyar] {line}");
 
         public void Warn(string line) => Core.Log.LogWarning($"[nyar] {line}");
