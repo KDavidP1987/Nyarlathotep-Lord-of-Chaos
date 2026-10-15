@@ -570,6 +570,26 @@ public partial class UnitWatchTests
         Assert.InRange(m.W.GroundCalls + m.W.WalkCalls - before, 1, 120);
     }
 
+    /// <summary>Codex pre-release M1: one off-ground read may examine many height levels; every probe is debited from the
+    /// watch's 120-check ceiling (D10), only levels at or below the unit's reach are examined, its own level first (D3).</summary>
+    [Fact]
+    public void Controls_fails_when_a_ground_read_probes_past_the_walk_cap()
+    {
+        var (r, _) = Watch.Rig();
+        r.W.GroundAt = (_, _) => new GroundReading(null);          // no grounded level: each read scans every level in reach
+        for (var i = 0; i < 50; i++) r.W.Add("uw", Spawned, 100 + 5 * i, 500);
+        r.For(5);
+        Assert.Equal(UnitWatch.WalkCap, r.W.GroundCalls);          // 120 probes, not 50 units x 16 levels
+        var (one, _) = Watch.Rig();
+        one.W.Add("uw", Spawned, 100, 500);
+        one.For(5);
+        Assert.Equal(1, one.W.GroundCalls);                        // grounded at its own level: one probe
+        var (deep, _) = Watch.Rig();
+        deep.W.Add("uw", Spawned, 100, 500, -15f);
+        deep.For(5);
+        Assert.Equal(8, deep.W.GroundCalls);                       // levels 7..0 only: none above its reach (-5 m)
+    }
+
     [Fact]
     public void Controls_fails_when_a_removal_skips_the_despawn_budget()
     {

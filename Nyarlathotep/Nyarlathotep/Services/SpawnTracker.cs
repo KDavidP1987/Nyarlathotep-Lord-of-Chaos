@@ -182,6 +182,9 @@ internal static class SpawnTracker
     [Mutating]
     internal static (int Queued, int Cancelled) PurgeUnits() => _ledger.Purge();
 
+    /// <summary>The waiting orders of one event a purge would cancel (apocalypse D15).</summary>
+    internal static int WaitingOrders(string eventId) => _ledger.Waiting(eventId);
+
     /// <summary>The event, wave and spawn time of a tracked unit (wave-sets D13), null for anything else; read before
     /// <see cref="Died"/> forgets it.</summary>
     internal static OurUnit? EventOf(Entity unit) => _ledger.EventOf(KeyOf(unit));
@@ -928,16 +931,11 @@ internal static class SpawnTracker
         /// <summary>A revenge instance's focus player's Hunt key (Spawning's FocusKey join), from this check's players.</summary>
         public long? FocusKey(ActiveEvent a) => HuntPlan.FocusKey((_rows ?? PlayerQuery.Read()).Select(p => (p.Key, p.PlatformId)), a.Focus);
 
-        /// <summary>The lowest grounded walk-check level at (x, z), lowest first, stopping at the first (D3, S-12's fallback);
-        /// LowestY null when no level is grounded there; null when the walk check cannot answer (no tile world, off the
-        /// tile grid). A throwing call throws, which the phase counts as a failed read of that unit only.</summary>
-        public GroundReading? Ground(float x, float z)
-        {
-            if (!WalkCheck.OnGrid(x, z) || Probe() is not { } probe) return null;
-            for (var level = 0; level <= byte.MaxValue; level++)
-                if (probe.IsGrounded(x, z, (byte)level)) return new GroundReading(WalkCheck.HeightOf((byte)level));
-            return new GroundReading(null);
-        }
+        /// <summary>One grounded probe at (x, z) on <paramref name="level"/> (D3): null when the walk check cannot answer (no
+        /// tile world, off the tile grid). The watch scans the levels in Logic (UnitWatch.GroundScan), each probe from its
+        /// walk budget (D10). A throwing call throws, which the phase counts as a failed read of that unit only.</summary>
+        public bool? Grounded(float x, float z, byte level) =>
+            WalkCheck.OnGrid(x, z) && Probe() is { } probe ? probe.IsGrounded(x, z, level) : null;
 
         /// <summary>Free and grounded at <paramref name="level"/>; throws without a walk check, so no unit lands on unread
         /// ground and the read failure shows (as the apocalypse's hop).</summary>

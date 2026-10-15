@@ -63,3 +63,32 @@ public sealed class FightRead
         _faultSinceCheck = false;
     }
 }
+
+/// <summary>The fight read's owner walk (unit-watch D4): from a hit row's entity, the entity itself and then up to
+/// <see cref="Steps"/> owner links (a projectile, an area, a summon), as the spike read them. Pure over the patch's reads.</summary>
+public static class OwnerChain
+{
+    /// <summary>Owner links followed past the starting entity (Codex pre-release L1: the start plus three owners).</summary>
+    public const int Steps = 3;
+
+    /// <summary>The entity's owner, when it has one.</summary>
+    public delegate bool TryOwner<T>(T entity, out T owner);
+
+    /// <summary>The first entity on the chain from <paramref name="start"/> for which <paramref name="verdict"/> answers
+    /// true; null when it answers false, an entity does not exist, has no owner, or <see cref="Steps"/> links were followed.
+    /// A verdict of null follows the owner.</summary>
+    public static T? Find<T>(T start, Func<T, bool> exists, Func<T, bool?> verdict, TryOwner<T> owner) where T : struct
+    {
+        var entity = start;
+        for (var link = 0; link <= Steps && exists(entity); link++)
+        {
+            switch (verdict(entity))
+            {
+                case true: return entity;
+                case false: return null;
+            }
+            if (link == Steps || !owner(entity, out entity)) return null;
+        }
+        return null;
+    }
+}

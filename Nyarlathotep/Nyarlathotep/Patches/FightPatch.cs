@@ -23,9 +23,6 @@ internal static class FightPatch
 {
     static readonly Logic.FailureStreak Faults = new();
 
-    /// <summary>Owner steps followed from a source to a player (a projectile, an area, a summon), as the spike read them.</summary>
-    const int OwnerSteps = 3;
-
     [HarmonyPostfix]
     public static void ApplyStatChanges(NativeArray<StatChangeEvent> statChanges)
     {
@@ -57,28 +54,20 @@ internal static class FightPatch
         return TrackedOf(row.Source);
     }
 
-    /// <summary>The source is a player character or an entity a player owns.</summary>
-    static bool ByPlayer(Entity source)
-    {
-        for (var i = 0; i < OwnerSteps && source.Exists(); i++)
-        {
-            if (source.Has<PlayerCharacter>()) return true;
-            if (!source.TryGetComponent<EntityOwner>(out var owner)) return false;
-            source = owner.Owner;
-        }
-        return false;
-    }
+    /// <summary>The source is a player character or an entity a player owns, up to three owner links (Logic/OwnerChain).</summary>
+    static bool ByPlayer(Entity source) =>
+        Logic.OwnerChain.Find(source, e => e.Exists(), e => e.Has<PlayerCharacter>() ? true : null, Owner) is not null;
 
-    /// <summary>The tracked unit that is the source or owns it, or null (a player's own entity is none).</summary>
-    static long? TrackedOf(Entity source)
+    /// <summary>The tracked unit that is the source or owns it, up to three owner links, or null (a player's own entity is
+    /// none).</summary>
+    static long? TrackedOf(Entity source) =>
+        Logic.OwnerChain.Find(source, e => e.Exists(), e => SpawnTracker.IsTracked(SpawnTracker.KeyFor(e)) ? true : e.Has<PlayerCharacter>() ? false : null, Owner)
+            is { } unit ? SpawnTracker.KeyFor(unit) : null;
+
+    static bool Owner(Entity entity, out Entity owner)
     {
-        for (var i = 0; i < OwnerSteps && source.Exists(); i++)
-        {
-            var key = SpawnTracker.KeyFor(source);
-            if (SpawnTracker.IsTracked(key)) return key;
-            if (source.Has<PlayerCharacter>() || !source.TryGetComponent<EntityOwner>(out var owner)) return null;
-            source = owner.Owner;
-        }
-        return null;
+        var has = entity.TryGetComponent<EntityOwner>(out var o);
+        owner = has ? o.Owner : default;
+        return has;
     }
 }

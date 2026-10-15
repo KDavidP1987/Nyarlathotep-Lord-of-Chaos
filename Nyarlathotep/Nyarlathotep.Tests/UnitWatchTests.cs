@@ -70,11 +70,14 @@ sealed class WatchWorld(SpawnLedger? ledger = null) : IUnitWatchWorld
     public IReadOnlyList<HuntCandidate> Players() => People;
     public long? FocusKey(ActiveEvent a) => Focus;
 
-    public GroundReading? Ground(float x, float z)
+    /// <summary>One probe (counted in <see cref="GroundCalls"/>): <see cref="GroundAt"/>'s reading is the lowest grounded
+    /// height, every level at or above it grounded; null where it cannot answer.</summary>
+    public bool? Grounded(float x, float z, byte level)
     {
         GroundCalls++;
         if (ThrowGround) throw new InvalidOperationException("walk check down");
-        return GroundAt(x, z);
+        if (GroundAt(x, z) is not { } reading) return null;
+        return reading.LowestY is { } low && HeightOf(level) >= low;
     }
 
     public bool Walkable(float x, float z, byte level)
@@ -540,6 +543,28 @@ public partial class UnitWatchTests
         q.For(400);
         Assert.Null(q.P.MarkOf(close));
         Assert.Empty(q.Log);
+    }
+
+    /// <summary>Codex pre-release L1: the fight read follows the hit's source and then up to three owner links (a player's
+    /// projectile from an area from a summon), so a player three links away is found and one four links away is not; the
+    /// patch walks through Logic/OwnerChain, not a loop of its own.</summary>
+    [Fact]
+    public void Fight_fails_when_a_player_three_owner_links_away_is_missed()
+    {
+        // entity n is owned by n + 1; entity 4 is the player
+        static bool Owner(int e, out int o) { o = e + 1; return e < 10; }
+        int? Player(int start) => OwnerChain.Find(start, e => e > 0, e => e == 4 ? true : null, Owner);
+        Assert.Equal(4, Player(4));                                 // the source itself
+        Assert.Equal(4, Player(1));                                 // three owner links: 1 -> 2 -> 3 -> 4
+        Assert.Null(OwnerChain.Find(1, e => e > 0, e => e == 5 ? true : null, Owner));   // four links: too far
+        Assert.Null(OwnerChain.Find(1, e => e > 0, e => e == 2 ? false : e == 4 ? true : null, Owner));   // a false verdict stops the walk
+        static bool Orphan(int e, out int o) { o = 0; return false; }
+        Assert.Null(OwnerChain.Find(1, e => e > 0, e => e == 4 ? true : null, Orphan));
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "tools", "preflight.ps1"))) dir = dir.Parent;
+        var patch = File.ReadAllText(Path.Combine(dir!.FullName, "Nyarlathotep", "Nyarlathotep", "Patches", "FightPatch.cs"));
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(patch, @"Logic\.OwnerChain\.Find\(").Count);
+        Assert.DoesNotContain("for (", patch);
     }
 
     [Fact]

@@ -155,7 +155,7 @@ public class ApocalypseDependencyFailureTests
     }
 
     /// <summary>Code review L5: a throw out of the start gate itself (Services/ApocalypseAction.Prepare) refuses the start,
-    /// logged once per streak, instead of letting the instance start with no run; a Begin that fails is logged.</summary>
+    /// logged once per streak, instead of letting the instance start with no run; a Begin that fails is rolled back (see the next test).</summary>
     [Fact]
     public void NativeRead_fails_when_a_throwing_prepare_lets_the_start_through()
     {
@@ -176,7 +176,37 @@ public class ApocalypseDependencyFailureTests
         Assert.Contains("_guard.Prepare(def.Id, () => _host.Prepare(def, _game))", action);
         var start = EndPathTests.Body(EndPathTests.RuntimeSource().Replace("\r\n", "\n"), "internal static Outcome StartEvent(");
         Assert.Contains("!ApocalypseAction.Begin(active, now)", start);
-        Assert.Contains("started without its run (begin failed)", start);
+    }
+
+    /// <summary>Codex pre-release M2: a Begin that fails after the gate let the start through rolls the instance back through
+    /// the fault cancel path (EndSpawnState, the run's end and its record, the slot), logs it, refuses the start and announces
+    /// neither the start nor an end; it never leaves an instance running without its run.</summary>
+    [Fact]
+    public void NativeRead_fails_when_a_failed_begin_keeps_its_instance()
+    {
+        var rig = Make();
+        Assert.Null(rig.Engine.Start("apo", "manual", T0, Open(), gate: _ => null));   // the gate passed, nothing prepared
+        Assert.False(rig.Host.Begin(rig.Active, rig.Game, rig.State, rig.Board, T0));  // so the run cannot begin
+        Assert.NotNull(rig.Engine.Cancel("apo"));                                      // the roll-back frees the slot
+        rig.Host.Ended("apo", ApocalypseEnd.Fault, rig.Game, rig.State);
+        Assert.Null(rig.State.Document.Apocalypse);
+        Assert.Null(rig.Engine.Find("apo"));
+        Assert.Equal("apocalypse apo: begin failed; the start is rolled back", EntryGuard.BeginFailedLine("apo"));
+        Assert.False(EntryGuard.BeginFailed.Ok);
+
+        // the wiring (Services, a source check as EndPathTests'): the failed Begin ends the instance through End's fault path
+        // without its banner, before the start is announced, and refuses the start
+        var source = EndPathTests.RuntimeSource().Replace("\r\n", "\n");
+        var start = EndPathTests.Body(source, "internal static Outcome StartEvent(");
+        var begin = start.IndexOf("!ApocalypseAction.Begin(active, now)", StringComparison.Ordinal);
+        var rollback = start.IndexOf("End(id, \"rolled back (begin failed)\", EndPath.Fault, announce: false);", StringComparison.Ordinal);
+        var refuse = start.IndexOf("return EntryGuard.BeginFailed;", StringComparison.Ordinal);
+        var announced = start.IndexOf("Announcer.EventStarted(active.Instance);", StringComparison.Ordinal);
+        Assert.True(begin >= 0 && rollback > begin && refuse > rollback && announced > refuse, $"{begin} {rollback} {refuse} {announced}");
+        Assert.Contains("EntryGuard.BeginFailedLine(id)", start);
+        var end = EndPathTests.Body(source, "static bool End(string id, string why, EndPath path");
+        Assert.Contains("if (announce) Announcer.EventEnded(ended.Definition);", end);
+        Assert.Contains("EndSpawnState(id)", end);
     }
 
     static string Repo()

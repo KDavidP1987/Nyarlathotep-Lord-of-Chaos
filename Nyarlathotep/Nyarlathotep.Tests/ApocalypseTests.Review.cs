@@ -342,4 +342,27 @@ public partial class ApocalypseTests
         Assert.Contains("var (_, cancelled) = SpawnTracker.EndEventUnits(ended.Id, DateTime.MinValue);", outcome);
         Assert.Contains("ApocalypseAction.Ended(ended.Id, EndRule.Of(step.Result), cancelled)", outcome);
     }
+
+    /// <summary>Codex pre-release M3: a purge cancels the run's waiting orders too; its final tally counts them failed, as
+    /// stop, fault, the natural end and won or lost do, instead of leaving them pending.</summary>
+    [Fact]
+    public void Tally_fails_when_a_purge_drops_the_cancelled_orders()
+    {
+        var rig = ApocalypseDependencyFailureTests.Running();
+        Assert.Equal(1, rig.Tick(T0.AddMinutes(1)).Rose);                       // horde 1's orders wait
+        var waiting = rig.Game.Ledger.Waiting("apo");
+        Assert.True(waiting >= 8);
+        Assert.Equal(0, rig.Game.Ledger.Waiting("other"));
+        var (_, cancelled) = rig.Game.Ledger.Purge();
+        Assert.Equal(waiting, cancelled);
+        rig.Host.Purged(rig.Game, rig.State, waiting);
+        var tally = rig.Game.Logs.Last(l => l.StartsWith("apocalypse apo units: ", StringComparison.Ordinal));
+        Assert.Matches(new Regex($@"= 0 pending \+ .* \+ {waiting} failed$"), tally);
+
+        // the wiring: EventRuntime.Purge counts the apocalypse's waiting orders before the purge cancels them and passes them on
+        var purge = EndPathTests.Body(EndPathTests.RuntimeSource().Replace("\r\n", "\n"), "internal static Outcome Purge()");
+        var count = purge.IndexOf("Sum(e => SpawnTracker.WaitingOrders(e.Id))", StringComparison.Ordinal);
+        Assert.InRange(count, 0, purge.IndexOf("SpawnTracker.PurgeUnits()", StringComparison.Ordinal));
+        Assert.Contains("ApocalypseAction.Purged(apocalypseCancelled);", purge);
+    }
 }

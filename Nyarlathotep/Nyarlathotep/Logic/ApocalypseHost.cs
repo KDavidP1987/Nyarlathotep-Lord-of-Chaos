@@ -601,10 +601,11 @@ public sealed class ApocalypseHost
         }
     }
 
-    /// <summary>`.nyar purge confirm` (D9): whatever runs or waits to resume goes, and so does the record.</summary>
-    public void Purged(IApocalypseGame game, StateStore state)
+    /// <summary>`.nyar purge confirm` (D9): whatever runs or waits to resume goes, and so does the record; the run's
+    /// <paramref name="cancelled"/> waiting orders count failed in its final tally (D15), as on every other end path.</summary>
+    public void Purged(IApocalypseGame game, StateStore state, int cancelled = 0)
     {
-        if (_run is { } run) Ended(run.Id, ApocalypseEnd.Purge, game, state);
+        if (_run is { } run) Ended(run.Id, ApocalypseEnd.Purge, game, state, cancelled);
         if (_pending is { } p) Ended(p.EventId, ApocalypseEnd.Purge, game, state);
         if (state.Document.Apocalypse is not null)
         {
@@ -826,6 +827,12 @@ public sealed class EntryGuard(Action<string> error)
             return fallback;
         }
     }
+
+    /// <summary>The log line of a start whose run did not begin (Codex pre-release M2): the instance is rolled back.</summary>
+    public static string BeginFailedLine(string id) => $"apocalypse {id}: begin failed; the start is rolled back";
+
+    /// <summary>The reply to a start whose run did not begin: refused, nothing left running (Codex pre-release M2).</summary>
+    public static readonly Outcome BeginFailed = Outcome.Refused("begin failed: the start was rolled back", RefusalCode.State, "id", reason: Reasons.Internal);
 
     /// <summary>"no hotspot: prepare failed: &lt;message&gt;" (L5).</summary>
     public static string PrepareFailed(string message) => $"no hotspot: prepare failed: {message}";

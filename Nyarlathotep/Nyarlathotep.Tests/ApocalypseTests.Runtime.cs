@@ -14,11 +14,11 @@ public partial class ApocalypseTests
         source = source.Replace("\r\n", "\n");
         string Body(string signature) => EndPathTests.Body(source, signature);
         var gaps = new List<string>();
-        if (!Body("static bool End(string id, string why, EndPath path)").Contains("ApocalypseAction.Ended(id, ApocalypseEndOf(path), cancelled)", StringComparison.Ordinal))
+        if (!Body("static bool End(string id, string why, EndPath path").Contains("ApocalypseAction.Ended(id, ApocalypseEndOf(path), cancelled)", StringComparison.Ordinal))
             gaps.Add("stop");
         if (!source.Contains("EndPath.PillarOff => ApocalypseEnd.PillarOff", StringComparison.Ordinal)) gaps.Add("pillar off");
         if (!source.Contains("EndPath.Fault => ApocalypseEnd.Fault", StringComparison.Ordinal)) gaps.Add("fault");
-        if (!Body("internal static Outcome Purge()").Contains("ApocalypseAction.Purged();", StringComparison.Ordinal)) gaps.Add("purge");
+        if (!Body("internal static Outcome Purge()").Contains("ApocalypseAction.Purged(apocalypseCancelled);", StringComparison.Ordinal)) gaps.Add("purge");
         if (!Body("internal static IReadOnlyList<string> EndPillar(Pillar pillar)").Contains("ApocalypseAction.PillarOff(pillar);", StringComparison.Ordinal))
             gaps.Add("pillar off in the drain wait");
         if (!Body("internal static void Tick(DateTime now)").Contains("ApocalypseAction.Ended(ended.Id, ApocalypseEnd.Survived, cancelled)", StringComparison.Ordinal))
@@ -43,7 +43,7 @@ public partial class ApocalypseTests
                      ("ApocalypseAction.Ended(id, ApocalypseEndOf(path), cancelled)", "stop"),
                      ("EndPath.PillarOff => ApocalypseEnd.PillarOff", "pillar off"),
                      ("EndPath.Fault => ApocalypseEnd.Fault", "fault"),
-                     ("ApocalypseAction.Purged();", "purge"),
+                     ("ApocalypseAction.Purged(apocalypseCancelled);", "purge"),
                      ("ApocalypseAction.PillarOff(pillar);", "pillar off in the drain wait"),
                      ("ApocalypseAction.Ended(ended.Id, ApocalypseEnd.Survived, cancelled)", "survived"),
                      ("ApocalypseAction.Ended(ended.Id, EndRule.Of(step.Result), cancelled)", "won or lost"),
@@ -55,6 +55,6 @@ public partial class ApocalypseTests
             Assert.Equal([gap], ApocalypseRuntimeGaps(source.Replace(call, "x")));
         }
         // a commented-out call is no call
-        Assert.Equal(["purge"], ApocalypseRuntimeGaps(source.Replace("ApocalypseAction.Purged();", "// ApocalypseAction.Purged();")));
+        Assert.Equal(["purge"], ApocalypseRuntimeGaps(source.Replace("ApocalypseAction.Purged(apocalypseCancelled);", "// ApocalypseAction.Purged(apocalypseCancelled);")));
     }
 }
