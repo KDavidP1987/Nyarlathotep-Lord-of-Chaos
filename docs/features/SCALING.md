@@ -42,6 +42,22 @@ event runs exactly as before. Set from chat with `.nyar event set <id> action.sc
 - Advice for admins: a player-aimed event (revenge, AroundPlayer) on a Global scope counts every online player; give it a
   regional scope to scale only to the players nearby.
 
+## Owner test sheet · step 5 (D23, real players)
+
+Needs at least two real players. Build: the Release DLL of the step 4 commit (642d376) on the dev server or your own
+server; tools/vrclient/fixtures/sc-wave.json in events.json, enabled. Takes about 15 minutes.
+
+1. Connect to 127.0.0.1:9876 (Direct Connect, or your own server's address). Both players stand together at the pond:
+   `.devtp -1880 -1640` (dev server), or anywhere in one region on your server after `.nyar event set sc-wave action.location here`.
+2. `.nyar event info sc-wave` → a line "scaling: +2 units a player beyond the first, level players' gear +2, +1 a wave".
+3. `.nyar event start sc-wave`, then `.nyar event info sc-wave` → "scaling now: <n> players, gear <A>, level <L>".
+   **PASS:** <n> is the number of non-admin players in the event's scope (admins count only with [Scoreboard] IncludeAdmins = true);
+   wave 1 has 4 + 2 × (<n> − 1) bandit thugs at level <L> = the average of your character screens' Gear Level + 2.
+4. Kill wave 1. Wave 2 comes with Rufus the Foreman. **PASS:** the thugs are one level higher; Rufus is level 20.
+5. One player logs out (sc-wave has no scope, so it counts every online player wherever they stand); stop with `.nyar event stop sc-wave` and start it again.
+   **PASS:** "scaling now" counts one player fewer and wave 1 is 2 thugs smaller.
+6. Your verdict: are the size and the level fair for your group? Anything to change becomes an amendment before it is built.
+
 ## Open questions
 
 - None blocking. The gear rounding is settled as far as the spike could see (all readings whole numbers; S-6's floor kept).
