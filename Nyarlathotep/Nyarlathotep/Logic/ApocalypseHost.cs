@@ -54,6 +54,15 @@ public interface IApocalypseGame : IApocalypseWorld
 
     /// <summary>Queues a player line (AnnounceQueue, Info, as the scoreboard does, D7).</summary>
     void Announce(string eventId, string line);
+
+    /// <summary>The scaling source of <paramref name="active"/>'s run (scaling D2, D5, D12): its Read is a fresh guarded
+    /// read at each horde rise and roamer top-up, null when the read failed; null for a run without the block. Never
+    /// throws.</summary>
+    ScalingSource? Scaling(ActiveEvent active) => null;
+
+    /// <summary>A resume that failed after the engine resumed the run cancels it here, outside EventRuntime's end paths: its
+    /// scaling decision rows and read streak go too (scaling D12, D15; Services: ScalingReads.EventEnded). Never throws.</summary>
+    void ResumeCancelled(string eventId) { }
 }
 
 /// <summary>What one apocalypse tick did: the outcome (won or lost end the run; survived is the engine's expiry) and the
@@ -292,7 +301,7 @@ public sealed class ApocalypseHost
         Guard(_record, game, "start", () =>
         {
             game.MapTerritory(active.Id);
-            foreach (var line in _run!.TopUp(game, now)) Say(game.Log, line);
+            foreach (var line in _run!.TopUp(game, now, game.Scaling(active))) Say(game.Log, line);   // scaling D5
         });
         WriteRecord(game, state, board, now);
         return true;
@@ -331,7 +340,7 @@ public sealed class ApocalypseHost
         (HordeRise, IReadOnlyList<string>)? rise = null;
         try
         {
-            if (run.Rise(game, now, out var roamerLines) is { } risen) rise = (risen, roamerLines);
+            if (run.Rise(game, now, out var roamerLines, scale: game.Scaling(run.Active)) is { } risen) rise = (risen, roamerLines);   // scaling D5
             _rise.Ok();
         }
         catch (Exception e) { if (_rise.Fail()) Say(game.Warn, $"apocalypse: rise skipped: {e.Message}"); }
@@ -705,7 +714,7 @@ public sealed class ApocalypseHost
             Reset(run);
             foreach (var k in Enumerable.Range(1, p.HordesRisen).Where(k => p.Hordes.All(h => h.Number != k))) _defeated.Add(k);   // destroyed before the restart
             Safe(game, () => { game.MapTerritory(p.EventId); return 0; });
-            var (rebuilt, rises, topUp) = run.Rebuild(game, p, now);
+            var (rebuilt, rises, topUp) = run.Rebuild(game, p, now, game.Scaling(active));   // scaling D5: the rebuilt units unscaled
             Say(game.Log, ResumeRule.ResumedLine(p.EventId, p.HordesRisen, run.Action.Hordes.Count, rebuilt));
             foreach (var r in rises)
             {
@@ -727,6 +736,7 @@ public sealed class ApocalypseHost
             Safe(game, () => game.Ledger.EndEvent(p.EventId, DateTime.MaxValue));
             // and the restored scoreboard rows, so a later run of the same id starts from zero (code review L2)
             board.End(p.EventId);
+            Safe(game, () => { game.ResumeCancelled(p.EventId); return 0; });   // scaling D12, D15: no decision row or streak outlives it
             Reset(null);
             RemoveRecord(state, p.EventId);
             return null;

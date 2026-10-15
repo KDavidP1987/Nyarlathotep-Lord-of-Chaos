@@ -27,7 +27,8 @@ internal static class UnitSetup
         }
 
         var level = -1;
-        if (tuning.Level is { } wanted && unit.TryGetComponent<UnitLevel>(out var unitLevel))
+        // scaling D8, D12: a scaled level skips a V Blood, which keeps its own; a throwing flag read keeps the own level too
+        if (Scaling.LevelAtSetup(tuning, () => ScalingReads.IsVBlood(unit)) is { } wanted && unit.TryGetComponent<UnitLevel>(out var unitLevel))
         {
             level = wanted.Resolve(unitLevel.Level._Value);
             unitLevel.Level._Value = level;

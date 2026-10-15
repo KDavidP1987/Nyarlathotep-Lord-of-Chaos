@@ -21,7 +21,6 @@ sealed class ScalingRig : IScalingReader
     }
 
     public bool InScope(Scope scope, float x, float z) => Inside(x, z);
-    public bool IsVBlood(string prefab) => VBloods.Contains(prefab);
 
     /// <summary>A source over this rig for an apocalypse run: a fresh read at every call (admins counted).</summary>
     public ScalingSource Source(ScalingBook? book = null, bool includeAdmins = true) =>
@@ -173,7 +172,7 @@ public class ScalingTests
         var rig = new ScalingRig { Throw = "player read broke" };
         rig.Rows.AddRange([P(), P(), P()]);
         Assert.Null(Scaling.TryRead(rig, Scope.Global, true, out var error));
-        Assert.Equal("player read broke", error);
+        Assert.Equal("InvalidOperationException", error);                          // the type only, never the message (D11)
         var action = Waves(WavesAction(Block()));
         var unscaled = Scaling.ForWave(action, "sc", 1, null);
         Assert.Equal(action.Units.Select(e => e.Count), unscaled.Entries(0).Select(e => e.Count));
@@ -644,7 +643,7 @@ public class ScalingTests
         var last = Scaling.ForWave(action, "sc", 3, Read(1)).Entries(0);
         var boss = SpawnTuning.For(action, last[0], Read(1), 3);
         Assert.True(boss.Scaled);
-        Assert.Equal(new LevelArg(true, 2), Scaling.LevelAtSetup(boss, () => rig.IsVBlood(last[0].Prefab)));      // its own levelDelta
+        Assert.Equal(new LevelArg(true, 2), Scaling.LevelAtSetup(boss, () => rig.VBloods.Contains(last[0].Prefab)));      // its own levelDelta
         // a horde's boss keeps its own level too
         var run = Apo.Run(Apo.Active(Apo.Def(Apo.Action(hordes: Apo.Hordes(count: 1), extra: Keys("\"bosses\": [ " + Apo.BossJson() + " ]", Block(0, level: true)))), T0));
         var w = new ApoWorld();
@@ -652,8 +651,8 @@ public class ScalingTests
         run.Rise(w, T0.AddMinutes(1), out _, topUp: false, scale: rig.Source());
         var orders = w.Ledger.TakeSpawns();
         var bossOrder = orders.Single(o => o.Prefab == Tourok);
-        Assert.Null(Scaling.LevelAtSetup(bossOrder.Tuning, () => rig.IsVBlood(bossOrder.Prefab)));                  // the prefab's level
-        Assert.All(orders.Where(o => o.Prefab != Tourok), o => Assert.Equal(new LevelArg(false, 40), Scaling.LevelAtSetup(o.Tuning, () => rig.IsVBlood(o.Prefab))));
+        Assert.Null(Scaling.LevelAtSetup(bossOrder.Tuning, () => rig.VBloods.Contains(bossOrder.Prefab)));                  // the prefab's level
+        Assert.All(orders.Where(o => o.Prefab != Tourok), o => Assert.Equal(new LevelArg(false, 40), Scaling.LevelAtSetup(o.Tuning, () => rig.VBloods.Contains(o.Prefab))));
     }
 
     [Fact]
@@ -673,7 +672,7 @@ public class ScalingTests
         var action = Waves(WavesAction(Keys(BossKey, Block(1, level: true, offset: 2))));
         var last = Scaling.ForWave(action, "sc", 3, Read(1)).Entries(0);
         var thug = SpawnTuning.For(action, last.First(e => e.Prefab == Thug), Read(1), 3);
-        Assert.Equal(new LevelArg(false, 42), Scaling.LevelAtSetup(thug, () => rig.IsVBlood(Thug)));
+        Assert.Equal(new LevelArg(false, 42), Scaling.LevelAtSetup(thug, () => rig.VBloods.Contains(Thug)));
     }
 
     [Fact]

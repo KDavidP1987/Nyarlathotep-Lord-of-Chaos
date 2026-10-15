@@ -28,6 +28,10 @@ namespace Nyarlathotep.Services;
 /// group's units carry the group's centre as their hunt tag, which names their group (S-14).</item>
 /// <item>Every decided wave is reported once through EventEngine.WaveDecided, however many groups it spawned (automation
 /// D17).</item>
+/// <item>An action with `scaling` (scaling D2-D4, D7, D10, D12) reads the players afresh before each wave (Services/ScalingReads,
+/// guarded: a failed read rolls the wave unscaled), adds its extra copies to each entry (a fanOut group by the players near
+/// its own player) before the gate's roll and clamp, logs its one "scaling" line before the cap lines, and queues each unit
+/// with the scaled level; an action without it reads, logs and rolls nothing new.</item>
 /// <item>The territory map is built once per wave when the wave needs it (D17): a claimed ring point is blocked like an
 /// out-of-scope one unless allowTerritory.</item>
 /// <item>An AroundPlayer group has no anchor: its units stay where the game grounds them (design §9 D30, automation
@@ -63,10 +67,13 @@ internal static class WaveAction
 
         IReadOnlyList<(float X, float Z)> origins = [];                 // AroundPlayer: each group's picked player (A7)
         var spots = new List<RegionSpot?>();                            // Region: each group's spot by its index, null without one (D4)
-        Func<IReadOnlyList<UnitEntry>> roll = () => WaveRoll.ExpandEntries(BossWave.Units(action, due.Wave), _rng);   // revenge D29
+        // scaling D2, D12: a fresh guarded read for this wave, none without the block; a failed read rolls unscaled
+        var read = ScalingReads.Read(active, action);
         FanOutDecision decision;
         if (location.Type == LocationType.Region)
         {
+            var scaled = ScalingReads.Wave(active, action, due.Wave, read, null);              // scaling D3: before RegionWave's split
+            Func<IReadOnlyList<UnitEntry>> roll = () => WaveRoll.ExpandEntries(scaled.Entries(0), _rng);   // revenge D29
             // hunting-grounds D4: the whole wave clamped once, split into groups of at most 5, each at its own spot drawn
             // over the scope regions; no player position is read.
             decision = RegionWave.Decide(probe with { MapFailed = mapFailed }, roll, ledger.Limits.MaxPerWave, ledger.Occupied, ledger.Limits.MaxTracked,
@@ -90,7 +97,10 @@ internal static class WaveAction
                 centres = [new GroupCentre(cx, cy, cz, map is not null && claimed(cx, cz))];
             }
             var facts = probe with { MapFailed = mapFailed, Pick = pick };
-            decision = WaveGate.DecideGroupEntries(facts, centres, roll, ledger.Limits.MaxPerWave, ledger.Occupied, ledger.Limits.MaxTracked);
+            // scaling D3, D4: each group rolls its own entries, a fanOut group by the players near its own player
+            var scaled = ScalingReads.Wave(active, action, due.Wave, read, action.FanOut is not null ? origins : null);
+            decision = WaveGate.DecideGroupEntries(facts, centres, i => WaveRoll.ExpandEntries(scaled.Entries(i), _rng), ledger.Limits.MaxPerWave,
+                ledger.Occupied, ledger.Limits.MaxTracked);
         }
         foreach (var line in decision.CapLines) Core.Log.LogWarning($"[nyar] event {id} wave {due.Wave}: {line}");
 
@@ -133,7 +143,7 @@ internal static class WaveAction
                 foreach (var entry in group.Units)
                 {
                     var queued = SpawnTracker.RequestWave(entry.Prefab, id, entry.Count, life, new float3(gx, gy, gz), action.Radius, first,
-                        groupTotal, angle, anchor, check.Walk, allowed, SpawnTuning.For(action, entry), action.Loot, hunt, reach, due.Wave);
+                        groupTotal, angle, anchor, check.Walk, allowed, SpawnTuning.For(action, entry, read, due.Wave), action.Loot, hunt, reach, due.Wave);   // scaling D7
                     queuedUnits += queued.Queued;
                     moved += queued.Moved;
                     shortened += queued.Shortened;

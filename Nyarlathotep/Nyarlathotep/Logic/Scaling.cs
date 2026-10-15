@@ -9,7 +9,7 @@ namespace Nyarlathotep.Logic;
 // players before each wave, fanOut group, horde rise and roamer top-up (D2), adds unitsPerPlayer units a counted player
 // beyond the first to each entry (D3-D5), and with levelFromPlayers gives each unit that is not a V Blood the players'
 // average gear level plus the offset and the per-wave step (D6-D8). Everything here is pure: Services implement
-// IScalingReader over PlayerQuery, User.IsAdmin, the character's Equipment and the prefab's VBloodUnit (step 3).
+// IScalingReader over PlayerQuery, User.IsAdmin and the character's Equipment; UnitSetup reads VBloodUnit (step 3).
 
 /// <summary>One player as <see cref="IScalingReader.Players"/> reads him for one decision (D2, D6): his x and z, whether he
 /// is online, alive (not Dead, health above 0) and an admin, and his gear level, the sum of his Equipment's ArmorLevel,
@@ -24,9 +24,6 @@ public interface IScalingReader
 
     /// <summary>True when (x, z) lies in one of the regional <paramref name="scope"/>'s regions; never asked for Global.</summary>
     bool InScope(Scope scope, float x, float z);
-
-    /// <summary>True when <paramref name="prefab"/> carries VBloodUnit (D8).</summary>
-    bool IsVBlood(string prefab);
 }
 
 /// <summary>One decision's count (D2) and average gear level (D6), with the counted players for a fanOut wave's groups
@@ -87,13 +84,14 @@ public sealed partial record Scaling
         return new ScalingRead(counted.Count, Average(counted.Select(p => p.Gear)), counted);
     }
 
-    /// <summary><see cref="Read"/>, or null with <paramref name="error"/> when the read throws: the decision then goes on
-    /// unscaled (D2, D12).</summary>
+    /// <summary><see cref="Read"/>, or null with <paramref name="error"/>, the exception's type name only, when the read
+    /// throws: the decision then goes on unscaled (D2, D12). Never the exception's message, which may carry a player's name,
+    /// id or position (D11).</summary>
     public static ScalingRead? TryRead(IScalingReader reader, Scope scope, bool includeAdmins, out string? error)
     {
         error = null;
         try { return Read(reader, scope, includeAdmins); }
-        catch (Exception e) { error = e.Message; return null; }
+        catch (Exception e) { error = e.GetType().Name; return null; }
     }
 
     /// <summary>Each entry with <paramref name="extra"/> more copies, each copy still rolled against its chance (D3).</summary>
@@ -241,4 +239,138 @@ public sealed class ScalingBook
 
     /// <summary>The rows held, for the end-path tests.</summary>
     public int Count => _latest.Count + _roamers.Count;
+}
+
+/// <summary>The scaling reads' failure streaks (D12): a player read that throws makes the decision go on unscaled, logs
+/// "scaling &lt;event&gt;: player read failed: &lt;exception type&gt;" once per streak and holds <see cref="Entry"/> on the health line
+/// and `.nyar status` until a read of that event succeeds, the event ends (<see cref="EventEnded"/>) or the server restarts
+/// (<see cref="Clear"/>). Memory only; the line names the exception's type, never its message, so never a player's name, id
+/// or position (D11).</summary>
+public sealed class ScalingGuard
+{
+    /// <summary>The health entry while any event's read is failing.</summary>
+    public const string Entry = "scaling: player read failing";
+
+    readonly HashSet<string> _failing = new(StringComparer.Ordinal);
+
+    /// <summary>One decision's read for <paramref name="eventId"/> (D2): <see cref="Scaling.Read"/>, or null when it throws,
+    /// the first throw of a streak handing <paramref name="warn"/> its line. Never throws.</summary>
+    public ScalingRead? Read(string eventId, IScalingReader reader, Scope scope, bool includeAdmins, Action<string> warn)
+    {
+        var read = Scaling.TryRead(reader, scope, includeAdmins, out var error);
+        if (read is not null)
+        {
+            _failing.Remove(eventId);
+            return read;
+        }
+        if (_failing.Add(eventId))
+        {
+            try { warn(FailedLine(eventId, error)); }
+            catch (Exception) { /* a failed log line never stops the decision */ }
+        }
+        return null;
+    }
+
+    /// <summary>"scaling &lt;event&gt;: player read failed: &lt;exception type&gt;".</summary>
+    public static string FailedLine(string eventId, string? exceptionType) => $"scaling {eventId}: player read failed: {exceptionType}";
+
+    /// <summary>The health entries: <see cref="Entry"/> once while any event's read fails, else none.</summary>
+    public IReadOnlyList<string> Entries => _failing.Count > 0 ? [Entry] : [];
+
+    /// <summary>The event ended: its streak goes.</summary>
+    public void EventEnded(string eventId) => _failing.Remove(eventId);
+
+    /// <summary>A restart or a purge: every streak goes.</summary>
+    public void Clear() => _failing.Clear();
+}
+
+/// <summary>Scaling's run-time state and the steps the decision services take (step 3): the book of latest decisions (D15),
+/// the read guard (D12), a SpawnWaves wave's scaled entries with its line (D3, D4, D10) and an apocalypse run's source (D5).
+/// Services/ScalingReads holds one for the server's life; every end path calls <see cref="EventEnded"/> and a restart or
+/// a purge <see cref="Clear"/>. An event without the block reads nothing, records nothing and logs nothing (D18).</summary>
+public sealed class ScalingRuntime
+{
+    public ScalingBook Book { get; } = new();
+    public ScalingGuard Guard { get; } = new();
+
+    /// <summary>The fresh read of one decision of <paramref name="active"/> (D2): null without <paramref name="block"/>
+    /// (nothing is read, <paramref name="includeAdmins"/> included, D18) or when the read failed (D12).</summary>
+    public ScalingRead? Read(ActiveEvent active, Scaling? block, Scope scope, IScalingReader reader, Func<bool> includeAdmins, Action<string> warn) =>
+        block is null ? null : Guard.Read(active.Id, reader, scope, SafeFlag(includeAdmins), warn);
+
+    /// <summary>Wave <paramref name="wave"/> of <paramref name="active"/> under scaling (Scaling.ForWave): a scaled decision
+    /// is recorded in the book and its one line handed to <paramref name="log"/>, before the gate's cap lines (D10).</summary>
+    public ScaledWave Wave(ActiveEvent active, SpawnWavesAction action, int wave, ScalingRead? read, IReadOnlyList<(float X, float Z)>? origins,
+        Action<string> log)
+    {
+        var scaled = Scaling.ForWave(action, active.Id, wave, read, origins);
+        if (scaled.View is { } view) Book.Record(active, view);
+        if (scaled.Line is { } line) log(line);
+        return scaled;
+    }
+
+    /// <summary>The source of a running apocalypse with the block (D5): each call of its Read is a fresh guarded read of the
+    /// action's scope; null for any other event.</summary>
+    public ScalingSource? Source(ActiveEvent active, IScalingReader reader, Func<bool> includeAdmins, Action<string> warn) =>
+        active.Definition.Apocalypse is { Scaling: not null } apo
+            ? new ScalingSource(() => Guard.Read(active.Id, reader, apo.Scope, SafeFlag(includeAdmins), warn), Book)
+            : null;
+
+    static bool SafeFlag(Func<bool> flag)
+    {
+        try { return flag(); }
+        catch (Exception) { return false; }
+    }
+
+    /// <summary>`event info`'s running line of <paramref name="active"/> (D15), or null.</summary>
+    public string? NowLine(ActiveEvent? active) => Book.Latest(active) is { } view ? Scaling.Lines.Now(view) : null;
+
+    /// <summary>The health entries (D12).</summary>
+    public IReadOnlyList<string> Health => Guard.Entries;
+
+    /// <summary>One of D15's end paths: the event's decision rows and its streak go.</summary>
+    public void EventEnded(string eventId)
+    {
+        Book.EventEnded(eventId);
+        Guard.EventEnded(eventId);
+    }
+
+    /// <summary>A restart or a purge: everything goes.</summary>
+    public void Clear()
+    {
+        Book.Clear();
+        Guard.Clear();
+    }
+}
+
+/// <summary>Debug builds only (step 3; D21): the setting "scaleplayers:&lt;n&gt;@&lt;gear&gt;" adds n phantom players of gear
+/// level &lt;gear&gt; to each scaling read, at the position of the first online, alive real player at a usable position, so
+/// they share his scope and his fanOut group; none without such a player. Never an admin, never saved or logged by
+/// position.</summary>
+public static class ScalePhantoms
+{
+    public const string Setting = "scaleplayers:";
+    public const int Max = 9;
+
+    /// <summary>(n, gear) for "scaleplayers:&lt;n&gt;@&lt;gear&gt;" with n 1-9 and gear 0-120, else null.</summary>
+    public static (int N, int Gear)? Parse(string? value)
+    {
+        if (value is null || !value.StartsWith(Setting, StringComparison.Ordinal)) return null;
+        var parts = value[Setting.Length..].Split('@');
+        if (parts.Length != 2 || parts[0].Length != 1 || parts[0][0] is < '1' or > '9') return null;
+        if (parts[1].Length is < 1 or > 3 || !parts[1].All(c => c is >= '0' and <= '9')) return null;
+        var gear = int.Parse(parts[1], CultureInfo.InvariantCulture);
+        return gear <= Scaling.MaxLevel ? (parts[0][0] - '0', gear) : null;
+    }
+
+    /// <summary>The phantoms of one read (see the class).</summary>
+    public static IReadOnlyList<ScalingPlayer> Place(IReadOnlyList<ScalingPlayer> real, int n, int gear)
+    {
+        var anchor = real.FirstOrDefault(p => p.Online && p.Alive && PlayerPosition.Usable(p.X, p.Z));
+        if (!anchor.Online) return [];
+        return Enumerable.Range(0, Math.Clamp(n, 0, Max)).Select(_ => new ScalingPlayer(anchor.X, anchor.Z, true, true, false, gear)).ToList();
+    }
+
+    /// <summary>"scaling phantoms: &lt;placed&gt; of &lt;n&gt; at gear &lt;g&gt;", once per read.</summary>
+    public static string PlacedLine(int placed, int n, int gear) => $"scaling phantoms: {placed} of {n} at gear {gear}";
 }

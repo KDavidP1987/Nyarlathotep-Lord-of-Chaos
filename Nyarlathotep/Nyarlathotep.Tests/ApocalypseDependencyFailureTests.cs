@@ -70,6 +70,20 @@ sealed class ApoGame : IApocalypseGame
         Announced.Add(line);
     }
 
+    /// <summary>The run's scaling source (scaling D5, D12), as Services/ApocalypseAction's game gives it; none by default.</summary>
+    public Func<ActiveEvent, ScalingSource?>? Scale { get; set; }
+    public ScalingSource? Scaling(ActiveEvent active) => Scale?.Invoke(active);
+
+    /// <summary>The ids whose resume failed and were cancelled (scaling D12, D15), as Services/ApocalypseAction drops their
+    /// scaling rows and streak; <see cref="OnResumeCancelled"/> stands in for that drop.</summary>
+    public List<string> Cancelled { get; } = [];
+    public Action<string>? OnResumeCancelled { get; set; }
+    public void ResumeCancelled(string eventId)
+    {
+        Cancelled.Add(eventId);
+        OnResumeCancelled?.Invoke(eventId);
+    }
+
     /// <summary>Confirms every waiting order at its spawn point, telling the host as SpawnTracker does; returns the keys.</summary>
     public List<long> SpawnAll(ApocalypseHost host, DateTime at)
     {
@@ -372,8 +386,16 @@ public class ApocalypseDependencyFailureTests
         var (_, again) = Restarted();
         Assert.Equal("apo", again.Host.Boot(() => again.State.Document.Apocalypse, () => Apo.Set(Apo.Event()), again.Engine, again.Game,
             again.State, T0.AddMinutes(2)));
+        // a scaling streak open for the run (scaling D12): the failed resume drops it with the run (D15)
+        var scaling = new ScalingRuntime();
+        var broken = new ScalingRig { Throw = "player read failed" };
+        Assert.Null(scaling.Source(Apo.Active(Apo.Def(Apo.Action(extra: "\"scaling\": { \"unitsPerPlayer\": 2 }")), T0), broken, () => true, _ => { })!.Read());
+        Assert.NotEmpty(scaling.Health);
+        again.Game.OnResumeCancelled = scaling.EventEnded;
         again.Game.PlaceThrow = Boom("ground unreadable");
         Assert.Null(again.Host.Resume(again.Engine, Open(), again.Game, again.State, again.Board, T0.AddMinutes(2)));
+        Assert.Equal(["apo"], again.Game.Cancelled);
+        Assert.Empty(scaling.Health);
         Assert.Null(again.Engine.Find("apo"));
         Assert.Null(again.State.Document.Apocalypse);
         Assert.Null(again.Host.Run);

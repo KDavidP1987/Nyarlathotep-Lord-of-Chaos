@@ -1355,6 +1355,26 @@
           "control": "WatchMove"
         }
       ]
+    },
+    "scaling": {
+      "categories": [
+        "player-count",
+        "gear-read"
+      ],
+      "rows": [
+        {
+          "name": "player-count",
+          "kind": "tests",
+          "class": "ScalingDependencyFailureTests",
+          "control": "PlayerCount"
+        },
+        {
+          "name": "gear-read",
+          "kind": "tests",
+          "class": "ScalingDependencyFailureTests",
+          "control": "GearRead"
+        }
+      ]
     }
   },
   "controlSuites": {

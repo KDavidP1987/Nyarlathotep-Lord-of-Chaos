@@ -1,7 +1,9 @@
 # Scaling — wave and horde sizes and levels follow the players in scope
 
 **Status:** building (docs/dod/scaling.md, in progress; design §9 D52, D55, D57, owner 2026-10-14), on the git branch
-`scaling` until 0.13.0 is tagged. Step 1 (the gear spike) done, waiting on the owner's acceptance of D19; step 2 (Logic) next. Planned release 0.14.0, the first 1.0 child.
+`scaling` until 0.13.0 is tagged. Step 1 (the gear spike) done, waiting on the owner's acceptance of D19; step 2 (Logic) and step 3 (the Services
+wiring: the reads, the guard with its "scaling: player read failing" health entry, Debug.FaultInjection
+`scaleplayers:<n>@<gear>` in a Debug build) built; step 4 (the vrclient sessions) next. Planned release 0.14.0, the first 1.0 child.
 
 ## Goal
 

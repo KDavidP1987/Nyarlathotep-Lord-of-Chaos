@@ -137,7 +137,9 @@ internal static class Settings
 
 #if DEBUG
         FaultInjection = config.Bind("Debug", "FaultInjection", "",
-            "Debug builds only. An event id (its tick throws) or hook:<name> (that hook reports unavailable). Empty: off.");
+            "Debug builds only. An event id (its tick throws), hook:<name> (that hook reports unavailable), phantoms:<n> (n 1-9 phantom " +
+            "players for AroundPlayer picks) or scaleplayers:<n>@<gear> (n 1-9 phantom players of gear level 0-120 added to each " +
+            "scaling read, at the first living player's position). Empty: off.");
 #endif
     }
 

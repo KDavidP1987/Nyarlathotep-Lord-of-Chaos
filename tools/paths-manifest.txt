@@ -32,6 +32,8 @@ tracked: docs/audits/unit-watch-step2-planted.txt
 tracked: docs/audits/unit-watch-step3-planted.txt
 # the planted-fault runs of scaling step 2, copied into its post-audit (scaling Build plan step 2)
 tracked: docs/audits/scaling-step2-planted.txt
+# the planted-fault runs of scaling step 3, copied into its post-audit (scaling Build plan step 3)
+tracked: docs/audits/scaling-step3-planted.txt
 tracked: docs/img/*
 tracked: docs/dod/*.md
 tracked: docs/dod/*.html

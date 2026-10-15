@@ -73,7 +73,8 @@ internal static class EventCommands
                     apocalypse: def.Apocalypse is not null ? Services.ApocalypseAction.View(def.Id) : null,   // apocalypse D17
                     watch: def.Action is not null || def.Apocalypse is not null                                 // unit-watch D15
                         ? UnitWatchLines.Info(Config.Settings.UnitWatchEnabled.Value,
-                            active is not null ? Services.SpawnTracker.WatchCountsOf(active) : default) : null));
+                            active is not null ? Services.SpawnTracker.WatchCountsOf(active) : default) : null,
+                    scaling: active is not null ? Services.ScalingReads.NowLine(active) : null));   // scaling D15
                 return;
             }
             default:

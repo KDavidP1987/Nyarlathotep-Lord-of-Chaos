@@ -45,6 +45,9 @@ public partial class PrivacyTests
         output.Add(r.Flows.ApiEvent(r.Who, "set", "raid", "action.scaling.levelFromPlayers", "true", ""));
         output.Add(r.Flows.Set(r.Who, "raid", "action.scaling.levelOffset", "9").Human);
         output.AddRange(r.Lib.Log.Lines);
+        // a failing read whose exception message names a player, his platform id and his position (D11, D12)
+        var leaky = new ScalingRig { Throw = "Chaosplant 76561190000000123 at -1234.5, 678.25" };
+        new ScalingRuntime().Read(active, def.Action!.Scaling, Scope.Global, leaky, () => true, output.Add);
         return output;
     }
 
@@ -53,6 +56,7 @@ public partial class PrivacyTests
     {
         var output = ScalingOutput();
         Assert.Contains(output, l => l.StartsWith("scaling sc wave 1: players 2, ", StringComparison.Ordinal));
+        Assert.Contains("scaling sc: player read failed: InvalidOperationException", output);   // the exception's type, never its message
         Assert.All(output, l => Assert.DoesNotMatch(ScPlayerMarks, l));
         // a player's row has no name or platform id to leak: positions, flags and the gear level only
         Assert.DoesNotContain(typeof(ScalingPlayer).GetProperties(), p => p.PropertyType == typeof(string) || p.PropertyType == typeof(long) || p.PropertyType == typeof(ulong));
@@ -87,7 +91,7 @@ public partial class PrivacyTests
         var lines = ScalingOutput().Where(l => l.StartsWith("scaling ", StringComparison.Ordinal)).ToList();
         Assert.NotEmpty(lines);
         Assert.All(lines, l => Assert.Matches(@"^scaling ([a-z0-9-]+ (wave|horde) \d+: players \d+, gear (\d+|none), level (\d+|own), units \d+ -> \d+(, groups [\d/]+)?" +
-            @"|[a-z0-9-]+ roamers: players \d+, per hotspot \d+, max \d+|now: \d+ players, gear (\d+|none), level (\d+|own))$", l));
+            @"|[a-z0-9-]+ roamers: players \d+, per hotspot \d+, max \d+|now: \d+ players, gear (\d+|none), level (\d+|own)|[a-z0-9-]+: player read failed: [A-Za-z]+Exception)$", l));
         Assert.Contains("scaling sc wave 1: players 2, gear 51, level 53, units 3 -> 5", lines);
     }
 
