@@ -278,6 +278,7 @@ Constraints each child inherits (a child's review checks they appear verbatim or
 - apocalypse · planned · A35
 - unit-watch · planned · A38
 - scaling · planned · A39
+- replacements · planned · A40
 - boss-reinforcements · planned
 - anti-farming · planned · A29
 - outbreak · planned · A30
@@ -427,6 +428,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - A37 · 2026-10-12 · requested · — · layer: — · owner decision 2026-10-12, after swarm's Session 3: wave and swarm events need region-bound modes: spawn anywhere in a region and hunt the players in it without leaving it; spawn at a point and stay near it (swarm's arena); ambush only the players inside a region; spawn at a point and spread through the region hunting its players; and, for apocalypse, start at one or more areas and spread across the whole map hunting players (design §9 D48, D49): new child hunting-grounds (0.11.0) after swarm and before revenge; revenge 0.12.0 and apocalypse 0.13.0; apocalypse gains map-wide roaming by an amendment of its plan
 - A38 · 2026-10-14 · requested · — · layer: — · owner decision 2026-10-14 (design §9 D54, D55): a wave that waits to be cleared can be held by one stuck or unreachable unit until its timer runs out ("either due to the teleporting process or due to the spawning process"): new child unit-watch, built before Halloween and released with apocalypse as 0.13.0; the 1.0 follow-ups after it start with scaling to the players
 - A39 · 2026-10-14 · requested · — · layer: — · owner decisions 2026-10-14 (design §9 D52, D55, D57): the first 1.0 child after unit-watch is scaling: an opt-in per-event block for every spawner that adds an admin-set number of units per player beyond the first in the event's action scope (living online players, admins as the scoreboard's IncludeAdmins says, read before each wave or horde) and sets levels from the players' average gear level plus an admin offset, growth on top, clamped 1-120, V Blood bosses keeping their own level; the caps clamp every scaled count; new child scaling (docs/dod/scaling.md), after it D53 replacements
+- A40 · 2026-10-14 · requested · — · layer: — · owner decisions 2026-10-14 (design §9 D53, D55, D58): the second 1.0 child is replacements: an opt-in per-event budget (0-100 per run) that replaces a unit of ours dying unengaged (no hit to or from a player) at its group's spawn point with its own level and stats, for every SpawnWaves form and apocalypse hordes and bosses (roamers keep their refill); removals and despawns are never replaced; new child replacements (docs/dod/replacements.md)
 
 ## Log
 - 2026-09-23 · status → draft · plan
