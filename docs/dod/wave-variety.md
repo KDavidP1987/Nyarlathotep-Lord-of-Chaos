@@ -5,7 +5,7 @@ profile: full
 id: dod-20261016-wvr1
 slug: wave-variety
 title: Wave variety — pursuit, unit and boss pools, timed and onslaught templates, wider allied groups
-status: ready
+status: in-progress
 size: L
 parent: nyarlathotep
 kind: feature
@@ -328,3 +328,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-16 · note · deferred · Review 3 F4 · D8/D20: pursuing runs share the region phase's 20 jumps in the hunt phase's existing order (events in Engine.Active order, units by key); the builder may rotate the start event per tick
 - 2026-10-16 · note · deferred · Review 3 F5 · Rollout › Shipping: `action.pursuit none` applies at the next start; `.nyar event stop` or `.nyar purge confirm` ends a running pursuit now
 - 2026-10-16 · status → ready · approve · review: subagent
+- 2026-10-16 · status → in-progress · start
