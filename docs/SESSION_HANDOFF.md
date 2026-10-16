@@ -4,6 +4,37 @@ Where work stands between sessions. Overwrite this file at the end of a session;
 The plans (`docs/dod/`), audits (`docs/audits/`) and feature docs stay the source of truth. This file only points
 into them.
 
+**Written 2026-10-16 (wave-variety session close)**: the wave-variety child (docs/dod/wave-variety.md, 18/24) is
+built through step 4's pre-release work, commits a896846..88cb5cf on main (local, not pushed; push waits on the owner's OK).
+- **What it adds (design §9 D61, Epic A44):** `action.pursuit` (after N s with nobody in the arena, the waves hunt the
+  nearest eligible player map-wide; claimed territory is a refuge), named `action.pools` with pool entries and boss rolls
+  (a wave's `bosses`, min-max from a pool), the grown allied groups (docs/GAME_ASSETS.md › Faction compatibility), and 14
+  templates: seven `<base>-timed` (a fixed 75 s beat) and seven `<faction>-onslaught` (rolled waves, a boss mid-run and
+  one or two at the end). Feature doc docs/features/WAVE_VARIETY.md; EVENT_LIBRARY.md lists them.
+- **In game (vrclient, Sessions 1-6):** pursuit.vrs 27/27 (last on the final build, Session 6), wave-variety.vrs 26/26,
+  tick budget with 20+ pursuers "10/10 windows under 5 ms". Natives (bears, wolves) east of the pond kill pursuers even
+  at level 60; the timing scenario now records the count and leaves the bar to -TimingSpan.
+- **Codex (the child's single cross-inspection):** CHANGES REQUESTED (2) → both fixed (boss rolls on shared pools; the
+  quiet clock of a run decided between checks) → re-check found the shared-member double count → fixed (a matching) →
+  **PASS**. The Codex lines go into step 4's post-audit with the release (the post-audit header ends D22-D24's pending
+  controls, so it is written in the release commit).
+- **Rollback (D21):** 0.12.0's reasons read from a real boot; "drill selftest: 37/37".
+- **Waiting on the owner (rubric 3):** D13, D17, D18 (accept the vrclient evidence), D19 (look and feel: connect to
+  127.0.0.1:9876, `.nyar template use undead-onslaught`, `.nyar event enable undead-onslaught`, `.nyar event start
+  undead-onslaught`, walk 60 m away and wait; PASS when the units come after you without visibly teleporting in view and
+  the waves differ between two runs).
+- **Next:** the 0.13.0 release commit (apocalypse D33, unit-watch, wave-variety D22/D23): six surfaces with the README
+  template tables listing all 34 templates, step 4's post-audit with the Codex lines, `-AuditOf/-SessionsOf/-Paths
+  -DeclaredOf wave-variety`, then `dod close wave-variety` (partial while D13/D17-D19 wait). A **v0.13.0-rc.3** test build
+  for G-Portal (the owner chose "new features in a later rc.3") needs the owner's OK to tag and publish.
+- **Advice left (/code-review step 3, finding 5):** the eligibility rule (claimed territory, PvP combat) is written three
+  times in Services/HuntAction.cs (targets, verbose tally, seeds); one helper after 0.13.0.
+- **Stale references:** docs/dod/scaling.md and replacements.md (both ready) mention BossWave.Units; the code is now
+  Pools.Resolve. Not edited (an edit voids READY); update when each plan is next amended.
+- **Dev server:** stopped; snapshot wv4 restored, so it holds the step 3 DLL (f20d98e) with VerboseLogging false. Session
+  log copies in %TEMP%\nyar-wv3-logs (and nyar-wv2-logs, nyar-logs-20261016-rc2): remove them after the release records,
+  or `-Paths` reports them as leftover temp.
+
 **Written 2026-10-16 (session close)**: fixes from the owner's G-Portal test (2026-10-15) and six new wave templates,
 commit d492bd5 on main (local; push and a new test build wait on the owner's OK).
 - **G-Portal (hosted, read-only by owner's rule: never change anything on it; FTP only to read logs).** Findings: a
