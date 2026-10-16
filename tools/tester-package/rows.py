@@ -8,9 +8,9 @@ PRODUCT = "Nyarlathotep"
 ROUND = {
     "slug": "dev-round-01-production-setups",
     "title": "Nyarlathotep, Lord of Chaos — dev server test round 1: events set up as a real server would run them",
-    "build": "test build 0.13.0-rc.2 (apocalypse, unit watch, faction wave templates and the fresh-world fix, before release)",
+    "build": "test build 0.13.0-rc.3 (apocalypse, unit watch, faction wave templates, pursuit and the timed and onslaught waves, before release)",
     # the GitHub pre-release holding this round's mod zip, workbook and reading copy
-    "download": "https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.0-rc.2",
+    "download": "https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.0-rc.3",
     "date": "2026-10-16",
 }
 
@@ -50,7 +50,7 @@ COULD_NOT_CHECK = [
 # Installing the build on the test server: done once by whoever runs that server (the owner, or a tester running
 # their own). Each step is "action -> what you should see", like a row's steps.
 INSTALL = [
-    "Open the download page (link above) and download Nyarlathotep-0.13.0-rc.2.zip, this workbook and its reading "
+    "Open the download page (link above) and download Nyarlathotep-0.13.0-rc.3.zip, this workbook and its reading "
     "copy -> the zip holds Nyarlathotep.dll and a short install note.",
     "Stop the V Rising dedicated server -> a running server locks its mod files, so a copy over them fails.",
     "Install BepInExPack V Rising 1.733.2 on the server, with a mod manager's dedicated-server profile or by unzipping "
@@ -59,12 +59,12 @@ INSTALL = [
     "Put VampireCommandFramework 0.10.4 (VampireCommandFramework.dll) in the server's BepInEx/plugins folder -> it is "
     "the chat command library the mod needs.",
     "Put Nyarlathotep.dll from the zip in the same BepInEx/plugins folder, replacing any older copy -> one copy only.",
-    "Start the server and open BepInEx/LogOutput.log -> a line 'Plugin kdpen.Nyarlathotep v0.13.0-rc.2 loaded' "
+    "Start the server and open BepInEx/LogOutput.log -> a line 'Plugin kdpen.Nyarlathotep v0.13.0-rc.3 loaded' "
     "appears, and BepInEx/config gains kdpen.Nyarlathotep.cfg.",
     "Make each tester an admin: add their Steam ID (the 17-digit number) on its own line to adminlist.txt in the "
     "server's save data Settings folder, then restart the server -> in game, with the console switched on in "
     "Options, press the ~ key and type adminauth.",
-    "In game, type .nyar in chat -> the first line reads 'Nyarlathotep, Lord of Chaos (v0.13.0-rc.2)' and the admin "
+    "In game, type .nyar in chat -> the first line reads 'Nyarlathotep, Lord of Chaos (v0.13.0-rc.3)' and the admin "
     "commands are listed. Everything ships switched off; each row turns on what it needs.",
     "For a newer test build later: stop the server, replace Nyarlathotep.dll, start it -> the version line shows the "
     "new build. To remove the mod: type .nyar purge then .nyar purge confirm, stop the server, delete the file -> "
@@ -415,6 +415,46 @@ ROWS = [
             "Try .nyar event start bandit-ambush right after -> it is refused for about 4 minutes.",
         ],
         "mostWanted": "Was anything left behind after any of the three?",
+    },
+    {
+        "id": "N-18", "status": "new", "area": "Spawn events",
+        "title": "Timed waves: the next wave comes whether you are ready or not",
+        "summary": "'Militia muster (timed)' is militia-muster on a clock: 5 waves of militia in a 40 m arena, a new "
+                   "wave every 75 seconds even if the last one is still alive, ending on the militia leader. Six "
+                   "other factions have a timed version too (names ending in -timed).",
+        "needs": "Admin rights; the Spawns kind on (.nyar pillar spawns on); two players with gear level 50 or more "
+                 "(the militia leader is level 58); "
+                 "open ground.",
+        "howToTest": [
+            "Type .nyar template use militia-muster-timed, .nyar event enable militia-muster-timed.",
+            "Stand in open ground and type .nyar event start militia-muster-timed -> wave 1 (6 militia) appears "
+            "around you.",
+            "Do not fight for a while -> about 75 seconds after the start, wave 2 (9 militia) arrives while wave 1 "
+            "is still alive.",
+            "Fight the rest -> waves keep coming every 75 seconds; wave 5 brings the militia leader; the scoreboard "
+            "names a winner at the end.",
+        ],
+        "mostWanted": "Did the pressure of the clock feel exciting or simply unfair?",
+    },
+    {
+        "id": "N-19", "status": "new", "area": "Spawn events",
+        "title": "Onslaught: random waves, surprise bosses, and no running away",
+        "summary": "'Undead onslaught' rolls each wave at random from groups of undead, adds a random undead V Blood in "
+                   "the middle wave and one or two at the end. If nobody stays in the 40 m arena for 60 seconds, "
+                   "the undead go after the nearest player anywhere on the map. Six other factions have one too "
+                   "(names ending in -onslaught).",
+        "needs": "Admin rights; the Spawns kind on; two players with gear level 60 or more (the undead V Bloods "
+                 "run from level 27 to 63, up to two at once); a castle nearby.",
+        "howToTest": [
+            "Type .nyar template use undead-onslaught, .nyar event enable undead-onslaught, then .nyar event start "
+            "undead-onslaught in open ground -> about 12 undead appear around you.",
+            "Clear wave 1 or wait 75 seconds -> wave 2 brings different undead and one V Blood boss.",
+            "Both players run more than 60 m away and wait -> about a minute later the undead come after the "
+            "nearest of you, arriving near you rather than on top of you.",
+            "Go into your castle's territory -> they do not follow you in.",
+            "Stop it (.nyar event stop undead-onslaught) and start it again -> the waves and bosses are different.",
+        ],
+        "mostWanted": "Did the chase feel like a threat, and did anything visibly teleport while you watched?",
     },
     {
         "id": "E-01", "status": "explore", "area": "Spawn events",

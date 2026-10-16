@@ -1,10 +1,10 @@
 {
   "round": "dev-round-01-production-setups",
-  "build": "test build 0.13.0-rc.2 (apocalypse, unit watch, faction wave templates and the fresh-world fix, before release)",
-  "download": "https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.0-rc.2",
+  "build": "test build 0.13.0-rc.3 (apocalypse, unit watch, faction wave templates, pursuit and the timed and onslaught waves, before release)",
+  "download": "https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.0-rc.3",
   "files": [
     "nyarlathotep-dev-round-01-production-setups.xlsx",
     "nyarlathotep-dev-round-01-production-setups.pdf"
   ],
-  "source_sha256": "8fc589559612c7d9fd7f98c37b840dd6c88999542b3402b9e38d03cca5b45093"
+  "source_sha256": "a9a0b7c954c3fcec086e39984623d93ee69ca87cc7d1cec635fca71d62f70992"
 }
