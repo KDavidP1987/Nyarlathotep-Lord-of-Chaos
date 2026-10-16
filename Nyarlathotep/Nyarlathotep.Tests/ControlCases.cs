@@ -47,8 +47,8 @@ public static class ControlCases
         new(Apocalypse, "D33", 5, "0.13.0"), new(Apocalypse, "D34", 5, "0.13.0"), new(Apocalypse, "D35", 5, "0.13.0"),
         // unit-watch: step 5 the release
         new(UnitWatch, "D30", 5, "0.13.0"), new(UnitWatch, "D31", 5, "0.13.0"), new(UnitWatch, "D32", 5, "0.13.0"), new(UnitWatch, "D33", 5, "0.13.0"),
-        // wave-variety: step 2 the recorded groups, step 3 Services, templates and sessions, step 4 the release
-        new(WaveVariety, "D14", 2, "0.13.0"), new(WaveVariety, "D12", 3, "0.13.0"), new(WaveVariety, "D15", 3, "0.13.0"), new(WaveVariety, "D16", 3, "0.13.0"),
+        // wave-variety: step 3 Services, templates and sessions, step 4 the release
+        new(WaveVariety, "D12", 3, "0.13.0"), new(WaveVariety, "D15", 3, "0.13.0"), new(WaveVariety, "D16", 3, "0.13.0"),
         new(WaveVariety, "D20", 3, "0.13.0"), new(WaveVariety, "D21", 4, "0.13.0"), new(WaveVariety, "D22", 4, "0.13.0"), new(WaveVariety, "D23", 4, "0.13.0"),
         new(WaveVariety, "D24", 4, "0.13.0"),
     ];
@@ -943,5 +943,9 @@ public static class ControlCases
         T("D11", "WaveVariety", "PrivacyTests",
             ["a_name_or_position_reaches_a_line", "state_gains_a_property"],
             ["counts_and_ids_only"], ["no_wave_variety_keys"]) with { Plan = WaveVariety },
+        // ---- wave-variety step 2: the groups the mix runs recorded
+        T("D14", "Recorded", "FactionGroupsTests",
+            ["a_group_holds_a_unit_not_recorded_allied", "a_group_misses_a_recorded_unit"],
+            ["the_recorded_rows"], ["no_left_out_unit_in_a_group"]) with { Plan = WaveVariety },
     ];
 }

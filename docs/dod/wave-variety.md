@@ -351,3 +351,5 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-16 · note · method · the 50-unit validation ceiling applies to waves holding a pool entry; a wave's own bosses beside fanOut are refused ("action.waveList.<n>.bosses takes no fanOut"), as D51's action-level list is
 - 2026-10-16 · note · method · pool info lines wrap over several lines within 480 bytes (Review 3 F2's other form); an unknown or denied pool member's reason drops the prefab name when it would pass 120 bytes
 - 2026-10-16 · note · method · a pursuit group line names the group "<wave>.<group>"; the run's flag is ActiveEvent.Pursuing; between waves the area uses the run's last live centres
+- 2026-10-16 · note · planted · D14 · CHAR_Undead_ShadowSoldier added to the undead group → FactionGroupsTests.Recorded_passes_the_recorded_rows failed
+- 2026-10-16 · note · method · D13's scenario needs [Limits] ManualSpawnLifetimeSeconds 1800: a pass of 30 manual spawns outlived the 300 s default (Session 1), so its undead and militia passes were rerun (Session 2)

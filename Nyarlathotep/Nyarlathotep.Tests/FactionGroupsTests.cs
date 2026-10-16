@@ -79,4 +79,81 @@ public class FactionGroupsTests
     [Fact]
     public void Pools_empty_no_pools() =>
         Assert.Null(FactionGroups.Problem("t", UnitsForm([], [new UnitEntry(Guardian, 2)]) with { Pools = null }));
+
+    // ---- D14: the groups are exactly what docs/GAME_ASSETS.md › Faction compatibility records allied
+
+    static readonly Dictionary<string, string> GroupOfLabel = new()
+    {
+        ["Undead"] = "undead", ["Spiders"] = "spiders", ["Bandits"] = "bandits", ["Militia"] = "militia", ["Church of Light"] = "church",
+        ["Legion"] = "legion", ["Gloomrot"] = "gloomrot", ["Cursed"] = "cursed", ["Blackfangs"] = "blackfangs",
+    };
+
+    /// <summary>The Faction compatibility section's table rows as (group id, units, allied) and its "Left out" units.</summary>
+    internal static (List<(string Group, HashSet<string> Units, bool Allied)> Rows, HashSet<string> LeftOut) Recorded(string doc)
+    {
+        var start = doc.IndexOf("## Faction compatibility", StringComparison.Ordinal);
+        var end = doc.IndexOf("\n## ", start + 3, StringComparison.Ordinal);
+        var section = doc[start..(end < 0 ? doc.Length : end)];
+        var rows = new List<(string, HashSet<string>, bool)>();
+        var leftOut = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var line in section.Split('\n').Select(l => l.TrimEnd('\r')))
+        {
+            var names = System.Text.RegularExpressions.Regex.Matches(line, @"`(CHAR_\w+)`").Select(m => m.Groups[1].Value).ToHashSet(StringComparer.Ordinal);
+            if (line.StartsWith("- **Left out:", StringComparison.Ordinal)) leftOut.UnionWith(names);
+            if (!line.StartsWith("| ", StringComparison.Ordinal) || line.StartsWith("| Group", StringComparison.Ordinal) || line.StartsWith("|---", StringComparison.Ordinal))
+                continue;
+            var cells = line.Split('|');
+            var label = cells[1].Trim();
+            var paren = label.IndexOf(" (", StringComparison.Ordinal);
+            rows.Add((GroupOfLabel[paren < 0 ? label : label[..paren]], names, cells[^2].Trim().StartsWith("allied", StringComparison.Ordinal)));
+        }
+        return (rows, leftOut);
+    }
+
+    static string Assets => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Resources", "GAME_ASSETS.md"));
+
+    static string? Mismatch(IReadOnlyList<FactionGroup> groups, string doc)
+    {
+        var (rows, leftOut) = Recorded(doc);
+        foreach (var g in groups)
+        {
+            var allied = rows.Where(r => r.Group == g.Name && r.Allied).SelectMany(r => r.Units).ToHashSet(StringComparer.Ordinal);
+            var hostile = rows.Where(r => r.Group == g.Name && !r.Allied).SelectMany(r => r.Units).ToHashSet(StringComparer.Ordinal);
+            if (g.Names.FirstOrDefault(p => !allied.Contains(p) || hostile.Contains(p) || leftOut.Contains(p)) is { } extra)
+                return $"{g.Name} holds {extra}, not recorded allied";
+            if (allied.FirstOrDefault(p => !g.Names.Contains(p)) is { } missing) return $"{g.Name} misses {missing}, recorded allied";
+        }
+        return rows.Select(r => r.Group).Distinct().FirstOrDefault(id => groups.All(g => g.Name != id)) is { } none ? $"no group {none}" : null;
+    }
+
+    [Fact]
+    public void Recorded_passes_the_recorded_rows()
+    {
+        Assert.Null(Mismatch(FactionGroups.All, Assets));
+        Assert.Contains(FactionGroups.All, g => g.Name == "blackfangs" && g.Faction == "Faction_Blackfangs");
+    }
+
+    [Fact]
+    public void Recorded_fails_when_a_group_holds_a_unit_not_recorded_allied()
+    {
+        var extra = FactionGroups.All.Select(g => g.Name == "undead" ? g with { Names = [.. g.Names, "CHAR_Undead_ShadowSoldier"] } : g).ToList();
+        Assert.Equal("undead holds CHAR_Undead_ShadowSoldier, not recorded allied", Mismatch(extra, Assets));
+        var hostile = FactionGroups.All.Select(g => g.Name == "undead" ? g with { Names = [.. g.Names, "CHAR_Undead_ZealousCultist_Ghost"] } : g).ToList();
+        Assert.Equal("undead holds CHAR_Undead_ZealousCultist_Ghost, not recorded allied", Mismatch(hostile, Assets));
+    }
+
+    [Fact]
+    public void Recorded_fails_when_a_group_misses_a_recorded_unit()
+    {
+        var less = FactionGroups.All.Select(g => g.Name == "blackfangs" ? g with { Names = g.Names.Where(p => p != "CHAR_Blackfang_Lucie_VBlood").ToList() } : g).ToList();
+        Assert.Equal("blackfangs misses CHAR_Blackfang_Lucie_VBlood, recorded allied", Mismatch(less, Assets));
+    }
+
+    [Fact]
+    public void Recorded_empty_no_left_out_unit_in_a_group()
+    {
+        var (_, leftOut) = Recorded(Assets);
+        Assert.Contains("CHAR_Undead_ZealousCultist_Ghost", leftOut);
+        Assert.DoesNotContain(FactionGroups.All, g => g.Names.Any(leftOut.Contains));
+    }
 }

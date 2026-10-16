@@ -19,9 +19,11 @@ public sealed record FactionGroup(string Name, string Faction, IReadOnlyList<str
 /// The allied groups a shipped template's units and bosses must stay inside (apocalypse D38), from the in-game faction
 /// mixes of D37 (tools/vrclient/scenarios/faction-mix.vrs, 2026-10-13). Each group lists the unit names checked allied, so
 /// a new unit joins a group only after a mix run shows it allied. Left out on purpose: CHAR_Undead_ShadowSoldier (it
-/// killed its twin on spawn) and the Lesser Legion shadows (they attacked the undead). The militia additions and the
-/// church, legion, gloomrot and cursed groups are the faction wave templates' (design §9 D60), each checked by
-/// tools/vrclient/scenarios/faction-mix-waves.vrs.
+/// killed its twin on spawn) and CHAR_Undead_ZealousCultist_Ghost (it dies on its own seconds after spawning). The militia
+/// additions and the church, legion, gloomrot and cursed groups are the faction wave templates' (design §9 D60), each
+/// checked by tools/vrclient/scenarios/faction-mix-waves.vrs; every faction's other combat units and V Bloods, and the
+/// blackfangs group, joined after tools/vrclient/scenarios/faction-mix-wide.vrs (wave-variety D13, D14). The Lesser Legion
+/// shadows stand with the Legion but attacked the undead: groups are never alive together in one wave (D60).
 /// </summary>
 public static class FactionGroups
 {
@@ -29,41 +31,79 @@ public static class FactionGroups
     [
         new("undead", "Faction_Undead",
         [
-            "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "CHAR_Undead_Guardian",
-            "CHAR_Undead_GhostMilitia_Light", "CHAR_Undead_GhostBanshee", "CHAR_Undead_BishopOfDeath_VBlood",
+            "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane",
+            "CHAR_Undead_Guardian", "CHAR_Undead_GhostMilitia_Light", "CHAR_Undead_GhostBanshee",
+            "CHAR_Undead_BishopOfDeath_VBlood", "CHAR_Cultist_Pyromancer", "CHAR_Cultist_Slicer",
+            "CHAR_Undead_ArmoredSkeletonCrossbow_Dunley", "CHAR_Undead_Assassin", "CHAR_Undead_FlyingSkull",
+            "CHAR_Undead_GhostAssassin", "CHAR_Undead_GhostGuardian", "CHAR_Undead_GhostMilitia_Crossbow",
+            "CHAR_Undead_Ghoul_Armored_Farmlands", "CHAR_Undead_Necromancer", "CHAR_Undead_Priest",
+            "CHAR_Undead_SkeletonApprentice", "CHAR_Undead_SkeletonGolem", "CHAR_Undead_SkeletonMage",
+            "CHAR_Undead_SkeletonSoldier_Armored_Dunley", "CHAR_Undead_SkeletonSoldier_Infiltrator",
+            "CHAR_Undead_UndyingGhoul", "CHAR_Undead_ArenaChampion_VBlood", "CHAR_Undead_BishopOfShadows_VBlood",
+            "CHAR_Undead_Infiltrator_VBlood", "CHAR_Undead_Leader_Vblood", "CHAR_Undead_Priest_VBlood",
+            "CHAR_Undead_ZealousCultist_VBlood",
         ]),
         new("spiders", "Faction_Spiders",
-            ["CHAR_Spider_Forest", "CHAR_Spider_Melee", "CHAR_Spider_Range", "CHAR_Spider_Forestling", "CHAR_Spider_Queen_VBlood"]),
-        new("bandits", "Faction_Bandits", ["CHAR_Bandit_Thug", "CHAR_Bandit_Hunter", "CHAR_Bandit_Deadeye"]),
+        [
+            "CHAR_Spider_Forest", "CHAR_Spider_Melee", "CHAR_Spider_Range", "CHAR_Spider_Forestling",
+            "CHAR_Spider_Queen_VBlood", "CHAR_Spider_Broodmother", "CHAR_Spider_Spiderling",
+        ]),
+        new("bandits", "Faction_Bandits",
+        [
+            "CHAR_Bandit_Thug", "CHAR_Bandit_Hunter", "CHAR_Bandit_Deadeye",
+        ]),
         new("militia", "Faction_Militia",
         [
-            "CHAR_Militia_Crossbow", "CHAR_Militia_Light", "CHAR_Militia_Hound", "CHAR_Militia_Guard", "CHAR_Militia_Longbowman",
-            "CHAR_Militia_Torchbearer", "CHAR_Militia_Heavy", "CHAR_Militia_Nun", "CHAR_Militia_Devoted", "CHAR_Militia_Bomber",
-            "CHAR_Militia_Leader_VBlood",
+            "CHAR_Militia_Crossbow", "CHAR_Militia_Light", "CHAR_Militia_Hound", "CHAR_Militia_Guard",
+            "CHAR_Militia_Longbowman", "CHAR_Militia_Torchbearer", "CHAR_Militia_Heavy", "CHAR_Militia_Nun",
+            "CHAR_Militia_Devoted", "CHAR_Militia_Bomber", "CHAR_Militia_Leader_VBlood", "CHAR_Militia_BellRinger",
+            "CHAR_Militia_Horseman", "CHAR_Militia_Rider", "CHAR_ChurchOfLight_Sommelier_VBlood",
+            "CHAR_Militia_BishopOfDunley_VBlood", "CHAR_Militia_Glassblower_VBlood", "CHAR_Militia_Guard_VBlood",
+            "CHAR_Militia_HoundMaster_VBlood", "CHAR_Militia_Hound_VBlood", "CHAR_Militia_Longbowman_LightArrow_Vblood",
+            "CHAR_Militia_Nun_VBlood", "CHAR_Militia_Scribe_VBlood",
         ]),
         new("church", "Faction_ChurchOfLum",
         [
-            "CHAR_ChurchOfLight_Footman", "CHAR_ChurchOfLight_Archer", "CHAR_ChurchOfLight_Rifleman", "CHAR_ChurchOfLight_Cleric",
-            "CHAR_ChurchOfLight_Knight_Shield", "CHAR_ChurchOfLight_Knight_2H", "CHAR_ChurchOfLight_Priest", "CHAR_ChurchOfLight_Paladin",
-            "CHAR_ChurchOfLight_Lightweaver", "CHAR_ChurchOfLight_CardinalAide", "CHAR_ChurchOfLight_Paladin_VBlood",
-            "CHAR_ChurchOfLight_Overseer_VBlood",
+            "CHAR_ChurchOfLight_Footman", "CHAR_ChurchOfLight_Archer", "CHAR_ChurchOfLight_Rifleman",
+            "CHAR_ChurchOfLight_Cleric", "CHAR_ChurchOfLight_Knight_Shield", "CHAR_ChurchOfLight_Knight_2H",
+            "CHAR_ChurchOfLight_Priest", "CHAR_ChurchOfLight_Paladin", "CHAR_ChurchOfLight_Lightweaver",
+            "CHAR_ChurchOfLight_CardinalAide", "CHAR_ChurchOfLight_Paladin_VBlood", "CHAR_ChurchOfLight_Overseer_VBlood",
+            "CHAR_ChurchOfLight_SlaveMaster_Enforcer", "CHAR_ChurchOfLight_SlaveMaster_Sentry",
+            "CHAR_ChurchOfLight_Cardinal_VBlood", "CHAR_Militia_Fabian_VBlood", "CHAR_Villager_Tailor_VBlood",
         ]),
         new("legion", "Faction_Legion",
         [
-            "CHAR_Legion_Shadowkin", "CHAR_Legion_Assassin", "CHAR_Legion_Vargulf", "CHAR_Legion_BloodProphet", "CHAR_Legion_NightMaiden",
-            "CHAR_Legion_Dreadhorn", "CHAR_Legion_Gargoyle", "CHAR_Legion_Nightmare", "CHAR_Legion_Guardian_DraculaMinion",
-            "CHAR_Vampire_BloodKnight_VBlood",
+            "CHAR_Legion_Shadowkin", "CHAR_Legion_Assassin", "CHAR_Legion_Vargulf", "CHAR_Legion_BloodProphet",
+            "CHAR_Legion_NightMaiden", "CHAR_Legion_Dreadhorn", "CHAR_Legion_Gargoyle", "CHAR_Legion_Nightmare",
+            "CHAR_Legion_Guardian_DraculaMinion", "CHAR_Vampire_BloodKnight_VBlood", "CHAR_Legion_BloodProphet_Lesser",
+            "CHAR_Legion_DreadHorn_Lesser", "CHAR_Legion_Gargoyle_Styx", "CHAR_Legion_Guardian_DraculaMinion_Lesser",
+            "CHAR_Legion_NightMaiden_Lesser", "CHAR_Legion_Nightmare_Lesser", "CHAR_Legion_Shadowkin_Lesser",
+            "CHAR_Legion_Vargulf_Lesser", "CHAR_Vampire_CrimsonIronMaiden", "CHAR_BatVampire_VBlood",
+            "CHAR_Vampire_HighLord_VBlood", "CHAR_Vampire_IceRanger_VBlood",
         ]),
         new("gloomrot", "Faction_Gloomrot",
         [
-            "CHAR_Gloomrot_Technician", "CHAR_Gloomrot_Tazer", "CHAR_Gloomrot_Railgunner", "CHAR_Gloomrot_Pyro", "CHAR_Gloomrot_Batoon",
-            "CHAR_Gloomrot_SentryOfficer", "CHAR_Gloomrot_TractorBeamer", "CHAR_Gloomrot_SpiderTank_Driller", "CHAR_Gloomrot_Voltage_VBlood",
+            "CHAR_Gloomrot_Technician", "CHAR_Gloomrot_Tazer", "CHAR_Gloomrot_Railgunner", "CHAR_Gloomrot_Pyro",
+            "CHAR_Gloomrot_Batoon", "CHAR_Gloomrot_SentryOfficer", "CHAR_Gloomrot_TractorBeamer",
+            "CHAR_Gloomrot_SpiderTank_Driller", "CHAR_Gloomrot_Voltage_VBlood", "CHAR_Gloomrot_AceIncinerator",
+            "CHAR_Gloomrot_SpiderTank_Gattler", "CHAR_Gloomrot_SpiderTank_LightningRod", "CHAR_Gloomrot_SpiderTank_Zapper",
+            "CHAR_Gloomrot_Iva_VBlood", "CHAR_Gloomrot_Purifier_VBlood", "CHAR_Gloomrot_RailgunSergeant_VBlood",
+            "CHAR_Gloomrot_TheProfessor_VBlood",
         ]),
         new("cursed", "Faction_Cursed",
         [
             "CHAR_Cursed_Wolf", "CHAR_Cursed_ToadSpitter", "CHAR_Cursed_MonsterToad", "CHAR_Cursed_Nightlurker",
-            "CHAR_Cursed_Bear_Standard", "CHAR_Cursed_WormTerror", "CHAR_Cursed_Witch", "CHAR_Cursed_Wolf_Spirit", "CHAR_Cursed_Bear_Spirit",
-            "CHAR_Cursed_Witch_VBlood",
+            "CHAR_Cursed_Bear_Standard", "CHAR_Cursed_WormTerror", "CHAR_Cursed_Witch", "CHAR_Cursed_Wolf_Spirit",
+            "CHAR_Cursed_Bear_Spirit", "CHAR_Cursed_Witch_VBlood", "CHAR_Scarecrow", "CHAR_Cursed_MountainBeast_VBlood",
+            "CHAR_Cursed_ToadKing_VBlood", "CHAR_Undead_CursedSmith_VBlood", "CHAR_Villager_CursedWanderer_VBlood",
+            "CHAR_Winter_Yeti_VBlood",
+        ]),
+        new("blackfangs", "Faction_Blackfangs",
+        [
+            "CHAR_Blackfang_Alchemist", "CHAR_Blackfang_DartFlinger", "CHAR_Blackfang_Lurker", "CHAR_Blackfang_Sentinel",
+            "CHAR_Blackfang_Striker", "CHAR_Blackfang_Venomblade", "CHAR_Blackfang_Viper", "CHAR_Blackfang_WoodCarver",
+            "CHAR_GoldGolem", "CHAR_Blackfang_CarverBoss_VBlood", "CHAR_Blackfang_Lucie_VBlood",
+            "CHAR_Blackfang_Valyr_VBlood",
         ]),
     ];
 

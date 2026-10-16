@@ -30,4 +30,12 @@ yar-wv2-logs; snapshot wvmix saved (34 files); [Debug] VerboseLogging set true f
 - planted faults: 17 lines in docs/dod/wave-variety.md › Log, each failed with its fault and passed after the copy back
 - left for step 3: PursuitPhase.Tick in the scheduler, EventEnded/Clear on every end path, the health entry, the dependency suite, HuntAction's map-wide seeds for a pursuing run
 - in-game: none in this step (Logic); pursuit and rolls in game are step 3's sessions (D17, D18)
+### Step 2 · 2026-10-16 · step 2 commit
+- in-game: Session 1 (faction-mix-wide.vrs 284/337: six groups clean, the undead and militia passes lost to the 300 s manual-spawn lifetime) and Session 2 (their rerun at 1800 s, 118/119: only CHAR_Undead_ZealousCultist_Ghost, which dies on its own), recorded in docs/features/WAVE_VARIETY.md › Test results and docs/GAME_ASSETS.md › Faction compatibility
+- session 1 log check: 0 unhandled, 1287 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons (`-LogCheck -ServerPath` over the saved copy in %TEMP%
+yar-wv2-logs); every [Warning read: the six baseline lines and one slow tick (551 ms) at the first CHAR_Militia_Hound_VBlood spawn; no [Error
+- session 2 log check: 0 unhandled, 377 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons (live logs); every [Warning read: the six baseline lines only; no [Error
+- built: Logic/FactionGroups.cs grows every group to the recorded allied units and adds blackfangs (Faction_Blackfangs); FactionGroupsTests Recorded reads docs/GAME_ASSETS.md (copied into the test output); the apocalypse theory case for CHAR_Legion_Shadowkin_Lesser now expects "mixes the undead and legion groups" (it joined the legion group)
+- compile: 0 Warning(s), 0 Error(s); tests Passed! 3784/3784; planted: a ShadowSoldier added to the undead group fails all four Recorded tests, passes after the copy back
+- /code-review: in step 3's review of the child's diff (this step adds data and one test class)
 

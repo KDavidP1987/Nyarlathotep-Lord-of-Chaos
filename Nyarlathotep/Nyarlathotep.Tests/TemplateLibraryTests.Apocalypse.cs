@@ -170,7 +170,7 @@ public partial class TemplateLibraryTests
     [Theory]
     [InlineData("undead-rising", "CHAR_Bandit_Thug", "mixes the undead and bandits groups")]
     [InlineData("zombie-apocalypse", "CHAR_Undead_ShadowSoldier", "CHAR_Undead_ShadowSoldier is in no allied group")]
-    [InlineData("zombie-apocalypse", "CHAR_Legion_Shadowkin_Lesser", "CHAR_Legion_Shadowkin_Lesser is in no allied group")]
+    [InlineData("zombie-apocalypse", "CHAR_Legion_Shadowkin_Lesser", "mixes the undead and legion groups")]   // in the legion group since wave-variety D14
     [InlineData("spider-swarm", "CHAR_Militia_Light", "mixes the spiders and militia groups")]
     public void Factions_fails_when_a_template_mixes_two_groups(string id, string prefab, string expected)
     {
