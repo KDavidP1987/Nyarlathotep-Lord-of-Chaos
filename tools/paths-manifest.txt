@@ -158,6 +158,7 @@ remote-tag: v0.10.0
 remote-tag: v0.11.0
 remote-tag: v0.12.0
 remote-tag: v0.13.0-rc.1
+remote-tag: v0.13.0-rc.2
 remote-release: v0.2.0
 remote-release: v0.2.1
 remote-release: v0.3.0
@@ -173,3 +174,4 @@ remote-release: v0.10.0
 remote-release: v0.11.0
 remote-release: v0.12.0
 remote-release: v0.13.0-rc.1
+remote-release: v0.13.0-rc.2

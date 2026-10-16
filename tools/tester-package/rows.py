@@ -8,10 +8,10 @@ PRODUCT = "Nyarlathotep"
 ROUND = {
     "slug": "dev-round-01-production-setups",
     "title": "Nyarlathotep, Lord of Chaos — dev server test round 1: events set up as a real server would run them",
-    "build": "test build 0.13.0-rc.1 (apocalypse and unit watch, before release)",
+    "build": "test build 0.13.0-rc.2 (apocalypse, unit watch, faction wave templates and the fresh-world fix, before release)",
     # the GitHub pre-release holding this round's mod zip, workbook and reading copy
-    "download": "https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.0-rc.1",
-    "date": "2026-10-14",
+    "download": "https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.0-rc.2",
+    "date": "2026-10-16",
 }
 
 # Two testers by default; rename them on the Start here sheet before you begin.
@@ -50,7 +50,7 @@ COULD_NOT_CHECK = [
 # Installing the build on the test server: done once by whoever runs that server (the owner, or a tester running
 # their own). Each step is "action -> what you should see", like a row's steps.
 INSTALL = [
-    "Open the download page (link above) and download Nyarlathotep-0.13.0-rc.1.zip, this workbook and its reading "
+    "Open the download page (link above) and download Nyarlathotep-0.13.0-rc.2.zip, this workbook and its reading "
     "copy -> the zip holds Nyarlathotep.dll and a short install note.",
     "Stop the V Rising dedicated server -> a running server locks its mod files, so a copy over them fails.",
     "Install BepInExPack V Rising 1.733.2 on the server, with a mod manager's dedicated-server profile or by unzipping "
@@ -59,12 +59,12 @@ INSTALL = [
     "Put VampireCommandFramework 0.10.4 (VampireCommandFramework.dll) in the server's BepInEx/plugins folder -> it is "
     "the chat command library the mod needs.",
     "Put Nyarlathotep.dll from the zip in the same BepInEx/plugins folder, replacing any older copy -> one copy only.",
-    "Start the server and open BepInEx/LogOutput.log -> a line 'Plugin kdpen.Nyarlathotep v0.13.0-rc.1 loaded' "
+    "Start the server and open BepInEx/LogOutput.log -> a line 'Plugin kdpen.Nyarlathotep v0.13.0-rc.2 loaded' "
     "appears, and BepInEx/config gains kdpen.Nyarlathotep.cfg.",
     "Make each tester an admin: add their Steam ID (the 17-digit number) on its own line to adminlist.txt in the "
     "server's save data Settings folder, then restart the server -> in game, with the console switched on in "
     "Options, press the ~ key and type adminauth.",
-    "In game, type .nyar in chat -> the first line reads 'Nyarlathotep, Lord of Chaos (v0.13.0-rc.1)' and the admin "
+    "In game, type .nyar in chat -> the first line reads 'Nyarlathotep, Lord of Chaos (v0.13.0-rc.2)' and the admin "
     "commands are listed. Everything ships switched off; each row turns on what it needs.",
     "For a newer test build later: stop the server, replace Nyarlathotep.dll, start it -> the version line shows the "
     "new build. To remove the mod: type .nyar purge then .nyar purge confirm, stop the server, delete the file -> "
