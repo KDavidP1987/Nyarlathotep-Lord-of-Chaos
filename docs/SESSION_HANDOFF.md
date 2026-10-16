@@ -5,7 +5,11 @@ The plans (`docs/dod/`), audits (`docs/audits/`) and feature docs stay the sourc
 into them.
 
 **Written 2026-10-16 (wave-variety session close)**: the wave-variety child (docs/dod/wave-variety.md, 18/24) is
-built through step 4's pre-release work, commits a896846..88cb5cf on main (local, not pushed; push waits on the owner's OK).
+built through step 4's pre-release work, commits a896846..88cb5cf, all pushed (main cf2ef2a).
+- **Published (owner's OK 2026-10-16):** test build **v0.13.0-rc.3** (tag on cf2ef2a, GitHub pre-release with the zip,
+  workbook and PDF; DLL md5 2b7ddd324615617f6e4ed5121ba7d43f). Workbook rows N-18, N-19 cover the new templates.
+- **Raphael:** docs/RAPHAEL_HANDOFF_WAVE_VARIETY.md (nothing new on the wire, still api 8; new editor fields and the
+  template grouping). Take it with the contract to the Raphael session.
 - **What it adds (design §9 D61, Epic A44):** `action.pursuit` (after N s with nobody in the arena, the waves hunt the
   nearest eligible player map-wide; claimed territory is a refuge), named `action.pools` with pool entries and boss rolls
   (a wave's `bosses`, min-max from a pool), the grown allied groups (docs/GAME_ASSETS.md › Faction compatibility), and 14
@@ -25,8 +29,8 @@ built through step 4's pre-release work, commits a896846..88cb5cf on main (local
   the waves differ between two runs).
 - **Next:** the 0.13.0 release commit (apocalypse D33, unit-watch, wave-variety D22/D23): six surfaces with the README
   template tables listing all 34 templates, step 4's post-audit with the Codex lines, `-AuditOf/-SessionsOf/-Paths
-  -DeclaredOf wave-variety`, then `dod close wave-variety` (partial while D13/D17-D19 wait). A **v0.13.0-rc.3** test build
-  for G-Portal (the owner chose "new features in a later rc.3") needs the owner's OK to tag and publish.
+  -DeclaredOf wave-variety`, then `dod close wave-variety` (partial while D13/D17-D19 wait). rc.3 is published; the
+  release waits on the owner's test weekend. Remove the %TEMP% log folders `-Paths` reports after the release records.
 - **Advice left (/code-review step 3, finding 5):** the eligibility rule (claimed territory, PvP combat) is written three
   times in Services/HuntAction.cs (targets, verbose tally, seeds); one helper after 0.13.0.
 - **Stale references:** docs/dod/scaling.md and replacements.md (both ready) mention BossWave.Units; the code is now
