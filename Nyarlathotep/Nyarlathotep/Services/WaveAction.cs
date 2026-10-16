@@ -63,7 +63,8 @@ internal static class WaveAction
 
         IReadOnlyList<(float X, float Z)> origins = [];                 // AroundPlayer: each group's picked player (A7)
         var spots = new List<RegionSpot?>();                            // Region: each group's spot by its index, null without one (D4)
-        Func<IReadOnlyList<UnitEntry>> roll = () => WaveRoll.ExpandEntries(BossWave.Units(action, due.Wave), _rng);   // revenge D29
+        var draw = Pools.Resolve(action, due.Wave, _rng);                // wave-variety D5: the pools and boss rolls drawn once, bosses first
+        Func<IReadOnlyList<UnitEntry>> roll = () => draw.Expand(_rng);   // revenge D29
         FanOutDecision decision;
         if (location.Type == LocationType.Region)
         {
@@ -71,7 +72,7 @@ internal static class WaveAction
             // over the scope regions; no player position is read.
             decision = RegionWave.Decide(probe with { MapFailed = mapFailed }, roll, ledger.Limits.MaxPerWave, ledger.Occupied, ledger.Limits.MaxTracked,
                 groups => DrawSpots(groups, action, regionOf, map is null || action.AllowTerritory ? null : claimed, spots),
-                BossWave.Lead(action, due.Wave));
+                draw.Lead);
         }
         else
         {
@@ -92,6 +93,7 @@ internal static class WaveAction
             var facts = probe with { MapFailed = mapFailed, Pick = pick };
             decision = WaveGate.DecideGroupEntries(facts, centres, roll, ledger.Limits.MaxPerWave, ledger.Occupied, ledger.Limits.MaxTracked);
         }
+        if (draw.Rolled) Core.Log.LogInfo($"[nyar] {Pools.RolledLine(id, due.Wave, action.Waves, draw)}");   // wave-variety D6
         foreach (var line in decision.CapLines) Core.Log.LogWarning($"[nyar] event {id} wave {due.Wave}: {line}");
 
         var life = SpawnLedger.Lifetime(now, active.Instance.EndsUtc, action.UnitLifetimeSeconds,

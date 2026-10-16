@@ -625,7 +625,7 @@ public static class EventValidator
 
         var goal = ParseGoal(Required(a, "goal", GoalObject), trigger);
         var march = Number(Required(a, "marchSpeed", MarchSpeedRule), ApocalypseLimits.MinMarchSpeed, ApocalypseLimits.MaxMarchSpeed, MarchSpeedRule);
-        var bosses = a.TryGetProperty("bosses", out var bo) ? ParseBosses(bo, units, null) : null;
+        var bosses = a.TryGetProperty("bosses", out var bo) ? ParseBosses(bo, units, null, apocalypse: true) : null;
         var scope = a.TryGetProperty("scope", out var sc) ? ParseScope(sc, "action.scope", regions) : Scope.Global;
         var scoreboard = !a.TryGetProperty("scoreboard", out var sb) || Bool(sb, ScoreboardRule);      // absent = true (D1)
         return new ApocalypseAction(faction, list, hotspots, roamers, hordes, goal, march, scope, scoreboard, bosses);
@@ -736,7 +736,10 @@ public static class EventValidator
     {
         OnlyKeys(a, "action", "type", "units", "waves", "intervalSeconds", "radius", "location", "unitLifetimeSeconds", "scope",
             "modifiers", "loot", "behaviour", "allowTerritory", "fanOut", "waveList", "scoreboard", "arena", "winner", "growth", "regionLock",
-            "bosses");
+            "bosses", "pools", "pursuit");
+
+        // wave-variety D1: the pools come first, so a unit entry or a boss roll can name one.
+        var pools = a.TryGetProperty("pools", out var po) ? ParsePools(po, units) : null;
 
         IReadOnlyList<UnitEntry> list;
         IReadOnlyList<WaveSpec>? waveList = null;
@@ -747,7 +750,7 @@ public static class EventValidator
             // wave-sets D1: the waveList form replaces the units form's four keys.
             foreach (var key in UnitsFormKeys)
                 if (a.TryGetProperty(key, out _)) throw new Fail(WaveListReplaces);
-            waveList = ParseWaveList(wl, units);
+            waveList = ParseWaveList(wl, units, pools);
             list = waveList.SelectMany(w => w.Units).ToList();
             waves = waveList.Count;
             interval = 0;   // read only through WaveSchedule, which never reads it for a waveList (D6)
@@ -755,7 +758,8 @@ public static class EventValidator
         else
         {
             const string unitsRule = "action.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-50 }";
-            list = ParseEntries(Required(a, "units", unitsRule), "action.units", unitsRule, units, withModifiers: false);
+            list = ParseEntries(Required(a, "units", unitsRule), "action.units", unitsRule, units, withModifiers: false, pools, poolEntries: true);
+            WaveSize(list, "action.units");
             waves = Int(Required(a, "waves", "action.waves must be 1-10"), 1, 10, "action.waves must be 1-10");
             interval = Int(Required(a, "intervalSeconds", "action.intervalSeconds must be 10-600"), 10, 600, "action.intervalSeconds must be 10-600");
             modifiers = a.TryGetProperty("modifiers", out var mo) ? ParseModifiers(mo) : null;
@@ -787,9 +791,12 @@ public static class EventValidator
             growth = ParseGrowth(gr, waveList is not null, list, waves);
             waveList = Growth.Generate(list, modifiers, waves, interval, growth);
         }
-        var bosses = a.TryGetProperty("bosses", out var bo) ? ParseBosses(bo, units, fanOut) : null;
+        var bosses = a.TryGetProperty("bosses", out var bo) ? ParseBossList(bo, "action.bosses", units, fanOut, pools, waveLevel: false) : null;
+        WaveBosses(waveList, bosses, fanOut);
+        var pursuit = a.TryGetProperty("pursuit", out var pu) ? ParsePursuit(pu, behaviour, fanOut, regionLock) : null;
+        if (pools is not null) PoolsUsed(pools, list, waveList, bosses);
         return new SpawnWavesAction(list, waves, interval, radius, location, lifetime, scope, modifiers, loot, behaviour, allowTerritory, fanOut,
-            waveList, scoreboard, arena, winner, growth, regionLock, bosses);
+            waveList, scoreboard, arena, winner, growth, regionLock, bosses, pools, pursuit);
     }
 
     public const int MaxBosses = 3;
@@ -804,7 +811,7 @@ public static class EventValidator
 
     /// <summary>`bosses` (revenge D28): 1-3 entries { "prefab", "count": 1-3, "modifiers"? }, a prefab checked as a units
     /// entry's and modifiers as a waveList entry's; never with fanOut, whose groups would each need their own boss.</summary>
-    static IReadOnlyList<UnitEntry> ParseBosses(JsonElement b, IUnitCatalog units, FanOut? fanOut)
+    static IReadOnlyList<UnitEntry> ParseBosses(JsonElement b, IUnitCatalog units, FanOut? fanOut, bool apocalypse = false)
     {
         if (b.ValueKind != JsonValueKind.Array || b.GetArrayLength() is < 1 or > MaxBosses) throw new Fail(BossesRule);
         if (fanOut is not null) throw new Fail(BossesFanOut);
@@ -814,6 +821,7 @@ public static class EventValidator
         {
             m++;
             if (x.ValueKind != JsonValueKind.Object) throw new Fail(BossesRule);
+            if (apocalypse && x.TryGetProperty("pool", out _)) throw new Fail(BossRollApocalypse);          // wave-variety D3
             OnlyKeys(x, "action.bosses", "prefab", "count", "modifiers");
             var prefab = Str(Required(x, "prefab", BossesRule), BossesRule);
             if (UnitDenyList.IsDenied(prefab) || units.IsDenied(prefab)) throw new Fail($"unit{Shown(prefab)} is deny-listed");
@@ -823,6 +831,183 @@ public static class EventValidator
             list.Add(new UnitEntry(prefab, count, 1.0, modifiers));
         }
         return list;
+    }
+
+    public const int MaxPools = 8;
+    public const int MaxPoolMembers = 30;
+    public const int MaxPoolName = 24;
+    public const int MaxWaveBosses = 5;
+    public const int MaxRollBosses = 5;
+    public const int MinPursuitSeconds = 15;
+    public const int MaxPursuitSeconds = 600;
+    public const string PoolsObject = "action.pools must be an object";
+    public const string PoolsCountRule = "action.pools must hold 1-8 pools";
+    public const string BossRollApocalypse = "action.bosses: a pool roll needs a SpawnWaves action";
+    public const string PursuitObject = "action.pursuit must be an object";
+    public const string PursuitAfterRule = "action.pursuit.afterSeconds must be 15-600";
+    public const string PursuitHunt = "action.pursuit needs behaviour Hunt";
+    public const string PursuitFanOut = "action.pursuit takes no fanOut";
+    public const string PursuitRegionLock = "action.pursuit takes no regionLock";
+    static readonly Regex PoolNameRx = new("^[a-z0-9-]{1,24}$", RegexOptions.CultureInvariant);
+
+    /// <summary>A pool name: 1-24 characters of a-z, 0-9 and "-" (wave-variety D1).</summary>
+    public static bool IsPoolName(string? name) => name is not null && PoolNameRx.IsMatch(name);
+
+    /// <summary>The wave-variety reasons (D1, D2, D3, D7), each naming its field; a builder's reason drops the echoed value
+    /// when it would pass <see cref="Wire.ReasonBytes"/>.</summary>
+    public static string PoolNameRule(string name) => Fit($"action.pools:{Shown(name)} is not a pool name", "action.pools: a name is not a pool name");
+    public static string PoolMembersRule(string pool) => $"action.pools.{pool} must hold 1-30 distinct units";
+    public static string PoolUnknownUnit(string pool, string prefab) => Fit($"action.pools.{pool}: unknown unit{Shown(prefab)}", $"action.pools.{pool}: unknown unit");
+    public static string PoolDeniedUnit(string pool, string prefab) => Fit($"action.pools.{pool}: unit{Shown(prefab)} is deny-listed", $"action.pools.{pool}: a unit is deny-listed");
+    public static string PoolUnused(string pool) => $"action.pools.{pool} is not used";
+    public static string NoPool(string at, string? pool) => $"{at}.pool: no pool{(IsPoolName(pool) ? " " + pool : "")}";
+    public static string PrefabOrPool(string at) => $"{at} needs prefab or pool, not both";
+    public static string WaveSizeRule(string path) => $"{path} must hold at most {Limits.MaxUnitsPerWave.Max} units";
+    public static string BossesRuleAt(string path) => $"{path} must hold 1-3 entries";
+    public static string BossCountRuleAt(string path) => $"{path} count must be 1-3";
+    public static string BossesMost(string path) => $"{path} must hold at most {MaxWaveBosses} bosses";
+    public static string RollMinRule(string at) => $"{at}.min must be 1-{MaxRollBosses}";
+    public static string RollMaxRule(string at) => $"{at}.max must be min-{MaxRollBosses}";
+    public static string RollPastPool(string at, string pool) => $"{at}.max is larger than pool {pool}";
+    public static string BossesBothLast(int n) => $"action.bosses and action.waveList.{n}.bosses both name the last wave";
+    public static string WaveBossesFanOut(int n) => $"action.waveList.{n}.bosses takes no fanOut";
+
+    /// <summary>The fixed wave-variety reasons, for the 120-byte check (the builders are checked at their longest).</summary>
+    public static readonly IReadOnlyList<string> WaveVarietyReasons =
+        [PoolsObject, PoolsCountRule, BossRollApocalypse, PursuitObject, PursuitAfterRule, PursuitHunt, PursuitFanOut, PursuitRegionLock];
+
+    static string Fit(string reason, string shorter) =>
+        System.Text.Encoding.UTF8.GetByteCount(reason) <= Wire.ReasonBytes ? reason : shorter;
+
+    /// <summary>A unit entry's keys (wave-sets D1), and with a pool (wave-variety D2); the units form drops the last.</summary>
+    static readonly string[] EntryKeys = ["prefab", "count", "chance", "modifiers"];
+    static readonly string[] PoolEntryKeys = ["prefab", "count", "chance", "pool", "modifiers"];
+
+    /// <summary>`pools` (wave-variety D1): an object of 1-8 pools, each name 1-24 of a-z, 0-9 and "-", each an array of
+    /// 1-30 distinct known, not deny-listed CHAR_ names, kept in the file's order.</summary>
+    static IReadOnlyDictionary<string, IReadOnlyList<string>> ParsePools(JsonElement p, IUnitCatalog units)
+    {
+        if (p.ValueKind != JsonValueKind.Object) throw new Fail(PoolsObject);
+        if (p.EnumerateObject().Count() is < 1 or > MaxPools) throw new Fail(PoolsCountRule);
+        var result = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        foreach (var pool in p.EnumerateObject())
+        {
+            if (!IsPoolName(pool.Name) || result.ContainsKey(pool.Name)) throw new Fail(PoolNameRule(pool.Name));
+            var rule = PoolMembersRule(pool.Name);
+            if (pool.Value.ValueKind != JsonValueKind.Array || pool.Value.GetArrayLength() is < 1 or > MaxPoolMembers) throw new Fail(rule);
+            var members = new List<string>();
+            foreach (var x in pool.Value.EnumerateArray())
+            {
+                var prefab = Str(x, rule);
+                if (members.Contains(prefab)) throw new Fail(rule);
+                if (UnitDenyList.IsDenied(prefab) || units.IsDenied(prefab)) throw new Fail(PoolDeniedUnit(pool.Name, prefab));
+                if (!prefab.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(prefab)) throw new Fail(PoolUnknownUnit(pool.Name, prefab));
+                members.Add(prefab);
+            }
+            result.Add(pool.Name, members);
+        }
+        return result;
+    }
+
+    /// <summary>The pool a unit entry or boss roll at <paramref name="at"/> names: exactly one of prefab and pool, and a
+    /// pool the action defines (wave-variety D2).</summary>
+    static string PoolOf(JsonElement x, string at, IReadOnlyDictionary<string, IReadOnlyList<string>>? pools)
+    {
+        if (x.TryGetProperty("prefab", out _) == x.TryGetProperty("pool", out var pv)) throw new Fail(PrefabOrPool(at));
+        var name = pv.ValueKind == JsonValueKind.String ? pv.GetString() : null;
+        if (name is null || pools is null || !pools.ContainsKey(name)) throw new Fail(NoPool(at, name));
+        return name;
+    }
+
+    /// <summary>A wave holding a pool entry counts every entry against MaxUnitsPerWave's ceiling of 50 (wave-variety D2); a
+    /// wave of prefab entries only keeps 0.12.0's rules.</summary>
+    static void WaveSize(IReadOnlyList<UnitEntry> entries, string path)
+    {
+        if (PastWaveSize(entries)) throw new Fail(WaveSizeRule(path));
+    }
+
+    /// <summary>Whether a wave's entries break <see cref="WaveSize"/>'s ceiling (the validator's and the chat field's test).</summary>
+    public static bool PastWaveSize(IReadOnlyList<UnitEntry> entries) =>
+        entries.Any(e => e.Pool is not null) && entries.Sum(e => e.Count) > Limits.MaxUnitsPerWave.Max;
+
+    /// <summary>A bosses list at <paramref name="path"/> (wave-variety D3): 1-3 entries, each a fixed boss { prefab, count
+    /// 1-3, modifiers? } or a roll { pool, min 1-5, max min-5, modifiers? }, at most 5 bosses in all (counts and maxima), a
+    /// roll's max at most its pool's size less the list's fixed bosses from that pool. The action-level list of fixed
+    /// bosses only is revenge D28's, parsed by <see cref="ParseBosses"/> exactly as 0.12.0 does.</summary>
+    static IReadOnlyList<BossRoll> ParseBossList(JsonElement b, string path, IUnitCatalog units, FanOut? fanOut,
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? pools, bool waveLevel)
+    {
+        var anyRoll = b.ValueKind == JsonValueKind.Array && b.EnumerateArray().Any(x => x.ValueKind == JsonValueKind.Object && x.TryGetProperty("pool", out _));
+        if (!waveLevel && !anyRoll) return ParseBosses(b, units, fanOut).Select(e => (BossRoll)e).ToList();
+        if (b.ValueKind != JsonValueKind.Array || b.GetArrayLength() is < 1 or > MaxBosses) throw new Fail(BossesRuleAt(path));
+        if (fanOut is not null) throw new Fail(BossesFanOut);
+        var list = new List<BossRoll>();
+        var k = 0;
+        foreach (var x in b.EnumerateArray())
+        {
+            k++;
+            var at = $"{path}.{k}";
+            if (x.ValueKind != JsonValueKind.Object) throw new Fail(BossesRuleAt(path));
+            SpawnModifiers? Modifiers() => x.TryGetProperty("modifiers", out var mo) ? ParseModifiers(mo, $"{at}.modifiers") : null;
+            if (x.TryGetProperty("pool", out _) || !x.TryGetProperty("prefab", out _))
+            {
+                var pool = PoolOf(x, at, pools);
+                OnlyKeys(x, path, "pool", "min", "max", "modifiers");
+                var min = Int(Required(x, "min", RollMinRule(at)), 1, MaxRollBosses, RollMinRule(at));
+                var max = Int(Required(x, "max", RollMaxRule(at)), min, MaxRollBosses, RollMaxRule(at));
+                list.Add(BossRoll.Roll(pool, min, max, Modifiers()));
+                continue;
+            }
+            OnlyKeys(x, path, "prefab", "count", "modifiers");
+            var prefab = Str(x.GetProperty("prefab"), BossesRuleAt(path));
+            if (UnitDenyList.IsDenied(prefab) || units.IsDenied(prefab)) throw new Fail($"unit{Shown(prefab)} is deny-listed");
+            if (!prefab.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(prefab)) throw new Fail($"unknown unit{Shown(prefab)}");
+            var count = Int(Required(x, "count", BossCountRuleAt(path)), 1, MaxBossCount, BossCountRuleAt(path));
+            list.Add(BossRoll.Fixed(prefab, count, Modifiers()));
+        }
+        if (list.Sum(e => e.MostBosses) > MaxWaveBosses) throw new Fail(BossesMost(path));
+        for (var i = 0; i < list.Count; i++)
+        {
+            if (list[i] is not { Pool: { } name } roll) continue;
+            var members = pools![name];
+            var held = list.Where(e => !e.IsRoll && members.Contains(e.Prefab)).Select(e => e.Prefab).Distinct().Count();
+            if (roll.Max > members.Count - held) throw new Fail(RollPastPool($"{path}.{i + 1}", name));
+        }
+        return list;
+    }
+
+    /// <summary>The wave-level bosses' action rules (wave-variety D3): never beside fanOut, and the last wave's own list
+    /// never beside the action-level one.</summary>
+    static void WaveBosses(IReadOnlyList<WaveSpec>? waveList, IReadOnlyList<BossRoll>? bosses, FanOut? fanOut)
+    {
+        if (waveList is null) return;
+        for (var n = 1; n <= waveList.Count; n++)
+            if (waveList[n - 1].Bosses is not null && fanOut is not null) throw new Fail(WaveBossesFanOut(n));
+        if (bosses is not null && waveList[^1].Bosses is not null) throw new Fail(BossesBothLast(waveList.Count));
+    }
+
+    /// <summary>Every pool is named by a unit entry or a boss roll (wave-variety D1), checked in the file's order.</summary>
+    static void PoolsUsed(IReadOnlyDictionary<string, IReadOnlyList<string>> pools, IReadOnlyList<UnitEntry> units,
+        IReadOnlyList<WaveSpec>? waveList, IReadOnlyList<BossRoll>? bosses)
+    {
+        var used = new HashSet<string>(units.Select(u => u.Pool).OfType<string>(), StringComparer.Ordinal);
+        foreach (var w in waveList ?? [])
+            used.UnionWith((w.Bosses ?? []).Select(b => b.Pool).OfType<string>());
+        used.UnionWith((bosses ?? []).Select(b => b.Pool).OfType<string>());
+        foreach (var name in pools.Keys)
+            if (!used.Contains(name)) throw new Fail(PoolUnused(name));
+    }
+
+    /// <summary>`pursuit` (wave-variety D7): { "afterSeconds": 15-600 } on a Hunt action without fanOut or regionLock.</summary>
+    static Pursuit ParsePursuit(JsonElement v, Behaviour? behaviour, FanOut? fanOut, bool regionLock)
+    {
+        if (v.ValueKind != JsonValueKind.Object) throw new Fail(PursuitObject);
+        OnlyKeys(v, "action.pursuit", "afterSeconds");
+        var after = Int(Required(v, "afterSeconds", PursuitAfterRule), MinPursuitSeconds, MaxPursuitSeconds, PursuitAfterRule);
+        if (behaviour is not { Type: BehaviourType.Hunt }) throw new Fail(PursuitHunt);
+        if (fanOut is not null) throw new Fail(PursuitFanOut);
+        if (regionLock) throw new Fail(PursuitRegionLock);
+        return new Pursuit(after);
     }
 
     public const string RegionLocationScope = "action.location Region needs action.scope regions";
@@ -926,7 +1111,7 @@ public static class EventValidator
 
     /// <summary>`waveList` (wave-sets D1): 1-10 waves of { units, afterSeconds 10-3600, whenCleared }, wave 1 without a
     /// start key, each unit entry with an optional `modifiers` object under ParseModifiers' rules.</summary>
-    static IReadOnlyList<WaveSpec> ParseWaveList(JsonElement wl, IUnitCatalog units)
+    static IReadOnlyList<WaveSpec> ParseWaveList(JsonElement wl, IUnitCatalog units, IReadOnlyDictionary<string, IReadOnlyList<string>>? pools)
     {
         if (wl.ValueKind != JsonValueKind.Array || wl.GetArrayLength() is < 1 or > MaxWaveListWaves) throw new Fail(WaveListRule);
         var result = new List<WaveSpec>();
@@ -936,21 +1121,27 @@ public static class EventValidator
             n++;
             var path = $"action.waveList.{n}";
             if (w.ValueKind != JsonValueKind.Object) throw new Fail(WaveRule(n));
-            OnlyKeys(w, path, "units", "afterSeconds", "whenCleared");
+            OnlyKeys(w, path, "units", "afterSeconds", "whenCleared", "bosses");
             var unitsRule = $"{path}.units must be 1-10 entries {{ \"prefab\": CHAR_ name, \"count\": 1-50 }}";
-            var entries = ParseEntries(Required(w, "units", unitsRule), $"{path}.units", unitsRule, units, withModifiers: true);
+            var entries = ParseEntries(Required(w, "units", unitsRule), $"{path}.units", unitsRule, units, withModifiers: true, pools, poolEntries: true);
+            WaveSize(entries, $"{path}.units");
             int? after = w.TryGetProperty("afterSeconds", out var af) ? Int(af, MinAfterSeconds, MaxAfterSeconds, AfterSecondsRule(n)) : null;
             bool? cleared = w.TryGetProperty("whenCleared", out var wc) ? Bool(wc, WhenClearedRule(n)) : null;
             if (n == 1 && (after is not null || cleared is not null)) throw new Fail(FirstWaveStart);
             if (cleared == false && after is null) throw new Fail(NoStartRule(n));
-            result.Add(new WaveSpec(entries, after, cleared ?? false));
+            // wave-variety D3: a wave's own bosses, fixed or rolled, under the 5-boss limit.
+            var bosses = w.TryGetProperty("bosses", out var bo) ? ParseBossList(bo, $"{path}.bosses", units, null, pools, waveLevel: true) : null;
+            result.Add(new WaveSpec(entries, after, cleared ?? false, bosses));
         }
         return result;
     }
 
     /// <summary>1-10 unit entries { prefab, count 1-50, chance 0.05-1.0 } at <paramref name="path"/>, and with
-    /// <paramref name="withModifiers"/> an optional per-entry `modifiers` (wave-sets D1).</summary>
-    static List<UnitEntry> ParseEntries(JsonElement u, string path, string rule, IUnitCatalog units, bool withModifiers)
+    /// <paramref name="withModifiers"/> an optional per-entry `modifiers` (wave-sets D1). With <paramref name="poolEntries"/>
+    /// (a SpawnWaves action, wave-variety D2) an entry may name a `pool` of <paramref name="pools"/> instead of a prefab,
+    /// under the same count, chance and modifier rules; an entry without the key reads as 0.12.0's.</summary>
+    static List<UnitEntry> ParseEntries(JsonElement u, string path, string rule, IUnitCatalog units, bool withModifiers,
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? pools = null, bool poolEntries = false)
     {
         if (u.ValueKind != JsonValueKind.Array || u.GetArrayLength() is < 1 or > 10) throw new Fail(rule);
         var list = new List<UnitEntry>();
@@ -959,16 +1150,23 @@ public static class EventValidator
         {
             m++;
             if (x.ValueKind != JsonValueKind.Object) throw new Fail(rule);
-            if (withModifiers) OnlyKeys(x, $"{path}.{m}", "prefab", "count", "chance", "modifiers");
-            else OnlyKeys(x, path, "prefab", "count", "chance");
-            var prefab = Str(Required(x, "prefab", rule), rule);
-            if (UnitDenyList.IsDenied(prefab) || units.IsDenied(prefab)) throw new Fail($"unit{Shown(prefab)} is deny-listed");
-            if (!prefab.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(prefab)) throw new Fail($"unknown unit{Shown(prefab)}");
+            var keys = withModifiers ? (poolEntries ? PoolEntryKeys : EntryKeys) : poolEntries ? PoolEntryKeys[..^1] : EntryKeys[..^1];
+            if (withModifiers) OnlyKeys(x, $"{path}.{m}", keys);
+            else OnlyKeys(x, path, keys);
             var at = withModifiers ? $"{path}.{m}" : path;                                    // a wave's reason names the entry (review F6)
+            string? pool = null, prefab = null;
+            if (poolEntries && (x.TryGetProperty("pool", out _) || (pools is not null && !x.TryGetProperty("prefab", out _))))
+                pool = PoolOf(x, at, pools);                                                  // wave-variety D2
+            else
+            {
+                prefab = Str(Required(x, "prefab", rule), rule);
+                if (UnitDenyList.IsDenied(prefab) || units.IsDenied(prefab)) throw new Fail($"unit{Shown(prefab)} is deny-listed");
+                if (!prefab.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(prefab)) throw new Fail($"unknown unit{Shown(prefab)}");
+            }
             var count = Int(Required(x, "count", rule), 1, 50, $"{at}.count must be 1-50");
             var chance = x.TryGetProperty("chance", out var ch) ? Number(ch, MinChance, 1.0, ChanceRule.Replace("action.units", at)) : 1.0;
             var modifiers = withModifiers && x.TryGetProperty("modifiers", out var mo) ? ParseModifiers(mo, $"{path}.{m}.modifiers") : null;
-            list.Add(new UnitEntry(prefab, count, chance, modifiers));
+            list.Add(pool is null ? new UnitEntry(prefab!, count, chance, modifiers) : UnitEntry.FromPool(pool, count, chance, modifiers));
         }
         return list;
     }

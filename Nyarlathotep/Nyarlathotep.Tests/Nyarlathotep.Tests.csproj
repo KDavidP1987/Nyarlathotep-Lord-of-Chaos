@@ -45,6 +45,8 @@
 		<None Include="..\..\docs\audits\apocalypse.md" Link="Resources\audits\apocalypse.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\dod\unit-watch.md" Link="Resources\unit-watch.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\audits\unit-watch.md" Link="Resources\audits\unit-watch.md" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\..\docs\dod\wave-variety.md" Link="Resources\wave-variety.md" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\..\docs\audits\wave-variety.md" Link="Resources\audits\wave-variety.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\RAPHAEL_INTEGRATION_CONTRACT.md" Link="Resources\RAPHAEL_INTEGRATION_CONTRACT.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\NYARLATHOTEP_DESIGN.md" Link="Resources\NYARLATHOTEP_DESIGN.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\RAPHAEL_HANDOFF_API4.md" Link="Resources\RAPHAEL_HANDOFF_API4.md" CopyToOutputDirectory="PreserveNewest" />

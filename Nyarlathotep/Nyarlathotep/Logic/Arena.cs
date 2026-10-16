@@ -41,11 +41,16 @@ public sealed partial record Arena
     /// <summary>The centre of <paramref name="a"/>'s arena on x and z, or null when it has no arena or no centre (an Admin
     /// start without an origin, an AroundPlayer location, which validation refuses).</summary>
     public static (float X, float Z)? Centre(ActiveEvent a) =>
-        a.Definition.Action is not { Arena: not null } action ? null
-        : action.Location.Type switch
+        a.Definition.Action is not { Arena: not null } ? null : LocationCentre(a);
+
+    /// <summary>The fixed wave centre of <paramref name="a"/>'s location on x and z: a Point's, or the starting admin's
+    /// position for an Admin location; null for a location whose waves pick their own centres (AroundPlayer, Region) or
+    /// an Admin start without an origin. The arena's centre and the pursuit area's (wave-variety D8) are this one.</summary>
+    public static (float X, float Z)? LocationCentre(ActiveEvent a) =>
+        a.Definition.Action?.Location switch
         {
-            LocationType.Point => (action.Location.X, action.Location.Z),
-            LocationType.Admin => a.Origin is { } o ? (o.X, o.Z) : null,
+            { Type: LocationType.Point } l => (l.X, l.Z),
+            { Type: LocationType.Admin } => a.Origin is { } o ? (o.X, o.Z) : null,
             _ => null,
         };
 
@@ -74,10 +79,11 @@ public sealed partial record Arena
 
     /// <summary>One check of <paramref name="a"/>: every unit of its running instance that strays, with its return spot at
     /// <paramref name="walkableHeight"/> (x, z) and its target dropped unless that target stands inside the arena. Null when
-    /// <paramref name="a"/> has no arena or no centre. <paramref name="random"/> gives values in [0, 1).</summary>
+    /// <paramref name="a"/> has no arena or no centre, or pursues (its arena is lifted, wave-variety D8).
+    /// <paramref name="random"/> gives values in [0, 1).</summary>
     public static ArenaCheck? Check(ActiveEvent a, IEnumerable<ArenaUnit> units, Func<float, float, float> walkableHeight, Func<double> random)
     {
-        if (Centre(a) is not { } centre || a.Definition.Action is not { Arena: { } arena } action) return null;
+        if (a.Pursuing || Centre(a) is not { } centre || a.Definition.Action is not { Arena: { } arena } action) return null;
         var returns = new List<ArenaReturn>();
         var farthest = 0f;
         foreach (var u in units)
@@ -186,8 +192,8 @@ public sealed class ArenaPhase
         _next = default;
     }
 
-    /// <summary>The arena events among <paramref name="active"/>.</summary>
-    public static bool HasArena(ActiveEvent a) => a.Definition.Action is { Arena: not null };
+    /// <summary>The arena events among <paramref name="active"/>; a pursuing run's arena is lifted (wave-variety D8).</summary>
+    public static bool HasArena(ActiveEvent a) => a.Definition.Action is { Arena: not null } && !a.Pursuing;
 
     /// <summary>One scheduler tick: nothing unless an arena event runs and <see cref="Arena.CheckSeconds"/> have passed since
     /// the last check; then one check per arena event. Streaks of events no longer running are dropped first. Returns the

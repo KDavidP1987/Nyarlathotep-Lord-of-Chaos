@@ -108,6 +108,8 @@ public partial class CommandArgTests
         "action.growth.whenCleared" => "true",
         "action.regionLock" => "true",
         "action.bosses" => "CHAR_Spider_Queen_VBlood:1",
+        "action.waveList.1.bosses" => "pool:elite:1-2",                 // wave-variety D10
+        "action.pools.elite" => "CHAR_Bandit_Thug,CHAR_Bandit_Deadeye",
         "action.goal" => "here",                                         // apocalypse D16
         "action.goal.name" => "Brighthaven",
         "action.hordes.count" => "4",
@@ -119,11 +121,12 @@ public partial class CommandArgTests
     [Fact]
     public void SettableFields_passes_every_table_name()
     {
-        Assert.Equal(71, CommandArgs.SettableFields.Count);      // automation D16: 7 trigger fields and action.fanOut; wave-sets D14: 11; swarm D9: 6; hunting-grounds D14: 1; revenge D11: 3, D31: 1; apocalypse D16: 8
+        Assert.Equal(74, CommandArgs.SettableFields.Count);      // automation D16: 7 trigger fields and action.fanOut; wave-sets D14: 11; swarm D9: 6; hunting-grounds D14: 1; revenge D11: 3, D31: 1; apocalypse D16: 8; wave-variety D10: 3
         foreach (var (name, (family, who)) in CommandArgs.SettableFields)
         {
             var field = name.Replace(".N.", ".1.", StringComparison.Ordinal).Replace(".M.", ".1.", StringComparison.Ordinal);   // the placeholders
             if (field == "action.waveList.N") field = "action.waveList.1";
+            if (field == CommandArgs.PoolsField) field = "action.pools.elite";
             Assert.True(CommandArgs.SettableValue(field, ValidValue(field)).Ok, field);
             Assert.Contains(family, new[] { "definition", "trigger", "empower action", "spawn action", "apocalypse action", "location", "action" });
             Assert.Equal("admin", who);

@@ -33,7 +33,7 @@ public sealed partial record Growth
         {
             var step = n - 1;
             var entryModifiers = Raise(modifiers, step * growth.AddLevels);
-            var entries = baseWave.Select(u => new UnitEntry(u.Prefab, u.Count + step * growth.AddUnits, u.Chance, entryModifiers)).ToList();
+            var entries = baseWave.Select(u => u with { Count = u.Count + step * growth.AddUnits, Modifiers = entryModifiers }).ToList();   // a pool entry stays one (wave-variety D2)
             list.Add(n == 1 ? new WaveSpec(entries) : new WaveSpec(entries, intervalSeconds, growth.WhenCleared));
         }
         return list;

@@ -127,7 +127,24 @@ public static class CommandArgs
     public static string TableName(string field) =>
         UnitChanceIndex(field) is not null ? UnitChanceField
         : WaveListPath(field) is { } w ? w.Table
+        : PoolOf(field) is not null ? PoolsField
         : field;
+
+    /// <summary>`action.pursuit` (wave-variety D10): 15-600 (afterSeconds) or none.</summary>
+    public const string PursuitField = "action.pursuit";
+
+    /// <summary>`action.pools.&lt;name&gt;` (wave-variety D10): a list of prefabs, +prefab, -prefab or none; NAME stands for
+    /// one field per pool name.</summary>
+    public const string PoolsField = "action.pools.NAME";
+
+    /// <summary>The pool name of an `action.pools.&lt;name&gt;` field (any text without a dot, checked by the value parse),
+    /// or null for any other name.</summary>
+    public static string? PoolOf(string field)
+    {
+        const string head = "action.pools.";
+        return field.Length > head.Length && field.StartsWith(head, StringComparison.Ordinal) && field.IndexOf('.', head.Length) < 0
+            ? field[head.Length..] : null;
+    }
 
     /// <summary>`action.scoreboard` (wave-sets D2, D14): true or false.</summary>
     public const string ScoreboardField = "action.scoreboard";
@@ -135,7 +152,7 @@ public static class CommandArgs
     /// <summary>The wave-list fields (wave-sets D14) by table name: a wave's removal, its units, its two start keys and
     /// one modifier per unit entry, N and M 1-10.</summary>
     public static readonly IReadOnlyList<string> WaveListFields =
-        new[] { "action.waveList.N", "action.waveList.N.units", "action.waveList.N.afterSeconds", "action.waveList.N.whenCleared" }
+        new[] { "action.waveList.N", "action.waveList.N.units", "action.waveList.N.afterSeconds", "action.waveList.N.whenCleared", "action.waveList.N.bosses" }
             .Concat(new[] { "level", "levelDelta" }.Concat(EventValidator.ModifierKeys).Select(k => "action.waveList.N.units.M." + k))
             .ToList();
 
@@ -150,7 +167,7 @@ public static class CommandArgs
         var parts = field[head.Length..].Split('.');
         if (Index(parts[0]) is not { } n) return null;
         if (parts.Length == 1) return new WaveListField(n, null, null, null, "action.waveList.N");
-        if (parts.Length == 2 && parts[1] is "units" or "afterSeconds" or "whenCleared")
+        if (parts.Length == 2 && parts[1] is "units" or "afterSeconds" or "whenCleared" or "bosses")
             return new WaveListField(n, parts[1], null, null, $"action.waveList.N.{parts[1]}");
         if (parts.Length == 4 && parts[1] == "units" && Index(parts[2]) is { } m && Array.IndexOf(WaveModifierKeys, parts[3]) >= 0)
             return new WaveListField(n, "units", m, parts[3], $"action.waveList.N.units.M.{parts[3]}");
@@ -196,6 +213,8 @@ public static class CommandArgs
         foreach (var f in SwarmFields) d[f] = ("spawn action", "admin");      // swarm D9
         d[RegionLockField] = ("spawn action", "admin");             // hunting-grounds D14
         d[BossesField] = ("spawn action", "admin");                 // revenge D31; an Apocalypse's too (apocalypse D16)
+        d[PursuitField] = ("spawn action", "admin");                // wave-variety D10
+        d[PoolsField] = ("spawn action", "admin");
         foreach (var f in ApocalypseFields) d[f] = ("apocalypse action", "admin");     // apocalypse D16
         return d;
     }
@@ -240,26 +259,92 @@ public static class CommandArgs
     public const string BossesField = "action.bosses";
 
     /// <summary>`action.bosses`'s value: 1-3 entries, each count 1-3 (default 1), refused with the validator's reasons
-    /// (revenge D28); none removes the key.</summary>
-    static Arg<object> BossesValue(string? value)
+    /// (revenge D28); none removes the key. A list of fixed bosses only is revenge D31's UnitEntry[]; one holding a roll
+    /// (wave-variety D10) is BossRoll[].</summary>
+    static Arg<object> BossesValue(string? value) => BossList(BossesField, value, waveLevel: false);
+
+    /// <summary>A bosses list at <paramref name="field"/> (wave-variety D3, D10): 1-3 entries `CHAR_name[:count]` (count 1-3)
+    /// or `pool:&lt;name&gt;:&lt;min&gt;-&lt;max&gt;` (1 ≤ min ≤ max ≤ 5), at most 5 bosses in all for a wave's own list or a list
+    /// holding a roll, refused with the validator's reasons; none removes the key. Whether the pool exists and is large
+    /// enough is the validator's, on reload.</summary>
+    static Arg<object> BossList(string field, string? value, bool waveLevel)
     {
         if (string.IsNullOrWhiteSpace(value)) return Arg<object>.Bad(ValueRequired);
         if (value == "none") return Arg<object>.Of(FieldRemoval.Instance);
         var parts = CommaList(value, 10);
-        if (parts is null || parts.Length > EventValidator.MaxBosses) return Arg<object>.Bad(EventValidator.BossesRule);
-        var entries = new List<UnitEntry>();
-        foreach (var part in parts)
+        if (parts is null || parts.Length > EventValidator.MaxBosses) return Arg<object>.Bad(EventValidator.BossesRuleAt(field));
+        var entries = new List<BossRoll>();
+        for (var k = 1; k <= parts.Length; k++)
         {
+            var part = parts[k - 1];
+            var at = $"{field}.{k}";
+            if (part.StartsWith(PoolToken, StringComparison.Ordinal))
+            {
+                var bits = part.Split(':');
+                var range = bits.Length == 3 ? bits[2].Split('-') : [];
+                if (range.Length != 2 || !int.TryParse(range[0], NumberStyles.None, CultureInfo.InvariantCulture, out var min)
+                    || !int.TryParse(range[1], NumberStyles.None, CultureInfo.InvariantCulture, out var max))
+                    return Arg<object>.Bad(BossEntryRule(field));                // the token's shape, before its parts
+                if (!EventValidator.IsPoolName(bits[1])) return Arg<object>.Bad(EventValidator.NoPool(at, bits[1]));
+                if (min is < 1 or > EventValidator.MaxRollBosses) return Arg<object>.Bad(EventValidator.RollMinRule(at));
+                if (max < min || max > EventValidator.MaxRollBosses) return Arg<object>.Bad(EventValidator.RollMaxRule(at));
+                entries.Add(BossRoll.Roll(bits[1], min, max));
+                continue;
+            }
             var colon = part.IndexOf(':');
             var name = colon < 0 ? part : part[..colon];
             var count = 1;
             if (colon >= 0 && !(int.TryParse(part.AsSpan(colon + 1), NumberStyles.None, CultureInfo.InvariantCulture, out count)
                     && count is >= 1 and <= EventValidator.MaxBossCount))
-                return Arg<object>.Bad(EventValidator.BossCountRule);
-            if (!IsNameValue(name, "CHAR_")) return Arg<object>.Bad(NameRule(BossesField));
-            entries.Add(new UnitEntry(name, count));
+                return Arg<object>.Bad(EventValidator.BossCountRuleAt(field));
+            if (!IsNameValue(name, "CHAR_")) return Arg<object>.Bad(NameRule(field));
+            entries.Add(BossRoll.Fixed(name, count));
         }
-        return Arg<object>.Of(entries.ToArray());
+        var rolls = entries.Any(e => e.IsRoll);
+        if ((waveLevel || rolls) && entries.Sum(e => e.MostBosses) > EventValidator.MaxWaveBosses) return Arg<object>.Bad(EventValidator.BossesMost(field));
+        return rolls || waveLevel ? Arg<object>.Of(entries.ToArray()) : Arg<object>.Of(entries.Select(e => new UnitEntry(e.Prefab, e.Count)).ToArray());
+    }
+
+    /// <summary>A bosses list entry of the wrong shape (wave-variety D10): a `pool:` token without exactly a name and a
+    /// min-max of two whole numbers.</summary>
+    public static string BossEntryRule(string field) => $"{field} entries must be <prefab>:<count> or pool:<name>:<min>-<max>";
+
+    /// <summary>The token of a pool in a units list or a boss roll: `pool:&lt;name&gt;:…` (wave-variety D10).</summary>
+    public const string PoolToken = "pool:";
+
+    /// <summary>A `pool:&lt;name&gt;:&lt;count&gt;` token of a units list (wave-variety D10): count 1-50; null when
+    /// <paramref name="part"/> is no pool token, else the entry or the refusal.</summary>
+    static Arg<object>? PoolEntry(string field, string part, string rule)
+    {
+        if (!part.StartsWith(PoolToken, StringComparison.Ordinal)) return null;
+        var bits = part.Split(':');
+        if (bits.Length != 3) return Arg<object>.Bad(rule);
+        if (!EventValidator.IsPoolName(bits[1])) return Arg<object>.Bad(EventValidator.NoPool(field, bits[1]));
+        return int.TryParse(bits[2], NumberStyles.None, CultureInfo.InvariantCulture, out var count) && count is >= 1 and <= 50
+            ? Arg<object>.Of(UnitEntry.FromPool(bits[1], count)) : Arg<object>.Bad(rule);
+    }
+
+    /// <summary>`action.pursuit`'s value (wave-variety D10): afterSeconds 15-600, or none.</summary>
+    static Arg<object> PursuitValue(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? Arg<object>.Bad(ValueRequired)
+        : value == "none" ? Arg<object>.Of(FieldRemoval.Instance)
+        : int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var s) && s >= EventValidator.MinPursuitSeconds && s <= EventValidator.MaxPursuitSeconds
+            ? Arg<object>.Of(new PursuitArg(s)) : Arg<object>.Bad(EventValidator.PursuitAfterRule);
+
+    /// <summary>`action.pools.&lt;name&gt;`'s value (wave-variety D10): 1-30 distinct CHAR_ names (a list longer than one chat
+    /// line is built by appends), `+CHAR_name` or `-CHAR_name` for one member, or none; refused with the validator's
+    /// reasons. Whether the file's pool takes the append, or may be removed, is EventsEditor's, on the file.</summary>
+    static Arg<object> PoolValue(string field, string pool, string? value)
+    {
+        if (!EventValidator.IsPoolName(pool)) return Arg<object>.Bad(EventValidator.PoolNameRule(pool));
+        if (string.IsNullOrWhiteSpace(value)) return Arg<object>.Bad(ValueRequired);
+        if (value == "none") return Arg<object>.Of(FieldRemoval.Instance);
+        if (value[0] is '+' or '-')
+            return IsNameValue(value[1..], "CHAR_") ? Arg<object>.Of(new PoolEdit(value[0] == '+', value[1..])) : Arg<object>.Bad(NameRule(field));
+        var parts = CommaList(value, EventValidator.MaxPoolMembers);
+        if (parts is null || Repeated(parts) is not null) return Arg<object>.Bad(EventValidator.PoolMembersRule(pool));
+        if (parts.Any(p => !IsNameValue(p, "CHAR_"))) return Arg<object>.Bad(NameRule(field));
+        return Arg<object>.Of(parts);
     }
 
     /// <summary>`action.regionLock` (hunting-grounds D14): true, false or none (absent and false are the same).</summary>
@@ -510,6 +595,12 @@ public static class CommandArgs
         var entries = new List<UnitEntry>();
         foreach (var part in parts)
         {
+            if (PoolEntry(field, part, rule) is { } pool)                        // wave-variety D10
+            {
+                if (!pool.Ok) return pool;
+                entries.Add((UnitEntry)pool.Value!);
+                continue;
+            }
             var colon = part.IndexOf(':');
             var name = colon < 0 ? part : part[..colon];
             var count = 1;
@@ -518,7 +609,8 @@ public static class CommandArgs
             if (!IsNameValue(name, "CHAR_")) return Arg<object>.Bad(NameRule(field));
             entries.Add(new UnitEntry(name, count));
         }
-        if (Repeated(entries.Select(e => e.Prefab)) is { } twice) return Arg<object>.Bad(Twice(field, twice));
+        if (Repeated(entries.Select(e => e.Pool is { } p ? PoolToken + p : e.Prefab)) is { } twice) return Arg<object>.Bad(Twice(field, twice));
+        if (EventValidator.PastWaveSize(entries)) return Arg<object>.Bad(EventValidator.WaveSizeRule(field));   // wave-variety D2
         return Arg<object>.Of(entries.ToArray());
     }
 
@@ -546,7 +638,8 @@ public static class CommandArgs
     /// <summary>True when `event set` takes <paramref name="field"/>: a name of the table, or a unit's chance
     /// `action.units.N.chance` with n 1-10 (the table's placeholder itself is no field).</summary>
     public static bool IsSettable(string field) =>
-        field != UnitChanceField && !(field.StartsWith("action.waveList.", StringComparison.Ordinal) && field.Contains(".N", StringComparison.Ordinal))
+        field != UnitChanceField && field != PoolsField
+        && !(field.StartsWith("action.waveList.", StringComparison.Ordinal) && field.Contains(".N", StringComparison.Ordinal))
         && SettableFields.ContainsKey(TableName(field));
 
     /// <summary>`location here`, `location aroundplayer &lt;minDist&gt; &lt;maxDist&gt;` (event-library D11, event-spawns
@@ -639,6 +732,8 @@ public static class CommandArgs
                     ? Arg<object>.Of(after) : Arg<object>.Bad(EventValidator.AfterSecondsRule(w.Wave));
             case "whenCleared":
                 return value switch { "true" => Arg<object>.Of(true), "false" => Arg<object>.Of(false), _ => Arg<object>.Bad(EventValidator.WhenClearedRule(w.Wave)) };
+            case "bosses":
+                return BossList(field, value, waveLevel: true);                 // wave-variety D10
         }
         if (w.Modifier is null) return WaveUnits(field, value);
         var at = $"{path}.units.{w.Unit}.modifiers";
@@ -668,6 +763,12 @@ public static class CommandArgs
         var entries = new List<UnitEntry>();
         foreach (var part in parts)
         {
+            if (PoolEntry(field, part, rule) is { } pool)                        // wave-variety D10
+            {
+                if (!pool.Ok) return pool;
+                entries.Add((UnitEntry)pool.Value!);
+                continue;
+            }
             var colon = part.IndexOf(':');
             var name = colon < 0 ? part : part[..colon];
             var count = 1;
@@ -676,6 +777,7 @@ public static class CommandArgs
             if (!IsNameValue(name, "CHAR_")) return Arg<object>.Bad(NameRule(field));
             entries.Add(new UnitEntry(name, count));
         }
+        if (EventValidator.PastWaveSize(entries)) return Arg<object>.Bad(EventValidator.WaveSizeRule(field));   // wave-variety D2
         return Arg<object>.Of(entries.ToArray());
     }
 
@@ -691,6 +793,8 @@ public static class CommandArgs
         if (field == FanOutField) return FanOutValue(value);
         if (field == RegionLockField) return RegionLockValue(value);
         if (field == BossesField) return BossesValue(value);
+        if (field == PursuitField) return PursuitValue(value);
+        if (PoolOf(field) is { } pool) return PoolValue(field, pool, value);
         if (ApocalypseFields.Contains(field)) return ApocalypseValue(field, value);
         if (field == ScoreboardField)
             return value switch { "true" => Arg<object>.Of(true), "false" => Arg<object>.Of(false), _ => Arg<object>.Bad(EventValidator.ScoreboardRule) };
@@ -737,6 +841,18 @@ public sealed class FieldRemoval
     public static readonly FieldRemoval Instance = new();
     FieldRemoval() { }
     public override string ToString() => "none";
+}
+
+/// <summary>`action.pursuit &lt;afterSeconds&gt;` (wave-variety D10): written as action.pursuit { "afterSeconds": s }.</summary>
+public readonly record struct PursuitArg(int AfterSeconds)
+{
+    public override string ToString() => AfterSeconds.ToString(CultureInfo.InvariantCulture);
+}
+
+/// <summary>`action.pools.&lt;name&gt; +&lt;prefab&gt;` or `-&lt;prefab&gt;` (wave-variety D10): one member added or removed.</summary>
+public readonly record struct PoolEdit(bool Add, string Prefab)
+{
+    public override string ToString() => (Add ? "+" : "-") + Prefab;
 }
 
 /// <summary>`action.behaviour hunt &lt;range&gt;` (event-spawns D18): written as { "type": "Hunt", "range": r }.</summary>

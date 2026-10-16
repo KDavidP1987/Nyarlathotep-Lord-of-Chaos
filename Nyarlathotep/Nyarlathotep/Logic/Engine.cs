@@ -257,6 +257,10 @@ public sealed class ActiveEvent(RunningInstance instance, string trigger, (float
     /// <summary>The waves whose time has been used, spawned or skipped: the schedule counts these (A59, A62).</summary>
     public int WavesUsed => WavesSpawned + WavesSkipped;
     public int Faults { get; internal set; }
+    /// <summary>The run pursues (wave-variety D8): set once by Logic/Pursuit.cs PursuitPhase when no eligible player has
+    /// stood in its area for pursuit.afterSeconds, and kept until the run ends. Memory only: it ends with this instance on
+    /// every end path, and no restart or resume sets it (D9).</summary>
+    public bool Pursuing { get; internal set; }
 
     readonly List<WaveRecord> _decided = [];
     /// <summary>Each used wave's decision time and whether it queued a unit, in wave order (wave-sets D4, D7).</summary>

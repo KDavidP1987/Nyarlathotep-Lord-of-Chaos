@@ -71,6 +71,11 @@ internal static class HuntAction
         _parts = null;
     }
 
+    /// <summary>The distinct hunt centres of <paramref name="eventId"/>'s live Hunt units on x and z, one per wave group
+    /// (wave-variety D8: the pursuit area of an AroundPlayer or Region run); memory only.</summary>
+    internal static IReadOnlyList<(float X, float Z)> CentresOf(string eventId) =>
+        _units.Values.Where(u => u.EventId == eventId).Select(u => (u.Tag.X, u.Tag.Z)).Distinct().ToList();
+
     /// <summary>SpawnTracker confirmed a unit of a Hunt wave.</summary>
     internal static void Track(long key, Entity unit, string eventId, HuntTag tag) => _units[key] = (unit, eventId, tag);
 

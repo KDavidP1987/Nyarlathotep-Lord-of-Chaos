@@ -60,13 +60,19 @@ public sealed class DefinitionEditor(EventsFile file, IFileStore files, EventCat
         {
             string[] list => string.Join(",", list),
             int[] ints => ints.Length == 0 ? "none" : string.Join(",", ints),               // revenge D11: trigger.warnAt
-            UnitEntry[] u => string.Join(",", u.Select(e => $"{e.Prefab}:{e.Count}")),
+            UnitEntry[] u => string.Join(",", u.Select(e => e.Pool is { } pool ? $"{CommandArgs.PoolToken}{pool}:{e.Count}" : $"{e.Prefab}:{e.Count}")),
+            BossRoll[] b => string.Join(",", b.Select(e => e.Pool is { } pool ? $"{CommandArgs.PoolToken}{pool}:{e.Min}-{e.Max}" : $"{e.Prefab}:{e.Count}")),   // wave-variety D10
             bool b => b ? "true" : "false",                                           // as typed and as events.json spells it (A50)
             _ => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture),
         };
-        var done = path == "enabled" ? $"event {id} {((bool)value ? "enabled" : "disabled")}" : $"event {id} {path} = {shown}";
-        // a location's wire value is "x,z" with one decimal (contract §5a); the human text keeps its own form
+        // a location's wire value is "x,z" with one decimal (contract §5a); the human text keeps its own form; every other
+        // value is the stored one, which the wire cuts to 120 bytes (D11: never the shortened echo below)
         var wireValue = value is PointArg pt ? FormattableString.Invariant($"{pt.X:0.0},{pt.Z:0.0}") : shown ?? "";
+        // wave-variety D10: a long pool list is echoed as its count, so the reply and a "now disabled" reason fit one message
+        if (CommandArgs.PoolOf(path) is not null && value is string[] members
+            && System.Text.Encoding.UTF8.GetByteCount($"event {id} {path} = {shown}; now disabled: ") + Wire.ReasonBytes > Wire.MaxBytes)
+            shown = $"{members.Length} units";
+        var done = path == "enabled" ? $"event {id} {((bool)value ? "enabled" : "disabled")}" : $"event {id} {path} = {shown}";
         (string, string)[] fields = path == "enabled" ? [("changed", "1")] : [("field", path), ("value", wireValue)];
         return Write(text =>
         {

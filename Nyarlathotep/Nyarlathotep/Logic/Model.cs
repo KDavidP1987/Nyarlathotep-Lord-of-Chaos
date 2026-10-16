@@ -58,13 +58,39 @@ public sealed record Conditions(
 
 /// <summary>One unit entry of a wave; each of its <see cref="Count"/> copies spawns with probability
 /// <see cref="Chance"/> (event-spawns D8), 1.0 when absent. <see cref="Modifiers"/> is set only on an entry of a
-/// waveList wave (wave-sets D1, D3): that entry's own level and multipliers.</summary>
-public sealed record UnitEntry(string Prefab, int Count, double Chance = 1.0, SpawnModifiers? Modifiers = null);
+/// waveList wave (wave-sets D1, D3): that entry's own level and multipliers. A pool entry (wave-variety D2) names
+/// <see cref="Pool"/> and has an empty <see cref="Prefab"/>: Logic/Pools.cs draws its count from the pool at the wave's
+/// decision, so everything after the roll sees prefab entries only.</summary>
+public sealed record UnitEntry(string Prefab, int Count, double Chance = 1.0, SpawnModifiers? Modifiers = null, string? Pool = null)
+{
+    /// <summary>A pool entry of <paramref name="count"/> draws from <paramref name="pool"/>.</summary>
+    public static UnitEntry FromPool(string pool, int count, double chance = 1.0, SpawnModifiers? modifiers = null) =>
+        new("", count, chance, modifiers, pool);
+}
+
+/// <summary>One boss of a wave (wave-variety D3): a fixed boss, <see cref="Prefab"/> times <see cref="Count"/> (revenge
+/// D28's entry), or a roll of <see cref="Min"/>..<see cref="Max"/> distinct bosses from <see cref="Pool"/>, whose
+/// <see cref="Prefab"/> is empty and <see cref="Count"/> 0. A fixed entry converts from a UnitEntry, as 0.12.0 stored it.</summary>
+public sealed record BossRoll(string Prefab, string? Pool, int Count, int Min, int Max, SpawnModifiers? Modifiers = null)
+{
+    public bool IsRoll => Pool is not null;
+
+    /// <summary>The most bosses this entry can add: a fixed count, or a roll's maximum.</summary>
+    public int MostBosses => IsRoll ? Max : Count;
+
+    public static BossRoll Fixed(string prefab, int count, SpawnModifiers? modifiers = null) => new(prefab, null, count, 0, 0, modifiers);
+
+    public static BossRoll Roll(string pool, int min, int max, SpawnModifiers? modifiers = null) => new("", pool, 0, min, max, modifiers);
+
+    public static implicit operator BossRoll(UnitEntry e) => Fixed(e.Prefab, e.Count, e.Modifiers);
+}
 
 /// <summary>One wave of a waveList (wave-sets D1, D4): its own units, and for wave 2 onwards when it starts: after
 /// <see cref="AfterSeconds"/> from the previous wave's decision, when the previous wave is cleared
-/// (<see cref="WhenCleared"/>), whichever comes first, or when cleared with neither key set (design §9 D40).</summary>
-public sealed record WaveSpec(IReadOnlyList<UnitEntry> Units, int? AfterSeconds = null, bool WhenCleared = false)
+/// (<see cref="WhenCleared"/>), whichever comes first, or when cleared with neither key set (design §9 D40).
+/// <see cref="Bosses"/> are the wave's own bosses (wave-variety D3), null without the key.</summary>
+public sealed record WaveSpec(IReadOnlyList<UnitEntry> Units, int? AfterSeconds = null, bool WhenCleared = false,
+    IReadOnlyList<BossRoll>? Bosses = null)
 {
     /// <summary>The wave starts when the previous one is cleared: whenCleared, or neither key set.</summary>
     public bool WaitsForClear => WhenCleared || AfterSeconds is null;
@@ -114,7 +140,9 @@ public sealed partial record Growth(int AddUnits, int AddLevels, bool WhenCleare
 /// <see cref="Waves"/>, <see cref="IntervalSeconds"/> and <see cref="Modifiers"/> then stay the base the file holds, and
 /// everything after the parser reads the generated list. <see cref="Arena"/> and <see cref="Winner"/> are swarm D1 and
 /// D2. <see cref="RegionLock"/> keeps the units inside the scope regions (hunting-grounds D2, D5); false is 0.10.0's
-/// behaviour. <see cref="Bosses"/> join the final wave only (revenge D28, D29; design §9 D51), null without the key.</summary>
+/// behaviour. <see cref="Bosses"/> join the final wave only (revenge D28, D29; design §9 D51), null without the key.
+/// <see cref="Pools"/> are the named unit pools its pool entries and boss rolls draw from, and <see cref="Pursuit"/> lets a
+/// run chase players who left its area (wave-variety D1, D7), each null without the key.</summary>
 public sealed record SpawnWavesAction(
     IReadOnlyList<UnitEntry> Units,
     int Waves,
@@ -134,12 +162,18 @@ public sealed record SpawnWavesAction(
     WinnerRule Winner = WinnerRule.None,
     Growth? Growth = null,
     bool RegionLock = false,
-    IReadOnlyList<UnitEntry>? Bosses = null)
+    IReadOnlyList<BossRoll>? Bosses = null,
+    IReadOnlyDictionary<string, IReadOnlyList<string>>? Pools = null,
+    Pursuit? Pursuit = null)
 {
     /// <summary>The units of wave <paramref name="wave"/> (1-based): its waveList entry's, or <see cref="Units"/> for
     /// every wave of the units form.</summary>
     public IReadOnlyList<UnitEntry> UnitsOf(int wave) => WaveList is { } list ? list[Math.Clamp(wave, 1, list.Count) - 1].Units : Units;
 }
+
+/// <summary>A SpawnWaves run's pursuit (wave-variety D7, D8): once no eligible player has stood in its area for
+/// <see cref="AfterSeconds"/> (15-600) in a row, its units go after players anywhere. The rule is Logic/Pursuit.cs.</summary>
+public sealed partial record Pursuit(int AfterSeconds);
 
 /// <summary>The Empower action's multipliers (faction-empowerment S-1): each 1.0–3.0 of the base value, 1.0 meaning
 /// unchanged, at least one above 1.0.</summary>

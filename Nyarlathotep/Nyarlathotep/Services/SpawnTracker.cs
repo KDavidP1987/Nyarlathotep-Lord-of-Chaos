@@ -596,7 +596,7 @@ internal static class SpawnTracker
     /// <see cref="_entities"/> (CLAUDE.md › Spawn &amp; buff safety), which Logic/LockPhase and HuntPhase have already
     /// filtered to the running instance's own (HuntingGrounds.Ours). The players are read once per tick and the walk
     /// probe is opened once per tick, at its first use, and disposed by <see cref="End"/>; nothing is kept past the tick.</summary>
-    sealed class RegionWorld : IRegionWorld
+    sealed class RegionWorld : IRegionWorld, IPursuitWorld
     {
         WalkCheck.WaveCheck? _check;
         int _walkCalls, _noProbe, _notGrounded, _notFree, _moves;
@@ -608,6 +608,7 @@ internal static class SpawnTracker
         internal RegionParts Parts(int netGcs, int il2cppGcs) =>
             new(Ms(_openTicks), Ms(_walkTicks), Ms(_playersTicks), Ms(_claimedTicks), Ms(_moveTicks), _walkCalls, _moves, netGcs, il2cppGcs);
         List<HuntCandidate> _players;
+        List<(long Key, string PlatformId)> _ids;                         // the focus lookup's (revenge D6), this tick only
         string _playersFault;
         bool _playersRead;
 
@@ -618,6 +619,7 @@ internal static class SpawnTracker
             _walkCalls = _noProbe = _notGrounded = _notFree = _moves = 0;
             _openTicks = _walkTicks = _playersTicks = _claimedTicks = _moveTicks = 0;
             _players = null;
+            _ids = null;
             _playersFault = null;
             _playersRead = false;
         }
@@ -697,7 +699,9 @@ internal static class SpawnTracker
                 var t0 = Stopwatch.GetTimestamp();
                 try
                 {
-                    _players = PlayerQuery.Read().Select(p => new HuntCandidate(p.Key, p.X, p.Z, true, p.Alive, false, p.InPvpCombat)).ToList();
+                    var rows = PlayerQuery.Read();
+                    _players = rows.Select(p => new HuntCandidate(p.Key, p.X, p.Z, true, p.Alive, false, p.InPvpCombat)).ToList();
+                    _ids = rows.Select(p => (p.Key, p.PlatformId)).ToList();
                 }
                 catch (Exception e) { _playersFault = e.Message; }
                 finally { _playersTicks += Stopwatch.GetTimestamp() - t0; }
@@ -705,6 +709,19 @@ internal static class SpawnTracker
             if (_playersFault is not null) throw new InvalidOperationException(_playersFault);
             return _players;
         }
+
+        /// <summary>A focus-only (Revenge) instance's focus player as a Hunt key from this tick's read, as HuntAction's
+        /// targeting finds it (HuntPlan.FocusKey); null when the player is offline or the instance is not focus-only. A
+        /// failed read throws, as <see cref="Players"/>.</summary>
+        public long? FocusKey(ActiveEvent a)
+        {
+            if (!WaveFacts.IsFocusOnly(a.Definition)) return null;
+            Players();
+            return HuntPlan.FocusKey(_ids, a.Focus);
+        }
+
+        /// <summary>The live hunt centres of the instance's units (wave-variety D8), memory only.</summary>
+        public IReadOnlyList<(float X, float Z)> Centres(ActiveEvent a) => HuntAction.CentresOf(a.Id);
 
         public void Return(RegionReturn r, Scope scope)
         {

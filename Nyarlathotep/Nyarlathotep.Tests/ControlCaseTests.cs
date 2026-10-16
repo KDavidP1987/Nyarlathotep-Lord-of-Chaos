@@ -154,6 +154,8 @@ public class ControlCaseTests
         Assert.Equal(["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12", "D13", "D14", "D15", "D16", "D17", "D18",
              "D20", "D21", "D28", "D30", "D31", "D32", "D33", "D34"],
             PlanControls(PlanText(ControlCases.UnitWatch)));
+        Assert.Equal(["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12", "D14", "D15", "D16", "D20", "D21", "D22", "D23", "D24"],
+            PlanControls(PlanText(ControlCases.WaveVariety)));
         Assert.Empty(Problems(ControlCases.Table, AllPlanKeys(), TestMethods, RepoRoot()));
         Assert.Empty(PendingProblems(ControlCases.Pending, ControlCases.Table, AllPlanKeys(), AuditText, ModVersion()));
     }

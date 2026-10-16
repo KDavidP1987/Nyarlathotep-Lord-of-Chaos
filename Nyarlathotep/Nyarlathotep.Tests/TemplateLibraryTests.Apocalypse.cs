@@ -127,8 +127,8 @@ public partial class TemplateLibraryTests
         {
             if (Spawned(t.Definition) is not { } s) continue;
             checkedAny++;
-            var problem = t.Definition.Action is { WaveList: { } waves } w                // design §9 D60: a serial mixed-group waveList
-                ? FactionGroups.Problem(t.Id, waves, (w.Bosses ?? []).Select(b => b.Prefab))
+            var problem = t.Definition.Action is { } w                // design §9 D60 per wave, pool members included (wave-variety D4)
+                ? FactionGroups.Problem(t.Id, w)
                 : FactionGroups.Problem(t.Id, s.Prefabs, s.Faction);
             if (problem is { } p) problems.Add(p);
         }

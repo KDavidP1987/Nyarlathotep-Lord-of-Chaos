@@ -36,6 +36,7 @@ public partial class PrivacyTests
         public bool Walkable(float x, float z, byte level) => true;
         public float HeightOf(byte level) => 3f;
         public WalkBudget Budget { get; } = new();
+        public long? FocusKey(ActiveEvent a) => null;
         public IReadOnlyList<HuntCandidate> Players() => [new HuntCandidate((long)PlantedId, HuntedAt.X, HuntedAt.Z, true, true, false, false)];
         public void Return(RegionReturn r, Scope scope) => At[r.Key] = At[r.Key] with { X = r.X, Z = r.Z };
         public void Jump(RegionJump j) => At[j.Key] = At[j.Key] with { X = j.X, Z = j.Z };

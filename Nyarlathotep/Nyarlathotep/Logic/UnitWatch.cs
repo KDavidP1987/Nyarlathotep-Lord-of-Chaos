@@ -335,7 +335,7 @@ public static class StallClock
                 for (var k = 1; k <= risen; k++) yield return k;
             yield break;
         }
-        if (a.Definition.Action is not { WaveList: { } list, Growth: null, Arena: null }) yield break;
+        if (a.Definition.Action is not { WaveList: { } list, Growth: null, Arena: null } || a.Pursuing) yield break;   // wave-variety D8
         for (var k = 1; k <= a.Decided.Count && k <= list.Count; k++)
             if (a.Decided[k - 1].Fought && (k == list.Count || list[k].AfterSeconds is null)) yield return k;
     }
@@ -965,9 +965,10 @@ public sealed class UnitWatchPhase
         LandingContext Context(ActiveEvent a, TrackedUnit t, WatchUnit u)
         {
             var action = a.Definition.Action;
-            var scope = action?.Scope ?? a.Definition.Apocalypse?.Scope ?? Scope.Global;
-            var allowTerritory = action?.AllowTerritory ?? false;
-            var centre = Arena.Centre(a);
+            // wave-variety D8: a pursuing unit lands anywhere outside claimed territory, its arena and scope lifted
+            var scope = a.Pursuing ? Scope.Global : action?.Scope ?? a.Definition.Apocalypse?.Scope ?? Scope.Global;
+            var allowTerritory = !a.Pursuing && (action?.AllowTerritory ?? false);
+            var centre = a.Pursuing ? null : Arena.Centre(a);
             var radius = action?.Arena?.Radius ?? 0;
             bool Allowed(float x, float z) =>
                 (allowTerritory || !w.IsClaimed(a.Id, x, z))

@@ -87,6 +87,8 @@ public static class EventsEditor
             return null;
         }
         if (path == CommandArgs.BossesField) return SetBosses(root, ev, actionType, value, out error);
+        if (path == CommandArgs.PursuitField) return SetPursuit(root, ev, actionType, value, out error);          // wave-variety D10
+        if (CommandArgs.PoolOf(path) is { } pool) return SetPool(root, ev, actionType, pool, value, out error);
         if (CommandArgs.ApocalypseFields.Contains(path)) return SetApocalypse(root, ev, actionType, path, value, out error);
         if (CommandArgs.SwarmFields.Contains(path)) return SetSwarm(root, ev, actionType, path, value, out error);
         if (CommandArgs.SpawnKeyFields.Contains(CommandArgs.TableName(path)) || path is CommandArgs.FanOutField or CommandArgs.RegionLockField)
@@ -157,7 +159,11 @@ public static class EventsEditor
         string s => JsonValue.Create(s),
         string[] list => new JsonArray(list.Select(x => (JsonNode?)JsonValue.Create(x)).ToArray()),
         int[] ints => new JsonArray(ints.Select(x => (JsonNode?)JsonValue.Create(x)).ToArray()),            // revenge D11: trigger.warnAt
-        UnitEntry[] units => new JsonArray(units.Select(u => (JsonNode?)new JsonObject { ["prefab"] = u.Prefab, ["count"] = u.Count }).ToArray()),
+        UnitEntry[] units => new JsonArray(units.Select(u => (JsonNode?)(u.Pool is { } pool
+            ? new JsonObject { ["pool"] = pool, ["count"] = u.Count }                                       // wave-variety D10
+            : new JsonObject { ["prefab"] = u.Prefab, ["count"] = u.Count })).ToArray()),
+        BossRoll[] bosses => new JsonArray(bosses.Select(b => (JsonNode?)BossNode(b)).ToArray()),
+        PursuitArg p => new JsonObject { ["afterSeconds"] = p.AfterSeconds },
         PointArg p => new JsonObject { ["type"] = "Point", ["x"] = p.X, ["y"] = p.Y, ["z"] = p.Z },
         AroundPlayerArg a => new JsonObject { ["type"] = "AroundPlayer", ["minDist"] = a.MinDist, ["maxDist"] = a.MaxDist },
         BehaviourArg b => new JsonObject { ["type"] = "Hunt", ["range"] = b.Range },
@@ -198,20 +204,130 @@ public static class EventsEditor
             error = Invalid($"{EventValidator.BossesFanOut}: set action.fanOut none first", Reasons.Field);
             return null;
         }
-        var old = action["bosses"] as JsonArray;
-        var list = new JsonArray();
-        var i = 0;
-        foreach (var b in (UnitEntry[])value)
+        var entries = value is BossRoll[] rolls ? rolls : ((UnitEntry[])value).Select(b => (BossRoll)b).ToArray();
+        if (actionType == EventValidator.ApocalypseType && entries.Any(b => b.IsRoll))
         {
-            var entry = new JsonObject { ["prefab"] = b.Prefab, ["count"] = b.Count };
-            if (old is not null && i < old.Count && old[i] is JsonObject was && was["prefab"] is JsonValue p
-                && p.TryGetValue<string>(out var prefab) && prefab == b.Prefab && was["modifiers"] is JsonObject mods)
+            error = Invalid(EventValidator.BossRollApocalypse, Reasons.Field);                            // wave-variety D3
+            return null;
+        }
+        action["bosses"] = BossesNode(action["bosses"] as JsonArray, entries);
+        return root.ToJsonString(Write) + Environment.NewLine;
+    }
+
+    /// <summary>A bosses list as JSON, an entry keeping the modifiers of the entry it replaces when that names the same
+    /// prefab or pool (revenge D31, wave-variety D10).</summary>
+    static JsonArray BossesNode(JsonArray? old, IReadOnlyList<BossRoll> entries)
+    {
+        var list = new JsonArray();
+        for (var i = 0; i < entries.Count; i++)
+        {
+            var entry = BossNode(entries[i]);
+            var (key, name) = entries[i].Pool is { } pool ? ("pool", pool) : ("prefab", entries[i].Prefab);
+            if (old is not null && i < old.Count && old[i] is JsonObject was && was[key] is JsonValue p
+                && p.TryGetValue<string>(out var held) && held == name && was["modifiers"] is JsonObject mods)
                 entry["modifiers"] = JsonNode.Parse(mods.ToJsonString());
             list.Add(entry);
-            i++;
         }
-        action["bosses"] = list;
+        return list;
+    }
+
+    static JsonObject BossNode(BossRoll b) =>
+        b.Pool is { } pool ? new JsonObject { ["pool"] = pool, ["min"] = b.Min, ["max"] = b.Max } : new JsonObject { ["prefab"] = b.Prefab, ["count"] = b.Count };
+
+    /// <summary>`action.pursuit` (wave-variety D10) of a SpawnWaves action: { "afterSeconds": s }, or none removing it.
+    /// Whether the action can pursue (Hunt, no fanOut, no regionLock) is <see cref="ActionConflicts"/>'.</summary>
+    static string? SetPursuit(JsonNode root, JsonObject ev, string? actionType, object value, out Outcome? error)
+    {
+        error = null;
+        if (actionType != "SpawnWaves" || ev["action"] is not JsonObject action)
+        {
+            error = Invalid($"{CommandArgs.PursuitField} is not {Article(actionType)} field", Reasons.Field);
+            return null;
+        }
+        if (value is FieldRemoval) action.Remove("pursuit");
+        else action["pursuit"] = ToNode(value);
         return root.ToJsonString(Write) + Environment.NewLine;
+    }
+
+    /// <summary>`action.pools.&lt;name&gt;` (wave-variety D10) of a SpawnWaves action: a list replaces the pool (created when
+    /// missing, at most 8 pools), +prefab appends one member (never a 31st or one already there), -prefab removes one
+    /// (never the last), and none removes the pool, refused while a unit entry or boss roll still names it, with the
+    /// validator's reason. A pool no entry names yet is written and disabled by the reload ("is not used"), so a pool and
+    /// its first entry can be set in either order (deferred Review 3 F1).</summary>
+    static string? SetPool(JsonNode root, JsonObject ev, string? actionType, string pool, object value, out Outcome? error)
+    {
+        error = null;
+        if (actionType != "SpawnWaves" || ev["action"] is not JsonObject action)
+        {
+            error = Invalid($"action.pools.{pool} is not {Article(actionType)} field", Reasons.Field);
+            return null;
+        }
+        var pools = action["pools"] as JsonObject;
+        if (value is FieldRemoval)
+        {
+            if (PoolNamedAt(action, pool) is { } at)
+            {
+                error = Invalid(EventValidator.NoPool(at, pool), Reasons.Field);
+                return null;
+            }
+            pools?.Remove(pool);
+            if (pools is { Count: 0 }) action.Remove("pools");
+            return root.ToJsonString(Write) + Environment.NewLine;
+        }
+        var members = (pools?[pool] as JsonArray)?.Select(m => m is JsonValue v && v.TryGetValue<string>(out var s) ? s : "").ToList() ?? [];
+        string[] next;
+        switch (value)
+        {
+            case PoolEdit { Add: true } add:
+                if (members.Contains(add.Prefab) || members.Count >= EventValidator.MaxPoolMembers)
+                {
+                    error = Invalid(EventValidator.PoolMembersRule(pool), Reasons.Value);
+                    return null;
+                }
+                next = [.. members, add.Prefab];
+                break;
+            case PoolEdit drop:
+                if (!members.Contains(drop.Prefab) || members.Count == 1)
+                {
+                    error = Invalid(members.Contains(drop.Prefab) ? EventValidator.PoolMembersRule(pool) : $"action.pools.{pool} has no unit {drop.Prefab}", Reasons.Value);
+                    return null;
+                }
+                next = members.Where(m => m != drop.Prefab).ToArray();
+                break;
+            default:
+                next = (string[])value;
+                break;
+        }
+        if (pools?[pool] is null && (pools?.Count ?? 0) >= EventValidator.MaxPools)
+        {
+            error = Invalid(EventValidator.PoolsCountRule, Reasons.Field);
+            return null;
+        }
+        if (pools is null) action["pools"] = pools = new JsonObject();
+        pools[pool] = ToNode(next);
+        return root.ToJsonString(Write) + Environment.NewLine;
+    }
+
+    /// <summary>Where a unit entry or boss roll of <paramref name="action"/> names <paramref name="pool"/> (the validator's
+    /// path of its "no pool" reason), or null.</summary>
+    static string? PoolNamedAt(JsonObject action, string pool)
+    {
+        static bool Names(JsonNode? n, string pool) => n is JsonObject o && o["pool"] is JsonValue v && v.TryGetValue<string>(out var s) && s == pool;
+        if ((action["units"] as JsonArray)?.Any(u => Names(u, pool)) == true) return "action.units";
+        var waves = (action["waveList"] as JsonArray)?.ToList() ?? [];
+        for (var n = 1; n <= waves.Count; n++)
+        {
+            var units = (waves[n - 1]?["units"] as JsonArray)?.ToList() ?? [];
+            for (var m = 1; m <= units.Count; m++)
+                if (Names(units[m - 1], pool)) return $"action.waveList.{n}.units.{m}";
+            var bosses = (waves[n - 1]?["bosses"] as JsonArray)?.ToList() ?? [];
+            for (var k = 1; k <= bosses.Count; k++)
+                if (Names(bosses[k - 1], pool)) return $"action.waveList.{n}.bosses.{k}";
+        }
+        var last = (action["bosses"] as JsonArray)?.ToList() ?? [];
+        for (var k = 1; k <= last.Count; k++)
+            if (Names(last[k - 1], pool)) return $"action.bosses.{k}";
+        return null;
     }
 
     static string? SetSpawnKey(JsonNode root, JsonObject ev, string? actionType, string path, object value, out Outcome? error)
@@ -333,6 +449,10 @@ public static class EventsEditor
         {
             case "units" when f.Unit is null:
                 wave["units"] = ToNode(value);
+                return Done();
+            case "bosses":                                                      // wave-variety D10
+                if (value is FieldRemoval) wave.Remove("bosses");
+                else wave["bosses"] = BossesNode(wave["bosses"] as JsonArray, (BossRoll[])value);
                 return Done();
             case "afterSeconds" or "whenCleared":
                 if (f.Wave == 1) { error = Invalid(EventValidator.FirstWaveStart, Reasons.Field); return null; }
@@ -475,6 +595,18 @@ public static class EventsEditor
         if (locked && !regional) yield return EventValidator.RegionLockScope;
         else if (locked && action["arena"] is not null) yield return EventValidator.RegionLockArena;
         if (TypeOf(action["behaviour"]) == nameof(BehaviourType.RegionHunt) && !locked) yield return EventValidator.RegionHuntLock;
+        if (action["pursuit"] is not null)                                                         // wave-variety D7
+        {
+            if (TypeOf(action["behaviour"]) != nameof(BehaviourType.Hunt)) yield return EventValidator.PursuitHunt;
+            if (action["fanOut"] is not null) yield return EventValidator.PursuitFanOut;
+            if (locked) yield return EventValidator.PursuitRegionLock;
+        }
+        if (action["waveList"] is JsonArray { Count: > 0 } waveList)                                 // wave-variety D3
+        {
+            for (var k = 1; k <= waveList.Count; k++)
+                if (waveList[k - 1]?["bosses"] is not null && action["fanOut"] is not null) yield return EventValidator.WaveBossesFanOut(k);
+            if (action["bosses"] is not null && waveList[^1]?["bosses"] is not null) yield return EventValidator.BossesBothLast(waveList.Count);
+        }
         if (action["growth"] is not JsonObject growth) yield break;
         if (action["waveList"] is not null) yield return EventValidator.GrowthUnitsForm;
         var waves = IntOf(action["waves"]);
@@ -494,8 +626,9 @@ public static class EventsEditor
         if (old is null) return;
         foreach (var entry in now.OfType<JsonObject>())
         {
-            var prefab = entry["prefab"]?.GetValue<string>();
-            var was = old.OfType<JsonObject>().FirstOrDefault(o => o["prefab"] is JsonValue v && v.TryGetValue<string>(out var s) && s == prefab);
+            var key = entry["pool"] is not null ? "pool" : "prefab";                  // a pool entry by its pool (wave-variety D10)
+            var prefab = entry[key]?.GetValue<string>();
+            var was = old.OfType<JsonObject>().FirstOrDefault(o => o[key] is JsonValue v && v.TryGetValue<string>(out var s) && s == prefab);
             if (was?["chance"] is JsonNode chance) entry["chance"] = JsonNode.Parse(chance.ToJsonString());      // net6 has no DeepClone
         }
     }
@@ -686,7 +819,7 @@ public static class EventLines
             else
             {
                 var head = $"action: {a.Waves} waves every {WaveSchedule.IntervalOf(a)}s, radius {a.Radius}, {where}";
-                var units = a.Units.Select(u => $"{u.Count} {u.Prefab}").ToList();
+                var units = a.Units.Select(u => u.Pool is { } pool ? $"{u.Count} from {pool}" : $"{u.Count} {u.Prefab}").ToList();
                 var one = $"{head}, units {string.Join(", ", units)}{life}";
                 if (Encoding.UTF8.GetByteCount(one) <= Wire.MaxBytes) lines.Add(one);
                 else
@@ -701,6 +834,7 @@ public static class EventLines
             if (a.Arena is { } arena) lines.Add(ArenaLine(arena, a.Location.Type));
             lines.AddRange(HuntingGroundsLines(a));
             if (BossesLine(a) is { } bosses) lines.Add(bosses);
+            lines.AddRange(WaveVarietyLines(a));                                                        // wave-variety D6
         }
         if (d.Apocalypse is { } apo) lines.AddRange(ApocalypseLines(apo));
         lines.Add($"trigger scope: {d.Trigger.Scope}");                 // regions D9
@@ -721,8 +855,25 @@ public static class EventLines
     public static string? BossesLine(SpawnWavesAction a)
     {
         if (a.Bosses is not { Count: > 0 } bosses) return null;
-        var full = "final wave adds: " + string.Join(", ", bosses.Select(b => $"{b.Prefab} x{b.Count}"));
-        return System.Text.Encoding.UTF8.GetByteCount(full) <= Wire.MaxBytes ? full : $"final wave adds: {bosses.Sum(b => b.Count)} bosses";
+        var full = "final wave adds: " + string.Join(", ", bosses.Select(BossText));
+        return System.Text.Encoding.UTF8.GetByteCount(full) <= Wire.MaxBytes ? full : $"final wave adds: {bosses.Sum(b => b.MostBosses)} bosses";
+    }
+
+    /// <summary>"&lt;prefab&gt; x&lt;count&gt;" for a fixed boss, "&lt;min&gt;-&lt;max&gt; bosses from &lt;pool&gt;" for a roll (wave-variety D6).</summary>
+    public static string BossText(BossRoll b) => b.Pool is { } pool ? $"{b.Min}-{b.Max} bosses from {pool}" : $"{b.Prefab} x{b.Count}";
+
+    /// <summary>The wave-variety lines of `event info` and `template info` (D6), each within Wire.MaxBytes and only for an
+    /// action with the keys: "pools: &lt;name&gt; (&lt;k&gt; units): &lt;prefab&gt;, …" per pool (a long pool wraps onto further
+    /// lines of the same head, deferred Review 3 F2), "wave &lt;n&gt; adds: …" per wave with its own bosses, and
+    /// "pursuit: after &lt;s&gt; s with no player within &lt;r&gt; m".</summary>
+    public static IEnumerable<string> WaveVarietyLines(SpawnWavesAction a)
+    {
+        foreach (var (name, members) in a.Pools ?? new Dictionary<string, IReadOnlyList<string>>())
+            foreach (var line in PackList($"pools: {name} ({members.Count} units): ", members)) yield return line;
+        for (var n = 1; n <= (a.WaveList?.Count ?? 0); n++)
+            if (a.WaveList![n - 1].Bosses is { Count: > 0 } own)
+                foreach (var line in PackList($"wave {n} adds: ", own.Select(BossText).ToList())) yield return line;
+        if (a.Pursuit is { } p) yield return $"pursuit: after {p.AfterSeconds} s with no player within {Pursuit.Radius(a)} m";
     }
 
     /// <summary>An Apocalypse definition's `event info` lines (apocalypse D17), one per D1 key group, each within
@@ -809,7 +960,7 @@ public static class EventLines
     /// (wave-sets D15).</summary>
     public static string EntryText(UnitEntry u)
     {
-        var b = new StringBuilder($"{u.Prefab} ×{u.Count}");
+        var b = new StringBuilder(u.Pool is { } pool ? $"{u.Count} from {pool}" : $"{u.Prefab} ×{u.Count}");      // wave-variety D6
         if (u.Modifiers is { } m)
         {
             if (m.Level is { } lv) b.Append(FormattableString.Invariant($" L{lv}"));

@@ -42,7 +42,7 @@ public class BossWaveTests
         LocationType location = LocationType.Point) =>
         WaveGate.DecideEntries(new WaveFacts(wave, "bw", false, Location: location, AllowTerritory: true,
                 Pick: location == LocationType.AroundPlayer ? PickOutcome.Picked : null),
-            () => WaveRoll.ExpandEntries(BossWave.Units(a, wave), Rng), maxPerWave, occupied, maxTracked);
+            () => WaveRoll.ExpandEntries(Pools.Resolve(a, wave, PoolTests.NoRoll).Units, Rng), maxPerWave, occupied, maxTracked);
 
     static List<string> Prefabs(IEnumerable<UnitEntry> units) => units.SelectMany(u => Enumerable.Repeat(u.Prefab, u.Count)).ToList();
 
@@ -54,13 +54,13 @@ public class BossWaveTests
         for (var w = 1; w < a.Waves; w++)
         {
             Assert.DoesNotContain(Tourok, Prefabs(Decide(a, w).Units));
-            Assert.Equal(a.UnitsOf(w), BossWave.Units(a, w));
+            Assert.Equal(a.UnitsOf(w), Pools.Resolve(a, w, PoolTests.NoRoll).Units);
         }
         var last = Prefabs(Decide(a, a.Waves).Units);
         Assert.Equal(Tourok, last[0]);                                                     // the boss first ...
         Assert.Equal(a.UnitsOf(a.Waves).Sum(u => u.Count) + 1, last.Count);                // ... beside the wave's own units
-        Assert.Equal(1, BossWave.Lead(a, a.Waves));
-        Assert.Equal(0, BossWave.Lead(a, 1));
+        Assert.Equal(1, Pools.Resolve(a, a.Waves, PoolTests.NoRoll).Lead);
+        Assert.Equal(0, Pools.Resolve(a, 1, PoolTests.NoRoll).Lead);
     }
 
     [Theory]
@@ -123,17 +123,17 @@ public class BossWaveTests
         static int? Level(SpawnWavesAction a, UnitEntry e) => SpawnTuning.For(a, e).Level is { IsOffset: false } l ? l.Value : null;
 
         var units = UnitsForm();
-        Assert.Equal((int?)20, Level(units, BossWave.Units(units, 3)[0]));                    // the action's modifiers
+        Assert.Equal((int?)20, Level(units, Pools.Resolve(units, 3, PoolTests.NoRoll).Units[0]));                    // the action's modifiers
 
         var listed = WaveListForm();
-        Assert.Equal((int?)30, Level(listed, BossWave.Units(listed, 2)[0]));                  // the final wave's first entry
+        Assert.Equal((int?)30, Level(listed, Pools.Resolve(listed, 2, PoolTests.NoRoll).Units[0]));                  // the final wave's first entry
 
         var grown = GrowthForm();
-        Assert.Equal((int?)38, Level(grown, BossWave.Units(grown, 3)[0]));                    // 30 + 2 × 4: growth's added levels
+        Assert.Equal((int?)38, Level(grown, Pools.Resolve(grown, 3, PoolTests.NoRoll).Units[0]));                    // 30 + 2 × 4: growth's added levels
 
         var own = UnitsForm(Bosses("{ \"prefab\": \"" + Tourok + "\", \"count\": 1, \"modifiers\": { \"level\": 60 } }"));
-        Assert.Equal((int?)60, Level(own, BossWave.Units(own, 3)[0]));                        // its own
-        Assert.Equal((int?)20, Level(own, BossWave.Units(own, 3)[1]));                        // the wave's units keep theirs
+        Assert.Equal((int?)60, Level(own, Pools.Resolve(own, 3, PoolTests.NoRoll).Units[0]));                        // its own
+        Assert.Equal((int?)20, Level(own, Pools.Resolve(own, 3, PoolTests.NoRoll).Units[1]));                        // the wave's units keep theirs
     }
 
     [Fact]
@@ -158,7 +158,7 @@ public class BossWaveTests
     public void Final_empty_no_bosses()
     {
         var a = UnitsForm() with { Bosses = null };
-        Assert.Equal(a.UnitsOf(3), BossWave.Units(a, 3));
-        Assert.Equal(0, BossWave.Lead(a, 3));
+        Assert.Equal(a.UnitsOf(3), Pools.Resolve(a, 3, PoolTests.NoRoll).Units);
+        Assert.Equal(0, Pools.Resolve(a, 3, PoolTests.NoRoll).Lead);
     }
 }

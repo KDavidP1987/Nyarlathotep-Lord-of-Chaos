@@ -366,6 +366,10 @@ public interface IRegionWorld
 
     /// <summary>Moves one of our units to <paramref name="j"/>'s landing, its PreCombatPosition with it.</summary>
     void Jump(RegionJump j);
+
+    /// <summary>The Hunt key of a focus-only (Revenge) instance's focus player, or null: a pursuing Revenge run targets
+    /// that player alone (wave-variety D8). Null targets nobody; an instance that is not focus-only is never asked.</summary>
+    long? FocusKey(ActiveEvent a);
 }
 
 /// <summary>
@@ -857,7 +861,7 @@ public sealed class HuntPhase
         var checks = new List<HuntCheck>();
         try
         {
-            var hunting = active.Where(HuntingGrounds.Hunts).ToList();
+            var hunting = active.Where(Hunted).ToList();
             foreach (var id in _targets.Keys.Where(id => !hunting.Any(a => a.Id == id)).ToList()) _targets.Remove(id);
             foreach (var id in _waited.Keys.Where(id => !hunting.Any(a => a.Id == id)).ToList()) _waited.Remove(id);
             _failing.RemoveWhere(id => !hunting.Any(a => a.Id == id));
@@ -915,14 +919,20 @@ public sealed class HuntPhase
         public int Failed(long key) => WaitedBefore.TryGetValue(key, out var n) ? n : 0;
     }
 
+    /// <summary>The instances the phase moves: RegionHunt ones and pursuing runs (wave-variety D8).</summary>
+    public static bool Hunted(ActiveEvent a) => HuntingGrounds.Hunts(a) || a.Pursuing;
+
     /// <summary>Reads <paramref name="a"/>'s players and units and gives each unit its group's target; null when the
-    /// event does not hunt. A failed player read leaves a skipped run that <see cref="Finish"/> reports. Never throws.</summary>
+    /// event does not hunt. A pursuing run's eligible players are the roamers' (RoamRule.Eligible) anywhere on the map, a
+    /// focus-only run's its focus player alone, and its landings anywhere outside claimed territory (wave-variety D8). A
+    /// failed player read leaves a skipped run that <see cref="Finish"/> reports. Never throws.</summary>
     EventRun? Prepare(ActiveEvent a, IRegionWorld world)
     {
         var r = new EventRun(a);
         try
         {
-            if (a.Definition.Action is not { } action || !HuntingGrounds.Hunts(a)) return null;
+            if (a.Definition.Action is not { } action || !Hunted(a)) return null;
+            var pursuing = !HuntingGrounds.Hunts(a);
             var scope = action.Scope;
             // claimed territory by this event's own map: one event's missing map never vetoes another's targets (Codex step 4 F1)
             try { r.Players = world.Players().Select(p => p with { InTerritory = p.InTerritory || world.IsClaimed(a.Id, p.X, p.Z) }).ToList(); }
@@ -933,10 +943,12 @@ public sealed class HuntPhase
                 r.Skipped = true;
                 return r;
             }
+            var focusOnly = pursuing && WaveFacts.IsFocusOnly(a.Definition);
+            var focus = focusOnly ? world.FocusKey(a) : null;
             var eligible = new List<HuntCandidate>();
             foreach (var p in r.Players)
             {
-                try { if (HuntRule.Eligible(p, scope, world.RegionOf)) eligible.Add(p); }
+                try { if (pursuing ? Pursuit.Eligible(p, focusOnly, focus) : HuntRule.Eligible(p, scope, world.RegionOf)) eligible.Add(p); }
                 catch (Exception e) { r.Fault ??= e.Message; }
             }
             var units = new List<RegionUnit>();
@@ -946,7 +958,8 @@ public sealed class HuntPhase
                 catch (Exception e) { r.Fault ??= e.Message; }
             }
             r.WaitedBefore = _waited.TryGetValue(a.Id, out var w) ? w : new Dictionary<long, int>();
-            r.Allowed = (x, z) => HuntingGrounds.Inside(scope, world.RegionOf, x, z) && !world.IsClaimed(a.Id, x, z);
+            r.Allowed = pursuing ? (x, z) => !world.IsClaimed(a.Id, x, z)
+                : (x, z) => HuntingGrounds.Inside(scope, world.RegionOf, x, z) && !world.IsClaimed(a.Id, x, z);
             foreach (var group in HuntRule.Groups(units))
             {
                 if (HuntRule.Target(eligible, HuntRule.Mean(group.OrderBy(u => u.Key).ToList())) is not { } target) continue;   // no target: no jump, no seed
@@ -1030,6 +1043,12 @@ public sealed class HuntPhase
         {
             try
             {
+                if (r.Event.Pursuing && !HuntingGrounds.Hunts(r.Event))
+                {
+                    var before = _targets.TryGetValue(id, out var was) ? was : new Dictionary<(int, int), long>();
+                    foreach (var (group, key) in r.Targets.OrderBy(t => t.Key.Item1).ThenBy(t => t.Key.Item2))
+                        if (!before.TryGetValue(group, out var old) || old != key) Phases.Safe(info, Pursuit.GroupLine(id, group.Item1, group.Item2));
+                }
                 _targets[id] = r.Targets;
                 _waited[id] = r.WaitedNow;
                 done = new HuntCheck(id, r.Written, r.Waiting, r.InReach);
@@ -1085,15 +1104,15 @@ public sealed class RegionPhase
         Hunt.Clear();
     }
 
-    /// <summary>True when any running instance needs the phase (a lock or a region hunt).</summary>
-    public static bool Needed(IEnumerable<ActiveEvent> active) => active.Any(HuntingGrounds.Locked);
+    /// <summary>True when any running instance needs the phase (a lock, a region hunt or a pursuing run).</summary>
+    public static bool Needed(IEnumerable<ActiveEvent> active) => active.Any(a => HuntingGrounds.Locked(a) || a.Pursuing);
 
     /// <summary>One scheduler tick: the lock's and the hunt's checks when due; never throws.</summary>
     public (IReadOnlyList<LockCheck> Locks, IReadOnlyList<HuntCheck> Hunts) Tick(DateTime now, IReadOnlyCollection<ActiveEvent> active,
         IRegionWorld world, Func<double> random, Action<string> info, Action<string> error)
     {
         var due = false;
-        try { due = active.Any(HuntingGrounds.Locked) && Lock.Due(now); }
+        try { due = Needed(active) && Lock.Due(now); }
         catch (Exception) { /* never throws */ }
         var locks = Lock.Tick(now, active, world, random, info, error, due);
         var hunts = Hunt.Tick(active, world, info, error, due);

@@ -47,6 +47,7 @@ public class HuntingGroundsDependencyFailureTests
         public int Reads { get; private set; }
         public int PlayerReads { get; private set; }
         public WalkBudget Budget { get; } = new(1_000_000);
+        public long? FocusKey(ActiveEvent a) => null;
 
         /// <summary>A unit of <paramref name="eventId"/> at x, z, spawned at the centre of FarbaneWoods.</summary>
         public void Add(long key, string eventId, float x, float z, int group = 0)

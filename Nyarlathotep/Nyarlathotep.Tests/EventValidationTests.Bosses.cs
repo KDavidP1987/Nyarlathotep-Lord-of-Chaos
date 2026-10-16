@@ -67,6 +67,6 @@ public partial class EventValidationTests
     {
         var a = Json.One(Json.Event()).Action!;
         Assert.Null(a.Bosses);
-        Assert.Equal(a.UnitsOf(a.Waves), BossWave.Units(a, a.Waves));                                    // the final wave unchanged
+        Assert.Equal(a.UnitsOf(a.Waves), Pools.Resolve(a, a.Waves, PoolTests.NoRoll).Units);                                    // the final wave unchanged
     }
 }

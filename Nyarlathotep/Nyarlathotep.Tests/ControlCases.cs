@@ -35,9 +35,10 @@ public static class ControlCases
     public const string Revenge = "revenge";
     public const string Apocalypse = "apocalypse";
     public const string UnitWatch = "unit-watch";
+    public const string WaveVariety = "wave-variety";
 
     /// <summary>The plans whose controls the table lists; each is copied to the test output under Resources/.</summary>
-    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm, HuntingGrounds, Revenge, Apocalypse, UnitWatch];
+    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm, HuntingGrounds, Revenge, Apocalypse, UnitWatch, WaveVariety];
 
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
@@ -46,6 +47,10 @@ public static class ControlCases
         new(Apocalypse, "D33", 5, "0.13.0"), new(Apocalypse, "D34", 5, "0.13.0"), new(Apocalypse, "D35", 5, "0.13.0"),
         // unit-watch: step 5 the release
         new(UnitWatch, "D30", 5, "0.13.0"), new(UnitWatch, "D31", 5, "0.13.0"), new(UnitWatch, "D32", 5, "0.13.0"), new(UnitWatch, "D33", 5, "0.13.0"),
+        // wave-variety: step 2 the recorded groups, step 3 Services, templates and sessions, step 4 the release
+        new(WaveVariety, "D14", 2, "0.13.0"), new(WaveVariety, "D12", 3, "0.13.0"), new(WaveVariety, "D15", 3, "0.13.0"), new(WaveVariety, "D16", 3, "0.13.0"),
+        new(WaveVariety, "D20", 3, "0.13.0"), new(WaveVariety, "D21", 4, "0.13.0"), new(WaveVariety, "D22", 4, "0.13.0"), new(WaveVariety, "D23", 4, "0.13.0"),
+        new(WaveVariety, "D24", 4, "0.13.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -66,7 +71,7 @@ public static class ControlCases
         "WaveSetTests", "ScoreboardTests", "WaveSetDependencyFailureTests", "SwarmTests", "SwarmDependencyFailureTests",
         "HuntingGroundsTests", "HuntingGroundsDependencyFailureTests", "RevengeTests", "BossWaveTests", "RevengeDependencyFailureTests",
         "ApocalypseTests", "ApocalypseStateTests", "ApocalypseDependencyFailureTests", "UnitWatchTests",
-        "UnitWatchDependencyFailureTests",
+        "UnitWatchDependencyFailureTests", "PoolTests", "PursuitTests", "FactionGroupsTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -892,5 +897,51 @@ public static class ControlCases
             ["tools/preflight-fixtures/TimingSpan/bad-avg", "tools/preflight-fixtures/TimingSpan/bad-slow", "tools/preflight-fixtures/TimingSpan/bad-tracked",
              "tools/preflight-fixtures/TimingSpan/bad-notarget"],
             ["tools/preflight-fixtures/TimingSpan/good"], ["tools/preflight-fixtures/TimingSpan/empty"]) with { Plan = UnitWatch },
+        // ---- wave-variety step 1 (D12 and the dependency suite are step 3's; D8's CheckFailed row is the pursuit read's Logic seam)
+        T("D1", "Pools", "EventValidationTests",
+            ["a_key_is_out_of_range", "a_bound_is_off_by_one", "a_reason_exceeds_120_bytes_or_drops_the_pool", "a_deny_listed_member_loads", "an_event_without_the_key_parses_differently"],
+            ["the_file_order_and_the_entries"], ["no_pools_key"]) with { Plan = WaveVariety },
+        T("D2", "PoolEntries", "EventValidationTests",
+            ["an_entry_breaks_the_rule", "a_bound_differs_from_a_prefab_entry", "growth_skips_a_pool_entry", "a_51_unit_wave_of_pool_entries_loads"],
+            ["a_pool_entry_in_both_forms"], ["no_pool_key_reads_as_a_prefab_entry"]) with { Plan = WaveVariety },
+        T("D3", "BossRolls", "EventValidationTests",
+            ["a_key_is_out_of_range", "a_bound_is_off_by_one", "a_0_12_0_fixed_list_is_refused_or_parses_differently", "a_roll_loads_on_an_apocalypse", "a_wave_list_beside_fanOut_loads"],
+            ["the_action_level_roll"], ["no_wave_bosses"]) with { Plan = WaveVariety },
+        T("D4", "Pools", "FactionGroupsTests",
+            ["a_pool_mixing_two_groups_passes", "a_pool_member_in_no_group_passes", "a_wave_drawing_from_another_groups_pool_passes_realm_gauntlets_rule"],
+            ["one_group_and_a_prefab_only_action"], ["no_pools"]) with { Plan = WaveVariety },
+        T("D5", "Roll", "PoolTests",
+            ["a_roll_repeats_a_boss_or_draws_one_its_wave_holds", "a_member_is_missed_over_10000_rolls_or_a_count_leaves_min_max", "a_pool_entry_loses_its_chance_or_modifiers", "a_wave_is_re_rolled_after_its_decision", "a_cap_cuts_a_boss_before_a_unit", "the_action_level_roll_joins_another_wave_than_the_last", "a_queued_entry_of_a_pool_wave_has_an_empty_prefab"],
+            ["one_seeded_draw"], ["no_pools_no_random_number_and_BossWaves_list"]) with { Plan = WaveVariety },
+        T("D6", "Pools", "AuthoringTests",
+            ["a_line_passes_480_bytes_or_a_pool_or_roll_is_missing"],
+            ["event_info_lines", "the_units_form_and_the_action_level_roll", "template_info_lines"], ["no_wave_variety_lines"]) with { Plan = WaveVariety },
+        T("D6", "RolledLine", "PoolTests",
+            ["a_line_passes_480_bytes_or_omits_a_boss"],
+            ["units_grouped_then_bosses"], ["no_bosses_no_bosses_part"]) with { Plan = WaveVariety },
+        T("D7", "Pursuit", "EventValidationTests",
+            ["a_key_is_out_of_range", "a_bound_is_off_by_one", "an_event_without_the_key_parses_differently"],
+            ["hunt_at_a_point"], ["no_behaviour_no_pursuit"]) with { Plan = WaveVariety },
+        T("D8", "Pursue", "PursuitTests",
+            ["pursuit_starts_before_after_seconds", "pursuit_starts_with_an_eligible_player_in_the_area", "an_ineligible_player_in_the_area_holds_it", "the_clock_starts_before_the_first_waves_decision", "the_area_is_not_the_arena_else_the_hunt_range_around_the_centre", "a_player_in_claimed_territory_or_PvP_combat_is_targeted", "a_landing_is_in_claimed_territory", "a_revenge_run_targets_another_player_than_its_focus", "a_later_wave_does_not_pursue", "a_group_line_is_missing_or_repeated", "the_arena_still_returns_a_pursuing_unit", "a_unit_watch_landing_of_a_pursuing_unit_is_confined_to_the_arena", "a_waiting_pursuer_is_stall_marked", "a_line_carries_a_name_or_a_position", "a_player_at_the_last_wave_centre_between_waves_is_not_counted", "the_players_are_read_more_than_once_a_tick"],
+            ["a_run_left_alone_chases_its_player"], ["no_player_anywhere_units_stay"]) with { Plan = WaveVariety },
+        T("D8", "CheckFailed", "PursuitTests",
+            ["a_throwing_read_is_logged_twice_or_stops_another_events_check", "a_throwing_player_read_escapes"],
+            ["good_read_ends_the_streak"], ["no_pursuit_no_read"]) with { Plan = WaveVariety },
+        T("D9", "EndPaths", "PursuitTests",
+            ["an_end_path_keeps_a_pursuit_record", "a_jump_follows_an_end", "a_resumed_boot_starts_pursuing"],
+            ["stop_drops_the_clock_and_the_targets"], ["no_run_no_record"]) with { Plan = WaveVariety },
+        T("D10", "Pools", "CommandArgTests",
+            ["the_pool_first_order_does_not_reach_a_valid_enabled_definition", "the_entry_first_order_does_not_reach_a_valid_enabled_definition", "a_30_member_pool_cannot_be_built_by_appends", "a_pool_still_named_is_removed", "the_field_accepts_a_value_the_validator_refuses", "a_pool_token_count_differs_from_a_prefab_entrys", "the_field_refuses_a_value_the_validator_takes", "a_roll_reaches_an_apocalypse_or_both_final_lists_are_set"],
+            ["replies_within_480_bytes_and_the_table"], ["value_required"]) with { Plan = WaveVariety },
+        T("D10", "Pursuit", "CommandArgTests",
+            ["the_field_accepts_a_value_the_validator_refuses", "the_field_refuses_a_value_the_validator_takes", "a_conflict_is_written"],
+            ["set_and_none"], ["value_required"]) with { Plan = WaveVariety },
+        T("D11", "WaveVariety", "ContractDocTests",
+            ["the_api_changes_a_push_kind_is_added_or_the_contract_lacks_the_sentence"],
+            ["api_8_and_the_sentence"], ["contract"]) with { Plan = WaveVariety },
+        T("D11", "WaveVariety", "PrivacyTests",
+            ["a_name_or_position_reaches_a_line", "state_gains_a_property"],
+            ["counts_and_ids_only"], ["no_wave_variety_keys"]) with { Plan = WaveVariety },
     ];
 }

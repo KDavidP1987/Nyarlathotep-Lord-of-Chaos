@@ -24,12 +24,18 @@ public sealed record MessageContext(string Event, string Faction, int Minutes, i
         def.Empower is { } empower
             ? string.Join(", ", empower.Factions.Select(FactionDenyList.ShortName))
             : def.Apocalypse is { } apocalypse ? FactionDenyList.ShortName(apocalypse.Faction)
-            : FactionOf(def.Action?.Units.FirstOrDefault()?.Prefab),
+            : FactionOf(FirstPrefab(def.Action)),
         minutes,
         wave,
         def.Action?.Waves ?? def.Apocalypse?.Hordes.Count ?? 0,
         "-",
         RegionOf(def.Action?.Scope ?? def.Empower?.Scope ?? def.Apocalypse?.Scope ?? Scope.Global));
+
+    /// <summary>The first unit's prefab; a pool entry's is its pool's first member (wave-variety D2).</summary>
+    static string? FirstPrefab(SpawnWavesAction? action) =>
+        action?.Units.FirstOrDefault() is { } u
+            ? u.Pool is { } pool ? action.Pools?.GetValueOrDefault(pool)?.FirstOrDefault() : u.Prefab
+            : null;
 
     static string FactionOf(string? prefab)
     {

@@ -176,7 +176,7 @@ public partial class CommandArgTests
             Assert.Contains($"| `{f}` | spawn action | admin |", design);
             Assert.True(CommandArgs.SettableFields.ContainsKey(f), f);
         }
-        Assert.Equal(11, CommandArgs.WaveListFields.Count + 1);
+        Assert.Equal(12, CommandArgs.WaveListFields.Count + 1);       // wave-variety D10: action.waveList.N.bosses
     }
 
     [Fact]

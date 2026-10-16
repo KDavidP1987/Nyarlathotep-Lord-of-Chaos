@@ -90,19 +90,23 @@ public static class FactionGroups
         return null;
     }
 
-    /// <summary>A SpawnWaves template's problem under design §9 D60: one allied group as <see cref="Problem(string, IEnumerable{string}, string?)"/>
-    /// says, or, for a template that mixes groups, null only when each wave is one group, every later wave waits for the
-    /// last to be cleared with no afterSeconds (so two groups are never alive together), and its bosses are of the last
-    /// wave's group (they spawn with it).</summary>
-    public static string? Problem(string templateId, IReadOnlyList<WaveSpec> waves, IEnumerable<string> bosses)
+    /// <summary>A SpawnWaves template's problem (design §9 D60; wave-variety D4): one allied group as
+    /// <see cref="Problem(string, IEnumerable{string}, string?)"/> says, or, for a waveList that mixes groups, null only when
+    /// each wave is one group, every later wave waits for the last to be cleared with no afterSeconds (so two groups are
+    /// never alive together), and each wave's bosses are of its group (they spawn with it). A wave's prefabs are every one
+    /// it can spawn (Pools.Drawable): its prefab entries, every member of each pool its pool entries and boss rolls draw
+    /// from, and its fixed bosses; a units-form action is one group throughout.</summary>
+    public static string? Problem(string templateId, SpawnWavesAction action) =>
+        Problem(templateId, Enumerable.Range(1, action.Waves).Select(n => Pools.Drawable(action, n).ToList()).ToList(), action.WaveList);
+
+    /// <summary>The one-group rule over the prefabs of every wave, then design §9 D60's per-wave rule for a mixed list.</summary>
+    static string? Problem(string templateId, IReadOnlyList<List<string>> perWave, IReadOnlyList<WaveSpec>? waves)
     {
-        var bossList = bosses.ToList();
-        var whole = Problem(templateId, waves.SelectMany(w => w.Units.Select(u => u.Prefab)).Concat(bossList));
-        if (whole is null || !whole.Contains(" mixes the ", StringComparison.Ordinal)) return whole;
-        for (var i = 0; i < waves.Count; i++)
+        var whole = Problem(templateId, perWave.SelectMany(w => w));
+        if (whole is null || !whole.Contains(" mixes the ", StringComparison.Ordinal) || waves is null) return whole;
+        for (var i = 0; i < perWave.Count; i++)
         {
-            var wave = waves[i].Units.Select(u => u.Prefab).Concat(i == waves.Count - 1 ? bossList : []).ToList();
-            if (Problem($"{templateId} wave {i + 1}", wave) is { } p) return p;
+            if (Problem($"{templateId} wave {i + 1}", perWave[i]) is { } p) return p;
             if (i > 0 && (!waves[i].WhenCleared || waves[i].AfterSeconds is not null))
                 return $"{templateId} mixes groups but wave {i + 1} does not wait for wave {i} to be cleared";
         }
