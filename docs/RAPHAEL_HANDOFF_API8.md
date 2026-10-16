@@ -8,6 +8,8 @@ Take two files to the Raphael session: this page and `docs/RAPHAEL_INTEGRATION_C
 source of truth for every line shape; this page gives section numbers instead of repeating them. The earlier
 handoffs still apply: `docs/RAPHAEL_HANDOFF.md` (parser, handshake, api 2 panels) and `docs/RAPHAEL_HANDOFF_API4.md`
 (admin twins, templates, pillars, kill switch).
+Wave variety (test build `v0.13.0-rc.3`: pursuit, unit pools, boss rolls, 14 new templates) adds nothing to the wire;
+its editor fields and template grouping are in `docs/RAPHAEL_HANDOFF_WAVE_VARIETY.md`.
 
 > **Status.** §1-§4 of this page are IMPLEMENTED on the server (api 8): build them now. §5-§6 are PLANNED (contract
 > §10.5-§10.8). The owner settled their decisions on 2026-10-15 (contract §10.9): live-ops is planned next, and

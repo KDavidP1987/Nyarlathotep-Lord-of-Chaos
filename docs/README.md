@@ -39,6 +39,7 @@ One document per feature, kept current as it changes. Each ends with its in-game
 |---|---|
 | [RAPHAEL_INTEGRATION_CONTRACT.md](RAPHAEL_INTEGRATION_CONTRACT.md) | The `[NYAR:*]` wire: every command and line shape, its status and api number, and the planned live-operations and communications shapes (§10) |
 | [RAPHAEL_HANDOFF_API8.md](RAPHAEL_HANDOFF_API8.md) | **Start here** when building Raphael's side: panels, refresh schedule, notifications, the player overlay, a test checklist |
+| [RAPHAEL_HANDOFF_WAVE_VARIETY.md](RAPHAEL_HANDOFF_WAVE_VARIETY.md) | Wave variety (0.13.0, still api 8): new field-editor fields (pursuit, pools, boss rolls), the 14 timed and onslaught templates |
 | [RAPHAEL_HANDOFF_API4.md](RAPHAEL_HANDOFF_API4.md) · [RAPHAEL_HANDOFF.md](RAPHAEL_HANDOFF.md) | The earlier handoffs: admin twins (api 4); parser, handshake and the first panels (api 2) |
 
 ## Plans, audits and process
