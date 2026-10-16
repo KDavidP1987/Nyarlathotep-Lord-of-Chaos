@@ -150,9 +150,9 @@ public class PursuitTests
         var a = Run();
         r.W.People.Add(P(1, 25, 0));                                                         // within the arena's 30 m
         Assert.Null(r.Until(0, 60, a));
-        Assert.Equal(T0.AddSeconds(60), r.Phase.QuietSince("pv"));                           // reset at each check
+        Assert.Null(r.Phase.QuietSince("pv"));                                               // stopped while a player stands in the area
         r.W.People[0] = P(1, 31, 0);                                                         // steps out at 60 s
-        Assert.Equal(80, r.Until(65, 120, a));                                               // 20 s in a row after the last presence
+        Assert.Equal(85, r.Until(65, 120, a));                                               // 20 s from the first check with nobody (65 s)
     }
 
     [Fact]
@@ -182,10 +182,10 @@ public class PursuitTests
         Assert.Null(r.Until(0, 10, a));
         r.W.LiveCentres.Clear();                                                             // the wave is dead; the player stays
         Assert.Null(r.Until(15, 60, a));
-        Assert.Equal(T0.AddSeconds(60), r.Phase.QuietSince("pv"));
+        Assert.Null(r.Phase.QuietSince("pv"));
         Assert.Equal(2, r.Phase.AllRecords);                                                 // the clock and the last centres
         r.W.People[0] = P(1, 3000, 3000);                                                    // walks away
-        Assert.Equal(80, r.Until(65, 120, a));
+        Assert.Equal(85, r.Until(65, 120, a));
         Assert.Equal(0, r.Phase.AllRecords);                                                 // pursuing: nothing kept
         // the last centres go with an end path
         var b = Run(Def(location: LocationType.AroundPlayer, arena: null));
@@ -236,7 +236,7 @@ public class PursuitTests
         q.W.People.Add(P(1, 1010, 1000));
         Assert.Null(q.Until(0, 30, admin));
         q.W.People[0] = P(1, 10, 0);                                                         // at (0, 0): far from the admin's spot
-        Assert.Equal(50, q.Until(35, 60, admin));                                            // 20 s after the last presence at 30 s
+        Assert.Equal(55, q.Until(35, 60, admin));                                            // 20 s after the first empty check at 35 s
         // an AroundPlayer run: each live wave's own centre
         var around = Run(Def(location: LocationType.AroundPlayer, arena: null));
         var s = new Rig();
@@ -244,7 +244,7 @@ public class PursuitTests
         s.W.People.Add(P(1, 505, 500));
         Assert.Null(s.Until(0, 30, around));
         s.W.LiveCentres[0] = (2000, 2000);
-        Assert.Equal(50, s.Until(35, 60, around));
+        Assert.Equal(55, s.Until(35, 60, around));
     }
 
     // ================= D8 Targets =================
@@ -492,6 +492,142 @@ public class PursuitTests
         Assert.Equal(0, r.W.PlayerReads);
         Assert.False(Run(Def() with { Action = Def().Action! with { Pursuit = null } }).Pursuing);
         Assert.False(Pursuit.Configured(Run(Def() with { Action = Def().Action! with { Pursuit = null } })));
+    }
+
+    // ================= D8, D9 in the region phase and over the real Services =================
+
+    static Func<double> Rng() => new Random(3).NextDouble;
+
+    [Fact]
+    public void Pursue_fails_when_the_region_phase_does_not_hunt_a_run_the_tick_it_starts_pursuing()
+    {
+        var phase = new RegionPhase();
+        var a = Run();
+        var w = new World();
+        w.Add(1, 0, 0);
+        w.People.Add(P(20, 3000, 3000));
+        var info = new List<string>();
+        Assert.False(RegionPhase.Needed([a]));                                               // waiting to pursue: only the pursuit check runs
+        for (var s = 0; s < 20; s += Pursuit.CheckSeconds) phase.Tick(T0.AddSeconds(s), [a], w, Rng(), info.Add, _ => { });
+        Assert.False(a.Pursuing);
+        Assert.Empty(w.Jumps);
+        Assert.True(phase.Lock.Due(T0.AddSeconds(17)));                                      // another event's lock clock, off the pursuit grid
+        phase.Tick(T0.AddSeconds(20), [a], w, Rng(), info.Add, _ => { });
+        Assert.True(a.Pursuing);
+        Assert.True(RegionPhase.Needed([a]));                                                // pursuing: the phase runs on for it
+        Assert.Equal(20L, phase.Hunt.Targets("pv").ToDictionary(t => t.Key, t => t.Value)[(1, 0)]);   // hunted at the same tick
+        Assert.NotEmpty(w.Jumps);
+        Assert.Equal(["event pv pursuit: on, no player within 30 m for 20 s", "event pv pursuit: group 1.0 on a player"],
+            info.Where(l => l.Contains("pursuit", StringComparison.Ordinal)));
+    }
+
+    /// <summary>The comment-stripped bodies a pursuing run's seeding hangs on in Services/HuntAction.cs: Targeting gives it
+    /// the whole read as its pool with its focus, from each unit's own position; TargetsOf seeds through Pursuit.SeedTargets
+    /// (map-wide eligibility, 100 m from the unit); SeedUnit rehomes it.</summary>
+    static List<string> HuntActionGaps(string hunt)
+    {
+        var gaps = new List<string>();
+        if (!EndPathTests.Body(hunt, "static EventTargeting Targeting(string eventId").Contains(
+                "if (active.Pursuing) return new EventTargeting(candidates.ToList(), null, null, focusOnly, focusKey, OwnPosition: true, Pursuing: true)",
+                StringComparison.Ordinal)) gaps.Add("Targeting");
+        if (!EndPathTests.Body(hunt, "static List<long> TargetsOf(Entity unit, HuntTag tag, EventTargeting targeting)").Contains(
+                "Pursuit.SeedTargets(targeting.Pool, (self.Value.x, self.Value.z), targeting.FocusOnly, targeting.FocusKey)", StringComparison.Ordinal))
+            gaps.Add("TargetsOf");
+        if (!EndPathTests.Body(hunt, "static (int Kept, int Left) SeedUnit(").Contains("targeting?.OwnPosition == true) Rehome(", StringComparison.Ordinal))
+            gaps.Add("Rehome");
+        return gaps;
+    }
+
+    [Theory]
+    [InlineData("if (active.Pursuing) return new EventTargeting(", "if (false) return new EventTargeting(", "Targeting")]
+    [InlineData("Pursuit.SeedTargets(targeting.Pool,", "HuntPlan.Targets(targeting.Pool,", "TargetsOf")]
+    [InlineData("targeting?.OwnPosition == true) Rehome(", "targeting?.OwnPosition == false) Rehome(", "Rehome")]
+    public void Pursue_fails_when_the_hunt_action_seeds_a_pursuing_run_from_its_wave_centre(string call, string planted, string gap)
+    {
+        var hunt = ServiceSource("HuntAction.cs");
+        Assert.Empty(HuntActionGaps(hunt));
+        Assert.Contains(call, hunt);
+        Assert.Contains(gap, HuntActionGaps(hunt.Replace(call, planted)));
+        Assert.Contains(gap, HuntActionGaps(hunt.Replace(call, "// " + call)));
+    }
+
+    [Fact]
+    public void EndPaths_fails_when_the_region_phase_keeps_a_pursuit_record()
+    {
+        var phase = new RegionPhase();
+        var a = Run();
+        var w = new World();
+        w.People.Add(P(1, 500, 0));
+        phase.Tick(T0, [a], w, Rng(), _ => { }, _ => { });
+        Assert.NotNull(phase.Pursuit.QuietSince("pv"));
+        phase.EventEnded("pv");                                                              // EndSpawnState → SpawnTracker.RegionEnded
+        Assert.Equal(0, phase.Pursuit.AllRecords);
+        w.ThrowFor = "pv";
+        phase.Tick(T0.AddSeconds(5), [a], w, Rng(), _ => { }, _ => { });
+        Assert.Equal([PursuitPhase.Failing], phase.Health);                                  // the health line reads the region phase's
+        phase.Clear();                                                                       // purge confirm, restart
+        Assert.Equal(0, phase.Pursuit.AllRecords);
+        Assert.Empty(phase.Health);
+    }
+
+    /// <summary>The source without its comments: a commented-out call is no call.</summary>
+    static string Code(string source) =>
+        System.Text.RegularExpressions.Regex.Replace(source, @"//[^\n]*|/\*.*?\*/", "", System.Text.RegularExpressions.RegexOptions.Singleline);
+
+    static string ServiceSource(string file)
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "tools", "preflight.ps1"))) dir = dir.Parent;
+        return File.ReadAllText(Path.Combine(dir!.FullName, "Nyarlathotep", "Nyarlathotep", "Services", file)).Replace("\r\n", "\n");
+    }
+
+    /// <summary>Every link missing from an end path of the live game to the pursuit's records (D9): the natural end, all
+    /// waves defeated, the stop, pillar off and a fault cancel reach EndSpawnState, which reaches SpawnTracker.RegionEnded
+    /// and so RegionPhase.EventEnded; the purge and a restart clear the region phase; the scheduler's region phase runs
+    /// SpawnTracker.RegionTick, so RegionPhase.Tick (pursuit, lock, hunt).</summary>
+    static List<string> ServiceGaps(string runtime, string tracker, string scheduler)
+    {
+        var gaps = new List<string>();
+        void Need(string source, string signature, string call, string gap)
+        {
+            if (!EndPathTests.Body(source, signature).Contains(call, StringComparison.Ordinal)) gaps.Add(gap);
+        }
+        Need(runtime, "internal static void Tick(DateTime now)", "EndSpawnState(ended.Id)", "natural end");
+        Need(runtime, "internal static void Tick(DateTime now)", "EndSpawnState(beaten.Id)", "all waves defeated");
+        if (!Code(runtime).Contains("End(id, \"stopped\", EndPath.Stop)", StringComparison.Ordinal)) gaps.Add("stop");
+        Need(runtime, "internal static IReadOnlyList<string> EndPillar(Pillar pillar)", "End(id, \"ended (pillar off)\", EndPath.PillarOff)", "pillar off");
+        Need(runtime, "static void Guarded(ActiveEvent active, Action work)", "() => End(active.Id,", "fault cancel");
+        Need(runtime, "static bool End(string id, string why, EndPath path", "EndSpawnState(id)", "End");
+        Need(runtime, "internal static void EndSpawnState(string id)", "SpawnTracker.RegionEnded(id)", "EndSpawnState");
+        Need(runtime, "internal static Outcome Purge()", "SpawnTracker.RegionPurged()", "purge");
+        Need(tracker, "internal static void RegionEnded(string eventId)", "_region.EventEnded(eventId)", "RegionEnded");
+        Need(tracker, "internal static void RegionPurged()", "_region.Clear()", "RegionPurged");
+        Need(tracker, "internal static void Initialize()", "_region.Clear()", "restart");
+        Need(tracker, "internal static void RegionTick(DateTime now)", "_region.Tick(now,", "region tick");
+        if (!Code(scheduler).Contains("Phase(\"region\", () => SpawnTracker.RegionTick(now));", StringComparison.Ordinal)) gaps.Add("region phase");
+        return gaps;
+    }
+
+    [Theory]
+    [InlineData("EndSpawnState(ended.Id)", "natural end")]
+    [InlineData("EndSpawnState(beaten.Id)", "all waves defeated")]
+    [InlineData("End(id, \"stopped\", EndPath.Stop)", "stop")]
+    [InlineData("End(id, \"ended (pillar off)\", EndPath.PillarOff)", "pillar off")]
+    [InlineData("() => End(active.Id,", "fault cancel")]
+    [InlineData("SpawnTracker.RegionEnded(id)", "EndSpawnState")]
+    [InlineData("SpawnTracker.RegionPurged()", "purge")]
+    [InlineData("_region.EventEnded(eventId)", "RegionEnded")]
+    [InlineData("_region.Clear()", "restart")]
+    [InlineData("_region.Tick(now,", "region tick")]
+    [InlineData("Phase(\"region\", () => SpawnTracker.RegionTick(now));", "region phase")]
+    public void EndPaths_fails_when_a_service_end_path_skips_the_pursuit_drop(string call, string gap)
+    {
+        var (runtime, tracker, scheduler) = (ServiceSource("EventRuntime.cs"), ServiceSource("SpawnTracker.cs"), ServiceSource("EventScheduler.cs"));
+        Assert.Empty(ServiceGaps(runtime, tracker, scheduler));
+        Assert.True(runtime.Contains(call, StringComparison.Ordinal) || tracker.Contains(call, StringComparison.Ordinal)
+            || scheduler.Contains(call, StringComparison.Ordinal));
+        Assert.Contains(gap, ServiceGaps(runtime.Replace(call, ""), tracker.Replace(call, ""), scheduler.Replace(call, "")));
+        Assert.Contains(gap, ServiceGaps(runtime.Replace(call, "// " + call), tracker.Replace(call, "// " + call), scheduler.Replace(call, "// " + call)));
     }
 
     // ================= D12 CheckFailed =================

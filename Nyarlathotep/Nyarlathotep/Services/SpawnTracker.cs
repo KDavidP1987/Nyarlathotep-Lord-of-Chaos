@@ -520,6 +520,7 @@ internal static class SpawnTracker
         try
         {
             _region.Hunt.Detail = Settings.VerboseLogging.Value ? line => Core.Log.LogInfo($"[nyar] {line}") : null;   // why units wait
+            _region.Pursuit.Detail = _region.Hunt.Detail;                                                      // why a run turns on (wave-variety D8)
             _region.Tick(now, EventRuntime.Engine.Active, _regionWorld, _random.NextDouble,
                 line => Core.Log.LogInfo($"[nyar] {line}"), line => Core.Log.LogError($"[nyar] {line}"));
             if (Settings.VerboseLogging.Value && _regionWorld.WalkLine() is { } walk) Core.Log.LogInfo($"[nyar] {walk}");   // why landings fail

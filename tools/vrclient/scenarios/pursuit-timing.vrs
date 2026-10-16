@@ -1,0 +1,79 @@
+# pursuit-timing.vrs: wave-variety D20. An event wv-ptiming (two waves of 12 CHAR_Undead_SkeletonSoldier_Armored_Farbane
+# 30 s apart at the pond, arena 25, Hunt 25, pursuit after 20 s, duration 1800) runs while Chaos stands 250 m east, so
+# its 24 tracked units (level 60; the bears and wolves 250 m east still killed 8 of them in Session 5, 22 of the
+# level-20 ones in Session 4) pursue Chaos for the whole span: the pursuit check every 5 s, the seeds and the jumps all run
+# in the tick. The budget is read afterwards with -TimingSpan <log copy> -Windows 10 -MinTracked 20. No
+# "pursuit wv-ptiming: check failed" line and no "pursuit: check failing" health entry may appear. The event is deleted
+# at the end.
+# Needs: what pursuit.vrs needs; [Debug] TimingLog = true in the dev cfg; Chaos invulnerable (true only).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond x=(?P<PX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<PZ>-?[0-9.]+)
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar event delete wv-ptiming
+wait 1
+chat .nyar event delete wv-ptiming confirm
+wait 2
+chat .nyar event new wv-ptiming spawns
+expect-reply event wv-ptiming created
+chat .nyar event set wv-ptiming trigger.type Manual
+expect-reply wv-ptiming trigger.type =
+chat .nyar event set wv-ptiming action.units CHAR_Undead_SkeletonSoldier_Armored_Farbane:12
+expect-reply wv-ptiming action.units =
+chat .nyar event set wv-ptiming action.waves 2
+expect-reply wv-ptiming action.waves =
+chat .nyar event set wv-ptiming action.intervalSeconds 30
+expect-reply wv-ptiming action.intervalSeconds =
+chat .nyar event set wv-ptiming location here
+expect-reply wv-ptiming action.location =
+chat .nyar event set wv-ptiming action.arena 25
+expect-reply wv-ptiming action.arena =
+chat .nyar event set wv-ptiming action.behaviour "hunt 25"
+expect-reply wv-ptiming action.behaviour =
+chat .nyar event set wv-ptiming action.pursuit 20
+expect-reply wv-ptiming action.pursuit =
+chat .nyar event set wv-ptiming action.modifiers.level 60
+expect-reply wv-ptiming action.modifiers.level =
+chat .nyar event set wv-ptiming durationSeconds 1800
+expect-reply wv-ptiming durationSeconds =
+chat .nyar event enable wv-ptiming
+expect-reply wv-ptiming
+mark
+chat .nyar event start wv-ptiming
+expect-log event wv-ptiming started by timeout=20
+expect-log event wv-ptiming wave 1/2: 12 units queued timeout=30
+expect-log event wv-ptiming wave 2/2: 12 units queued timeout=60
+wait 10
+chat .nyar status
+expect-reply tracked units: 24
+calc FX = ${PX} + 250
+chat .devtp ${FX} ${PZ}
+expect-log \[DEV TP\] to
+console ToggleInvulnerable true
+expect-log event wv-ptiming pursuit: on timeout=45
+shot full ptiming-on
+wait 1500
+# drains every line of the 25 minutes: no failed check and no health line naming the pursuit entry
+expect-no-log pursuit( wv-ptiming: check failed|: check failing) timeout=3
+# the count left at the end, for the record: natives near the far spot kill some pursuers even at level 60 (Session 5:
+# 16 of 24 left), so the bar of 20 is -TimingSpan's -MinTracked over each window, not this line
+mark
+chat .nyar status
+expect-log \[CHAT> Chaos\] .*tracked units: [0-9]+ timeout=10
+shot full ptiming-end
+chat .nyar event stop wv-ptiming
+expect-log event wv-ptiming stopped timeout=20
+wait 25
+chat .nyar status
+expect-reply tracked units: 0
+expect-no-log wv-ptiming pursuit timeout=10
+chat .nyar event delete wv-ptiming
+wait 1
+chat .nyar event delete wv-ptiming confirm
+expect-reply wv-ptiming

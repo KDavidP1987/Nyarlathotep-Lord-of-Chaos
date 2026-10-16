@@ -15,8 +15,15 @@
 - preflight: PREFLIGHT OK, "secrets: none (2102 files scanned, 2047 index blobs)"
 - dod status: 0/24 verified
 - feature doc read: docs/features/WAVE_VARIETY.md (Status: in progress; open question: which units of each faction fight beside each other)
-- baseline boot: the v0.13.0-rc.2 DLL; the session before this one read clean (6 baseline warnings: HarmonyX x3, Il2CppInterop, Beelzebub TUNE, the dev example-empowerment), logs copied to %TEMP%
-yar-wv2-logs; snapshot wvmix saved (34 files); [Debug] VerboseLogging set true for the session
+- baseline boot: the v0.13.0-rc.2 DLL; the session before this one read clean (6 baseline warnings: HarmonyX x3, Il2CppInterop, Beelzebub TUNE, the dev example-empowerment), logs copied to %TEMP%\nyar-wv2-logs; snapshot wvmix saved (34 files); [Debug] VerboseLogging set true for the session
+
+### Step 3 · 2026-10-16 · e4141ab
+- git status: clean at e4141ab (step 2 committed)
+- compile: 0 Warning(s), 0 Error(s); tests 3784/3784
+- preflight: PREFLIGHT OK, "secrets: none (2115 files scanned, 2060 index blobs)"; -SessionsOf wave-variety 2/2 checked
+- dod status: 0/24 verified by status yet (step 1 and 2 controls pass; status runs at the end of the step)
+- feature doc read: docs/features/WAVE_VARIETY.md (Status: steps 1-2 built; Session 2 recorded the groups)
+- baseline boot: the dev server runs the rc.2 DLL from Session 2 (log check clean); step 3's sessions run on this step's Release build inside a fresh snapshot
 
 ## Post-audit
 ### Step 1 · 2026-10-16 · step 1 commit (builder subagent, on a896846)
@@ -32,10 +39,22 @@ yar-wv2-logs; snapshot wvmix saved (34 files); [Debug] VerboseLogging set true f
 - in-game: none in this step (Logic); pursuit and rolls in game are step 3's sessions (D17, D18)
 ### Step 2 · 2026-10-16 · step 2 commit
 - in-game: Session 1 (faction-mix-wide.vrs 284/337: six groups clean, the undead and militia passes lost to the 300 s manual-spawn lifetime) and Session 2 (their rerun at 1800 s, 118/119: only CHAR_Undead_ZealousCultist_Ghost, which dies on its own), recorded in docs/features/WAVE_VARIETY.md › Test results and docs/GAME_ASSETS.md › Faction compatibility
-- session 1 log check: 0 unhandled, 1287 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons (`-LogCheck -ServerPath` over the saved copy in %TEMP%
-yar-wv2-logs); every [Warning read: the six baseline lines and one slow tick (551 ms) at the first CHAR_Militia_Hound_VBlood spawn; no [Error
+- session 1 log check: 0 unhandled, 1287 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons (`-LogCheck -ServerPath` over the saved copy in %TEMP%\nyar-wv2-logs); every [Warning read: the six baseline lines and one slow tick (551 ms) at the first CHAR_Militia_Hound_VBlood spawn; no [Error
 - session 2 log check: 0 unhandled, 377 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons (live logs); every [Warning read: the six baseline lines only; no [Error
 - built: Logic/FactionGroups.cs grows every group to the recorded allied units and adds blackfangs (Faction_Blackfangs); FactionGroupsTests Recorded reads docs/GAME_ASSETS.md (copied into the test output); the apocalypse theory case for CHAR_Legion_Shadowkin_Lesser now expects "mixes the undead and legion groups" (it joined the legion group)
 - compile: 0 Warning(s), 0 Error(s); tests Passed! 3784/3784; planted: a ShadowSoldier added to the undead group fails all four Recorded tests, passes after the copy back
 - /code-review: in step 3's review of the child's diff (this step adds data and one test class)
-
+### Step 3 · 2026-10-16 · step 3 commit
+- compile: `dotnet build Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__` 0 Warning(s), 0 Error(s)
+- tests: Passed! 3825/3825 (3784 before)
+- preflight: PREFLIGHT OK, "secrets: none (2130 files scanned, 2061 index blobs)"; `-DependencySuite wave-variety` "dependency suite: wave-variety 1/1 (pursuit-read)"
+- built: pursuit in the region phase (PursuitPhase ticks with the hunt; a run turned pursuing is hunted the same tick; HuntAction seeds a pursuing run map-wide through Pursuit.SeedTargets), the "pursuit" health entry and its dependency suite, the verbose check line ("pursuit <id>: <n> players read, <k> eligible (…), <m> within <r> m of <c> centres, quiet <s> s"), the quiet clock that stops while a player is in the area and starts at the first check that sees nobody; the 14 templates in Resources/templates.json (seven timed, seven onslaughts) with TemplateLibraryTests.WaveVariety.cs; scenarios pursuit.vrs, wave-variety.vrs, pursuit-timing.vrs
+- /code-review: 7 findings. Fixed: RegionPhase.Needed counted waiting runs; a run newly turned pursuing waited a hunt interval before its first hunt (now `due || started`); four scenario faults (the no-log window, the rolled line's "… and <n> more" cut, the home check not scoped to the event, the timing count). Left as advice: the eligibility rule (claimed territory, PvP combat) is written three times in HuntAction (targets, the verbose tally, the seeds); one helper is a refactor for after 0.13.0, recorded here and in docs/SESSION_HANDOFF.md
+- planted faults: the D7, D8, D15, D16 and D17 lines in docs/dod/wave-variety.md › Log, each failed with its fault and passed after the copy back
+- in-game: Sessions 3, 4 and 5 in docs/features/WAVE_VARIETY.md › Test results. D17 pursuit.vrs PASS 27/27 (pursuit-20261016-145616.json, "on" 20 s after the first empty check); D18 wave-variety.vrs PASS 26/26 (wave-variety-20261016-140858.json); D20 -TimingSpan "timing span: 10/10 windows under 5 ms, tracked >= 20, targets >= 1, 0 slow ticks" over Session 5's log copy (the scenario's own end count failed, 16 of 24 left after natives killed 8; the count is now recorded, not judged)
+- session 3 log check: 0 unhandled, 583 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons (%TEMP%\nyar-wv3-logs\s3-srv)
+- session 4 log check: 0 unhandled, 1494 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons (%TEMP%\nyar-wv3-logs\s4-srv)
+- session 5 log check: 0 unhandled, 1061 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons (%TEMP%\nyar-wv3-logs\s5-srv); every [Warning read in all three: the baseline kinds and the runs' "stopped" lines; no [Error; NyarDev.log holds only the game's "Prefab … is in an unknown state" warnings
+- snapshot: wv3 restored after Session 5, "snapshot restored; hashes equal"; VerboseLogging back to false
+- owner: D19 (the feel of pursuit and the rolls) waits on the owner (rubric 3, never self-accepted)
+- docs: %TEMP% paths that an earlier shell edit had mangled were repaired in docs/features/WAVE_VARIETY.md, docs/audits/wave-variety.md, docs/SESSION_HANDOFF.md, docs/dod/event-spawns.reviews.md, docs/dod/unit-watch.md (Log only), docs/features/APOCALYPSE.md and docs/features/UNIT_WATCH.md

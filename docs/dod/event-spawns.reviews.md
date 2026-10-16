@@ -61,8 +61,7 @@ VERDICT: REVISE
 - F1 · accepted · consequence of F2-F17; the Coverage pointers are updated with the new items
 - F2 · accepted · Design › Permissions names unauthenticated connections (never reach chat), the operator (file edits validated alike by D6), Claude (builds and pushes) and the owner (sole publisher, D31), no service account; D22's auth suite now also fails on a new command without adminOnly
 - F3 · accepted · +D28 (Walk radius argument): default 0.5, 0.1-5 invariant decimal, the refusal line and CommandArgTests WalkRadius with its fails-when; D1 cites it
-- F4 · accepted · Design › Data gains rows for events.json.bak, build outputs, the release zip, tags and releases (the only things that exist once) and the committed docs, each with owner, retention and deletion; D27 fails on a leftover %TEMP%
-yar-* folder ("paths: leftover temp")
+- F4 · accepted · Design › Data gains rows for events.json.bak, build outputs, the release zip, tags and releases (the only things that exist once) and the committed docs, each with owner, retention and deletion; D27 fails on a leftover %TEMP%\nyar-* folder ("paths: leftover temp")
 - F5 · accepted · +D29 (Wave precedence order): Logic WaveGate.Decide gives one outcome in the stated order and WaveAction decides nothing itself; evidence `dotnet test --filter WavePrecedence` with at least 12 tests; Business rules 8 cites it
 - F6 · accepted · D22 states the enumeration: Get-TreeFiles (git ls-files --cached --others --exclude-standard) over Commands, Patches and Services, so a new untracked file is seen; HuntAction joins $DispatchedServices; new fixture GatewayOnly/bad-new plants a [Mutating] method in a new untracked Services/Stray.cs
 - F7 · accepted · Interfaces › External states no quota and no monetary cost, and the record variants sampled: every CHAR_ prefab's SpawnBuffElement at boot (D7's "ambush: <n> units can hide" against the dump's 36, recorded in D14), territories with and without a heart (D17), and every player state PlayerPick reads (D16)
@@ -73,8 +72,7 @@ yar-* folder ("paths: leftover temp")
 - F12 · accepted · +D30 (Health shows spawn trouble): the walk and territory failures join HealthMonitor's degraded list, so the 10-minute health line, `.nyar status` and the admin login notice carry them; Failure & observability 12.3 names the login notice as the alert
 - F13 · accepted · Failure & observability gains a table of every check this plan introduces with its failing, silent and empty input; release, privacy, audit, session and path checks are the existing ones with their fixtures; ControlCases list extended with D28-D30
 - F14 · accepted · Performance gains a bounds table: every range and cap with its source, its behaviour at the bound and the valid case it excludes
-- F15 · accepted · Rollout › Paths walked enumerates the six surfaces and states what the walker reads (tracked, untracked, ignored and generated files after the builds, server paths, %TEMP%
-yar-*, remote tags and releases)
+- F15 · accepted · Rollout › Paths walked enumerates the six surfaces and states what the walker reads (tracked, untracked, ignored and generated files after the builds, server paths, %TEMP%\nyar-*, remote tags and releases)
 - F16 · accepted · D24 defines the measurement: the ten 60-tick timing lines after the first health line showing at least 140 tracked units, the first window skipped as warm-up, each average under 5 ms, no slow-tick line in the span, a player within Hunt range
 - F17 · accepted · D14 requires two trials: approach from 30 m without attacking (recording the reveal distance), and a ranged attack from 20 m on a fresh wave
 - F18 · accepted · S-10's fallback now says a weighted pick is new semantics that would come as a requested amendment with its own key, validation, chat field and template, leaving chance unchanged; it stays reversible because nothing built here is undone

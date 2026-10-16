@@ -53,6 +53,13 @@ public sealed partial record Pursuit
         string.Create(CultureInfo.InvariantCulture, $"event {eventId} pursuit: group {wave}.{group} on a player");
 
     /// <summary>"pursuit &lt;id&gt;: check failed: &lt;message&gt;" (D12), once per streak.</summary>
+    /// <summary>"pursuit &lt;id&gt;: &lt;n&gt; players read, &lt;k&gt; eligible (&lt;t&gt; in claimed territory, &lt;v&gt; in PvP combat, &lt;o&gt;
+    /// other), &lt;m&gt; within &lt;r&gt; m of &lt;c&gt; centres, quiet &lt;s&gt; s" (verbose, D8): counts only (D11).</summary>
+    public static string DetailLine(string eventId, int read, int eligible, int territory, int pvp, int inArea, int radius, int centres,
+        int quietSeconds) =>
+        string.Create(CultureInfo.InvariantCulture,
+            $"pursuit {eventId}: {read} players read, {eligible} eligible ({territory} in claimed territory, {pvp} in PvP combat, {read - eligible - territory - pvp} other), {inArea} within {radius} m of {centres} centres, quiet {quietSeconds} s");
+
     public static string FailedLine(string eventId, string message) => $"pursuit {eventId}: check failed: {message}";
 }
 
@@ -80,8 +87,9 @@ public sealed record PursuitCheck(string EventId, bool Started, bool InArea);
 
 /// <summary>
 /// The pursuit phase (wave-variety D8, D9, D12): every <see cref="Pursuit.CheckSeconds"/> s while a run with `pursuit`
-/// runs and does not yet pursue, each such run's players are read and its quiet clock (from the first wave's decision,
-/// reset whenever an eligible player stands in the area) checked; past afterSeconds the run is set pursuing and logs its
+/// runs and does not yet pursue, each such run's players are read and its quiet clock (from the first wave's decision;
+/// a check that sees an eligible player in the area stops it, and the next check that sees none starts it again, so a run
+/// never turns on before afterSeconds have passed since the player left) checked; past afterSeconds the run is set pursuing and logs its
 /// line once. The area's centre is the location's fixed centre (Arena.LocationCentre), else the run's live wave centres,
 /// else, while no wave of the run is alive, the live centres it last saw (so players standing at an AroundPlayer or Region
 /// run between its waves still count). Records (clock, last centres, streak) live in memory for the run's life: every end
@@ -101,14 +109,22 @@ public sealed class PursuitPhase
     bool _phaseFailing;
     DateTime _next;
 
+    /// <summary>Verbose only (the service sets it while VerboseLogging is on): one line per check with its counts, why a
+    /// run turns on or does not; no name and no position (D11).</summary>
+    public Action<string>? Detail { get; set; }
+
     /// <summary>The health entry: one while any run's check, or the phase itself, is failing.</summary>
     public IReadOnlyList<string> Health => _failing.Count > 0 || _phaseFailing ? [Failing] : [];
 
     /// <summary>Every record held (quiet clocks, last centres and streaks), for the end-path checks.</summary>
     public int AllRecords => _quietSince.Count + _lastCentres.Count + _failing.Count;
 
-    /// <summary>When the run's quiet clock started, or null.</summary>
-    public DateTime? QuietSince(string eventId) => _quietSince.TryGetValue(eventId, out var t) ? t : null;
+    /// <summary>The quiet clock of a run whose last check saw an eligible player in its area: stopped until a check sees
+    /// none.</summary>
+    static readonly DateTime Seen = DateTime.MaxValue;
+
+    /// <summary>When the run's quiet clock started, or null (none, or stopped by a player in the area).</summary>
+    public DateTime? QuietSince(string eventId) => _quietSince.TryGetValue(eventId, out var t) && t != Seen ? t : null;
 
     /// <summary>True when any running instance needs the check.</summary>
     public static bool Needed(IEnumerable<ActiveEvent> active) => active.Any(a => Pursuit.Configured(a) && !a.Pursuing);
@@ -190,8 +206,8 @@ public sealed class PursuitPhase
             if (!_quietSince.TryGetValue(a.Id, out var since)) _quietSince[a.Id] = since = a.Decided[0].DecidedUtc;
             var focusOnly = WaveFacts.IsFocusOnly(a.Definition);
             var focus = focusOnly ? world.FocusKey(a) : null;
-            var eligible = players().Select(p => p with { InTerritory = p.InTerritory || world.IsClaimed(a.Id, p.X, p.Z) })
-                .Where(p => Pursuit.Eligible(p, focusOnly, focus)).ToList();
+            var read = players().Select(p => p with { InTerritory = p.InTerritory || world.IsClaimed(a.Id, p.X, p.Z) }).ToList();
+            var eligible = read.Where(p => Pursuit.Eligible(p, focusOnly, focus)).ToList();
             IReadOnlyList<(float X, float Z)> centres;
             if (Arena.LocationCentre(a) is { } c) centres = [c];
             else
@@ -201,9 +217,15 @@ public sealed class PursuitPhase
                 else if (_lastCentres.TryGetValue(a.Id, out var last)) centres = last;
             }
             var radius = Pursuit.Radius(action);
-            if (Pursuit.AnyoneInArea(eligible, centres, radius))
+            var present = Pursuit.AnyoneInArea(eligible, centres, radius);
+            if (!present && since == Seen) _quietSince[a.Id] = since = now;                    // the first check with nobody
+            if (Detail is { } detail)
+                Phases.Safe(detail, Pursuit.DetailLine(a.Id, read.Count, eligible.Count, read.Count(p => p.InTerritory),
+                    read.Count(p => !p.InTerritory && p.InPvpCombat), eligible.Count(p => centres.Any(c => Arena.Distance(c, p.X, p.Z) <= radius)),
+                    radius, centres.Count, present ? 0 : (int)(now - since).TotalSeconds));
+            if (present)
             {
-                _quietSince[a.Id] = now;
+                _quietSince[a.Id] = Seen;
                 done = new PursuitCheck(a.Id, false, true);
             }
             else if ((now - since).TotalSeconds >= pursuit.AfterSeconds)

@@ -1,0 +1,86 @@
+# wave-variety.vrs: wave-variety D18. (1) militia-muster-timed, started at the admin, queues wave 2 at its 75 s beat while
+# wave 1 still lives: no "wave 1 cleared" line between wave 1 and wave 2 (Chaos is invulnerable and never attacks). (2)
+# undead-onslaught, with its final roll set to 2-2 by `.nyar event set`, logs a "rolled:" line per wave naming only undead
+# pool units (CHAR_Undead_* and the two allied CHAR_Cultist_*; the regex refuses any other prefab, and allows the
+# line's "… and <n> more" cut at the wire size), its middle wave names
+# exactly one boss and its final wave two distinct bosses, and both final bosses spawn (the verbose "spawned <prefab> for
+# undead-onslaught" line of each). Every run stopped leaves "tracked units: 0". The events made here are deleted at the end.
+# Needs: the step 3 Release DLL; [Debug] VerboseLogging = true; NyarDevTools (.devgo) and DevChatEcho; the pond mark; pillar spawns on; no other event
+# running; Chaos invulnerable (true only).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar event delete militia-muster-timed
+wait 1
+chat .nyar event delete militia-muster-timed confirm
+wait 2
+chat .nyar event delete undead-onslaught
+wait 1
+chat .nyar event delete undead-onslaught confirm
+wait 2
+#
+# (1) timed: wave 2 comes on the beat, wave 1 alive
+chat .nyar template use militia-muster-timed
+expect-reply militia-muster-timed
+chat .nyar event enable militia-muster-timed
+expect-reply militia-muster-timed
+mark
+chat .nyar event start militia-muster-timed
+expect-log event militia-muster-timed started by timeout=20
+expect-log event militia-muster-timed wave 1/5: 6 units queued timeout=30
+wait 10
+shot full timed-wave1
+expect-no-log event militia-muster-timed wave 1 cleared timeout=55
+expect-log event militia-muster-timed wave 2/5: 9 units queued timeout=30
+wait 5
+shot full timed-wave2
+chat .nyar event stop militia-muster-timed
+expect-log event militia-muster-timed stopped timeout=20
+wait 20
+chat .nyar status
+expect-reply tracked units: 0
+#
+# (2) onslaught: pools only, one boss mid-run, two distinct bosses at the end
+chat .nyar template use undead-onslaught
+expect-reply undead-onslaught
+chat .nyar event set undead-onslaught action.waveList.3.bosses pool:lords:2-2
+expect-reply undead-onslaught action.waveList.3.bosses =
+chat .nyar event enable undead-onslaught
+expect-reply undead-onslaught
+mark
+chat .nyar event start undead-onslaught
+expect-log event undead-onslaught started by timeout=20
+expect-seen event undead-onslaught wave 1/3 rolled: (?:CHAR_(?:Undead|Cultist)_\w+x[0-9]+(?:, )?)+(?: … and [0-9]+ more)?\s*$ timeout=30
+expect-no-log event undead-onslaught wave 1/3 rolled: .*; bosses: timeout=1
+wait 10
+shot full onslaught-wave1
+expect-log event undead-onslaught wave 2/3: [0-9]+ units queued timeout=90
+expect-seen event undead-onslaught wave 2/3 rolled: (?:CHAR_(?:Undead|Cultist)_\w+x[0-9]+(?:, )?)+(?: … and [0-9]+ more)?; bosses: CHAR_Undead_\w+\s*$ timeout=10
+wait 10
+shot full onslaught-wave2
+expect-log event undead-onslaught wave 3/3: [0-9]+ units queued timeout=90
+expect-seen event undead-onslaught wave 3/3 rolled: (?:CHAR_(?:Undead|Cultist)_\w+x[0-9]+(?:, )?)+(?: … and [0-9]+ more)?; bosses: (?P<B1>CHAR_Undead_\w+), (?P<B2>CHAR_Undead_\w+)\s*$ timeout=10
+wait 15
+expect-seen \[nyar\] spawned ${B1} for undead-onslaught
+expect-seen \[nyar\] spawned ${B2} for undead-onslaught
+shot full onslaught-bosses
+chat .nyar event stop undead-onslaught
+expect-log event undead-onslaught stopped timeout=20
+wait 25
+chat .nyar status
+expect-reply tracked units: 0
+chat .nyar event delete militia-muster-timed
+wait 1
+chat .nyar event delete militia-muster-timed confirm
+expect-reply militia-muster-timed
+chat .nyar event delete undead-onslaught
+wait 1
+chat .nyar event delete undead-onslaught confirm
+expect-reply undead-onslaught

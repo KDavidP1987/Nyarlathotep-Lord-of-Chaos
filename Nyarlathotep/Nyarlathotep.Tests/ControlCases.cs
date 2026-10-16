@@ -48,7 +48,6 @@ public static class ControlCases
         // unit-watch: step 5 the release
         new(UnitWatch, "D30", 5, "0.13.0"), new(UnitWatch, "D31", 5, "0.13.0"), new(UnitWatch, "D32", 5, "0.13.0"), new(UnitWatch, "D33", 5, "0.13.0"),
         // wave-variety: step 3 Services, templates and sessions, step 4 the release
-        new(WaveVariety, "D12", 3, "0.13.0"), new(WaveVariety, "D15", 3, "0.13.0"), new(WaveVariety, "D16", 3, "0.13.0"),
         new(WaveVariety, "D20", 3, "0.13.0"), new(WaveVariety, "D21", 4, "0.13.0"), new(WaveVariety, "D22", 4, "0.13.0"), new(WaveVariety, "D23", 4, "0.13.0"),
         new(WaveVariety, "D24", 4, "0.13.0"),
     ];
@@ -71,7 +70,7 @@ public static class ControlCases
         "WaveSetTests", "ScoreboardTests", "WaveSetDependencyFailureTests", "SwarmTests", "SwarmDependencyFailureTests",
         "HuntingGroundsTests", "HuntingGroundsDependencyFailureTests", "RevengeTests", "BossWaveTests", "RevengeDependencyFailureTests",
         "ApocalypseTests", "ApocalypseStateTests", "ApocalypseDependencyFailureTests", "UnitWatchTests",
-        "UnitWatchDependencyFailureTests", "PoolTests", "PursuitTests", "FactionGroupsTests",
+        "UnitWatchDependencyFailureTests", "PoolTests", "PursuitTests", "FactionGroupsTests", "WaveVarietyDependencyFailureTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -923,13 +922,14 @@ public static class ControlCases
             ["a_key_is_out_of_range", "a_bound_is_off_by_one", "an_event_without_the_key_parses_differently"],
             ["hunt_at_a_point"], ["no_behaviour_no_pursuit"]) with { Plan = WaveVariety },
         T("D8", "Pursue", "PursuitTests",
-            ["pursuit_starts_before_after_seconds", "pursuit_starts_with_an_eligible_player_in_the_area", "an_ineligible_player_in_the_area_holds_it", "the_clock_starts_before_the_first_waves_decision", "the_area_is_not_the_arena_else_the_hunt_range_around_the_centre", "a_player_in_claimed_territory_or_PvP_combat_is_targeted", "a_landing_is_in_claimed_territory", "a_revenge_run_targets_another_player_than_its_focus", "a_later_wave_does_not_pursue", "a_group_line_is_missing_or_repeated", "the_arena_still_returns_a_pursuing_unit", "a_unit_watch_landing_of_a_pursuing_unit_is_confined_to_the_arena", "a_waiting_pursuer_is_stall_marked", "a_line_carries_a_name_or_a_position", "a_player_at_the_last_wave_centre_between_waves_is_not_counted", "the_players_are_read_more_than_once_a_tick"],
+            ["pursuit_starts_before_after_seconds", "pursuit_starts_with_an_eligible_player_in_the_area", "an_ineligible_player_in_the_area_holds_it", "the_clock_starts_before_the_first_waves_decision", "the_area_is_not_the_arena_else_the_hunt_range_around_the_centre", "a_player_in_claimed_territory_or_PvP_combat_is_targeted", "a_landing_is_in_claimed_territory", "a_revenge_run_targets_another_player_than_its_focus", "a_later_wave_does_not_pursue", "a_group_line_is_missing_or_repeated", "the_arena_still_returns_a_pursuing_unit", "a_unit_watch_landing_of_a_pursuing_unit_is_confined_to_the_arena", "a_waiting_pursuer_is_stall_marked", "a_line_carries_a_name_or_a_position", "a_player_at_the_last_wave_centre_between_waves_is_not_counted", "the_players_are_read_more_than_once_a_tick", "the_region_phase_does_not_hunt_a_run_the_tick_it_starts_pursuing", "the_hunt_action_seeds_a_pursuing_run_from_its_wave_centre"],
             ["a_run_left_alone_chases_its_player"], ["no_player_anywhere_units_stay"]) with { Plan = WaveVariety },
         T("D8", "CheckFailed", "PursuitTests",
             ["a_throwing_read_is_logged_twice_or_stops_another_events_check", "a_throwing_player_read_escapes"],
             ["good_read_ends_the_streak"], ["no_pursuit_no_read"]) with { Plan = WaveVariety },
         T("D9", "EndPaths", "PursuitTests",
-            ["an_end_path_keeps_a_pursuit_record", "a_jump_follows_an_end", "a_resumed_boot_starts_pursuing"],
+            ["an_end_path_keeps_a_pursuit_record", "a_jump_follows_an_end", "a_resumed_boot_starts_pursuing", "the_region_phase_keeps_a_pursuit_record",
+             "a_service_end_path_skips_the_pursuit_drop"],
             ["stop_drops_the_clock_and_the_targets"], ["no_run_no_record"]) with { Plan = WaveVariety },
         T("D10", "Pools", "CommandArgTests",
             ["the_pool_first_order_does_not_reach_a_valid_enabled_definition", "the_entry_first_order_does_not_reach_a_valid_enabled_definition", "a_30_member_pool_cannot_be_built_by_appends", "a_pool_still_named_is_removed", "the_field_accepts_a_value_the_validator_refuses", "a_pool_token_count_differs_from_a_prefab_entrys", "the_field_refuses_a_value_the_validator_takes", "a_roll_reaches_an_apocalypse_or_both_final_lists_are_set"],
@@ -947,5 +947,18 @@ public static class ControlCases
         T("D14", "Recorded", "FactionGroupsTests",
             ["a_group_holds_a_unit_not_recorded_allied", "a_group_misses_a_recorded_unit"],
             ["the_recorded_rows"], ["no_left_out_unit_in_a_group"]) with { Plan = WaveVariety },
+        // ---- wave-variety step 3: the pursuit check's dependency suite
+        T("D12", "PursuitRead", "WaveVarietyDependencyFailureTests",
+            ["a_throwing_territory_read_is_logged_twice_or_stops_another_events_check", "a_throwing_position_read_escapes_or_stops_the_hunt",
+             "a_throwing_player_read_escapes_or_logs_twice", "the_health_entry_outlives_a_clean_check_or_the_end", "the_health_line_does_not_read_the_region_phase"],
+            ["good_read_ends_the_streak"], ["no_pursuit_no_read"]) with { Plan = WaveVariety },
+        C("D12", "DependencySuite", "preflight -DependencySuite wave-variety",
+            ["selftest DependencySuite/bad", "selftest DependencySuite/bad-2", "selftest DependencySuite/bad-floor-spawns"], ["selftest DependencySuite/good"],
+            ["selftest DependencySuite/empty"]) with { Plan = WaveVariety },
+        // ---- wave-variety step 3: the timed and onslaught templates
+        T("D15", "Timed", "TemplateLibraryTests", ["a_template_breaks_the_rule"], ["the_seven_templates"],
+            ["no_timed_template_in_an_empty_library"]) with { Plan = WaveVariety },
+        T("D16", "Onslaught", "TemplateLibraryTests", ["a_template_breaks_the_rule"], ["the_seven_templates"],
+            ["no_onslaught_in_an_empty_library"]) with { Plan = WaveVariety },
     ];
 }

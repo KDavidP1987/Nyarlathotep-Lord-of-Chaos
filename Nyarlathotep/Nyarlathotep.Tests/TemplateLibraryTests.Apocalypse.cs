@@ -12,7 +12,7 @@ namespace Nyarlathotep.Tests;
 /// Logic/FactionGroups, and an Apocalypse template's group is its faction's.</summary>
 public partial class TemplateLibraryTests
 {
-    const int TemplatesNow = TemplatesBefore + 2 + 6;                            // revenge's bandit-revenge, apocalypse's zombie-apocalypse, Epic A43's six wave templates
+    const int TemplatesNow = TemplatesBefore + 2 + 6 + 14;                       // revenge's bandit-revenge, apocalypse's zombie-apocalypse, Epic A43's six wave templates, wave-variety's fourteen
 
     static readonly string[] UndeadGroup =
     [
@@ -141,7 +141,7 @@ public partial class TemplateLibraryTests
     {
         var c = Real();
         Assert.Empty(FactionProblems(c));
-        Assert.Equal(16, c.Templates.Count(t => Spawned(t.Definition) is not null));   // fifteen SpawnWaves (Epic A43's six) and one Apocalypse
+        Assert.Equal(30, c.Templates.Count(t => Spawned(t.Definition) is not null));   // 29 SpawnWaves (Epic A43's six, wave-variety's fourteen) and one Apocalypse
     }
 
     /// <summary>Design §9 D60: realm-gauntlet mixes groups across waves; it passes only while each wave is one group, each

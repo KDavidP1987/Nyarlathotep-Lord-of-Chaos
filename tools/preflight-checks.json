@@ -1353,6 +1353,19 @@
           "control": "WatchMove"
         }
       ]
+    },
+    "wave-variety": {
+      "categories": [
+        "pursuit-read"
+      ],
+      "rows": [
+        {
+          "name": "pursuit-read",
+          "kind": "tests",
+          "class": "WaveVarietyDependencyFailureTests",
+          "control": "PursuitRead"
+        }
+      ]
     }
   },
   "controlSuites": {

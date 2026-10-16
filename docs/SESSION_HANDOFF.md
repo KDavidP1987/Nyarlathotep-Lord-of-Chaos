@@ -21,8 +21,7 @@ commit d492bd5 on main (local; push and a new test build wait on the owner's OK)
   `action=apocalypse`, the pillar in pillar_off) are in contract §8 and §10.5/§10.7 for live-ops.
 - **Not yet done:** README template tables and both CHANGELOGs (at the 0.13.0 release commit, six surfaces);
   `v0.13.0-rc.2` test build for the G-Portal retest (tag, pre-release, `ROUND["download"]`); push.
-- **Dev server:** running (VerboseLogging back to false). Config backed up to %TEMP%
-yar-fresh-20261016 and restored
+- **Dev server:** running (VerboseLogging back to false). Config backed up to %TEMP%\nyar-fresh-20261016 and restored
   after the brand-new-world boot (save folder `save-data-nyarfresh` left on disk, unused).
 
 **Written 2026-10-15 (session close)**: a docs-only session, pushed to main.

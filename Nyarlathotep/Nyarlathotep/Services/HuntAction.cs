@@ -165,6 +165,9 @@ internal static class HuntAction
                         var (first, _, tag) = g.First().Value;
                         // a RegionHunt unit seeds from its own position over 100 m (hunting-grounds A4): counted the same way
                         why = map is null ? "no territory map, nobody targeted"
+                            : targeting?.Pursuing == true && first.TryGetComponent<Translation>(out var self)   // wave-variety D8: its own position
+                                ? HuntPlan.Tally(targeting.Pool.Where(p => !targeting.FocusOnly || p.Key == targeting.FocusKey).ToList(),
+                                    (self.Value.x, self.Value.z), HuntingGrounds.SeedReach).ToString()
                             : targeting?.RegionHuntScope is { } scope && first.TryGetComponent<Translation>(out var at)
                                 ? HuntPlan.Tally(HuntRule.EligibleInside(targeting.Pool, scope, targeting.RegionOf), (at.Value.x, at.Value.z), HuntingGrounds.SeedReach).ToString()
                                 : HuntPlan.Tally(players.Select(p => Candidate(p, map)).ToList(), (tag.X, tag.Z), tag.Range).ToString();
@@ -205,7 +208,10 @@ internal static class HuntAction
     /// D13); else the players as Hunt candidates, narrowed while the event's region lock holds to those inside its scope
     /// regions (hunting-grounds D5, S-9; none while the region index is unavailable), with the scope and region lookup a
     /// RegionHunt unit seeds by (hunting-grounds D7). Read from the running instance's own definition. A Revenge
-    /// instance targets its focus player alone, resolved to a key from this tick's read (revenge D6).</summary>
+    /// instance targets its focus player alone, resolved to a key from this tick's read (revenge D6). A pursuing run
+    /// (wave-variety D8) seeds each unit from its own position within 100 m among the eligible players anywhere on the map
+    /// (Pursuit.SeedTargets: RoamRule.Eligible, a focus-only run's focus player alone) and rehomes it to its nearest
+    /// seeded player; the region phase's hunt moves it there by hidden jumps.</summary>
     static EventTargeting Targeting(string eventId, List<PlayerRow> players, IReadOnlySet<(int X, int Z)> map)
     {
         if (map is null) return null;
@@ -219,6 +225,7 @@ internal static class HuntAction
         if (action is null) return new EventTargeting(candidates.ToList(), null, null);
         var focusOnly = WaveFacts.IsFocusOnly(active.Definition);
         var focusKey = focusOnly ? HuntPlan.FocusKey(players.Select(p => (p.Key, p.PlatformId)), active.Focus) : null;
+        if (active.Pursuing) return new EventTargeting(candidates.ToList(), null, null, focusOnly, focusKey, OwnPosition: true, Pursuing: true);
         Func<float, float, string> regionOf = RegionMap.State.Available ? RegionMap.State.Index.RegionOf : null;
         var pool = LockRule.SeedPool(action, candidates, regionOf).ToList();
         return action.Behaviour is { Type: BehaviourType.RegionHunt } && regionOf is not null
@@ -230,7 +237,7 @@ internal static class HuntAction
     /// scope and the region lookup its units are seeded by from their own positions, and for a Revenge instance its focus
     /// key (revenge D6).</summary>
     sealed record EventTargeting(List<HuntCandidate> Pool, Scope? RegionHuntScope, Func<float, float, string> RegionOf,
-        bool FocusOnly = false, long? FocusKey = null, bool OwnPosition = false);
+        bool FocusOnly = false, long? FocusKey = null, bool OwnPosition = false, bool Pursuing = false);
 
     /// <summary>The players to seed for one unit: a Hunt unit's within its range of its wave's centre (HuntPlan.Targets); a
     /// RegionHunt unit's within 100 m (A4) of its own position among the eligible players inside the scope regions
@@ -238,6 +245,9 @@ internal static class HuntAction
     static List<long> TargetsOf(Entity unit, HuntTag tag, EventTargeting targeting)
     {
         if (targeting is null) return new List<long>();
+        if (targeting.Pursuing)                                              // wave-variety D8: map-wide, from its own position
+            return unit.TryGetComponent<Translation>(out var self)
+                ? Pursuit.SeedTargets(targeting.Pool, (self.Value.x, self.Value.z), targeting.FocusOnly, targeting.FocusKey) : new List<long>();
         if (targeting.OwnPosition)
             return unit.TryGetComponent<Translation>(out var own) ? HuntPlan.Targets(targeting.Pool, (own.Value.x, own.Value.z), tag.Range) : new List<long>();
         if (targeting.RegionHuntScope is not { } scope)

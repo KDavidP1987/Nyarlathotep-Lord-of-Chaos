@@ -90,6 +90,7 @@ public class HuntingGroundsTests
         public int PlayerReads { get; private set; }
         public WalkBudget Budget { get; set; } = new(1_000_000);
         public long? FocusKey(ActiveEvent a) => null;
+        public IReadOnlyList<(float X, float Z)> Centres(ActiveEvent a) => [];
 
         public void Add(long key, float x, float z, string? eventId = "hg", DateTime? spawned = null, int wave = 1, int group = 0,
             (float X, float Y, float Z)? spawn = null, byte level = 10)

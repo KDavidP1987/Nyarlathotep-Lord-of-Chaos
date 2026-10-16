@@ -1,0 +1,91 @@
+# pursuit.vrs: wave-variety D17. An event wv-pursuit (one wave of 6 CHAR_Undead_SkeletonSoldier_Armored_Farbane at a
+# Point at the pond, arena 25, Hunt 25, pursuit after 20 s, duration 600) is started with Chaos at the spot. Chaos then
+# stands 250 m east: the quiet clock starts at the first 5 s check that sees nobody in the area (its verbose line
+# "0 within 25 m …, quiet 0 s", at most 5 s after the teleport), and "pursuit: on" follows when that clock reads 20 s,
+# so 20-25 s after the leaving, timed from the server's own lines (the client's console steps delay a client-side
+# window by 10 s or more, Session 5),
+# and a unit of the run must stand within 60 m of Chaos within 120 s (`.nyar debug here 60` names the event, so a native
+# skeleton never counts). Chaos then goes home (TPHome, claimed territory): after 60 s no unit of the run stands within
+# 60 m of home (`.nyar debug here 60` names no unit of the event). `.nyar event stop` leaves "tracked units: 0" after the grace and no pursuit line after the stop. The event
+# is deleted at the end.
+# Needs: the step 3 Release DLL; [Debug] VerboseLogging = true; NyarDevTools (.devgo .devtp .devwhere) and DevChatEcho; the pond mark; pillar spawns on;
+# no other event running; Chaos invulnerable (`ToggleInvulnerable true`, a Boolean, never false).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond x=(?P<PX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<PZ>-?[0-9.]+)
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar event delete wv-pursuit
+wait 1
+chat .nyar event delete wv-pursuit confirm
+wait 2
+chat .nyar event new wv-pursuit spawns
+expect-reply event wv-pursuit created
+chat .nyar event set wv-pursuit trigger.type Manual
+expect-reply wv-pursuit trigger.type =
+chat .nyar event set wv-pursuit action.units CHAR_Undead_SkeletonSoldier_Armored_Farbane:6
+expect-reply wv-pursuit action.units =
+chat .nyar event set wv-pursuit action.waves 1
+expect-reply wv-pursuit action.waves =
+chat .nyar event set wv-pursuit location here
+expect-reply wv-pursuit action.location =
+chat .nyar event set wv-pursuit action.arena 25
+expect-reply wv-pursuit action.arena =
+chat .nyar event set wv-pursuit action.behaviour "hunt 25"
+expect-reply wv-pursuit action.behaviour =
+chat .nyar event set wv-pursuit action.pursuit 20
+expect-reply wv-pursuit action.pursuit =
+chat .nyar event set wv-pursuit durationSeconds 600
+expect-reply wv-pursuit durationSeconds =
+chat .nyar event enable wv-pursuit
+expect-reply wv-pursuit
+mark
+chat .nyar event start wv-pursuit
+expect-log event wv-pursuit started by timeout=20
+expect-log event wv-pursuit wave 1/1: 6 units queued timeout=30
+wait 8
+chat .nyar debug here 30
+expect-log \[nyar\] debug: CHAR_Undead_SkeletonSoldier_Armored_Farbane wv-pursuit timeout=10
+shot full pursuit-spawn
+# Chaos 250 m east of the spot: the first empty check, then "pursuit: on" at 20 s on its clock
+calc FX = ${PX} + 250
+chat .devtp ${FX} ${PZ}
+expect-log \[DEV TP\] to
+console ToggleInvulnerable true
+expect-log pursuit wv-pursuit: 1 players read, 1 eligible .*, 0 within 25 m of 1 centres, quiet 0 s timeout=15
+expect-log event wv-pursuit pursuit: on, no player within 25 m for (?P<SECS>[0-9]+) s timeout=25
+expect-calc ${SECS} >= 20 and ${SECS} <= 24
+expect-log event wv-pursuit pursuit: group 1\.[0-9]+ on a player timeout=60
+# a unit of the run within 60 m of Chaos within 120 s of leaving
+wait 60
+chat .devwhere
+expect-log \[DEV WHERE\]
+mark
+chat .nyar debug here 60
+expect-log \[nyar\] debug: CHAR_Undead_SkeletonSoldier_Armored_Farbane wv-pursuit timeout=10
+shot full pursuit-arrived
+# home, in claimed territory: no unit of the run near it after 60 s
+console TPHome
+wait 5
+console ToggleInvulnerable true
+wait 55
+shot full pursuit-home
+mark
+chat .nyar debug here 60
+expect-log \[nyar\] debug: no tracked units within 60 m timeout=10
+# stop: nothing left, no pursuit line after it
+chat .nyar event stop wv-pursuit
+expect-log event wv-pursuit stopped timeout=20
+wait 20
+chat .nyar status
+expect-reply tracked units: 0
+expect-no-log wv-pursuit pursuit timeout=10
+chat .nyar event delete wv-pursuit
+wait 1
+chat .nyar event delete wv-pursuit confirm
+expect-reply wv-pursuit

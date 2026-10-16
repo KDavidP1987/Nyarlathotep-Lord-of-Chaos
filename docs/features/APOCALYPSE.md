@@ -221,8 +221,7 @@ record's write times sampled every 20 s by `tools/vrclient/soak-sampler.ps1` (so
 
 ### Session 4 · 2026-10-16 · the 0.13.0 work after the G-Portal test (local build, uncommitted on f01f18f) · vrclient as Chaos on the local dev server
 
-Dev cfg for the session: VerboseLogging true (restored to false afterwards). Logs copied to %TEMP%
-yar-logs-20261016-*.
+Dev cfg for the session: VerboseLogging true (restored to false afterwards). Logs copied to %TEMP%\nyar-logs-20261016-*.
 
 - **Admin goal (fix):** `tools/vrclient/scenarios/wave-templates.vrs` run 2 SCENARIO PASS 54/54
   (`wave-templates-20261016-012328.json`). `.nyar template use zombie-apocalypse as apo-admin`, enable, start at the pond:

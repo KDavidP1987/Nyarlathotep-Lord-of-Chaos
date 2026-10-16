@@ -175,8 +175,7 @@ grounded level at its position, or with no grounded level at all.
 
 ### Session 1 · 2026-10-14 · step 3 (the mod at 5e4659f + A2, NyarDevTools .devaggro/.devbuff/.devperch/hold) · vrclient as Chaos on the local dev server
 
-Logs in %TEMP%
-yar-uw1-logs (a- to k-, one pair per boot, copied before each stop). Snapshot uw1 saved before the cfg
+Logs in %TEMP%\nyar-uw1-logs (a- to k-, one pair per boot, copied before each stop). Snapshot uw1 saved before the cfg
 changes. Seven boots; cfg changes per run: VerboseLogging and TimingLog true, IncludeAdmins true, StallMinutes 1 for the
 stall run, Enabled false for the watch-off run, all restored.
 

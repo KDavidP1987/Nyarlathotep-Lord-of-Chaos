@@ -328,10 +328,13 @@ public sealed record HuntCheck(string EventId, IReadOnlyList<RegionJump> Jumps, 
 }
 
 /// <summary>
-/// The game side of the lock and the hunt (D5-D9), implemented by Services over SpawnTracker's ledger and its own entities.
-/// Every member may throw, which the phases take as a failure of that read or write only.
+/// The game side of the lock, the hunt and the pursuit check (D5-D9; wave-variety D8), implemented by Services over
+/// SpawnTracker's ledger and its own entities. The players, the claimed check, the focus and the live centres are
+/// IPursuitWorld's: the players are read once per region tick, memory only, and their territory flag is the phase's to
+/// set per event by that event's own map, never one event's map for another (Codex step 4 F1). Every member may throw,
+/// which the phases take as a failure of that read or write only.
 /// </summary>
-public interface IRegionWorld
+public interface IRegionWorld : IPursuitWorld
 {
     /// <summary>The ledger's tracked units (key, event, spawn time, wave).</summary>
     IEnumerable<TrackedUnit> Units { get; }
@@ -342,9 +345,6 @@ public interface IRegionWorld
     /// <summary>The region at a point (RegionIndex.RegionOf).</summary>
     string RegionOf(float x, float z);
 
-    /// <summary>The point lies in claimed territory by the event's kept map (TerritoryMaps.ForHunt); false without one.</summary>
-    bool IsClaimed(string eventId, float x, float z);
-
     /// <summary>The walk check at a point and level: free and grounded (two game calls).</summary>
     bool Walkable(float x, float z, byte level);
 
@@ -354,11 +354,6 @@ public interface IRegionWorld
     /// <summary>The tick's walk-check budget (WalkBudget.PerTick).</summary>
     WalkBudget Budget { get; }
 
-    /// <summary>Every connected character as Hunt sees it (PlayerQuery.Read): read once per hunt check, memory only. The
-    /// territory flag is the hunt's to set per event (<see cref="IsClaimed"/>), never one event's map for another (Codex
-    /// step 4 F1).</summary>
-    IReadOnlyList<HuntCandidate> Players();
-
     /// <summary>Moves one of our units to <paramref name="r"/>'s spot, its PreCombatPosition with it, and drops its
     /// AggroBuffer entries (with their seed records) on players standing in no region of <paramref name="scope"/>
     /// (<see cref="LockRule.DropsEntry"/>). A unit no longer there is left alone.</summary>
@@ -366,10 +361,6 @@ public interface IRegionWorld
 
     /// <summary>Moves one of our units to <paramref name="j"/>'s landing, its PreCombatPosition with it.</summary>
     void Jump(RegionJump j);
-
-    /// <summary>The Hunt key of a focus-only (Revenge) instance's focus player, or null: a pursuing Revenge run targets
-    /// that player alone (wave-variety D8). Null targets nobody; an instance that is not focus-only is never asked.</summary>
-    long? FocusKey(ActiveEvent a);
 }
 
 /// <summary>
@@ -1079,43 +1070,63 @@ public sealed class JumpAllowance(int max)
 }
 
 /// <summary>
-/// The "region" tick phase (D5-D9, D12): the lock, then the hunt, every <see cref="HuntingGrounds.CheckSeconds"/> s while
-/// a locked or RegionHunt instance runs. One end-path entry drops both phases' records for an event; a restart or a purge
-/// clears both. Never throws.
+/// The "region" tick phase (D5-D9, D12; wave-variety D8, D9): the pursuit check, then the lock, then the hunt, every
+/// <see cref="HuntingGrounds.CheckSeconds"/> s while a locked or RegionHunt instance runs, a run waits to pursue or a run
+/// pursues. The pursuit check runs first, so a run that starts pursuing is hunted at the same tick. One end-path entry
+/// drops all three phases' records for an event (Services/EventRuntime.EndSpawnState → SpawnTracker.RegionEnded); a
+/// restart or a purge clears all three. Never throws.
 /// </summary>
 public sealed class RegionPhase
 {
     public LockPhase Lock { get; } = new();
     public HuntPhase Hunt { get; } = new();
+    public PursuitPhase Pursuit { get; } = new();
 
-    /// <summary>The two health entries (D6, D9), each while failing.</summary>
-    public IReadOnlyList<string> Health => Lock.Health.Concat(Hunt.Health).ToList();
+    /// <summary>The health entries (D6, D9; wave-variety D12's "pursuit: check failing"), each while failing.</summary>
+    public IReadOnlyList<string> Health => Lock.Health.Concat(Hunt.Health).Concat(Pursuit.Health).ToList();
 
-    /// <summary>Every end path of <paramref name="eventId"/>: its last inside spots, targets and streaks go (D12).</summary>
+    /// <summary>Every end path of <paramref name="eventId"/>: its last inside spots, targets, pursuit clock and centres
+    /// and streaks go (D12; wave-variety D9).</summary>
     public void EventEnded(string eventId)
     {
         Lock.EventEnded(eventId);
         Hunt.EventEnded(eventId);
+        Pursuit.EventEnded(eventId);
     }
 
     public void Clear()
     {
         Lock.Clear();
         Hunt.Clear();
+        Pursuit.Clear();
     }
 
-    /// <summary>True when any running instance needs the phase (a lock, a region hunt or a pursuing run).</summary>
-    public static bool Needed(IEnumerable<ActiveEvent> active) => active.Any(a => HuntingGrounds.Locked(a) || a.Pursuing);
+    /// <summary>True when any running instance needs the lock and hunt passes: a lock, a region hunt or a pursuing run
+    /// (wave-variety D8). A run still waiting to pursue needs only the pursuit check, which has its own gate.</summary>
+    public static bool Needed(IEnumerable<ActiveEvent> active) =>
+        active.Any(a => HuntingGrounds.Locked(a) || a.Pursuing);
 
-    /// <summary>One scheduler tick: the lock's and the hunt's checks when due; never throws.</summary>
+    /// <summary>One scheduler tick: the pursuit check, then the lock's and the hunt's checks when due; a run the check
+    /// has just turned pursuing is hunted in the same tick, whatever the lock clock's grid; never throws.</summary>
     public (IReadOnlyList<LockCheck> Locks, IReadOnlyList<HuntCheck> Hunts) Tick(DateTime now, IReadOnlyCollection<ActiveEvent> active,
         IRegionWorld world, Func<double> random, Action<string> info, Action<string> error)
     {
+        var started = false;
+        try
+        {
+            if (Pursuit.AllRecords > 0 || PursuitPhase.Needed(active))
+            {
+                var before = active.Count(a => a.Pursuing);
+                Pursuit.Tick(now, active, world, info, error);
+                started = active.Count(a => a.Pursuing) > before;
+            }
+        }
+        catch (Exception) { /* never throws */ }
         var due = false;
         try { due = Needed(active) && Lock.Due(now); }
         catch (Exception) { /* never throws */ }
         var locks = Lock.Tick(now, active, world, random, info, error, due);
-        var hunts = Hunt.Tick(active, world, info, error, due);
+        var hunts = Hunt.Tick(active, world, info, error, due || started);
         return (locks, hunts);
     }
 }
