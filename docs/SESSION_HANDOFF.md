@@ -4,6 +4,27 @@ Where work stands between sessions. Overwrite this file at the end of a session;
 The plans (`docs/dod/`), audits (`docs/audits/`) and feature docs stay the source of truth. This file only points
 into them.
 
+**Written 2026-10-16 (session close)**: fixes from the owner's G-Portal test (2026-10-15) and six new wave templates,
+commit d492bd5 on main (local; push and a new test build wait on the owner's OK).
+- **G-Portal (hosted, read-only by owner's rule: never change anything on it; FTP only to read logs).** Findings: a
+  brand-new world initialised Nyarlathotep before the day/night cycle and region polygons existed ("degraded: hook
+  DayNight, regions: unavailable", so day/night events never fired). Fixed: init waits up to 120 s (Epic A42,
+  docs/features/FOUNDATION.md). The apocalypse Admin goal was refused "admin_location": fixed (AdminFlows).
+  pillar_off for bandit-ambush is correct (Spawns ships off). units=0 was the owner's fast kills; an early-departure log
+  line now names any event unit that leaves within 60 s, with how.
+- **Six wave templates (Epic A43, design §9 D60, apocalypse A14):** militia-muster, silverlight-crusade,
+  legion-incursion, gloomrot-assault, cursed-night, realm-gauntlet (one faction per wave, each waiting for the last to be
+  cleared). In game: wave-templates.vrs PASS 54/54, faction-mix-waves.vrs 131/132 then cursed 26/26 after
+  CHAR_Cursed_Mosquito was dropped (the game removed one 10 s after spawn, cause unknown). D38 ticked. Codex PASS.
+- **Raphael:** its analysis is in the Raphael repo `docs/NYAR_FEEDBACK_2026-10-15.md` (its own items fixed in Raphael
+  0.71.0). Here: handoff API8 §7 step 7 corrected (a purge sends only `killswitch`); its requests R1-R3 (units-gone push,
+  `action=apocalypse`, the pillar in pillar_off) are in contract §8 and §10.5/§10.7 for live-ops.
+- **Not yet done:** README template tables and both CHANGELOGs (at the 0.13.0 release commit, six surfaces);
+  `v0.13.0-rc.2` test build for the G-Portal retest (tag, pre-release, `ROUND["download"]`); push.
+- **Dev server:** running (VerboseLogging back to false). Config backed up to %TEMP%
+yar-fresh-20261016 and restored
+  after the brand-new-world boot (save folder `save-data-nyarfresh` left on disk, unused).
+
 **Written 2026-10-15 (session close)**: a docs-only session, pushed to main.
 - **Raphael:** `docs/RAPHAEL_HANDOFF_API8.md` is the new handoff for the Raphael workspace (api 8 panels, refresh
   schedule, notifications, the player overlay, a test checklist). Contract §10.5-§10.9 specify the proposed live-ops
@@ -60,6 +81,9 @@ and `scaling` are pushed and equal to origin. The repo is
 
 ## Next, in order
 
+00. With the owner's OK: push d492bd5 and its docs commit, build `v0.13.0-rc.2` (step 1's recipe below) and hand it to
+    the G-Portal test (retest: day/night events, zombie-apocalypse at the admin, the new templates with the Spawns
+    pillar on).
 0. `/dod plan live-ops` (parent nyarlathotep; contract §10.5-§10.7, D59), one subagent review round; build on its own
    branch beside the test weekend.
 1. A row edit in `tools/tester-package/rows.py` needs `python tools/tester-package/build.py` (TesterPackageTests fails
