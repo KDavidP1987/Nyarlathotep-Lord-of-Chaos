@@ -47,9 +47,8 @@ public static class ControlCases
         new(Apocalypse, "D33", 5, "0.13.0"), new(Apocalypse, "D34", 5, "0.13.0"), new(Apocalypse, "D35", 5, "0.13.0"),
         // unit-watch: step 5 the release
         new(UnitWatch, "D30", 5, "0.13.0"), new(UnitWatch, "D31", 5, "0.13.0"), new(UnitWatch, "D32", 5, "0.13.0"), new(UnitWatch, "D33", 5, "0.13.0"),
-        // wave-variety: step 3 Services, templates and sessions, step 4 the release
-        new(WaveVariety, "D20", 3, "0.13.0"), new(WaveVariety, "D21", 4, "0.13.0"), new(WaveVariety, "D22", 4, "0.13.0"), new(WaveVariety, "D23", 4, "0.13.0"),
-        new(WaveVariety, "D24", 4, "0.13.0"),
+        // wave-variety: step 4 the release
+        new(WaveVariety, "D22", 4, "0.13.0"), new(WaveVariety, "D23", 4, "0.13.0"), new(WaveVariety, "D24", 4, "0.13.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -904,7 +903,7 @@ public static class ControlCases
             ["an_entry_breaks_the_rule", "a_bound_differs_from_a_prefab_entry", "growth_skips_a_pool_entry", "a_51_unit_wave_of_pool_entries_loads"],
             ["a_pool_entry_in_both_forms"], ["no_pool_key_reads_as_a_prefab_entry"]) with { Plan = WaveVariety },
         T("D3", "BossRolls", "EventValidationTests",
-            ["a_key_is_out_of_range", "a_bound_is_off_by_one", "a_0_12_0_fixed_list_is_refused_or_parses_differently", "a_roll_loads_on_an_apocalypse", "a_wave_list_beside_fanOut_loads"],
+            ["a_key_is_out_of_range", "a_bound_is_off_by_one", "a_0_12_0_fixed_list_is_refused_or_parses_differently", "a_roll_loads_on_an_apocalypse", "a_wave_list_beside_fanOut_loads", "an_accepted_roll_draws_fewer_than_its_count"],
             ["the_action_level_roll"], ["no_wave_bosses"]) with { Plan = WaveVariety },
         T("D4", "Pools", "FactionGroupsTests",
             ["a_pool_mixing_two_groups_passes", "a_pool_member_in_no_group_passes", "a_wave_drawing_from_another_groups_pool_passes_realm_gauntlets_rule"],
@@ -922,7 +921,7 @@ public static class ControlCases
             ["a_key_is_out_of_range", "a_bound_is_off_by_one", "an_event_without_the_key_parses_differently"],
             ["hunt_at_a_point"], ["no_behaviour_no_pursuit"]) with { Plan = WaveVariety },
         T("D8", "Pursue", "PursuitTests",
-            ["pursuit_starts_before_after_seconds", "pursuit_starts_with_an_eligible_player_in_the_area", "an_ineligible_player_in_the_area_holds_it", "the_clock_starts_before_the_first_waves_decision", "the_area_is_not_the_arena_else_the_hunt_range_around_the_centre", "a_player_in_claimed_territory_or_PvP_combat_is_targeted", "a_landing_is_in_claimed_territory", "a_revenge_run_targets_another_player_than_its_focus", "a_later_wave_does_not_pursue", "a_group_line_is_missing_or_repeated", "the_arena_still_returns_a_pursuing_unit", "a_unit_watch_landing_of_a_pursuing_unit_is_confined_to_the_arena", "a_waiting_pursuer_is_stall_marked", "a_line_carries_a_name_or_a_position", "a_player_at_the_last_wave_centre_between_waves_is_not_counted", "the_players_are_read_more_than_once_a_tick", "the_region_phase_does_not_hunt_a_run_the_tick_it_starts_pursuing", "the_hunt_action_seeds_a_pursuing_run_from_its_wave_centre"],
+            ["pursuit_starts_before_after_seconds", "pursuit_starts_with_an_eligible_player_in_the_area", "an_ineligible_player_in_the_area_holds_it", "the_clock_starts_before_the_first_waves_decision", "the_area_is_not_the_arena_else_the_hunt_range_around_the_centre", "a_player_in_claimed_territory_or_PvP_combat_is_targeted", "a_landing_is_in_claimed_territory", "a_revenge_run_targets_another_player_than_its_focus", "a_later_wave_does_not_pursue", "a_group_line_is_missing_or_repeated", "the_arena_still_returns_a_pursuing_unit", "a_unit_watch_landing_of_a_pursuing_unit_is_confined_to_the_arena", "a_waiting_pursuer_is_stall_marked", "a_line_carries_a_name_or_a_position", "a_player_at_the_last_wave_centre_between_waves_is_not_counted", "the_players_are_read_more_than_once_a_tick", "the_region_phase_does_not_hunt_a_run_the_tick_it_starts_pursuing", "the_hunt_action_seeds_a_pursuing_run_from_its_wave_centre", "a_run_decided_between_the_shared_checks_gains_the_unchecked_seconds"],
             ["a_run_left_alone_chases_its_player"], ["no_player_anywhere_units_stay"]) with { Plan = WaveVariety },
         T("D8", "CheckFailed", "PursuitTests",
             ["a_throwing_read_is_logged_twice_or_stops_another_events_check", "a_throwing_player_read_escapes"],
@@ -960,5 +959,14 @@ public static class ControlCases
             ["no_timed_template_in_an_empty_library"]) with { Plan = WaveVariety },
         T("D16", "Onslaught", "TemplateLibraryTests", ["a_template_breaks_the_rule"], ["the_seven_templates"],
             ["no_onslaught_in_an_empty_library"]) with { Plan = WaveVariety },
+        C("D20", "TimingSpan", "preflight -TimingSpan -Windows 10 -MinTracked 20 › Test-CheckTimingSpan",
+            ["tools/preflight-fixtures/TimingSpan/bad-avg", "tools/preflight-fixtures/TimingSpan/bad-slow", "tools/preflight-fixtures/TimingSpan/bad-tracked",
+             "tools/preflight-fixtures/TimingSpan/bad-notarget"],
+            ["tools/preflight-fixtures/TimingSpan/good"], ["tools/preflight-fixtures/TimingSpan/empty"]) with { Plan = WaveVariety },
+        C("D21", "RollbackDrill", "rollback-drill.ps1 -SelfTest (pairs and fixtures under tools/rollback-drill-fixtures)",
+            ["tools/rollback-drill-fixtures/pair-otherkey", "tools/rollback-drill-fixtures/pair-otherwavekey"],
+            ["tools/rollback-drill-fixtures/pair-pools", "tools/rollback-drill-fixtures/pair-pursuit", "tools/rollback-drill-fixtures/pair-wavebosses",
+             "tools/rollback-drill-fixtures/pair-poolentry"],
+            ["tools/rollback-drill-fixtures/empty"]) with { Plan = WaveVariety },
     ];
 }

@@ -25,6 +25,15 @@
 - feature doc read: docs/features/WAVE_VARIETY.md (Status: steps 1-2 built; Session 2 recorded the groups)
 - baseline boot: the dev server runs the rc.2 DLL from Session 2 (log check clean); step 3's sessions run on this step's Release build inside a fresh snapshot
 
+### Step 4 · 2026-10-16 · f20d98e
+- git status: clean at f20d98e but for this step's own rollback-drill fixtures and tools/rollback-drill.ps1 (built while Session 5 ran)
+- compile: 0 Warning(s), 0 Error(s); tests 3825/3825 (step 3's post-audit, same tree)
+- preflight: PREFLIGHT OK, "secrets: none (2130 files scanned, 2061 index blobs)"
+- dod status: 17/24 verified (D13, D17, D18, D19 wait on the owner; D21, D22, D23 are this step's)
+- feature doc read: docs/features/WAVE_VARIETY.md (Status: steps 1-3 built; Open questions: none)
+- baseline boot: the dev server ran the step 3 build in Session 5, log check clean; this step's one boot pair (the step 3 build, then v0.12.0, on the same events.json) ran inside snapshot wv3, restored "hashes equal"
+- session 6 log check: 0 unhandled, 220 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons (%TEMP%\nyar-wv3-logs\s6-srv; the fixed build after Codex's findings, pursuit.vrs 27/27); every [Warning read: the baseline kinds and the run's "stopped" line; no [Error
+
 ## Post-audit
 ### Step 1 · 2026-10-16 · step 1 commit (builder subagent, on a896846)
 - compile: `dotnet build Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__` 0 Warning(s), 0 Error(s)
@@ -33,7 +42,7 @@
 - built: Logic/Pools.cs (the roll, the "rolled:" line), Logic/Pursuit.cs (the rule and PursuitPhase), Model/Validation (pools, pool entries, wave and action boss rolls, pursuit), Arena, UnitWatch, HuntingGrounds and Engine (a pursuing run), FactionGroups.Problem over an action's pool members, CommandArgs/DefinitionEditor/EventAdmin/Messages (chat fields and info lines), design §6 rows, the contract sentence; Services/WaveAction already takes the roll (Pools.Resolve replaces BossWave.Units/Lead), SpawnTracker.RegionWorld implements IPursuitWorld and FocusKey
 - amendment: A1 (discovered, ~D4, layer 5.1): no authoring warning exists in `.nyar event set`; the clause is dropped
 - /code-review: 10 findings, all fixed: (1) Pools.Resolve had no production caller, pool entries would queue prefab "" (WaveAction wired, BossWave.Units/Lead removed); (2) IRegionWorld.FocusKey defaulted to null (default removed, SpawnTracker implements it); (3) between waves an AroundPlayer/Region run had no centres (last centres kept); (4) chat units lists skipped the 50-unit wave size; (5) players read once per run (now once per tick); (6) the api twin carried the shortened "<n> units" text; (7) a malformed boss pool token answered "no pool"; (8) the centre rule duplicated (Arena.LocationCentre shared); (9) as 1; (10) a dead FactionGroups overload removed
-- Codex: once per child before the release (Halloween track, design §9 D34), in step 4
+- Codex verdict: deferred to step 4 (the child's single cross-inspection, design §9 D34)
 - planted faults: 17 lines in docs/dod/wave-variety.md › Log, each failed with its fault and passed after the copy back
 - left for step 3: PursuitPhase.Tick in the scheduler, EventEnded/Clear on every end path, the health entry, the dependency suite, HuntAction's map-wide seeds for a pursuing run
 - in-game: none in this step (Logic); pursuit and rolls in game are step 3's sessions (D17, D18)
@@ -44,6 +53,7 @@
 - built: Logic/FactionGroups.cs grows every group to the recorded allied units and adds blackfangs (Faction_Blackfangs); FactionGroupsTests Recorded reads docs/GAME_ASSETS.md (copied into the test output); the apocalypse theory case for CHAR_Legion_Shadowkin_Lesser now expects "mixes the undead and legion groups" (it joined the legion group)
 - compile: 0 Warning(s), 0 Error(s); tests Passed! 3784/3784; planted: a ShadowSoldier added to the undead group fails all four Recorded tests, passes after the copy back
 - /code-review: in step 3's review of the child's diff (this step adds data and one test class)
+- Codex verdict: deferred to step 4 (the child's single cross-inspection, design §9 D34)
 ### Step 3 · 2026-10-16 · step 3 commit
 - compile: `dotnet build Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__` 0 Warning(s), 0 Error(s)
 - tests: Passed! 3825/3825 (3784 before)
@@ -57,4 +67,5 @@
 - session 5 log check: 0 unhandled, 1061 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons (%TEMP%\nyar-wv3-logs\s5-srv); every [Warning read in all three: the baseline kinds and the runs' "stopped" lines; no [Error; NyarDev.log holds only the game's "Prefab … is in an unknown state" warnings
 - snapshot: wv3 restored after Session 5, "snapshot restored; hashes equal"; VerboseLogging back to false
 - owner: D19 (the feel of pursuit and the rolls) waits on the owner (rubric 3, never self-accepted)
+- Codex verdict: deferred to step 4 (the child's single cross-inspection, design §9 D34)
 - docs: %TEMP% paths that an earlier shell edit had mangled were repaired in docs/features/WAVE_VARIETY.md, docs/audits/wave-variety.md, docs/SESSION_HANDOFF.md, docs/dod/event-spawns.reviews.md, docs/dod/unit-watch.md (Log only), docs/features/APOCALYPSE.md and docs/features/UNIT_WATCH.md

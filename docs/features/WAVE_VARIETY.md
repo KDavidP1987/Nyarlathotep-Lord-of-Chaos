@@ -18,7 +18,7 @@ Three additions to SpawnWaves events, each off until a definition uses it:
 - **Wave bosses** (`action.waveList[n].bosses`, 1-3 entries, at most 5 bosses): any wave may bring bosses, fixed or
   rolled; the action-level `bosses` stays the final wave's.
 
-Fourteen new templates use them: seven timed (`<base>-timed`, a fixed 60-90 s beat, pursuit after 60 s) and seven
+Fourteen new templates use them: seven timed (`<base>-timed`, a fixed 75 s beat, pursuit after 60 s) and seven
 onslaught (`<faction>-onslaught`, pools at about 1.5 times the base counts, one rolled boss mid-run and one or two at
 the end).
 
@@ -164,3 +164,16 @@ TimingLog on. Three runs of `tools/vrclient/scenarios/pursuit.vrs`, all SCENARIO
   "16 valid, 6 disabled": "unknown field action.pursuit", "unknown field action.waveList.2.bosses", "unknown field
   action.pools" for both pools definitions, and the dev world's apo-admin "durationSeconds must be 30-7200" (the limit
   apocalypse raised); then the wv3 snapshot was restored ("hashes equal", VerboseLogging back to false).
+
+### Session 6 · 2026-10-16 · step 4 build after Codex's fixes · vrclient as Chaos on the local dev server
+
+Codex's cross-inspection found two faults, both fixed before this session: boss rolls on shared pools could draw fewer
+bosses than their `min` (validation now refuses such a list), and a run started between two pursuit checks could turn
+on up to 5 s early (the clock now starts only at its first empty check).
+
+- **D17** `pursuit.vrs` → **SCENARIO PASS 27/27** (%TEMP%\vrclient\results\pursuit-20261016-155317.json): "pursuit: on,
+  no player within 25 m for 20 s", a unit of the run within 60 m of Chaos after 60 s, none near home, "tracked units: 0"
+  after the stop.
+- Log check: 0 unhandled, 220 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons (copy in
+  %TEMP%\nyar-wv3-logs\s6-srv); [Warning lines: the baseline kinds and the run's "stopped" line; no [Error. Snapshot
+  wv4 restored ("hashes equal"), so the dev server holds the step 3 DLL again.

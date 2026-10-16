@@ -71,6 +71,7 @@ public partial class PrivacyTests
         var world = new ChaseWorld();
         world.Add(1, 4000f, 8000f);
         var pursuit = new PursuitPhase();
+        pursuit.Tick(Now.AddSeconds(5), [active], world, lines.Add, lines.Add);           // the first empty check starts the clock
         pursuit.Tick(Now.AddSeconds(30), [active], world, lines.Add, lines.Add);
         Assert.True(active.Pursuing);
         var hunt = new HuntPhase();
@@ -88,7 +89,7 @@ public partial class PrivacyTests
     {
         var lines = WaveVarietyLines();
         Assert.Contains(lines, l => l.StartsWith("event wv wave 3/3 rolled: ", StringComparison.Ordinal));
-        Assert.Contains($"event wv pursuit: on, no player within 30 m for 30 s", lines);
+        Assert.Contains($"event wv pursuit: on, no player within 30 m for 25 s", lines);
         Assert.Contains("event wv pursuit: group 1.0 on a player", lines);
         Assert.Contains("pursuit wx: check failed: player query failed", lines);
         Assert.Contains(PursuitPhase.Failing, lines);

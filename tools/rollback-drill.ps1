@@ -59,7 +59,11 @@
     pair-othertrigger2 ("unknown trigger type Swarmz", a type no release has): fail; three for apocalypse (D32, A13):
     pair-apocalypse ("durationSeconds must be 30-7200", 0.12.0's refusal of a 14400 s Apocalypse) and pair-apocalypse-short
     ("unknown action type Apocalypse"): pass, and pair-otheraction ("unknown action type Ritual", a type no release has):
-    fail → "drill selftest: 32/32".
+    fail; five for wave-variety (D21): pair-pools ("unknown field action.pools"), pair-pursuit ("unknown field
+    action.pursuit"), pair-wavebosses ("unknown field action.waveList.2.bosses") and pair-poolentry (a pool entry needs
+    action.pools, so 0.12.0 names that key first): pass, and pair-otherwavekey ("unknown field action.waveList.2.loot", a
+    key no release has): fail → "drill selftest: 37/37". Each reason is 0.12.0's own, read from a boot of v0.12.0 on
+    the four definitions (docs/audits/wave-variety.md, step 4).
 
     -LogsTo <dir> keeps the logs of N's drill-mark boot and N-1's boot there as N.txt and N-1.txt.
 #>
@@ -116,7 +120,7 @@ function Get-DisabledLines([string]$Text) {
 # Point gets the same text from 0.6.0 but is disabled by N too, so it is never an extra (Codex step 4 F2). Hunting-grounds
 # (D29) adds regionLock, the RegionHunt behaviour type (0.10.0: "unknown behaviour type RegionHunt") and 0.10.0's
 # three-type location rule, its refusal of a Region location.
-$script:NewerKeyReasons = '^(unknown field action\.(modifiers|loot|behaviour|allowTerritory|units\.chance|fanOut|waveList|scoreboard|arena|winner|growth|regionLock|bosses)|unknown behaviour type RegionHunt|action\.location must be \{ "type": "Point", "x": number, "z": number, optional "y": number \} or \{ "type": "Admin" \}|action\.location must be \{ "type": "Point", "x": number, "z": number, optional "y": number \}, \{ "type": "Admin" \} or \{ "type": "AroundPlayer", "minDist": 10-60, "maxDist": 15-80 \})$'
+$script:NewerKeyReasons = '^(unknown field action\.(modifiers|loot|behaviour|allowTerritory|units\.chance|fanOut|waveList|scoreboard|arena|winner|growth|regionLock|bosses|pools|pursuit|waveList\.\d+\.bosses)|unknown behaviour type RegionHunt|action\.location must be \{ "type": "Point", "x": number, "z": number, optional "y": number \} or \{ "type": "Admin" \}|action\.location must be \{ "type": "Point", "x": number, "z": number, optional "y": number \}, \{ "type": "Admin" \} or \{ "type": "AroundPlayer", "minDist": 10-60, "maxDist": 15-80 \})$'
 
 # The trigger types automation added (D23): 0.7.0 refuses each with "unknown trigger type <T>".
 $script:NewerTriggerReasons = '^unknown trigger type (Interval|RegionEntered|FactionKills|Revenge)$'
@@ -214,7 +218,9 @@ if ($SelfTest) {
         @{ Name = 'pair-arena'; Pass = $true }, @{ Name = 'pair-winner'; Pass = $true }, @{ Name = 'pair-growth'; Pass = $true },
         @{ Name = 'pair-regionlock'; Pass = $true }, @{ Name = 'pair-regionhunt'; Pass = $true }, @{ Name = 'pair-regionlocation'; Pass = $true },
         @{ Name = 'pair-revenge'; Pass = $true }, @{ Name = 'pair-bosses'; Pass = $true }, @{ Name = 'pair-othertrigger2'; Pass = $false },
-        @{ Name = 'pair-apocalypse'; Pass = $true }, @{ Name = 'pair-apocalypse-short'; Pass = $true }, @{ Name = 'pair-otheraction'; Pass = $false })
+        @{ Name = 'pair-apocalypse'; Pass = $true }, @{ Name = 'pair-apocalypse-short'; Pass = $true }, @{ Name = 'pair-otheraction'; Pass = $false },
+        @{ Name = 'pair-pools'; Pass = $true }, @{ Name = 'pair-pursuit'; Pass = $true }, @{ Name = 'pair-wavebosses'; Pass = $true },
+        @{ Name = 'pair-poolentry'; Pass = $true }, @{ Name = 'pair-otherwavekey'; Pass = $false })
     foreach ($pair in $pairs) {
         $pn = Join-Path $fx "$($pair.Name)\N.txt"; $pn1 = Join-Path $fx "$($pair.Name)\N-1.txt"
         $r = if ((Test-Path -LiteralPath $pn) -and (Test-Path -LiteralPath $pn1)) {

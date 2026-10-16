@@ -203,7 +203,9 @@ public sealed class PursuitPhase
         {
             if (!Pursuit.Configured(a) || a.Pursuing || a.Definition.Action is not { Pursuit: { } pursuit } action || a.Decided.Count == 0)
                 return null;
-            if (!_quietSince.TryGetValue(a.Id, out var since)) _quietSince[a.Id] = since = a.Decided[0].DecidedUtc;
+            // A new run starts with the clock stopped: its first check with nobody starts it, whenever the shared 5 s
+            // check falls after the first wave's decision (Codex wave-variety F2).
+            if (!_quietSince.TryGetValue(a.Id, out var since)) _quietSince[a.Id] = since = Seen;
             var focusOnly = WaveFacts.IsFocusOnly(a.Definition);
             var focus = focusOnly ? world.FocusKey(a) : null;
             var read = players().Select(p => p with { InTerritory = p.InTerritory || world.IsClaimed(a.Id, p.X, p.Z) }).ToList();

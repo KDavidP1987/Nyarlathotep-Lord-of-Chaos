@@ -220,7 +220,23 @@ public class PursuitTests
         Assert.Null(r.Until(0, 60, a));
         Assert.Null(r.Phase.QuietSince("pv"));
         a.Record(T0.AddSeconds(60), fought: true);
-        Assert.Equal(80, r.Until(65, 120, a));
+        Assert.Equal(85, r.Until(65, 120, a));                 // the first empty check (65 s) starts it, not the decision (60 s)
+    }
+
+    [Fact]
+    public void Pursue_fails_when_a_run_decided_between_the_shared_checks_gains_the_unchecked_seconds()
+    {
+        // Codex wave-variety F2: pa sets the shared 5 s grid at 0; pb, after 17 s, is decided at 1 s. Its first check (5 s)
+        // starts its clock, so it pursues at the first check 17 s after that (25 s), never at 20 s (19 s after the decision).
+        var r = new Rig();
+        var pa = Run(Def("pa", after: 600));
+        var pb = Run(Def("pb", after: 17), decided: false);
+        r.Tick(T0, pa, pb);
+        pb.Record(T0.AddSeconds(1), fought: true);
+        for (var s = 5; s <= 20; s += Pursuit.CheckSeconds)
+            Assert.DoesNotContain(r.Tick(T0.AddSeconds(s), pa, pb), c => c.Started);
+        Assert.Equal(T0.AddSeconds(5), r.Phase.QuietSince("pb"));
+        Assert.Contains(r.Tick(T0.AddSeconds(25), pa, pb), c => c.Started && c.EventId == "pb");
     }
 
     [Fact]

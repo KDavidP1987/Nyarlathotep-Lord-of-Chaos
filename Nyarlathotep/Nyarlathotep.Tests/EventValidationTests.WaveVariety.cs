@@ -40,6 +40,11 @@ public partial class EventValidationTests
     const string Elite = "{ \"elite\": " + "[ \"CHAR_Pool_01\", \"CHAR_Pool_02\", \"CHAR_Pool_03\" ] }";
     const string Bosspool = "{ \"elite\": [ \"CHAR_Pool_01\", \"CHAR_Pool_02\", \"CHAR_Pool_03\" ], " +
                             "\"lords\": [ \"CHAR_Pool_11\", \"CHAR_Pool_12\", \"CHAR_Pool_13\", \"CHAR_Pool_14\", \"CHAR_Pool_15\" ] }";
+    // elite and a pool sharing CHAR_Pool_03 with it (Codex wave-variety F1: rolls draw in order, from what is left)
+    const string Overlap = "{ \"elite\": [ \"CHAR_Pool_01\", \"CHAR_Pool_02\", \"CHAR_Pool_03\" ], \"mixed\": [ \"CHAR_Pool_03\", \"CHAR_Pool_11\" ] }";
+    // three pools sharing CHAR_Pool_01 (Codex wave-variety re-check): two earlier rolls can take it only once
+    const string Shared = "{ \"elite\": [ \"CHAR_Pool_01\", \"CHAR_Pool_02\", \"CHAR_Pool_03\" ], \"a\": [ \"CHAR_Pool_01\", \"CHAR_Pool_11\" ], " +
+                          "\"b\": [ \"CHAR_Pool_01\", \"CHAR_Pool_12\" ], \"c\": [ \"CHAR_Pool_01\", \"CHAR_Pool_13\", \"CHAR_Pool_14\" ] }";
 
     static string PWave(string units = "[ { \"pool\": \"elite\", \"count\": 2 } ]", string? keys = null) =>
         "{ \"units\": " + units + (keys is null ? "" : ", " + keys) + " }";
@@ -280,6 +285,9 @@ public partial class EventValidationTests
         [BossWaves(Fixed("CHAR_Pool_11", 3) + ", " + Fixed("CHAR_Pool_12", 3)), EventValidator.BossesMost("action.waveList.1.bosses")],
         [BossWaves(Roll("elite", 1, 4)), EventValidator.RollPastPool("action.waveList.1.bosses.1", "elite")],
         [BossWaves(Fixed("CHAR_Pool_01", 1) + ", " + Roll("elite", 1, 3)), EventValidator.RollPastPool("action.waveList.1.bosses.2", "elite")],
+        [BossWaves(Roll("elite", 2, 2) + ", " + Roll("elite", 2, 2), pools: Elite), EventValidator.RollPastPool("action.waveList.1.bosses.2", "elite")],
+        [BossWaves(Roll("elite", 1, 3) + ", " + Roll("mixed", 1, 2), pools: Overlap), EventValidator.RollPastPool("action.waveList.1.bosses.2", "mixed")],
+        [BossWaves(Roll("a", 1, 1) + ", " + Roll("b", 1, 1) + ", " + Roll("c", 3, 3), pools: Shared), EventValidator.RollPastPool("action.waveList.1.bosses.3", "c")],
         [BossWaves(Roll("elite", 1, 1), "\"bosses\": [ " + Fixed("CHAR_Pool_11", 1) + " ]", "\"bosses\": [ " + Fixed("CHAR_Bandit_Tourok_VBlood", 1) + " ]"),
             EventValidator.BossesBothLast(2)],
         [PoolUnitsAction(Bosspool, "[ { \"pool\": \"elite\", \"count\": 2 } ]", "\"bosses\": [ " + Fixed("CHAR_Pool_01", 3) + ", " + Roll("lords", 1, 3) + " ]"),
@@ -306,6 +314,27 @@ public partial class EventValidationTests
         Loads(BossWaves(Fixed("CHAR_Pool_01", 1) + ", " + Roll("elite", 1, 2), pools: Elite));                       // the size less the fixed one
         Loads(BossWaves(Fixed("CHAR_Pool_11", 1) + ", " + Roll("elite", 1, 3), pools: Elite));                       // a fixed boss of another pool takes nothing
         Loads(BossWaves(Roll("elite", 1, 1), "\"bosses\": [ " + Fixed("CHAR_Pool_11", 1) + ", " + Roll("lords", 1, 4) + " ]"));
+        Loads(BossWaves(Roll("elite", 1, 1) + ", " + Roll("elite", 2, 2), pools: Elite));                                         // 1 + 2 = the pool's 3
+        Loads(BossWaves(Roll("elite", 1, 3) + ", " + Roll("mixed", 1, 1), pools: Overlap));                          // elite may take CHAR_Pool_03, CHAR_Pool_11 is left
+        Loads(BossWaves(Roll("a", 1, 1) + ", " + Roll("b", 1, 1) + ", " + Roll("c", 2, 2), pools: Shared));          // a and b take CHAR_Pool_01 once at most
+    }
+
+    [Fact]
+    public void BossRolls_fails_when_an_accepted_roll_draws_fewer_than_its_count()
+    {
+        // Codex wave-variety F1: every list the validator accepts gives each roll its count, whatever the draws
+        foreach (var (bosses, pools, want) in new[] { (Roll("elite", 1, 1) + ", " + Roll("elite", 2, 2), Elite, 3),
+                     (Roll("elite", 3, 3) + ", " + Roll("mixed", 1, 1), Overlap, 4), (Roll("mixed", 1, 1) + ", " + Roll("elite", 2, 2), Overlap, 3),
+                     (Roll("a", 1, 1) + ", " + Roll("b", 1, 1) + ", " + Roll("c", 2, 2), Shared, 4) })
+        {
+            var d = Loads(BossWaves(bosses, pools: pools));
+            for (var seed = 0; seed < 200; seed++)
+            {
+                var draw = Pools.Resolve(d.Action!, 1, new SystemRandom(new Random(seed)));
+                Assert.Equal(want, draw.Bosses.Count);
+                Assert.Equal(want, draw.Bosses.Select(b => b.Prefab).Distinct().Count());
+            }
+        }
     }
 
     [Fact]

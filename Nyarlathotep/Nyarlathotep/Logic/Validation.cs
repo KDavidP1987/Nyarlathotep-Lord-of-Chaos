@@ -932,7 +932,8 @@ public static class EventValidator
 
     /// <summary>A bosses list at <paramref name="path"/> (wave-variety D3): 1-3 entries, each a fixed boss { prefab, count
     /// 1-3, modifiers? } or a roll { pool, min 1-5, max min-5, modifiers? }, at most 5 bosses in all (counts and maxima), a
-    /// roll's max at most its pool's size less the list's fixed bosses from that pool. The action-level list of fixed
+    /// roll's max at most its pool's size less the list's fixed bosses from that pool and less the most each earlier roll
+    /// can take from the members they share, so every roll always draws its count. The action-level list of fixed
     /// bosses only is revenge D28's, parsed by <see cref="ParseBosses"/> exactly as 0.12.0 does.</summary>
     static IReadOnlyList<BossRoll> ParseBossList(JsonElement b, string path, IUnitCatalog units, FanOut? fanOut,
         IReadOnlyDictionary<string, IReadOnlyList<string>>? pools, bool waveLevel)
@@ -966,14 +967,43 @@ public static class EventValidator
             list.Add(BossRoll.Fixed(prefab, count, Modifiers()));
         }
         if (list.Sum(e => e.MostBosses) > MaxWaveBosses) throw new Fail(BossesMost(path));
+        var fixedBosses = list.Where(e => !e.IsRoll).Select(e => e.Prefab).ToHashSet(StringComparer.Ordinal);
         for (var i = 0; i < list.Count; i++)
         {
             if (list[i] is not { Pool: { } name } roll) continue;
-            var members = pools![name];
-            var held = list.Where(e => !e.IsRoll && members.Contains(e.Prefab)).Select(e => e.Prefab).Distinct().Count();
-            if (roll.Max > members.Count - held) throw new Fail(RollPastPool($"{path}.{i + 1}", name));
+            var free = pools![name].Where(p => !fixedBosses.Contains(p)).ToHashSet(StringComparer.Ordinal);
+            // The rolls draw in list order (Pools.Resolve), so the earlier rolls may take some of this one's members
+            // (Codex wave-variety F1): what is left must still cover this roll's max, at the worst the earlier draws allow.
+            var taken = MostTaken(list.Take(i).Where(e => e.IsRoll).Select(e => (e.Max, pools[e.Pool!])), free);
+            if (roll.Max > free.Count - taken) throw new Fail(RollPastPool($"{path}.{i + 1}", name));
         }
         return list;
+    }
+
+    /// <summary>The most of <paramref name="members"/> that <paramref name="rolls"/>, each drawing up to Max distinct
+    /// prefabs of its pool, can take together: a maximum matching of the rolls' draws to the members they share (a member
+    /// shared by two earlier pools is taken once). At most 3 rolls of 5 draws over 30 members.</summary>
+    static int MostTaken(IEnumerable<(int Max, IReadOnlyList<string> Pool)> rolls, IReadOnlySet<string> members)
+    {
+        var draws = rolls.SelectMany(r => Enumerable.Repeat(r.Pool.Where(members.Contains).ToList(), r.Max)).ToList();
+        var holder = new Dictionary<string, int>(StringComparer.Ordinal);
+        bool Place(int d, HashSet<string> seen)
+        {
+            foreach (var m in draws[d])
+            {
+                if (!seen.Add(m)) continue;
+                if (!holder.TryGetValue(m, out var other) || Place(other, seen))
+                {
+                    holder[m] = d;
+                    return true;
+                }
+            }
+            return false;
+        }
+        var taken = 0;
+        for (var d = 0; d < draws.Count; d++)
+            if (Place(d, [])) taken++;
+        return taken;
     }
 
     /// <summary>The wave-level bosses' action rules (wave-variety D3): never beside fanOut, and the last wave's own list

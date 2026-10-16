@@ -34,6 +34,17 @@ with no file edits.
     group, or, as realm-gauntlet, each wave is one group and waits for the last to be cleared, so two groups are never
     alive together. An admin who gives a mixed template an `afterSeconds` makes that choice for their own server; the
     shipped catalogue never does.
+- **Timed and onslaught templates (0.13.0, wave-variety, design §9 D61):** fourteen more Manual spawns templates on the
+  same pattern, each pursuing the players after 60 s with nobody in the arena (`action.pursuit`). The full tables are in
+  `docs/features/WAVE_VARIETY.md` › The fourteen templates.
+  - Timed, one per wave faction: `spider-swarm-timed`, `graveyard-waves-timed`, `militia-muster-timed`,
+    `silverlight-crusade-timed`, `legion-incursion-timed`, `gloomrot-assault-timed`, `cursed-night-timed`. The next wave
+    comes on a fixed 75 s beat whether or not the last is cleared, so the waves pile up on slow players.
+  - Onslaughts: `spider-onslaught`, `undead-onslaught`, `militia-onslaught`, `silverlight-onslaught`,
+    `legion-onslaught`, `gloomrot-onslaught`, `cursed-onslaught`. Each wave rolls its units from the template's named
+    pools (`action.pools`, one allied group), and bosses roll mid-run and at the end (a wave's `bosses`, `min`-`max`
+    from a pool of V Bloods), so no two runs look the same. They keep the same 75 s beat.
+  - realm-gauntlet has no timed variant: its waves are different groups and must never be alive together.
 - **Template commands:** `.nyar template list [pillar] [page]`, `.nyar template info <id>` and
   `.nyar template use <t> [as <id>]` (the last writes a disabled copy).
 - **Authoring commands:**
