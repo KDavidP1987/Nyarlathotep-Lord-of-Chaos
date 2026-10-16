@@ -219,6 +219,27 @@ record's write times sampled every 20 s by `tools/vrclient/soak-sampler.ps1` (so
   d88dbbc on logs the step's parts ("slow step: …") when a step takes 250 ms or more, so a repeat names its part
 - D30 waits on the owner's acceptance of this record (rubric 3), the slow tick included.
 
+### Session 4 · 2026-10-16 · the 0.13.0 work after the G-Portal test (local build, uncommitted on f01f18f) · vrclient as Chaos on the local dev server
+
+Dev cfg for the session: VerboseLogging true (restored to false afterwards). Logs copied to %TEMP%
+yar-logs-20261016-*.
+
+- **Admin goal (fix):** `tools/vrclient/scenarios/wave-templates.vrs` run 2 SCENARIO PASS 54/54
+  (`wave-templates-20261016-012328.json`). `.nyar template use zombie-apocalypse as apo-admin`, enable, start at the pond:
+  "event apo-admin started by manual", no `admin_location` refusal (G-Portal, 2026-10-15: `code=badarg arg=location
+  reason=admin_location`); stopped: "12 units queued, 0 spawns cancelled".
+- **D38 as amended by D60 (A14):** `tools/vrclient/scenarios/faction-mix-waves.vrs` run 1 131/132
+  (`faction-mix-waves-20261016-004501.json`): militia, church, legion and gloomrot passed whole, no unit killed by its
+  own group and every count held after 60 s. The one failure was one `CHAR_Cursed_Mosquito` that the game removed about
+  10 s after its spawn, with no death; the mosquito was dropped from cursed-night and from the group, and the cursed pass
+  alone (`faction-mix-waves-cursed.vrs`) then passed 26/26 (`faction-mix-waves-cursed-20261016-005919.json`). Record:
+  docs/GAME_ASSETS.md › Faction compatibility.
+- **realm-gauntlet (D60):** the same wave-templates run: waves 1-5 (bandits 8, undead 8, militia 9, gloomrot 9, church
+  8 plus `CHAR_ChurchOfLight_Overseer_VBlood`) each queued only after "wave <n> cleared", never two factions alive
+  together, ending "all waves defeated (5 of 5 waves)". Run 1 failed only its own expectation (the last wave's queued
+  count includes its V Blood: 9, not 8).
+- Logs: no Nyarlathotep error; the warnings were the stop lines and the dev events.json's own example-empowerment line.
+
 ### Test weekend · about 2026-10-24/25 · the owner with the players (D31)
 
 **Sheet.** Install the Release build of the step-3 commit (`Nyarlathotep.dll` from `Nyarlathotep/Nyarlathotep/bin/Release/net6.0/`)

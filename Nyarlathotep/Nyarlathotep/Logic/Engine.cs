@@ -391,7 +391,7 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
         if (def.Action?.Location.Type == LocationType.Admin && origin is null)
             return Outcome.Refused($"event {id} spawns at the admin: start it with .nyar event start", RefusalCode.BadArg, "location", reason: Reasons.AdminLocation);
         if (def.Apocalypse?.Goal.Location.Type == LocationType.Admin && origin is null)
-            return Outcome.Refused($"event {id} marches on the admin: start it with .nyar event start", RefusalCode.BadArg, "location", reason: Reasons.AdminLocation);
+            return Outcome.Refused($"event {id} marches on the admin who starts it: only an admin's .nyar event start can start it", RefusalCode.BadArg, "location", reason: Reasons.AdminLocation);
         var outside = ScopeGate.AdminOutside(def, origin, controls);
         if (outside is not null) return outside;
         var scoped = ScopeGate.TriggerBlocker(def, controls, kill);

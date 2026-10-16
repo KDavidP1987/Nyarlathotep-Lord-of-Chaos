@@ -1,0 +1,97 @@
+# faction-mix-waves-cursed.vrs: the cursed pass of faction-mix-waves.vrs alone, rerun 2026-10-16 after CHAR_Cursed_Mosquito was dropped.
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+# pass cursed (allied)
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 5
+console ToggleInvulnerable true
+wait 1
+chat .devmark mix-cursed
+expect-log \[DEV MARK\] mix-cursed
+chat .nyar spawn CHAR_Cursed_Wolf 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Cursed_ToadSpitter 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Cursed_MonsterToad 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Cursed_Nightlurker 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Cursed_Bear_Standard 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Cursed_WormTerror 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Cursed_Witch 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Cursed_Wolf_Spirit 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Cursed_Bear_Spirit 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Cursed_Witch_VBlood 1
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+wait 3
+chat .devtp -1840 -1640
+expect-log \[DEV TP\] to
+wait 2
+mark
+wait 60
+expect-no-log \[nyar\] CHAR_\S+ of \S+ died \(killer CHAR_Cursed_ timeout=1
+chat .devunits -218175217 60 mix-cursed
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-218175217
+chat .devunits 1478790879 60 mix-cursed
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=1478790879
+chat .devunits 575918722 60 mix-cursed
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=575918722
+chat .devunits -2046268156 60 mix-cursed
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-2046268156
+chat .devunits -559819989 60 mix-cursed
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-559819989
+chat .devunits 658578725 60 mix-cursed
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=658578725
+chat .devunits -56441915 60 mix-cursed
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-56441915
+chat .devunits 407089231 60 mix-cursed
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=407089231
+chat .devunits 1105583702 60 mix-cursed
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=1105583702
+chat .devunits -910296704 60 mix-cursed
+expect-log \[DEV UNITS\] n=([1-9]|[1-9][0-9]) prefab=-910296704
+shot full mix-cursed
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 3
+chat .devkill -218175217 60
+chat .devkill 1478790879 60
+chat .devkill 575918722 60
+chat .devkill -2046268156 60
+chat .devkill -559819989 60
+chat .devkill 658578725 60
+chat .devkill -56441915 60
+chat .devkill 407089231 60
+chat .devkill 1105583702 60
+chat .devkill -910296704 60
+wait 3
+chat .devkill -218175217 60
+chat .devkill 1478790879 60
+chat .devkill 575918722 60
+chat .devkill -2046268156 60
+chat .devkill -559819989 60
+chat .devkill 658578725 60
+chat .devkill -56441915 60
+chat .devkill 407089231 60
+chat .devkill 1105583702 60
+chat .devkill -910296704 60
+wait 3

@@ -29,7 +29,7 @@ public partial class TemplateLibraryTests
             "CHAR_Militia_Light", "CHAR_Militia_Crossbow", "CHAR_Spider_Forest", "CHAR_Spider_Forestling", "CHAR_Spider_Melee", "CHAR_Spider_Range",
             "CHAR_Spider_Queen_VBlood", "CHAR_Bandit_Deadeye",
             "CHAR_Undead_GhostMilitia_Light", "CHAR_Undead_GhostBanshee", "CHAR_Undead_BishopOfDeath_VBlood" }
-            .Concat(BanditVBloods).Concat(MilitiaVBloods).Concat(extra).ToArray()) { Regions = FakeRegions.All() };
+            .Concat(BanditVBloods).Concat(MilitiaVBloods).Concat(WavePrefabs).Concat(extra).ToArray()) { Regions = FakeRegions.All() };
 
     internal static string RealText => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Resources", "templates.json"));
     internal static byte[] Bytes(string text) => System.Text.Encoding.UTF8.GetBytes(text);
@@ -136,7 +136,7 @@ public partial class TemplateLibraryTests
     static List<string> Differences(TemplateCatalog c)
     {
         var diffs = new List<string>();
-        var total = Expected.Length + AutomationExpected.Length + 5;                // the six starters, automation D18's three, graveyard-waves, spider-swarm, spider-hunting-grounds, bandit-revenge, zombie-apocalypse
+        var total = Expected.Length + AutomationExpected.Length + 5 + 6;            // the six starters, automation D18's three, graveyard-waves, spider-swarm, spider-hunting-grounds, bandit-revenge, zombie-apocalypse, Epic A43's six wave templates
         if (c.Templates.Count != total) diffs.Add($"{c.Templates.Count} templates, not {total}");
         foreach (var e in Expected)
         {
@@ -235,12 +235,12 @@ public partial class TemplateLibraryTests
         else rising["action"]!["modifiers"]!["levelDelta"] = 6;                     // outside D6's -5..5
         var c = TemplateCatalog.Load(Bytes(root.ToJsonString()), Units(), Units());
         Assert.Contains(TemplateCatalog.Problems(c, DefaultIds()), p => p.StartsWith(problem, StringComparison.Ordinal));
-        Assert.Empty(TemplateCatalog.Problems(Real(), DefaultIds()));                // "templates: 14/14 valid", all disabled
+        Assert.Empty(TemplateCatalog.Problems(Real(), DefaultIds()));                // "templates: 20/20 valid", all disabled
     }
 
     [Fact]
     public void StarterTemplates_empty_no_templates() =>
-        Assert.Contains("0 templates, not 14", Differences(TemplateCatalog.Load(Bytes("{\"SchemaVersion\":1,\"events\":[]}"), Units(), Units())));
+        Assert.Contains("0 templates, not 20", Differences(TemplateCatalog.Load(Bytes("{\"SchemaVersion\":1,\"events\":[]}"), Units(), Units())));
 
     // ---- automation D18: roaming-hunters, border-watch, bandit-reprisal
 
@@ -285,7 +285,7 @@ public partial class TemplateLibraryTests
         Assert.Empty(AutomationDifferences(c));
         var lines = new List<string>();
         TemplateCatalog.Boot(Bytes(RealText), Units(), Units(), lines.Add, lines.Add);
-        Assert.Contains("templates: 14/14 valid", lines);
+        Assert.Contains("templates: 20/20 valid", lines);
     }
 
     [Theory]
@@ -321,7 +321,7 @@ public partial class TemplateLibraryTests
         {
             var lines = new List<string>();
             TemplateCatalog.Boot(Bytes(root.ToJsonString()), Units(), Units(), lines.Add, lines.Add);
-            Assert.DoesNotContain("templates: 14/14 valid", lines);
+            Assert.DoesNotContain("templates: 20/20 valid", lines);
         }
     }
     [Fact]

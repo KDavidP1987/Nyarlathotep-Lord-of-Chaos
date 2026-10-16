@@ -197,6 +197,7 @@ internal static class SpawnTracker
         var tracked = _ledger.Find(key);                                     // read before Forget, for the watch's stall clock
         if (!_ledger.Forget(key)) return;
         WatchDied(key, tracked);
+        if (tracked is not null) Early(tracked, "died" + KillerText(killer));
         try { Left(key, Settings.VerboseLogging.Value ? "died" + KillerText(killer) : "died"); }
         finally { Departed(key, UnitDeparture.Died); Release(key); }
     }
@@ -214,6 +215,18 @@ internal static class SpawnTracker
             return text + ")";
         }
         catch { return " (killer unreadable)"; }
+    }
+
+    static readonly EarlyDepartureLog _early = new();
+
+    /// <summary>The early-departure diagnostic (Logic/EarlyDepartureLog): logged whatever VerboseLogging says. Never throws.</summary>
+    static void Early(TrackedUnit unit, string how)
+    {
+        try
+        {
+            if (_early.Line(unit, how, DateTime.UtcNow) is { } line) Core.Log.LogInfo($"[nyar] {line}");
+        }
+        catch { /* a diagnostic line never stops the release */ }
     }
 
     /// <summary>A66: with VerboseLogging, a tracked unit leaving the ledger outside a despawn says so. Never throws.</summary>
@@ -277,9 +290,11 @@ internal static class SpawnTracker
         Regroup();
 
         // Units the game removed on its own (LifeTime ran out, DestroyWhenDisabled) leave the ledger here.
-        foreach (var gone in _ledger.Units.Where(u => !_entities.TryGetValue(u.Key, out var e) || !e.Exists()).Select(u => u.Key).ToList())
+        foreach (var goneUnit in _ledger.Units.Where(u => !_entities.TryGetValue(u.Key, out var e) || !e.Exists()).ToList())
         {
+            var gone = goneUnit.Key;
             _ledger.Forget(gone);
+            Early(goneUnit, "removed by the game");
             try { Left(gone, "removed by the game"); }
             finally { Departed(gone, UnitDeparture.Removed); Release(gone); }
         }

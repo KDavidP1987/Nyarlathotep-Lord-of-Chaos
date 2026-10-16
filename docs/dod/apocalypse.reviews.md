@@ -428,3 +428,40 @@ VERDICT: READY
 ### Dispositions
 - F1 · accepted · deferred to the Log (advice on a READY review, no plan text edited): `note · deferred · Review 10 F1`, step 5 names pair-apocalypse-short in Paths walked when it adds the fixture
 - F2 · accepted · deferred to the Log: `note · deferred · Review 10 F2`, rollback-drill.ps1 says beside the duration reason that it is accepted only because N raises the limit for Apocalypse alone
+
+## Review 11 · 2026-10-16 · subagent · plan uncommitted · plan 128082 B · 38 items · files 0 · e3b0c44298fc · prompt c4d4227e6903 · scope A14
+Scope: A14 (design §9 D60: D38 lets a SpawnWaves template mix allied groups across serial waves).
+
+L1 · Considered · no finding
+L2 · Considered · no finding
+L3 · Considered · no finding
+L4 · Considered · F2, F4
+L5 · Considered · no finding
+L6 · Considered · F1
+L7 · Considered · F3
+L8 · Considered · no finding
+L9 · Considered · F4
+L10 · Considered · no finding
+L11 · Considered · no finding
+L12 · Considered · F5
+L13 · Considered · no finding
+L14 · Considered · no finding
+L15 · Considered · no finding
+
+F1 · advisory · 6.1: A14 amends D38 but not D37; D37's mixes list names only the undead, spider, bandit and militia (Light, Crossbow) mixes and Build plan step 1 is done, while the new templates spawn units in no FactionGroups group (other militia units, ChurchOfLight_*, Gloomrot_*, Cursed_*, Legion_* with CHAR_Vampire_BloodKnight_VBlood); D37's general clause still covers them. Fix: name the six templates' mixes in D37, name the step that runs the mix for them, and keep D38 open until those runs land in docs/GAME_ASSETS.md › Faction compatibility.
+F2 · advisory · 4.5: A14 records `layer: —` although it changes a business rule (what one allied group means for D38). Fix: record it as 4.5 (or 4.4).
+F3 · advisory · 7.2: D38 holds per run and per template only; a realm-gauntlet restarted inside its own grace window, or two single-group templates run at one spot, can still put hostile groups together. Fix: one sentence saying D38 is per run and per template; cross-event and cross-run mixing is the admin's choice.
+F4 · advisory · 9.2: D38 checks only the shipped text; `.nyar event set realm-gauntlet action.waveList.3.afterSeconds 60` brings overlapping hostile waves back with no warning. Fix: accept it as the admin's choice, or warn on event set or event info.
+F5 · advisory · 12.4: the new theory Factions_fails_when_a_gauntlet_lets_two_groups_meet has no row in Nyarlathotep.Tests/ControlCases.cs, so ControlCaseTests will fail; record a planted-fault run (remove the `AfterSeconds is not null` clause) in the post-audit.
+
+missing components: none
+undeclared families: none
+15/15 layers · 50/50 probes
+VERDICT: READY
+
+### Dispositions
+- F1 · accepted · deferred to the Log (advice on a READY review, no plan text edited): `note · deferred · Review 11 F1`, tools/vrclient/scenarios/faction-mix-waves.vrs runs the five new groups' mixes before any of them ships, and docs/GAME_ASSETS.md › Faction compatibility records the result
+- F2 · accepted · deferred to the Log: `note · deferred · Review 11 F2`, the rule change sits on probe 4.5
+- F3 · accepted · deferred to the Log: `note · deferred · Review 11 F3`, docs/features/EVENT_LIBRARY.md says the rule holds per run and per template
+- F4 · accepted · deferred to the Log: `note · deferred · Review 11 F4`, an admin's afterSeconds on a mixed template is the admin's choice, said in the same doc
+- F5 · accepted · fixed in code: ControlCases.cs gains the D38 rows; the planted fault is recorded in the post-audit

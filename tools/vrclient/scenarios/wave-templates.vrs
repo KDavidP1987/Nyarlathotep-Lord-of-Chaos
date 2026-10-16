@@ -1,0 +1,188 @@
+# wave-templates.vrs: the 2026-10-16 fixes and Epic A43. (1) zombie-apocalypse with its Admin goal starts from
+# `.nyar event start` (G-Portal 2026-10-15 refused it "badarg location admin_location"); it is stopped at once. (2) each
+# faction wave template starts at the admin and queues wave 1, then is stopped. (3) realm-gauntlet runs every wave: each is
+# killed with `.devkill`, the next is queued only after "wave <n> cleared", the last brings its V Blood, and the event ends
+# "all waves defeated". Every event added here is deleted at the end. Generated from Resources/templates.json.
+# Needs: NyarDevTools (.devgo .devkill .devunits), DevChatEcho; the pond mark; no purge cooldown; no other event running;
+# Chaos invulnerable (true only).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar template use zombie-apocalypse as apo-admin
+expect-reply apo-admin
+chat .nyar event enable apo-admin
+expect-reply apo-admin
+mark
+chat .nyar event start apo-admin
+expect-log event apo-admin started by timeout=20
+expect-no-log admin_location timeout=1
+wait 5
+chat .nyar event stop apo-admin
+expect-log event apo-admin stopped timeout=20
+wait 10
+chat .nyar template use militia-muster
+expect-reply militia-muster
+chat .nyar event enable militia-muster
+expect-reply militia-muster
+mark
+chat .nyar event start militia-muster
+expect-log event militia-muster started by timeout=20
+expect-log event militia-muster wave 1/5: 6 units queued timeout=30
+wait 10
+shot full wave-militia-muster
+chat .nyar event stop militia-muster
+expect-log event militia-muster stopped timeout=20
+wait 20
+chat .nyar template use silverlight-crusade
+expect-reply silverlight-crusade
+chat .nyar event enable silverlight-crusade
+expect-reply silverlight-crusade
+mark
+chat .nyar event start silverlight-crusade
+expect-log event silverlight-crusade started by timeout=20
+expect-log event silverlight-crusade wave 1/5: 7 units queued timeout=30
+wait 10
+shot full wave-silverlight-crusade
+chat .nyar event stop silverlight-crusade
+expect-log event silverlight-crusade stopped timeout=20
+wait 20
+chat .nyar template use legion-incursion
+expect-reply legion-incursion
+chat .nyar event enable legion-incursion
+expect-reply legion-incursion
+mark
+chat .nyar event start legion-incursion
+expect-log event legion-incursion started by timeout=20
+expect-log event legion-incursion wave 1/4: 6 units queued timeout=30
+wait 10
+shot full wave-legion-incursion
+chat .nyar event stop legion-incursion
+expect-log event legion-incursion stopped timeout=20
+wait 20
+chat .nyar template use gloomrot-assault
+expect-reply gloomrot-assault
+chat .nyar event enable gloomrot-assault
+expect-reply gloomrot-assault
+mark
+chat .nyar event start gloomrot-assault
+expect-log event gloomrot-assault started by timeout=20
+expect-log event gloomrot-assault wave 1/4: 6 units queued timeout=30
+wait 10
+shot full wave-gloomrot-assault
+chat .nyar event stop gloomrot-assault
+expect-log event gloomrot-assault stopped timeout=20
+wait 20
+chat .nyar template use cursed-night
+expect-reply cursed-night
+chat .nyar event enable cursed-night
+expect-reply cursed-night
+mark
+chat .nyar event start cursed-night
+expect-log event cursed-night started by timeout=20
+expect-log event cursed-night wave 1/4: 7 units queued timeout=30
+wait 10
+shot full wave-cursed-night
+chat .nyar event stop cursed-night
+expect-log event cursed-night stopped timeout=20
+wait 20
+chat .nyar template use realm-gauntlet
+expect-reply realm-gauntlet
+chat .nyar event enable realm-gauntlet
+expect-reply realm-gauntlet
+mark
+chat .nyar event start realm-gauntlet
+expect-log event realm-gauntlet started by timeout=20
+expect-log event realm-gauntlet wave 1/5: 8 units queued timeout=30
+wait 10
+shot full gauntlet-1
+chat .devkill -301730941 60
+chat .devkill -1301144178 60
+chat .devkill -1030822544 60
+wait 3
+chat .devkill -301730941 60
+chat .devkill -1301144178 60
+chat .devkill -1030822544 60
+wait 3
+expect-log event realm-gauntlet wave 1 cleared timeout=20
+expect-log event realm-gauntlet wave 2/5: 8 units queued timeout=30
+wait 10
+shot full gauntlet-2
+chat .devkill -837329073 60
+chat .devkill -195077008 60
+chat .devkill -1146194149 60
+wait 3
+chat .devkill -837329073 60
+chat .devkill -195077008 60
+chat .devkill -1146194149 60
+wait 3
+expect-log event realm-gauntlet wave 2 cleared timeout=20
+expect-log event realm-gauntlet wave 3/5: 9 units queued timeout=30
+wait 10
+shot full gauntlet-3
+chat .devkill -63435588 60
+chat .devkill 956965183 60
+chat .devkill -249647316 60
+wait 3
+chat .devkill -63435588 60
+chat .devkill 956965183 60
+chat .devkill -249647316 60
+wait 3
+expect-log event realm-gauntlet wave 3 cleared timeout=20
+expect-log event realm-gauntlet wave 4/5: 9 units queued timeout=30
+wait 10
+shot full gauntlet-4
+chat .devkill 1732477970 60
+chat .devkill 674807351 60
+chat .devkill 820492683 60
+wait 3
+chat .devkill 1732477970 60
+chat .devkill 674807351 60
+chat .devkill 820492683 60
+wait 3
+expect-log event realm-gauntlet wave 4 cleared timeout=20
+expect-log event realm-gauntlet wave 5/5: 9 units queued timeout=30
+wait 10
+shot full gauntlet-5
+chat .devunits -26105228 60
+expect-log \[DEV UNITS\] n=1 prefab=-26105228
+chat .devkill 2128996433 60
+chat .devkill 426583055 60
+chat .devkill 1728773109 60
+chat .devkill -26105228 60
+wait 3
+chat .devkill 2128996433 60
+chat .devkill 426583055 60
+chat .devkill 1728773109 60
+chat .devkill -26105228 60
+wait 3
+expect-log event realm-gauntlet wave 5 cleared timeout=20
+expect-log event realm-gauntlet ended: all waves defeated \(5 of 5 waves\) timeout=20
+wait 5
+chat .nyar event delete apo-admin confirm
+expect-reply apo-admin
+wait 1
+chat .nyar event delete militia-muster confirm
+expect-reply militia-muster
+wait 1
+chat .nyar event delete silverlight-crusade confirm
+expect-reply silverlight-crusade
+wait 1
+chat .nyar event delete legion-incursion confirm
+expect-reply legion-incursion
+wait 1
+chat .nyar event delete gloomrot-assault confirm
+expect-reply gloomrot-assault
+wait 1
+chat .nyar event delete cursed-night confirm
+expect-reply cursed-night
+wait 1
+chat .nyar event delete realm-gauntlet confirm
+expect-reply realm-gauntlet
+wait 1

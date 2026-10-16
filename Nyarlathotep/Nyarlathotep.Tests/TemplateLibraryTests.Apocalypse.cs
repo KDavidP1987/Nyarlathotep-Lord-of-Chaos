@@ -12,7 +12,7 @@ namespace Nyarlathotep.Tests;
 /// Logic/FactionGroups, and an Apocalypse template's group is its faction's.</summary>
 public partial class TemplateLibraryTests
 {
-    const int TemplatesNow = TemplatesBefore + 2;                                // revenge's bandit-revenge, apocalypse's zombie-apocalypse
+    const int TemplatesNow = TemplatesBefore + 2 + 6;                            // revenge's bandit-revenge, apocalypse's zombie-apocalypse, Epic A43's six wave templates
 
     static readonly string[] UndeadGroup =
     [
@@ -127,7 +127,10 @@ public partial class TemplateLibraryTests
         {
             if (Spawned(t.Definition) is not { } s) continue;
             checkedAny++;
-            if (FactionGroups.Problem(t.Id, s.Prefabs, s.Faction) is { } p) problems.Add(p);
+            var problem = t.Definition.Action is { WaveList: { } waves } w                // design §9 D60: a serial mixed-group waveList
+                ? FactionGroups.Problem(t.Id, waves, (w.Bosses ?? []).Select(b => b.Prefab))
+                : FactionGroups.Problem(t.Id, s.Prefabs, s.Faction);
+            if (problem is { } p) problems.Add(p);
         }
         if (checkedAny == 0) problems.Add("no template spawns units");
         return problems;
@@ -138,7 +141,30 @@ public partial class TemplateLibraryTests
     {
         var c = Real();
         Assert.Empty(FactionProblems(c));
-        Assert.Equal(10, c.Templates.Count(t => Spawned(t.Definition) is not null));   // nine SpawnWaves and one Apocalypse
+        Assert.Equal(16, c.Templates.Count(t => Spawned(t.Definition) is not null));   // fifteen SpawnWaves (Epic A43's six) and one Apocalypse
+    }
+
+    /// <summary>Design §9 D60: realm-gauntlet mixes groups across waves; it passes only while each wave is one group, each
+    /// later wave waits for the last to be cleared with no timer, and its boss is of the last wave's group.</summary>
+    [Theory]
+    [InlineData("wave", "realm-gauntlet wave 2 mixes the undead and bandits groups")]
+    [InlineData("after", "realm-gauntlet mixes groups but wave 3 does not wait for wave 2 to be cleared")]
+    [InlineData("cleared", "realm-gauntlet mixes groups but wave 3 does not wait for wave 2 to be cleared")]
+    [InlineData("boss", "realm-gauntlet wave 5 mixes the bandits and church groups")]
+    public void Factions_fails_when_a_gauntlet_lets_two_groups_meet(string mutation, string expected)
+    {
+        var root = JsonNode.Parse(RealText)!;
+        var action = ((JsonArray)root["events"]!).OfType<JsonObject>().First(e => (string)e["id"]! == "realm-gauntlet")["action"]!;
+        var waves = (JsonArray)action["waveList"]!;
+        switch (mutation)
+        {
+            case "wave": waves[1]!["units"]![0]!["prefab"] = "CHAR_Bandit_Thug"; break;
+            case "after": waves[2]!["afterSeconds"] = 120; break;
+            case "cleared": waves[2]!["whenCleared"] = false; waves[2]!["afterSeconds"] = 120; break;
+            case "boss": action["bosses"]![0]!["prefab"] = "CHAR_Bandit_Deadeye"; break;
+        }
+        var problems = FactionProblems(TemplateCatalog.Load(Bytes(root.ToJsonString()), Units(), Units()));
+        Assert.Contains(expected, problems);
     }
 
     [Theory]

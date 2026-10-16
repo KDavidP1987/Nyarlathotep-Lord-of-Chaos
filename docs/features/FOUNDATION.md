@@ -28,6 +28,11 @@ The shared engine every pillar builds on:
   is renamed `state.json.corrupt` and an empty state used; a newer SchemaVersion loads read-only; state.json is
   written at most once per second, and a failing write is retried every second with one log line per streak.
 - **First run** seeds events.json from `Resources/events.default.json`: one example per pillar, every one disabled.
+- **A brand-new world (0.13.0, Epic A42):** the game creates the day/night cycle and the region polygons after its
+  startup trigger, so init waits for both: "[nyar] init (<trigger>): world data not loaded yet (<what>); retrying each
+  second for up to 120 s", then "[nyar] world data ready after <n> s". Past 120 s it initialises without them, with a
+  warning, as before (the GameTime hook and region events are then degraded). Found on a hosted server's first boot
+  (2026-10-15: "degraded: hook DayNight, regions: unavailable", so day/night events never fired).
 - **One door for changes** (step 3): every mutating operation is an ActionKind run through `Logic/ActionGateway`.
   Admin may run every kind; the operator's file load runs as Operator; the scheduler and triggers (System) may only
   start and end enabled definitions; players get none in this child. A denial is logged as "gateway: denied <kind>
@@ -67,7 +72,7 @@ The shared engine every pillar builds on:
 | Files and definitions | `Services/Persistence.cs` (disk), `Services/EventStore.cs` (seed, load, reload), `Resources/events.default.json` |
 | Gateway | `Services/Gateway.cs` (the one `ActionGateway`; `Gateway.Run` wraps every `[Mutating]` call) |
 | Messages and health (step 6) | `Services/Announcer.cs`, `Services/HealthMonitor.cs`, `Patches/UserConnectPatch.cs`, `Commands/MessageCommands.cs` (`announce`, `api version`) |
-| Startup | `Patches/GameDataInitializedPatch.cs` — the save-loaded trigger and, for a brand-new world, `ServerStartupPatch` (A5) |
+| Startup | `Patches/GameDataInitializedPatch.cs` — the save-loaded trigger and, for a brand-new world, `ServerStartupPatch` (A5); `Core.cs` RetryUntilReady and `Logic/WorldWait.cs` wait for the world data (Epic A42) |
 | Preflight checks (step 3) | `tools/preflight.ps1` — GatewayOnly, FaultInjection, AdminList (`-ListCommands admin`), SessionLogs (`-SessionsOf <slug>`) |
 | Unit tests | `Nyarlathotep/Nyarlathotep.Tests/` (xUnit 2.9.3, Microsoft.NET.Test.Sdk 17.8.0, net6.0) |
 
@@ -394,6 +399,22 @@ Release build of the 0.2.1 release tree, unattended boot on the restored config;
   them while state.json already listed none. The marker sweep, not state.json, found them.
 - Log check: 0 unhandled, 6 nyar lines, 0 orphan errors, 0 unity errors; warnings only Il2CppInterop and
   Beelzebub, plus the 226 PrefabLookupMap lines.
+
+### Brand-new world · 2026-10-16 · Epic A42 (local dedicated server, `-saveName nyarfresh`, a new save folder)
+
+Config and logs were backed up first and the config restored afterwards. The 2026-10-15 G-Portal first boot had
+logged "degraded: hook DayNight, regions: unavailable"; this boot logged:
+
+```
+[nyar] init (ServerStartupPatch): world data not loaded yet (the day/night cycle, the region polygons); retrying each second for up to 120 s
+[nyar] world data ready after 1 s
+[nyar] regions: 10 polygons, 10 regions (StartCave, FarbaneWoods, ...); 0 untagged, 0 dropped
+[nyar] triggers: all hooks available
+Nyarlathotep initialized via world data wait (attempt #2).
+```
+
+No Nyarlathotep warning except the dev events.json's own (example-empowerment edited for an earlier test). The normal
+dev world (save loaded) still initialises at once through GameDataInitializedPatch. Unit tests: WorldWaitTests.
 
 ## Open questions
 

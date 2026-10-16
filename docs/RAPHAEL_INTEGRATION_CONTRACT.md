@@ -517,7 +517,9 @@ Gate the panels on the handshake:
 
 | # | Date | Request | Status |
 |---|---|---|---|
-| — | — | none yet | — |
+| R1 | 2026-10-15 | When an ending event's units are gone, say so: a push, or `grace=` on `event-end` (Raphael's list refresh guessed) | planned, §10.7 `units-gone` |
+| R2 | 2026-10-15 | `[NYAR:def]` names an apocalypse `action=apocalypse`, not `action=waves` | planned, §10.5 |
+| R3 | 2026-10-15 | `code=disabled reason=pillar_off` names the pillar (`arg=pillar` today; `pillar=<name>` wanted) | planned, §10.5 |
 
 ## 9. Change log
 
@@ -702,6 +704,11 @@ once the unit is gone.
 or ->`: for admins always; for players only when the event's `announce.warnings` is true and `WaveWarnings` is on,
   since the chat warnings already tell them, and `-` otherwise (L2). A new last key, so an api 8 parser skips it.
 
+**Two corrections to existing lines (requests R2, R3).** From live-ops, `[NYAR:def]` says `action=apocalypse` for an
+apocalypse definition (api 8 says `action=waves`); a client that does not know the value shows it as text. The
+pillar-off refusal gains a last key naming the pillar: `[NYAR:err] cmd=event verb=start code=disabled arg=pillar
+reason=pillar_off pillar=spawns`, so the client can say which `[Pillars]` switch is off.
+
 ### 10.6 Twins — PLANNED (live-ops, communications)
 
 §5a's rules hold for every new twin: one `ok` or `err` line, the same flow and log line as the human command, and the
@@ -736,6 +743,7 @@ marked admin-only is sent to players as `-`.
 | `personal` | live-ops | `id=<event> secs=0 kind=revenge\|hunted state=warned\|active\|ended`; only to the player the alert is about, when one of their `mine` alerts appears, changes state or ends (L8). The client then re-reads `api mine` |
 | `what=` on `config-changed` | live-ops | `events \| pillars \| messages \| announce`, after `secs`; the client re-reads only that part. An api 8 client ignores it and re-reads everything |
 | `notice` | communications | `id=<event\|-> secs=0 kind=<kind> to=<all\|you\|clan\|admins> text=<escaped>`; the push twin of every chat line the server sends to that player, public or private (§10.8). The chat line is still sent: the push is a copy (L5) |
+| `units-gone` | live-ops | `id=<event> secs=0`; after `event-end`, once the event's last tracked unit has despawned or died (request R1). The client drops the event's unit rows then, without a refresh |
 | `event-soon` | communications | `id=<event> secs=<until start>`, at the start-warning offsets before a `schedule` trigger's start when `announce.soon` is on |
 
 `notice` `kind` ∈ `start | end | warn | cleared | horde | march | outcome | scoreboard | revenge | daily | admin |

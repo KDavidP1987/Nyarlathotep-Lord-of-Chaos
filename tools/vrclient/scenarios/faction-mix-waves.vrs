@@ -1,0 +1,482 @@
+# faction-mix-waves.vrs: design §9 D60 / apocalypse D38, the allied groups of the faction wave templates (Epic A43).
+# Each pass spawns 2 of each unit the group's templates name and 1 of each of its V Bloods at the pond with `.nyar spawn`,
+# then Chaos stands 40 m east, invulnerable, for 60 s. Allied: no "died (killer CHAR_<group>" line for a manual unit in those
+# 60 s (natives of another faction may still kill one; that is not this check), and every prefab still counts its units
+# within 60 m. `.devkill` clears each pass (twice: spawns are staggered). Generated from Resources/templates.json; guids from
+# Reference Data/unit_index.tsv. A failed pass names the group to drop from Logic/FactionGroups.cs.
+# Needs: [Debug] VerboseLogging = true (the died line names its killer); NyarDevTools (.devgo .devtp .devmark .devunits
+# .devkill), DevChatEcho; the pond mark; Chaos invulnerable (true only).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+# pass militia (allied)
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 5
+console ToggleInvulnerable true
+wait 1
+chat .devmark mix-militia
+expect-log \[DEV MARK\] mix-militia
+chat .nyar spawn CHAR_Militia_Light 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Militia_Crossbow 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Militia_Hound 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Militia_Guard 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Militia_Longbowman 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Militia_Torchbearer 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Militia_Heavy 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Militia_Nun 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Militia_Devoted 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Militia_Bomber 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Militia_Leader_VBlood 1
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+wait 3
+chat .devtp -1840 -1640
+expect-log \[DEV TP\] to
+wait 2
+mark
+wait 60
+expect-no-log \[nyar\] CHAR_\S+ of \S+ died \(killer CHAR_Militia_ timeout=1
+chat .devunits -63435588 60 mix-militia
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-63435588
+chat .devunits 956965183 60 mix-militia
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=956965183
+chat .devunits -249647316 60 mix-militia
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-249647316
+chat .devunits 1730498275 60 mix-militia
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=1730498275
+chat .devunits 203103783 60 mix-militia
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=203103783
+chat .devunits 37713289 60 mix-militia
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=37713289
+chat .devunits 2005508157 60 mix-militia
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=2005508157
+chat .devunits -700632469 60 mix-militia
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-700632469
+chat .devunits 1660801216 60 mix-militia
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=1660801216
+chat .devunits 847893333 60 mix-militia
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=847893333
+chat .devunits 1688478381 60 mix-militia
+expect-log \[DEV UNITS\] n=([1-9]|[1-9][0-9]) prefab=1688478381
+shot full mix-militia
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 3
+chat .devkill -63435588 60
+chat .devkill 956965183 60
+chat .devkill -249647316 60
+chat .devkill 1730498275 60
+chat .devkill 203103783 60
+chat .devkill 37713289 60
+chat .devkill 2005508157 60
+chat .devkill -700632469 60
+chat .devkill 1660801216 60
+chat .devkill 847893333 60
+chat .devkill 1688478381 60
+wait 3
+chat .devkill -63435588 60
+chat .devkill 956965183 60
+chat .devkill -249647316 60
+chat .devkill 1730498275 60
+chat .devkill 203103783 60
+chat .devkill 37713289 60
+chat .devkill 2005508157 60
+chat .devkill -700632469 60
+chat .devkill 1660801216 60
+chat .devkill 847893333 60
+chat .devkill 1688478381 60
+wait 3
+# pass church (allied)
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 5
+console ToggleInvulnerable true
+wait 1
+chat .devmark mix-church
+expect-log \[DEV MARK\] mix-church
+chat .nyar spawn CHAR_ChurchOfLight_Footman 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_ChurchOfLight_Archer 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_ChurchOfLight_Rifleman 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_ChurchOfLight_Cleric 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_ChurchOfLight_Knight_Shield 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_ChurchOfLight_Knight_2H 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_ChurchOfLight_Priest 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_ChurchOfLight_Paladin 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_ChurchOfLight_Lightweaver 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_ChurchOfLight_CardinalAide 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_ChurchOfLight_Paladin_VBlood 1
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_ChurchOfLight_Overseer_VBlood 1
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+wait 3
+chat .devtp -1840 -1640
+expect-log \[DEV TP\] to
+wait 2
+mark
+wait 60
+expect-no-log \[nyar\] CHAR_\S+ of \S+ died \(killer CHAR_ChurchOfLight_ timeout=1
+chat .devunits 2128996433 60 mix-church
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=2128996433
+chat .devunits 426583055 60 mix-church
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=426583055
+chat .devunits 1148936156 60 mix-church
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=1148936156
+chat .devunits -1464869978 60 mix-church
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-1464869978
+chat .devunits 794228023 60 mix-church
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=794228023
+chat .devunits -930333806 60 mix-church
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-930333806
+chat .devunits 1406393857 60 mix-church
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=1406393857
+chat .devunits 1728773109 60 mix-church
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=1728773109
+chat .devunits 1185952775 60 mix-church
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=1185952775
+chat .devunits 1745498602 60 mix-church
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=1745498602
+chat .devunits -740796338 60 mix-church
+expect-log \[DEV UNITS\] n=([1-9]|[1-9][0-9]) prefab=-740796338
+chat .devunits -26105228 60 mix-church
+expect-log \[DEV UNITS\] n=([1-9]|[1-9][0-9]) prefab=-26105228
+shot full mix-church
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 3
+chat .devkill 2128996433 60
+chat .devkill 426583055 60
+chat .devkill 1148936156 60
+chat .devkill -1464869978 60
+chat .devkill 794228023 60
+chat .devkill -930333806 60
+chat .devkill 1406393857 60
+chat .devkill 1728773109 60
+chat .devkill 1185952775 60
+chat .devkill 1745498602 60
+chat .devkill -740796338 60
+chat .devkill -26105228 60
+wait 3
+chat .devkill 2128996433 60
+chat .devkill 426583055 60
+chat .devkill 1148936156 60
+chat .devkill -1464869978 60
+chat .devkill 794228023 60
+chat .devkill -930333806 60
+chat .devkill 1406393857 60
+chat .devkill 1728773109 60
+chat .devkill 1185952775 60
+chat .devkill 1745498602 60
+chat .devkill -740796338 60
+chat .devkill -26105228 60
+wait 3
+# pass legion (allied)
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 5
+console ToggleInvulnerable true
+wait 1
+chat .devmark mix-legion
+expect-log \[DEV MARK\] mix-legion
+chat .nyar spawn CHAR_Legion_Shadowkin 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Legion_Assassin 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Legion_Vargulf 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Legion_BloodProphet 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Legion_NightMaiden 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Legion_Dreadhorn 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Legion_Gargoyle 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Legion_Nightmare 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Legion_Guardian_DraculaMinion 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Vampire_BloodKnight_VBlood 1
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+wait 3
+chat .devtp -1840 -1640
+expect-log \[DEV TP\] to
+wait 2
+mark
+wait 60
+expect-no-log \[nyar\] CHAR_\S+ of \S+ died \(killer CHAR_(Legion|Vampire)_ timeout=1
+chat .devunits 1980594081 60 mix-legion
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=1980594081
+chat .devunits -1076780215 60 mix-legion
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-1076780215
+chat .devunits -653348998 60 mix-legion
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-653348998
+chat .devunits 1912966420 60 mix-legion
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=1912966420
+chat .devunits -494298686 60 mix-legion
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-494298686
+chat .devunits 981369753 60 mix-legion
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=981369753
+chat .devunits -65981941 60 mix-legion
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-65981941
+chat .devunits -1009917656 60 mix-legion
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-1009917656
+chat .devunits -669027288 60 mix-legion
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-669027288
+chat .devunits 495971434 60 mix-legion
+expect-log \[DEV UNITS\] n=([1-9]|[1-9][0-9]) prefab=495971434
+shot full mix-legion
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 3
+chat .devkill 1980594081 60
+chat .devkill -1076780215 60
+chat .devkill -653348998 60
+chat .devkill 1912966420 60
+chat .devkill -494298686 60
+chat .devkill 981369753 60
+chat .devkill -65981941 60
+chat .devkill -1009917656 60
+chat .devkill -669027288 60
+chat .devkill 495971434 60
+wait 3
+chat .devkill 1980594081 60
+chat .devkill -1076780215 60
+chat .devkill -653348998 60
+chat .devkill 1912966420 60
+chat .devkill -494298686 60
+chat .devkill 981369753 60
+chat .devkill -65981941 60
+chat .devkill -1009917656 60
+chat .devkill -669027288 60
+chat .devkill 495971434 60
+wait 3
+# pass gloomrot (allied)
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 5
+console ToggleInvulnerable true
+wait 1
+chat .devmark mix-gloomrot
+expect-log \[DEV MARK\] mix-gloomrot
+chat .nyar spawn CHAR_Gloomrot_Technician 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Gloomrot_Tazer 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Gloomrot_Railgunner 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Gloomrot_Pyro 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Gloomrot_Batoon 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Gloomrot_SentryOfficer 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Gloomrot_TractorBeamer 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Gloomrot_SpiderTank_Driller 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Gloomrot_Voltage_VBlood 1
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+wait 3
+chat .devtp -1840 -1640
+expect-log \[DEV TP\] to
+wait 2
+mark
+wait 60
+expect-no-log \[nyar\] CHAR_\S+ of \S+ died \(killer CHAR_Gloomrot_ timeout=1
+chat .devunits 820492683 60 mix-gloomrot
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=820492683
+chat .devunits 674807351 60 mix-gloomrot
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=674807351
+chat .devunits 1732477970 60 mix-gloomrot
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=1732477970
+chat .devunits -322293503 60 mix-gloomrot
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-322293503
+chat .devunits -1707267769 60 mix-gloomrot
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-1707267769
+chat .devunits 1401026468 60 mix-gloomrot
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=1401026468
+chat .devunits -293507834 60 mix-gloomrot
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-293507834
+chat .devunits 709450349 60 mix-gloomrot
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=709450349
+chat .devunits -1101874342 60 mix-gloomrot
+expect-log \[DEV UNITS\] n=([1-9]|[1-9][0-9]) prefab=-1101874342
+shot full mix-gloomrot
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 3
+chat .devkill 820492683 60
+chat .devkill 674807351 60
+chat .devkill 1732477970 60
+chat .devkill -322293503 60
+chat .devkill -1707267769 60
+chat .devkill 1401026468 60
+chat .devkill -293507834 60
+chat .devkill 709450349 60
+chat .devkill -1101874342 60
+wait 3
+chat .devkill 820492683 60
+chat .devkill 674807351 60
+chat .devkill 1732477970 60
+chat .devkill -322293503 60
+chat .devkill -1707267769 60
+chat .devkill 1401026468 60
+chat .devkill -293507834 60
+chat .devkill 709450349 60
+chat .devkill -1101874342 60
+wait 3
+# pass cursed (allied)
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 5
+console ToggleInvulnerable true
+wait 1
+chat .devmark mix-cursed
+expect-log \[DEV MARK\] mix-cursed
+chat .nyar spawn CHAR_Cursed_Wolf 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Cursed_ToadSpitter 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Cursed_MonsterToad 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Cursed_Nightlurker 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Cursed_Bear_Standard 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Cursed_WormTerror 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Cursed_Witch 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Cursed_Wolf_Spirit 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Cursed_Bear_Spirit 2
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+chat .nyar spawn CHAR_Cursed_Witch_VBlood 1
+expect-log spawn batch: .* 0 waiting timeout=30
+wait 1
+wait 3
+chat .devtp -1840 -1640
+expect-log \[DEV TP\] to
+wait 2
+mark
+wait 60
+expect-no-log \[nyar\] CHAR_\S+ of \S+ died \(killer CHAR_Cursed_ timeout=1
+chat .devunits -218175217 60 mix-cursed
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-218175217
+chat .devunits 1478790879 60 mix-cursed
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=1478790879
+chat .devunits 575918722 60 mix-cursed
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=575918722
+chat .devunits -2046268156 60 mix-cursed
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-2046268156
+chat .devunits -559819989 60 mix-cursed
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-559819989
+chat .devunits 658578725 60 mix-cursed
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=658578725
+chat .devunits -56441915 60 mix-cursed
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=-56441915
+chat .devunits 407089231 60 mix-cursed
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=407089231
+chat .devunits 1105583702 60 mix-cursed
+expect-log \[DEV UNITS\] n=([2-9]|[1-9][0-9]) prefab=1105583702
+chat .devunits -910296704 60 mix-cursed
+expect-log \[DEV UNITS\] n=([1-9]|[1-9][0-9]) prefab=-910296704
+shot full mix-cursed
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 3
+chat .devkill -218175217 60
+chat .devkill 1478790879 60
+chat .devkill 575918722 60
+chat .devkill -2046268156 60
+chat .devkill -559819989 60
+chat .devkill 658578725 60
+chat .devkill -56441915 60
+chat .devkill 407089231 60
+chat .devkill 1105583702 60
+chat .devkill -910296704 60
+wait 3
+chat .devkill -218175217 60
+chat .devkill 1478790879 60
+chat .devkill 575918722 60
+chat .devkill -2046268156 60
+chat .devkill -559819989 60
+chat .devkill 658578725 60
+chat .devkill -56441915 60
+chat .devkill 407089231 60
+chat .devkill 1105583702 60
+chat .devkill -910296704 60
+wait 3

@@ -138,12 +138,23 @@ group (D38).
 | Spiders | `CHAR_Spider_Forest` -581295882, `CHAR_Spider_Melee` 2136899683, `CHAR_Spider_Range` 2103131615, `CHAR_Spider_Forestling` 574276383, boss `CHAR_Spider_Queen_VBlood` -548489519 | spider-swarm, spider-hunting-grounds | allied |
 | Bandits | `CHAR_Bandit_Thug` -301730941, `CHAR_Bandit_Hunter` -1301144178, `CHAR_Bandit_Deadeye` -1030822544 | bandit-ambush, roaming-hunters, bandit-reprisal, bandit-revenge | allied |
 | Militia | `CHAR_Militia_Crossbow` 956965183, `CHAR_Militia_Light` -63435588 | border-watch | allied |
+| Militia (D60) | adds `CHAR_Militia_Hound` -249647316, `CHAR_Militia_Guard` 1730498275, `CHAR_Militia_Longbowman` 203103783, `CHAR_Militia_Torchbearer` 37713289, `CHAR_Militia_Heavy` 2005508157, `CHAR_Militia_Nun` -700632469, `CHAR_Militia_Devoted` 1660801216, `CHAR_Militia_Bomber` 847893333, boss `CHAR_Militia_Leader_VBlood` 1688478381 | militia-muster, realm-gauntlet wave 3 | allied (2026-10-16) |
+| Church of Light | `CHAR_ChurchOfLight_Footman` 2128996433, `CHAR_ChurchOfLight_Archer` 426583055, `CHAR_ChurchOfLight_Rifleman` 1148936156, `CHAR_ChurchOfLight_Cleric` -1464869978, `CHAR_ChurchOfLight_Knight_Shield` 794228023, `CHAR_ChurchOfLight_Knight_2H` -930333806, `CHAR_ChurchOfLight_Priest` 1406393857, `CHAR_ChurchOfLight_Paladin` 1728773109, `CHAR_ChurchOfLight_Lightweaver` 1185952775, `CHAR_ChurchOfLight_CardinalAide` 1745498602, bosses `CHAR_ChurchOfLight_Paladin_VBlood` -740796338, `CHAR_ChurchOfLight_Overseer_VBlood` -26105228 | silverlight-crusade, realm-gauntlet wave 5 | allied (2026-10-16) |
+| Legion | `CHAR_Legion_Shadowkin` 1980594081, `CHAR_Legion_Assassin` -1076780215, `CHAR_Legion_Vargulf` -653348998, `CHAR_Legion_BloodProphet` 1912966420, `CHAR_Legion_NightMaiden` -494298686, `CHAR_Legion_Dreadhorn` 981369753, `CHAR_Legion_Gargoyle` -65981941, `CHAR_Legion_Nightmare` -1009917656, `CHAR_Legion_Guardian_DraculaMinion` -669027288, boss `CHAR_Vampire_BloodKnight_VBlood` 495971434 | legion-incursion | allied (2026-10-16) |
+| Gloomrot | `CHAR_Gloomrot_Technician` 820492683, `CHAR_Gloomrot_Tazer` 674807351, `CHAR_Gloomrot_Railgunner` 1732477970, `CHAR_Gloomrot_Pyro` -322293503, `CHAR_Gloomrot_Batoon` -1707267769, `CHAR_Gloomrot_SentryOfficer` 1401026468, `CHAR_Gloomrot_TractorBeamer` -293507834, `CHAR_Gloomrot_SpiderTank_Driller` 709450349, boss `CHAR_Gloomrot_Voltage_VBlood` -1101874342 | gloomrot-assault, realm-gauntlet wave 4 | allied (2026-10-16) |
+| Cursed | `CHAR_Cursed_Wolf` -218175217, `CHAR_Cursed_ToadSpitter` 1478790879, `CHAR_Cursed_MonsterToad` 575918722, `CHAR_Cursed_Nightlurker` -2046268156, `CHAR_Cursed_Bear_Standard` -559819989, `CHAR_Cursed_WormTerror` 658578725, `CHAR_Cursed_Witch` -56441915, `CHAR_Cursed_Wolf_Spirit` 407089231, `CHAR_Cursed_Bear_Spirit` 1105583702, boss `CHAR_Cursed_Witch_VBlood` -910296704 | cursed-night | allied (2026-10-16) |
 
 - **Hostile: Legion shadows with the undead.** `CHAR_Legion_Shadowkin_Lesser` -1200074387 (Faction_Legion) attacked
   the undead at once: in run 1 it killed a Farbane crossbowman, and the undead killed both Shadowkin; in run 3 a
   banshee killed one. Never mix Faction_Legion units into an undead template.
 - **Left out: `CHAR_Undead_ShadowSoldier` 678628353.** In run 1 one ShadowSoldier killed the other within seconds of
   spawning, so it is not used as a standalone unit (probably an ability summon; not investigated further).
+- **The D60 groups** (2026-10-16, `tools/vrclient/scenarios/faction-mix-waves.vrs`, run 1 131/132): the same method at
+  the pond, with the died line naming its killer. No unit of any group was killed by its own group, and every unit
+  counted in place after 60 s. Each group is checked alone: units of two groups are never alive together in a shipped
+  template (D38 as amended by D60).
+- **Left out: `CHAR_Cursed_Mosquito` -744966291.** In run 1 one of the two was "removed by the game" about 10 s after it
+  spawned, with no death and no killer; the cause is not known, so cursed-night uses `CHAR_Cursed_ToadSpitter` instead.
 - Natives near a mix keep fighting whoever they aggro on (here Chaos); the native counts in the scenario are logged
   for the record, not checked, because natives that chased Chaos leash home out of the 80 m read.
 

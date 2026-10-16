@@ -25,7 +25,7 @@ public partial class ApiLinesTests
 
         var spawns = catalog.Templates.Count(t => t.Definition.Pillar == Pillar.Spawns);
         var filtered = ApiLines.Templates(catalog, "spawns", "");
-        Assert.Equal(spawns, filtered.Count - 1);
+        Assert.Equal(Math.Min(spawns, Paging.PageSize), filtered.Count - 1);                              // page 1 (sixteen spawns templates since Epic A43)
         Assert.All(filtered.SkipLast(1), l => Assert.Equal("spawns", Value(l, "pillar")));
         Assert.Equal(filtered, ApiLines.Templates(catalog, "spawns", "1"));
     }

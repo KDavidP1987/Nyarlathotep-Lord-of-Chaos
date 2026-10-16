@@ -19,6 +19,21 @@ with no file edits.
   disabled:
   - `legion-weekend-surge`, `bandit-vengeance`, `undead-nightfall` and `militia-crackdown` (empowerment);
   - `bandit-ambush` and `undead-rising` (spawns).
+  Later releases added templates per child (swarm, wave-sets, hunting grounds, revenge, apocalypse); `.nyar template
+  list` is the current catalogue.
+- **Faction wave templates (0.13.0, Epic A43, design §9 D60):** six Manual spawns templates on the spider-swarm pattern,
+  held in a 40 m arena at the admin who starts them, hunting, with the scoreboard and a K/D winner. Each wave is larger
+  than the last and the last brings one V Blood:
+  - `militia-muster` (5 waves, `CHAR_Militia_Leader_VBlood`), `silverlight-crusade` (5,
+    `CHAR_ChurchOfLight_Paladin_VBlood`), `legion-incursion` (4, `CHAR_Vampire_BloodKnight_VBlood`), `gloomrot-assault`
+    (4, `CHAR_Gloomrot_Voltage_VBlood`), `cursed-night` (4, `CHAR_Cursed_Witch_VBlood`): a later wave comes 150 s after
+    the last (legion 180 s) or as soon as it is cleared;
+  - `realm-gauntlet`: one faction per wave (bandits, undead, militia, gloomrot, church), each wave only once the last
+    is cleared, ending on `CHAR_ChurchOfLight_Overseer_VBlood`.
+  - The one-allied-group rule (apocalypse D38) is checked per template and per run: a template's units are one allied
+    group, or, as realm-gauntlet, each wave is one group and waits for the last to be cleared, so two groups are never
+    alive together. An admin who gives a mixed template an `afterSeconds` makes that choice for their own server; the
+    shipped catalogue never does.
 - **Template commands:** `.nyar template list [pillar] [page]`, `.nyar template info <id>` and
   `.nyar template use <t> [as <id>]` (the last writes a disabled copy).
 - **Authoring commands:**
@@ -542,3 +557,11 @@ kick-off only):
   PrefabLookupMap notices at save load only; no mod warning or error.
 Then `pwsh tools/dev-snapshot.ps1 -Restore` → "snapshot restored; hashes equal (s7,
 C:\Users\<user>\AppData\Local\Temp\nyar-snap-s7 deleted)"; %TEMP%\nyar-session and the %TEMP%\nyar-soak-* folders deleted.
+
+### Faction wave templates · 2026-10-16 · Epic A43 · vrclient as Chaos on the local dev server
+
+`tools/vrclient/scenarios/wave-templates.vrs` SCENARIO PASS 54/54 (`wave-templates-20261016-012328.json`): each of
+militia-muster, silverlight-crusade, legion-incursion, gloomrot-assault and cursed-night copied with `.nyar template use`,
+enabled, started at the admin ("wave 1/n: k units queued" with k 6, 7, 6, 6, 7) and stopped; realm-gauntlet ran all five
+waves to "all waves defeated"; every test event deleted afterwards. The allied-group mix runs are in
+docs/features/APOCALYPSE.md › Session 4.

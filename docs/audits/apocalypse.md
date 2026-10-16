@@ -98,3 +98,15 @@
   10/10 windows under 5 ms, tracked >= 50, targets >= 1, 0 slow ticks"; every [Warning] known (stop line, example-empowerment,
   Beelzebub, Il2CppInterop), no [Error], 0 exceptions in the Unity log
 - Codex runs once more on the release diff only if code changes after the test weekend
+
+## Post-audit · 2026-10-16 · the G-Portal fixes and A14 (admin goal, fresh-world wait, early-departure log, D60 groups, six wave templates)
+
+- compile: 0 Warning(s), 0 Error(s); tests 3586/3586; `pwsh tools/preflight.ps1` → PREFLIGHT OK; dod --check apocalypse
+  and nyarlathotep: problems 0
+- Codex (`codex exec -s read-only -c features.experimental_windows_sandbox=true`, prompt via stdin, on the uncommitted
+  code diff over f01f18f): VERDICT: PASS (no blocking defects)
+- in game: wave-templates.vrs SCENARIO PASS 54/54 (wave-templates-20261016-012328.json); faction-mix-waves.vrs 131/132
+  then the cursed pass 26/26 after CHAR_Cursed_Mosquito was dropped (docs/features/APOCALYPSE.md › Session 4); a
+  brand-new world boot (docs/features/FOUNDATION.md › Test results); every [Warning] known (stop lines, the dev
+  example-empowerment, Beelzebub, HarmonyX, Il2CppInterop), no [Error]; the 224 PrefabLookupMap notices at save load
+  appear on every boot of the dev world

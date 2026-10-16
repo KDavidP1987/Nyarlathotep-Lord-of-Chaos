@@ -1,9 +1,12 @@
+using System;
 using System.Collections;
+using Il2CppInterop.Runtime;
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using ProjectM;
 using ProjectM.Physics;
 using ProjectM.Scripting;
+using ProjectM.Terrain;
 using Unity.Entities;
 using UnityEngine;
 
@@ -55,6 +58,8 @@ internal static class Core
                 return;
             }
 
+            if (!WorldDataReady(server, trigger)) return;
+
             Server = server;
             EntityManager = server.EntityManager;
             PrefabCollectionSystem = prefabSystem;
@@ -92,6 +97,61 @@ internal static class Core
         {
             _initInProgress = false;
         }
+    }
+
+    static DateTime? _worldWaitSince;
+    static bool _worldWaitRetrying;
+
+    /// <summary>Epic A42: true once the DayNightCycle singleton and at least one region polygon exist, or once
+    /// <see cref="Logic.WorldWait.LimitSeconds"/> have passed (then init goes on without them, degraded as before). While
+    /// waiting, a coroutine retries <see cref="TryInitialize"/> each second, since a brand-new world fires its one
+    /// startup trigger before that data is there.</summary>
+    static bool WorldDataReady(World server, string trigger)
+    {
+        var em = server.EntityManager;
+        var dayNight = Count(em, ComponentType.ReadOnly(Il2CppType.Of<DayNightCycle>()), EntityQueryOptions.Default) == 1;    // TriggerBus's DayNight hook test
+        var regions = Count(em, ComponentType.ReadOnly(Il2CppType.Of<WorldRegionPolygon>()), EntityQueryOptions.IncludeDisabled) > 0;   // RegionMap's read
+        var now = DateTime.UtcNow;
+        var waited = _worldWaitSince is { } since ? (now - since).TotalSeconds : 0;
+        var missing = Logic.WorldWait.Missing(dayNight, regions);
+        switch (Logic.WorldWait.Decide(dayNight, regions, waited))
+        {
+            case Logic.WorldWaitStep.Init:
+                if (_worldWaitSince is not null) Log.LogInfo($"[nyar] world data ready after {waited:0} s");
+                return true;
+            case Logic.WorldWaitStep.InitWithout:
+                Log.LogWarning($"[nyar] world data still missing after {Logic.WorldWait.LimitSeconds} s ({missing}); initialising without it");
+                return true;
+            default:
+                if (_worldWaitSince is null)
+                {
+                    _worldWaitSince = now;
+                    Log.LogInfo($"[nyar] init ({trigger}): world data not loaded yet ({missing}); retrying each second for up to {Logic.WorldWait.LimitSeconds} s");
+                }
+                if (!_worldWaitRetrying)
+                {
+                    _worldWaitRetrying = true;
+                    StartCoroutine(RetryUntilReady());
+                }
+                return false;
+        }
+    }
+
+    static IEnumerator RetryUntilReady()
+    {
+        var wait = new WaitForSeconds(1f);
+        while (!IsReady)
+        {
+            yield return wait;
+            TryInitialize("world data wait");
+        }
+    }
+
+    static int Count(EntityManager em, ComponentType type, EntityQueryOptions options)
+    {
+        var query = em.CreateEntityQuery(new EntityQueryDesc { All = new[] { type }, Options = options });
+        try { return query.CalculateEntityCount(); }
+        finally { query.Dispose(); }
     }
 
     static World FindServerWorld()

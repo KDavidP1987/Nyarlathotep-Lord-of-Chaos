@@ -78,13 +78,14 @@ public sealed class AdminFlows(IAdminOps ops, ActionGateway gateway, PurgeArming
         ["event unstick"] = ActionKind.UnstickUnits,
     };
 
-    /// <summary>`event start &lt;id&gt;`: an event whose location is Admin spawns around the admin, whose position must
-    /// be readable (Business rules 3: badarg location no_position).</summary>
+    /// <summary>`event start &lt;id&gt;`: an event whose location is Admin spawns around the admin, and an apocalypse whose
+    /// goal is Admin marches on the admin's position (apocalypse D11); either way that position must be readable (Business rules 3: badarg location no_position).</summary>
     public Outcome Start(AdminCaller who, string id)
     {
         if (BadId(id) is { } bad) return bad;
         (float X, float Y, float Z)? origin = null;
-        if (ops.Definitions.Find(id)?.Action?.Location.Type == LocationType.Admin)
+        if (ops.Definitions.Find(id) is { } found
+            && (found.Action?.Location.Type == LocationType.Admin || found.Apocalypse?.Goal.Location.Type == LocationType.Admin))   // apocalypse: the goal is the starting admin's position (D11)
         {
             origin = who.Position();
             if (origin is null) return AdminLines.PositionUnread;

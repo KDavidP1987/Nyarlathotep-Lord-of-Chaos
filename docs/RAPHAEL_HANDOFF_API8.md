@@ -236,8 +236,9 @@ Server: the local dev server `127.0.0.1:9876` running `v0.13.0-rc.1` (or a later
 5. **Unstick:** while it runs, press Unstick. PASS: `ok … verb=unstick id=graveyard-waves marked=<n> fighting=<f>`, or
    `err … code=invalid reason=watch_off` when `[UnitWatch] Enabled` is false.
 6. **Errors:** press Start again. PASS: "Already running" from `code=state reason=already_active`.
-7. **Kill switch:** Purge, confirm. PASS: `event-end` and `killswitch` pushes, a cooldown banner counting down, and
-   `api killswitch` back to `on=0` when it ends.
+7. **Kill switch:** Purge, confirm. PASS: one `killswitch` push (a purge sends no `event-end` per event: the client
+   clears every running row on `killswitch`), a cooldown banner counting down, and `api killswitch` back to `on=0` when
+   it ends. Corrected 2026-10-16: this step said `event-end` pushes came too.
 8. **Login toast:** start `graveyard-waves` again, disconnect, reconnect. PASS: one toast listing the running event.
 9. **Empowerment:** create `legion-weekend-surge` from a template and start it. PASS: a `kind=empower` row with
    `faction=` and, for admins, `units=` > 0.
