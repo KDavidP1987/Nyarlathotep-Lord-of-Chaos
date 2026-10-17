@@ -198,6 +198,63 @@ public sealed class LoginGate
     }
 }
 
+/// <summary>The login notice of running events (login-notice D2, D4). Every connect while the switch is on is queued; the
+/// notice leaves <see cref="Delay"/> later with the running list read then, so nothing is sent when nothing runs at that
+/// moment, when the recipient left or another player holds the user entity, or when the same player was sent one for a
+/// connect within <see cref="LoginGate.Quiet"/> before (the gate is consulted only for a notice that would leave, Review 1
+/// F4). <typeparamref name="TUser"/> is the user entity in game and any value in tests.</summary>
+public sealed class LoginNotices<TUser>(Func<DateTime> clock, Action<string> info, Action<string> warn, FailureStreak sendFaults)
+{
+    public static readonly TimeSpan Delay = TimeSpan.FromSeconds(10);
+
+    readonly LoginGate _gate = new();
+    readonly FailureStreak _readFaults = new();
+    readonly List<(TUser User, ulong PlatformId, DateTime ConnectUtc)> _due = [];
+
+    public int Pending => _due.Count;
+
+    /// <summary>A user connected; with the switch <paramref name="on"/> off nothing is queued.</summary>
+    public void Connected(TUser user, ulong platformId, bool on)
+    {
+        if (on) _due.Add((user, platformId, clock()));
+    }
+
+    /// <summary>Sends every notice due now. <paramref name="holds"/> says whether the user is still connected as the same
+    /// platform id; <paramref name="running"/> is read once per due notice; <paramref name="send"/> may throw, which the
+    /// shared private-message streak logs once, and the other due notices still leave.</summary>
+    public void Tick(Func<TUser, ulong, bool> holds, Func<IReadOnlyList<RunningInstance>> running,
+        Func<RunningInstance, string?> own, Action<TUser, string> send)
+    {
+        var now = clock();
+        for (var i = 0; i < _due.Count;)
+        {
+            var (user, platformId, connectUtc) = _due[i];
+            if (now - connectUtc < Delay) { i++; continue; }
+            _due.RemoveAt(i);
+            if (!holds(user, platformId)) continue;
+            IReadOnlyList<RunningInstance> list;
+            try { list = running(); _readFaults.Ok(); }
+            catch (Exception ex)
+            {
+                if (_readFaults.Fail()) warn($"login notice failed: {ex.Message}");
+                continue;
+            }
+            if (Messages.LoginNotice(list, now, own) is not { } text) continue;
+            if (!_gate.ShouldGreet(platformId, connectUtc)) continue;
+            try
+            {
+                send(user, text);
+                sendFaults.Ok();
+                info($"login notice sent: {list.Count} events");
+            }
+            catch (Exception ex)
+            {
+                if (sendFaults.Fail()) warn($"private message failed: {ex.Message}");
+            }
+        }
+    }
+}
+
 /// <summary>The health line (D31): due every <see cref="Interval"/>, the first one an interval after boot.</summary>
 public sealed class HealthClock
 {

@@ -36,10 +36,17 @@ internal static class Settings
     public static ConfigEntry<bool> DailyBanner { get; private set; }
     public static ConfigEntry<bool> LoginStats { get; private set; }
     public static ConfigEntry<bool> PlayerShare { get; private set; }
+    public static ConfigEntry<bool> LoginEventNotice { get; private set; }
     /// <summary>Announcements.WarningOffsets as loaded: 1-5 values of 5-3600 s, sorted descending.</summary>
     public static IReadOnlyList<int> WarningOffsets { get; private set; } = Limits.DefaultWarningOffsets;
     /// <summary>Announcements.DailyBannerTime as loaded, server-local.</summary>
     public static System.TimeOnly DailyBannerTime { get; private set; } = new(20, 0);
+
+    // ---- Unit watch (unit-watch D1, design §9 D54): a safety rail on, unlike the pillars (S-3) ----
+    public static ConfigEntry<bool> UnitWatchEnabled { get; private set; }
+
+    // ---- Scoreboard (wave-sets D9, design §9 D38) ----
+    public static ConfigEntry<bool> ScoreboardIncludeAdmins { get; private set; }
 
     // ---- Debug ----
     public static ConfigEntry<bool> VerboseLogging { get; private set; }
@@ -78,6 +85,8 @@ internal static class Settings
             "Most units spawned in one server tick; a larger wave spreads over the next ticks.");
         BindLimit(config, Limits.MaxDespawnsPerTick,
             "Most units despawned in one server tick (many destroys in one frame can crash the server).");
+        BindLimit(config, Limits.EmpowerBatchPerTick,
+            "Most empowerment carrier operations (applies and removals together, removals first) in one server tick.");
         BindLimit(config, Limits.GraceSeconds,
             "Seconds an event's units outlive the event's end before they expire.");
         BindLimit(config, Limits.PurgeCooldownSeconds,
@@ -95,6 +104,9 @@ internal static class Settings
             "Private stats line on login. Reserved: it takes effect when player stats arrive in a later version.");
         PlayerShare = config.Bind("Announcements", "PlayerShare", false,
             "Let players share a leaderboard line server-wide. Reserved: it takes effect with player stats in a later version.");
+        // The one [Announcements] switch on by default (design §9 D63; preflight's announcement check names it).
+        LoginEventNotice = config.Bind("Announcements", "LoginEventNotice", true,
+            "Private line to a player who logs in while an event runs, naming the running events and their time left.");
         var offsets = config.Bind("Announcements", "WarningOffsets", "300,60,10",
             "Seconds before a wave at which its warning fires: 1-5 comma-separated values, each 5-3600.");
         var (parsedOffsets, offsetsLog) = Limits.ParseWarningOffsets(offsets.Value);
@@ -109,6 +121,18 @@ internal static class Settings
             "Seconds a player waits between two shares.");
         BindLimit(config, Limits.ShareMaxPerMinute,
             "Most player shares the whole server passes in any minute.");
+
+        ScoreboardIncludeAdmins = config.Bind("Scoreboard", "IncludeAdmins", false,
+            "Count admins on an event's scoreboard (events.json action.scoreboard true). Off: an admin's kills and deaths are left out.");
+
+        UnitWatchEnabled = config.Bind("UnitWatch", "Enabled", true,
+            "Watch event units for being stuck: a unit that stands still beside a player, or under the ground, is moved back unseen; after 2 failed tries it is removed with no kill credit.");
+        BindLimit(config, Limits.StuckSeconds,
+            "Seconds a unit stands still with a player near, or stays off the ground, before it counts as stuck.");
+        BindLimit(config, Limits.StallMinutes,
+            "Minutes with no death and no fight before the leftovers of a wave the event waits on are treated as stuck. 0 turns this off.");
+        BindLimit(config, Limits.SpawnStillSeconds,
+            "Seconds after a unit is spawned or put down by the mod within which, with a player near, it must have moved; one that has not is stuck at once.");
 
         VerboseLogging = config.Bind("Debug", "VerboseLogging", false,
             "Log each unit spawned and despawned, and each announcement sent.");

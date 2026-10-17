@@ -36,6 +36,7 @@ internal static class Settings
     public static ConfigEntry<bool> DailyBanner { get; private set; }
     public static ConfigEntry<bool> LoginStats { get; private set; }
     public static ConfigEntry<bool> PlayerShare { get; private set; }
+    public static ConfigEntry<bool> LoginEventNotice { get; private set; }
     /// <summary>Announcements.WarningOffsets as loaded: 1-5 values of 5-3600 s, sorted descending.</summary>
     public static IReadOnlyList<int> WarningOffsets { get; private set; } = Limits.DefaultWarningOffsets;
     /// <summary>Announcements.DailyBannerTime as loaded, server-local.</summary>
@@ -103,6 +104,9 @@ internal static class Settings
             "Private stats line on login. Reserved: it takes effect when player stats arrive in a later version.");
         PlayerShare = config.Bind("Announcements", "PlayerShare", false,
             "Let players share a leaderboard line server-wide. Reserved: it takes effect with player stats in a later version.");
+        // The one [Announcements] switch on by default (design §9 D63; preflight's announcement check names it).
+        LoginEventNotice = config.Bind("Announcements", "LoginEventNotice", true,
+            "Private line to a player who logs in while an event runs, naming the running events and their time left.");
         var offsets = config.Bind("Announcements", "WarningOffsets", "300,60,10",
             "Seconds before a wave at which its warning fires: 1-5 comma-separated values, each 5-3600.");
         var (parsedOffsets, offsetsLog) = Limits.ParseWarningOffsets(offsets.Value);

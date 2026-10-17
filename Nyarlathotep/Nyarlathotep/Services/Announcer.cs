@@ -42,6 +42,7 @@ internal static class Announcer
         {
             ("WaveWarnings", Settings.WaveWarnings.Value), ("EventBanners", Settings.EventBanners.Value),
             ("DailyBanner", Settings.DailyBanner.Value), ("LoginStats", Settings.LoginStats.Value), ("PlayerShare", Settings.PlayerShare.Value),
+            ("LoginEventNotice", Settings.LoginEventNotice.Value),
         }.Where(s => s.Item2).Select(s => s.Item1).ToList();
         Core.Log.LogInfo($"[nyar] announcements: {(on.Count == 0 ? "all off" : string.Join(", ", on))}; warning offsets {string.Join(",", Settings.WarningOffsets)} s; daily banner {Settings.DailyBannerTime:HH\\:mm}");
     }

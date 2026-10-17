@@ -36,9 +36,10 @@ public static class ControlCases
     public const string Apocalypse = "apocalypse";
     public const string UnitWatch = "unit-watch";
     public const string WaveVariety = "wave-variety";
+    public const string LoginNotice = "login-notice";
 
     /// <summary>The plans whose controls the table lists; each is copied to the test output under Resources/.</summary>
-    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm, HuntingGrounds, Revenge, Apocalypse, UnitWatch, WaveVariety];
+    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm, HuntingGrounds, Revenge, Apocalypse, UnitWatch, WaveVariety, LoginNotice];
 
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
@@ -47,6 +48,9 @@ public static class ControlCases
         new(Apocalypse, "D33", 5, "0.13.0"), new(Apocalypse, "D34", 5, "0.13.0"), new(Apocalypse, "D35", 5, "0.13.0"),
         // unit-watch: step 5 the release
         new(UnitWatch, "D30", 5, "0.13.0"), new(UnitWatch, "D31", 5, "0.13.0"), new(UnitWatch, "D32", 5, "0.13.0"), new(UnitWatch, "D33", 5, "0.13.0"),
+        // login-notice: step 2 the session in game, step 3 the release
+        new(LoginNotice, "D7", 2, "0.13.1"),
+        new(LoginNotice, "D8", 3, "0.13.1"), new(LoginNotice, "D9", 3, "0.13.1"), new(LoginNotice, "D10", 3, "0.13.1"), new(LoginNotice, "D11", 3, "0.13.1"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -67,7 +71,7 @@ public static class ControlCases
         "WaveSetTests", "ScoreboardTests", "WaveSetDependencyFailureTests", "SwarmTests", "SwarmDependencyFailureTests",
         "HuntingGroundsTests", "HuntingGroundsDependencyFailureTests", "RevengeTests", "BossWaveTests", "RevengeDependencyFailureTests",
         "ApocalypseTests", "ApocalypseStateTests", "ApocalypseDependencyFailureTests", "UnitWatchTests",
-        "UnitWatchDependencyFailureTests", "PoolTests", "PursuitTests", "FactionGroupsTests", "WaveVarietyDependencyFailureTests",
+        "UnitWatchDependencyFailureTests", "PoolTests", "PursuitTests", "FactionGroupsTests", "WaveVarietyDependencyFailureTests", "LoginNoticeTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -979,5 +983,27 @@ public static class ControlCases
             ["tools/preflight-fixtures/Secrets/bad", "tools/preflight-fixtures/Secrets/bad-sentinel-log"],
             ["tools/preflight-fixtures/Secrets/good", "tools/preflight-fixtures/Secrets/good-sentinel"],
             ["tools/preflight-fixtures/Secrets/empty", "tools/preflight-fixtures/Secrets/empty-sentinel"]) with { Plan = WaveVariety },
+        // ---- login-notice step 1 (D7 is step 2's, D8-D11 step 3's)
+        T("D1", "Text", "LoginNoticeTests",
+            ["a_line_is_returned_with_nothing_running", "a_part_is_out_of_end_time_order_or_differs_from_its_status_line",
+             "a_line_passes_480_bytes_cuts_a_part_or_miscounts_the_rest"],
+            ["one_event"], ["no_running_instance_no_line"]) with { Plan = LoginNotice },
+        T("D2", "Delivery", "LoginNoticeTests",
+            ["a_notice_leaves_before_10_s", "sent_with_nothing_running_at_its_due_time", "it_reaches_a_disconnected_or_replaced_user",
+             "sent_twice_within_60_s_of_reconnects", "sent_for_an_enabled_event_that_is_not_running", "a_connect_with_nothing_running_uses_up_the_gate",
+             "it_skips_a_non_admin_or_stops_the_admin_degraded_notice"],
+            ["the_switch_off_queues_nothing"], ["no_connect_no_read"]) with { Plan = LoginNotice },
+        C("D3", "AnnouncementDefaults", "preflight › Test-CheckAnnouncementDefaults",
+            ["tools/preflight-fixtures/AnnouncementDefaults/bad", "tools/preflight-fixtures/AnnouncementDefaults/bad-2", "tools/preflight-fixtures/AnnouncementDefaults/bad-3"],
+            ["tools/preflight-fixtures/AnnouncementDefaults/good"], ["tools/preflight-fixtures/AnnouncementDefaults/empty"]) with { Plan = LoginNotice },
+        T("D4", "Faults", "LoginNoticeTests",
+            ["a_throwing_send_stops_the_other_notices_or_logs_twice_in_a_streak", "a_throwing_read_sends_a_notice_or_logs_twice"],
+            ["a_good_read_ends_the_streak"], ["nothing_due_nothing_logged"]) with { Plan = LoginNotice },
+        T("D5", "LoginNotice", "ContractDocTests",
+            ["the_api_or_handshake_changes_or_the_contract_lacks_the_sentence"], ["api_8_and_the_sentence"], ["contract"]) with { Plan = LoginNotice },
+        T("D5", "LoginNotice", "PrivacyTests",
+            ["a_name_id_or_position_reaches_a_line"], ["counts_and_event_names_only"], ["no_running_event_no_line"]) with { Plan = LoginNotice },
+        T("D6", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit"],
+            ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = LoginNotice },
     ];
 }

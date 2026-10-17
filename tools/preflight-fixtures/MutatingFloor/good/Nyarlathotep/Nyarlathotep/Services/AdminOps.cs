@@ -21,7 +21,8 @@ internal sealed class AdminOps : IAdminOps
         (Persistence.State.Document.PurgeUntilUtc, EventRuntime.Engine.Active.Count, SpawnTracker.Ledger.Units.Count);
 
     [Mutating]
-    public Outcome OpStartEvent(string id, (float X, float Y, float Z)? origin) => EventRuntime.StartEvent(id, "manual", Actor.Admin, origin);
+    public Outcome OpStartEvent(string id, (float X, float Y, float Z)? origin, string focus = null) =>
+        EventRuntime.StartEvent(id, "manual", Actor.Admin, origin, focus: focus);
 
     [Mutating]
     public Outcome OpStopEvent(string id) => EventRuntime.StopEvent(id);
@@ -48,4 +49,9 @@ internal sealed class AdminOps : IAdminOps
 
     [Mutating]
     public Outcome OpSetPillar(string name, string state) => PillarSwitches.SetPillar(name, state);
+
+    /// <summary>`.nyar event unstick &lt;id&gt;` and its twin (unit-watch D12, D13): marks the running instance's units that
+    /// have not fought; the watch phase moves them.</summary>
+    [Mutating]
+    public Outcome OpUnstick(string id) => SpawnTracker.Unstick(id);
 }

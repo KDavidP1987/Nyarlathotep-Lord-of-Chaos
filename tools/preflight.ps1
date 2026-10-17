@@ -363,8 +363,10 @@ function Test-CheckPillarDefaults([string]$Root) {
 }
 
 # Every bool Bind in [Announcements] of Config/Settings.cs defaults to false, and the section binds the five switches
-# WaveWarnings, EventBanners, DailyBanner, LoginStats and PlayerShare (Epic D41, foundation D17).
-$script:AnnouncementSwitches = @('WaveWarnings', 'EventBanners', 'DailyBanner', 'LoginStats', 'PlayerShare')
+# WaveWarnings, EventBanners, DailyBanner, LoginStats, PlayerShare and LoginEventNotice (Epic D41, foundation D17). LoginEventNotice
+# is the one switch on by default (design §9 D63, login-notice D3): it must default to true, every other one to false.
+$script:AnnouncementSwitches = @('WaveWarnings', 'EventBanners', 'DailyBanner', 'LoginStats', 'PlayerShare', 'LoginEventNotice')
+$script:AnnouncementOnByDefault = @('LoginEventNotice')
 
 function Test-CheckAnnouncementDefaults([string]$Root) {
     $settings = Read-Text $Root "$PkgRel/Config/Settings.cs"
@@ -373,9 +375,11 @@ function Test-CheckAnnouncementDefaults([string]$Root) {
     $names = @($binds | ForEach-Object { $_.Groups[1].Value })
     $missing = @($script:AnnouncementSwitches | Where-Object { $names -notcontains $_ })
     if ($missing) { return New-Result $false "announcement defaults: switch not bound: $($missing -join ', ')" }
-    $on = @($binds | Where-Object { $_.Groups[2].Value -ne 'false' } | ForEach-Object { $_.Groups[1].Value })
+    $on = @($binds | Where-Object { $_.Groups[2].Value -ne 'false' -and $script:AnnouncementOnByDefault -notcontains $_.Groups[1].Value } | ForEach-Object { $_.Groups[1].Value })
     if ($on) { return New-Result $false "announcement defaults: ON by default: $($on -join ', ')" }
-    return New-Result $true "announcement defaults: all off ($($binds.Count) switches)"
+    $off = @($binds | Where-Object { $_.Groups[2].Value -ne 'true' -and $script:AnnouncementOnByDefault -contains $_.Groups[1].Value } | ForEach-Object { $_.Groups[1].Value })
+    if ($off) { return New-Result $false "announcement defaults: OFF by default but must be on: $($off -join ', ')" }
+    return New-Result $true "announcement defaults: all off but $($script:AnnouncementOnByDefault -join ', ') ($($binds.Count) switches)"
 }
 
 $script:PublicCommands = @('nyar', 'status', 'help', 'me', 'top', 'hide', 'show', 'version', 'sub', 'regions')   # Epic D5 (A4); regions D11

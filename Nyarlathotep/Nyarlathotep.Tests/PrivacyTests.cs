@@ -40,6 +40,7 @@ public partial class PrivacyTests
         [nameof(Messages.Overview)] = () => [Messages.Overview("0.2.0")],
         [nameof(Messages.CommandList)] = () => Messages.CommandList([".nyar", ".nyar status", ".nyar api version"]),
         [nameof(Messages.Status)] = () => Messages.Status(Running, Now).Concat(Messages.Status([], Now)),
+        [nameof(Messages.LoginNotice)] = () => [Messages.LoginNotice(Running, Now, _ => null)!],   // login-notice D5 (PrivacyTests.LoginNotice.cs)
         [nameof(Messages.Render)] = () => AllTemplates().Select(t => Messages.Render(t, MessageContext.For(PlantedDefinition(), 5, 2))),
         [nameof(Messages.StartBanner)] = () => Running.SelectMany(r => Enumerable.Range(0, 3).Select(p => Messages.StartBanner(r.Definition, 10, p))),
         [nameof(Messages.EndBanner)] = () => Running.SelectMany(r => Enumerable.Range(0, 3).Select(p => Messages.EndBanner(r.Definition, p))),

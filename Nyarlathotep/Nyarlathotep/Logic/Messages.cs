@@ -1,4 +1,5 @@
 #nullable enable
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Nyarlathotep.Logic;
@@ -154,6 +155,26 @@ public static class Messages
             .Select(r => own(r) ?? $"{r.Definition.Name}: {MinutesLeft(r.EndsUtc, utcNow)} min left")
             .ToList();
         return lines.Count == 0 ? [NoActiveEvents] : lines;
+    }
+
+    /// <summary>The private line a player gets at login while events run (login-notice D1): null when nothing runs, else
+    /// "Events in progress: &lt;part&gt;[; &lt;part&gt; …]. Type .nyar status for details." with each part the
+    /// <see cref="Status(IEnumerable{RunningInstance}, DateTime, Func{RunningInstance, string?})"/> line of its instance,
+    /// in the same end-time order. Parts that would take the line past <see cref="Wire.MaxBytes"/> are left out whole and
+    /// counted by "… and &lt;m&gt; more".</summary>
+    public static string? LoginNotice(IEnumerable<RunningInstance> running, DateTime utcNow, Func<RunningInstance, string?> own)
+    {
+        var list = running.ToList();
+        if (list.Count == 0) return null;
+        var parts = Status(list, utcNow, own);
+        const string Head = "Events in progress: ", Tail = ". Type .nyar status for details.";
+        for (var kept = parts.Count; kept > 0; kept--)
+        {
+            var left = parts.Count - kept;
+            var line = Head + string.Join("; ", parts.Take(kept)) + (left > 0 ? $"; … and {left} more" : "") + Tail;
+            if (Encoding.UTF8.GetByteCount(line) <= Wire.MaxBytes) return line;
+        }
+        return Head + $"… and {parts.Count} more" + Tail;
     }
 
     /// <summary>An announcement from <paramref name="template"/>; an unknown placeholder is left as written (the

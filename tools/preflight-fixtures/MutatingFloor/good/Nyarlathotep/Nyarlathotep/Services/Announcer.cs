@@ -42,16 +42,29 @@ internal static class Announcer
         {
             ("WaveWarnings", Settings.WaveWarnings.Value), ("EventBanners", Settings.EventBanners.Value),
             ("DailyBanner", Settings.DailyBanner.Value), ("LoginStats", Settings.LoginStats.Value), ("PlayerShare", Settings.PlayerShare.Value),
+            ("LoginEventNotice", Settings.LoginEventNotice.Value),
         }.Where(s => s.Item2).Select(s => s.Item1).ToList();
         Core.Log.LogInfo($"[nyar] announcements: {(on.Count == 0 ? "all off" : string.Join(", ", on))}; warning offsets {string.Join(",", Settings.WarningOffsets)} s; daily banner {Settings.DailyBannerTime:HH\\:mm}");
     }
 
-    /// <summary>EventRuntime: an event started. With EventBanners on, its start banner is queued.</summary>
+    /// <summary>EventRuntime: an event started. With EventBanners on, its start banner is queued; a Revenge definition
+    /// queues its faction alert instead, whatever EventBanners says (revenge D7).</summary>
     internal static void EventStarted(RunningInstance instance)
     {
-        if (!Settings.EventBanners.Value) return;
         var minutes = (int)Math.Ceiling((instance.EndsUtc - instance.StartedUtc).TotalMinutes);
-        _queue.Enqueue(new QueuedLine(Messages.StartBanner(instance.Definition, minutes, _random.Next()), LineKind.Info, instance.Definition.Id), DateTime.UtcNow);
+        foreach (var line in RevengeRule.StartLines(instance.Definition, Settings.EventBanners.Value, _random.Next(),
+            () => Messages.StartBanner(instance.Definition, minutes, _random.Next())))
+            _queue.Enqueue(line, DateTime.UtcNow);
+    }
+
+    /// <summary>A private line to the player with platform id <paramref name="player"/> (revenge D4, D7, D8): nothing when
+    /// that player is not connected. Throws when the send fails, so the caller's streak logs it (revenge D10).</summary>
+    internal static void SendTo(string player, string text)
+    {
+        if (!ulong.TryParse(player, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var id)) return;
+        var users = new GameUsers();
+        if (!users.Connected().Contains(id)) return;
+        users.Send(id, TextSink.CutToBytes(text, Wire.MaxBytes));
     }
 
     /// <summary>EventRuntime: an event ended (expired, stopped or cancelled). Its unsent warnings go; with EventBanners on,
@@ -62,6 +75,20 @@ internal static class Announcer
         if (!Settings.EventBanners.Value) return;
         _queue.Enqueue(new QueuedLine(Messages.EndBanner(def, _random.Next()), LineKind.Info, def.Id), DateTime.UtcNow);
     }
+
+    /// <summary>EventRuntime: an event's scoreboard (wave-sets D10, D11), queued after its end banner as informational
+    /// lines whatever EventBanners says (the admin opted in per event). Its lines carry player names, so no log line shows
+    /// their text (D12).</summary>
+    internal static void Scoreboard(string eventId, IReadOnlyList<string> lines)
+    {
+        foreach (var line in lines) _queue.Enqueue(new QueuedLine(line, LineKind.Info, eventId, Named: true), DateTime.UtcNow);
+    }
+
+    /// <summary>ApocalypseAction: a horde's rise, a march's 25 % step, a horde's defeat or the outcome (apocalypse D7, D8),
+    /// queued as an informational line whatever EventBanners says, as the scoreboard is. No line names or locates a
+    /// player, so its text may be logged.</summary>
+    internal static void Apocalypse(string eventId, string line) =>
+        _queue.Enqueue(new QueuedLine(line, LineKind.Info, eventId), DateTime.UtcNow);
 
     /// <summary>The purge ends every event without banners; unsent warnings go.</summary>
     internal static void Purged() => _queue.DropWarnings();
@@ -84,7 +111,7 @@ internal static class Announcer
         if (Settings.DailyBanner.Value) QueueDailyBanner(now);
         if (_queue.Next(now) is not { } line) return;
         var reached = _broadcaster.SendToAll(TextSink.CutToBytes(line.Text, Wire.MaxBytes));
-        if (Settings.VerboseLogging.Value) Core.Log.LogInfo($"[nyar] announced to {reached}: {line.Text}");
+        if (Settings.VerboseLogging.Value) Core.Log.LogInfo($"[nyar] announced to {reached}: {line.LogText}");
     }
 
     static void QueueWarnings(DateTime now)
