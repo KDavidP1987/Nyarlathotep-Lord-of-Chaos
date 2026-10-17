@@ -1,0 +1,57 @@
+# infestation.vrs: undead-hordes D24. The inf-test event (tools/vrclient/scenarios/fixtures/inf-test.json: an
+# Infestation of Faction_Undead, 3 origins of at least 5 natives 300 m apart, 10 CHAR_Undead_SkeletonSoldier_Withered
+# at level 20 each, hunters 50, spread 1-3 from the Withered pool) starts with Chaos at home. Its origins must lie at
+# least 500 m from Chaos; at least half of the hunter share (8 of the 15 hunters of 30) must stand within 100 m of Chaos
+# within 5 minutes (wild Withered within 100 m of home before the start are subtracted). Three CHAR_Bandit_Thug natives
+# (`.devnative`, never the mod's units; Session 0's Hostility table: bandits fight the undead) then spawn beside Chaos
+# among the hunters: a spread of 1-3 is logged within 3 minutes. `.nyar event stop` ends it and drains to 0 tracked.
+# Needs: `python tools/vrclient/fixture-install.py <server>/BepInEx/config/Nyarlathotep/events.json inf-test` before the
+# boot (or `.nyar event reload` below); the dev cfg at MaxTrackedUnits 300 (the pillar switch below re-reads it);
+# NyarDevTools (.devwhere .devunits .devnative) and DevChatEcho; pillar spawns on; no other event running; Chaos
+# invulnerable (`ToggleInvulnerable true`, a Boolean, never false).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 5
+console ToggleInvulnerable true
+wait 2
+chat .nyar pillar spawns on
+expect-reply spawns
+chat .nyar event reload
+expect-log events: reloaded
+expect-no-log event inf-test: timeout=3
+chat .devwhere
+expect-log \[DEV WHERE\] x=(?P<HX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<HZ>-?[0-9.]+)
+chat .devunits -1584807109 100
+expect-log \[DEV UNITS\] n=(?P<WILD>[0-9]+) prefab=-1584807109
+mark
+chat .nyar event start inf-test
+expect-log event inf-test started by timeout=20
+expect-log apocalypse inf-test hotspots: 3 \([0-9]+ at (?P<AX>-?[0-9]+) (?P<AZ>-?[0-9]+), [0-9]+ at (?P<BX>-?[0-9]+) (?P<BZ>-?[0-9]+), [0-9]+ at (?P<CX>-?[0-9]+) (?P<CZ>-?[0-9]+)\) timeout=30
+calc DMIN = min(hypot(${AX} - ${HX}, ${AZ} - ${HZ}), hypot(${BX} - ${HX}, ${BZ} - ${HZ}), hypot(${CX} - ${HX}, ${CZ} - ${HZ}))
+expect-calc ${DMIN} >= 500
+expect-log apocalypse inf-test roamers: \+10 at hotspot 1 timeout=60
+expect-log apocalypse inf-test roamers: \+10 at hotspot 2 timeout=60
+expect-log apocalypse inf-test roamers: \+10 at hotspot 3 timeout=60
+poll-reply RISE tracked units: 30 \(spawning 0, :: .nyar status every=5 timeout=120
+# the hunters come to Chaos: the run's Withered within 100 m at 2.5 and at 5 minutes after the rise (the last counts)
+wait 150
+chat .devunits -1584807109 100
+expect-log \[DEV UNITS\] n=(?P<N1>[0-9]+) prefab=-1584807109
+wait 145
+chat .devunits -1584807109 100
+expect-log \[DEV UNITS\] n=(?P<N>[0-9]+) prefab=-1584807109
+calc HUNTERS = ${N} - ${WILD}
+expect-calc ${HUNTERS} >= 8
+shot full inf-hunters
+# natives among them: a kill by the run's units spreads 1-3
+mark
+chat .devnative -301730941 3 300
+expect-log \[DEV NATIVE\] n=3
+expect-log apocalypse inf-test spread: \+(?P<SPREAD>[0-9]+) \( timeout=180
+expect-calc ${SPREAD} >= 1 and ${SPREAD} <= 3
+shot full inf-spread
+chat .nyar event stop inf-test
+expect-log event inf-test stopped timeout=20
+poll-reply DRAIN tracked units: 0 \(spawning 0, despawning 0\) :: .nyar status every=3 timeout=180

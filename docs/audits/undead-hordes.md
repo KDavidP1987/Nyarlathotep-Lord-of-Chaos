@@ -27,6 +27,7 @@
 - compile: step 3's post-audit build at the same tree, 0 Warning(s), 0 Error(s); tests 4034/4034; preflight OK
 - dod status: 20/33 verified (D1-D5, D7-D17, D20-D22, D33)
 - feature doc read: docs/features/UNDEAD_HORDES.md (Status, Design, Load test, Hostility); the baseline boot runs at the start of Session 1, before any scenario
+- baseline boot: 5ccf276's Release DLL on the dev server, no client: "Nyarlathotep initialized via GameDataInitializedPatch (attempt #1)", events 17 valid, templates 36/36, boot marker sweep 0 found, boot carrier sweep 0 found; warnings only the known example-empowerment line, Beelzebub's TUNE line and HarmonyX's type-load lines; the Unity log's 226 missing-prefab lines are the game's own
 
 ## Post-audit
 ### Step 1 · 2026-10-17 · the step's commit follows

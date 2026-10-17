@@ -1,0 +1,43 @@
+{
+  "id": "inf-test",
+  "name": "Infestation test",
+  "enabled": true,
+  "pillar": "spawns",
+  "trigger": {
+    "type": "Manual"
+  },
+  "durationSeconds": 1800,
+  "action": {
+    "type": "Infestation",
+    "faction": "Faction_Undead",
+    "pools": {
+      "troops": [
+        "CHAR_Undead_SkeletonSoldier_Withered"
+      ]
+    },
+    "units": [
+      {
+        "prefab": "CHAR_Undead_SkeletonSoldier_Withered",
+        "count": 10,
+        "modifiers": {
+          "level": 20
+        }
+      }
+    ],
+    "origins": {
+      "count": 3,
+      "minNatives": 5,
+      "minSpacing": 300,
+      "perOrigin": 10
+    },
+    "hunters": 50,
+    "driftRadius": 400,
+    "spread": {
+      "perKillMin": 1,
+      "perKillMax": 3,
+      "pool": "troops",
+      "max": 300,
+      "perMinute": 20
+    }
+  }
+}

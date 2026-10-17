@@ -4,7 +4,7 @@
 # then its first hunt seed (Chaos is the only player within 40 m of the mark). Run 2: Chaos stands 150 m along the route;
 # the front logs "held by a player" (a player within 60 m of it, outside the destination radius + 60 m), logs no
 # arrival for 60 s, and units of the event stand within 90 m of Chaos (held round the front, in front of him; they
-# engage when he closes in); Chaos leaves, the front logs "marching on" and arrives. Each run ends with `.nyar event stop` and 0 tracked.
+# engage when he closes in: `.devunits` shows a unit with an aggro target); Chaos leaves, the front logs "marching on" and arrives. Each run ends with `.nyar event stop` and 0 tracked.
 # The log lines carry no position; the event is deleted at the end.
 # Needs: the step 4 Release DLL; NyarDevTools (.devgo .devtp) and DevChatEcho; the pond mark; pillar spawns on; no other
 # event running; Chaos invulnerable (`ToggleInvulnerable true`, a Boolean, never false).
@@ -86,6 +86,16 @@ expect-no-log march wd-test wave 1: (arrived|marching on) timeout=60
 shot full wd-held
 chat .nyar debug here 90
 expect-log \[nyar\] debug: CHAR_Undead_SkeletonSoldier_Withered wd-test timeout=10
+# Chaos closes in on the held front: a unit takes him as its aggro target
+calc CX = ${HX} - 50
+chat .devtp ${CX} ${PZ}
+expect-log \[DEV TP\] to
+wait 3
+console ToggleInvulnerable true
+wait 12
+chat .devunits -1584807109 40
+expect-seen \[DEV UNIT\] .* target=1
+shot full wd-engaged
 # Chaos leaves: the front marches on and arrives
 console TPHome
 wait 5
