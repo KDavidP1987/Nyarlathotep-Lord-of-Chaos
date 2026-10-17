@@ -21,3 +21,20 @@ VERDICT: REVISE
 - F6 · accepted · D6: a held front's time does not count toward the stall; D11: a stalled horde infests where it stands; D3's drain bar in seconds at the one-second tick
 - F7 · accepted · Rollout › Rollback and D28: 0.13.1's boot orphan sweep drains a running infestation's units, checked by the gate's drill
 - UF1 · accepted · D17
+
+## Review 2 · 2026-10-17 · subagent · plan commit 30b194c · plan 58937 B · 32 items · files 0 · e3b0c44298fc · prompt 5268ddf31dfb
+F1 blocking · blocks: limit · 4.4/13.1 · D26 needs a horde march and an infestation to grow together, but D13 refuses a second apocalypse-type event, so D26 can never pass and the 1000-unit claim has no in-play evidence — let one horde march grow and infest to the ceiling, with destination SpawnWaves events beside it if needed
+F2 advisory · 13.1/S-4 · the dev server runs at ServerFps 30, so a meter reading the frame interval sees about 33.3 ms idle and "frame average under 33 ms" fails at step 100 — say what the meter measures and set D3's bars to match
+F3 advisory · 12.4 · D25's -MinTracked 450 cannot pass if the owner accepts a ceiling below 500 — use a share of the horde's size
+F4 advisory · 7.1 · D10's Hotspot start has no refusal when no hotspot qualifies
+F5 advisory · 9.2 · an Admin destination in the template has no meaning without an admin's start
+missing components: none
+undeclared families: none
+15/15 layers · 50/50 probes
+VERDICT: REVISE
+### Dispositions
+- F1 · accepted · D26 is one horde march at the MaxUnitsPerWave ceiling that grows and infests until the run holds the MaxTrackedUnits ceiling, destination waves beside it only to fill
+- F2 · accepted · D2 measures the interval between frames; D3, Performance and S-4 bar the interval average under 36 ms (28 of 30 fps) and p95 under 50 ms
+- F3 · accepted · D25's -MinTracked is 90 % of the horde's size
+- F4 · accepted · D10 refuses with "no <faction> natives found at least <minDistance> m away", with a fails-when
+- F5 · accepted · D10: an Admin start or destination needs a Manual trigger and an admin's start, refused otherwise, as Admin locations today
