@@ -91,6 +91,7 @@ public partial class PrivacyTests
             lines.AddRange(EventLines.Info(rig.Active.Definition, rig.Active, UdhT0.AddMinutes(2)));
         }
         lines.Add(ApocalypseHost.ArrivedLine("apo", "the living", 40, 11));
+        lines.Add(Messages.HordeArrived("the living"));                       // A6: the planted admin meets the horde first
         // Codex step 3 F2: a horde that rises at the planted admin's spot (an Admin start) and stalls there at once
         var stuck = ApocalypseDependencyFailureTests.Make(Inf.March(start: "{ \"type\": \"Admin\" }"));
         Assert.Null(stuck.Engine.Start("apo", "manual", UdhT0, open, origin, gate: d => stuck.Host.Prepare(d, stuck.Game, origin)));
@@ -116,7 +117,7 @@ public partial class PrivacyTests
         var lines = FamilyLines();
         Assert.Contains(lines, l => l.StartsWith("The dead rise in ", StringComparison.Ordinal));
         Assert.Contains(lines, l => l.StartsWith("horde apo: 10 units, 1 bosses, from ", StringComparison.Ordinal));
-        Assert.Contains("The horde has reached the living!", lines);
+        Assert.Contains(lines, l => l.StartsWith("horde apo: met by a player after ", StringComparison.Ordinal) && l.EndsWith("; infesting there", StringComparison.Ordinal));
         Assert.Contains(lines, l => l.StartsWith("horde apo: arrived at the living after ", StringComparison.Ordinal));
         Assert.Contains(lines, l => l.StartsWith("horde apo: stalled ", StringComparison.Ordinal) && l.EndsWith(" m short of Brighthaven; infesting there", StringComparison.Ordinal));
         Assert.Contains("hotspot 1: the starting admin", lines);

@@ -133,7 +133,7 @@ public sealed class WaveMarches
             }
             byte? level = units.MinBy(u => Apocalypse.Distance(u.X, u.Z, m.Front.X, m.Front.Z)).Level;
             var line = m.Step(seconds, players, (x, z) => HopRule.Ground(x, z, level, game.Walkable, game.Budget), utcNow, units.Count,
-                out var held, (x, z) => HopRule.GroundRead(x, z, level, game.Walkable, game.Budget));
+                out var held, (x, z) => HopRule.GroundRead(x, z, level, game.Walkable, game.Budget), units.Select(u => (u.X, u.Z)).ToList());
             if (held is not null) game.Log($"march {m.EventId} {held}");
             if (m.HoldLine is not null) game.Log(m.HoldLine);
             if (line is not null) game.Log(line);

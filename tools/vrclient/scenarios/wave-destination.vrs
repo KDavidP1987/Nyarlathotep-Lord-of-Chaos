@@ -1,13 +1,13 @@
 # wave-destination.vrs: undead-hordes D23. An event wd-test (one wave of 20 CHAR_Undead_SkeletonSoldier_Withered at a
 # Point at the pond, radius 8, Hunt 40, destination "the mark" 300 m east, radius 20, marchSpeed 2.0, duration 900) runs
-# twice. Run 1: Chaos waits at the mark; the wave logs "march wd-test wave 1: arrived after <s> s" within 6 minutes and
-# then its first hunt seed (Chaos is the only player within 40 m of the mark). Run 2: Chaos stands 150 m along the route;
-# the front logs "held by a player" (a player within 60 m of it, outside the destination radius + 60 m), logs no
-# arrival for 60 s, and units of the event stand within 90 m of Chaos (held round the front, in front of him; they
-# engage when he closes in: `.devunits` shows a unit with an aggro target); Chaos leaves, the front logs "marching on" and arrives. Each run ends with `.nyar event stop` and 0 tracked.
-# The log lines carry no position; the event is deleted at the end.
-# Needs: the step 4 Release DLL; NyarDevTools (.devgo .devtp) and DevChatEcho; the pond mark; pillar spawns on; no other
-# event running; Chaos invulnerable (`ToggleInvulnerable true`, a Boolean, never false).
+# twice. Run 1: Chaos waits unseen 150 m north of the mark; the wave logs "march wd-test wave 1: arrived after <s> s"
+# within 6 minutes with at least 12 of its units within 40 m of the mark (`.devunits` at the wd-mark dev mark); Chaos
+# then steps onto the mark: the first hunt seed follows and a unit takes him as its aggro target. Run 2: Chaos stands
+# 150 m along the route; the front holds ("held by a player"), the wave is met within 90 s (A6: seen for 30 s in a row)
+# with at least 12 units within 100 m of Chaos and no arrival, and a unit engages him when he steps among them.
+# Each run ends with `.nyar event stop` and 0 tracked. The mod's lines carry no position; the event is deleted at the end.
+# Needs: the step 4 Release DLL with A6; NyarDevTools (.devgo .devtp .devmark .devunits) and DevChatEcho; the pond mark;
+# pillar spawns on; no other event running; Chaos invulnerable (`ToggleInvulnerable true`, a Boolean, never false).
 ensure
 console ToggleInvulnerable true
 wait 2
@@ -43,6 +43,8 @@ calc MX = ${PX} + 300
 chat .devtp ${MX} ${PZ}
 expect-log \[DEV TP\] to
 wait 3
+chat .devmark wd-mark
+expect-log \[DEV MARK\] wd-mark
 chat .nyar event set wd-test action.destination here
 expect-reply wd-test action.destination =
 chat .nyar event set wd-test action.destination.radius 20
@@ -53,7 +55,11 @@ chat .nyar event set wd-test action.marchSpeed 2.0
 expect-reply wd-test action.marchSpeed =
 chat .nyar event enable wd-test
 expect-reply wd-test
-# run 1: Chaos waits at the mark
+# run 1: Chaos waits unseen 150 m north of the mark
+calc NZ = ${PZ} - 150
+chat .devtp ${MX} ${NZ}
+expect-log \[DEV TP\] to
+wait 3
 console ToggleInvulnerable true
 wait 2
 mark
@@ -62,15 +68,24 @@ expect-log event wd-test started by timeout=20
 expect-log event wd-test wave 1/1: 20 units queued timeout=30
 expect-log march wd-test wave 1: arrived after (?P<SECS>[0-9]+) s, (?P<UNITS>[0-9]+) units timeout=360
 expect-calc ${SECS} <= 360 and ${UNITS} >= 15
+chat .devunits -1584807109 40 wd-mark
+expect-log \[DEV UNITS\] n=(?P<ATMARK>[0-9]+) prefab=-1584807109
+expect-calc ${ATMARK} >= 12
+# Chaos steps onto the mark: the hunt seeds him and a unit engages
+chat .devgo wd-mark
+expect-log \[DEV TP\] wd-mark
+wait 3
+console ToggleInvulnerable true
 expect-log march wd-test wave 1: first hunt seed timeout=30
 wait 10
 shot full wd-arrived
-chat .nyar debug here 40
-expect-log \[nyar\] debug: CHAR_Undead_SkeletonSoldier_Withered wd-test timeout=10
+mark
+chat .devunits -1584807109 40
+expect-seen \[DEV UNIT\] .* target=1
 chat .nyar event stop wd-test
 expect-log event wd-test stopped timeout=20
 poll-reply DRAIN1 tracked units: 0 \(spawning 0, despawning 0\) :: .nyar status every=3 timeout=120
-# run 2: Chaos 150 m along the route holds the front
+# run 2: Chaos 150 m along the route meets the wave
 calc HX = ${PX} + 150
 chat .devtp ${HX} ${PZ}
 expect-log \[DEV TP\] to
@@ -82,26 +97,27 @@ chat .nyar event start wd-test
 expect-log event wd-test started by timeout=20
 expect-log event wd-test wave 1/1: 20 units queued timeout=30
 expect-log march wd-test wave 1: held by a player timeout=180
-expect-no-log march wd-test wave 1: (arrived|marching on) timeout=60
-shot full wd-held
-chat .nyar debug here 90
-expect-log \[nyar\] debug: CHAR_Undead_SkeletonSoldier_Withered wd-test timeout=10
-# Chaos closes in on the held front: a unit takes him as its aggro target
-calc CX = ${HX} - 50
-chat .devtp ${CX} ${PZ}
+expect-log march wd-test wave 1: met by a player after [0-9]+ s, (?P<MET>[0-9]+) units timeout=90
+expect-no-log march wd-test wave 1: arrived timeout=5
+shot full wd-met
+mark
+chat .devunits -1584807109 100
+expect-log \[DEV UNIT\] 0 x=(?P<UX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<UZ>-?[0-9.]+)
+expect-log \[DEV UNITS\] n=(?P<NEAR>[0-9]+) prefab=-1584807109
+expect-calc ${NEAR} >= 12
+# Chaos steps among them: a unit takes him as its aggro target
+chat .devtp ${UX} ${UZ}
 expect-log \[DEV TP\] to
 wait 3
 console ToggleInvulnerable true
-wait 12
+wait 10
+mark
 chat .devunits -1584807109 40
 expect-seen \[DEV UNIT\] .* target=1
 shot full wd-engaged
-# Chaos leaves: the front marches on and arrives
 console TPHome
 wait 5
 console ToggleInvulnerable true
-expect-log march wd-test wave 1: marching on timeout=30
-expect-log march wd-test wave 1: arrived after [0-9]+ s, [0-9]+ units timeout=300
 chat .nyar event stop wd-test
 expect-log event wd-test stopped timeout=20
 poll-reply DRAIN2 tracked units: 0 \(spawning 0, despawning 0\) :: .nyar status every=3 timeout=120

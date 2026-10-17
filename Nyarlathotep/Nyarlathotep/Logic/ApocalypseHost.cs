@@ -260,6 +260,7 @@ public sealed class ApocalypseHost
         _roamTurns.Clear();
         _infestTurns = new RoundRobin(RoundRobin.PerPass);
         _stalls.Clear();
+        _met.Clear();
         _lastMarch = _lastMove = _lastRenew = _lastRecord = null;
         _march.Ok();
         _roam.Ok();
@@ -427,8 +428,18 @@ public sealed class ApocalypseHost
                 }
                 byte? level = horde.Count == 0 ? null : horde.MinBy(u => Apocalypse.Distance(u.X, u.Z, front.X, front.Z))!.Level;
                 var unread = false;
-                var step = MarchRule.Step(front, action.Goal.Radius, action.MarchSpeed, seconds, online,
-                    (x, z) => HopRule.Ground(x, z, level, game.Walkable, game.Budget), now, out var held,
+                // undead-hordes A6: a horde march's front waits for units a player can see; the Apocalypse type is unchanged
+                var points = horde.Select(u => (u.X, u.Z)).ToList();
+                var met = false;
+                if (run.Mode == ApocalypseMode.HordeMarch)
+                {
+                    if (!_met.TryGetValue(front.Horde, out var clock)) _met[front.Horde] = clock = new MetClock();
+                    met = clock.Seen(MarchRule.SeenNow(front, now), now);
+                }
+                string? held = null;
+                var step = met || run.Mode == ApocalypseMode.HordeMarch && MarchRule.WaitsForUnits(front, points, now) ? MarchStep.HeldByPlayer
+                    : MarchRule.Step(front, action.Goal.Radius, action.MarchSpeed, seconds, online,
+                    (x, z) => HopRule.Ground(x, z, level, game.Walkable, game.Budget), now, out held,
                     (x, z) =>
                     {
                         var known = HopRule.GroundRead(x, z, level, game.Walkable, game.Budget);
@@ -437,7 +448,7 @@ public sealed class ApocalypseHost
                     });
                 if (held is not null) Say(game.Log, $"apocalypse {run.Id} {held}");
                 if (step == MarchStep.Moved) marching = true;
-                if (run.Mode == ApocalypseMode.HordeMarch && Arrival(run, front, step, unread, seconds, horde.Count, game, now)) forced = true;
+                if (run.Mode == ApocalypseMode.HordeMarch && Arrival(run, front, step, unread, seconds, horde.Count, game, now, met)) forced = true;
                 var crossed = MarchRule.NewSteps(front);
                 foreach (var pct in crossed) game.Announce(run.Id, Messages.ApocalypseProgress(active.Definition.Name, pct, action.Goal.Name));
                 if (step is MarchStep.Moved or MarchStep.HeldNoGround && MarchRule.IsUnobserved(front, now)
@@ -507,6 +518,7 @@ public sealed class ApocalypseHost
     /// (undead-hordes D18), and a horde march's stall clock per horde (D11).</summary>
     RoundRobin _infestTurns = new(RoundRobin.PerPass);
     readonly Dictionary<int, MarchStall> _stalls = [];
+    readonly Dictionary<int, MetClock> _met = [];                                                  // undead-hordes A6
 
     /// <summary>Every unit the hops, the roam and the infestation's moves visited since the host began (ScaleTests,
     /// undead-hordes D18).</summary>
@@ -531,6 +543,10 @@ public sealed class ApocalypseHost
     public static string ArrivedLine(string eventId, string destination, int seconds, int units) =>
         $"horde {eventId}: arrived at {destination} after {seconds} s, {units} units; infesting";
 
+    /// <summary>"horde &lt;event&gt;: met by a player after &lt;s&gt; s, &lt;n&gt; units; infesting there" (undead-hordes A6): no
+    /// position.</summary>
+    public static string MetLine(string eventId, int seconds, int units) => $"horde {eventId}: met by a player after {seconds} s, {units} units; infesting there";
+
     /// <summary>"horde &lt;event&gt;: stalled &lt;d&gt; m short of &lt;name&gt;; infesting there" (undead-hordes D11, A5): a distance,
     /// never a point, since the front starts where the horde rose, which can be the starting admin's position.</summary>
     public static string StalledLine(string eventId, int metresShort, string destination) => $"horde {eventId}: stalled {metresShort} m short of {destination}; infesting there";
@@ -538,14 +554,15 @@ public sealed class ApocalypseHost
     /// <summary>A horde march's front after its step (undead-hordes D11): within the destination's radius it arrives there,
     /// and after 120 s held by unwalkable ground with no player holding it (D6's stall) it infests where it stands; either way
     /// the run switches to the infestation's rule, logs it and, on arrival, tells the players. True when it switched.</summary>
-    bool Arrival(ApocalypseRun run, Front front, MarchStep step, bool unread, double seconds, int units, IApocalypseGame game, DateTime now)
+    bool Arrival(ApocalypseRun run, Front front, MarchStep step, bool unread, double seconds, int units, IApocalypseGame game, DateTime now, bool met = false)
     {
         var goal = run.Action.Goal;
-        var near = Apocalypse.Distance(front.X, front.Z, front.GoalX, front.GoalZ) <= goal.Radius;
+        var near = !met && Apocalypse.Distance(front.X, front.Z, front.GoalX, front.GoalZ) <= goal.Radius;
         if (!_stalls.TryGetValue(front.Horde, out var stall)) _stalls[front.Horde] = stall = new MarchStall();
-        if (!near && !stall.Add(step, unread, seconds)) return false;
+        if (!near && !met && !stall.Add(step, unread, seconds)) return false;
         if (!run.Arrive(near ? front.GoalX : front.X, near ? front.GoalZ : front.Z)) return false;
-        if (near)
+        if (met) Say(game.Log, MetLine(run.Id, (int)Math.Round((now - run.Active.Instance.StartedUtc).TotalSeconds), units));
+        else if (near)
         {
             Say(game.Log, ArrivedLine(run.Id, goal.Name, (int)Math.Round((now - run.Active.Instance.StartedUtc).TotalSeconds), units));
             game.Announce(run.Id, Messages.HordeArrived(goal.Name));

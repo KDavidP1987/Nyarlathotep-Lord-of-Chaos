@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Nyarlathotep.Logic;
 
 /// <summary>Where a destination wave stands (undead-hordes D6): marching, arrived within the radius, or stalled.</summary>
-public enum WaveMarchState { Marching, Arrived, Stalled }
+public enum WaveMarchState { Marching, Arrived, Stalled, Met }
 
 /// <summary>
 /// One wave of a destination event on its way (undead-hordes D6): a front from the wave's spawn centre to the destination at
@@ -27,6 +27,7 @@ public sealed class WaveMarch
     public WaveMarchState State { get; private set; } = WaveMarchState.Marching;
 
     readonly MarchStall _stall = new();
+    readonly MetClock _met = new();
     bool _heldByPlayer;
 
     /// <summary>The last step's hold change, "march &lt;event&gt; wave &lt;k&gt;: held by a player" or "…: marching on", else
@@ -65,7 +66,7 @@ public sealed class WaveMarch
     /// <paramref name="held"/> is the march rule's held or crossed line. <paramref name="living"/> counts the wave's units
     /// for the arrival line.</summary>
     public string? Step(double seconds, IReadOnlyList<(float X, float Z)> players, Func<float, float, bool> walkable, DateTime utcNow, int living,
-        out string? held, Func<float, float, bool?>? cross = null)
+        out string? held, Func<float, float, bool?>? cross = null, IReadOnlyCollection<(float X, float Z)>? units = null)
     {
         held = null;
         HoldLine = null;
@@ -77,7 +78,14 @@ public sealed class WaveMarch
             if (known is null) unread = true;
             return known;
         };
-        var step = MarchRule.Step(Front, Radius, Speed, seconds, players, walkable, utcNow, out held, probe);
+        // undead-hordes A6: seen for 30 s, the wave is met and fights where it stands; seen and behind, the front waits
+        if (units is not null && _met.Seen(MarchRule.SeenNow(Front, utcNow), utcNow))
+        {
+            State = WaveMarchState.Met;
+            return MetLine(EventId, Wave, (int)Math.Round((utcNow - StartedUtc).TotalSeconds), living);
+        }
+        var step = units is not null && MarchRule.WaitsForUnits(Front, units, utcNow) ? MarchStep.HeldByPlayer
+            : MarchRule.Step(Front, Radius, Speed, seconds, players, walkable, utcNow, out held, probe);
         if ((step == MarchStep.HeldByPlayer) != _heldByPlayer)
         {
             _heldByPlayer = !_heldByPlayer;
@@ -96,10 +104,29 @@ public sealed class WaveMarch
     /// <summary>"march &lt;event&gt; wave &lt;k&gt;: arrived after &lt;s&gt; s, &lt;n&gt; units".</summary>
     public static string ArrivedLine(string eventId, int wave, int seconds, int units) => $"march {eventId} wave {wave}: arrived after {seconds} s, {units} units";
 
+    /// <summary>"march &lt;event&gt; wave &lt;k&gt;: met by a player after &lt;s&gt; s, &lt;n&gt; units" (A6): no position.</summary>
+    public static string MetLine(string eventId, int wave, int seconds, int units) => $"march {eventId} wave {wave}: met by a player after {seconds} s, {units} units";
+
     /// <summary>"march &lt;event&gt; wave &lt;k&gt;: stalled &lt;d&gt; m short of its destination" (A5): a distance, never a point,
     /// since a front starts at its spawn centre, which can be the starting admin's position.</summary>
     public static string StalledLine(string eventId, int wave, int metresShort) =>
         $"march {eventId} wave {wave}: stalled {metresShort} m short of its destination";
+}
+
+/// <summary>A march's seen clock (undead-hordes A6): true once a player has watched it for <see cref="After"/> in a row.</summary>
+public sealed class MetClock
+{
+    public static readonly TimeSpan After = TimeSpan.FromSeconds(30);
+    DateTime? _since;
+
+    public bool Seen(bool watched, DateTime utcNow)
+    {
+        if (!watched) { _since = null; return false; }
+        _since ??= utcNow;
+        return utcNow - _since.Value >= After;
+    }
+
+    public void Reset() => _since = null;
 }
 
 /// <summary>

@@ -209,6 +209,27 @@ public class HordeMarchTests
     }
 
     [Fact]
+    public void Arrival_fails_when_a_horde_seen_for_30_s_is_not_met_where_it_stands()
+    {
+        var rig = Risen();
+        var run = rig.Host.Run!;
+        rig.Game.Online.Add(Inf.Player(200, 40));                              // a player on the way to Brighthaven
+        var s = 1;
+        for (; s <= 400 && !run.Arrived; s++)
+        {
+            rig.Game.Budget.Reset();
+            rig.Tick(T0.AddSeconds(s));
+        }
+        Assert.True(run.Arrived);                                                 // undead-hordes A6: met, then infests there
+        var (x, _) = run.ArrivedAt!.Value;
+        Assert.True(x < 200, $"met at {x}");
+        Assert.Contains(rig.Game.Logs, l => l.StartsWith("horde apo: met by a player after ", StringComparison.Ordinal) && l.EndsWith(" units; infesting there", StringComparison.Ordinal));
+        Assert.DoesNotContain(rig.Game.Logs, l => l.Contains(": arrived at ", StringComparison.Ordinal));
+        Assert.DoesNotContain(rig.Game.Announced, l => l.Contains("has reached", StringComparison.Ordinal));
+        Assert.True(run.Infesting);
+    }
+
+    [Fact]
     public void Arrival_fails_when_an_outcome_differs()
     {
         var rig = Risen();

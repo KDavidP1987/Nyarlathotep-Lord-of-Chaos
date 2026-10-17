@@ -1058,7 +1058,7 @@ public static class ControlCases
             ["a_front_moves_while_a_player_is_within_60_m", "arrival_does_not_switch_the_behaviour", "a_stall_leaves_the_wave_without_orders",
              "a_stall_counts_ground_it_could_not_read", "a_hop_happens_with_a_player_within_100_m",
              "arrival_does_not_hand_the_wave_its_hunt_at_the_destination", "a_stalled_wave_is_left_without_its_hunt",
-             "a_player_holding_the_front_is_not_logged_or_does_not_hold_it"],   // step 4: the march's driver; D23's hold line
+             "a_player_holding_the_front_is_not_logged_or_does_not_hold_it", "a_seen_wave_runs_ahead_of_its_units_or_is_never_met"],   // step 4: the march's driver; D23's hold line
             ["the_front_from_the_action_to_its_destination"],
             ["a_wave_without_a_destination_has_no_march", "a_wave_whose_units_are_gone_or_whose_event_ended_has_no_march"]) with { Plan = UndeadHordes },
         T("D7", "Spread", "SpreadTests",
@@ -1092,7 +1092,7 @@ public static class ControlCases
              "an_admin_destination_runs_without_an_admins_start", "growth_passes_its_max_or_does_not_join_the_front"],
             ["a_template_sized_horde_under_raised_caps"], ["a_horde_cut_to_nothing_waits"]) with { Plan = UndeadHordes },
         T("D11", "Arrival", "HordeMarchTests",
-            ["arrival_does_not_switch_the_rule_or_the_infest_spread_is_not_used", "a_stall_does_not_switch_the_rule", "an_outcome_differs"],
+            ["arrival_does_not_switch_the_rule_or_the_infest_spread_is_not_used", "a_stall_does_not_switch_the_rule", "a_horde_seen_for_30_s_is_not_met_where_it_stands", "an_outcome_differs"],
             ["kills_after_arrival_count_on_the_scoreboard"], ["an_apocalypse_never_arrives"]) with { Plan = UndeadHordes },
         T("D13", "Clash", "InfestationTests", ["two_of_the_family_run_together_or_a_destination_wave_is_refused"],
             ["one_after_another"], ["nothing_running_nothing_refused"]) with { Plan = UndeadHordes },

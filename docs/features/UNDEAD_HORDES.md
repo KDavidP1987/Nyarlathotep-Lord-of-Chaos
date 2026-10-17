@@ -32,7 +32,8 @@ Up to 1000 tracked units, once a load test on the local server proves it takes t
 - **Wave destination.** A SpawnWaves action may carry `"destination": { "location": Point | Admin, "radius": 10-100,
   "name" }` and `"marchSpeed"` (0.5-5.0, default 2.0). Its own location must then be a Point or Admin, and fanOut,
   regionLock, arena and pursuit are refused. Each wave marches as one front; it takes its behaviour on arrival, or
-  where it stands after 120 s stuck with nobody holding it. Chat: `action.destination here` or `none`, `.radius`,
+  where it stands after 120 s stuck with nobody holding it. A seen wave's front waits for its units, and a wave seen by
+  a player for 30 s in a row is met: it fights where it stands (the game will not walk it the last 100 m). Chat: `action.destination here` or `none`, `.radius`,
   `.name`, `action.marchSpeed`.
 - **Spread from a pool.** An apocalypse's `roamers` take `perKillMin`/`perKillMax` (0-3) and `pool`; each kill adds a
   uniform draw of that many pool members. `"pools"` and pool entries work as in SpawnWaves. The old `perKill: n` reads
@@ -49,7 +50,8 @@ Up to 1000 tracked units, once a load test on the local server proves it takes t
 - **Horde march** (`"type": "HordeMarch"`). One horde of its units' counts (10-500) and its `bosses` (fixed or rolled
   from a pool) rises at `start`: a Point, the admin's spot, or the native hotspot nearest the destination at least
   `minDistance` m away. It marches to its `destination` at `marchSpeed`; each kill on the way adds a `growth` draw that
-  joins the horde. On arrival, or where it stands after 120 s stuck, it infests there by its `infest` rule and spread.
+  joins the horde. On arrival, where it stands after 120 s stuck, or where players have watched it for 30 s, it infests there by its
+  `infest` rule and spread.
   Won when the horde is destroyed. Banner on arrival: "The horde has reached <destination>!"
 - **One at a time.** An Apocalypse, an Infestation and a HordeMarch share one engine: a second start is refused with
   "an apocalypse-type event is running: <name>". Destination waves run beside them.

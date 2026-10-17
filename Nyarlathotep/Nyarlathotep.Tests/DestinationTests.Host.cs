@@ -79,11 +79,11 @@ public partial class DestinationTests
     {
         var (host, game) = Marching();
         game.Online.Add((0, 80));                                               // 80 m off the units: they are watched
-        Run(host, game, 0, 40);
+        Run(host, game, 0, 25);                                                 // under the 30 s that make it met
         Assert.Empty(game.Moves);
-        Assert.True(host.Find("raid", 1)!.Front.X > 30);                        // the front walks on: no player within 60 m of it
+        Assert.InRange(host.Find("raid", 1)!.Front.X, 1, 36);                   // A6: the front waits for units no hop can bring
         game.Online.Clear();
-        Run(host, game, 41, 60);                                                // 10 s unwatched, then the stragglers hop
+        Run(host, game, 26, 60);                                                // 10 s unwatched, then the stragglers hop
         Assert.NotEmpty(game.Moves);
         var front = host.Find("raid", 1)!.Front;
         Assert.All(game.Moves, m => Assert.True(Apocalypse.Distance(m.X, m.Z, front.X, front.Z) <= 60));
@@ -96,13 +96,34 @@ public partial class DestinationTests
         Run(host, game, 0, 10);
         var x = host.Find("raid", 1)!.Front.X;
         game.Online.Add((x + 40, 0));                                           // 40 m ahead of the front: it holds
-        Run(host, game, 11, 40);
+        Run(host, game, 11, 35);                                                // under the 30 s that make it met
         Assert.Equal(x, host.Find("raid", 1)!.Front.X, 1);
         Assert.Single(game.Logs, l => l == "march raid wave 1: held by a player");
         game.Online.Clear();
-        Run(host, game, 41, 45);
+        Run(host, game, 36, 40);
         Assert.True(host.Find("raid", 1)!.Front.X > x + 5);
         Assert.Single(game.Logs, l => l == "march raid wave 1: marching on");
+    }
+
+    [Fact]
+    public void March_fails_when_a_seen_wave_runs_ahead_of_its_units_or_is_never_met()
+    {
+        var (host, game) = Marching();
+        Run(host, game, 0, 100);                                                // unseen: the units hop with the front
+        var m = host.Find("raid", 1)!;
+        var x = m.Front.X;
+        game.Online.Add((300, 0));                                              // a player waits at the destination
+        Run(host, game, 101, 125);
+        Assert.Equal(WaveMarchState.Marching, m.State);
+        Assert.All(game.Positions.Values, p => Assert.True(Apocalypse.Distance(p.X, p.Z, m.Front.X, m.Front.Z) <= 45));  // never run ahead
+        Run(host, game, 126, 140);
+        Assert.Equal(WaveMarchState.Met, m.State);                              // 30 s seen: met where it stands, short of the mark
+        Assert.Contains(game.Logs, l => l.StartsWith("march raid wave 1: met by a player after ", StringComparison.Ordinal) && l.EndsWith(" s, 5 units", StringComparison.Ordinal));
+        Assert.DoesNotContain(game.Logs, l => l.Contains(": arrived after ", StringComparison.Ordinal));
+        var tag = host.HuntTagOf("raid", 1, Tag);
+        Assert.NotNull(tag);
+        Assert.True(Apocalypse.Distance(tag!.Value.X, tag.Value.Z, m.Front.X, m.Front.Z) < 1);
+        Assert.True(m.Front.X >= x && m.Front.X < 300 - 20);
     }
 
     [Fact]
