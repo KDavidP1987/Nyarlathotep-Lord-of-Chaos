@@ -33,6 +33,7 @@
 - /code-review: the builder read the diff (Logic/Messages LoginNotice, Logic/AnnouncerCore LoginNotices, Settings, preflight); no finding. The child's one Codex cross-inspection and /code-review of the whole diff run at step 3 (Halloween track, CLAUDE.md)
 - in-game: none (step 2)
 - dod status: D1, D3, D5, D6, D12 have evidence after this commit; D2 and D4 wait for step 2's service wiring
+- Codex verdict: deferred to step 3 (Halloween track: once per child before its release)
 - session 1 log check: 0 unhandled, 552 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons (`-LogCheck` on the live logs before the next start; copies in %TEMP%\nyar-ln-logs\s1-srv); every [Warning read: the four boot kinds (Il2CppInterop, HarmonyX x3), Beelzebub TUNE, the dev example-empowerment line at each reload, and the runs' own "event ln-test stopped" lines; no [Error
 
 ### Step 2 · 2026-10-17 · e4bfe99
@@ -41,3 +42,14 @@
 - /code-review: the builder read the diff (Services/Announcer.cs: the LoginNotices instance on the shared private-message streak, Holds, SendLoginNotice; the tooling fixes in tools/vrclient/vrclient.py); no finding. Codex and /code-review of the child run once at step 3
 - in-game: Session 1, login-notice.vrs SCENARIO PASS 17/17, recorded in docs/features/LOGIN_NOTICE.md › Test results; snapshot ln1 restored "hashes equal"
 - dod status: D2, D4 and D7 have evidence after this commit
+- Codex verdict: deferred to step 3 (Halloween track: once per child before its release)
+
+### Step 3 · 2026-10-17 · f6f5326 (the fixes), the release commit follows
+- Codex verdict: REVISE (bd6e01f fixes all four: F1 a failed send used up the reconnect gate; F2 holds and the status text outside the try; F3 the AnnouncementDefaults check accepted an extra switch; F4 the degraded-notice regression test drove a stand-in). One cross-inspection per child (Halloween track); the fixes are pinned by tests planted red once
+- Codex re-check of bd6e01f..f6f5326: REVISE on one point, the runtime fixes accepted; F3 still missed a `Bind<bool>(...)` spelling, fixed in the next commit (the matcher takes the explicit generic; fixture AnnouncementDefaults/bad-5, planted red once)
+- /code-review: 10 findings; 3 fixed in f6f5326 (a quick rejoin greeted early and then gated out; the switch read only at connect; the degraded list read for every player), 2 stale comments fixed, 5 advisory not taken (plan Log)
+- compile: 0 Warning(s), 0 Error(s); tests Passed! 3859/3859 with D8-D11 moved from ControlCases.Pending to their rows
+- preflight: PREFLIGHT OK (data inventory gains nyar-ln*-logs); `-SelfTest` 40/40 checks, 7/7 external selftests (fixtures AnnouncementDefaults/bad-4 and bad-5 added)
+- records: `-AuditOf login-notice` "audit steps: login-notice 3/3 pre, 3/3 post, 3/3 Codex verdicts"; `-SessionsOf login-notice` "session logs: login-notice 2/2 checked"
+- in-game: Session 2 on the 0.13.1 Release build, login-notice.vrs SCENARIO PASS 17/17 (docs/features/LOGIN_NOTICE.md › Test results); snapshot ln2 restored "hashes equal"
+- session 2 log check: 0 unhandled, 95 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons (copies in %TEMP%\nyar-ln-logs\s2-srv); every [Warning read: Il2CppInterop, HarmonyX, Beelzebub TUNE, the dev example-empowerment line at each reload, the run's own "event ln-test stopped"; no [Error; the 226 game missing-prefab warnings as at every boot

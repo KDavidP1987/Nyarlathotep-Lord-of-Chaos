@@ -49,7 +49,6 @@ public static class ControlCases
         // unit-watch: step 5 the release
         new(UnitWatch, "D30", 5, "0.13.0"), new(UnitWatch, "D31", 5, "0.13.0"), new(UnitWatch, "D32", 5, "0.13.0"), new(UnitWatch, "D33", 5, "0.13.0"),
         // login-notice: step 3 the release
-        new(LoginNotice, "D8", 3, "0.13.1"), new(LoginNotice, "D9", 3, "0.13.1"), new(LoginNotice, "D10", 3, "0.13.1"), new(LoginNotice, "D11", 3, "0.13.1"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -996,7 +995,8 @@ public static class ControlCases
             ["the_switch_off_queues_nothing"], ["no_connect_no_read"]) with { Plan = LoginNotice },
         C("D3", "AnnouncementDefaults", "preflight › Test-CheckAnnouncementDefaults",
             ["tools/preflight-fixtures/AnnouncementDefaults/bad", "tools/preflight-fixtures/AnnouncementDefaults/bad-2", "tools/preflight-fixtures/AnnouncementDefaults/bad-3",
-             "tools/preflight-fixtures/AnnouncementDefaults/bad-4"],
+             "tools/preflight-fixtures/AnnouncementDefaults/bad-4",
+             "tools/preflight-fixtures/AnnouncementDefaults/bad-5"],
             ["tools/preflight-fixtures/AnnouncementDefaults/good"], ["tools/preflight-fixtures/AnnouncementDefaults/empty"]) with { Plan = LoginNotice },
         T("D4", "Faults", "LoginNoticeTests",
             ["a_throwing_send_stops_the_other_notices_or_logs_twice_in_a_streak", "a_throwing_read_sends_a_notice_or_logs_twice",
@@ -1013,5 +1013,21 @@ public static class ControlCases
             ["expect-log login notice sent: 1 events fails when no notice leaves while ln-test runs", "expect-chat Events in progress fails when the line does not render",
              "expect-no-log login notice sent fails when a notice leaves with nothing running"],
             ["tools/vrclient/scenarios/login-notice.vrs"], ["ln-test stopped: expect-no-log login notice sent"]) with { Plan = LoginNotice },
+        // ---- login-notice step 3: the release 0.13.1
+        C("D8", "RollbackGate", "rollback-gate.ps1 -Plan login-notice › preflight -RollbackOf › RollbackRoutes",
+            ["tools/preflight-fixtures/RollbackRoutes/bad", "tools/preflight-fixtures/RollbackRoutes/bad-2", "tools/preflight-fixtures/RollbackRoutes/bad-3"],
+            ["tools/preflight-fixtures/RollbackRoutes/good"], ["tools/preflight-fixtures/RollbackRoutes/empty"]) with { Plan = LoginNotice },
+        C("D9", "Release", "preflight › Test-CheckVersion and Test-CheckChangelogs",
+            ["tools/preflight-fixtures/Version/bad", "tools/preflight-fixtures/Changelogs/bad"],
+            ["tools/preflight-fixtures/Version/good", "tools/preflight-fixtures/Changelogs/good"],
+            ["tools/preflight-fixtures/Version/empty", "tools/preflight-fixtures/Changelogs/empty"]) with { Plan = LoginNotice },
+        C("D10", "Records", "preflight -AuditOf, -SessionsOf and -Paths -DeclaredOf › AuditSteps, SessionLogs and Paths",
+            ["tools/preflight-fixtures/AuditSteps/bad", "tools/preflight-fixtures/SessionLogs/bad", "tools/preflight-fixtures/Paths/bad-undeclared"],
+            ["tools/preflight-fixtures/AuditSteps/good", "tools/preflight-fixtures/SessionLogs/good", "tools/preflight-fixtures/Paths/good"],
+            ["tools/preflight-fixtures/AuditSteps/empty", "tools/preflight-fixtures/SessionLogs/empty", "tools/preflight-fixtures/Paths/empty"]) with { Plan = LoginNotice },
+        C("D11", "Secrets", "preflight › Test-CheckSecrets",
+            ["tools/preflight-fixtures/Secrets/bad", "tools/preflight-fixtures/Secrets/bad-sentinel-log"],
+            ["tools/preflight-fixtures/Secrets/good", "tools/preflight-fixtures/Secrets/good-sentinel"],
+            ["tools/preflight-fixtures/Secrets/empty", "tools/preflight-fixtures/Secrets/empty-sentinel"]) with { Plan = LoginNotice },
     ];
 }

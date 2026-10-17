@@ -134,6 +134,8 @@ temp: nyar-rv*-logs
 temp: nyar-apo*-logs
 # the session log copies of the unit-watch spike and sessions (unit-watch step 1, 3); deleted after the release
 temp: nyar-uw*-logs
+# the session log copies of the login-notice sessions (login-notice D10); deleted after the release
+temp: nyar-ln*-logs
 # the self-test scratch folders (event-library A14): preflight -SelfTest, preflight -DependencySuite, dev-snapshot -SelfTest
 # and rollback-drill -SelfTest create one and remove it before they exit
 temp: nyar-selftest-*

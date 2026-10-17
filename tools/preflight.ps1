@@ -371,7 +371,7 @@ $script:AnnouncementOnByDefault = @('LoginEventNotice')
 function Test-CheckAnnouncementDefaults([string]$Root) {
     $settings = Read-Text $Root "$PkgRel/Config/Settings.cs"
     if ($null -eq $settings) { return New-Result $false 'announcement defaults: Config/Settings.cs not found' }
-    $binds = [regex]::Matches((Remove-CsComments $settings), 'Bind\(\s*"Announcements"\s*,\s*"([^"]+)"\s*,\s*(true|false)\b')
+    $binds = [regex]::Matches((Remove-CsComments $settings), 'Bind(?:\s*<\s*bool\s*>)?\s*\(\s*"Announcements"\s*,\s*"([^"]+)"\s*,\s*(true|false)\b')
     $names = @($binds | ForEach-Object { $_.Groups[1].Value })
     $missing = @($script:AnnouncementSwitches | Where-Object { $names -notcontains $_ })
     if ($missing) { return New-Result $false "announcement defaults: switch not bound: $($missing -join ', ')" }

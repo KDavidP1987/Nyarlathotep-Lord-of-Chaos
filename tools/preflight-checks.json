@@ -197,7 +197,8 @@
         "bad": "EventBanners Bind default set to true",
         "bad-2": "the PlayerShare Bind removed (5 switches)",
         "bad-3": "LoginEventNotice Bind default set to false (login-notice D3)",
-        "bad-4": "a seventh [Announcements] bool Bind, default false (Codex step 3 F3)"
+        "bad-4": "a seventh [Announcements] bool Bind, default false (Codex step 3 F3)",
+        "bad-5": "a seventh switch spelled Bind<bool>(...) (Codex step 3 re-check)"
       }
     },
     {
