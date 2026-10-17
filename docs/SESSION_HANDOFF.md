@@ -4,6 +4,24 @@ Where work stands between sessions. Overwrite this file at the end of a session;
 The plans (`docs/dod/`), audits (`docs/audits/`) and feature docs stay the source of truth. This file only points
 into them.
 
+**Written 2026-10-17 (undead-hordes step 3 done)**: undead-hordes (docs/dod/undead-hordes.md, 0.14.0) is in progress,
+**20/33**, with steps 1-3 closed. Steps 2 and 3 are Logic only, so nothing new has run in game yet.
+- **Local only, not pushed:** step 2 (e366845, 40385fb, c737599) and step 3 (dbc04ad, evidence bfa8aa6). The owner was
+  asked for the OK to push; there is no answer yet. Before a push, run the privacy grep `git grep -n -E "7656119|kdpenland"`;
+  after it, check that `git rev-parse HEAD` equals `git ls-remote origin main`.
+- **Step 3:** the Infestation and HordeMarch types, the clash rule, resume, chat fields, the templates and A5 (stall lines
+  give the distance, never a point). Tests 4034/4034. Codex: REVISE, then REVISE twice more, all fixed, then READY.
+  /code-review: 9 of 10 fixed. Records: docs/audits/undead-hordes.md › Post-audit › Step 3.
+- **Changelog:** the root CHANGELOG.md has an `[Unreleased] - 0.14.0` section; the Thunderstore changelog follows at the release.
+- **Next: step 4 (Services and the in-game sessions: D6, D9, D11, D17, D18, D23-D27).** The work deferred from steps 2-3:
+  - EventRuntime passes the admin origin to ApocalypseHost.Prepare and the mode to ApocalypseOutcome.Line.
+  - Suppress the generic start banner for an Infestation.
+  - Wire the destination march in Services/WaveAction.cs.
+  - Bound HuntAction's aggro seeding per tick.
+  Tell the owner before each vrclient run. D27 is the owner's own look-and-feel test.
+- **Known, not this child's:** the dod check flags an old review record in docs/dod/spikes.reviews.md (a VERDICT not on
+  its own line); `-SessionsOf apocalypse` and `-SessionsOf unit-watch` fail on missing session log-check lines.
+
 **Written 2026-10-17 (undead-hordes step 1 done)**: v0.13.1 is pushed and released. The undead-hordes child
 (docs/dod/undead-hordes.md, L, 0.14.0, design §9 D62) is in progress, **4/33**, with step 1 closed.
 - **Local only:** the plan commits (17a190b..3e22e87), step 1 158ec59 and its evidence f0e4132. Pushing them waits on the owner's OK.
