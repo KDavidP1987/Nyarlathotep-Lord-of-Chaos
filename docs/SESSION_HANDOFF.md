@@ -11,7 +11,7 @@ into them.
   the units the fight minutes ran at about 19 fps; the mod's tick stayed at 1.2 ms. The owner kept MaxTrackedUnits at
   500 (A3). MaxUnitsPerWave goes 50 → 500 and the tick budgets 20 → 40. Rows: docs/features/UNDEAD_HORDES.md › Load test.
 - **Hostility:** all four natives probed fight the spawned undead (feature doc › Hostility).
-- **Owner, still open:** A2 (D33, the stall rule spares the infestation and horde march) needs their yes before step 3.
+- **Owner:** A2 confirmed (D33, the stall rule spares the infestation and horde march).
 - **Kept for the release:** %TEMP%
 yar-udh-logs (Session 0 log copies; `-Paths` flags them until they are deleted).
 - **Known, not this child's:** `-SessionsOf apocalypse` and `-SessionsOf unit-watch` fail on missing session log-check lines.

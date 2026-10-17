@@ -390,3 +390,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-17 · D2 · pass · cmd: python tools/vrclient/load-ladder.py selftest → "load ladder selftest: pass" · 158ec59 · claude
 - 2026-10-17 · D3 · pass · cmd: python tools/vrclient/load-ladder.py report <s0a> <s0b> <s0c LogOutput.log> → "load ladder: 100 pass, 250 pass, 500 fail (fight frame window 1 avg 51.7 ms) · ceiling 250", the line naming the first failing step; rows in docs/features/UNDEAD_HORDES.md › Load test · 158ec59 · claude
 - 2026-10-17 · D4 · pass · test: dotnet test --filter "FullyQualifiedName~CeilingTests.Ladder" → Passed! 4/4 (MaxTrackedUnits 500 with the ladder at 250 and the owner's lines; MaxUnitsPerWave 500); Hostility in docs/features/UNDEAD_HORDES.md › Hostility · 158ec59 · claude
+- 2026-10-17 · note · owner · A2 confirmed: D33 holds, the stall rule spares the Infestation and HordeMarch types ("Exempt them (Recommended)")
