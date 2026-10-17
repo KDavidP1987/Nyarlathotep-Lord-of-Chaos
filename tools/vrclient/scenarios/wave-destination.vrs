@@ -4,7 +4,8 @@
 # within 6 minutes with at least 12 of its units within 40 m of the mark (`.devunits` at the wd-mark dev mark); Chaos
 # then steps onto the mark: the first hunt seed follows and a unit takes him as its aggro target. Run 2: Chaos stands
 # 150 m along the route; the front holds ("held by a player"), the wave is met within 90 s (A6: seen for 30 s in a row)
-# with at least 12 units within 100 m of Chaos and no arrival, and a unit engages him when he steps among them.
+# and no arrival, its units stopping 100-150 m short of Chaos (A6); 120 m back along the route at least 10 of them stand
+# within 40 m of him and one takes him as its aggro target.
 # Each run ends with `.nyar event stop` and 0 tracked. The mod's lines carry no position; the event is deleted at the end.
 # Needs: the step 4 Release DLL with A6; NyarDevTools (.devgo .devtp .devmark .devunits) and DevChatEcho; the pond mark;
 # pillar spawns on; no other event running; Chaos invulnerable (`ToggleInvulnerable true`, a Boolean, never false).
@@ -100,19 +101,18 @@ expect-log march wd-test wave 1: held by a player timeout=180
 expect-log march wd-test wave 1: met by a player after [0-9]+ s, (?P<MET>[0-9]+) units timeout=90
 expect-no-log march wd-test wave 1: arrived timeout=5
 shot full wd-met
-mark
-chat .devunits -1584807109 100
-expect-log \[DEV UNIT\] 0 x=(?P<UX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<UZ>-?[0-9.]+)
-expect-log \[DEV UNITS\] n=(?P<NEAR>[0-9]+) prefab=-1584807109
-expect-calc ${NEAR} >= 12
-# Chaos steps among them: a unit takes him as its aggro target
-chat .devtp ${UX} ${UZ}
+# Chaos steps 120 m back along the route, among them (the pond road's wild Withered stand 70 m off): at least
+# 10 of the wave within 40 m, and one takes him as its aggro target
+calc WX = ${HX} - 120
+chat .devtp ${WX} ${PZ}
 expect-log \[DEV TP\] to
 wait 3
 console ToggleInvulnerable true
 wait 10
 mark
 chat .devunits -1584807109 40
+expect-log \[DEV UNITS\] n=(?P<NEAR>[0-9]+) prefab=-1584807109
+expect-calc ${NEAR} >= 10
 expect-seen \[DEV UNIT\] .* target=1
 shot full wd-engaged
 console TPHome
