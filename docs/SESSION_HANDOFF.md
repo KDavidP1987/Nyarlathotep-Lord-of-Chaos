@@ -23,6 +23,11 @@ runs on the released build and its findings go to 0.13.x.
 - **dod:** wave-variety 20/24 (D13, D17, D18, D19 wait on the owner), apocalypse 29/38, unit-watch 7/34 (the test weekend's
   items and older session-record items stay open: `-SessionsOf apocalypse` 0/4, `-SessionsOf unit-watch` 0/1 because those
   sessions' log-check and snapshot lines are not in the audit form). `dod close` waits for the weekend.
+- **G-Portal test server on 0.13.0 (2026-10-17, owner's request):** with the server stopped by the owner, only
+  BepInEx/plugins/Nyarlathotep.dll was replaced over FTP (hash checked; the other 17 plugins, config, events and state
+  untouched). First boot: "regions: 10 polygons, 10 regions", "templates: 34/34 valid", "triggers: all hooks available",
+  "nyar health: 2 events, 12 tracked, degraded: none" (0.12.0 there said "degraded: hook DayNight, regions: unavailable").
+  One "slow tick: 313 ms" during the undead-nightfall empower sweep of 190 units at boot; no Nyarlathotep error.
 - **Next:** the owner's test weekend on 0.13.0 (apocalypse D31, unit-watch D23 and D29, wave-variety D19); then 0.13.x fixes;
   the HuntAction eligibility-helper advice; live-ops planning.
 
