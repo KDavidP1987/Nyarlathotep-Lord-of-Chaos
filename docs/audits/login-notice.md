@@ -27,7 +27,7 @@
 - dod status: D1, D3, D5, D6, D12 have evidence after this commit; D2 and D4 wait for step 2's service wiring
 - session 1 log check: 0 unhandled, 552 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons (`-LogCheck` on the live logs before the next start; copies in %TEMP%\nyar-ln-logs\s1-srv); every [Warning read: the four boot kinds (Il2CppInterop, HarmonyX x3), Beelzebub TUNE, the dev example-empowerment line at each reload, and the runs' own "event ln-test stopped" lines; no [Error
 
-### Step 2 · 2026-10-17 · step 2's commit (this entry)
+### Step 2 · 2026-10-17 · e4bfe99
 - compile: 0 Warning(s), 0 Error(s); tests Passed! 3854/3854 with D7 moved from ControlCases.Pending to its row
 - preflight: PREFLIGHT OK, "secrets: none (2145 files scanned, 2086 index blobs)"; `-SessionsOf login-notice` "session logs: login-notice 1/1 checked"
 - /code-review: the builder read the diff (Services/Announcer.cs: the LoginNotices instance on the shared private-message streak, Holds, SendLoginNotice; the tooling fixes in tools/vrclient/vrclient.py); no finding. Codex and /code-review of the child run once at step 3

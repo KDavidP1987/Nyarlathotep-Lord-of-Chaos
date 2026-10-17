@@ -13,7 +13,7 @@
 | [faction-empowerment](faction-empowerment.md) | Faction empowerment — timed carrier buffs on every NPC of a faction | done | L | 30/30 | 29 | 69 % | nyarlathotep |
 | [foundation](foundation.md) | Foundation engine, store, spawner, scheduler, announcer and commands | done | L | 40/40 | 38 | 63 % | nyarlathotep |
 | [hunting-grounds](hunting-grounds.md) | Hunting grounds — region-bound spawns, a region lock and a region hunt by hidden jumps | done | L | 32/32 | 32 | 86 % | nyarlathotep |
-| [login-notice](login-notice.md) | Login notice — a player who logs in during a running event is told what is running | in-progress | M | 5/12 | 12 | 100 % | nyarlathotep |
+| [login-notice](login-notice.md) | Login notice — a player who logs in during a running event is told what is running | in-progress | M | 8/12 | 12 | 100 % | nyarlathotep |
 | [nyarlathotep](nyarlathotep.md) | Nyarlathotep, Lord of Chaos, v0.1 to v1.0 | in-progress | Epic | 37/47 | 36 | 73 % |  |
 | [raphael-api-admin](raphael-api-admin.md) | Raphael api 4 — admin action twins, admin reads and release 0.5.2 | done | L | 16/16 | 16 | 40 % | nyarlathotep |
 | [raphael-api-core](raphael-api-core.md) | Raphael api 2 — status, events, push subscription, paging, contract check | done | L | 22/22 | 22 | 63 % | nyarlathotep |
