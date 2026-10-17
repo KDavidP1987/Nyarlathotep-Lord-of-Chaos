@@ -38,3 +38,25 @@ VERDICT: REVISE
 - F3 · accepted · D25's -MinTracked is 90 % of the horde's size
 - F4 · accepted · D10 refuses with "no <faction> natives found at least <minDistance> m away", with a fails-when
 - F5 · accepted · D10: an Admin start or destination needs a Manual trigger and an admin's start, refused otherwise, as Admin locations today
+
+## Review 3 · 2026-10-17 · subagent · plan commit 5f9fc26 · plan 60271 B · 32 items · files 0 · e3b0c44298fc · prompt 2cd3f9b8d23e
+F1 advisory · 12.4 · D24's "half of the hunter share (15 of the 30 hunters)" contradicts the template numbers: 3 origins × 10 = 30 units, 50 % hunters = 15 — state the bar as one number
+F2 advisory · 12.4/6.2 · D24's kill-to-spread step needs a native the Hostility record lists as hostile; with none and Chaos invulnerable it cannot pass — name the fallback
+F3 advisory · 6.2 · D28 claims 0.13.1 ignores a state record whose event no longer validates; name the code path or plant one in the gate
+F4 advisory · 7.1/9.1 · a 500-unit rise takes 50+ ticks at MaxSpawnsPerTick; say whether the front waits for the rise
+F5 advisory · 4.1 · the horde march template's growth block has no per-minute limit
+F6 advisory · 10.4 · event info shows the destination's coordinates; say event info and status are admin-only or cover it in PrivacyTests
+F7 advisory · 14.4 · run -Paths -DeclaredOf once after step 1's audit base exists and log what it lists
+missing components: none
+undeclared families: none
+15/15 layers · 50/50 probes
+VERDICT: READY
+### Dispositions
+- F1 · accepted · deferred to the build: D24's bar is read as 8 of the 15 hunters (half the hunter share of 3 × 10 at 50 %), counting hunters added by spread; Log note at step 4 (Log note deferred)
+- F2 · accepted · deferred to the build: if Session 0's Hostility record finds no hostile native, an amendment names the spread target before step 4 (Log note deferred)
+- F3 · accepted · deferred to the build: step 5 names the 0.13.1 resume path for a disabled definition (ResumeVerdict.Disabled, Logic/Apocalypse.cs) in the rollback route (Log note deferred)
+- F4 · accepted · deferred to the build: the front marches once the rise has spawned, later units join at the front (a method note at step 3) (Log note deferred)
+- F5 · accepted · deferred to the build: the template's growth block takes 20 a minute, as its infest block (step 3, Log note deferred)
+- F6 · accepted · deferred to the build: event info is adminOnly today; PrivacyTests UndeadHordes asserts the coordinates reach only admin replies (step 2, Log note deferred)
+- F7 · accepted · deferred to the build: step 1's post-audit records the -Paths -DeclaredOf listing (Log note deferred)
+
