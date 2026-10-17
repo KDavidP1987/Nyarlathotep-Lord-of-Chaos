@@ -23,13 +23,13 @@
 | [scaling](scaling.md) | Scaling to the players — wave and horde sizes and levels follow the players in scope | ready | L | 0/27 | 27 | n/a | nyarlathotep |
 | [spikes](spikes.md) | Spikes S1-S3, march, restart marker, carrier buff | done ⚠ 1 | M | 20/20 | 20 | 50 % | nyarlathotep |
 | [swarm](swarm.md) | Swarm — a contained arena of growing spider waves with a kill-to-death winner | done | L | 25/25 | 25 | 96 % | nyarlathotep |
-| [undead-hordes](undead-hordes.md) | Undead hordes — waves that march to a destination, an infestation, a horde march, up to 1000 units | in-progress | L | 0/32 | 32 | 100 % | nyarlathotep |
+| [undead-hordes](undead-hordes.md) | Undead hordes — waves that march to a destination, an infestation, a horde march, up to 1000 units | in-progress | L | 4/33 | 32 | 94 % | nyarlathotep |
 | [unit-watch](unit-watch.md) | Unit watch — stuck units recovered unseen, then removed, so a wave never hangs | in-progress | L | 7/34 | 33 | 77 % | nyarlathotep |
 | [walkable-spawns](walkable-spawns.md) | Walkable spawns — the walk probe, walkable spawn points and release 0.5.1 | done | M | 12/12 | 12 | 41 % | nyarlathotep |
 | [wave-sets](wave-sets.md) | Wave sets — per-wave units and stats, waves that wait to be cleared, the event scoreboard | done | L | 27/27 | 27 | 68 % | nyarlathotep |
 | [wave-variety](wave-variety.md) | Wave variety — pursuit, unit and boss pools, timed and onslaught templates, wider allied groups | in-progress | L | 20/24 | 24 | 96 % | nyarlathotep |
 
-Most-missed layers — done plans: layer 14.4 (33), layer 12.4 (33), layer 4.1 (21), layer 6.1 (21), layer 6.2 (16); open plans (provisional): layer 6.1 (4), layer 5.3 (2), layer 11.2 (2), layer 5.1 (2), layer 14.1 (2).
+Most-missed layers — done plans: layer 14.4 (33), layer 12.4 (33), layer 4.1 (21), layer 6.1 (21), layer 6.2 (16); open plans (provisional): layer 6.1 (4), layer 5.3 (2), layer 11.2 (2), layer 5.1 (2), layer 5.2 (2).
 Miss history — done plans: 3.1 (3 of 13) · 3.3 (3 of 13) · 4.1 (6 of 13) · 4.2 (3 of 13) · 4.3 (3 of 13) · 4.4 (4 of 13) · 4.5 (5 of 13) · 5.1 (5 of 13) · 5.2 (2 of 13) · 5.3 (3 of 13) · 6.1 (7 of 13) · 6.2 (6 of 13) · 7.1 (2 of 13) · 7.2 (4 of 13) · 7.3 (4 of 13) · 10.1 (2 of 13) · 11.2 (3 of 13) · 12.2 (5 of 13) · 12.3 (4 of 13) · 12.4 (7 of 13) · 13.1 (4 of 13) · 13.2 (2 of 13) · 14.2 (2 of 13) · 14.3 (3 of 13) · 14.4 (7 of 13)
 Rework — done plans: 0 of 247 misses corrected an earlier amendment.
 
