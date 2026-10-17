@@ -103,8 +103,15 @@ public partial class TemplateTests
             var copy = lib.Catalog.Current.Find(id)!;
             Assert.Null(copy.DisabledReason);
             Assert.False(copy.Enabled);
-            // a start at the default cfg runs, cut, and names the cut (D12)
+            // a start at the default cfg runs and names its cut (D12); the infestation's rise of 5 x 10 fits in 150 tracked
+            // and is never held to MaxUnitsPerWave, so it starts uncut
             var cut = Precedence.StartCut(copy, Limits.MaxUnitsPerWave.Default, 0, Limits.MaxTrackedUnits.Default);
+            if (id == "undead-infestation")
+            {
+                Assert.Null(cut);
+                Assert.Equal($"event {id} started", AdminLines.Started(id, cut).Human);
+                continue;
+            }
             Assert.NotNull(cut);
             Assert.StartsWith($"event {id} started; capped: ", AdminLines.Started(id, cut).Human);
             Assert.EndsWith("; raise it in the cfg", AdminLines.Started(id, cut).Human);

@@ -80,6 +80,26 @@ public class CapNoticeTests
     }
 
     [Fact]
+    public void Cap_fails_when_an_infestation_names_a_cap_its_rise_never_applies()
+    {
+        // 3 origins of 10: the rise queues all 30 under a MaxUnitsPerWave of 20 (RoamerPlan.TopUp has no wave cap); the
+        // dev server's start said "capped: 20 of 30 by MaxUnitsPerWave 20" while 30 spawned
+        var inf = Apo.Def(Inf.Action(origins: Inf.Origins(count: 3, perOrigin: 10), spread: Inf.Spread(cap: 200)));
+        Assert.Null(Precedence.StartCut(inf, 20, 0, 300));
+        // the free slots before the start cut it, named by MaxTrackedUnits
+        Assert.Equal(new CapCut(12, 30, "MaxTrackedUnits", 300), Precedence.StartCut(inf, 20, 288, 300));
+        // the rise is held to its own max first, which no cfg key names
+        var small = Apo.Def(Inf.Action(origins: Inf.Origins(count: 3, perOrigin: 10), spread: Inf.Spread(cap: 25)));
+        Assert.Null(Precedence.StartCut(small, 20, 275, 300));
+        Assert.Equal(new CapCut(24, 25, "MaxTrackedUnits", 300), Precedence.StartCut(small, 20, 276, 300));
+        // EventRuntime measures the free slots before the start queues its own units
+        var runtime = File.ReadAllText(Path.Combine(ControlCaseTests.RepoRoot(), "Nyarlathotep", "Nyarlathotep", "Services", "EventRuntime.cs"));
+        Assert.True(runtime.IndexOf("var occupied = SpawnTracker.Ledger.Occupied;", StringComparison.Ordinal) is var at and >= 0
+            && at < runtime.IndexOf("var refused = Engine.Start(", StringComparison.Ordinal));
+        Assert.Contains("Precedence.StartCut(active.Definition, ledger.Limits.MaxPerWave, occupied, ledger.Limits.MaxTracked)", runtime);
+    }
+
+    [Fact]
     public void Cap_fails_when_it_names_the_wrong_key_or_value()
     {
         Assert.Equal(new CapCut(50, 80, "MaxUnitsPerWave", 50), Precedence.Cut(80, 50, 0, 500));

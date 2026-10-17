@@ -1,8 +1,9 @@
 # infestation.vrs: undead-hordes D24. The inf-test event (tools/vrclient/scenarios/fixtures/inf-test.json: an
 # Infestation of Faction_Undead, 3 origins of at least 5 natives 300 m apart, 10 CHAR_Undead_SkeletonSoldier_Withered
-# at level 20 each, hunters 50, spread 1-3 from the Withered pool) starts with Chaos at home. Its origins must lie at
+# at level 20 each, hunters 50, spread 1-3 from the Withered pool) starts with Chaos at (-2480, -1640), outside his castle
+# territory (a refuge: no hunter targets a player inside it) and 558 m from Session 1's nearest origin. Its origins must lie at
 # least 500 m from Chaos; at least half of the hunter share (8 of the 15 hunters of 30) must stand within 100 m of Chaos
-# within 5 minutes (wild Withered within 100 m of home before the start are subtracted). Three CHAR_Bandit_Thug natives
+# within 5 minutes (wild Withered within 100 m of Chaos before the start are subtracted). Three CHAR_Bandit_Thug natives
 # (`.devnative`, never the mod's units; Session 0's Hostility table: bandits fight the undead) then spawn beside Chaos
 # among the hunters: a spread of 1-3 is logged within 3 minutes. `.nyar event stop` ends it and drains to 0 tracked.
 # Needs: `python tools/vrclient/fixture-install.py <server>/BepInEx/config/Nyarlathotep/events.json inf-test` before the
@@ -14,6 +15,11 @@ console ToggleInvulnerable true
 wait 2
 console TPHome
 wait 5
+console ToggleInvulnerable true
+wait 2
+chat .devtp -2480 -1640
+expect-log \[DEV TP\] to
+wait 4
 console ToggleInvulnerable true
 wait 2
 chat .nyar pillar spawns on

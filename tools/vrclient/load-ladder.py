@@ -3,6 +3,7 @@
   python tools/vrclient/load-ladder.py fixtures            write scenarios/fixtures/load-<n>.json (D3's mix)
   python tools/vrclient/load-ladder.py install <events>    put the load-<n> events into a dev events.json (others kept)
   python tools/vrclient/load-ladder.py report <log>...     the Load test rows and "load ladder: … · ceiling <n>"
+  python tools/vrclient/load-ladder.py report <log>... --run ceiling   D26: "ceiling run: pass (...)" or the bar missed
   python tools/vrclient/load-ladder.py selftest            "load ladder selftest: pass"
 
 The logs carry no timestamps, so scenarios/load-ladder.vrs marks each step's phases with NyarDevTools' `.devnote`:
@@ -300,6 +301,99 @@ def cmd_report(paths: list[str]) -> int:
     return 0 if line.endswith(f"ceiling {STEPS[-1]}") else 1
 
 
+# ---------------------------------------------------------------------------------------------------- the ceiling run
+# D26: scenarios/ceiling-run.vrs (to the restart) and ceiling-resume.vrs (after it) mark the run's phases:
+#   [DEV NOTE] run=ceiling phase=start                       before the horde march starts
+#   [DEV NOTE] run=ceiling phase=hold tracked=<k>            the run holds the MaxTrackedUnits ceiling
+#   [DEV NOTE] run=ceiling phase=restart                     the last mark before the server stops
+#   [DEV NOTE] run=ceiling phase=resume tracked=<k>          after the boot: the run's units rebuilt
+#   [DEV NOTE] run=ceiling phase=purge                       `.nyar purge confirm` sent
+#   [DEV NOTE] run=ceiling phase=end s=<drain s> purged=<k>  tracked units 0
+# and the boot's "boot marker sweep: <n> found" and "event <id> resumed after restart (..., <u> units to rebuild)".
+# It passes when the hold holds at least 98 % of the ceiling, the sweep found the old units, the resume rebuilt at least
+# 95 % of u, the hold and resume windows add up to 30 of each kind (the first after each mark not counted), every one
+# under D3's bars with no slow tick in them, and the drain ends within ceil(n / MaxDespawnsPerTick) + 60 s.
+CEILING = 500                   # MaxTrackedUnits' ceiling
+CEILING_WINDOWS = 30
+CEIL_PHASES = ["start", "hold", "restart", "resume", "purge", "end"]
+CEIL_NOTE = re.compile(r"\[DEV NOTE\] run=ceiling phase=(start|hold|restart|resume|purge|end)(?: tracked=(\d+))?(?: s=(\d+))?(?: purged=(\d+))?")
+SWEPT = re.compile(r"\[nyar\] boot marker sweep: (\d+) found")
+RESUMED = re.compile(r"event \S+ resumed after restart \(horde \d+/\d+, (\d+) units to rebuild\)")
+
+
+def ceiling_run(lines: list[str]) -> str:
+    """D26's verdict over the run's log copies."""
+    phases, tracked, ticks, frames, slow = [], {}, [], [], 0
+    swept = rebuild = drain = purged = None
+    phase, skip = None, set()
+    for line in lines:
+        if m := CEIL_NOTE.search(line):
+            p = m[1]
+            phases.append(p)
+            if m[2]:
+                tracked[p] = int(m[2])
+            if p == "end":
+                drain = int(m[3]) if m[3] else None
+                purged = int(m[4]) if m[4] else None
+            phase = p if p in ("hold", "resume") else None
+            skip = {"tick", "frame"}
+            continue
+        if phases[-1:] == ["restart"]:
+            if m := SWEPT.search(line):
+                swept = int(m[1])
+            elif m := RESUMED.search(line):
+                rebuild = int(m[1])
+            continue
+        if not phase:
+            continue
+        if m := TICK.search(line):
+            if "tick" in skip:
+                skip.discard("tick")
+            else:
+                ticks.append(float(m[1]))
+        elif m := FRAME.search(line):
+            if "frame" in skip:
+                skip.discard("frame")
+            else:
+                frames.append((float(m[1]), float(m[2])))
+        elif SLOW.search(line):
+            slow += 1
+    margin = math.ceil(CEILING / DESPAWNS_PER_TICK) + 60
+    over = [(i, a, q) for i, (a, q) in enumerate(frames, 1) if a >= FRAME_AVG_BAR or q >= FRAME_P95_BAR]
+    slow_ticks = [(i, a) for i, a in enumerate(ticks, 1) if a >= TICK_BAR]
+    if phases != CEIL_PHASES:
+        problem = "not finished" if phases == CEIL_PHASES[:len(phases)] else "phases out of order: " + " ".join(phases)
+    elif tracked.get("hold", 0) < math.ceil(CEILING * 0.98):
+        problem = f"held {tracked.get('hold')} of {CEILING}"
+    elif not swept:
+        problem = "no boot sweep of the old units"
+    elif rebuild is None:
+        problem = "the run was not resumed"
+    elif tracked.get("resume", 0) < math.ceil(rebuild * 0.95):
+        problem = f"rebuilt {tracked.get('resume')} of {rebuild}"
+    elif len(ticks) < CEILING_WINDOWS:
+        problem = f"{len(ticks)} of {CEILING_WINDOWS} tick windows"
+    elif len(frames) < CEILING_WINDOWS:
+        problem = f"{len(frames)} of {CEILING_WINDOWS} frame windows"
+    elif slow_ticks:
+        problem = f"tick window {slow_ticks[0][0]} avg {slow_ticks[0][1]:g} ms"
+    elif over:
+        i, a, q = over[0]
+        problem = f"frame window {i} avg {a:g} ms" if a >= FRAME_AVG_BAR else f"frame window {i} p95 {q:g} ms"
+    elif slow:
+        problem = f"slow ticks while holding: {slow}"
+    elif drain is None or drain > margin:
+        problem = f"drain {drain} s over {margin} s"
+    else:
+        problem = None
+    if problem:
+        return f"ceiling run: fail ({problem})"
+    fa = sum(a for a, _ in frames) / len(frames)
+    return (f"ceiling run: pass (held {tracked['hold']}, swept {swept}, rebuilt {tracked['resume']} of {rebuild}, "
+            f"{len(ticks)} windows, tick avg max {max(ticks):g} ms, frame avg {fa:.1f} ms p95 max {max(q for _, q in frames):g} ms, "
+            f"drain {drain} s, purged {purged})")
+
+
 # ---------------------------------------------------------------------------------------------------- selftest
 def synthetic(n: int, quiet=QUIET_WINDOWS + 1, fight=FIGHT_WINDOWS + 1, tick=1.2, frame=(33.4, 35.0), mem=4100,
               drain=None, slow_in=None, frames=True, tracked=None, purged=None) -> list[str]:
@@ -352,6 +446,41 @@ def cmd_selftest() -> int:
     bad = []
     for name, lines, want in cases:
         got = verdict(parse(lines))
+        if got != want:
+            bad.append(f"{name}: got {got!r}")
+    def ceil_log(hold=500, swept=480, rebuild=480, resumed=480, windows=(16, 16), frame=(33.4, 35.0), drain=60, slow=False,
+                 order=CEIL_PHASES):
+        i, d = "[Info   :Nyarlathotep] [nyar] ", "[Info   :NyarDevTools] [DEV NOTE] run=ceiling phase="
+        win = [f"{i}tick timing: avg 1.300 ms, max 9.000 ms over 60 ticks",
+               f"[Info   :NyarDevTools] [DEV FRAME] avg={frame[0]:.1f} p95={frame[1]:.1f} max=60.0 frames=1790 mem=4200"]
+        out = []
+        for p in order:
+            out.append(d + p + {"hold": f" tracked={hold}", "resume": f" tracked={resumed}", "end": f" s={drain} purged=500"}.get(p, ""))
+            if p == "restart":
+                out += [f"{i}boot marker sweep: {swept} found, {swept} queued for despawn (0 listed in state.json)"] if swept else []
+                out += [f"{i}event ceiling-test resumed after restart (horde 1/1, {rebuild} units to rebuild)"] if rebuild else []
+            if p in ("hold", "resume"):
+                out += win * windows[0 if p == "hold" else 1]
+                if slow and p == "resume":
+                    out.append(f"{i}slow tick: 260.0 ms (spawn 250.0 ms)")
+        return out
+    ceil_cases = [
+        ("a passing ceiling run", ceil_log(), "ceiling run: pass (held 500, swept 480, rebuilt 480 of 480, 30 windows, "
+         "tick avg max 1.3 ms, frame avg 33.4 ms p95 max 35 ms, drain 60 s, purged 500)"),
+        ("the ceiling not reached", ceil_log(hold=480), "ceiling run: fail (held 480 of 500)"),
+        ("no resume", ceil_log(rebuild=0), "ceiling run: fail (the run was not resumed)"),
+        ("no boot sweep", ceil_log(swept=0), "ceiling run: fail (no boot sweep of the old units)"),
+        ("the resume short", ceil_log(resumed=400), "ceiling run: fail (rebuilt 400 of 480)"),
+        ("29 windows", ceil_log(windows=(16, 15)), "ceiling run: fail (29 of 30 tick windows)"),
+        ("a frame p95 at the bar", ceil_log(frame=(34.0, 50.0)), "ceiling run: fail (frame window 1 p95 50 ms)"),
+        ("a slow tick", ceil_log(slow=True), "ceiling run: fail (slow ticks while holding: 1)"),
+        ("a drain over its margin", ceil_log(drain=86), "ceiling run: fail (drain 86 s over 85 s)"),
+        ("no restart", ceil_log(order=["start", "hold", "resume", "purge", "end"]),
+         "ceiling run: fail (phases out of order: start hold resume purge end)"),
+        ("not finished", ceil_log()[:-1], "ceiling run: fail (not finished)"),
+    ]
+    for name, lines, want in ceil_cases:
+        got = ceiling_run(lines)
         if got != want:
             bad.append(f"{name}: got {got!r}")
     # the figures: the row reads the frame and memory numbers as written, and skips the straddling first window
@@ -408,6 +537,10 @@ def main(argv: list[str]) -> int:
         return cmd_fixtures()
     if len(argv) == 2 and argv[0] == "install":
         return cmd_install(argv[1])
+    if len(argv) >= 4 and argv[0] == "report" and argv[-2:] == ["--run", "ceiling"]:
+        line = ceiling_run(read_logs(argv[1:-2]))
+        print(line)
+        return 0 if line.startswith("ceiling run: pass") else 1
     if len(argv) >= 2 and argv[0] == "report":
         return cmd_report(argv[1:])
     if argv[:1] == ["selftest"]:

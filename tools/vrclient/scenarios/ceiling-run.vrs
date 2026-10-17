@@ -1,0 +1,58 @@
+# ceiling-run.vrs: undead-hordes D26, the part before the restart (ceiling-resume.vrs is the part after it).
+# The ceiling-test event (tools/vrclient/scenarios/fixtures/ceiling-test.json: hm-test's horde of 480, from the pond's
+# Point to "the mark" 600 m east, with growth max 500 and an infestation of hunters 0, drift 100, spread max 500 at the
+# mark) rises and marches unseen; ten CHAR_Bandit_Thug natives on the route (`.devnative`) feed its growth. Once it has
+# arrived, ceiling-fill (fixtures/ceiling-fill.json: 40 CHAR_Undead_SkeletonSoldier_Armored_Farbane marching 200 m
+# south to the mark, cut to the free slots) fills the run to the MaxTrackedUnits ceiling. The run holds it for
+# 16 minutes with Chaos 300 m off, then marks the restart and stops there; the orchestrator restarts the server.
+# The marks and the report: tools/vrclient/load-ladder.py, "the ceiling run" (`report <log copies> --run ceiling`).
+# Needs: `python tools/vrclient/fixture-install.py <server>/BepInEx/config/Nyarlathotep/events.json ceiling-test
+# ceiling-fill`; the dev cfg at the ceiling (MaxTrackedUnits 500, MaxUnitsPerWave 500, MaxSpawnsPerTick 20,
+# MaxDespawnsPerTick 20, [Debug] TimingLog true, [UnitWatch] StallMinutes 60 so the idle units at the mark stay; the
+# pillar switch below re-reads it); NyarDevTools (.devtp .devframes .devnative .devnote) and DevChatEcho; pillar spawns
+# on; no other event running and no purge in the 240 s before; Chaos invulnerable (`ToggleInvulnerable true`, never false).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .nyar pillar spawns on
+expect-reply spawns
+chat .nyar event reload
+expect-log events: reloaded
+expect-no-log event ceiling-test: timeout=3
+expect-no-log event ceiling-fill: timeout=1
+chat .devframes on
+expect-reply devframes: on
+chat .devtp -1580 -1640
+expect-log \[DEV TP\] to
+wait 3
+console ToggleInvulnerable true
+chat .devnative -301730941 10 900
+expect-log \[DEV NATIVE\] n=10
+chat .devtp -1580 -1440
+expect-log \[DEV TP\] to
+wait 3
+console ToggleInvulnerable true
+chat .devnote run=ceiling phase=start
+expect-reply devnote: run=ceiling phase=start
+mark
+chat .nyar event start ceiling-test
+expect-log event ceiling-test started by timeout=20
+expect-log horde ceiling-test: 480 units, 1 bosses, from .* to the mark timeout=30
+poll-reply RISE tracked units: 480 \(spawning 0, :: .nyar status every=5 timeout=300
+expect-seen apocalypse ceiling-test spread: \+(?P<GROW>[0-9]+) \( timeout=420
+expect-calc ${GROW} >= 1 and ${GROW} <= 3
+expect-log horde ceiling-test: arrived at the mark after [0-9]+ s, (?P<ARRIVED>[0-9]+) units; infesting timeout=600
+chat .nyar event start ceiling-fill
+expect-log event ceiling-fill started by timeout=20
+poll-reply HOLD tracked units: (?P<N>49[0-9]|500) \(spawning 0, :: .nyar status every=5 timeout=180
+chat .devnote run=ceiling phase=hold tracked=${N}
+expect-reply devnote: run=ceiling phase=hold
+shot full ceiling-hold
+wait 990
+chat .nyar status
+expect-log \] tracked units: (?P<LATE>[0-9]+) \( timeout=10
+expect-calc ${LATE} >= 490
+chat .devnote run=ceiling phase=restart
+expect-reply devnote: run=ceiling phase=restart

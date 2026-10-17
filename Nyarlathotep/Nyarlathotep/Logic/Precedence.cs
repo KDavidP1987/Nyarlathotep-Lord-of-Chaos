@@ -83,12 +83,17 @@ public static class Precedence
     }
 
     /// <summary>The cut an admin start names (undead-hordes D12): a destination event's first wave (its entries and fixed
-    /// bosses) or an apocalypse's largest horde (the last, with its bosses) against the caps now; null for any other
-    /// event or when nothing is cut.</summary>
+    /// bosses), an apocalypse's largest horde (the last, with its bosses) or an infestation's rise against the caps
+    /// before the start (<paramref name="occupied"/>); null for any other event or when nothing is cut. The rise, as
+    /// RoamerPlan.TopUp queues it, is held to its own max and the free MaxTrackedUnits slots, never MaxUnitsPerWave.</summary>
     public static CapCut? StartCut(EventDefinition d, int maxPerWave, int occupied, int maxTracked)
     {
         if (d.Apocalypse is { Mode: ApocalypseMode.Infestation } inf)                                                     // undead-hordes D12: the rise
-            return Cut(inf.Hotspots.Count * inf.Roamers.PerHotspot, maxPerWave, occupied, maxTracked);
+        {
+            var rise = Math.Min(inf.Hotspots.Count * inf.Roamers.PerHotspot, inf.Roamers.Max);
+            var free = Math.Max(0, maxTracked - occupied);
+            return free < rise ? new CapCut(free, rise, "MaxTrackedUnits", maxTracked) : null;
+        }
         if (d.Apocalypse is { Mode: ApocalypseMode.HordeMarch } march)                                                    // the horde with its fixed bosses
             return Cut(march.Units.Sum(u => u.Count) + (march.March?.Bosses ?? []).Sum(b => b.MostBosses), maxPerWave, occupied, maxTracked);   // a roll at its most
         if (d.Apocalypse is { } apo)

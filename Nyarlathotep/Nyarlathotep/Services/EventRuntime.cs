@@ -141,6 +141,7 @@ internal static class EventRuntime
             }
         }
 
+        var occupied = SpawnTracker.Ledger.Occupied;          // the cut forecast's free slots, before this start queues any (undead-hordes D12)
         var refused = Engine.Start(id, trigger, now, controls, origin, kill, focus, gate: d => ApocalypseAction.Prepare(d, origin));   // undead-hordes D10: an Admin start or destination
         if (refused is not null)
         {
@@ -168,7 +169,7 @@ internal static class EventRuntime
         if (RevengeRule.StartPrivate(active) is { } start) TriggerBus.Tell(start.Player, start.Line);   // revenge D7
         var ledger = SpawnTracker.Ledger;                                                              // undead-hordes D12
         // the reply's forecast only: the cut itself is logged and kept for `event info` when the wave or horde is cut
-        var cut = Precedence.StartCut(active.Definition, ledger.Limits.MaxPerWave, ledger.Occupied, ledger.Limits.MaxTracked);
+        var cut = Precedence.StartCut(active.Definition, ledger.Limits.MaxPerWave, occupied, ledger.Limits.MaxTracked);
         return AdminLines.Started(id, actor == Actor.Admin ? cut : null);
     }
 

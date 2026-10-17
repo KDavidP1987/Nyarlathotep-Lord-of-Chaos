@@ -1,0 +1,129 @@
+{
+  "id": "ceiling-test",
+  "name": "Ceiling run",
+  "enabled": true,
+  "pillar": "spawns",
+  "trigger": {
+    "type": "Manual"
+  },
+  "durationSeconds": 5400,
+  "action": {
+    "type": "HordeMarch",
+    "faction": "Faction_Undead",
+    "pools": {
+      "troops": [
+        "CHAR_Undead_SkeletonSoldier_Armored_Farbane",
+        "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane",
+        "CHAR_Undead_SkeletonApprentice",
+        "CHAR_Undead_UndyingGhoul"
+      ]
+    },
+    "units": [
+      {
+        "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane",
+        "count": 95,
+        "modifiers": {
+          "level": 20
+        }
+      },
+      {
+        "prefab": "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane",
+        "count": 95,
+        "modifiers": {
+          "level": 20
+        }
+      },
+      {
+        "prefab": "CHAR_Undead_SkeletonApprentice",
+        "count": 95,
+        "modifiers": {
+          "level": 20
+        }
+      },
+      {
+        "prefab": "CHAR_Undead_UndyingGhoul",
+        "count": 95,
+        "modifiers": {
+          "level": 20
+        }
+      },
+      {
+        "prefab": "CHAR_Undead_Guardian",
+        "count": 30,
+        "modifiers": {
+          "level": 40
+        }
+      },
+      {
+        "prefab": "CHAR_Undead_SkeletonMage",
+        "count": 30,
+        "modifiers": {
+          "level": 40
+        }
+      },
+      {
+        "prefab": "CHAR_Undead_SkeletonGolem",
+        "count": 19,
+        "modifiers": {
+          "level": 40
+        }
+      },
+      {
+        "prefab": "CHAR_Undead_GhostBanshee",
+        "count": 10,
+        "modifiers": {
+          "level": 60
+        }
+      },
+      {
+        "prefab": "CHAR_Undead_GhostGuardian",
+        "count": 10,
+        "modifiers": {
+          "level": 60
+        }
+      }
+    ],
+    "bosses": [
+      {
+        "prefab": "CHAR_Undead_BishopOfDeath_VBlood",
+        "count": 1,
+        "modifiers": {
+          "level": 50
+        }
+      }
+    ],
+    "start": {
+      "type": "Point",
+      "x": -1880,
+      "z": -1640
+    },
+    "destination": {
+      "location": {
+        "type": "Point",
+        "x": -1280,
+        "z": -1640
+      },
+      "radius": 30,
+      "name": "the mark"
+    },
+    "marchSpeed": 2.0,
+    "growth": {
+      "perKillMin": 1,
+      "perKillMax": 3,
+      "pool": "troops",
+      "max": 500,
+      "perMinute": 30
+    },
+    "infest": {
+      "hunters": 0,
+      "driftRadius": 100,
+      "spread": {
+        "perKillMin": 1,
+        "perKillMax": 3,
+        "pool": "troops",
+        "max": 500,
+        "perMinute": 30
+      }
+    }
+  }
+}

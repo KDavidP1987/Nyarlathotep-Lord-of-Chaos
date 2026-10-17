@@ -1,0 +1,47 @@
+{
+  "id": "ceiling-fill",
+  "name": "Ceiling fill",
+  "enabled": true,
+  "pillar": "spawns",
+  "trigger": {
+    "type": "Manual"
+  },
+  "durationSeconds": 5400,
+  "action": {
+    "type": "SpawnWaves",
+    "waveList": [
+      {
+        "units": [
+          {
+            "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane",
+            "count": 40,
+            "modifiers": {
+              "level": 20
+            }
+          }
+        ]
+      }
+    ],
+    "radius": 10,
+    "location": {
+      "type": "Point",
+      "x": -1280,
+      "z": -1440,
+      "y": 0
+    },
+    "behaviour": {
+      "type": "Hunt",
+      "range": 40
+    },
+    "destination": {
+      "location": {
+        "type": "Point",
+        "x": -1280,
+        "z": -1640
+      },
+      "radius": 30,
+      "name": "the mark"
+    },
+    "marchSpeed": 2.0
+  }
+}

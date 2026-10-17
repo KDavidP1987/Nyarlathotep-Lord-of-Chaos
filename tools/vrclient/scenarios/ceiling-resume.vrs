@@ -1,0 +1,35 @@
+# ceiling-resume.vrs: undead-hordes D26, the part after the restart that ceiling-run.vrs ends on (logs copied first).
+# The boot's sweep drains the old units and ceiling-test resumes ("event ceiling-test resumed after restart (horde 1/1,
+# <u> units to rebuild)", read from the log copy by the report). Here: the rebuilt count within 5 minutes, ceiling-fill
+# (ended by the restart, as every event but an apocalypse-type one) started again to fill the free slots, the run held at
+# the ceiling for 16 minutes more with Chaos 300 m off, then `.nyar purge confirm` drains to 0 tracked.
+# Then: `python tools/vrclient/load-ladder.py report <copy before the restart> <copy after> --run ceiling`.
+# Run: --var UNITS=<u from the resume line>. Needs what ceiling-run.vrs needs; the frame meter is off after a boot.
+ensure
+console ToggleInvulnerable true
+wait 2
+chat .devframes on
+expect-reply devframes: on
+poll-reply REBUILD tracked units: (?P<REBUILT>[1-9][0-9]{2}) \(spawning 0, despawning 0\) ::.nyar status every=5 timeout=300
+expect-calc ${REBUILT} >= ${UNITS} * 0.95
+chat .nyar event start ceiling-fill
+expect-log event ceiling-fill started by timeout=20
+poll-reply HOLD2 tracked units: (?P<N2>49[0-9]|500) \(spawning 0, :: .nyar status every=5 timeout=180
+chat .devnote run=ceiling phase=resume tracked=${REBUILT}
+expect-reply devnote: run=ceiling phase=resume
+shot full ceiling-resume
+wait 990
+chat .nyar status
+expect-log \] tracked units: (?P<LATE>[0-9]+) \( timeout=10
+expect-calc ${LATE} >= 490
+chat .devnote run=ceiling phase=purge
+expect-reply devnote: run=ceiling phase=purge
+chat .nyar purge
+wait 2
+chat .nyar purge confirm
+expect-log purge: \d+ events ended, (?P<PURGED>\d+) units queued
+poll-reply DRAIN tracked units: 0 \(spawning 0, despawning 0\) :: .nyar status every=3 timeout=600
+chat .devnote run=ceiling phase=end s=${DRAIN} purged=${PURGED}
+expect-reply devnote: run=ceiling phase=end
+chat .devframes off
+console TPHome
