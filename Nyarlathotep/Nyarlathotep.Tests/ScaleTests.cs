@@ -143,6 +143,48 @@ public class ScaleTests
         var (perTick, _, n) = Infesting(50);
         Assert.Equal(Limits.MaxTrackedUnits.Max, n);
         Assert.Equal(RoundRobin.PerPass, perTick);
+
+        // destination waves: two waves of 500 marching far behind their fronts hop at most PerPass (plus one a wave) a pass
+        var (hopsPerPass, waited) = WaveHops(2, 500);
+        Assert.InRange(hopsPerPass, 1, RoundRobin.PerPass + 2);
+        Assert.True(waited <= 10, $"a straggler waited {waited} s for its turn");
+    }
+
+    /// <summary>undead-hordes D18: <paramref name="waves"/> destination waves of <paramref name="perWave"/> units, their fronts
+    /// running ahead; the most hop visits of one tick and the longest a unit waited between turns once the hops began.</summary>
+    static (long PerPass, int Waited) WaveHops(int waves, int perWave)
+    {
+        var t0 = Zones.Utc(2026, 10, 31, 20, 0);
+        var host = new WaveMarches();
+        var game = new MarchGame();
+        for (var w = 1; w <= waves; w++)
+        {
+            game.Spawn("raid", w, perWave, 0, 0, t0);
+            host.Begin(new WaveMarch("raid", w, (0, 0), (5000, 0), 20, 0.5, t0));
+        }
+        game.Ground = (x, _, _) => x < 1;                                    // no ground: the front holds; each pass still takes its turn
+        long most = 0, before = 0;
+        var seen = new Dictionary<long, int>();
+        var waited = 0;
+        for (var s = 0; s <= 60; s++)
+        {
+            game.Budget.Reset();
+            host.Tick(game, t0.AddSeconds(s));
+            most = Math.Max(most, host.HopVisits - before);
+            before = host.HopVisits;
+        }
+        // the turns themselves: each wave's keyed round robin at its share, every 5 s
+        var turns = Enumerable.Range(0, waves).Select(_ => new RoundRobin()).ToList();
+        var keys = Enumerable.Range(0, waves).Select(w => Enumerable.Range(0, perWave).Select(i => (long)(w * 10000 + i)).ToList()).ToList();
+        for (var t = 0; t <= 60; t += (int)WaveMarches.HopEvery.TotalSeconds)
+            for (var w = 0; w < waves; w++)
+                foreach (var k in turns[w].Take(keys[w], RoundRobin.Share(perWave, waves * perWave), k => k))
+                {
+                    if (seen.TryGetValue(k, out var at)) waited = Math.Max(waited, t - at);
+                    seen[k] = t;
+                }
+        Assert.Equal(waves * perWave, seen.Count);
+        return (most, waited);
     }
 
     [Fact]
@@ -206,6 +248,12 @@ public class ScaleTests
         Assert.Contains("units.ToLookup(", host);
         Assert.Contains("_infestTurns.Take(units, RoundRobin.PerPass, u => u.Key)", host);     // the infestation's moves too
         Assert.Contains("_infestTurns = new RoundRobin(RoundRobin.PerPass);", host);
+        // the destination waves' hops and the hunt's seeding, each by its own bounded turns
+        var marches = File.ReadAllText(Path.Combine(ControlCaseTests.RepoRoot(), "Nyarlathotep", "Nyarlathotep", "Logic", "WaveMarches.cs"));
+        Assert.Contains("turns.Take(units, RoundRobin.Share(units.Count, total), u => u.Key)", marches);
+        Assert.DoesNotContain(".IndexOf(", marches);
+        var hunt = File.ReadAllText(Path.Combine(ControlCaseTests.RepoRoot(), "Nyarlathotep", "Nyarlathotep", "Services", "HuntAction.cs"));
+        Assert.Contains("_turns.Take(_units.Keys.ToList(), RoundRobin.PerPass, k => k)", hunt);
     }
 
     [Fact]

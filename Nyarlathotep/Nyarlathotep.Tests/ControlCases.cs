@@ -1056,8 +1056,10 @@ public static class ControlCases
             ["a_point_or_admin_destination_and_shows_the_march"], ["no_destination_no_march"]) with { Plan = UndeadHordes },
         T("D6", "March", "DestinationTests",
             ["a_front_moves_while_a_player_is_within_60_m", "arrival_does_not_switch_the_behaviour", "a_stall_leaves_the_wave_without_orders",
-             "a_stall_counts_ground_it_could_not_read"],
-            ["the_front_from_the_action_to_its_destination"], ["a_wave_without_a_destination_has_no_march"]) with { Plan = UndeadHordes },
+             "a_stall_counts_ground_it_could_not_read", "a_hop_happens_with_a_player_within_100_m",
+             "arrival_does_not_hand_the_wave_its_hunt_at_the_destination", "a_stalled_wave_is_left_without_its_hunt"],   // step 4: the march's driver
+            ["the_front_from_the_action_to_its_destination"],
+            ["a_wave_without_a_destination_has_no_march", "a_wave_whose_units_are_gone_or_whose_event_ended_has_no_march"]) with { Plan = UndeadHordes },
         T("D7", "Spread", "SpreadTests",
             ["a_draw_leaves_min_max", "a_member_outside_the_pool_spawns", "the_max_the_minute_or_the_free_slots_are_passed", "a_0_13_perKill_reads_differently",
              "a_draw_form_or_a_pool_is_wrong"],

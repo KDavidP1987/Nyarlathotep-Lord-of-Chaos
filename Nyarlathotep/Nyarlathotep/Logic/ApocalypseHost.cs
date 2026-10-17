@@ -520,6 +520,10 @@ public sealed class ApocalypseHost
     public static string HordeLine(string eventId, int units, int bosses, string? startRegion, string destination) =>
         $"horde {eventId}: {units} units, {bosses} bosses, from {(string.IsNullOrEmpty(startRegion) ? Messages.Wilds : startRegion)} to {destination}";
 
+    /// <summary>True when the event announces its own start in place of the generic start banner: an infestation's "The dead
+    /// rise in &lt;n&gt; places" (undead-hordes D8).</summary>
+    public static bool OwnStartBanner(EventDefinition def) => def.Apocalypse?.Mode == ApocalypseMode.Infestation;
+
     /// <summary>"apocalypse &lt;event&gt; hotspots: 1 (the starting admin)": a horde march's Admin start, with no position (A5).</summary>
     public static string AdminStartLine(string eventId) => $"apocalypse {eventId} hotspots: 1 (the starting admin)";
 

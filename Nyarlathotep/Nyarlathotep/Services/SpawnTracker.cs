@@ -274,7 +274,7 @@ internal static class SpawnTracker
             }
             ApocalypseAction.Settled(order.EventId, order.Wave, true);
             _entities[key] = unit;
-            if (order.Hunt is { } hunt && order.EventId is { } huntEvent) HuntAction.Track(key, unit, huntEvent, hunt);
+            if (order.Hunt is { } hunt && order.EventId is { } huntEvent) HuntAction.Track(key, unit, huntEvent, hunt, order.Wave);
             if (order.EventId is { } ev) _meta[key] = new UnitMeta(order.Wave, GroupOf(ev, order), (order.X, order.Y, order.Z));   // S-14
             var stateUnit = new StateUnit(order.EventId ?? "manual", order.Prefab, order.X, order.Z, now);
             _stateUnits[key] = stateUnit;
@@ -936,7 +936,8 @@ internal static class SpawnTracker
             var p = pos.Value;
             var known = _meta.TryGetValue(t.Key, out var meta);
             var (ax, ay, az) = known ? meta.Spawn : (p.x, p.y, p.z);
-            if (t.EventId is { } eventId && ApocalypseAction.AnchorOf(eventId, t.Wave) is { } front) (ax, az) = (front.X, front.Z);
+            if (t.EventId is { } eventId && (ApocalypseAction.AnchorOf(eventId, t.Wave) ?? WaveMarchAction.AnchorOf(eventId, t.Wave)) is { } front)
+                (ax, az) = (front.X, front.Z);                              // undead-hordes D6: a marching wave's front
             float? target = null;
             if (unit.TryGetComponent<AggroConsumer>(out var aggro) && aggro.AggroTarget._Entity is var e && e.Exists() && e.Has<PlayerCharacter>()
                 && e.TryGetComponent<Translation>(out var tp))

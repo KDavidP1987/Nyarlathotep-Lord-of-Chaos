@@ -7,7 +7,7 @@ namespace Nyarlathotep.Tests;
 /// fields and info line) and D6 (March: each wave's front moves to the destination by the apocalypse's march rule, holds
 /// while a player is near, hops stragglers only unobserved, arrives within the radius or stalls after 120 s unheld, and
 /// then takes the action's behaviour).</summary>
-public class DestinationTests
+public partial class DestinationTests
 {
     static readonly DateTime T0 = Zones.Utc(2026, 10, 31, 20, 0);
     const string Camp = "{ \"location\": { \"type\": \"Point\", \"x\": -1000, \"z\": -800 }, \"radius\": 20, \"name\": \"the camp\" }";

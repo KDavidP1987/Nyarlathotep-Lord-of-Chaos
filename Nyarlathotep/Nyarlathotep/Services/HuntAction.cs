@@ -66,6 +66,8 @@ internal static class HuntAction
     {
         _seeds = new HuntSeeds();
         _units.Clear();
+        _waves.Clear();
+        _turns = new RoundRobin(RoundRobin.PerPass);
         _next = default;
         LastTargets = 0;
         _parts = null;
@@ -77,12 +79,23 @@ internal static class HuntAction
         _units.Values.Where(u => u.EventId == eventId).Select(u => (u.Tag.X, u.Tag.Z)).Distinct().ToList();
 
     /// <summary>SpawnTracker confirmed a unit of a Hunt wave.</summary>
-    internal static void Track(long key, Entity unit, string eventId, HuntTag tag) => _units[key] = (unit, eventId, tag);
+    internal static void Track(long key, Entity unit, string eventId, HuntTag tag, int wave = 0)
+    {
+        _units[key] = (unit, eventId, tag);
+        _waves[key] = wave;
+    }
+
+    /// <summary>Each unit's wave, for a destination wave's hunt tag (undead-hordes D6).</summary>
+    static readonly Dictionary<long, int> _waves = new();
+
+    /// <summary>undead-hordes D18: the units one tick seeds, a round robin by key, every unit within 10 s at 1000.</summary>
+    static RoundRobin _turns = new(RoundRobin.PerPass);
 
     /// <summary>A unit left the game (despawned, died or removed): its seeds go with it.</summary>
     internal static void Forget(long key)
     {
         _units.Remove(key);
+        _waves.Remove(key);
         _seeds.ForgetUnit(key);
     }
 
@@ -90,7 +103,11 @@ internal static class HuntAction
     /// its seeded entries stay on its units, which the despawn removes (Design › Data).</summary>
     internal static void EndEvent(string eventId)
     {
-        foreach (var key in _units.Where(u => u.Value.EventId == eventId).Select(u => u.Key).ToList()) _units.Remove(key);
+        foreach (var key in _units.Where(u => u.Value.EventId == eventId).Select(u => u.Key).ToList())
+        {
+            _units.Remove(key);
+            _waves.Remove(key);
+        }
         _seeds.ForgetEvent(eventId);
         WalkCheck.Health.Recovered(SpawnFailure.HuntSeed, eventId);
     }
@@ -100,6 +117,7 @@ internal static class HuntAction
     {
         foreach (var id in _units.Values.Select(u => u.EventId).Distinct().ToList()) WalkCheck.Health.Recovered(SpawnFailure.HuntSeed, id);
         _units.Clear();
+        _waves.Clear();
         _seeds.Clear();
     }
 
@@ -124,7 +142,9 @@ internal static class HuntAction
         try
         {
             foreach (var gone in _units.Where(u => !u.Value.Unit.Exists()).Select(u => u.Key).ToList()) Forget(gone);
-            byEvent = _units.GroupBy(u => u.Value.EventId).ToList();
+            // undead-hordes D18: at most RoundRobin.PerPass units a tick, by key
+            var turn = _turns.Take(_units.Keys.ToList(), RoundRobin.PerPass, k => k).ToHashSet();
+            byEvent = _units.Where(u => turn.Contains(u.Key)).GroupBy(u => u.Value.EventId).ToList();
             if (byEvent.Count == 0) { LastTargets = 0; return; }
             sweepEnd = Stopwatch.GetTimestamp();
             players = PlayerQuery.Read();
@@ -145,10 +165,13 @@ internal static class HuntAction
                 var targeting = Targeting(g.Key, players, map);
                 int kept = 0, left = 0;
                 var held = new HashSet<long>();
-                foreach (var (key, (unit, _, tag)) in g.ToList())
+                foreach (var (key, (unit, _, own)) in g.ToList())
                 {
                     if (!unit.Exists()) { Forget(key); continue; }
-                    var (k, l) = SeedUnit(key, unit, g.Key, tag, players, targeting, held);
+                    // undead-hordes D6: a marching wave is not seeded; an arrived or stalled one hunts where its front stopped
+                    if (WaveMarchAction.HuntTagOf(g.Key, _waves.TryGetValue(key, out var wave) ? wave : 0, own) is not { } tag) continue;
+                    var (k, l, added) = SeedUnit(key, unit, g.Key, tag, players, targeting, held);
+                    if (added > 0) WaveMarchAction.Seeded(g.Key, wave);                 // undead-hordes D23: once a wave
                     kept += k;
                     left += l;
                 }
@@ -260,11 +283,11 @@ internal static class HuntAction
     /// <summary>One unit's tick: reconcile the record with the buffer, then remove the seeds of players no longer targets
     /// and add the new targets'. Adds to <paramref name="held"/> each target the buffer holds afterwards (already there
     /// and kept, or written now). Returns the seeds kept and those left to the game.</summary>
-    static (int Kept, int Left) SeedUnit(long key, Entity unit, string eventId, HuntTag tag, List<PlayerRow> players,
+    static (int Kept, int Left, int Added) SeedUnit(long key, Entity unit, string eventId, HuntTag tag, List<PlayerRow> players,
         EventTargeting targeting, HashSet<long> held)
     {
         var bufferStart = Stopwatch.GetTimestamp();                          // HasBuffer/GetBuffer may wait on a job (A7)
-        if (!Core.EntityManager.HasBuffer<AggroBuffer>(unit)) { _bufferTicks += Stopwatch.GetTimestamp() - bufferStart; _seeds.ForgetUnit(key); return (0, 0); }
+        if (!Core.EntityManager.HasBuffer<AggroBuffer>(unit)) { _bufferTicks += Stopwatch.GetTimestamp() - bufferStart; _seeds.ForgetUnit(key); return (0, 0, 0); }
         var buffer = Core.EntityManager.GetBuffer<AggroBuffer>(unit);
         _bufferTicks += Stopwatch.GetTimestamp() - bufferStart;
         var inBuffer = BufferSeeds(buffer);
@@ -285,15 +308,17 @@ internal static class HuntAction
         }
         foreach (var target in targets) if (inBuffer.ContainsKey(target) && !removes.Contains(target)) held.Add(target);
         if (targeting?.RegionHuntScope is not null || targeting?.OwnPosition == true) Rehome(unit, targets, targeting.Pool, players);
+        var added = 0;
         foreach (var target in adds)
         {
             var player = players.FirstOrDefault(p => p.Key == target);
             if (!player.Character.Exists()) continue;
+            added++;
             buffer.Add(new AggroBuffer { Entity = player.Character, DamageValue = SeedDamage, Weight = SeedWeight });
             _seeds.Wrote(key, eventId, new AggroSeed(target, SeedDamage, SeedWeight));
             held.Add(target);                                                // counted once written (Review 36 F4)
         }
-        return (kept, left);
+        return (kept, left, added);
     }
 
     /// <summary>hunting-grounds A5: a seeded RegionHunt unit's return point (AggroConsumer.PreCombatPosition and

@@ -74,6 +74,8 @@ public class InfestationTests
         Assert.Equal(8, Ours(rig).Count);
         Assert.Empty(run.Fronts);                                                  // no horde
         Assert.Equal(["The dead rise in 2 places: Night of the dead."], rig.Game.Announced);
+        Assert.True(ApocalypseHost.OwnStartBanner(rig.Active.Definition));             // step 4: in place of the generic start banner
+        Assert.False(ApocalypseHost.OwnStartBanner(Apo.Def()));
         Assert.Null(rig.Tick(T0.AddMinutes(30)).Rose);                             // and none ever rises
     }
 

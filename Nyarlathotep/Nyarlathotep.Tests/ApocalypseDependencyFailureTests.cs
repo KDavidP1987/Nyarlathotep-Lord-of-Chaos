@@ -183,7 +183,7 @@ public class ApocalypseDependencyFailureTests
         Assert.True(rig.Host.Begin(rig.Active, rig.Game, rig.State, rig.Board, T0.AddSeconds(10)));
         // the wiring: Prepare goes through the guard, and a Begin that returns false is logged by the start
         var action = File.ReadAllText(Path.Combine(Repo(), "Nyarlathotep", "Nyarlathotep", "Services", "ApocalypseAction.cs")).Replace("\r\n", "\n");
-        Assert.Contains("_guard.Prepare(def.Id, () => _host.Prepare(def, _game))", action);
+        Assert.Contains("_guard.Prepare(def.Id, () => _host.Prepare(def, _game, origin))", action);
         var start = EndPathTests.Body(EndPathTests.RuntimeSource().Replace("\r\n", "\n"), "internal static Outcome StartEvent(");
         Assert.Contains("!ApocalypseAction.Begin(active, now)", start);
     }

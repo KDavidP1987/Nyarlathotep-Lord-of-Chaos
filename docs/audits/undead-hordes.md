@@ -22,6 +22,12 @@
 - dod status: 8/33 verified (D1-D5, D7, D12, D21)
 - feature doc read: docs/features/UNDEAD_HORDES.md (Status, Design summary; no open question); docs/features/APOCALYPSE.md (hotspots, roamers, resume); step 3 is Logic only, so no baseline boot
 
+### Step 4 · 2026-10-17 · 640dc05
+- git status: clean at 640dc05 (steps 2 and 3 with their evidence and the handoff committed; not yet pushed)
+- compile: step 3's post-audit build at the same tree, 0 Warning(s), 0 Error(s); tests 4034/4034; preflight OK
+- dod status: 20/33 verified (D1-D5, D7-D17, D20-D22, D33)
+- feature doc read: docs/features/UNDEAD_HORDES.md (Status, Design, Load test, Hostility); the baseline boot runs at the start of Session 1, before any scenario
+
 ## Post-audit
 ### Step 1 · 2026-10-17 · the step's commit follows
 - compile: `dotnet build Nyarlathotep.sln -c Release` 0 Warning(s), 0 Error(s); tests Passed! 3868/3868 with D2, D3 and D4 moved from ControlCases.Pending to their rows

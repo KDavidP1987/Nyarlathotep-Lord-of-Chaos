@@ -141,7 +141,7 @@ internal static class EventRuntime
             }
         }
 
-        var refused = Engine.Start(id, trigger, now, controls, origin, kill, focus, gate: ApocalypseAction.Prepare);
+        var refused = Engine.Start(id, trigger, now, controls, origin, kill, focus, gate: d => ApocalypseAction.Prepare(d, origin));   // undead-hordes D10: an Admin start or destination
         if (refused is not null)
         {
             // a failed native read is logged by the host once per streak (apocalypse D21); every other refusal here
@@ -164,7 +164,7 @@ internal static class EventRuntime
             End(id, "rolled back (begin failed)", EndPath.Fault, announce: false);
             return EntryGuard.BeginFailed;
         }
-        Announcer.EventStarted(active.Instance);
+        if (!ApocalypseHost.OwnStartBanner(active.Definition)) Announcer.EventStarted(active.Instance);   // undead-hordes D8
         if (RevengeRule.StartPrivate(active) is { } start) TriggerBus.Tell(start.Player, start.Line);   // revenge D7
         var ledger = SpawnTracker.Ledger;                                                              // undead-hordes D12
         // the reply's forecast only: the cut itself is logged and kept for `event info` when the wave or horde is cut
@@ -195,6 +195,7 @@ internal static class EventRuntime
         }
         TriggerBus.ClearRevenge();                                           // revenge D8: no heat outlives the purge
         HuntAction.Clear();                                                  // seeds and kept maps go too
+        WaveMarchAction.Purged();                                            // undead-hordes D6: every march
         ApocalypseAction.Purged(apocalypseCancelled);                        // apocalypse D9: the run, a pending resume and the record
         SpawnTracker.RegionPurged();                                         // hunting-grounds D12: every lock and hunt record
         SpawnTracker.WatchPurged();                                          // unit-watch D10, D11: every watch row, try, clock and streak
@@ -338,6 +339,7 @@ internal static class EventRuntime
     internal static void EndSpawnState(string id)
     {
         HuntAction.EndEvent(id);
+        WaveMarchAction.Ended(id);                                          // undead-hordes D6: its marches
         TerritoryMap.Forget(id);
         WalkCheck.Health.EventEnded(id);                                    // A71
         SpawnTracker.ArenaEnded(id);                                        // swarm D4: no arena streak outlives its event
@@ -413,7 +415,7 @@ internal static class EventRuntime
     /// &lt;c&gt; hordes risen)"; it takes the end banner's place.</summary>
     static void ApocalypseEnded(ActiveEvent ended, ApocalypseResult result, Logic.ApocalypseAction apo)
     {
-        Core.Log.LogInfo($"[nyar] {ApocalypseOutcome.Line(ended.Id, result, ended.WavesSpawned, apo.Hordes.Count)}");
+        Core.Log.LogInfo($"[nyar] {ApocalypseOutcome.Line(ended.Id, result, ended.WavesSpawned, apo.Hordes.Count, apo.Mode)}");
         Announcer.Apocalypse(ended.Id, Messages.ApocalypseOutcome(ended.Definition.Name, result, apo.Goal.Name));
     }
 

@@ -48,9 +48,9 @@ internal static class ApocalypseAction
 
     /// <summary>Engine.Start's last gate for an apocalypse: its hotspots (D2), or the refusal; a throw refuses the start too
     /// (code review L5), so no instance ever starts without its run.</summary>
-    internal static Outcome Prepare(EventDefinition def)
+    internal static Outcome Prepare(EventDefinition def, (float X, float Y, float Z)? origin)
     {
-        try { return _guard.Prepare(def.Id, () => _host.Prepare(def, _game)); }
+        try { return _guard.Prepare(def.Id, () => _host.Prepare(def, _game, origin)); }
         finally { _game.Close(); }
     }
 

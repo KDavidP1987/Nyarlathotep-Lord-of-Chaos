@@ -1877,7 +1877,8 @@ function Get-ParenEnd([string]$Text, [int]$Open) {
 # EmpowerAction is the empowerment service EventRuntime and SpawnTracker call directly (faction-empowerment D21).
 # AdminOps is the game side of Logic/AdminFlows (raphael-api-admin D11): its Op members are one-call shims.
 # HuntAction writes the AggroBuffer seeds of our own Hunt units, driven by the scheduler's "hunt" phase (event-spawns D13, D22, A70).
-$script:DispatchedServices = @('EventRuntime', 'SpawnTracker', 'UnitSetup', 'WaveAction', 'Persistence', 'EventStore', 'Announcer', 'Pusher', 'EmpowerAction', 'TemplateLibrary', 'PillarSwitches', 'AdminOps', 'HuntAction', 'ApocalypseAction') |
+# WaveMarchAction hops our own destination waves' stragglers through SpawnTracker.MoveOwn, driven by the "march" phase (undead-hordes D6).
+$script:DispatchedServices = @('EventRuntime', 'SpawnTracker', 'UnitSetup', 'WaveAction', 'Persistence', 'EventStore', 'Announcer', 'Pusher', 'EmpowerAction', 'TemplateLibrary', 'PillarSwitches', 'AdminOps', 'HuntAction', 'ApocalypseAction', 'WaveMarchAction') |
     ForEach-Object { "$PkgRel/Services/$_.cs" }
 
 # A member access of an AdminOps or IAdminOps member: ".Op<Name>", called or taken as a method group (raphael-api-admin
@@ -1936,7 +1937,7 @@ function Test-InSpan([int]$Index, $Spans) {
 # any other [Mutating] name in those files still fails outside Gateway.Run.
 # Each is "<service>.<method>": the use must name its service right before the method (SpawnTracker.Tick, or
 # Services.SpawnTracker.BootSweep), so another service's [Mutating] Tick is no entry point (Codex step 1 F2).
-$script:SystemEntryPoints = @('SpawnTracker.Tick', 'SpawnTracker.BootSweep', 'SpawnTracker.ArenaTick', 'SpawnTracker.RegionTick', 'SpawnTracker.WatchTick', 'EventRuntime.Tick', 'EventRuntime.ApocalypseTick', 'EmpowerAction.BeginCarrierTick', 'EmpowerAction.TickCarriers', 'HuntAction.Tick')
+$script:SystemEntryPoints = @('SpawnTracker.Tick', 'SpawnTracker.BootSweep', 'SpawnTracker.ArenaTick', 'SpawnTracker.RegionTick', 'SpawnTracker.WatchTick', 'EventRuntime.Tick', 'EventRuntime.ApocalypseTick', 'EmpowerAction.BeginCarrierTick', 'EmpowerAction.TickCarriers', 'HuntAction.Tick', 'WaveMarchAction.Tick')
 # True when the use of $Name at $Index in $Text is written "<Type>.<Name>" and that pair is a System-actor entry point.
 # A use written "<Type>.<Name>" whose type's own file, Services/<Type>.cs, declares no [Mutating] <Name> is that type's
 # method, not a mutating one (Announcer.Tick beside SpawnTracker.Tick), so a System-actor file may name it too.
@@ -1971,6 +1972,7 @@ $script:MutatingFloor = [ordered]@{
     'TemplateLibrary' = @('UseTemplate')
     'UnitSetup'       = @('Apply', 'StatModifiers')
     'WaveAction'      = @('QueueDueWave')
+    'WaveMarchAction' = @('Tick')
 }
 $script:SystemCallers = @("$PkgRel/Services/EventScheduler.cs", "$PkgRel/Core.cs")
 function Test-IsSystemCaller([string]$File) { $script:SystemCallers -contains $File -or $File -like "$PkgRel/Patches/*" }

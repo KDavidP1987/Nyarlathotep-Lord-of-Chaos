@@ -175,6 +175,9 @@ internal static class WaveAction
 #endif
         }, outcome => EventRuntime.Engine.WaveDecided(id, outcome, now, queuedUnits));
         if (decision.Outcome != WaveOutcome.Spawn) return;
+        // undead-hordes D6: one group (a destination refuses fanOut), whose centre the front starts from
+        if (action.Destination is not null && queuedUnits > 0 && decision.Groups.Count > 0)
+            WaveMarchAction.Begin(active, due.Wave, (decision.Groups[0].Centre.X, decision.Groups[0].Centre.Z), now);
         var levelText = level is { } h ? $", walk h {h}" : "";
         var where = location.Type switch
         {

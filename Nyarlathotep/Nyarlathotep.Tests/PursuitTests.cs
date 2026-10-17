@@ -549,7 +549,7 @@ public class PursuitTests
         if (!EndPathTests.Body(hunt, "static List<long> TargetsOf(Entity unit, HuntTag tag, EventTargeting targeting)").Contains(
                 "Pursuit.SeedTargets(targeting.Pool, (self.Value.x, self.Value.z), targeting.FocusOnly, targeting.FocusKey)", StringComparison.Ordinal))
             gaps.Add("TargetsOf");
-        if (!EndPathTests.Body(hunt, "static (int Kept, int Left) SeedUnit(").Contains("targeting?.OwnPosition == true) Rehome(", StringComparison.Ordinal))
+        if (!EndPathTests.Body(hunt, "static (int Kept, int Left, int Added) SeedUnit(").Contains("targeting?.OwnPosition == true) Rehome(", StringComparison.Ordinal))
             gaps.Add("Rehome");
         return gaps;
     }
