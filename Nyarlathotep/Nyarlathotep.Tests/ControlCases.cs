@@ -1057,7 +1057,8 @@ public static class ControlCases
         T("D6", "March", "DestinationTests",
             ["a_front_moves_while_a_player_is_within_60_m", "arrival_does_not_switch_the_behaviour", "a_stall_leaves_the_wave_without_orders",
              "a_stall_counts_ground_it_could_not_read", "a_hop_happens_with_a_player_within_100_m",
-             "arrival_does_not_hand_the_wave_its_hunt_at_the_destination", "a_stalled_wave_is_left_without_its_hunt"],   // step 4: the march's driver
+             "arrival_does_not_hand_the_wave_its_hunt_at_the_destination", "a_stalled_wave_is_left_without_its_hunt",
+             "a_player_holding_the_front_is_not_logged_or_does_not_hold_it"],   // step 4: the march's driver; D23's hold line
             ["the_front_from_the_action_to_its_destination"],
             ["a_wave_without_a_destination_has_no_march", "a_wave_whose_units_are_gone_or_whose_event_ended_has_no_march"]) with { Plan = UndeadHordes },
         T("D7", "Spread", "SpreadTests",

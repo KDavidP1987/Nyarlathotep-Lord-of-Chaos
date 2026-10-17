@@ -90,6 +90,22 @@ public partial class DestinationTests
     }
 
     [Fact]
+    public void March_fails_when_a_player_holding_the_front_is_not_logged_or_does_not_hold_it()
+    {
+        var (host, game) = Marching();
+        Run(host, game, 0, 10);
+        var x = host.Find("raid", 1)!.Front.X;
+        game.Online.Add((x + 40, 0));                                           // 40 m ahead of the front: it holds
+        Run(host, game, 11, 40);
+        Assert.Equal(x, host.Find("raid", 1)!.Front.X, 1);
+        Assert.Single(game.Logs, l => l == "march raid wave 1: held by a player");
+        game.Online.Clear();
+        Run(host, game, 41, 45);
+        Assert.True(host.Find("raid", 1)!.Front.X > x + 5);
+        Assert.Single(game.Logs, l => l == "march raid wave 1: marching on");
+    }
+
+    [Fact]
     public void March_fails_when_arrival_does_not_hand_the_wave_its_hunt_at_the_destination()
     {
         var (host, game) = Marching();

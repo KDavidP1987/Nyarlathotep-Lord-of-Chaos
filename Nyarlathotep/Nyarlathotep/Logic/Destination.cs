@@ -27,6 +27,11 @@ public sealed class WaveMarch
     public WaveMarchState State { get; private set; } = WaveMarchState.Marching;
 
     readonly MarchStall _stall = new();
+    bool _heldByPlayer;
+
+    /// <summary>The last step's hold change, "march &lt;event&gt; wave &lt;k&gt;: held by a player" or "…: marching on", else
+    /// null (D23's evidence; no position).</summary>
+    public string? HoldLine { get; private set; }
 
     /// <summary>The seconds the front has been stuck (no walkable ground ahead) with no player holding it, in a row.</summary>
     public double StuckSeconds => _stall.StuckSeconds;
@@ -63,6 +68,7 @@ public sealed class WaveMarch
         out string? held, Func<float, float, bool?>? cross = null)
     {
         held = null;
+        HoldLine = null;
         if (Released) return null;
         var unread = false;
         Func<float, float, bool?>? probe = cross is null ? null : (x, z) =>
@@ -72,6 +78,11 @@ public sealed class WaveMarch
             return known;
         };
         var step = MarchRule.Step(Front, Radius, Speed, seconds, players, walkable, utcNow, out held, probe);
+        if ((step == MarchStep.HeldByPlayer) != _heldByPlayer)
+        {
+            _heldByPlayer = !_heldByPlayer;
+            HoldLine = $"march {EventId} wave {Wave}: " + (_heldByPlayer ? "held by a player" : "marching on");
+        }
         if (Apocalypse.Distance(Front.X, Front.Z, Front.GoalX, Front.GoalZ) <= Radius)
         {
             State = WaveMarchState.Arrived;

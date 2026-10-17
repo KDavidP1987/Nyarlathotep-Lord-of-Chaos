@@ -1,0 +1,101 @@
+# wave-destination.vrs: undead-hordes D23. An event wd-test (one wave of 20 CHAR_Undead_SkeletonSoldier_Withered at a
+# Point at the pond, radius 8, Hunt 40, destination "the mark" 300 m east, radius 20, marchSpeed 2.0, duration 900) runs
+# twice. Run 1: Chaos waits at the mark; the wave logs "march wd-test wave 1: arrived after <s> s" within 6 minutes and
+# then its first hunt seed (Chaos is the only player within 40 m of the mark). Run 2: Chaos stands 150 m along the route;
+# the front logs "held by a player" (a player within 60 m of it, outside the destination radius + 60 m), logs no
+# arrival for 60 s, and units of the event stand within 90 m of Chaos (held round the front, in front of him; they
+# engage when he closes in); Chaos leaves, the front logs "marching on" and arrives. Each run ends with `.nyar event stop` and 0 tracked.
+# The log lines carry no position; the event is deleted at the end.
+# Needs: the step 4 Release DLL; NyarDevTools (.devgo .devtp) and DevChatEcho; the pond mark; pillar spawns on; no other
+# event running; Chaos invulnerable (`ToggleInvulnerable true`, a Boolean, never false).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond x=(?P<PX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<PZ>-?[0-9.]+)
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar event delete wd-test
+wait 1
+chat .nyar event delete wd-test confirm
+wait 2
+chat .nyar event new wd-test spawns
+expect-reply event wd-test created
+chat .nyar event set wd-test trigger.type Manual
+expect-reply wd-test trigger.type =
+chat .nyar event set wd-test action.units CHAR_Undead_SkeletonSoldier_Withered:20
+expect-reply wd-test action.units =
+chat .nyar event set wd-test action.waves 1
+expect-reply wd-test action.waves =
+chat .nyar event set wd-test location here
+expect-reply wd-test action.location =
+chat .nyar event set wd-test action.radius 8
+expect-reply wd-test action.radius =
+chat .nyar event set wd-test action.behaviour "hunt 40"
+expect-reply wd-test action.behaviour =
+chat .nyar event set wd-test durationSeconds 900
+expect-reply wd-test durationSeconds =
+# the destination: 300 m east of the pond
+calc MX = ${PX} + 300
+chat .devtp ${MX} ${PZ}
+expect-log \[DEV TP\] to
+wait 3
+chat .nyar event set wd-test action.destination here
+expect-reply wd-test action.destination =
+chat .nyar event set wd-test action.destination.radius 20
+expect-reply wd-test action.destination.radius =
+chat .nyar event set wd-test action.destination.name "the mark"
+expect-reply wd-test action.destination.name =
+chat .nyar event set wd-test action.marchSpeed 2.0
+expect-reply wd-test action.marchSpeed =
+chat .nyar event enable wd-test
+expect-reply wd-test
+# run 1: Chaos waits at the mark
+console ToggleInvulnerable true
+wait 2
+mark
+chat .nyar event start wd-test
+expect-log event wd-test started by timeout=20
+expect-log event wd-test wave 1/1: 20 units queued timeout=30
+expect-log march wd-test wave 1: arrived after (?P<SECS>[0-9]+) s, (?P<UNITS>[0-9]+) units timeout=360
+expect-calc ${SECS} <= 360 and ${UNITS} >= 15
+expect-log march wd-test wave 1: first hunt seed timeout=30
+wait 10
+shot full wd-arrived
+chat .nyar debug here 40
+expect-log \[nyar\] debug: CHAR_Undead_SkeletonSoldier_Withered wd-test timeout=10
+chat .nyar event stop wd-test
+expect-log event wd-test stopped timeout=20
+poll-reply DRAIN1 tracked units: 0 \(spawning 0, despawning 0\) :: .nyar status every=3 timeout=120
+# run 2: Chaos 150 m along the route holds the front
+calc HX = ${PX} + 150
+chat .devtp ${HX} ${PZ}
+expect-log \[DEV TP\] to
+wait 3
+console ToggleInvulnerable true
+wait 2
+mark
+chat .nyar event start wd-test
+expect-log event wd-test started by timeout=20
+expect-log event wd-test wave 1/1: 20 units queued timeout=30
+expect-log march wd-test wave 1: held by a player timeout=180
+expect-no-log march wd-test wave 1: (arrived|marching on) timeout=60
+shot full wd-held
+chat .nyar debug here 90
+expect-log \[nyar\] debug: CHAR_Undead_SkeletonSoldier_Withered wd-test timeout=10
+# Chaos leaves: the front marches on and arrives
+console TPHome
+wait 5
+console ToggleInvulnerable true
+expect-log march wd-test wave 1: marching on timeout=30
+expect-log march wd-test wave 1: arrived after [0-9]+ s, [0-9]+ units timeout=300
+chat .nyar event stop wd-test
+expect-log event wd-test stopped timeout=20
+poll-reply DRAIN2 tracked units: 0 \(spawning 0, despawning 0\) :: .nyar status every=3 timeout=120
+chat .nyar event delete wd-test
+wait 1
+chat .nyar event delete wd-test confirm
+expect-reply wd-test

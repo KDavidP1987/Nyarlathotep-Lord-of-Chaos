@@ -135,6 +135,7 @@ public sealed class WaveMarches
             var line = m.Step(seconds, players, (x, z) => HopRule.Ground(x, z, level, game.Walkable, game.Budget), utcNow, units.Count,
                 out var held, (x, z) => HopRule.GroundRead(x, z, level, game.Walkable, game.Budget));
             if (held is not null) game.Log($"march {m.EventId} {held}");
+            if (m.HoldLine is not null) game.Log(m.HoldLine);
             if (line is not null) game.Log(line);
         }
     }
