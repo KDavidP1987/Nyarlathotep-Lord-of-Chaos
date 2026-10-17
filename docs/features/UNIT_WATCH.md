@@ -1,7 +1,7 @@
 # Unit watch — stuck units recovered, then removed, so a wave never hangs
 
-**Status:** planned (docs/dod/unit-watch.md, draft; design §9 D54, owner 2026-10-14). Built after apocalypse's step 3
-and before its release; released together with apocalypse as 0.13.0. Nothing is built yet.
+**Status:** released with apocalypse in 0.13.0 (2026-10-16; docs/dod/unit-watch.md, design §9 D54). The test weekend's
+checks (D23, D29) run on the released build.
 
 ## Goal
 

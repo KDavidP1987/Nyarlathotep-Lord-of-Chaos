@@ -3,9 +3,9 @@
 <p align="center"><img src="docs/img/nyarlathotep-cover.jpg" alt="Nyarlathotep, Lord of Chaos" width="512"></p>
 
 A server-side BepInEx IL2CPP plugin for V Rising that stages NPC events the base game doesn't have: empowered
-factions, hunting waves, swarms in an arena, region-bound hunting grounds and faction revenge. Admins build events
-from templates or in chat. Each event starts on a schedule, at nightfall, after a V Blood kill, on its own, or by
-command, and everything it spawned is removed when it ends.
+factions, hunting waves, swarms in an arena, region-bound hunting grounds, faction revenge and a map-wide apocalypse.
+Admins build events from templates or in chat. Each event starts on a schedule, at nightfall, after a V Blood kill, on
+its own, or by command, and everything it spawned is removed when it ends.
 
 Public beta. Every pillar and every automatic announcement starts disabled; admins opt in.
 
@@ -13,8 +13,7 @@ Public beta. Every pillar and every automatic announcement starts disabled; admi
 
 | Build | What it is |
 |---|---|
-| [**v0.12.0**](https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.12.0) | Current release: revenge and final-wave bosses. |
-| [**v0.13.0-rc.1**](https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.0-rc.1) | Test build for the Halloween release: the apocalypse event and unit watch. The test round's workbook is in [`testing/`](testing/). |
+| [**v0.13.0**](https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.0) | Current release, the Halloween release: the apocalypse, unit watch and wave variety. The test round's workbook is in [`testing/`](testing/). |
 
 What each version shipped: [`CHANGELOG.md`](CHANGELOG.md). What comes next: the Epic plan,
 [`docs/dod/nyarlathotep.md`](docs/dod/nyarlathotep.md).
@@ -41,7 +40,7 @@ the event created is reverted or despawned.
 
 | Triggers | Actions |
 |---|---|
-| Schedule (days and times), nightfall or daybreak, a V Blood kill, a random interval, a player entering a region, a player killing a faction, faction revenge, an admin command | Empower factions with timed carrier buffs, or spawn waves of units, with levels, stat multipliers and a behaviour (hunt nearby players, roam a region, hold an arena) |
+| Schedule (days and times), nightfall or daybreak, a V Blood kill, a random interval, a player entering a region, a player killing a faction, faction revenge, an admin command | Empower factions with timed carrier buffs; spawn waves of units, with levels, stat multipliers and a behaviour (hunt nearby players, roam a region, hold an arena, pursue); or run an apocalypse of hordes marching on a goal |
 
 Safety rules hold for every event:
 
@@ -73,8 +72,9 @@ units, with hunting, fan-out, the player-trigger scan and the kill feed included
 | Swarm | Arenas, waves that grow on their own, a kill-to-death winner | 0.10.0 | [SWARM](docs/features/SWARM.md) |
 | Hunting grounds | Waves spread over regions, units kept inside them, groups that hunt the players there | 0.11.0 | [HUNTING_GROUNDS](docs/features/HUNTING_GROUNDS.md) |
 | Revenge | A faction hunts a player who kills too many of its units; bosses on an event's last wave | 0.12.0 | [REVENGE](docs/features/REVENGE.md) |
-| Apocalypse | A map-wide outbreak of one faction: hotspots, roamers that spread, hordes marching on a goal | 0.13.0 (rc) | [APOCALYPSE](docs/features/APOCALYPSE.md) |
-| Unit watch | Stuck units moved back to walkable ground, or removed after two tries | 0.13.0 (rc) | [UNIT_WATCH](docs/features/UNIT_WATCH.md) |
+| Apocalypse | A map-wide outbreak of one faction: hotspots, roamers that spread, hordes marching on a goal | 0.13.0 | [APOCALYPSE](docs/features/APOCALYPSE.md) |
+| Unit watch | Stuck units moved back to walkable ground, or removed after two tries | 0.13.0 | [UNIT_WATCH](docs/features/UNIT_WATCH.md) |
+| Wave variety | Pursuit of players who run, unit pools and boss rolls, the timed and onslaught templates | 0.13.0 | [WAVE_VARIETY](docs/features/WAVE_VARIETY.md) |
 | Raphael API | A machine-readable `[NYAR:*]` wire for the Raphael client: status, admin actions, pushes | 0.3.0, api 8 in 0.13.0 | [Contract](docs/RAPHAEL_INTEGRATION_CONTRACT.md) |
 | Scaling, replacements, boss reinforcements, live operations, stats, sieges | Planned | — | [Epic plan](docs/dod/nyarlathotep.md) |
 

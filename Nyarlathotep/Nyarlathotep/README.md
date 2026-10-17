@@ -3,10 +3,10 @@
 ![Nyarlathotep, Lord of Chaos](https://raw.githubusercontent.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/main/docs/img/nyarlathotep-cover.jpg)
 
 A **server-side** event layer for V Rising. Admins stage NPC events the base game doesn't have: hunting waves
-and empowered factions on a schedule, at nightfall or after a V Blood falls, with warnings and banners for
-players, and in later releases castle sieges, defended zones and boss-fight adds.
+and empowered factions on a schedule, at nightfall or after a V Blood falls, a days-long apocalypse, with warnings
+and banners for players, and in later releases castle sieges, defended zones and boss-fight adds.
 
-> **Public beta (0.12.0).** Every pillar and automatic announcement is off by default; no event runs until an
+> **Public beta (0.13.0).** Every pillar and automatic announcement is off by default; no event runs until an
 > admin turns on its pillar and enables it.
 
 ## What it does
@@ -189,7 +189,7 @@ Together with the existing locations they give four modes:
   the region after players.
 - **Point arena:** swarm's `arena`, above.
 
-A map-wide spread comes with the apocalypse event. In chat: `.nyar event set <id> location region`,
+The apocalypse (below) spreads map-wide. In chat: `.nyar event set <id> location region`,
 `action.regionLock true|false|none` and `action.behaviour regionhunt`. Rolling back to 0.10.0 disables the events
 that use these keys.
 </details>
@@ -220,9 +220,83 @@ disables the events that use these keys.
 </details>
 
 <details>
-<summary><b>Event templates and chat authoring</b> · <i>0.5.0; three automatic templates 0.8.0; a wave set 0.9.0; a swarm 0.10.0; hunting grounds 0.11.0; revenge 0.12.0</i></summary>
+<summary><b>The apocalypse: an outbreak that marches on a goal</b> · <i>0.13.0</i></summary>
 
-Thirteen ready-made events ship inside the mod. `.nyar template use <id>` copies one into your `events.json`,
+An event with `"action": { "type": "Apocalypse", … }` (Spawns pillar) turns one faction into an outbreak that runs
+from 10 minutes to 7 days (`durationSeconds` 600–604800):
+
+| Key | Values | Effect |
+|---|---|---|
+| `faction`, `units` | a `Faction_*` name; 1–10 units, `count` is each one's weight | Who rises |
+| `hotspots` | `count` 1–5, `minNatives` 3–50, `minSpacing` 100–3000 m | Found at the start where at least `minNatives` of the faction's own NPCs stand together; those NPCs are never touched |
+| `roamers` | `perHotspot` 1–10, `perKill` 0–2, `max` 1–100, `perMinute` 1–30, `huntRange` 20–60 | Roamers hunt the nearest player anywhere on the map, closing in with hidden jumps, never into a castle. Each kill a roamer or horde makes, player or NPC, adds `perKill` roamers where the victim fell, at most `perMinute` a minute and `max` alive |
+| `hordes` | `count` 1–10, `firstAfterMinutes` 0–1440, `everyMinutes` 5–1440, `size` 5–50, `growth` 0–20 | Horde k rises at the next hotspot with `size` + (k−1)·`growth` units and marches on the goal; the last brings the action's `bosses` |
+| `goal`, `marchSpeed` | `{ "type": "Point", x, z }` or `{ "type": "Admin" }` (where the admin stood at the start; by command only), `radius` 10–100, `name`; 0.5–5.0 m/s | A horde stops and fights while a player stands within 60 m of its front, except close to the goal |
+
+A horde at the goal loses the event ("<goal> has fallen"), destroying every horde wins it, and running out the clock
+survives it; then the scoreboard. `event stop` shows only the scoreboard, a purge nothing. Chat announces each horde
+rising (with its region), each quarter of its march and each horde destroyed, and `.nyar status` shows the horde, the
+march and the roamers.
+
+**Restarts.** The apocalypse is the only event that carries on after a restart. Its progress and scoreboard are saved
+in `state.json` every minute (30 s while a horde marches); after the boot its units are rebuilt, and a horde due while
+the server was down rises then.
+
+**Big hordes.** A horde never passes `[Limits] MaxUnitsPerWave` (20), and every unit counts against `MaxTrackedUnits`
+(150). For hordes over 20, raise `MaxUnitsPerWave` (up to 50) and `MaxTrackedUnits` with it. `zombie-apocalypse` fits
+the defaults: at most 83 units.
+
+`zombie-apocalypse`: undead of levels 22–38 at 3 hotspots, 4 hordes of 7 to 19 from minute 10, every 30 minutes, the
+last with the Bishop of Death, marching at 2 m/s on where the admin stood, for 4 hours. `.nyar template use
+zombie-apocalypse`, `.nyar event enable zombie-apocalypse`, then `.nyar event start zombie-apocalypse` where the living
+make their stand. In chat: `.nyar event set <id> action.goal here`, `action.goal.radius`, `action.goal.name`,
+`action.hordes.count|everyMinutes|size`, `action.roamers.max`, `action.marchSpeed`, `action.bosses` and
+`durationSeconds`; every other key in `events.json`, then `.nyar event reload`.
+</details>
+
+<details>
+<summary><b>Unit watch: stuck units recovered, then removed</b> · <i>0.13.0</i></summary>
+
+On by default for every event unit (waves, swarms, revenge, hunting grounds, apocalypse roamers and hordes; never a
+`.nyar spawn` unit), so a wave never hangs on one unit nobody can reach. A unit is stuck when, without fighting:
+
+- it has stood within 5 m for `StuckSeconds` (90 s) while trying to reach a player;
+- it is under the ground, more than 10 m below walkable ground;
+- it has not moved within `SpawnStillSeconds` (10 s) of being spawned or put down, while targeting a player.
+
+An idle unit beside a player is left alone. A stuck unit is moved, only while no player is within 100 m, to walkable
+ground at least 50 m from every player and outside castles: beside its group, else near the nearest player it may
+hunt, else back to its spot. After two failed tries it is removed: it counts as gone for its wave, so the next wave
+comes, but gives no kill credit (no scoreboard kill, V Blood trigger, kill count, revenge heat or spread).
+
+A wave the event waits on that sees no death and no fight for `StallMinutes` (10) sends its leftovers through the same
+tries. `.nyar event unstick <id>` does it at once for every unit not fighting (its twin `.nyar api event unstick` serves Raphael),
+and `.nyar event info <id>` shows "unit watch: <s> stuck now, <r> recovered, <x> removed". The keys are under
+`[UnitWatch]` (Configuration below); `Enabled = false` turns it all off.
+</details>
+
+<details>
+<summary><b>Wave variety: pursuit, unit pools and boss rolls</b> · <i>0.13.0</i></summary>
+
+Three more optional keys on a spawn event:
+
+| Key | Values | Effect |
+|---|---|---|
+| `pursuit` | `{ "afterSeconds": 15–600 }`, with Hunt, not with `fanOut` or `regionLock` | Once no player has stood in the event's arena (or Hunt range) for `afterSeconds`, its units go after the nearest player anywhere, with hidden jumps, until the event ends. A castle and PvP combat stay a refuge |
+| `pools` | `{ "<name>": [ 1–30 unit names ], … }`, 1–8 pools | Lists to draw from: a unit entry `{ "pool": "troops", "count": 9 }` draws 9 at random, repeats allowed |
+| `waveList[n].bosses` | 1–3 entries: `{ "prefab", "count" }` or `{ "pool": "lords", "min": 1, "max": 2 }`; at most 5 bosses | Any wave can bring bosses, fixed or rolled (no repeats); the action's `bosses` stays the last wave's |
+
+Each wave is rolled when it comes, so no two runs look the same, and the caps cut regular units before bosses. Every
+shipped template keeps to units that fight on the same side (nine allied groups, checked in game). The timed and
+onslaught templates below use these keys. In chat: `action.pursuit 60`, `action.pools.troops <unit>,<unit>,…`
+(`+<unit>` or `-<unit>` to add or remove one), `pool:troops:9` in a units list, and `action.waveList.3.bosses
+pool:lords:2-2` for two bosses at the end every time.
+</details>
+
+<details>
+<summary><b>Event templates and chat authoring</b> · <i>0.5.0; three automatic templates 0.8.0; a wave set 0.9.0; a swarm 0.10.0; hunting grounds 0.11.0; revenge 0.12.0; twenty-one more 0.13.0</i></summary>
+
+Thirty-four ready-made events ship inside the mod. `.nyar template use <id>` copies one into your `events.json`,
 disabled, ready to adjust and enable.
 
 | Template | What it does | Starts |
@@ -240,6 +314,11 @@ disabled, ready to adjust and enable.
 | `spider-swarm` | 5 spider waves growing from 6 to 18 units and level 30 to 42, held in a 40 m arena around the admin, ending on Ungoro, with the scoreboard and a K/D winner (0.10.0; Ungoro 0.12.0) | By command |
 | `spider-hunting-grounds` | 3 waves of 6 level 30 spiders spread over Dunley Farmlands, kept inside and hunting the players there, ending on Ungoro, with the scoreboard (0.11.0; Ungoro 0.12.0) | By command |
 | `bandit-revenge` | 3 tiers of bandits around a player who killed 30 bandits within 15 minutes, warned at 10 and 20, hunting only that player, with the scoreboard (0.12.0) | Revenge |
+| `zombie-apocalypse` | The undead outbreak above: 3 hotspots, 4 hordes marching on the admin's spot, the Bishop of Death, 4 hours (0.13.0) | By command |
+| `militia-muster` · `silverlight-crusade` · `legion-incursion` · `gloomrot-assault` · `cursed-night` | 4–5 growing waves of one faction in a 40 m arena around the admin, 150 s apart (legion 180 s) or on a clear, ending on a V Blood (Militia Leader, Paladin, Blood Knight, Voltage, Cursed Witch), with the scoreboard and a K/D winner (0.13.0) | By command |
+| `realm-gauntlet` | 5 waves, one faction each (bandits, undead, militia, gloomrot, church), each once the last is cleared, ending on the Overseer (0.13.0) | By command |
+| `spider-swarm-timed` · `graveyard-waves-timed` · `militia-muster-timed` · `silverlight-crusade-timed` · `legion-incursion-timed` · `gloomrot-assault-timed` · `cursed-night-timed` | The base template's waves (and its final V Blood, if any) on a fixed 75 s beat, cleared or not, in a 40 m arena around the admin, pursuing after 60 s (0.13.0) | By command |
+| `spider-onslaught` · `undead-onslaught` · `militia-onslaught` · `silverlight-onslaught` · `legion-onslaught` · `gloomrot-onslaught` · `cursed-onslaught` | 3–5 waves rolled from the faction's `troops` and `elite` pools, about 1.5 times the base's, one V Blood rolled mid-run and one or two at the end, 75 s beat, 40 m arena, pursuing after 60 s (0.13.0) | By command |
 
 You can build and change events without touching the file. Use `.nyar event new <id> <pillar>`,
 `.nyar event copy <id> <newId>` and `.nyar event delete <id>` (then `confirm`). `.nyar event set` also changes
@@ -284,7 +363,8 @@ ends, a wave comes or is warned, the kill switch fires or the definitions change
 more than chat or `.nyar status` does, and no line carries a position. From 0.5.2 the admin buttons (start or
 stop an event, use a template, switch a pillar, purge) have machine-readable versions that answer one line each.
 From 0.8.0 (api 6) an event's trigger can also read `interval`, `regionentered` or `factionkills`; a Raphael built
-for api 5 may show those events' trigger wrongly until it is updated.
+for api 5 may show those events' trigger wrongly until it is updated. From 0.13.0 (api 8) the admin twins include `event
+unstick`.
 The panels arrive with a Raphael update.
 </details>
 
@@ -399,6 +479,8 @@ V Rising offers no screen reader for it, a limitation of the game.
 | `.nyar event set <id> <field> <value>` (0.8.0) | `trigger.type Interval\|RegionEntered\|FactionKills`, `trigger.minMinutes`, `trigger.maxMinutes`, `trigger.playerCooldownMinutes`, `trigger.factions` (`Name,Name`), `trigger.kills`, `trigger.windowSeconds`, `trigger.shared` (`true\|false`), `action.fanOut` (`none` or `"<maxInstances> <minSpacing>"`). `event info` shows an Interval event's next start |
 | `.nyar event set <id> <field> <value>` (0.9.0) | `action.scoreboard` (`true\|false`), `action.waveList.<n>.units` (`CHAR_<name>[:<count>][,…]`; n up to one past the last wave appends one; on a units-form event `waveList.1.units` converts it), `action.waveList.<n>.afterSeconds` (10-3600 or `none`), `action.waveList.<n>.whenCleared` (`true\|false`), `action.waveList.<n>.units.<m>.<level\|levelDelta\|maxHealth\|power\|moveSpeed\|attackSpeed>` (a value or `none`), `action.waveList.<n> none` (removes the wave). `event info` shows one line per wave |
 | `.nyar event set <id> <field> <value>` (0.12.0) | `trigger.type Revenge`, `trigger.heat`, `trigger.warnAt` (`n,n` or `none`), `trigger.vbloodHeat`, and on a Revenge event `trigger.factions`, `trigger.windowSeconds` and `trigger.playerCooldownMinutes`; `action.bosses` (`CHAR_<name>[:<count>][,…]` or `none`). `event info` shows the heat counts |
+| `.nyar event set <id> <field> <value>` (0.13.0) | On an apocalypse: `action.goal here`, `action.goal.radius` (10-100), `action.goal.name`, `action.hordes.count\|everyMinutes\|size`, `action.roamers.max`, `action.marchSpeed` (0.5-5.0), `action.bosses`, `durationSeconds` (600-604800). On a wave event: `action.pursuit` (15-600 or `none`), `action.pools.<name>` (`<unit>,<unit>,…`, `+<unit>`, `-<unit>` or `none`), a `pool:<name>:<count>` token in `action.units` or `action.waveList.<n>.units`, `action.waveList.<n>.bosses` (`<unit>:<count>` or `pool:<name>:<min>-<max>`, comma separated, or `none`) |
+| `.nyar event unstick <id>` | Move a running event's units that aren't fighting back unseen, removing any still stuck after two tries (0.13.0) |
 | `.nyar event reload` | Re-read `events.json` |
 | `.nyar region list` / `region here` | The map's regions with their event counts / the region you stand in (0.6.0) |
 | `.nyar spawn <unit> [count] [level\|+n\|-n] [hp] [power]` | One-off test spawn beside you, removed after `ManualSpawnLifetimeSeconds` |
@@ -444,7 +526,7 @@ slowest part, at most once a minute.
 | General | Enabled | `true` | Master switch |
 | Pillars | FactionEmpowerment · SiegeWaves · DefendedZones · BossReinforcements · EventSpawns | `false` | One switch per pillar; an event runs only while its pillar is on |
 | Limits | MaxTrackedUnits | `150` | Most mod units alive at once (1-500; see Scale above) |
-| Limits | MaxUnitsPerWave | `20` | Most units in one wave (1-50) |
+| Limits | MaxUnitsPerWave | `20` | Most units in one wave or apocalypse horde (1-50); raise it, and MaxTrackedUnits, for bigger hordes |
 | Limits | MaxConcurrentEvents | `3` | Most events running at once (1-10) |
 | Limits | MaxSpawnsPerTick · MaxDespawnsPerTick | `10` · `5` | Spawns and removals per server tick (1-20 each), so big waves never land in one frame |
 | Limits | GraceSeconds | `30` | How long units outlive their event before removal (0-600) |
@@ -456,6 +538,10 @@ slowest part, at most once a minute.
 | Announcements | DailyBannerTime | `20:00` | Server-local time of the daily banner |
 | Announcements | LoginStats · PlayerShare · ShareCooldownSeconds · ShareMaxPerMinute | `false` · `false` · `300` · `3` | Reserved for stats (later release); cooldown 10-86400, per minute 1-20 |
 | Scoreboard | IncludeAdmins | `false` | Whether admins appear on an event's scoreboard (0.9.0) |
+| UnitWatch | Enabled | `true` | Stuck event units are moved back, then removed (0.13.0); `false` also refuses `unstick` |
+| UnitWatch | StuckSeconds | `90` | How long a unit trying to reach a player may stand still before it is stuck (30-600) |
+| UnitWatch | StallMinutes | `10` | A waited-on wave with no death and no fight this long clears its leftovers (0-60; 0 = off) |
+| UnitWatch | SpawnStillSeconds | `10` | A unit that targets a player but hasn't moved this long after a spawn or landing is stuck (5-60) |
 | Debug | VerboseLogging · TimingLog | `false` | Log every spawn, removal and announcement · the scheduler's tick time |
 
 **Upgrading from 0.1.0:** `General.AnnounceEvents` is retired and ignored; use the `[Announcements]` switches.
@@ -469,7 +555,8 @@ Faction empowerment above.
 Stop the server and delete `Nyarlathotep.dll`. The mod's units carry a timer and expire on their own, and so
 do empowerment buffs. To downgrade to 0.3.0, run `.nyar purge confirm` first: 0.3.0 does not remove the buffs,
 which otherwise stay until their event's time runs out. An older release disables an event using a key it does not
-know until you remove the key: 0.11.0 the 0.12.0 `Revenge` trigger and `bosses`, 0.8.0 the 0.9.0 keys `waveList` and `scoreboard` (it ignores `[Scoreboard]
+know until you remove the key: 0.12.0 the 0.13.0 Apocalypse action (and any event longer than 7200 s), `pursuit`,
+`pools` and a wave's `bosses` (it ignores `[UnitWatch]`), 0.11.0 the 0.12.0 `Revenge` trigger and `bosses`, 0.8.0 the 0.9.0 keys `waveList` and `scoreboard` (it ignores `[Scoreboard]
 IncludeAdmins`), 0.7.0 the 0.8.0 triggers (`Interval`, `RegionEntered`, `FactionKills`) and `fanOut`
 (it ignores the next starts kept in `state.json`), 0.6.0 the 0.7.0 wave keys (`chance`, `modifiers`, `loot`, `behaviour`,
 `allowTerritory`) and the `AroundPlayer` location, 0.5.x `scope` and `{region}`. To

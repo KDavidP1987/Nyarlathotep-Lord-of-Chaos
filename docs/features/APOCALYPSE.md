@@ -1,6 +1,7 @@
 # Apocalypse: the outbreak event
 
-> **Status:** step 1 spikes recorded (march go — hop, pathing walk not usable, faction mixes); step 2 (Logic) merged. Plan `docs/dod/apocalypse.md` (0.13.0, the Halloween release). The
+> **Status:** released in 0.13.0 (2026-10-16), before the players' test weekend (owner's call); the weekend's verdict
+> (D31) is still open. Plan `docs/dod/apocalypse.md`. The
 > owner's brief and the settled questions are in docs/features/OUTBREAK.md.
 > Stuck hordes and roamers are handled by unit watch (docs/features/UNIT_WATCH.md, released with this in 0.13.0).
 

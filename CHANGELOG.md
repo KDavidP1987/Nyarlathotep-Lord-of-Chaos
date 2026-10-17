@@ -3,6 +3,190 @@
 The complete technical history. The concise, player-facing changelog that ships to Thunderstore lives at
 `Nyarlathotep/Nyarlathotep/CHANGELOG.md`. Public beta from 0.2.0; features stay experimental until validated on live servers.
 
+## [0.13.0] - 2026-10-16
+
+The Halloween release: three children of the DoD Epic. `apocalypse` (`docs/dod/apocalypse.md`) adds a third action kind,
+a map-wide outbreak that marches on a goal and resumes after a restart; `unit-watch` (`docs/dod/unit-watch.md`) recovers
+or removes stuck event units so no wave hangs; `wave-variety` (`docs/dod/wave-variety.md`) adds pursuit, unit pools and
+boss rolls and fourteen templates. With them: six faction wave templates (Epic A43) and the fresh-world start-up fix
+(Epic A42). Design and sessions: `docs/features/APOCALYPSE.md`, `docs/features/UNIT_WATCH.md`,
+`docs/features/WAVE_VARIETY.md`, `docs/features/EVENT_LIBRARY.md`; audits: `docs/audits/apocalypse.md`,
+`docs/audits/unit-watch.md`, `docs/audits/wave-variety.md`; design §9 D37, D44, D45, D49-D51, D54, D56, D60, D61. Wire
+api 8. state.json gains an optional `Apocalypse` record; the cfg gains `[UnitWatch]`. Test builds v0.13.0-rc.1 to rc.3
+came first.
+
+<details open>
+<summary><b>Definition keys</b></summary>
+
+A key that fails validation disables the event, with one reason that names the field. SchemaVersion stays 1.
+
+| Key | Values | Effect |
+|---|---|---|
+| `action.type` `"Apocalypse"` | `faction`, `units` (1-10, as SpawnWaves'; `count` 1-50 is the weight), `hotspots { count 1-5, minNatives 3-50, minSpacing 100-3000 }`, `roamers { perHotspot 1-10, perKill 0-2, max 1-100, perMinute 1-30, huntRange 20-60 }`, `hordes { count 1-10, firstAfterMinutes 0-1440, everyMinutes 5-1440, size 5-50, growth 0-20 }`, `goal { location Point (x, z, optional y) or Admin, radius 10-100, name 1-32 }`, `marchSpeed` 0.5-5.0, optional `bosses` (revenge's form), `scope`, `scoreboard` (absent = true) | The outbreak (Runtime below). Spawns pillar. `durationSeconds` is 600-604800 for this kind (every other kind keeps 30-7200); an Admin goal needs a Manual trigger; a last horde rising at or after the end is refused "action.hordes: last horde rises at or after the duration" |
+| `action.pursuit` | `{ "afterSeconds": 15-600 }`, needs Hunt; refused beside `fanOut` or `regionLock: true` | Once no eligible player has stood within the arena (or Hunt range) of the centre for afterSeconds, the run pursues until it ends |
+| `action.pools` | 1-8 named lists (`a-z`, `0-9`, `-`, 1-24 characters) of 1-30 distinct prefabs | Named unit lists for the two entries below |
+| unit entry `{ "pool", "count" }` | `count` 1-50, in `units` or a wave's `units` | Draws `count` units from the pool, with repeats, when the wave is due |
+| `action.waveList[n].bosses` | 1-3 entries, `{ "prefab", "count" 1-3, "modifiers" }` or `{ "pool", "min", "max" }` (1-5 distinct), at most 5 bosses a wave | Any wave may bring bosses, fixed or rolled; the action-level `bosses` stays the last wave's and also takes a roll. A roll on a pool shared with too few distinct members for its `min` is refused |
+</details>
+
+<details open>
+<summary><b>Runtime: apocalypse</b></summary>
+
+- **Hotspots** (`Logic/Apocalypse.cs` Hotspots.Pick, `Services/ApocalypseAction.cs`). At the start the faction's eligible
+  natives inside `scope` are grouped into 100 m cells; up to `count` cells with at least minNatives, minSpacing apart,
+  become hotspots. The read never writes to a native. No hotspot refuses the start "no hotspot: fewer than <n> <faction>
+  natives in one place in scope".
+- **Roamers and spread** (design §9 D49). Each hotspot is topped up to perHotspot at the start and at each horde rise,
+  under `roamers.max`. Roamers hunt map-wide: each hotspot's roamers go after the eligible player nearest them, moved by
+  hunting-grounds' hidden jumps, never into claimed territory. A kill by a roamer or horde unit (player or native)
+  queues perKill roamers within 3 m of the victim, at most perMinute a minute.
+- **Hordes and the march.** Horde k rises at start + firstAfterMinutes + (k−1)·everyMinutes, at hotspot ((k−1) mod
+  hotspots) + 1, size + (k−1)·growth units clamped by MaxUnitsPerWave and the free MaxTrackedUnits slots; a horde that
+  queues nothing is retried every 60 s. The last horde brings `bosses` (cut after its regular units). The front hops
+  along the line to the goal at marchSpeed, holds while a player is within 60 m (except within goal.radius + 60 m of
+  the goal) and crosses up to 120 m of unwalkable ground while unobserved. The walk spike found the game's pathing not
+  usable for this (design §9 D50 stays a 1.0 study). Lines: "<event>: a horde of <n> rises in <region> and marches on
+  <goal>", each 25 % of the way, "horde <k> of <c> destroyed".
+- **Outcomes.** Lost when a front is within goal.radius with a unit within goal.radius + 30 m ("<goal> has fallen");
+  won when every horde has risen and none lives ("the living have won"); survived at the end ("the living held out");
+  lost beats won on one tick. Each logs "event <id> ended: <won|lost|survived> (<r> of <c> hordes risen)", then the
+  scoreboard (wave-sets' rules, kills of roamers and horde units). `event stop` shows the scoreboard without an outcome;
+  purge, `pillar spawns off` and a fault show neither. Every end path removes the resume record.
+- **Resume after a restart** (design §9 D37, D44, D45). The record (event id, times, the resolved goal, hotspots, hordes
+  risen, living fronts, counts and living bosses, roamers per hotspot, the spread window, the scoreboard rows by
+  platform id) is written at a rise or defeat, every 30 s of a march and every 60 s otherwise. After the boot sweep has
+  drained (or 5 min, with a warning), "event <id> resumed after restart (horde <r>/<c>, <u> units to rebuild)"; hordes
+  missed while down rise once each, in order. A definition gone, disabled, changed or ended while down is not resumed.
+  The record keeps the top 200 scoreboard rows.
+- **Lifetime and caps.** Units carry at most 2 h of LifeTime, renewed while the run lives, so a removed mod leaves none
+  past about 2 h. One apocalypse at a time, counted as a concurrent event. The tally line "apocalypse <id> units: <q>
+  queued = …" at each rise and the end.
+- **Status.** `.nyar status`: "<event>: horde <r>/<c>, <p> % to <goal>, <n> roamers, ends in <t>". `event info` adds the
+  hotspots, fronts and tally for admins.
+- **Fixed since rc.1: the Admin goal** (`Logic/AdminFlows.cs`). A started `zombie-apocalypse` takes the admin's position
+  as its goal; rc.1 refused it `code=badarg arg=location reason=admin_location` (G-Portal test, 2026-10-15).
+</details>
+
+<details open>
+<summary><b>Runtime: unit watch</b></summary>
+
+- **Stuck** (every 5 s, every unit SpawnTracker holds for a running event; `.nyar spawn` units are never watched):
+  standing, no more than 5 m moved and no fight for StuckSeconds while holding a player as its aggro target (design §9
+  D56, plan A2); off the ground, more than 10 m below the lowest grounded level or with none (the spike's fallback);
+  still, not 0.5 m moved within SpawnStillSeconds of a spawn or landing, with a player target. A fight (the
+  StatChangeSystem damage read, or a player target within 5 m) clears it.
+- **Hidden recovery.** Two tries: a stuck unit is moved only while no player is within 100 m, to walkable ground 50 m
+  or more from every player, outside claimed territory and inside the scope or arena, beside its group, else 50-60 m
+  from the nearest eligible player, else its anchor.
+- **Removal with no kill credit.** After the second failed try the unit leaves through the staged despawn (waiting up to
+  StuckSeconds for an unseen moment, then even in view). It counts as gone for its wave, raises no scoreboard row,
+  V Blood trigger, kill count, revenge heat or spread, and is never rebuilt by a resume.
+- **Backstop.** A wave the event waits on with no timer (a waveList wave before a clear-only wave, a waveList's last
+  wave, an apocalypse's hordes after the last rise) that sees no death and no fight for StallMinutes marks its leftovers
+  stuck.
+- **Chat.** `.nyar event unstick <id>` marks every live unit of the running instance that has not fought lately:
+  "unstick <id>: <n> units marked, <f> fighting left alone"; refused "unit watch is off: [UnitWatch] Enabled". `event
+  info` shows "unit watch: <s> stuck now, <r> recovered, <x> removed".
+- **Lines.** "[nyar] unit-watch <event> stuck|recovered|try failed|removed|cleared|stall: …", prefab and our units'
+  distances only; read and move failures once per streak with a health entry. Purge, pillar off and every end path drop
+  the rows; a restart drops them (memory only).
+</details>
+
+<details open>
+<summary><b>Runtime: wave variety</b></summary>
+
+- **Pools and rolls** (`Logic/Pools.cs` Pools.Resolve). Each wave is rolled once, when due: pool entries draw with
+  repeats, boss rolls draw min..max distinct bosses. Bosses spawn first and the caps cut units before bosses. Logged
+  "event <id> wave <n>/<N> rolled: <prefab>x<k>, …; bosses: …".
+- **Pursuit** (`Logic/Pursuit.cs`, the region phase, every 5 s). The quiet clock starts at the first check that sees no
+  eligible player within the arena (or Hunt range); after afterSeconds "event <id> pursuit: on, no player within <r> m
+  for <s> s", on until the run ends. Groups are seeded on the nearest eligible player map-wide and moved by the
+  hidden jumps, 20 per tick shared across events. Claimed territory and PvP combat stay a refuge. A failing check logs
+  "pursuit <id>: check failed: …" with a health entry.
+- **Allied groups** (`Logic/FactionGroups.cs`, docs/GAME_ASSETS.md › Faction compatibility). Grown by the wide mix runs
+  to nine groups: undead, spiders, bandits, militia, church, legion, gloomrot, cursed, blackfangs. Every shipped
+  template keeps its units, pools and bosses in one group, or, as realm-gauntlet, one group per wave with each wave
+  waiting for the last to be cleared (design §9 D60).
+</details>
+
+<details open>
+<summary><b>Other runtime changes</b></summary>
+
+- **Fixed: a brand-new world** (Epic A42, `docs/features/FOUNDATION.md`). Init waited for nothing, so a fresh world's
+  first boot logged "degraded: hook DayNight, regions: unavailable" and day/night events never fired. It now logs
+  "world data not loaded yet (…); retrying each second for up to 120 s", then "world data ready after <n> s"; past
+  120 s it initialises without them, with a warning, as before.
+- **Early departures** (`Logic/EarlyDepartureLog.cs`). Whatever VerboseLogging says, an event unit that leaves within
+  60 s of its spawn logs "early departure: <prefab> of <id> wave <n> after <s> s: <how>" (died with the killer's prefab,
+  or removed by the game), at most 20 a minute.
+</details>
+
+<details open>
+<summary><b>Chat</b></summary>
+
+- **Apocalypse** (D16): `.nyar event set <id> action.goal here` (x, y and z), `action.goal.radius`, `action.goal.name`,
+  `action.hordes.count|everyMinutes|size`, `action.roamers.max`, `action.marchSpeed`, `action.bosses` and
+  `durationSeconds` within the kind's bounds; every other key in events.json and `.nyar event reload`.
+- **Wave variety** (D10): `action.pursuit <15-600|none>`; `action.pools.<name> <list|+prefab|-prefab|none>` (refused
+  while an entry names the pool); `pool:<name>:<count>` tokens in `action.units` and `action.waveList.<n>.units`;
+  `action.bosses` and `action.waveList.<n>.bosses` take `<prefab>:<count>` or `pool:<name>:<min>-<max>` or `none`.
+  `event info` shows pools, entries, rolls and pursuit.
+- **Unit watch:** `.nyar event unstick <id>` (admin).
+</details>
+
+<details open>
+<summary><b>Templates</b></summary>
+
+Thirty-four in all (thirteen at 0.12.0), every one disabled; the twenty-one new ones start by command:
+
+- `zombie-apocalypse`: Faction_Undead, levels 22-38 (a Guardian leader with doubled health), 3 hotspots, 4 roamers each
+  (max 30, 6 a minute), 4 hordes from 10 min every 30 min of 7 growing by 4, the last with the Bishop of Death, an Admin
+  goal of radius 30 named "the living", 2 m/s, 4 h. Its worst case, 83 tracked, fits the default caps.
+- Faction waves (Epic A43): `militia-muster`, `silverlight-crusade`, `legion-incursion`, `gloomrot-assault`,
+  `cursed-night` (4-5 growing waves 150 s apart, legion 180 s, or on a clear, ending on a V Blood) and `realm-gauntlet`
+  (one faction per wave, each on a clear, ending on the Overseer). A 40 m arena at the admin, Hunt, the scoreboard and
+  the K/D winner.
+- Timed (`<base>-timed`, seven): spider-swarm, graveyard-waves and the five faction waves on a fixed 75 s beat, pursuit
+  after 60 s.
+- Onslaught (`<faction>-onslaught`, seven: spider, undead, militia, silverlight, legion, gloomrot, cursed): pools
+  `troops`, `elite` and `lords`, waves about 1.5 times the base's (at most 20), one rolled lord mid-run and one or two at
+  the end, 75 s beat, pursuit after 60 s. No timed or onslaught run passes the default caps with every wave alive.
+</details>
+
+<details open>
+<summary><b>Wire</b></summary>
+
+api 8 (unit-watch): the twin `.nyar api event unstick <id>` → `[NYAR:ok] cmd=event verb=unstick id=<id> marked=<n>
+fighting=<f>`, refusals `state`, `badarg` and `invalid reason=watch_off`. No tag, key or push kind. An apocalypse's
+status row is `kind=waves` with `wave=<hordes risen>/<hordes>`, every outcome the usual `event-end`; hotspots, roamers,
+fronts and the goal never reach the wire. Wave variety adds nothing. Raphael: `docs/RAPHAEL_HANDOFF_API8.md`,
+`docs/RAPHAEL_HANDOFF_WAVE_VARIETY.md`.
+</details>
+
+<details open>
+<summary><b>Config</b></summary>
+
+`[UnitWatch]`: `Enabled` (true), `StuckSeconds` (90, 30-600), `StallMinutes` (10, 0-60, 0 = backstop off),
+`SpawnStillSeconds` (10, 5-60). Recovery tries are fixed at 2. No [Limits] key changed: a big horde needs
+`MaxUnitsPerWave` (a horde never passes it; default 20, up to 50) and `MaxTrackedUnits` raised.
+</details>
+
+<details>
+<summary><b>Static checks and tools</b></summary>
+
+- **Rollback drill.** 0.12.0 disables an Apocalypse lasting over 7200 s with "durationSeconds must be 30-7200" and a
+  shorter one with "unknown action type Apocalypse", and the wave-variety keys with "unknown field action.pursuit",
+  "action.pools" (a pool entry, too) and "action.waveList.<n>.bosses"; it ignores state.json's `Apocalypse` and the
+  `[UnitWatch]` entries. Fixtures pair-apocalypse, pair-apocalypse-short, pair-pursuit, pair-pools, pair-poolentry and
+  pair-wavebosses pass, pair-otheraction and pair-otherwavekey fail; selftest 37/37.
+- **Dependency suites.** `apocalypse` 5/5 (native-read, spread-read, march-read, resume-read, state-write),
+  `unit-watch` 2/2 (watch-read, watch-move), `wave-variety` 1/1 (pursuit-read).
+- **vrclient.** Scenarios apocalypse, apocalypse-prep-restart/-boot2, apocalypse-timing, faction-mix(-waves, -wide),
+  unit-watch (with -apocalypse, -ends, -perch, -remove, -stall, -timing), pursuit, pursuit-timing, wave-variety,
+  wave-templates.
+- **Tests.** 3830 (3134 at 0.12.0), with a control row for every D-item (ControlCases).
+</details>
+
 ## [0.12.0] - 2026-10-13
 
 The `revenge` child of the DoD Epic (`docs/dod/revenge.md`). A faction takes revenge on one player who killed too many

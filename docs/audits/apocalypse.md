@@ -35,6 +35,14 @@
 - feature doc read: docs/features/APOCALYPSE.md (Sessions 1-2 recorded, the test weekend sheet written, Session 3 running)
 - the rest of step 5 (Codex, surfaces, release) waits on step 4 (the owner's test weekend)
 
+### Step 5 (release) · 2026-10-16 · adba3b3 (+ the release surfaces, uncommitted)
+- git status: clean at adba3b3 but for this step's release surfaces, plan log notes and the tester package (the release commit)
+- compile: 0 Warning(s), 0 Error(s); tests 3830/3830
+- preflight: PREFLIGHT OK, version 0.13.0 on csproj and thunderstore.toml, both changelogs carry 0.13.0
+- dod status: 26/38 verified; step 4 (the test weekend, D31) has not run: the owner asked to release first (Log, 2026-10-16)
+- feature doc read: docs/features/APOCALYPSE.md (Status: released in 0.13.0; D31 open)
+- baseline boot: the rc.3 DLL (same code, version suffix only) booted 2026-10-16 for tester-setups.vrs 79/80, every [Error/[Warning read (baseline kinds only), snapshot setups restored "hashes equal"
+
 ## Post-audit
 
 ### Step 1 · 2026-10-13 · spike session (boots 1-2, 515a020 tools)

@@ -399,3 +399,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-16 · D11 · pass · test: dotnet test Nyarlathotep/Nyarlathotep.Tests -c Release --filter "FullyQualifiedName~ContractDocTests.WaveVariety_|FullyQualifiedName~PrivacyTests.WaveVariety_" → Passed! 7/7 · 88cb5cf · claude
 - 2026-10-16 · D21 · pass · cmd: pwsh tools/rollback-drill.ps1 -SelfTest → "drill selftest: 37/37" (pair-pools, pair-pursuit, pair-wavebosses, pair-poolentry pass; pair-otherkey and pair-otherwavekey fail) · 88cb5cf · claude
 - 2026-10-16 · note · status · 18/24 verified; D13, D17, D18, D19 wait on the owner (rubric 3); D22 (release surfaces) and D23 (records, with step 4's post-audit) come with the 0.13.0 release commit
+- 2026-10-16 · note · owner · release 0.13.0 now (owner, 2026-10-16; apocalypse's Log has the words); D13, D17, D18, D19 stay with the owner

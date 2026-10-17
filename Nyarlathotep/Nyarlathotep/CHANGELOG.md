@@ -2,6 +2,29 @@
 
 Public beta. Event pillars and automatic announcements default off; admins opt in per feature.
 
+## 0.13.0 (2026-10-16)
+
+The Halloween release.
+
+- **Apocalypse.** A new event kind, `"type": "Apocalypse"`: an outbreak of one faction that lasts hours or days.
+  Hotspots form where the faction's NPCs gather; roamers hunt players anywhere on the map and every kill they make
+  adds more; growing hordes rise one by one, are announced, and march on a goal (a point, or where the admin stood).
+  A horde at the goal loses the event, killing every horde wins it, and running out the clock survives it; then the
+  scoreboard. It is the one event that carries on after a server restart. New template `zombie-apocalypse` (off).
+- **Unit watch** (on by default, `[UnitWatch]`). An event unit stuck where players can't reach it is moved back
+  unseen, twice at most, then removed with no kill credit, so a wave never hangs on it. A quiet wave the event waits on
+  clears its leftovers after `StallMinutes` (10), and `.nyar event unstick <id>` does it at once.
+- **Pursuit, pools and boss rolls.** `"pursuit": { "afterSeconds": 60 }` sends a wave event's units after the players
+  who run from it (castles and PvP combat stay a refuge). `"pools"` name unit lists that each wave draws from at random,
+  and any wave can bring bosses, fixed or rolled from a pool. Every new field can be set in chat.
+- **Twenty more templates** (off): six faction wave events (`militia-muster`, `silverlight-crusade`, `legion-incursion`,
+  `gloomrot-assault`, `cursed-night`, `realm-gauntlet`), seven `-timed` versions on a fixed 75 s beat, and seven
+  `-onslaught` events whose waves and bosses are rolled each run. Thirty-four in all.
+- **Fixed:** on a brand-new world, start-up now waits up to 120 s for the day/night cycle and the regions, so
+  day/night and region events work from the first boot. The apocalypse's admin goal is no longer refused.
+- Raphael: api 8 (a machine-readable `event unstick`). Rolling back to 0.12.0 disables the events that use the Apocalypse
+  action, `pursuit`, `pools` or a wave's `bosses`; the `[UnitWatch]` keys are ignored.
+
 ## 0.12.0 (2026-10-13)
 
 - **Revenge.** A spawn event with a `"Revenge"` trigger lets a faction take revenge on one player. Kills of the

@@ -47,8 +47,6 @@ public static class ControlCases
         new(Apocalypse, "D33", 5, "0.13.0"), new(Apocalypse, "D34", 5, "0.13.0"), new(Apocalypse, "D35", 5, "0.13.0"),
         // unit-watch: step 5 the release
         new(UnitWatch, "D30", 5, "0.13.0"), new(UnitWatch, "D31", 5, "0.13.0"), new(UnitWatch, "D32", 5, "0.13.0"), new(UnitWatch, "D33", 5, "0.13.0"),
-        // wave-variety: step 4 the release
-        new(WaveVariety, "D22", 4, "0.13.0"), new(WaveVariety, "D23", 4, "0.13.0"), new(WaveVariety, "D24", 4, "0.13.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -968,5 +966,18 @@ public static class ControlCases
             ["tools/rollback-drill-fixtures/pair-pools", "tools/rollback-drill-fixtures/pair-pursuit", "tools/rollback-drill-fixtures/pair-wavebosses",
              "tools/rollback-drill-fixtures/pair-poolentry"],
             ["tools/rollback-drill-fixtures/empty"]) with { Plan = WaveVariety },
+        // ---- wave-variety step 4: the release with 0.13.0
+        C("D22", "Release", "preflight › Test-CheckVersion and Test-CheckChangelogs",
+            ["tools/preflight-fixtures/Version/bad", "tools/preflight-fixtures/Changelogs/bad"],
+            ["tools/preflight-fixtures/Version/good", "tools/preflight-fixtures/Changelogs/good"],
+            ["tools/preflight-fixtures/Version/empty", "tools/preflight-fixtures/Changelogs/empty"]) with { Plan = WaveVariety },
+        C("D23", "Records", "preflight -AuditOf, -SessionsOf and -Paths -DeclaredOf › AuditSteps, SessionLogs and Paths",
+            ["tools/preflight-fixtures/AuditSteps/bad", "tools/preflight-fixtures/SessionLogs/bad", "tools/preflight-fixtures/Paths/bad-undeclared"],
+            ["tools/preflight-fixtures/AuditSteps/good", "tools/preflight-fixtures/SessionLogs/good", "tools/preflight-fixtures/Paths/good"],
+            ["tools/preflight-fixtures/AuditSteps/empty", "tools/preflight-fixtures/SessionLogs/empty", "tools/preflight-fixtures/Paths/empty"]) with { Plan = WaveVariety },
+        C("D24", "Secrets", "preflight › Test-CheckSecrets",
+            ["tools/preflight-fixtures/Secrets/bad", "tools/preflight-fixtures/Secrets/bad-sentinel-log"],
+            ["tools/preflight-fixtures/Secrets/good", "tools/preflight-fixtures/Secrets/good-sentinel"],
+            ["tools/preflight-fixtures/Secrets/empty", "tools/preflight-fixtures/Secrets/empty-sentinel"]) with { Plan = WaveVariety },
     ];
 }

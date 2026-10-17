@@ -25,6 +25,14 @@
 - feature doc read: docs/features/UNIT_WATCH.md (D34 in Detection and Config)
 - baseline boot: the pathing probe's boot of the same session (0.12.0+ DLL at 6e0b901 code with NyarDevTools): -LogCheck 0 unhandled, only known warnings
 
+### Step 5 (release) · 2026-10-16 · adba3b3 (+ the release surfaces, uncommitted)
+- git status: clean at adba3b3 but for this step's release surfaces, plan log notes and the tester package (the release commit)
+- compile: 0 Warning(s), 0 Error(s); tests 3830/3830
+- preflight: PREFLIGHT OK, version 0.13.0 on csproj and thunderstore.toml, both changelogs carry 0.13.0
+- dod status: see dod status; step 4 (the test weekend, D23 and D29) has not run: the owner asked to release first (Log, 2026-10-16)
+- feature doc read: docs/features/UNIT_WATCH.md (Status: released with apocalypse in 0.13.0)
+- baseline boot: the rc.3 DLL (same code, version suffix only) booted 2026-10-16 for tester-setups.vrs 79/80, every [Error/[Warning read (baseline kinds only), snapshot setups restored "hashes equal"
+
 ## Post-audit
 ### Step 1 · 2026-10-14 · (this commit)
 - compile / preflight: mod 0 errors 0 warnings; NyarDevTools builds 0 errors (dev server only, never shipped); preflight OK

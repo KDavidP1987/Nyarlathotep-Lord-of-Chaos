@@ -451,3 +451,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-14 · note · planted · D3 · UnitWatch.cs scan top set to level 255 · UnitWatchTests.Controls_fails_when_a_ground_read_probes_past_the_walk_cap red (+OffGround_fails_when_no_grounded_level_is_not_stuck) · restored
 - 2026-10-14 · note · planted · D4 · FightRead.cs link <= Steps → < Steps · UnitWatchTests.Fight_fails_when_a_player_three_owner_links_away_is_missed red · restored
 - 2026-10-14 · note · Codex re-check of the fix diff (codex exec -s read-only): no findings · VERDICT: APPROVED
+- 2026-10-16 · note · owner · release 0.13.0 now, before the test weekend (owner, 2026-10-16; apocalypse's Log has the words); step 5 runs before step 4, D23 and D29 stay open for the weekend on the released build, its findings going to 0.13.x

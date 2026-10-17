@@ -1,8 +1,7 @@
 # Wave variety — pursuit, unit and boss pools, timed and onslaught templates
 
-**Status:** in progress for 0.13.0 (docs/dod/wave-variety.md, audit docs/audits/wave-variety.md; design §9 D61, Epic
-A44). Steps 1 (the logic), 2 (the mix runs) and 3 (services, templates, sessions) are built; step 4 (the release with
-0.13.0) is being built.
+**Status:** released in 0.13.0 (2026-10-16; docs/dod/wave-variety.md, audit docs/audits/wave-variety.md; design §9 D61,
+Epic A44). The owner's look-and-feel check (D19) is still open.
 
 ## Goal
 
