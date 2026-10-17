@@ -207,8 +207,9 @@ public sealed class LoginGate
 /// asks this after the login notice queued its own entry, so the two never share a gate (login-notice D2).</summary>
 public static class DegradedGreeting
 {
-    public static bool ShouldQueue(bool isAdmin, int degraded, LoginGate gate, ulong platformId, DateTime utcNow) =>
-        isAdmin && degraded > 0 && gate.ShouldGreet(platformId, utcNow);
+    /// <remarks><paramref name="degraded"/> is read only for an admin.</remarks>
+    public static bool ShouldQueue(bool isAdmin, Func<int> degraded, LoginGate gate, ulong platformId, DateTime utcNow) =>
+        isAdmin && degraded() > 0 && gate.ShouldGreet(platformId, utcNow);
 }
 
 /// <summary>The login notice of running events (login-notice D2, D4). Every connect while the switch is on is queued; the
@@ -226,18 +227,24 @@ public sealed class LoginNotices<TUser>(Func<DateTime> clock, Action<string> inf
 
     public int Pending => _due.Count;
 
-    /// <summary>A user connected; with the switch <paramref name="on"/> off nothing is queued.</summary>
+    /// <summary>A user connected; with the switch <paramref name="on"/> off nothing is queued. A newer connect of the same
+    /// platform id replaces its queued one, so a quick drop and rejoin is greeted 10 s into the new session, not sooner
+    /// (code review step 3).</summary>
     public void Connected(TUser user, ulong platformId, bool on)
     {
-        if (on) _due.Add((user, platformId, clock()));
+        if (!on) return;
+        _due.RemoveAll(d => d.PlatformId == platformId);
+        _due.Add((user, platformId, clock()));
     }
 
     /// <summary>Sends every notice due now. <paramref name="holds"/> says whether the user is still connected as the same
     /// platform id; <paramref name="running"/> is read once per due notice; <paramref name="send"/> may throw, which the
-    /// shared private-message streak logs once, and the other due notices still leave.</summary>
-    public void Tick(Func<TUser, ulong, bool> holds, Func<IReadOnlyCollection<RunningInstance>> running,
+    /// shared private-message streak logs once, and the other due notices still leave. With the switch <paramref name="on"/>
+    /// turned off since, the queued notices are dropped.</summary>
+    public void Tick(bool on, Func<TUser, ulong, bool> holds, Func<IReadOnlyCollection<RunningInstance>> running,
         Func<RunningInstance, string?> own, Action<TUser, string> send)
     {
+        if (!on) { _due.Clear(); return; }
         var now = clock();
         for (var i = 0; i < _due.Count;)
         {

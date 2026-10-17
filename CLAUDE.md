@@ -15,7 +15,8 @@ server. It adds admin-configured, event-driven NPC behaviour the base game doesn
 4. **Event spawns** — waves of chosen unit types into chosen areas, at base stats or with level/HP/damage
    modifiers.
 
-Everything ships **disabled**; admins opt in per pillar and per event.
+Everything ships **disabled**; admins opt in per pillar and per event. The one exception is the login notice of
+running events, `[Announcements] LoginEventNotice`, on by default (design §9 D63).
 
 Same family as the author's other mods — **Beelzebub** (server), **Uriel** (server), **Faust** (server),
 and **Raphael** (client, formerly BloodCraftHub). Nyarlathotep mirrors the Faust/Uriel architecture.

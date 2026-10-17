@@ -81,6 +81,7 @@ public class LoginNoticeTests
         public readonly FailureStreak SendFaults = new();
         public Func<int, string, bool>? FailSend;
         public Exception? ReadFault, HoldsFault, OwnFault;
+        public bool On = true;
         public readonly LoginNotices<int> Notices;
 
         public Rig() => Notices = new LoginNotices<int>(() => Now, Info.Add, Warn.Add, SendFaults);
@@ -90,7 +91,7 @@ public class LoginNoticeTests
         public void At(int seconds)
         {
             Now = T0.AddSeconds(seconds);
-            Notices.Tick((u, id) => HoldsFault is { } hf ? throw hf : Holders.TryGetValue(u, out var h) && h == id,
+            Notices.Tick(On, (u, id) => HoldsFault is { } hf ? throw hf : Holders.TryGetValue(u, out var h) && h == id,
                 () => ReadFault is { } f ? throw f : Running, r => OwnFault is { } of ? throw of : NoOwn(r),
                 (u, text) =>
                 {
@@ -189,14 +190,14 @@ public class LoginNoticeTests
         var rig = new Rig { Running = [Run("a", "Bandit raid", 5)] };
         var degradedGate = new LoginGate();
         rig.Connect(1, 100);                   // a player
-        Assert.False(DegradedGreeting.ShouldQueue(false, 2, degradedGate, 100, T0));
+        Assert.False(DegradedGreeting.ShouldQueue(false, () => 2, degradedGate, 100, T0));
         rig.Connect(2, 200);                   // an admin, with two systems degraded
-        Assert.True(DegradedGreeting.ShouldQueue(true, 2, degradedGate, 200, T0));
+        Assert.True(DegradedGreeting.ShouldQueue(true, () => 2, degradedGate, 200, T0));
         rig.At(10);
         Assert.Equal([1, 2], rig.Sent.Select(s => s.User).OrderBy(u => u));
-        Assert.False(DegradedGreeting.ShouldQueue(true, 2, degradedGate, 200, T0.AddSeconds(30)));   // its own 60 s window
-        Assert.True(DegradedGreeting.ShouldQueue(true, 2, degradedGate, 200, T0.AddSeconds(100)));
-        Assert.False(DegradedGreeting.ShouldQueue(true, 0, degradedGate, 300, T0));                   // nothing degraded
+        Assert.False(DegradedGreeting.ShouldQueue(true, () => 2, degradedGate, 200, T0.AddSeconds(30)));   // its own 60 s window
+        Assert.True(DegradedGreeting.ShouldQueue(true, () => 2, degradedGate, 200, T0.AddSeconds(100)));
+        Assert.False(DegradedGreeting.ShouldQueue(true, () => 0, degradedGate, 300, T0));                   // nothing degraded
         Assert.True(degradedGate.Allows(300, T0));                                                    // and the gate untouched
     }
 
@@ -212,6 +213,39 @@ public class LoginNoticeTests
         rig.Notices.Connected(1, 100, true);   // a reconnect inside 60 s still gets the notice
         rig.At(30);
         Assert.Single(rig.Sent);
+    }
+
+    [Fact]
+    public void Delivery_fails_when_a_quick_rejoin_is_greeted_early_or_not_at_all()
+    {
+        var rig = new Rig { Running = [Run("a", "Bandit raid", 5)] };
+        rig.Connect(1, 100);                   // t=0
+        rig.Now = T0.AddSeconds(5);
+        rig.Notices.Connected(1, 100, true);   // dropped and rejoined at t=5
+        rig.At(10);
+        Assert.Empty(rig.Sent);                // not 5 s into the new session
+        rig.At(15);
+        Assert.Single(rig.Sent);
+        Assert.Equal(0, rig.Notices.Pending);
+    }
+
+    [Fact]
+    public void Delivery_fails_when_a_notice_queued_before_the_switch_went_off_is_sent()
+    {
+        var rig = new Rig { Running = [Run("a", "Bandit raid", 5)] };
+        rig.Connect(1, 100);
+        rig.On = false;
+        rig.At(10);
+        Assert.Empty(rig.Sent);
+        Assert.Equal(0, rig.Notices.Pending);
+    }
+
+    [Fact]
+    public void Delivery_fails_when_the_degraded_list_is_read_for_a_non_admin()
+    {
+        var reads = 0;
+        Assert.False(DegradedGreeting.ShouldQueue(false, () => ++reads, new LoginGate(), 100, T0));
+        Assert.Equal(0, reads);
     }
 
     [Fact]

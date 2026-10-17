@@ -22,7 +22,7 @@ public partial class PrivacyTests
         notices.Connected(PlantedName + "2", PlantedId + 1, true);
         now = Now.AddSeconds(10);
         var first = true;
-        notices.Tick((_, _) => true, () => Running, _ => null, (_, text) =>
+        notices.Tick(true, (_, _) => true, () => Running, _ => null, (_, text) =>
         {
             lines.Add(text);
             if (first) { first = false; return; }
@@ -30,7 +30,7 @@ public partial class PrivacyTests
         });
         notices.Connected(PlantedName, PlantedId + 2, true);
         now = Now.AddSeconds(20);
-        notices.Tick((_, _) => true, () => throw new InvalidOperationException("read broke"), _ => null, (_, text) => lines.Add(text));
+        notices.Tick(true, (_, _) => true, () => throw new InvalidOperationException("read broke"), _ => null, (_, text) => lines.Add(text));
         return lines;
     }
 
@@ -62,7 +62,7 @@ public partial class PrivacyTests
         var lines = new List<string>();
         var notices = new LoginNotices<string>(() => Now.AddSeconds(10), lines.Add, lines.Add, new FailureStreak());
         notices.Connected(PlantedName, PlantedId, true);
-        notices.Tick((_, _) => true, () => [], _ => null, (_, text) => lines.Add(text));
+        notices.Tick(true, (_, _) => true, () => [], _ => null, (_, text) => lines.Add(text));
         Assert.Empty(lines);
     }
 }

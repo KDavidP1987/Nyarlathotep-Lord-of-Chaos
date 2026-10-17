@@ -8,7 +8,8 @@ namespace Nyarlathotep.Patches;
 
 /// <summary>
 /// The login hook (foundation D31, Interfaces › External: ServerBootstrapSystem.OnUserConnected): hands the connecting
-/// user to the Announcer for the admin degraded notice. The user is found as KindredCommands'
+/// user to the Announcer for the login notice of running events (every player, login-notice D2) and the admin degraded
+/// notice. The user is found as KindredCommands'
 /// Patches/PlayerConnectivityPatches.cs does, through the approved-user index of the connection. TriggerBus reports
 /// the UserConnect hook available once this patch is applied.
 /// </summary>

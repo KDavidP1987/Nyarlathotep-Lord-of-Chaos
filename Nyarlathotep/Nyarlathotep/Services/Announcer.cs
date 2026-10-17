@@ -109,7 +109,7 @@ internal static class Announcer
     internal static void Tick(DateTime now)
     {
         SendDueNotices(now);
-        _loginNotices.Tick(Holds, () => EventStore.Catalog.Running, ApocalypseAction.StatusLine, SendLoginNotice);
+        _loginNotices.Tick(Settings.LoginEventNotice.Value, Holds, () => EventStore.Catalog.Running, ApocalypseAction.StatusLine, SendLoginNotice);
         QueueWarnings(now);
         if (Settings.DailyBanner.Value) QueueDailyBanner(now);
         if (_queue.Next(now) is not { } line) return;
@@ -156,7 +156,7 @@ internal static class Announcer
         var user = Core.EntityManager.GetComponentData<User>(userEntity);
         _loginNotices.Connected(userEntity, user.PlatformId, Settings.LoginEventNotice.Value);   // login-notice D2: everyone
         // The reconnect gate is consulted last, so a connect that queues nothing does not use it up (Codex round 2).
-        if (!DegradedGreeting.ShouldQueue(IsAdmin(user), HealthMonitor.Degraded().Count, _logins, user.PlatformId, DateTime.UtcNow)) return;
+        if (!DegradedGreeting.ShouldQueue(IsAdmin(user), () => HealthMonitor.Degraded().Count, _logins, user.PlatformId, DateTime.UtcNow)) return;
         _notices.Add((userEntity, user.PlatformId, DateTime.UtcNow + NoticeDelay));
     }
 

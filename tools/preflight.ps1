@@ -362,7 +362,7 @@ function Test-CheckPillarDefaults([string]$Root) {
     return New-Result $true "pillar defaults: all off ($($binds.Count) switches, $($templates.Count) templates)"
 }
 
-# Every bool Bind in [Announcements] of Config/Settings.cs defaults to false, and the section binds exactly the six switches
+# The [Announcements] section of Config/Settings.cs binds exactly the six bool switches
 # WaveWarnings, EventBanners, DailyBanner, LoginStats, PlayerShare and LoginEventNotice and no other (Epic D41, foundation D17). LoginEventNotice
 # is the one switch on by default (design §9 D63, login-notice D3): it must default to true, every other one to false.
 $script:AnnouncementSwitches = @('WaveWarnings', 'EventBanners', 'DailyBanner', 'LoginStats', 'PlayerShare', 'LoginEventNotice')
