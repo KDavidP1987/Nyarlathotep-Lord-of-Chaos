@@ -311,14 +311,15 @@ def cmd_report(paths: list[str]) -> int:
 #   [DEV NOTE] run=ceiling phase=end s=<drain s> purged=<k>  tracked units 0
 # and the boot's "boot marker sweep: <n> found" and "event <id> resumed after restart (..., <u> units to rebuild)".
 # It passes when the hold holds at least 98 % of the ceiling, the sweep found the old units, the resume rebuilt at least
-# 95 % of u, the hold and resume windows add up to 30 of each kind (the first after each mark not counted), every one
-# under D3's bars with no slow tick in them, and the drain ends within ceil(n / MaxDespawnsPerTick) + 60 s.
+# 95 % of u (ceiling-test's resume line only), the hold and resume windows add up to 30 of each kind (the first after each mark not counted), every one
+# under D3's bars with no slow tick in them, the purge queues at least 95 % of the hold and its drain ends within
+# ceil(n / MaxDespawnsPerTick) + 60 s.
 CEILING = 500                   # MaxTrackedUnits' ceiling
 CEILING_WINDOWS = 30
 CEIL_PHASES = ["start", "hold", "restart", "resume", "purge", "end"]
 CEIL_NOTE = re.compile(r"\[DEV NOTE\] run=ceiling phase=(start|hold|restart|resume|purge|end)(?: tracked=(\d+))?(?: s=(\d+))?(?: purged=(\d+))?")
 SWEPT = re.compile(r"\[nyar\] boot marker sweep: (\d+) found")
-RESUMED = re.compile(r"event \S+ resumed after restart \(horde \d+/\d+, (\d+) units to rebuild\)")
+RESUMED = re.compile(r"event ceiling-test resumed after restart \(horde \d+/\d+, (\d+) units to rebuild\)")
 
 
 def ceiling_run(lines: list[str]) -> str:
@@ -384,6 +385,8 @@ def ceiling_run(lines: list[str]) -> str:
         problem = f"slow ticks while holding: {slow}"
     elif drain is None or drain > margin:
         problem = f"drain {drain} s over {margin} s"
+    elif purged is None or purged < math.ceil(tracked["hold"] * 0.95):
+        problem = f"purged {purged} of {tracked['hold']}"
     else:
         problem = None
     if problem:
@@ -449,16 +452,16 @@ def cmd_selftest() -> int:
         if got != want:
             bad.append(f"{name}: got {got!r}")
     def ceil_log(hold=500, swept=480, rebuild=480, resumed=480, windows=(16, 16), frame=(33.4, 35.0), drain=60, slow=False,
-                 order=CEIL_PHASES):
+                 order=CEIL_PHASES, purged=500, event="ceiling-test"):
         i, d = "[Info   :Nyarlathotep] [nyar] ", "[Info   :NyarDevTools] [DEV NOTE] run=ceiling phase="
         win = [f"{i}tick timing: avg 1.300 ms, max 9.000 ms over 60 ticks",
                f"[Info   :NyarDevTools] [DEV FRAME] avg={frame[0]:.1f} p95={frame[1]:.1f} max=60.0 frames=1790 mem=4200"]
         out = []
         for p in order:
-            out.append(d + p + {"hold": f" tracked={hold}", "resume": f" tracked={resumed}", "end": f" s={drain} purged=500"}.get(p, ""))
+            out.append(d + p + {"hold": f" tracked={hold}", "resume": f" tracked={resumed}", "end": f" s={drain} purged={purged}"}.get(p, ""))
             if p == "restart":
                 out += [f"{i}boot marker sweep: {swept} found, {swept} queued for despawn (0 listed in state.json)"] if swept else []
-                out += [f"{i}event ceiling-test resumed after restart (horde 1/1, {rebuild} units to rebuild)"] if rebuild else []
+                out += [f"{i}event {event} resumed after restart (horde 1/1, {rebuild} units to rebuild)"] if rebuild else []
             if p in ("hold", "resume"):
                 out += win * windows[0 if p == "hold" else 1]
                 if slow and p == "resume":
@@ -478,6 +481,8 @@ def cmd_selftest() -> int:
         ("no restart", ceil_log(order=["start", "hold", "resume", "purge", "end"]),
          "ceiling run: fail (phases out of order: start hold resume purge end)"),
         ("not finished", ceil_log()[:-1], "ceiling run: fail (not finished)"),
+        ("the purge lost units", ceil_log(purged=0), "ceiling run: fail (purged 0 of 500)"),
+        ("another event resumed", ceil_log(event="apo-test"), "ceiling run: fail (the run was not resumed)"),
     ]
     for name, lines, want in ceil_cases:
         got = ceiling_run(lines)

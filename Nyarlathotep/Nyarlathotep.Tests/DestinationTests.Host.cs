@@ -127,6 +127,23 @@ public partial class DestinationTests
     }
 
     [Fact]
+    public void March_fails_when_a_seen_front_leaves_one_unit_behind()
+    {
+        // D6: a seen front waits for any unit it would leave more than 30 m behind, not only for 80 % of them (Codex step 4b F1)
+        var now = new DateTime(2026, 10, 17, 12, 0, 0, DateTimeKind.Utc);
+        var front = new Front(1, 0, 0, 500, 0) { Kind = "wave" };
+        front.LastWatchedUtc = now;
+        var with = Enumerable.Repeat((0f, 0f), 9).ToList();
+        Assert.False(MarchRule.WaitsForUnits(front, with, now));
+        Assert.True(MarchRule.WaitsForUnits(front, [.. with, (-40f, 0f)], now));      // one of ten 40 m behind
+        Assert.True(MarchRule.WaitsForUnits(front, [.. with, (0f, 40f)], now));       // level with it, 40 m off: a step leaves it
+        Assert.False(MarchRule.WaitsForUnits(front, [.. with, (60f, 0f)], now));      // ahead: the front closes on it
+        Assert.False(MarchRule.WaitsForUnits(front, [.. with, (-25f, 0f)], now));     // within 30 m
+        front.LastWatchedUtc = now.AddSeconds(-11);                                    // unseen: hops bring it up instead
+        Assert.False(MarchRule.WaitsForUnits(front, [.. with, (-40f, 0f)], now));
+    }
+
+    [Fact]
     public void March_fails_when_arrival_does_not_hand_the_wave_its_hunt_at_the_destination()
     {
         var (host, game) = Marching();

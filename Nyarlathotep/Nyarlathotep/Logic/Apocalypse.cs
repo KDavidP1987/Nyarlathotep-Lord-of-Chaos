@@ -744,11 +744,17 @@ public static class MarchRule
     /// the met clock's sighting (undead-hordes A6), without <see cref="IsUnobserved"/>'s 10 s tail.</summary>
     public static bool SeenNow(Front front, DateTime utcNow) => front.LastWatchedUtc == utcNow;
 
-    /// <summary>True when a destination wave's or a horde march's front waits for its units (undead-hordes A6): they are
-    /// watched, so no hop brings them up, and fewer than 80 % stand within 30 m of the front. A front never runs ahead of
-    /// units a player can see.</summary>
+    /// <summary>True when a destination wave's or a horde march's front waits for its units (undead-hordes A6, D6): they
+    /// are watched, so no hop brings them up, and any one of them stands more than 30 m from the front where a step
+    /// towards the goal would not bring it closer (behind the front or level with it). A front never runs ahead of units a
+    /// player can see; the met clock ends the wait after 30 s in view.</summary>
     public static bool WaitsForUnits(Front front, IReadOnlyCollection<(float X, float Z)> units, DateTime utcNow) =>
-        units.Count > 0 && !IsUnobserved(front, utcNow) && !KeptUp(KeepUp(front, units));
+        units.Count > 0 && !IsUnobserved(front, utcNow) && units.Any(u => LeftBehind(front, u));
+
+    /// <summary>True when <paramref name="u"/> stands more than 30 m from the front and not ahead of it along the march.</summary>
+    public static bool LeftBehind(Front front, (float X, float Z) u) =>
+        Apocalypse.Distance(u.X, u.Z, front.X, front.Z) > Apocalypse.KeepUpRange
+        && (u.X - front.X) * (front.GoalX - front.X) + (u.Z - front.Z) * (front.GoalZ - front.Z) <= 0;
 
     /// <summary>Refreshes the front's watch time when any player stands within 100 m of the horde: of its front or of one of
     /// its living <paramref name="units"/> (D6). Called before the hop decision (code review M3).</summary>
