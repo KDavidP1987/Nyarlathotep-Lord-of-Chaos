@@ -745,6 +745,29 @@ class Scenario:
             self.check(f"expect-reply {text}", hit is not None,
                        hit.split("] ", 2)[-1][:300] if hit else f"no reply containing it in {t:.0f}s (is DevChatEcho loaded?)")
             return hit is not None
+        elif op == "poll-reply":
+            # poll-reply NAME <regex> :: <chat line> [every=S] [timeout=T]: sends the chat line every S s (default 5)
+            # until a reply matches the regex, within T s (default 600); ${NAME} becomes the seconds it took (a check).
+            # The logs carry no timestamps, so this times a spawn or a drain (undead-hordes D3).
+            m = re.fullmatch(r"(\w+)\s+(.+?)\s+::\s+(.+?)(?:\s+every=(\d+(?:\.\d+)?))?(?:\s+timeout=(\d+(?:\.\d+)?))?", rest)
+            if not m:
+                raise ValueError("poll-reply needs NAME <regex> :: <chat line> [every=S] [timeout=T]")
+            name, pattern, line = m[1], m[2], m[3]
+            every, t = float(m[4] or 5), float(m[5] or 600)
+            pat = r"\[CHAT> " + re.escape(self.vars["CHARACTER"]) + r"\] .*" + pattern
+            start = time.time()
+            hit = None
+            while hit is None and time.time() - start < t:
+                chat(line)
+                hit = self.replies.wait_for(pat, every)
+            took = time.time() - start
+            if hit:
+                self.captured[name] = _num(round(took))
+                if mm := re.search(pattern, hit):         # named groups become ${vars}, as expect-log's do
+                    self.captured.update({k: v for k, v in mm.groupdict().items() if v is not None})
+            self.check(f"poll-reply {name} {pattern}", hit is not None,
+                       f"{took:.0f}s: " + hit.split("] ", 2)[-1][:200] if hit else f"no reply matching it in {t:.0f}s")
+            return hit is not None
         elif op in ("expect-chat", "expect-screen", "expect-bar"):
             # On-screen OCR, fuzzy. Chat fades after a few seconds, so expect-chat first checks the transcript taken
             # right after the last chat step, then reopens the chat history (Enter), reads it and closes it (Esc).

@@ -1,0 +1,109 @@
+{
+  "id": "load-500",
+  "name": "Load 500",
+  "enabled": true,
+  "pillar": "spawns",
+  "trigger": {
+    "type": "Manual"
+  },
+  "durationSeconds": 3600,
+  "action": {
+    "type": "SpawnWaves",
+    "waveList": [
+      {
+        "units": [
+          {
+            "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane",
+            "count": 100,
+            "modifiers": {
+              "level": 20
+            }
+          },
+          {
+            "prefab": "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane",
+            "count": 100,
+            "modifiers": {
+              "level": 20
+            }
+          },
+          {
+            "prefab": "CHAR_Undead_SkeletonApprentice",
+            "count": 100,
+            "modifiers": {
+              "level": 20
+            }
+          },
+          {
+            "prefab": "CHAR_Undead_UndyingGhoul",
+            "count": 100,
+            "modifiers": {
+              "level": 20
+            }
+          },
+          {
+            "prefab": "CHAR_Undead_Guardian",
+            "count": 25,
+            "modifiers": {
+              "level": 40
+            }
+          },
+          {
+            "prefab": "CHAR_Undead_SkeletonMage",
+            "count": 25,
+            "modifiers": {
+              "level": 40
+            }
+          },
+          {
+            "prefab": "CHAR_Undead_SkeletonGolem",
+            "count": 24,
+            "modifiers": {
+              "level": 40
+            }
+          },
+          {
+            "prefab": "CHAR_Undead_GhostBanshee",
+            "count": 9,
+            "modifiers": {
+              "level": 60
+            }
+          },
+          {
+            "prefab": "CHAR_Undead_GhostGuardian",
+            "count": 8,
+            "modifiers": {
+              "level": 60
+            }
+          },
+          {
+            "prefab": "CHAR_Undead_GhostMilitia_Light",
+            "count": 8,
+            "modifiers": {
+              "level": 60
+            }
+          }
+        ],
+        "bosses": [
+          {
+            "prefab": "CHAR_Undead_BishopOfDeath_VBlood",
+            "count": 1,
+            "modifiers": {
+              "level": 50
+            }
+          }
+        ]
+      }
+    ],
+    "radius": 30,
+    "location": {
+      "type": "Point",
+      "x": -1880,
+      "z": -1640,
+      "y": 0
+    },
+    "behaviour": {
+      "type": "Hunt",
+      "range": 40
+    }
+  }
+}

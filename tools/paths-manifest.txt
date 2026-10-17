@@ -136,6 +136,8 @@ temp: nyar-apo*-logs
 temp: nyar-uw*-logs
 # the session log copies of the login-notice sessions (login-notice D10); deleted after the release
 temp: nyar-ln*-logs
+# the session log copies of the undead-hordes sessions (undead-hordes D3, D4); deleted after the release
+temp: nyar-udh*-logs
 # the self-test scratch folders (event-library A14): preflight -SelfTest, preflight -DependencySuite, dev-snapshot -SelfTest
 # and rollback-drill -SelfTest create one and remove it before they exit
 temp: nyar-selftest-*

@@ -155,8 +155,8 @@ public partial class CommandArgTests
         ["action.bosses", "pool:lords:a-b", CommandArgs.BossEntryRule("action.bosses")],
         ["action.bosses", "pool:lords:1-2-3", CommandArgs.BossEntryRule("action.bosses")],
         ["action.waveList.1.bosses", "CHAR_Spider_Queen_VBlood:1,pool:lords:-2", CommandArgs.BossEntryRule("action.waveList.1.bosses")],
-        ["action.units", "pool:elite:40,CHAR_Bandit_Thug:11", EventValidator.WaveSizeRule("action.units")],
-        ["action.waveList.1.units", "pool:elite:50,pool:guard:1", EventValidator.WaveSizeRule("action.waveList.1.units")],
+        ["action.units", "pool:elite:490,CHAR_Bandit_Thug:11", EventValidator.WaveSizeRule("action.units")],
+        ["action.waveList.1.units", "pool:elite:500,pool:guard:1", EventValidator.WaveSizeRule("action.waveList.1.units")],
         ["action.bosses", "CHAR_Spider_Queen_VBlood:1,pool:Lords:1-1", EventValidator.NoPool("action.bosses.2", "Lords")],
         ["action.bosses", "CHAR_Spider_Queen_VBlood:3,pool:lords:1-3", EventValidator.BossesMost("action.bosses")],
         ["action.waveList.1.bosses", "CHAR_Spider_Queen_VBlood:3,CHAR_Undead_BishopOfDeath_VBlood:3", EventValidator.BossesMost("action.waveList.1.bosses")],
@@ -179,10 +179,10 @@ public partial class CommandArgTests
     }
 
     [Theory]
-    [InlineData("action.units", "pool:elite:51", "CHAR_Bandit_Thug:51")]
+    [InlineData("action.units", "pool:elite:501", "CHAR_Bandit_Thug:501")]
     [InlineData("action.units", "pool:elite:0", "CHAR_Bandit_Thug:0")]
     [InlineData("action.units", "pool:elite:x", "CHAR_Bandit_Thug:x")]
-    [InlineData("action.waveList.1.units", "pool:elite:51", "CHAR_Bandit_Thug:51")]
+    [InlineData("action.waveList.1.units", "pool:elite:501", "CHAR_Bandit_Thug:501")]
     [InlineData("action.waveList.1.units", "pool:elite", "CHAR_Bandit_Thug:")]
     [InlineData("action.units", "pool:elite:2,pool:elite:3", "CHAR_Bandit_Thug:2,CHAR_Bandit_Thug:3")]
     public void Pools_fails_when_a_pool_token_count_differs_from_a_prefab_entrys(string field, string pool, string prefab)

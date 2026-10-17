@@ -44,7 +44,7 @@ public static class EventsEditor
     /// text a wave-list conversion adds to the reply (wave-sets D14: the keys it removed).</summary>
     /// <remarks>Swarm D9 and deferred Review 2 F1: an edit that would give the event a new arena, winner or growth conflict
     /// (an AroundPlayer location or a spawn radius or Hunt range wider than its arena, a winner without the scoreboard,
-    /// growth beside a waveList, with waves 1, adding nothing or growing the last wave past 50 units) is refused with the
+    /// growth beside a waveList, with waves 1, adding nothing or growing the last wave past MaxUnitsPerWave's ceiling) is refused with the
     /// validator's own reason before anything is written. A conflict the file already held is not the edit's, so an
     /// unrelated edit of an already disabled event still goes through. Hunting-grounds D14 adds its conflicts to the same
     /// set: a Region location or a lock without a regional scope, a lock beside an arena, RegionHunt without the lock and an

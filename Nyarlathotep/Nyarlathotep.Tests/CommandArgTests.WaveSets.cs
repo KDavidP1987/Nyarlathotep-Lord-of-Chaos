@@ -35,10 +35,10 @@ public partial class CommandArgTests
         "action.waveList.1.units.1.modifiers.maxHealth must be a number 0.5-3.0 with at most two decimals")]
     [InlineData("action.waveList.1.units.1.power", "1.234",
         "action.waveList.1.units.1.modifiers.power must be a number 0.5-3.0 with at most two decimals")]
-    [InlineData("action.waveList.1.units", "CHAR_Bandit_Thug:51",
-        "action.waveList.1.units must be 1-10 entries CHAR_name or CHAR_name:count, count 1-50, comma separated")]
+    [InlineData("action.waveList.1.units", "CHAR_Bandit_Thug:501",
+        "action.waveList.1.units must be 1-10 entries CHAR_name or CHAR_name:count, count 1-500, comma separated")]
     [InlineData("action.waveList.1.units", "CHAR_Bandit_Thug:0",
-        "action.waveList.1.units must be 1-10 entries CHAR_name or CHAR_name:count, count 1-50, comma separated")]
+        "action.waveList.1.units must be 1-10 entries CHAR_name or CHAR_name:count, count 1-500, comma separated")]
     [InlineData("action.waveList.1", "remove", "action.waveList.1 takes none (removes the wave)")]
     public void WaveSets_fails_when_value_out_of_range(string field, string value, string error)
     {

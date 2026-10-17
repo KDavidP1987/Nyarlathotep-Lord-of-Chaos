@@ -147,7 +147,7 @@ public partial class EventValidationTests
             for (var n = 1; n <= d.Action.Waves; n++) Assert.False(Pools.Rolls(d.Action, n));
         }
         // the 0.12.0 refusals of an entry without a prefab, on an action without pools, are unchanged
-        Refused(PoolOne(PoolUnitsAction(null, "[ { \"count\": 5 } ]")), "action.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-50 }");
+        Refused(PoolOne(PoolUnitsAction(null, "[ { \"count\": 5 } ]")), "action.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-500 }");
         Refused(PoolOne(PoolUnitsAction(null, "[ { \"prefab\": \"CHAR_Bandit_Thug\", \"count\": 5, \"elite\": 1 } ]")), "unknown field action.units.elite");
     }
 
@@ -183,8 +183,8 @@ public partial class EventValidationTests
             EventValidator.PrefabOrPool("action.waveList.1.units.1")],
         [PoolWaveAction(Elite, PWave() + ", " + PWave("[ " + Thug + ", { \"pool\": \"ghost\", \"count\": 2 } ]", "\"whenCleared\": true")),
             EventValidator.NoPool("action.waveList.2.units.2", "ghost")],
-        [PoolUnitsAction(Elite, "[ { \"pool\": \"elite\", \"count\": 30 }, { \"pool\": \"elite\", \"count\": 21 } ]"), EventValidator.WaveSizeRule("action.units")],
-        [PoolWaveAction(Elite, PWave("[ { \"pool\": \"elite\", \"count\": 50 }, " + Thug.Replace("2 }", "1 }") + " ]")),
+        [PoolUnitsAction(Elite, "[ { \"pool\": \"elite\", \"count\": 300 }, { \"pool\": \"elite\", \"count\": 201 } ]"), EventValidator.WaveSizeRule("action.units")],
+        [PoolWaveAction(Elite, PWave("[ { \"pool\": \"elite\", \"count\": 500 }, " + Thug.Replace("2 }", "1 }") + " ]")),
             EventValidator.WaveSizeRule("action.waveList.1.units")],
     ];
 
@@ -194,7 +194,7 @@ public partial class EventValidationTests
 
     [Theory]
     [InlineData("\"count\": 0", "count")]
-    [InlineData("\"count\": 51", "count")]
+    [InlineData("\"count\": 501", "count")]
     [InlineData("\"count\": 5, \"chance\": 0.04", "chance")]
     [InlineData("\"count\": 5, \"chance\": 1.01", "chance")]
     [InlineData("\"count\": 5, \"modifiers\": { \"level\": 121 }", "modifiers")]
@@ -230,13 +230,13 @@ public partial class EventValidationTests
     }
 
     [Fact]
-    public void PoolEntries_fails_when_a_51_unit_wave_of_pool_entries_loads()
+    public void PoolEntries_fails_when_a_wave_of_pool_entries_past_the_ceiling_loads()
     {
-        Loads(PoolUnitsAction(Elite, "[ { \"pool\": \"elite\", \"count\": 30 }, { \"pool\": \"elite\", \"count\": 20 } ]"));        // 50 loads
-        Refused(PoolOne(PoolUnitsAction(Elite, "[ { \"pool\": \"elite\", \"count\": 30 }, { \"pool\": \"elite\", \"count\": 21 } ]")),
+        Loads(PoolUnitsAction(Elite, "[ { \"pool\": \"elite\", \"count\": 300 }, { \"pool\": \"elite\", \"count\": 200 } ]"));      // 500 loads
+        Refused(PoolOne(PoolUnitsAction(Elite, "[ { \"pool\": \"elite\", \"count\": 300 }, { \"pool\": \"elite\", \"count\": 201 } ]")),
             EventValidator.WaveSizeRule("action.units"));
-        // a wave of prefab entries only keeps 0.12.0's rules (each entry 1-50)
-        Loads(PoolUnitsAction(null, "[ { \"prefab\": \"CHAR_Bandit_Thug\", \"count\": 50 }, { \"prefab\": \"CHAR_Bandit_Deadeye\", \"count\": 50 } ]"));
+        // a wave of prefab entries only keeps 0.12.0's rules (each entry 1 to MaxUnitsPerWave's ceiling)
+        Loads(PoolUnitsAction(null, "[ { \"prefab\": \"CHAR_Bandit_Thug\", \"count\": 500 }, { \"prefab\": \"CHAR_Bandit_Deadeye\", \"count\": 500 } ]"));
     }
 
     [Fact]

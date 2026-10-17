@@ -1,0 +1,118 @@
+# hostility.vrs: undead-hordes D4's hostility probe. Which natives fight the undead the game spawns? For each native,
+# 10 weak undead (CHAR_Undead_SkeletonSoldier_Armored_Farbane, -837329073) are spawned at the mark and 5 of the native
+# 10 m from them; Chaos stands 80 m off for 60 s between the marks
+#   [DEV NOTE] hostility-start native=<prefab>   and   [DEV NOTE] hostility native=<prefab>
+# `load-ladder.py report` counts the mod's "[nyar] <prefab> of <event> died (killer <prefab>)" lines between them into
+# the feature doc's Hostility table: a death count with its killer, not a head count (Session 0's first run counted the
+# living within 40 m, and units that walked off read as dead). Nothing writes a faction (D14).
+#
+# Needs: [Debug] VerboseLogging = true saved in the cfg (the died lines name the killer only then); the pillar switch
+# below re-reads the cfg, so no restart. NyarDevTools (.devmark .devtp .devgo .devkill .devnote), DevChatEcho, Chaos
+# invulnerable. Run before the ladder, and set VerboseLogging back to false (and switch again) before it.
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .nyar pillar spawns on
+expect-reply spawns
+chat .devtp -1580 -1640
+expect-log \[DEV TP\] to
+wait 3
+console ToggleInvulnerable true
+wait 2
+chat .devmark hostility
+expect-log \[DEV MARK\] hostility
+# ---- CHAR_Bandit_Thug (-301730941)
+chat .devgo hostility
+expect-log \[DEV TP\] hostility
+chat .devnote hostility-start native=CHAR_Bandit_Thug
+expect-reply devnote: hostility-start native=CHAR_Bandit_Thug
+chat .nyar spawn CHAR_Undead_SkeletonSoldier_Armored_Farbane 10
+expect-reply spawned 10
+chat .devtp -1570 -1640
+expect-log \[DEV TP\] to
+chat .nyar spawn CHAR_Bandit_Thug 5
+expect-reply spawned 5
+chat .devtp -1500 -1640
+expect-log \[DEV TP\] to
+wait 60
+chat .devnote hostility native=CHAR_Bandit_Thug
+expect-reply devnote: hostility native=CHAR_Bandit_Thug
+chat .devgo hostility
+expect-log \[DEV TP\] hostility
+chat .devkill -837329073 150
+expect-log \[DEV KILL\] n=
+chat .devkill -301730941 150
+expect-log \[DEV KILL\] n=
+# ---- CHAR_Militia_Light (-63435588)
+chat .devgo hostility
+expect-log \[DEV TP\] hostility
+chat .devnote hostility-start native=CHAR_Militia_Light
+expect-reply devnote: hostility-start native=CHAR_Militia_Light
+chat .nyar spawn CHAR_Undead_SkeletonSoldier_Armored_Farbane 10
+expect-reply spawned 10
+chat .devtp -1570 -1640
+expect-log \[DEV TP\] to
+chat .nyar spawn CHAR_Militia_Light 5
+expect-reply spawned 5
+chat .devtp -1500 -1640
+expect-log \[DEV TP\] to
+wait 60
+chat .devnote hostility native=CHAR_Militia_Light
+expect-reply devnote: hostility native=CHAR_Militia_Light
+chat .devgo hostility
+expect-log \[DEV TP\] hostility
+chat .devkill -837329073 150
+expect-log \[DEV KILL\] n=
+chat .devkill -63435588 150
+expect-log \[DEV KILL\] n=
+# ---- CHAR_Forest_Wolf (-1418430647)
+chat .devgo hostility
+expect-log \[DEV TP\] hostility
+chat .devnote hostility-start native=CHAR_Forest_Wolf
+expect-reply devnote: hostility-start native=CHAR_Forest_Wolf
+chat .nyar spawn CHAR_Undead_SkeletonSoldier_Armored_Farbane 10
+expect-reply spawned 10
+chat .devtp -1570 -1640
+expect-log \[DEV TP\] to
+chat .nyar spawn CHAR_Forest_Wolf 5
+expect-reply spawned 5
+chat .devtp -1500 -1640
+expect-log \[DEV TP\] to
+wait 60
+chat .devnote hostility native=CHAR_Forest_Wolf
+expect-reply devnote: hostility native=CHAR_Forest_Wolf
+chat .devgo hostility
+expect-log \[DEV TP\] hostility
+chat .devkill -837329073 150
+expect-log \[DEV KILL\] n=
+chat .devkill -1418430647 150
+expect-log \[DEV KILL\] n=
+# ---- CHAR_Legion_Shadowkin_Lesser (-1200074387)
+chat .devgo hostility
+expect-log \[DEV TP\] hostility
+chat .devnote hostility-start native=CHAR_Legion_Shadowkin_Lesser
+expect-reply devnote: hostility-start native=CHAR_Legion_Shadowkin_Lesser
+chat .nyar spawn CHAR_Undead_SkeletonSoldier_Armored_Farbane 10
+expect-reply spawned 10
+chat .devtp -1570 -1640
+expect-log \[DEV TP\] to
+chat .nyar spawn CHAR_Legion_Shadowkin_Lesser 5
+expect-reply spawned 5
+chat .devtp -1500 -1640
+expect-log \[DEV TP\] to
+wait 60
+chat .devnote hostility native=CHAR_Legion_Shadowkin_Lesser
+expect-reply devnote: hostility native=CHAR_Legion_Shadowkin_Lesser
+chat .devgo hostility
+expect-log \[DEV TP\] hostility
+chat .devkill -837329073 150
+expect-log \[DEV KILL\] n=
+chat .devkill -1200074387 150
+expect-log \[DEV KILL\] n=
+# ---- every unit spawned here is gone
+chat .nyar purge
+wait 2
+chat .nyar purge confirm
+poll-reply CLEAN tracked units: 0 \(spawning 0, despawning 0\) :: .nyar status every=3 timeout=120

@@ -129,7 +129,7 @@ public partial class EventValidationTests
         [Action(extra: GrowthKey("\"addLevels\": 6")), EventValidator.GrowthAddLevelsRule],
         [Action(extra: GrowthKey("\"addLevels\": \"2\"")), EventValidator.GrowthAddLevelsRule],
         [Action(extra: GrowthKey("\"addUnits\": 1, \"whenCleared\": \"yes\"")), EventValidator.GrowthWhenClearedRule],
-        [Action(units: SwarmUnits(20, 11), waves: "3", extra: GrowthKey("\"addUnits\": 5")), EventValidator.GrowthLastWave],   // 30 + 21 = 51
+        [Action(units: SwarmUnits(200, 281), waves: "3", extra: GrowthKey("\"addUnits\": 5")), EventValidator.GrowthLastWave],   // 481 + 20 = 501
         [Action(extra: "\"growth\": 2"), EventValidator.GrowthObject],
         [Action(extra: "\"growth\": [ ]"), EventValidator.GrowthObject],
         [Action(extra: GrowthKey("\"addUnits\": 1, \"addWaves\": 2")), "unknown field action.growth.addWaves"],
@@ -142,10 +142,10 @@ public partial class EventValidationTests
     [Fact]
     public void Growth_passes_the_bounds_and_keeps_the_base()
     {
-        var top = Json.One(Json.Event(action: Action(units: SwarmUnits(20, 10), waves: "3", extra: GrowthKey("\"addUnits\": 5, \"addLevels\": 5"))));
-        Assert.True(top.Startable, top.DisabledReason);                                                  // 30 + 20 = 50: the ceiling loads
+        var top = Json.One(Json.Event(action: Action(units: SwarmUnits(200, 280), waves: "3", extra: GrowthKey("\"addUnits\": 5, \"addLevels\": 5"))));
+        Assert.True(top.Startable, top.DisabledReason);                                                  // 480 + 20 = 500: the ceiling loads
         Assert.Equal(new Growth(5, 5, false), top.Action!.Growth);
-        Assert.Equal(50, top.Action.WaveList![^1].Units.Sum(u => u.Count));
+        Assert.Equal(500, top.Action.WaveList![^1].Units.Sum(u => u.Count));
         var ten = Json.One(Json.Event(action: Action(units: SwarmUnits(1), waves: "10", extra: GrowthKey("\"addUnits\": 0, \"addLevels\": 1, \"whenCleared\": true"))));
         Assert.True(ten.Startable, ten.DisabledReason);
         Assert.Equal(new Growth(0, 1, true), ten.Action!.Growth);

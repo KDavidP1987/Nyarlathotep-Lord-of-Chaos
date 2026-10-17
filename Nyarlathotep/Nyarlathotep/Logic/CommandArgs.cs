@@ -312,7 +312,7 @@ public static class CommandArgs
     /// <summary>The token of a pool in a units list or a boss roll: `pool:&lt;name&gt;:…` (wave-variety D10).</summary>
     public const string PoolToken = "pool:";
 
-    /// <summary>A `pool:&lt;name&gt;:&lt;count&gt;` token of a units list (wave-variety D10): count 1-50; null when
+    /// <summary>A `pool:&lt;name&gt;:&lt;count&gt;` token of a units list (wave-variety D10): count 1 to MaxUnitsPerWave's ceiling; null when
     /// <paramref name="part"/> is no pool token, else the entry or the refusal.</summary>
     static Arg<object>? PoolEntry(string field, string part, string rule)
     {
@@ -320,7 +320,7 @@ public static class CommandArgs
         var bits = part.Split(':');
         if (bits.Length != 3) return Arg<object>.Bad(rule);
         if (!EventValidator.IsPoolName(bits[1])) return Arg<object>.Bad(EventValidator.NoPool(field, bits[1]));
-        return int.TryParse(bits[2], NumberStyles.None, CultureInfo.InvariantCulture, out var count) && count is >= 1 and <= 50
+        return int.TryParse(bits[2], NumberStyles.None, CultureInfo.InvariantCulture, out var count) && count >= 1 && count <= Limits.MaxUnitsPerWave.Max
             ? Arg<object>.Of(UnitEntry.FromPool(bits[1], count)) : Arg<object>.Bad(rule);
     }
 
@@ -585,11 +585,11 @@ public static class CommandArgs
         return Arg<object>.Of(parts);
     }
 
-    /// <summary>action.units: 1-10 entries CHAR_&lt;name&gt;[:&lt;count&gt;], count 1-50 (default 1), each name once
+    /// <summary>action.units: 1-10 entries CHAR_&lt;name&gt;[:&lt;count&gt;], count 1 to MaxUnitsPerWave's ceiling (default 1), each name once
     /// (event-library D10, S-8).</summary>
     static Arg<object> Units(string field, string? value)
     {
-        const string rule = "action.units must be 1-10 entries CHAR_name or CHAR_name:count, count 1-50, comma separated";
+        var rule = $"action.units must be 1-10 entries CHAR_name or CHAR_name:count, count {EventValidator.CountRange}, comma separated";
         var parts = CommaList(value, 10);
         if (parts is null) return Arg<object>.Bad(rule);
         var entries = new List<UnitEntry>();
@@ -604,7 +604,7 @@ public static class CommandArgs
             var colon = part.IndexOf(':');
             var name = colon < 0 ? part : part[..colon];
             var count = 1;
-            if (colon >= 0 && !(int.TryParse(part.AsSpan(colon + 1), NumberStyles.None, CultureInfo.InvariantCulture, out count) && count is >= 1 and <= 50))
+            if (colon >= 0 && !(int.TryParse(part.AsSpan(colon + 1), NumberStyles.None, CultureInfo.InvariantCulture, out count) && count >= 1 && count <= Limits.MaxUnitsPerWave.Max))
                 return Arg<object>.Bad(rule);
             if (!IsNameValue(name, "CHAR_")) return Arg<object>.Bad(NameRule(field));
             entries.Add(new UnitEntry(name, count));
@@ -753,11 +753,11 @@ public static class CommandArgs
         }
     }
 
-    /// <summary>A wave's units: 1-10 entries CHAR_&lt;name&gt;[:&lt;count&gt;], count 1-50 (default 1), a prefab allowed in
+    /// <summary>A wave's units: 1-10 entries CHAR_&lt;name&gt;[:&lt;count&gt;], count 1 to MaxUnitsPerWave's ceiling (default 1), a prefab allowed in
     /// more than one entry (wave-sets D3).</summary>
     static Arg<object> WaveUnits(string field, string value)
     {
-        var rule = $"{field} must be 1-10 entries CHAR_name or CHAR_name:count, count 1-50, comma separated";
+        var rule = $"{field} must be 1-10 entries CHAR_name or CHAR_name:count, count {EventValidator.CountRange}, comma separated";
         var parts = CommaList(value, 10);
         if (parts is null) return Arg<object>.Bad(rule);
         var entries = new List<UnitEntry>();
@@ -772,7 +772,7 @@ public static class CommandArgs
             var colon = part.IndexOf(':');
             var name = colon < 0 ? part : part[..colon];
             var count = 1;
-            if (colon >= 0 && !(int.TryParse(part.AsSpan(colon + 1), NumberStyles.None, CultureInfo.InvariantCulture, out count) && count is >= 1 and <= 50))
+            if (colon >= 0 && !(int.TryParse(part.AsSpan(colon + 1), NumberStyles.None, CultureInfo.InvariantCulture, out count) && count >= 1 && count <= Limits.MaxUnitsPerWave.Max))
                 return Arg<object>.Bad(rule);
             if (!IsNameValue(name, "CHAR_")) return Arg<object>.Bad(NameRule(field));
             entries.Add(new UnitEntry(name, count));

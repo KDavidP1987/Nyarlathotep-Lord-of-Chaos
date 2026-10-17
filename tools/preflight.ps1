@@ -2992,7 +2992,7 @@ function Test-CheckSessionLogs([string]$Root) {
     $allSessions = $sessions                                         # the snapshot rule still reads every session
     $sessions = @($sessions | Where-Object { $uncounted -notcontains $_ })
     $uncNote = if ($uncounted.Count) { "; $($uncounted.Count) uncounted (session $($uncounted -join ', '))" } else { '' }
-    $cutoff = if ($script:SessionsBeforeA10.ContainsKey($slug)) { $script:SessionsBeforeA10[$slug] } else { 0 }
+    $cutoff = if ($script:SessionsBeforeA10.ContainsKey($slug)) { $script:SessionsBeforeA10[$slug] } else { -1 }   # a Session 0 counts (undead-hordes)
     $pre = @($sessions | Where-Object { $_ -le $cutoff })
     $post = @($sessions | Where-Object { $_ -gt $cutoff })
     $missing = @($sessions | Where-Object { -not $checks.ContainsKey($_) })

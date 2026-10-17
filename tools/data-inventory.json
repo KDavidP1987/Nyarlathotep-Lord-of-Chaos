@@ -508,9 +508,10 @@
         "nyar-rv*-logs",
         "nyar-apo*-logs",
         "nyar-uw*-logs",
-        "nyar-ln*-logs"
+        "nyar-ln*-logs",
+        "nyar-udh*-logs"
       ],
-      "location": "%TEMP%\\nyar-s<n>-logs (copies of LogOutput.log and NyarDev.log taken by hand during event-library Sessions 4 and 5); %TEMP%\\nyar-ws<n>-logs (wave-sets Session 1); %TEMP%\\nyar-sw<n>-logs (swarm Session 1); %TEMP%\nyar-hg<n>-logs (hunting-grounds Sessions 1-2); %TEMP%\\nyar-rv<n>-logs (revenge sessions); %TEMP%\\nyar-apo<n>-logs (apocalypse spike and sessions); %TEMP%\\nyar-uw<n>-logs (unit-watch spike and sessions); %TEMP%\nyar-ln-logs (login-notice sessions)",
+      "location": "%TEMP%\\nyar-s<n>-logs (copies of LogOutput.log and NyarDev.log taken by hand during event-library Sessions 4 and 5); %TEMP%\\nyar-ws<n>-logs (wave-sets Session 1); %TEMP%\\nyar-sw<n>-logs (swarm Session 1); %TEMP%\nyar-hg<n>-logs (hunting-grounds Sessions 1-2); %TEMP%\\nyar-rv<n>-logs (revenge sessions); %TEMP%\\nyar-apo<n>-logs (apocalypse spike and sessions); %TEMP%\\nyar-uw<n>-logs (unit-watch spike and sessions); %TEMP%\nyar-ln-logs (login-notice sessions); %TEMP%\\nyar-udh-logs (undead-hordes sessions)",
       "owner": "Claude during a server session",
       "retention": "the session that made them",
       "deletion": "deleted once the session is recorded; later sessions copy to nyar-soak-* instead; a leftover fails -Paths",

@@ -1,0 +1,68 @@
+# load-ladder.vrs: undead-hordes D3, one step of the load ladder. Run once per step, in order, each after the last passed:
+#   python tools/vrclient/vrclient.py run scenarios/load-ladder.vrs --var N=100 --var WAVES=1
+#   N=250 WAVES=1 · N=500 WAVES=1 · N=750 WAVES=2 · N=1000 WAVES=2
+# The load-<N> event (tools/vrclient/scenarios/fixtures/load-<N>.json, put in by `load-ladder.py install`) spawns N tracked
+# units at the pond: 80 % weak at level 20, 15 % mid at 40, 5 % strong at 60 and the Bishop of Death at 50, Hunt 40.
+# Chaos waits 300 m away while they spawn and for 11 quiet minutes (the report skips the first window, which straddles
+# the mark), then stands among them for 6 minutes with the weak ones' aggro forced on Chaos, then purges. The
+# `.devnote` lines mark the phases for `load-ladder.py report`; the logs carry no timestamps.
+#
+# Needs: the Session 0 dev cfg (MaxTrackedUnits 1000, MaxUnitsPerWave 500, MaxSpawnsPerTick 20, MaxDespawnsPerTick 20,
+# [Debug] TimingLog true, [UnitWatch] StallMinutes 60: the stall rule would clear a held wave after 10 min); NyarDevTools with .devframes and .devnote; DevChatEcho; Chaos invulnerable
+# (`ToggleInvulnerable true`, never false). No purge in the 240 s before the run (the cooldown refuses the start).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+# re-reads the saved cfg (the pillar switch reloads it): VerboseLogging off, the Session 0 caps in
+chat .nyar pillar spawns on
+expect-reply spawns
+chat .devtp -1580 -1640
+expect-log \[DEV TP\] to
+wait 3
+console ToggleInvulnerable true
+wait 2
+chat .devframes on
+expect-reply devframes: on
+chat .nyar event reload
+expect-log events: reloaded
+chat .devnote step=${N} phase=start
+expect-reply devnote: step=${N} phase=start
+mark
+chat .nyar event start load-${N}
+expect-log event load-${N} started by
+expect-log event load-${N} wave ${WAVES}/${WAVES}: \d+ units queued timeout=60
+poll-reply SPAWN tracked units: (?P<TRACKED>\d+) \(spawning 0, :: .nyar status every=5 timeout=600
+chat .devnote step=${N} phase=quiet s=${SPAWN} tracked=${TRACKED}
+expect-reply devnote: step=${N} phase=quiet
+wait 660
+chat .devgo pond
+expect-log \[DEV TP\] pond
+wait 3
+console ToggleInvulnerable true
+wait 2
+chat .devnote step=${N} phase=fight
+expect-reply devnote: step=${N} phase=fight
+chat .devaggro -837329073 60 400
+expect-log \[DEV AGGRO\] put=
+chat .devaggro -195077008 60 400
+expect-log \[DEV AGGRO\] put=
+chat .devaggro -1789347076 60 400
+expect-log \[DEV AGGRO\] put=
+chat .devaggro 1640311129 60 400
+expect-log \[DEV AGGRO\] put=
+wait 360
+chat .devnote step=${N} phase=drain
+expect-reply devnote: step=${N} phase=drain
+chat .nyar purge
+wait 2
+chat .nyar purge confirm
+expect-log purge: \d+ events ended, (?P<PURGED>\d+) units queued
+poll-reply DRAIN tracked units: 0 \(spawning 0, despawning 0\) :: .nyar status every=3 timeout=900
+chat .devnote step=${N} phase=end s=${DRAIN} purged=${PURGED}
+expect-reply devnote: step=${N} phase=end
+chat .devtp -1580 -1640
+expect-log \[DEV TP\] to
+# the purge cooldown (240 s) passes before the next step's start
+wait 250

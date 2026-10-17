@@ -141,7 +141,7 @@ public partial class CommandArgTests
         Assert.Null(WaveAction(lib, "grown")["waveList"]);                                           // never converted
         Assert.StartsWith("event grown action.growth.addLevels = 0", AuthoringTests.Set(lib, "grown", "action.growth.addLevels", "0"));
         Refused(lib, "grown", "action.growth.addUnits", "0", EventValidator.GrowthAdds);
-        Refused(lib, "grown", "action.units", "CHAR_Bandit_Thug:50", EventValidator.GrowthLastWave);   // 50 + 2·1 = 52
+        Refused(lib, "grown", "action.units", "CHAR_Bandit_Thug:500", EventValidator.GrowthLastWave);   // 500 + 2·1 = 502
         Refused(lib, "raid", "action.growth.whenCleared", "true", EventValidator.GrowthAdds);           // created adding nothing
     }
 

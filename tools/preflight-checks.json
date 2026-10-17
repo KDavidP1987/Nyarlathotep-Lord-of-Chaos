@@ -104,6 +104,9 @@
     "login-notice": [
       "docs/features/LOGIN_NOTICE.md"
     ],
+    "undead-hordes": [
+      "docs/features/UNDEAD_HORDES.md"
+    ],
     "boss-reinforcements": [
       "docs/features/BOSS_REINFORCEMENTS.md"
     ],

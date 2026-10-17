@@ -132,6 +132,7 @@ regex group captured by an earlier `expect-log`. Ending a step with `timeout=N` 
 | `expect-server-log <regex>` | A new Unity server log line matches | yes |
 | `expect-no-log <regex>` | No new line matches within the wait (default 3 s) | yes |
 | `expect-reply <text>` | A command reply contains the text (exact, case-insensitive; needs DevChatEcho) | yes |
+| `poll-reply NAME <regex> :: <chat line> [every=S] [timeout=T]` | Send the line every S s (default 5) until a reply matches; `${NAME}` = the seconds it took (times a spawn or a drain) | yes |
 | `expect-chat <text>` | The chat box shows the text (OCR, fuzzy; use 15+ characters) | yes |
 | `expect-screen <text>` / `expect-bar <text>` | The screen or the ability bar shows the text (OCR, fuzzy) | yes |
 | `calc NAME = <expr>` | Arithmetic on numbers (`+ - * / ** %`, `sqrt hypot abs min max round floor ceil`); the result becomes `${NAME}` | no |

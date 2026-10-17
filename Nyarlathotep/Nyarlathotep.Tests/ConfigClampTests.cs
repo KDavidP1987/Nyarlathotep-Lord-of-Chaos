@@ -7,10 +7,10 @@ public partial class ConfigClampTests
 {
     [Theory]
     [InlineData("MaxTrackedUnits", 500)]
-    [InlineData("MaxUnitsPerWave", 50)]
+    [InlineData("MaxUnitsPerWave", 500)]
     [InlineData("MaxConcurrentEvents", 10)]
-    [InlineData("MaxDespawnsPerTick", 20)]
-    [InlineData("MaxSpawnsPerTick", 20)]
+    [InlineData("MaxDespawnsPerTick", 40)]
+    [InlineData("MaxSpawnsPerTick", 40)]
     public void Epic_ceilings_are_the_code_ceilings(string key, int ceiling)
     {
         Assert.Equal(ceiling, Limits.All.Single(l => l.Key == key).Max);

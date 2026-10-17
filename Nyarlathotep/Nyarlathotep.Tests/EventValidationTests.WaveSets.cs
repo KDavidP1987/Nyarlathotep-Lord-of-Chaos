@@ -31,13 +31,13 @@ public partial class EventValidationTests
         [WaveListAction(List(Wave(), Wave(keys: "\"afterSeconds\": 3601"))), EventValidator.AfterSecondsRule(2)],
         [WaveListAction(List(Wave(), Wave(keys: "\"whenCleared\": \"yes\""))), EventValidator.WhenClearedRule(2)],
         [WaveListAction(List(Wave(), Wave(keys: "\"whenCleared\": false"))), EventValidator.NoStartRule(2)],          // A1 (a)
-        [WaveListAction(List(Wave(), Wave(units: "[]"))), "action.waveList.2.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-50 }"],
+        [WaveListAction(List(Wave(), Wave(units: "[]"))), "action.waveList.2.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-500 }"],
         [WaveListAction(List(Wave(units: "[ " + string.Join(", ", Enumerable.Repeat(Thug, 11)) + " ]"))),
-            "action.waveList.1.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-50 }"],
-        [WaveListAction(List(Wave(units: "[ { \"prefab\": \"CHAR_Bandit_Thug\", \"count\": 51 } ]"))), "action.waveList.1.units.1.count must be 1-50"],
-        [WaveListAction(List(Wave(units: "[ { \"prefab\": \"CHAR_Bandit_Thug\", \"count\": 0 } ]"))), "action.waveList.1.units.1.count must be 1-50"],
-        [WaveListAction(List(Wave(units: "[ " + Thug + ", " + Thug + ", { \"prefab\": \"CHAR_Bandit_Thug\", \"count\": 51 } ]"))),
-            "action.waveList.1.units.3.count must be 1-50"],                                                  // review F6: the entry is named
+            "action.waveList.1.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-500 }"],
+        [WaveListAction(List(Wave(units: "[ { \"prefab\": \"CHAR_Bandit_Thug\", \"count\": 501 } ]"))), "action.waveList.1.units.1.count must be 1-500"],
+        [WaveListAction(List(Wave(units: "[ { \"prefab\": \"CHAR_Bandit_Thug\", \"count\": 0 } ]"))), "action.waveList.1.units.1.count must be 1-500"],
+        [WaveListAction(List(Wave(units: "[ " + Thug + ", " + Thug + ", { \"prefab\": \"CHAR_Bandit_Thug\", \"count\": 501 } ]"))),
+            "action.waveList.1.units.3.count must be 1-500"],                                                  // review F6: the entry is named
         [WaveListAction(List(Wave(units: "[ { \"prefab\": \"CHAR_Bandit_Thug\", \"count\": 1, \"chance\": 0.04 } ]"))),
             "action.waveList.1.units.1.chance must be a number 0.05-1.0"],
         [WaveListAction(List(Wave(units: "[ { \"prefab\": \"CHAR_Nobody\", \"count\": 1 } ]"))), "unknown unit CHAR_Nobody"],

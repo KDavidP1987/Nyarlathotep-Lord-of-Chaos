@@ -543,7 +543,9 @@ public static class EventValidator
     public const string ApocalypseDurationRule = "durationSeconds must be 600-604800 for an Apocalypse";
     public const string ApocalypsePillar = "action Apocalypse needs pillar spawns";
     public const string ApocalypseFactionRule = "action.faction must be a Faction_ name";
-    public const string ApocalypseUnitsRule = "action.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-50 }";
+    /// <summary>A unit entry's count range: 1 to MaxUnitsPerWave's ceiling (undead-hordes D1).</summary>
+    public static string CountRange => $"1-{Limits.MaxUnitsPerWave.Max}";
+    public static string ApocalypseUnitsRule => $"action.units must be 1-10 entries {{ \"prefab\": CHAR_ name, \"count\": {CountRange} }}";
     public const string HotspotsObject = "action.hotspots must be an object { count, minNatives, minSpacing }";
     public const string HotspotsCountRule = "action.hotspots.count must be 1-5";
     public const string MinNativesRule = "action.hotspots.minNatives must be 3-50";
@@ -757,7 +759,7 @@ public static class EventValidator
         }
         else
         {
-            const string unitsRule = "action.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-50 }";
+            var unitsRule = $"action.units must be 1-10 entries {{ \"prefab\": CHAR_ name, \"count\": {CountRange} }}";
             list = ParseEntries(Required(a, "units", unitsRule), "action.units", unitsRule, units, withModifiers: false, pools, poolEntries: true);
             WaveSize(list, "action.units");
             waves = Int(Required(a, "waves", "action.waves must be 1-10"), 1, 10, "action.waves must be 1-10");
@@ -919,7 +921,7 @@ public static class EventValidator
         return name;
     }
 
-    /// <summary>A wave holding a pool entry counts every entry against MaxUnitsPerWave's ceiling of 50 (wave-variety D2); a
+    /// <summary>A wave holding a pool entry counts every entry against MaxUnitsPerWave's ceiling (wave-variety D2, undead-hordes D1); a
     /// wave of prefab entries only keeps 0.12.0's rules.</summary>
     static void WaveSize(IReadOnlyList<UnitEntry> entries, string path)
     {
@@ -1078,7 +1080,7 @@ public static class EventValidator
     public const string GrowthAddUnitsRule = "action.growth.addUnits must be 0-10";
     public const string GrowthAddLevelsRule = "action.growth.addLevels must be 0-5";
     public const string GrowthWhenClearedRule = "action.growth.whenCleared must be true or false";
-    public const string GrowthLastWave = "action.growth grows the last wave past 50 units";
+    public static string GrowthLastWave => $"action.growth grows the last wave past {Limits.MaxUnitsPerWave.Max} units";
 
     /// <summary>Every reason swarm D1, D2 and D24 give, for the 120-byte check.</summary>
     public static readonly IReadOnlyList<string> SwarmReasons =
@@ -1152,7 +1154,7 @@ public static class EventValidator
             var path = $"action.waveList.{n}";
             if (w.ValueKind != JsonValueKind.Object) throw new Fail(WaveRule(n));
             OnlyKeys(w, path, "units", "afterSeconds", "whenCleared", "bosses");
-            var unitsRule = $"{path}.units must be 1-10 entries {{ \"prefab\": CHAR_ name, \"count\": 1-50 }}";
+            var unitsRule = $"{path}.units must be 1-10 entries {{ \"prefab\": CHAR_ name, \"count\": {CountRange} }}";
             var entries = ParseEntries(Required(w, "units", unitsRule), $"{path}.units", unitsRule, units, withModifiers: true, pools, poolEntries: true);
             WaveSize(entries, $"{path}.units");
             int? after = w.TryGetProperty("afterSeconds", out var af) ? Int(af, MinAfterSeconds, MaxAfterSeconds, AfterSecondsRule(n)) : null;
@@ -1166,7 +1168,7 @@ public static class EventValidator
         return result;
     }
 
-    /// <summary>1-10 unit entries { prefab, count 1-50, chance 0.05-1.0 } at <paramref name="path"/>, and with
+    /// <summary>1-10 unit entries { prefab, count 1 to MaxUnitsPerWave's ceiling, chance 0.05-1.0 } at <paramref name="path"/>, and with
     /// <paramref name="withModifiers"/> an optional per-entry `modifiers` (wave-sets D1). With <paramref name="poolEntries"/>
     /// (a SpawnWaves action, wave-variety D2) an entry may name a `pool` of <paramref name="pools"/> instead of a prefab,
     /// under the same count, chance and modifier rules; an entry without the key reads as 0.12.0's.</summary>
@@ -1193,7 +1195,7 @@ public static class EventValidator
                 if (UnitDenyList.IsDenied(prefab) || units.IsDenied(prefab)) throw new Fail($"unit{Shown(prefab)} is deny-listed");
                 if (!prefab.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(prefab)) throw new Fail($"unknown unit{Shown(prefab)}");
             }
-            var count = Int(Required(x, "count", rule), 1, 50, $"{at}.count must be 1-50");
+            var count = Int(Required(x, "count", rule), 1, Limits.MaxUnitsPerWave.Max, $"{at}.count must be {CountRange}");
             var chance = x.TryGetProperty("chance", out var ch) ? Number(ch, MinChance, 1.0, ChanceRule.Replace("action.units", at)) : 1.0;
             var modifiers = withModifiers && x.TryGetProperty("modifiers", out var mo) ? ParseModifiers(mo, $"{path}.{m}.modifiers") : null;
             list.Add(pool is null ? new UnitEntry(prefab!, count, chance, modifiers) : UnitEntry.FromPool(pool, count, chance, modifiers));

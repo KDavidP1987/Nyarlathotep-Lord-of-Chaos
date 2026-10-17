@@ -20,11 +20,13 @@ public sealed record IntLimit(string Section, string Key, int Default, int Min, 
 
 public static partial class Limits
 {
+    /// <summary>The ceilings of the first four follow the undead-hordes load ladder (D1, D4; Epic Business rules 9, A48): it
+    /// passed 250 units and failed 500 (about 19 fps with a player among them), and the owner kept 0.13.1's 500 (A3).</summary>
     public static readonly IntLimit MaxTrackedUnits = new("Limits", "MaxTrackedUnits", 150, 1, 500);
-    public static readonly IntLimit MaxUnitsPerWave = new("Limits", "MaxUnitsPerWave", 20, 1, 50);
+    public static readonly IntLimit MaxUnitsPerWave = new("Limits", "MaxUnitsPerWave", 20, 1, 500);
     public static readonly IntLimit MaxConcurrentEvents = new("Limits", "MaxConcurrentEvents", 3, 1, 10);
-    public static readonly IntLimit MaxSpawnsPerTick = new("Limits", "MaxSpawnsPerTick", 10, 1, 20);
-    public static readonly IntLimit MaxDespawnsPerTick = new("Limits", "MaxDespawnsPerTick", 5, 1, 20);
+    public static readonly IntLimit MaxSpawnsPerTick = new("Limits", "MaxSpawnsPerTick", 10, 1, 40);
+    public static readonly IntLimit MaxDespawnsPerTick = new("Limits", "MaxDespawnsPerTick", 5, 1, 40);
     public static readonly IntLimit GraceSeconds = new("Limits", "GraceSeconds", 30, 0, 600);
     public static readonly IntLimit PurgeCooldownSeconds = new("Limits", "PurgeCooldownSeconds", 60, 0, 3600);
     public static readonly IntLimit ManualSpawnLifetimeSeconds = new("Limits", "ManualSpawnLifetimeSeconds", 300, 30, 3600);

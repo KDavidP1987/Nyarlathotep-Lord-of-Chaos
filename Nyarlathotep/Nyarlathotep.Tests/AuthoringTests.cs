@@ -331,9 +331,9 @@ public partial class AuthoringTests
     public static TheoryData<string, string, string, string> BadActionValues => new()
     {
         { "surge", "action.factions", "Faction_A,Faction_B,Faction_C,Faction_D,Faction_E,Faction_F", "action.factions must be 1-5 Faction_ names, comma separated" },
-        { "raid", "action.units", string.Join(",", Enumerable.Range(1, 11).Select(i => $"CHAR_U{i}")), "action.units must be 1-10 entries CHAR_name or CHAR_name:count, count 1-50, comma separated" },
-        { "raid", "action.units", "CHAR_Bandit_Thug:0", "action.units must be 1-10 entries CHAR_name or CHAR_name:count, count 1-50, comma separated" },
-        { "raid", "action.units", "CHAR_Bandit_Thug:51", "action.units must be 1-10 entries CHAR_name or CHAR_name:count, count 1-50, comma separated" },
+        { "raid", "action.units", string.Join(",", Enumerable.Range(1, 11).Select(i => $"CHAR_U{i}")), "action.units must be 1-10 entries CHAR_name or CHAR_name:count, count 1-500, comma separated" },
+        { "raid", "action.units", "CHAR_Bandit_Thug:0", "action.units must be 1-10 entries CHAR_name or CHAR_name:count, count 1-500, comma separated" },
+        { "raid", "action.units", "CHAR_Bandit_Thug:501", "action.units must be 1-10 entries CHAR_name or CHAR_name:count, count 1-500, comma separated" },
         { "raid", "action.units", "CHAR_Bandit-Thug", "action.units names must be CHAR_ or Faction_ then A-Za-z0-9_, at most 96 characters" },
         { "raid", "action.units", Long("CHAR_"), "action.units names must be CHAR_ or Faction_ then A-Za-z0-9_, at most 96 characters" },
         { "surge", "action.factions", Long("Faction_"), "action.factions names must be CHAR_ or Faction_ then A-Za-z0-9_, at most 96 characters" },

@@ -33,8 +33,8 @@ public partial class EventValidationTests
         // units, under ParseEntries and ParseModifiers
         [Apo.Action(units: "[ ]"), EventValidator.ApocalypseUnitsRule],
         [Apo.Action(units: "[ " + string.Join(", ", Enumerable.Repeat(Apo.Unit(), 11)) + " ]"), EventValidator.ApocalypseUnitsRule],
-        [Apo.Action(units: "[ " + Apo.Unit(count: "0") + " ]"), "action.units.1.count must be 1-50"],
-        [Apo.Action(units: "[ " + Apo.Unit(count: "51") + " ]"), "action.units.1.count must be 1-50"],
+        [Apo.Action(units: "[ " + Apo.Unit(count: "0") + " ]"), "action.units.1.count must be 1-500"],
+        [Apo.Action(units: "[ " + Apo.Unit(count: "501") + " ]"), "action.units.1.count must be 1-500"],
         [Apo.Action(units: "[ " + Apo.Unit(more: "\"chance\": 0.04") + " ]"), "action.units.1.chance must be a number 0.05-1.0"],
         [Apo.Action(units: "[ " + Apo.Unit(more: "\"modifiers\": { \"level\": 121 }") + " ]"), "action.units.1.modifiers.level must be 1-120"],
         [Apo.Action(units: "[ " + Apo.Unit(more: "\"modifiers\": { \"level\": 30, \"levelDelta\": 2 }") + " ]"), "action.units.1.modifiers takes level or levelDelta, not both"],

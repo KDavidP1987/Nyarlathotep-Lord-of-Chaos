@@ -93,10 +93,10 @@ public partial class EventValidationTests
     [
         ["\"action\": { \"type\": \"Heal\" }", "unknown action type Heal"],
         ["\"action\": { \"type\": \"Empower\" }", "action Empower needs pillar empowerment"],
-        [Action(units: "[]"), "action.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-50 }"],
+        [Action(units: "[]"), "action.units must be 1-10 entries { \"prefab\": CHAR_ name, \"count\": 1-500 }"],
         [Action(units: "[ { \"prefab\": \"CHAR_Nobody\", \"count\": 1 } ]"), "unknown unit CHAR_Nobody"],
         [Action(units: "[ { \"prefab\": \"CHAR_Mount_Horse_Vampire\", \"count\": 1 } ]"), "unit CHAR_Mount_Horse_Vampire is deny-listed"],
-        [Action(units: "[ { \"prefab\": \"CHAR_Bandit_Thug\", \"count\": 51 } ]"), "action.units.count must be 1-50"],
+        [Action(units: "[ { \"prefab\": \"CHAR_Bandit_Thug\", \"count\": 501 } ]"), "action.units.count must be 1-500"],
         [Action(waves: "0"), "action.waves must be 1-10"],
         [Action(waves: "11"), "action.waves must be 1-10"],
         [Action(interval: "9"), "action.intervalSeconds must be 10-600"],

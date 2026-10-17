@@ -37,9 +37,10 @@ public static class ControlCases
     public const string UnitWatch = "unit-watch";
     public const string WaveVariety = "wave-variety";
     public const string LoginNotice = "login-notice";
+    public const string UndeadHordes = "undead-hordes";
 
     /// <summary>The plans whose controls the table lists; each is copied to the test output under Resources/.</summary>
-    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm, HuntingGrounds, Revenge, Apocalypse, UnitWatch, WaveVariety, LoginNotice];
+    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm, HuntingGrounds, Revenge, Apocalypse, UnitWatch, WaveVariety, LoginNotice, UndeadHordes];
 
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
@@ -49,6 +50,11 @@ public static class ControlCases
         // unit-watch: step 5 the release
         new(UnitWatch, "D30", 5, "0.13.0"), new(UnitWatch, "D31", 5, "0.13.0"), new(UnitWatch, "D32", 5, "0.13.0"), new(UnitWatch, "D33", 5, "0.13.0"),
         // login-notice: step 3 the release
+        // undead-hordes: D2-D4 later in step 1, steps 2-5
+        new(UndeadHordes, "D5", 2, "0.14.0"), new(UndeadHordes, "D6", 2, "0.14.0"), new(UndeadHordes, "D7", 2, "0.14.0"), new(UndeadHordes, "D12", 2, "0.14.0"), new(UndeadHordes, "D16", 2, "0.14.0"), new(UndeadHordes, "D18", 2, "0.14.0"), new(UndeadHordes, "D19", 2, "0.14.0"), new(UndeadHordes, "D21", 2, "0.14.0"),
+        new(UndeadHordes, "D8", 3, "0.14.0"), new(UndeadHordes, "D9", 3, "0.14.0"), new(UndeadHordes, "D10", 3, "0.14.0"), new(UndeadHordes, "D11", 3, "0.14.0"), new(UndeadHordes, "D13", 3, "0.14.0"), new(UndeadHordes, "D14", 3, "0.14.0"), new(UndeadHordes, "D15", 3, "0.14.0"), new(UndeadHordes, "D17", 3, "0.14.0"), new(UndeadHordes, "D20", 3, "0.14.0"), new(UndeadHordes, "D33", 3, "0.14.0"),
+        new(UndeadHordes, "D23", 4, "0.14.0"), new(UndeadHordes, "D24", 4, "0.14.0"), new(UndeadHordes, "D25", 4, "0.14.0"), new(UndeadHordes, "D26", 4, "0.14.0"),
+        new(UndeadHordes, "D28", 5, "0.14.0"), new(UndeadHordes, "D29", 5, "0.14.0"), new(UndeadHordes, "D30", 5, "0.14.0"), new(UndeadHordes, "D31", 5, "0.14.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -70,6 +76,7 @@ public static class ControlCases
         "HuntingGroundsTests", "HuntingGroundsDependencyFailureTests", "RevengeTests", "BossWaveTests", "RevengeDependencyFailureTests",
         "ApocalypseTests", "ApocalypseStateTests", "ApocalypseDependencyFailureTests", "UnitWatchTests",
         "UnitWatchDependencyFailureTests", "PoolTests", "PursuitTests", "FactionGroupsTests", "WaveVarietyDependencyFailureTests", "LoginNoticeTests",
+        "CeilingTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -900,7 +907,7 @@ public static class ControlCases
             ["a_key_is_out_of_range", "a_bound_is_off_by_one", "a_reason_exceeds_120_bytes_or_drops_the_pool", "a_deny_listed_member_loads", "an_event_without_the_key_parses_differently"],
             ["the_file_order_and_the_entries"], ["no_pools_key"]) with { Plan = WaveVariety },
         T("D2", "PoolEntries", "EventValidationTests",
-            ["an_entry_breaks_the_rule", "a_bound_differs_from_a_prefab_entry", "growth_skips_a_pool_entry", "a_51_unit_wave_of_pool_entries_loads"],
+            ["an_entry_breaks_the_rule", "a_bound_differs_from_a_prefab_entry", "growth_skips_a_pool_entry", "a_wave_of_pool_entries_past_the_ceiling_loads"],
             ["a_pool_entry_in_both_forms"], ["no_pool_key_reads_as_a_prefab_entry"]) with { Plan = WaveVariety },
         T("D3", "BossRolls", "EventValidationTests",
             ["a_key_is_out_of_range", "a_bound_is_off_by_one", "a_0_12_0_fixed_list_is_refused_or_parses_differently", "a_roll_loads_on_an_apocalypse", "a_wave_list_beside_fanOut_loads", "an_accepted_roll_draws_fewer_than_its_count"],
@@ -1029,5 +1036,20 @@ public static class ControlCases
             ["tools/preflight-fixtures/Secrets/bad", "tools/preflight-fixtures/Secrets/bad-sentinel-log"],
             ["tools/preflight-fixtures/Secrets/good", "tools/preflight-fixtures/Secrets/good-sentinel"],
             ["tools/preflight-fixtures/Secrets/empty", "tools/preflight-fixtures/Secrets/empty-sentinel"]) with { Plan = LoginNotice },
+        // ---- undead-hordes step 1 (D2-D4 later in step 1; steps 2-5 in Pending)
+        T("D1", "Ceilings", "CeilingTests",
+            ["a_ceiling_stays_at_50_or_20", "a_default_changes", "a_check_refuses_a_value_the_ceiling_allows"],
+            ["one_past_each_ceiling_is_refused"], ["a_cfg_value_below_the_minimum_takes_the_minimum"]) with { Plan = UndeadHordes },
+        C("D2", "FrameMeter", "load-ladder.py selftest", ["selftest figures", "selftest a frame average at the bar"],
+            ["selftest a passing ladder"], ["selftest no [DEV FRAME] lines"]) with { Plan = UndeadHordes },
+        C("D3", "LadderReport", "load-ladder.py selftest",
+            ["selftest a tick window at the bar", "selftest a frame p95 at the bar", "selftest a slow tick while fighting", "selftest a drain over its margin",
+             "selftest a step after a failure", "selftest a spawn short of its count", "selftest units lost before the purge",
+             "selftest phases swapped", "selftest a phase marked twice"],
+            ["selftest a passing ladder", "selftest a rerun of the same step"], ["selftest one quiet window short"]) with { Plan = UndeadHordes },
+        T("D4", "Ladder", "CeilingTests", ["the_ceiling_differs_from_the_feature_doc", "below_500_without_the_owners_line"],
+            ["the_code_matches_the_recorded_ladder"], ["a_feature_doc_without_a_ladder_line"]) with { Plan = UndeadHordes },
+        T("D22", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit"],
+            ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = UndeadHordes },
     ];
 }
