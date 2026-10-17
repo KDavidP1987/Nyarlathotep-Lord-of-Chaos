@@ -92,7 +92,7 @@ public static class Pools
     }
 
     /// <summary>A uniform index in 0..<paramref name="n"/>−1.</summary>
-    static int Index(IRandom rng, int n) => Math.Min(n - 1, (int)(rng.NextDouble() * n));
+    internal static int Index(IRandom rng, int n) => Math.Min(n - 1, (int)(rng.NextDouble() * n));
 
     /// <summary>"event &lt;id&gt; wave &lt;n&gt;/&lt;N&gt; rolled: &lt;prefab&gt;x&lt;k&gt;, …[; bosses: &lt;prefab&gt;, …]" (wave-variety D6)
     /// within Wire.MaxBytes: the drawn units grouped by prefab in draw order, then every boss; a list too long ends

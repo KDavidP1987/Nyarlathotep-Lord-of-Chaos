@@ -368,8 +368,8 @@ public partial class ApocalypseTests
         capped.TopUp(w2, T0);
         Assert.Null(capped.SpreadOn(w2, kill, (0, 0), T0));
         Assert.Equal(6, w2.Ledger.PendingSpawns);
-        Assert.Equal(0, new SpreadGate().Allow(T0, new ApocalypseRoamers(3, 2, 10, 30, 40), 9, 0));     // tracked full: none
-        Assert.Equal(1, new SpreadGate().Allow(T0, new ApocalypseRoamers(3, 2, 10, 30, 40), 9, 50));    // one under max
+        Assert.Equal(0, new SpreadGate().Allow(T0, new ApocalypseRoamers(3, 2, 10, 30, 40), 9, 0, 2));     // tracked full: none
+        Assert.Equal(1, new SpreadGate().Allow(T0, new ApocalypseRoamers(3, 2, 10, 30, 40), 9, 50, 2));    // one under max
     }
 
     [Fact]

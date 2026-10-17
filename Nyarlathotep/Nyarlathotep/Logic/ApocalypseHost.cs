@@ -256,6 +256,8 @@ public sealed class ApocalypseHost
         _defeated.Clear();
         _keepUp.Clear();
         _hops.Clear();
+        _hopTurns.Clear();
+        _roamTurns.Clear();
         _lastMarch = _lastMove = _lastRenew = _lastRecord = null;
         _march.Ok();
         _roam.Ok();
@@ -347,6 +349,7 @@ public sealed class ApocalypseHost
             Safe(game, () => { game.MapTerritory(run.Id); return 0; });
             Say(game.Log, string.Create(CultureInfo.InvariantCulture, $"apocalypse {run.Id} horde {r.Horde}/{action.Hordes.Count} rose at hotspot {r.Hotspot}: {r.Queued} units"));
             foreach (var l in r.Log) Say(game.Log, $"apocalypse {run.Id} horde {r.Horde}: {l}");
+            if (r.Cut is { } cut) Say(game.Log, cut.LogLine(run.Id));                                  // undead-hordes D12
             foreach (var l in roamerLines) Say(game.Log, l);
             Say(game.Log, run.Tally.Line(run.Id, Alive(game, run)));
             var spot = run.Hotspots[r.Hotspot - 1];
@@ -373,19 +376,26 @@ public sealed class ApocalypseHost
             _stepUnits = units.Count;
             Parts.Mark("read");
             var online = players.Where(p => p.Online && PlayerPosition.Usable(p.X, p.Z)).Select(p => (p.X, p.Z)).ToList();
-            foreach (var front in run.Fronts.Values.Where(f => !_defeated.Contains(f.Horde)).ToList())
+            var byHorde = units.ToLookup(u => Apocalypse.HordeOfWave(u.Wave));                     // undead-hordes D18: one pass
+            var fronts = run.Fronts.Values.Where(f => !_defeated.Contains(f.Horde)).ToList();
+            var hordeUnits = fronts.Sum(f => byHorde[f.Horde].Count());                           // the hops share one tick's bound
+            foreach (var front in fronts)
             {
-                var horde = units.Where(u => Apocalypse.HordeOfWave(u.Wave) == front.Horde).ToList();
+                var horde = byHorde[front.Horde].ToList();
                 // the watch time first, from the front and every living unit of the horde, so no hop is decided on a stale
                 // one (code review M3)
                 MarchRule.Watch(front, online, horde.Select(u => (u.X, u.Z)), now);
                 if (moveDue)
                 {
-                    var stragglers = MarchRule.Stragglers(front, horde.Select(u => (u.Key, u.X, u.Z)), online, now);
+                    // undead-hordes D18: the horde's share of RoundRobin.PerPass a pass, each found by an index built once
+                    var slice = HopTurns(front.Horde).Take(horde, RoundRobin.Share(horde.Count, hordeUnits), u => u.Key);
+                    var stragglers = MarchRule.Stragglers(front, slice.Select(u => (u.Key, u.X, u.Z)), online, now);
+                    var index = new Dictionary<long, int>(horde.Count);
+                    for (var j = 0; j < horde.Count; j++) index[horde[j].Key] = j;
                     var moved = 0;
                     for (var i = 0; i < stragglers.Count; i++)
                     {
-                        var at = horde.FindIndex(h => h.Key == stragglers[i]);
+                        var at = index[stragglers[i]];
                         var u = horde[at];
                         if (HopRule.Land(u, front, i, stragglers.Count, game.Walkable, game.HeightOf, game.Budget) is not { } hop) continue;
                         game.Move(hop);
@@ -397,7 +407,7 @@ public sealed class ApocalypseHost
                     _hops[front.Horde] = (sum.Moved + moved, sum.Stragglers + stragglers.Count);
                     Parts.Mark("hops");
                 }
-                byte? level = horde.Count == 0 ? null : horde.OrderBy(u => Apocalypse.Distance(u.X, u.Z, front.X, front.Z)).First().Level;
+                byte? level = horde.Count == 0 ? null : horde.MinBy(u => Apocalypse.Distance(u.X, u.Z, front.X, front.Z))!.Level;
                 var step = MarchRule.Step(front, action.Goal.Radius, action.MarchSpeed, seconds, online,
                     (x, z) => HopRule.Ground(x, z, level, game.Walkable, game.Budget), now, out var held,
                     (x, z) => HopRule.GroundRead(x, z, level, game.Walkable, game.Budget));
@@ -456,20 +466,34 @@ public sealed class ApocalypseHost
     /// <summary>The roam (D3, A2): each hotspot's roamers go after the eligible player nearest their mean position, anywhere
     /// outside claimed territory, by JumpRule's plan; the roam line once per hotspot and target change. A throwing move
     /// leaves the roamers where they stand, logs once per streak and holds <see cref="RoamFailing"/> until a move succeeds.</summary>
+    readonly Dictionary<int, RoundRobin> _hopTurns = [], _roamTurns = [];
+
+    /// <summary>The round robin of horde <paramref name="horde"/>'s hops, and of hotspot <paramref name="hotspot"/>'s roam
+    /// jumps (undead-hordes D18).</summary>
+    RoundRobin HopTurns(int horde) => _hopTurns.TryGetValue(horde, out var r) ? r : _hopTurns[horde] = new RoundRobin();
+    RoundRobin RoamTurns(int hotspot) => _roamTurns.TryGetValue(hotspot, out var r) ? r : _roamTurns[hotspot] = new RoundRobin();
+
+    /// <summary>Every unit the hops and the roam visited since the host began (ScaleTests, undead-hordes D18).</summary>
+    public long Visits => HopVisits + RoamVisits;
+    public long HopVisits => _hopTurns.Values.Sum(r => r.Visits);
+    public long RoamVisits => _roamTurns.Values.Sum(r => r.Visits);
+
     void Roam(ApocalypseRun run, IApocalypseGame game, IReadOnlyList<HuntCandidate> players, IReadOnlyList<RegionUnit> units)
     {
         try
         {
             var candidates = players.Select(p => p with { InTerritory = game.IsClaimed(run.Id, p.X, p.Z) }).ToList();
+            var bySpot = units.ToLookup(u => Apocalypse.HotspotOfWave(u.Wave));                    // undead-hordes D18: one pass
+            var roaming = run.Hotspots.Sum(h => bySpot[h.Number].Count());                         // the jumps share one tick's bound
             foreach (var spot in run.Hotspots)
             {
-                var roamers = units.Where(u => Apocalypse.HotspotOfWave(u.Wave) == spot.Number).ToList();
+                var roamers = bySpot[spot.Number].ToList();
                 if (roamers.Count == 0) { _roamTargets.Seen(run.Id, spot.Number, null); continue; }
                 var mean = ((float)roamers.Average(u => (double)u.X), (float)roamers.Average(u => (double)u.Z));
                 var target = RoamRule.Target(candidates, mean);
                 if (_roamTargets.Seen(run.Id, spot.Number, target?.Key) is { } line) Say(game.Log, line);
                 if (target is not { } t) continue;
-                foreach (var u in roamers)
+                foreach (var u in RoamTurns(spot.Number).Take(roamers, RoundRobin.Share(roamers.Count, roaming), r => r.Key))   // undead-hordes D18
                 {
                     var (kind, jump) = RoamRule.Plan(u, (t.X, t.Z), players, (x, z) => game.IsClaimed(run.Id, x, z), game.Walkable, game.HeightOf, game.Budget);
                     if (kind == JumpKind.Jump && jump is { } j) game.Move(j);
@@ -542,7 +566,8 @@ public sealed class ApocalypseHost
         if (read is not { } r || _run is not { } run) return;
         try
         {
-            if (run.SpreadOn(game, r.Sides, r.Victim, now) is { } line) Say(game.Log, line);
+            if (run.SpreadOn(game, r.Sides, r.Victim, now, out var cut) is { } line) Say(game.Log, line);
+            if (cut is not null) Say(game.Log, cut.LogLine(run.Id));                                    // undead-hordes D12
             _spread.Ok();
         }
         catch (Exception e) { SpreadFailed(game, e); }

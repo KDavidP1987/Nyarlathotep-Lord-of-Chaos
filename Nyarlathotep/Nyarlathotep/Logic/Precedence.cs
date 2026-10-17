@@ -3,6 +3,19 @@ using System.Collections.Generic;
 
 namespace Nyarlathotep.Logic;
 
+/// <summary>A cut by a cfg cap (undead-hordes D12): <see cref="Queued"/> of <see cref="Asked"/> units by <see cref="Key"/>
+/// at <see cref="Value"/>. Admins see it in the start reply, `event info` and the log; a player never sees a cfg key.</summary>
+public sealed record CapCut(int Queued, int Asked, string Key, int Value)
+{
+    public string Text => $"capped: {Queued} of {Asked} by {Key} {Value}";
+
+    /// <summary>"&lt;event&gt; capped: &lt;n&gt; of &lt;m&gt; by &lt;key&gt; &lt;value&gt;", the log line without "[nyar] ".</summary>
+    public string LogLine(string eventId) => $"{eventId} {Text}";
+
+    /// <summary>"capped: &lt;n&gt; of &lt;m&gt; by &lt;key&gt; &lt;value&gt;; raise it in the cfg", the admin's line.</summary>
+    public string InfoLine => Text + "; raise it in the cfg";
+}
+
 /// <summary>The controls in force when an event is asked to start. <see cref="PlayerPositions"/> reads the online
 /// players' x/z and <see cref="RegionOf"/> names a point's region (regions D4, A11, A20, A26); both are read only for a
 /// definition with a scope, and a null one refuses a scoped start (fails closed).</summary>
@@ -55,6 +68,30 @@ public static class Precedence
             n = free;
         }
         return n;
+    }
+
+    /// <summary>The cut WaveSize makes of <paramref name="requested"/> units (undead-hordes D12), named by the cap that set
+    /// the final size: MaxTrackedUnits when the free slots are fewer than the wave cap allows, else MaxUnitsPerWave; null
+    /// when nothing is cut.</summary>
+    public static CapCut? Cut(int requested, int maxPerWave, int occupied, int maxTracked)
+    {
+        var n = WaveSize(requested, maxPerWave, occupied, maxTracked, []);
+        if (n >= requested) return null;
+        return Math.Max(0, maxTracked - occupied) < Math.Min(requested, maxPerWave)
+            ? new CapCut(n, requested, "MaxTrackedUnits", maxTracked)
+            : new CapCut(n, requested, "MaxUnitsPerWave", maxPerWave);
+    }
+
+    /// <summary>The cut an admin start names (undead-hordes D12): a destination event's first wave (its entries and fixed
+    /// bosses) or an apocalypse's largest horde (the last, with its bosses) against the caps now; null for any other
+    /// event or when nothing is cut.</summary>
+    public static CapCut? StartCut(EventDefinition d, int maxPerWave, int occupied, int maxTracked)
+    {
+        if (d.Apocalypse is { } apo)
+            return Cut(HordeSchedule.Size(apo.Hordes, apo.Hordes.Count) + (apo.Bosses ?? []).Sum(b => b.Count), maxPerWave, occupied, maxTracked);
+        if (d.Action is not { Destination: not null } a) return null;
+        var first = a.UnitsOf(1).Sum(u => u.Count) + (Pools.BossesOf(a, 1) ?? []).Where(b => !b.IsRoll).Sum(b => b.Count);
+        return Cut(first, maxPerWave, occupied, maxTracked);
     }
 
     /// <summary>When a unit spawned at <paramref name="spawnUtc"/> must be gone: min(its own lifetime, event end +

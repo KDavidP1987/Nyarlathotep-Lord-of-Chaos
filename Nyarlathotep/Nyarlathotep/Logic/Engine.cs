@@ -262,6 +262,9 @@ public sealed class ActiveEvent(RunningInstance instance, string trigger, (float
     /// every end path, and no restart or resume sets it (D9).</summary>
     public bool Pursuing { get; internal set; }
 
+    /// <summary>The run's last cut by a cfg cap (undead-hordes D12), shown by `event info`; memory only.</summary>
+    public CapCut? LastCut { get; internal set; }
+
     readonly List<WaveRecord> _decided = [];
     /// <summary>Each used wave's decision time and whether it queued a unit, in wave order (wave-sets D4, D7).</summary>
     public IReadOnlyList<WaveRecord> Decided => _decided;

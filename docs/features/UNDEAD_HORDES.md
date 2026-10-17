@@ -1,6 +1,6 @@
 # Undead hordes — waves that march to a destination, an infestation, a horde march, up to 500 units
 
-**Status:** in progress, step 1 of 5 (docs/dod/undead-hordes.md, audit docs/audits/undead-hordes.md; design §9 D62,
+**Status:** in progress, step 2 of 5 (docs/dod/undead-hordes.md, audit docs/audits/undead-hordes.md; design §9 D62,
 Epic A46). Release target 0.14.0.
 
 ## Goal
@@ -27,7 +27,20 @@ Up to 1000 tracked units, once a load test on the local server proves it takes t
   only when nobody is within 100 m.
 - **Graveyards** are the hotspots of the faction's native NPCs (the apocalypse's hotspot pick).
 - **Hostility** is the game's own: nothing writes a unit's faction.
-- **Caps** stay modest by default (150 tracked, 20 a wave); a cut names the cfg key to raise.
+- **Caps** stay modest by default (150 tracked, 20 a wave); a cut names the cfg key to raise: the admin's start
+  reply and `event info` say "capped: n of m by <key> <value>; raise it in the cfg", and the log has one line per cut.
+- **Wave destination.** A SpawnWaves action may carry `"destination": { "location": Point | Admin, "radius": 10-100,
+  "name" }` and `"marchSpeed"` (0.5-5.0, default 2.0). Its own location must then be a Point or Admin, and fanOut,
+  regionLock, arena and pursuit are refused. Each wave marches as one front; it takes its behaviour on arrival, or
+  where it stands after 120 s stuck with nobody holding it. Chat: `action.destination here` or `none`, `.radius`,
+  `.name`, `action.marchSpeed`.
+- **Spread from a pool.** An apocalypse's `roamers` take `perKillMin`/`perKillMax` (0-3) and `pool`; each kill adds a
+  uniform draw of that many pool members. `"pools"` and pool entries work as in SpawnWaves. The old `perKill: n` reads
+  as n..n and plans exactly as in 0.13.1.
+- **Raised ranges.** roamers.max 1-500, hordes.size 5-500, growth 0-100.
+- **Work per tick is bounded.** The hops, the roam and the unit watch's stall marks each take at most 500 units a tick,
+  shared by every horde, hotspot and wave and taken in turn by unit, so every unit of 1000 is visited within 10 s and a
+  step's work grows linearly.
 
 ## Open questions
 
@@ -69,6 +82,16 @@ native probed fights the undead, so the spread test can use any of them (a wild 
 | CHAR_Legion_Shadowkin_Lesser | yes | 10 undead killed by it, 2 killed by the undead |
 
 ## Test results
+
+### Step 2 · 2026-10-17 · Logic (unit tests, no in-game run; the march is wired in game at step 4)
+
+- Test methods: DestinationTests 24, SpreadTests 7, CapNoticeTests 5, LimitsTests 5 (15 cases), ScaleTests 7,
+  CompatTests 3, ContractDocTests.UndeadHordes 3, PrivacyTests.UndeadHordes 4; full suite 3936/3936.
+- CompatTests compares every 0.13.1 template and the two fixtures against a digest written on a v0.13.1 worktree
+  (Resources/compat/plans-0.13.1.txt): the same validation, info lines, waves, hordes, roamers and spreads.
+- ScaleTests runs hordes of 100, 250, 500 and 1000 (two of 500) through the host: the work a unit stays within 1.25x
+  of the 100-unit figure, and one tick's hops, roam jumps and stall marks each stay within 500 (plus one a group).
+- Planted faults: one per control, each turned its test red and was restored (the plan's Log).
 
 ### Session 0 · 2026-10-17 · step 1 Release build (version string 0.13.1) · vrclient as Chaos on the local dev server
 

@@ -95,6 +95,11 @@ internal static class WaveAction
         }
         if (draw.Rolled) Core.Log.LogInfo($"[nyar] {Pools.RolledLine(id, due.Wave, action.Waves, draw)}");   // wave-variety D6
         foreach (var line in decision.CapLines) Core.Log.LogWarning($"[nyar] event {id} wave {due.Wave}: {line}");
+        if (action.Destination is not null && decision.Cut is { } cut)                                  // undead-hordes D12
+        {
+            active.LastCut = cut;
+            Core.Log.LogInfo($"[nyar] {cut.LogLine(id)}");
+        }
 
         var life = SpawnLedger.Lifetime(now, active.Instance.EndsUtc, action.UnitLifetimeSeconds,
             Settings.Limit(Limits.GraceSeconds), Settings.Limit(Limits.ManualSpawnLifetimeSeconds), SpawnTracker.DrainMargin());

@@ -233,6 +233,27 @@ public static class RoamerPlan
         return best.Number;
     }
 
+    /// <summary>One unit of <paramref name="action"/> (undead-hordes D7): an entry of its units by weight count × chance; a
+    /// pool entry then names one member of its pool, drawn uniformly, with the entry's chance and modifiers.</summary>
+    public static UnitEntry Draw(ApocalypseAction action, IRandom rng) => Member(action, Draw(action.Units, rng), rng);
+
+    /// <summary>One spread unit (undead-hordes D7): a member of roamers.pool drawn uniformly, with the modifiers of the first
+    /// units entry naming that pool; without a pool, <see cref="Draw(ApocalypseAction, IRandom)"/>.</summary>
+    public static UnitEntry Spread(ApocalypseAction action, IRandom rng)
+    {
+        if (action.Roamers.Pool is not { } pool) return Draw(action, rng);
+        var named = action.Units.FirstOrDefault(u => u.Pool == pool);
+        return Member(action, UnitEntry.FromPool(pool, 1, 1.0, named?.Modifiers), rng);
+    }
+
+    // validation gives every pool at least one member and every pool entry a pool the action defines
+    static UnitEntry Member(ApocalypseAction action, UnitEntry e, IRandom rng)
+    {
+        if (e.Pool is not { } pool) return e;
+        var members = action.Pools![pool];
+        return new UnitEntry(members[Pools.Index(rng, members.Count)], 1, e.Chance, e.Modifiers);
+    }
+
     /// <summary>One draw from <paramref name="units"/> by weight count × chance.</summary>
     public static UnitEntry Draw(IReadOnlyList<UnitEntry> units, IRandom rng)
     {
@@ -302,8 +323,9 @@ public sealed class RoamTargets
 /// <summary>
 /// The spread (D4, Business rules 4; design §9 D44): a victim, player or NPC not ours, whose killer resolves (the unit,
 /// else its EntityOwner, as the scoreboard does) to a living unit of the running apocalypse spawned since its start queues
-/// perKill roamers within 3 m of the victim; none while live roamers are at roamers.max, while perMinute spread units were
-/// queued in the last 60 s, or while MaxTrackedUnits is full.
+/// a uniform draw of perKillMin..perKillMax roamers (undead-hordes D7; a 0.13.x perKill n is n..n) within 3 m of the
+/// victim; none while live roamers are at roamers.max, while perMinute spread units were queued in the last 60 s, or while
+/// MaxTrackedUnits is full.
 /// </summary>
 public sealed class SpreadGate
 {
@@ -322,10 +344,15 @@ public sealed class SpreadGate
         return _queued.Count;
     }
 
-    /// <summary>How many spread roamers one qualifying kill may queue now: min(perKill, roamers.max − live roamers, perMinute
-    /// − the window, the free tracked slots), at least 0.</summary>
-    public int Allow(DateTime utcNow, ApocalypseRoamers roamers, int liveRoamers, int freeTracked) =>
-        Math.Max(0, Math.Min(Math.Min(roamers.PerKill, roamers.Max - liveRoamers), Math.Min(roamers.PerMinute - InWindow(utcNow), freeTracked)));
+    /// <summary>One kill's draw (undead-hordes D7): uniform in perKillMin..perKillMax; a fixed draw (0.13.x's perKill) takes
+    /// no random number, so a 0.13.x run draws its roamers as before (D21).</summary>
+    public static int Draw(ApocalypseRoamers roamers, IRandom rng) =>
+        roamers.PerKillMin == roamers.PerKillMax ? roamers.PerKillMin : roamers.PerKillMin + Pools.Index(rng, roamers.PerKillMax - roamers.PerKillMin + 1);
+
+    /// <summary>How many of <paramref name="drawn"/> spread roamers one qualifying kill may queue now: min(drawn, roamers.max
+    /// − live roamers, perMinute − the window, the free tracked slots), at least 0.</summary>
+    public int Allow(DateTime utcNow, ApocalypseRoamers roamers, int liveRoamers, int freeTracked, int drawn) =>
+        Math.Max(0, Math.Min(Math.Min(drawn, roamers.Max - liveRoamers), Math.Min(roamers.PerMinute - InWindow(utcNow), freeTracked)));
 
     /// <summary>Counts <paramref name="n"/> spread units queued at <paramref name="utcNow"/> in the window.</summary>
     public void Queued(DateTime utcNow, int n)
@@ -392,7 +419,7 @@ public static class HordeSchedule
             result.Add((unit with { Count = n }, entry));
             room -= n;
         }
-        for (var i = 0; i < Math.Min(regular, room); i++) result.Add((RoamerPlan.Draw(action.Units, rng) with { Count = 1 }, 0));
+        for (var i = 0; i < Math.Min(regular, room); i++) result.Add((RoamerPlan.Draw(action, rng) with { Count = 1 }, 0));
         return result;
     }
 
@@ -404,6 +431,9 @@ public static class HordeSchedule
 public sealed class Front(int horde, float originX, float originZ, float goalX, float goalZ)
 {
     public int Horde { get; } = horde;
+
+    /// <summary>"horde", or "wave" for a destination wave's front (undead-hordes D6): the word of its held and crossed lines.</summary>
+    public string Kind { get; init; } = "horde";
     public float OriginX { get; } = originX;
     public float OriginZ { get; } = originZ;
     public float GoalX { get; } = goalX;
@@ -480,14 +510,14 @@ public static class MarchRule
                     var known = cross is null ? walkable(cx, cz) : cross(cx, cz);
                     if (known is null) break;
                     if (known == false) continue;
-                    line = CrossedLine(front.Horde, far);
+                    line = CrossedLine(front.Horde, far, front.Kind);
                     front.HeldNoGround = false;
                     front.X = cx;
                     front.Z = cz;
                     return cx == front.GoalX && cz == front.GoalZ ? MarchStep.AtGoal : MarchStep.Moved;
                 }
             }
-            if (!front.HeldNoGround) line = HeldLine(front.Horde);
+            if (!front.HeldNoGround) line = HeldLine(front.Horde, front.Kind);
             front.HeldNoGround = true;
             return MarchStep.HeldNoGround;
         }
@@ -505,10 +535,10 @@ public static class MarchRule
             : (front.X + (front.GoalX - front.X) / left * metres, front.Z + (front.GoalZ - front.Z) / left * metres);
 
     /// <summary>"horde &lt;k&gt; held: no walkable ground ahead" (D6).</summary>
-    public static string HeldLine(int horde) => $"horde {horde} held: no walkable ground ahead";
+    public static string HeldLine(int horde, string kind = "horde") => $"{kind} {horde} held: no walkable ground ahead";
 
     /// <summary>"horde &lt;k&gt; crossed &lt;d&gt; m of unwalkable ground" (D6, A12).</summary>
-    public static string CrossedLine(int horde, float metres) => $"horde {horde} crossed {metres:0} m of unwalkable ground";
+    public static string CrossedLine(int horde, float metres, string kind = "horde") => $"{kind} {horde} crossed {metres:0} m of unwalkable ground";
 
     /// <summary>The 25 % steps <paramref name="front"/> crossed since the last call, each once (D7).</summary>
     public static IReadOnlyList<int> NewSteps(Front front)
@@ -837,7 +867,7 @@ public interface IApocalypseWorld
 }
 
 /// <summary>A rise of horde k (D5, D7): its number, hotspot, queued count, and the clamp lines.</summary>
-public sealed record HordeRise(int Horde, int Hotspot, int Queued, IReadOnlyList<string> Log);
+public sealed record HordeRise(int Horde, int Hotspot, int Queued, IReadOnlyList<string> Log, CapCut? Cut = null);
 
 /// <summary>
 /// One running apocalypse's state (D3-D8, D11, D12, D15, D36): hotspots, the resolved goal, hordes risen, fronts, the spread
@@ -925,25 +955,36 @@ public sealed class ApocalypseRun
         {
             var queued = 0;
             for (var i = 0; i < plan[h]; i++)
-                queued += Queue(w, RoamerPlan.Draw(Action.Units, w.Random), 1, Apocalypse.RoamerWave(Hotspots[h].Number), Hotspots[h].X, Hotspots[h].Z,
+                queued += Queue(w, RoamerPlan.Draw(Action, w.Random), 1, Apocalypse.RoamerWave(Hotspots[h].Number), Hotspots[h].X, Hotspots[h].Z,
                     Apocalypse.RoamerSpawnRadius, utcNow);
             if (queued > 0) lines.Add(RoamerPlan.Line(Id, queued, Hotspots[h].Number));
         }
         return lines;
     }
 
-    /// <summary>The spread of one death (D4): for a qualifying kill, up to perKill roamers within 3 m of the victim, each
-    /// joining the hotspot nearest its spawn point; returns the spread line, or null when nothing spread.</summary>
-    public string? SpreadOn(IApocalypseWorld w, ScoreSides sides, (float X, float Z) victim, DateTime utcNow)
+    /// <summary>The spread of one death (D4, undead-hordes D7): for a qualifying kill, a draw of perKillMin..perKillMax roamers
+    /// from the spread pool within 3 m of the victim, each joining the hotspot nearest its spawn point; returns the spread
+    /// line, or null when nothing spread.</summary>
+    public string? SpreadOn(IApocalypseWorld w, ScoreSides sides, (float X, float Z) victim, DateTime utcNow) => SpreadOn(w, sides, victim, utcNow, out _);
+
+    /// <summary><see cref="SpreadOn(IApocalypseWorld, ScoreSides, (float X, float Z), DateTime)"/>, with the draw's cut by
+    /// the free MaxTrackedUnits slots (undead-hordes D12) in <paramref name="cut"/>: of what roamers.max and the minute
+    /// limit allowed, so raising the cfg would queue them.</summary>
+    public string? SpreadOn(IApocalypseWorld w, ScoreSides sides, (float X, float Z) victim, DateTime utcNow, out CapCut? cut)
     {
+        cut = null;
         if (!SpreadGate.Qualifies(sides, Active)) return null;
         var live = RoamersPerHotspot(w).Sum();
-        var n = Spread.Allow(utcNow, Action.Roamers, live, FreeTracked(w));
+        var drawn = SpreadGate.Draw(Action.Roamers, w.Random);
+        var free = FreeTracked(w);
+        var n = Spread.Allow(utcNow, Action.Roamers, live, free, drawn);
+        var allowed = Spread.Allow(utcNow, Action.Roamers, live, int.MaxValue, drawn);
+        if (free < allowed) cut = Active.LastCut = new CapCut(n, allowed, "MaxTrackedUnits", w.Ledger.Limits.MaxTracked);
         if (n <= 0) return null;
         var hotspot = RoamerPlan.NearestHotspot(Hotspots, victim.X, victim.Z);
         var queued = 0;
         for (var i = 0; i < n; i++)
-            queued += Queue(w, RoamerPlan.Draw(Action.Units, w.Random), 1, Apocalypse.RoamerWave(hotspot), victim.X, victim.Z, Apocalypse.SpreadRadius, utcNow);
+            queued += Queue(w, RoamerPlan.Spread(Action, w.Random), 1, Apocalypse.RoamerWave(hotspot), victim.X, victim.Z, Apocalypse.SpreadRadius, utcNow);
         Spread.Queued(utcNow, queued);
         return queued == 0 ? null
             : SpreadGate.Line(Id, queued, live + queued, Action.Roamers.Max, Spread.InWindow(utcNow), Action.Roamers.PerMinute);
@@ -964,6 +1005,9 @@ public sealed class ApocalypseRun
         roamerLines = [];
         var hotspot = Hotspots[HordeSchedule.HotspotOf(k, Hotspots.Count) - 1];
         var log = new List<string>();
+        var asked = HordeSchedule.Size(Action.Hordes, k) + (k == Action.Hordes.Count ? (Action.Bosses ?? []).Sum(b => b.Count) : 0);
+        var cut = Precedence.Cut(asked, w.Ledger.Limits.MaxPerWave, w.Ledger.Occupied, w.Ledger.Limits.MaxTracked);   // undead-hordes D12
+        if (cut is not null) Active.LastCut = cut;
         var units = HordeSchedule.Units(Action, k, w.Ledger.Limits.MaxPerWave, w.Ledger.Occupied, w.Ledger.Limits.MaxTracked, w.Random, log);
         var queued = 0;
         foreach (var (unit, entry) in units)
@@ -981,7 +1025,7 @@ public sealed class ApocalypseRun
             BossPrefabs = units.Any(u => u.Entry > 0) ? (Action.Bosses ?? []).Select(b => b.Prefab).ToList() : [],
         };
         if (topUp) roamerLines = TopUp(w, utcNow);
-        return new HordeRise(k, hotspot.Number, queued, log);
+        return new HordeRise(k, hotspot.Number, queued, log, cut);
     }
 
     /// <summary>True when horde <paramref name="horde"/> has risen and has no unit and no order left, bosses included.</summary>
@@ -1052,7 +1096,7 @@ public sealed class ApocalypseRun
             else
                 for (var i = 0; i < o.Count; i++)
                 {
-                    var one = Queue(w, RoamerPlan.Draw(Action.Units, w.Random) with { Count = 1 }, 1, o.Wave, o.X, o.Z, Apocalypse.RoamerSpawnRadius, utcNow);
+                    var one = Queue(w, RoamerPlan.Draw(Action, w.Random) with { Count = 1 }, 1, o.Wave, o.X, o.Z, Apocalypse.RoamerSpawnRadius, utcNow);
                     if (one == 0) break;                                       // the caps refused it: the rest would be refused too
                     rebuilt += one;
                 }

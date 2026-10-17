@@ -24,6 +24,7 @@
 		<Compile Include="..\Nyarlathotep\Logic\**\*.cs" Link="Logic\%(RecursiveDir)%(Filename)%(Extension)" />
 		<None Include="..\Nyarlathotep\Resources\events.default.json" Link="Resources\events.default.json" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\Nyarlathotep\Resources\templates.json" Link="Resources\templates.json" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="Resources\compat\*" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\Nyarlathotep\Config\Settings.cs" Link="Resources\Settings.cs.txt" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\dod\event-library.md" Link="Resources\event-library.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\dod\walkable-spawns.md" Link="Resources\walkable-spawns.md" CopyToOutputDirectory="PreserveNewest" />

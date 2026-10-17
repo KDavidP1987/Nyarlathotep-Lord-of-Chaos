@@ -216,7 +216,35 @@ public static class CommandArgs
         d[PursuitField] = ("spawn action", "admin");                // wave-variety D10
         d[PoolsField] = ("spawn action", "admin");
         foreach (var f in ApocalypseFields) d[f] = ("apocalypse action", "admin");     // apocalypse D16
+        foreach (var f in DestinationFields) d[f] = ("spawn action", "admin");         // undead-hordes D5
         return d;
+    }
+
+    /// <summary>`action.destination` (undead-hordes D5): here only, the admin's x, y and z as a Point destination.</summary>
+    public const string DestinationField = "action.destination";
+    public const string DestinationHereRule = "action.destination takes here (your position) or none";
+    public const string MarchSpeedField = "action.marchSpeed";
+
+    /// <summary>A SpawnWaves action's destination fields (undead-hordes D5); `action.marchSpeed` is the apocalypse's field and
+    /// fits a SpawnWaves action too.</summary>
+    public static readonly IReadOnlyList<string> DestinationFields = [DestinationField, "action.destination.radius", "action.destination.name"];
+
+    static Arg<object> DestinationValue(string field, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return Arg<object>.Bad(ValueRequired);
+        return field switch
+        {
+            DestinationField => value switch
+            {
+                "here" => Arg<object>.Of(LocationHere.Instance),
+                "none" => Arg<object>.Of(FieldRemoval.Instance),
+                _ => Arg<object>.Bad(DestinationHereRule),
+            },
+            "action.destination.radius" => int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var r)
+                                           && r >= DestinationLimits.MinRadius && r <= DestinationLimits.MaxRadius
+                ? Arg<object>.Of(r) : Arg<object>.Bad(EventValidator.DestinationRadiusRule),
+            _ => EventValidator.IsPlainText(value, DestinationLimits.MaxName) ? Arg<object>.Of(value) : Arg<object>.Bad(EventValidator.DestinationNameRule),
+        };
     }
 
     /// <summary>`action.goal` (apocalypse D16): here only, the admin's x, y and z as a Point goal.</summary>
@@ -228,7 +256,7 @@ public static class CommandArgs
     public static readonly IReadOnlyList<string> ApocalypseFields =
     [
         GoalField, "action.goal.radius", "action.goal.name", "action.hordes.count", "action.hordes.everyMinutes", "action.hordes.size",
-        "action.roamers.max", "action.marchSpeed",
+        "action.roamers.max", MarchSpeedField,
     ];
 
     /// <summary>`durationSeconds` takes 30-604800 here; EventsEditor holds it to the event's kind on the file (apocalypse D1:
@@ -796,6 +824,7 @@ public static class CommandArgs
         if (field == PursuitField) return PursuitValue(value);
         if (PoolOf(field) is { } pool) return PoolValue(field, pool, value);
         if (ApocalypseFields.Contains(field)) return ApocalypseValue(field, value);
+        if (DestinationFields.Contains(field)) return DestinationValue(field, value);
         if (field == ScoreboardField)
             return value switch { "true" => Arg<object>.Of(true), "false" => Arg<object>.Of(false), _ => Arg<object>.Bad(EventValidator.ScoreboardRule) };
         if (WaveListPath(field) is { } wave) return WaveListValue(field, wave, value);

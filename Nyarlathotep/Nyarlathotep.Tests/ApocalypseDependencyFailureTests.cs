@@ -7,7 +7,7 @@ namespace Nyarlathotep.Tests;
 /// renewals of Services/ApocalypseAction, each able to throw on demand, with every log, warning and announcement kept.</summary>
 sealed class ApoGame : IApocalypseGame
 {
-    public SpawnLedger Ledger { get; } = new(new LedgerLimits(200, 50, 1000, 1000));
+    public SpawnLedger Ledger { get; init; } = new(new LedgerLimits(200, 50, 1000, 1000));
     public IRandom Random { get; } = new StepRandom();
     public int GraceSeconds => 60;
     public int DrainMarginSeconds => 120;
@@ -41,9 +41,13 @@ sealed class ApoGame : IApocalypseGame
     public IEnumerable<HotspotNative> Natives() => NativeRead();
     public IReadOnlyList<HuntCandidate> Players() => PlayersThrow is { } e ? throw e : Online;
 
+    /// <summary>Every unit position read (ScaleTests, undead-hordes D18).</summary>
+    public long Reads { get; private set; }
+
     public RegionUnit? Read(TrackedUnit unit)
     {
         if (ReadThrow is { } e) throw e;
+        Reads++;
         var (x, z) = Positions.TryGetValue(unit.Key, out var p) ? p : (0f, 0f);
         return new RegionUnit(unit.Key, unit.EventId, unit.SpawnedUtc, x, 0, z, 1, unit.Wave);
     }

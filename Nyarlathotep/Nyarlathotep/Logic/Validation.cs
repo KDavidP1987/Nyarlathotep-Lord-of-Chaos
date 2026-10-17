@@ -551,17 +551,20 @@ public static class EventValidator
     public const string MinNativesRule = "action.hotspots.minNatives must be 3-50";
     public const string MinSpacingRule = "action.hotspots.minSpacing must be 100-3000";
     public const string RoamersObject = "action.roamers must be an object { perHotspot, perKill, max, perMinute, huntRange }";
+    public const string KillDrawBoth = "action.roamers takes perKill or perKillMin and perKillMax, not both";
+    public const string PerKillMinRule = "action.roamers.perKillMin must be 0-3";
+    public const string PerKillMaxRule = "action.roamers.perKillMax must be perKillMin-3";
     public const string PerHotspotRule = "action.roamers.perHotspot must be 1-10";
     public const string PerKillRule = "action.roamers.perKill must be 0-2";
-    public const string RoamersMaxRule = "action.roamers.max must be 1-100";
+    public const string RoamersMaxRule = "action.roamers.max must be 1-500";
     public const string PerMinuteRule = "action.roamers.perMinute must be 1-30";
     public const string RoamersHuntRangeRule = "action.roamers.huntRange must be 20-60";
     public const string HordesObject = "action.hordes must be an object { count, firstAfterMinutes, everyMinutes, size, growth }";
     public const string HordesCountRule = "action.hordes.count must be 1-10";
     public const string FirstAfterRule = "action.hordes.firstAfterMinutes must be 0-1440";
     public const string EveryMinutesRule = "action.hordes.everyMinutes must be 5-1440";
-    public const string HordeSizeRule = "action.hordes.size must be 5-50";
-    public const string HordeGrowthRule = "action.hordes.growth must be 0-20";
+    public const string HordeSizeRule = "action.hordes.size must be 5-500";
+    public const string HordeGrowthRule = "action.hordes.growth must be 0-100";
     public const string LastHordeLate = "action.hordes: last horde rises at or after the duration";
     public const string GoalObject = "action.goal must be an object { location, radius, name }";
     public const string GoalLocationRule = "action.goal.location must be { \"type\": \"Point\", \"x\", \"z\", optional \"y\" } or { \"type\": \"Admin\" }";
@@ -575,7 +578,8 @@ public static class EventValidator
     public static readonly IReadOnlyList<string> ApocalypseReasons =
     [
         ApocalypseDurationRule, ApocalypsePillar, ApocalypseFactionRule, ApocalypseUnitsRule, HotspotsObject, HotspotsCountRule,
-        MinNativesRule, MinSpacingRule, RoamersObject, PerHotspotRule, PerKillRule, RoamersMaxRule, PerMinuteRule, RoamersHuntRangeRule,
+        MinNativesRule, MinSpacingRule, RoamersObject, PerHotspotRule, PerKillRule, KillDrawBoth, PerKillMinRule, PerKillMaxRule,
+        RoamersMaxRule, PerMinuteRule, RoamersHuntRangeRule,
         HordesObject, HordesCountRule, FirstAfterRule, EveryMinutesRule, HordeSizeRule, HordeGrowthRule, LastHordeLate, GoalObject,
         GoalLocationRule, GoalAdminManual, GoalRadiusRule, GoalNameRule, MarchSpeedRule, GoalCoordRule("x"),
     ];
@@ -592,12 +596,14 @@ public static class EventValidator
     static ApocalypseAction ParseApocalypse(JsonElement a, Trigger trigger, IUnitCatalog units, IFactionCatalog factions,
         IRegionCatalog regions, int durationSeconds)
     {
-        OnlyKeys(a, "action", "type", "faction", "units", "hotspots", "roamers", "hordes", "goal", "marchSpeed", "bosses", "scope", "scoreboard");
+        OnlyKeys(a, "action", "type", "faction", "units", "hotspots", "roamers", "hordes", "goal", "marchSpeed", "bosses", "scope", "scoreboard", "pools");
         var faction = Str(Required(a, "faction", ApocalypseFactionRule), ApocalypseFactionRule);
         if (FactionDenyList.IsDenied(faction)) throw new Fail($"faction{Shown(faction)} is deny-listed");
         if (!faction.StartsWith("Faction_", StringComparison.Ordinal)) throw new Fail(ApocalypseFactionRule);
         if (!factions.IsKnown(faction)) throw new Fail($"unknown faction{Shown(faction)}");
-        var list = ParseEntries(Required(a, "units", ApocalypseUnitsRule), "action.units", ApocalypseUnitsRule, units, withModifiers: true);
+        // undead-hordes D7: the SpawnWaves pool rules, pool entries in the units and a spread pool
+        var pools = a.TryGetProperty("pools", out var po) ? ParsePools(po, units) : null;
+        var list = ParseEntries(Required(a, "units", ApocalypseUnitsRule), "action.units", ApocalypseUnitsRule, units, withModifiers: true, pools, poolEntries: true);
 
         var h = Obj(Required(a, "hotspots", HotspotsObject), HotspotsObject);
         OnlyKeys(h, "action.hotspots", "count", "minNatives", "minSpacing");
@@ -607,13 +613,16 @@ public static class EventValidator
             Int(Required(h, "minSpacing", MinSpacingRule), ApocalypseLimits.MinSpacing, ApocalypseLimits.MaxSpacing, MinSpacingRule));
 
         var r = Obj(Required(a, "roamers", RoamersObject), RoamersObject);
-        OnlyKeys(r, "action.roamers", "perHotspot", "perKill", "max", "perMinute", "huntRange");
+        OnlyKeys(r, "action.roamers", "perHotspot", "perKill", "perKillMin", "perKillMax", "pool", "max", "perMinute", "huntRange");
+        var (killMin, killMax) = KillDraw(r);
+        var spreadPool = r.TryGetProperty("pool", out var sp) ? SpreadPool(sp, "action.roamers", pools) : null;
         var roamers = new ApocalypseRoamers(
             Int(Required(r, "perHotspot", PerHotspotRule), ApocalypseLimits.MinPerHotspot, ApocalypseLimits.MaxPerHotspot, PerHotspotRule),
-            Int(Required(r, "perKill", PerKillRule), ApocalypseLimits.MinPerKill, ApocalypseLimits.MaxPerKill, PerKillRule),
+            killMin,
             Int(Required(r, "max", RoamersMaxRule), ApocalypseLimits.MinRoamers, ApocalypseLimits.MaxRoamers, RoamersMaxRule),
             Int(Required(r, "perMinute", PerMinuteRule), ApocalypseLimits.MinPerMinute, ApocalypseLimits.MaxPerMinute, PerMinuteRule),
-            Int(Required(r, "huntRange", RoamersHuntRangeRule), ApocalypseLimits.MinHuntRange, ApocalypseLimits.MaxHuntRange, RoamersHuntRangeRule));
+            Int(Required(r, "huntRange", RoamersHuntRangeRule), ApocalypseLimits.MinHuntRange, ApocalypseLimits.MaxHuntRange, RoamersHuntRangeRule),
+            killMax == killMin ? null : killMax, spreadPool);
 
         var o = Obj(Required(a, "hordes", HordesObject), HordesObject);
         OnlyKeys(o, "action.hordes", "count", "firstAfterMinutes", "everyMinutes", "size", "growth");
@@ -630,7 +639,35 @@ public static class EventValidator
         var bosses = a.TryGetProperty("bosses", out var bo) ? ParseBosses(bo, units, null, apocalypse: true) : null;
         var scope = a.TryGetProperty("scope", out var sc) ? ParseScope(sc, "action.scope", regions) : Scope.Global;
         var scoreboard = !a.TryGetProperty("scoreboard", out var sb) || Bool(sb, ScoreboardRule);      // absent = true (D1)
-        return new ApocalypseAction(faction, list, hotspots, roamers, hordes, goal, march, scope, scoreboard, bosses);
+        if (pools is not null) PoolsUsed(pools, spreadPool is null ? list : [.. list, UnitEntry.FromPool(spreadPool, 1)], null, null);
+        return new ApocalypseAction(faction, list, hotspots, roamers, hordes, goal, march, scope, scoreboard, bosses, pools);
+    }
+
+    /// <summary>The draw per kill (undead-hordes D7): the 0.13.x `perKill` n (0-2) as n..n, or `perKillMin` 0-3 with
+    /// `perKillMax` perKillMin-3; never both forms.</summary>
+    static (int Min, int Max) KillDraw(JsonElement r)
+    {
+        var hasMin = r.TryGetProperty("perKillMin", out var lo);
+        var hasMax = r.TryGetProperty("perKillMax", out var hi);
+        if (r.TryGetProperty("perKill", out var one))
+        {
+            if (hasMin || hasMax) throw new Fail(KillDrawBoth);
+            var n = Int(one, ApocalypseLimits.MinPerKill, ApocalypseLimits.MaxPerKill, PerKillRule);
+            return (n, n);
+        }
+        if (!hasMin && !hasMax) throw new Fail(PerKillRule);
+        if (!hasMin) throw new Fail(PerKillMinRule);
+        if (!hasMax) throw new Fail(PerKillMaxRule);
+        var min = Int(lo, ApocalypseLimits.MinKillDraw, ApocalypseLimits.MaxKillDraw, PerKillMinRule);
+        return (min, Int(hi, min, ApocalypseLimits.MaxKillDraw, PerKillMaxRule));
+    }
+
+    /// <summary>A spread block's `pool` at <paramref name="at"/> (undead-hordes D7): the name of a pool the action defines.</summary>
+    static string SpreadPool(JsonElement v, string at, IReadOnlyDictionary<string, IReadOnlyList<string>>? pools)
+    {
+        var name = v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+        if (name is null || pools is null || !pools.ContainsKey(name)) throw new Fail(NoPool(at, name));
+        return name;
     }
 
     static JsonElement Obj(JsonElement v, string rule) => v.ValueKind == JsonValueKind.Object ? v : throw new Fail(rule);
@@ -641,33 +678,36 @@ public static class EventValidator
     {
         Obj(g, GoalObject);
         OnlyKeys(g, "action.goal", "location", "radius", "name");
-        var l = Obj(Required(g, "location", GoalLocationRule), GoalLocationRule);
-        var type = l.TryGetProperty("type", out var ty) && ty.ValueKind == JsonValueKind.String ? ty.GetString() : null;
-        Location location;
-        switch (type)
-        {
-            case "Point":
-                OnlyKeys(l, "action.goal.location", "type", "x", "y", "z");
-                float? y = l.TryGetProperty("y", out var yv) ? GoalCoord(yv, "y") : null;
-                location = new Location(LocationType.Point, GoalCoord(Required(l, "x", GoalLocationRule), "x"), GoalCoord(Required(l, "z", GoalLocationRule), "z"), y);
-                break;
-            case "Admin":
-                OnlyKeys(l, "action.goal.location", "type");
-                if (trigger.Type != TriggerType.Manual) throw new Fail(GoalAdminManual);
-                location = new Location(LocationType.Admin, 0, 0);
-                break;
-            default:
-                throw new Fail(GoalLocationRule);
-        }
+        var location = ParseTarget(Required(g, "location", GoalLocationRule), "action.goal.location", trigger, GoalLocationRule, GoalAdminManual, GoalCoordRule);
         var radius = Int(Required(g, "radius", GoalRadiusRule), ApocalypseLimits.MinGoalRadius, ApocalypseLimits.MaxGoalRadius, GoalRadiusRule);
         var name = Str(Required(g, "name", GoalNameRule), GoalNameRule);
         if (!IsPlainText(name, ApocalypseLimits.MaxGoalName)) throw new Fail(GoalNameRule);
         return new ApocalypseGoal(location, radius, name);
     }
 
-    static float GoalCoord(JsonElement v, string axis)
+    /// <summary>A goal's or a destination's location at <paramref name="at"/>: { "type": "Point", x, z, optional y } within
+    /// ±10000, or { "type": "Admin" } on a Manual trigger only.</summary>
+    static Location ParseTarget(JsonElement v, string at, Trigger trigger, string rule, string adminManual, Func<string, string> coordRule)
     {
-        var rule = GoalCoordRule(axis);
+        var l = Obj(v, rule);
+        var type = l.TryGetProperty("type", out var ty) && ty.ValueKind == JsonValueKind.String ? ty.GetString() : null;
+        switch (type)
+        {
+            case "Point":
+                OnlyKeys(l, at, "type", "x", "y", "z");
+                float? y = l.TryGetProperty("y", out var yv) ? TargetCoord(yv, coordRule("y")) : null;
+                return new Location(LocationType.Point, TargetCoord(Required(l, "x", rule), coordRule("x")), TargetCoord(Required(l, "z", rule), coordRule("z")), y);
+            case "Admin":
+                OnlyKeys(l, at, "type");
+                if (trigger.Type != TriggerType.Manual) throw new Fail(adminManual);
+                return new Location(LocationType.Admin, 0, 0);
+            default:
+                throw new Fail(rule);
+        }
+    }
+
+    static float TargetCoord(JsonElement v, string rule)
+    {
         if (v.ValueKind != JsonValueKind.Number || !v.TryGetDouble(out var d) || double.IsNaN(d) || d < -10000 || d > 10000) throw new Fail(rule);
         return (float)d;
     }
@@ -738,7 +778,7 @@ public static class EventValidator
     {
         OnlyKeys(a, "action", "type", "units", "waves", "intervalSeconds", "radius", "location", "unitLifetimeSeconds", "scope",
             "modifiers", "loot", "behaviour", "allowTerritory", "fanOut", "waveList", "scoreboard", "arena", "winner", "growth", "regionLock",
-            "bosses", "pools", "pursuit");
+            "bosses", "pools", "pursuit", "destination", "marchSpeed");
 
         // wave-variety D1: the pools come first, so a unit entry or a boss roll can name one.
         var pools = a.TryGetProperty("pools", out var po) ? ParsePools(po, units) : null;
@@ -797,8 +837,59 @@ public static class EventValidator
         WaveBosses(waveList, bosses, fanOut);
         var pursuit = a.TryGetProperty("pursuit", out var pu) ? ParsePursuit(pu, behaviour, fanOut, regionLock) : null;
         if (pools is not null) PoolsUsed(pools, list, waveList, bosses);
+        // undead-hordes D5: a destination marches the waves from a Point or Admin start, none of them fanned out, locked,
+        // in an arena or pursuing
+        var destination = a.TryGetProperty("destination", out var de) ? ParseDestination(de, trigger) : null;
+        var march = DestinationLimits.DefaultMarchSpeed;
+        if (a.TryGetProperty("marchSpeed", out var ms))
+        {
+            if (destination is null) throw new Fail(MarchSpeedNeedsDestination);
+            march = Number(ms, ApocalypseLimits.MinMarchSpeed, ApocalypseLimits.MaxMarchSpeed, MarchSpeedRule);
+        }
+        if (destination is not null)
+        {
+            if (location.Type is not (LocationType.Point or LocationType.Admin)) throw new Fail(DestinationStart);
+            if (fanOut is not null) throw new Fail(DestinationTakesNo("fanOut"));
+            if (regionLock) throw new Fail(DestinationTakesNo("regionLock"));
+            if (arena is not null) throw new Fail(DestinationTakesNo("arena"));
+            if (pursuit is not null) throw new Fail(DestinationTakesNo("pursuit"));
+        }
         return new SpawnWavesAction(list, waves, interval, radius, location, lifetime, scope, modifiers, loot, behaviour, allowTerritory, fanOut,
-            waveList, scoreboard, arena, winner, growth, regionLock, bosses, pools, pursuit);
+            waveList, scoreboard, arena, winner, growth, regionLock, bosses, pools, pursuit, destination, march);
+    }
+
+    public const string DestinationObject = "action.destination must be an object { location, radius, name }";
+    public const string DestinationLocationRule = "action.destination.location must be { \"type\": \"Point\", \"x\", \"z\", optional \"y\" } or { \"type\": \"Admin\" }";
+    public const string DestinationAdminManual = "action.destination.location Admin needs a Manual trigger";
+    public const string DestinationRadiusRule = "action.destination.radius must be 10-100";
+    public const string DestinationNameRule = "action.destination.name must be 1-40 characters, no angle brackets or control characters";
+    public const string DestinationStart = "action.destination needs an action.location of Point or Admin";
+    public const string MarchSpeedNeedsDestination = "action.marchSpeed needs action.destination";
+
+    /// <summary>"&lt;field&gt; needs action.destination": a destination's radius or name set before its location (undead-hordes D5).</summary>
+    public static string NeedsDestination(string field) => $"{field} needs action.destination";
+    public static string DestinationTakesNo(string key) => $"action.{key} takes no action.destination";
+    public static string DestinationCoordRule(string axis) => $"action.destination.location.{axis} must be a number within -10000..10000";
+
+    /// <summary>Every reason undead-hordes D5 adds, for the 120-byte check.</summary>
+    public static readonly IReadOnlyList<string> DestinationReasons =
+    [
+        DestinationObject, DestinationLocationRule, DestinationAdminManual, DestinationRadiusRule, DestinationNameRule, DestinationStart,
+        MarchSpeedNeedsDestination, DestinationTakesNo("regionLock"), DestinationCoordRule("x"),
+    ];
+
+    /// <summary>`destination` (undead-hordes D5): { "location": Point | Admin (a Manual trigger only), "radius": 10-100,
+    /// "name": 1-40 plain characters }.</summary>
+    static Destination ParseDestination(JsonElement g, Trigger trigger)
+    {
+        if (g.ValueKind != JsonValueKind.Object) throw new Fail(DestinationObject);
+        OnlyKeys(g, "action.destination", "location", "radius", "name");
+        var location = ParseTarget(Required(g, "location", DestinationLocationRule), "action.destination.location", trigger,
+            DestinationLocationRule, DestinationAdminManual, DestinationCoordRule);
+        var radius = Int(Required(g, "radius", DestinationRadiusRule), DestinationLimits.MinRadius, DestinationLimits.MaxRadius, DestinationRadiusRule);
+        var name = Str(Required(g, "name", DestinationNameRule), DestinationNameRule);
+        if (!IsPlainText(name, DestinationLimits.MaxName)) throw new Fail(DestinationNameRule);
+        return new Destination(location, radius, name);
     }
 
     public const int MaxBosses = 3;

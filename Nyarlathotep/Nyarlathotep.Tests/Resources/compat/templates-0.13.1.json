@@ -1,0 +1,850 @@
+{
+  "SchemaVersion": 1,
+  "events": [
+    {
+      "id": "legion-weekend-surge",
+      "name": "Legion weekend surge",
+      "enabled": false,
+      "pillar": "empowerment",
+      "trigger": { "type": "Schedule", "days": [ "Sat" ], "times": [ "20:00" ] },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "Empower",
+        "factions": [ "Faction_Legion" ],
+        "stats": { "physicalPower": 1.5, "maxHealth": 1.5 }
+      },
+      "announce": { "start": [ "The {faction} surge: {event}." ], "end": [ "The {faction} fall back. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "bandit-vengeance",
+      "name": "Bandit vengeance",
+      "enabled": false,
+      "pillar": "empowerment",
+      "trigger": {
+        "type": "VBloodKilled",
+        "bosses": [
+          "CHAR_Bandit_Bomber_VBlood", "CHAR_Bandit_Chaosarrow_VBlood", "CHAR_Bandit_Fisherman_VBlood",
+          "CHAR_Bandit_Foreman_VBlood", "CHAR_Bandit_Frostarrow_VBlood", "CHAR_Bandit_Stalker_VBlood",
+          "CHAR_Bandit_StoneBreaker_VBlood", "CHAR_Bandit_Tourok_VBlood"
+        ]
+      },
+      "conditions": { "cooldownMinutes": 30 },
+      "durationSeconds": 600,
+      "action": {
+        "type": "Empower",
+        "factions": [ "Faction_Bandits" ],
+        "stats": { "physicalPower": 1.3, "attackSpeed": 1.3 }
+      },
+      "announce": { "start": [ "The {faction} swear vengeance: {event}." ], "end": [ "The {faction} lose heart. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "undead-nightfall",
+      "name": "Undead nightfall",
+      "enabled": false,
+      "pillar": "empowerment",
+      "trigger": { "type": "GameTime", "phase": "night" },
+      "durationSeconds": 1200,
+      "action": {
+        "type": "Empower",
+        "factions": [ "Faction_Undead" ],
+        "stats": { "physicalPower": 1.25, "spellPower": 1.25 }
+      },
+      "announce": { "start": [ "Night falls and the {faction} stir: {event}." ], "end": [ "The {faction} settle. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "militia-crackdown",
+      "name": "Militia crackdown",
+      "enabled": false,
+      "pillar": "empowerment",
+      "trigger": {
+        "type": "VBloodKilled",
+        "bosses": [
+          "CHAR_ChurchOfLight_Sommelier_VBlood", "CHAR_Militia_BishopOfDunley_VBlood", "CHAR_Militia_Glassblower_VBlood",
+          "CHAR_Militia_Guard_VBlood", "CHAR_Militia_Hound_VBlood", "CHAR_Militia_HoundMaster_VBlood",
+          "CHAR_Militia_Leader_VBlood", "CHAR_Militia_Longbowman_LightArrow_Vblood", "CHAR_Militia_Nun_VBlood",
+          "CHAR_Militia_Scribe_VBlood", "CHAR_ChurchOfLight_Overseer_VBlood", "CHAR_Militia_Fabian_VBlood",
+          "CHAR_Villager_Tailor_VBlood", "CHAR_ChurchOfLight_Cardinal_VBlood", "CHAR_ChurchOfLight_Paladin_VBlood"
+        ]
+      },
+      "conditions": { "cooldownMinutes": 30 },
+      "durationSeconds": 900,
+      "action": {
+        "type": "Empower",
+        "factions": [ "Faction_Militia", "Faction_ChurchOfLum" ],
+        "stats": { "maxHealth": 1.3 }
+      },
+      "announce": { "start": [ "The {faction} crack down: {event}." ], "end": [ "The {faction} stand down. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "bandit-ambush",
+      "name": "Bandit ambush",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 600,
+      "action": {
+        "type": "SpawnWaves",
+        "units": [ { "prefab": "CHAR_Bandit_Thug", "count": 4 }, { "prefab": "CHAR_Bandit_Hunter", "count": 2 } ],
+        "waves": 3, "intervalSeconds": 60, "radius": 10,
+        "location": { "type": "Admin" }
+      },
+      "announce": { "start": [ "Bandits lie in wait: {event}." ], "end": [ "The bandits scatter. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "undead-rising",
+      "name": "Undead rising",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 600,
+      "action": {
+        "type": "SpawnWaves",
+        "units": [
+          { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 5 },
+          { "prefab": "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "count": 2 }
+        ],
+        "waves": 2, "intervalSeconds": 90, "radius": 12,
+        "location": { "type": "Admin" },
+        "modifiers": { "levelDelta": 2, "maxHealth": 1.2 }
+      },
+      "announce": { "start": [ "The dead claw their way up: {event}." ], "end": [ "The dead lie still. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "roaming-hunters",
+      "name": "Roaming hunters",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Interval", "minMinutes": 60, "maxMinutes": 90 },
+      "durationSeconds": 600,
+      "action": {
+        "type": "SpawnWaves",
+        "units": [ { "prefab": "CHAR_Bandit_Thug", "count": 4 }, { "prefab": "CHAR_Bandit_Hunter", "count": 2 } ],
+        "waves": 1, "intervalSeconds": 60, "radius": 10,
+        "location": { "type": "AroundPlayer", "minDist": 20, "maxDist": 40 },
+        "fanOut": { "maxInstances": 3, "minSpacing": 150 },
+        "behaviour": { "type": "Hunt", "range": 45 }
+      },
+      "announce": { "start": [ "Hunters roam the land: {event}." ], "end": [ "The hunters scatter. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "border-watch",
+      "name": "Border watch",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "RegionEntered", "scope": [ "DunleyFarmlands" ], "playerCooldownMinutes": 30 },
+      "durationSeconds": 600,
+      "action": {
+        "type": "SpawnWaves",
+        "units": [ { "prefab": "CHAR_Militia_Light", "count": 3 }, { "prefab": "CHAR_Militia_Crossbow", "count": 2 } ],
+        "waves": 1, "intervalSeconds": 60, "radius": 10,
+        "location": { "type": "AroundPlayer", "minDist": 20, "maxDist": 40 },
+        "behaviour": { "type": "Hunt", "range": 45 }
+      },
+      "announce": { "start": [ "The border watch rides out: {event}." ], "end": [ "The watch returns to its post. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "bandit-reprisal",
+      "name": "Bandit reprisal",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "FactionKills", "factions": [ "Faction_Bandits" ], "kills": 20, "windowSeconds": 300 },
+      "durationSeconds": 600,
+      "action": {
+        "type": "SpawnWaves",
+        "units": [ { "prefab": "CHAR_Bandit_Thug", "count": 4 }, { "prefab": "CHAR_Bandit_Hunter", "count": 2 } ],
+        "waves": 1, "intervalSeconds": 60, "radius": 10,
+        "location": { "type": "AroundPlayer", "minDist": 20, "maxDist": 40 },
+        "behaviour": { "type": "Hunt", "range": 45 }
+      },
+      "announce": { "start": [ "The bandits want revenge: {event}." ], "end": [ "The bandits fall back. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "graveyard-waves",
+      "name": "Graveyard waves",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 900,
+      "action": {
+        "type": "SpawnWaves",
+        "waveList": [
+          { "units": [
+            { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 6, "modifiers": { "levelDelta": 1 } },
+            { "prefab": "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "count": 2, "modifiers": { "levelDelta": 1 } } ] },
+          { "units": [
+            { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 6, "modifiers": { "levelDelta": 2, "maxHealth": 1.2 } },
+            { "prefab": "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "count": 3, "modifiers": { "levelDelta": 2, "power": 1.2 } } ],
+            "afterSeconds": 120, "whenCleared": true },
+          { "units": [
+            { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 6, "modifiers": { "levelDelta": 3, "maxHealth": 1.4, "power": 1.2 } },
+            { "prefab": "CHAR_Undead_Guardian", "count": 1, "modifiers": { "level": 30, "maxHealth": 2.0, "power": 1.3 } } ],
+            "whenCleared": true }
+        ],
+        "radius": 10,
+        "location": { "type": "AroundPlayer", "minDist": 20, "maxDist": 40 },
+        "behaviour": { "type": "Hunt", "range": 45 },
+        "scoreboard": true
+      },
+      "announce": { "start": [ "The graves open: {event}." ], "end": [ "The graveyard falls silent. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "spider-swarm",
+      "name": "Spider swarm",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1200,
+      "action": {
+        "type": "SpawnWaves",
+        "units": [
+          { "prefab": "CHAR_Spider_Forest", "count": 2 },
+          { "prefab": "CHAR_Spider_Melee", "count": 2 },
+          { "prefab": "CHAR_Spider_Range", "count": 2 }
+        ],
+        "waves": 5, "intervalSeconds": 120, "radius": 12,
+        "location": { "type": "Admin" },
+        "modifiers": { "level": 30 },
+        "growth": { "addUnits": 1, "addLevels": 3, "whenCleared": true },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "bosses": [ { "prefab": "CHAR_Spider_Queen_VBlood", "count": 1, "modifiers": { "level": 45 } } ]
+      },
+      "announce": { "start": [ "The webs stir: {event}." ], "end": [ "The swarm withdraws. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "spider-hunting-grounds",
+      "name": "Spider hunting grounds",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "units": [
+          { "prefab": "CHAR_Spider_Forestling", "count": 2 },
+          { "prefab": "CHAR_Spider_Forest", "count": 2 },
+          { "prefab": "CHAR_Spider_Range", "count": 2 }
+        ],
+        "waves": 3, "intervalSeconds": 300, "radius": 8,
+        "location": { "type": "Region" },
+        "scope": [ "DunleyFarmlands" ],
+        "regionLock": true,
+        "modifiers": { "level": 30 },
+        "behaviour": { "type": "RegionHunt" },
+        "scoreboard": true,
+        "bosses": [ { "prefab": "CHAR_Spider_Queen_VBlood", "count": 1, "modifiers": { "level": 35 } } ]
+      },
+      "announce": { "start": [ "Dunley Farmlands crawls with spiders: {event}." ], "end": [ "The spiders retreat to their webs. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "bandit-revenge",
+      "name": "Bandit revenge",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": {
+        "type": "Revenge", "factions": [ "Faction_Bandits" ], "heat": 30, "windowSeconds": 900, "warnAt": [ 10, 20 ],
+        "vbloodHeat": 10, "playerCooldownMinutes": 30
+      },
+      "durationSeconds": 900,
+      "action": {
+        "type": "SpawnWaves",
+        "waveList": [
+          { "units": [
+            { "prefab": "CHAR_Bandit_Thug", "count": 3 },
+            { "prefab": "CHAR_Bandit_Hunter", "count": 1 } ] },
+          { "units": [
+            { "prefab": "CHAR_Bandit_Thug", "count": 4, "modifiers": { "levelDelta": 1 } },
+            { "prefab": "CHAR_Bandit_Hunter", "count": 2, "modifiers": { "levelDelta": 1 } } ],
+            "afterSeconds": 120, "whenCleared": true },
+          { "units": [
+            { "prefab": "CHAR_Bandit_Thug", "count": 4, "modifiers": { "levelDelta": 2 } },
+            { "prefab": "CHAR_Bandit_Hunter", "count": 3, "modifiers": { "levelDelta": 2 } },
+            { "prefab": "CHAR_Bandit_Deadeye", "count": 1, "modifiers": { "levelDelta": 2, "maxHealth": 2.0 } } ],
+            "afterSeconds": 120, "whenCleared": true }
+        ],
+        "radius": 8,
+        "location": { "type": "AroundPlayer", "minDist": 20, "maxDist": 40 },
+        "behaviour": { "type": "Hunt", "range": 45 },
+        "scoreboard": true
+      },
+      "announce": { "start": [ "The {faction} want revenge: {event}." ], "end": [ "The {faction} give up the hunt. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "zombie-apocalypse",
+      "name": "Zombie apocalypse",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 14400,
+      "action": {
+        "type": "Apocalypse",
+        "faction": "Faction_Undead",
+        "units": [
+          { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 3, "modifiers": { "level": 22 } },
+          { "prefab": "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "count": 2, "modifiers": { "level": 24 } },
+          { "prefab": "CHAR_Undead_GhostMilitia_Light", "count": 2, "modifiers": { "level": 28 } },
+          { "prefab": "CHAR_Undead_GhostBanshee", "count": 1, "modifiers": { "level": 32 } },
+          { "prefab": "CHAR_Undead_Guardian", "count": 1, "modifiers": { "level": 38, "maxHealth": 2.0 } }
+        ],
+        "hotspots": { "count": 3, "minNatives": 5, "minSpacing": 300 },
+        "roamers": { "perHotspot": 4, "perKill": 1, "max": 30, "perMinute": 6, "huntRange": 40 },
+        "hordes": { "count": 4, "firstAfterMinutes": 10, "everyMinutes": 30, "size": 7, "growth": 4 },
+        "goal": { "location": { "type": "Admin" }, "radius": 30, "name": "the living" },
+        "marchSpeed": 2.0,
+        "bosses": [ { "prefab": "CHAR_Undead_BishopOfDeath_VBlood", "count": 1, "modifiers": { "level": 40 } } ],
+        "scoreboard": true
+      },
+      "announce": { "start": [ "The dead rise: {event}." ], "end": [ "The dead lie still again. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "militia-muster",
+      "name": "Militia muster",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "waveList": [
+          { "units": [ { "prefab": "CHAR_Militia_Light", "count": 4 }, { "prefab": "CHAR_Militia_Crossbow", "count": 2 } ] },
+          { "units": [ { "prefab": "CHAR_Militia_Light", "count": 4 }, { "prefab": "CHAR_Militia_Crossbow", "count": 3 }, { "prefab": "CHAR_Militia_Hound", "count": 2 } ], "afterSeconds": 150, "whenCleared": true },
+          { "units": [ { "prefab": "CHAR_Militia_Guard", "count": 4 }, { "prefab": "CHAR_Militia_Longbowman", "count": 3 }, { "prefab": "CHAR_Militia_Torchbearer", "count": 2 } ], "afterSeconds": 150, "whenCleared": true },
+          { "units": [ { "prefab": "CHAR_Militia_Heavy", "count": 3 }, { "prefab": "CHAR_Militia_Guard", "count": 3 }, { "prefab": "CHAR_Militia_Nun", "count": 2 }, { "prefab": "CHAR_Militia_Longbowman", "count": 3 } ], "afterSeconds": 150, "whenCleared": true },
+          { "units": [ { "prefab": "CHAR_Militia_Heavy", "count": 4 }, { "prefab": "CHAR_Militia_Devoted", "count": 3 }, { "prefab": "CHAR_Militia_Bomber", "count": 2 }, { "prefab": "CHAR_Militia_Nun", "count": 2 } ], "afterSeconds": 150, "whenCleared": true }
+        ],
+        "radius": 12,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "bosses": [ { "prefab": "CHAR_Militia_Leader_VBlood", "count": 1 } ]
+      },
+      "announce": { "start": [ "Dunley's militia musters against you: {event}." ], "end": [ "The militia breaks ranks. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "silverlight-crusade",
+      "name": "Silverlight crusade",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "waveList": [
+          { "units": [ { "prefab": "CHAR_ChurchOfLight_Footman", "count": 4 }, { "prefab": "CHAR_ChurchOfLight_Archer", "count": 3 } ] },
+          { "units": [ { "prefab": "CHAR_ChurchOfLight_Footman", "count": 4 }, { "prefab": "CHAR_ChurchOfLight_Rifleman", "count": 3 }, { "prefab": "CHAR_ChurchOfLight_Cleric", "count": 2 } ], "afterSeconds": 150, "whenCleared": true },
+          { "units": [ { "prefab": "CHAR_ChurchOfLight_Knight_Shield", "count": 3 }, { "prefab": "CHAR_ChurchOfLight_Knight_2H", "count": 2 }, { "prefab": "CHAR_ChurchOfLight_Archer", "count": 3 }, { "prefab": "CHAR_ChurchOfLight_Priest", "count": 1 } ], "afterSeconds": 150, "whenCleared": true },
+          { "units": [ { "prefab": "CHAR_ChurchOfLight_Paladin", "count": 3 }, { "prefab": "CHAR_ChurchOfLight_Knight_2H", "count": 3 }, { "prefab": "CHAR_ChurchOfLight_Lightweaver", "count": 2 }, { "prefab": "CHAR_ChurchOfLight_Rifleman", "count": 3 } ], "afterSeconds": 150, "whenCleared": true },
+          { "units": [ { "prefab": "CHAR_ChurchOfLight_Paladin", "count": 4 }, { "prefab": "CHAR_ChurchOfLight_Knight_Shield", "count": 3 }, { "prefab": "CHAR_ChurchOfLight_Lightweaver", "count": 2 }, { "prefab": "CHAR_ChurchOfLight_CardinalAide", "count": 1 } ], "afterSeconds": 150, "whenCleared": true }
+        ],
+        "radius": 12,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "bosses": [ { "prefab": "CHAR_ChurchOfLight_Paladin_VBlood", "count": 1 } ]
+      },
+      "announce": { "start": [ "The Church of Light marches from Silverlight: {event}." ], "end": [ "The crusade falls back. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "legion-incursion",
+      "name": "Legion incursion",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "waveList": [
+          { "units": [ { "prefab": "CHAR_Legion_Shadowkin", "count": 4 }, { "prefab": "CHAR_Legion_Assassin", "count": 2 } ] },
+          { "units": [ { "prefab": "CHAR_Legion_Shadowkin", "count": 4 }, { "prefab": "CHAR_Legion_Vargulf", "count": 2 }, { "prefab": "CHAR_Legion_BloodProphet", "count": 2 } ], "afterSeconds": 180, "whenCleared": true },
+          { "units": [ { "prefab": "CHAR_Legion_NightMaiden", "count": 3 }, { "prefab": "CHAR_Legion_Dreadhorn", "count": 2 }, { "prefab": "CHAR_Legion_Assassin", "count": 3 } ], "afterSeconds": 180, "whenCleared": true },
+          { "units": [ { "prefab": "CHAR_Legion_Gargoyle", "count": 2 }, { "prefab": "CHAR_Legion_Nightmare", "count": 2 }, { "prefab": "CHAR_Legion_BloodProphet", "count": 3 }, { "prefab": "CHAR_Legion_Guardian_DraculaMinion", "count": 1 } ], "afterSeconds": 180, "whenCleared": true }
+        ],
+        "radius": 12,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "bosses": [ { "prefab": "CHAR_Vampire_BloodKnight_VBlood", "count": 1 } ]
+      },
+      "announce": { "start": [ "Dracula's Legion comes for you: {event}." ], "end": [ "The Legion withdraws into the dark. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "gloomrot-assault",
+      "name": "Gloomrot assault",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "waveList": [
+          { "units": [ { "prefab": "CHAR_Gloomrot_Technician", "count": 3 }, { "prefab": "CHAR_Gloomrot_Tazer", "count": 3 } ] },
+          { "units": [ { "prefab": "CHAR_Gloomrot_Railgunner", "count": 3 }, { "prefab": "CHAR_Gloomrot_Pyro", "count": 3 }, { "prefab": "CHAR_Gloomrot_Batoon", "count": 2 } ], "afterSeconds": 150, "whenCleared": true },
+          { "units": [ { "prefab": "CHAR_Gloomrot_SentryOfficer", "count": 2 }, { "prefab": "CHAR_Gloomrot_TractorBeamer", "count": 2 }, { "prefab": "CHAR_Gloomrot_Railgunner", "count": 3 }, { "prefab": "CHAR_Gloomrot_Pyro", "count": 2 } ], "afterSeconds": 150, "whenCleared": true },
+          { "units": [ { "prefab": "CHAR_Gloomrot_SpiderTank_Driller", "count": 2 }, { "prefab": "CHAR_Gloomrot_Tazer", "count": 3 }, { "prefab": "CHAR_Gloomrot_Railgunner", "count": 4 }, { "prefab": "CHAR_Gloomrot_SentryOfficer", "count": 2 } ], "afterSeconds": 150, "whenCleared": true }
+        ],
+        "radius": 12,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "bosses": [ { "prefab": "CHAR_Gloomrot_Voltage_VBlood", "count": 1 } ]
+      },
+      "announce": { "start": [ "Gloomrot's machines roll out: {event}." ], "end": [ "The machines power down. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "cursed-night",
+      "name": "Cursed night",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "waveList": [
+          { "units": [ { "prefab": "CHAR_Cursed_Wolf", "count": 4 }, { "prefab": "CHAR_Cursed_ToadSpitter", "count": 3 } ] },
+          { "units": [ { "prefab": "CHAR_Cursed_ToadSpitter", "count": 3 }, { "prefab": "CHAR_Cursed_MonsterToad", "count": 2 }, { "prefab": "CHAR_Cursed_Nightlurker", "count": 3 } ], "afterSeconds": 150, "whenCleared": true },
+          { "units": [ { "prefab": "CHAR_Cursed_Bear_Standard", "count": 2 }, { "prefab": "CHAR_Cursed_WormTerror", "count": 2 }, { "prefab": "CHAR_Cursed_Witch", "count": 2 }, { "prefab": "CHAR_Cursed_Wolf", "count": 3 } ], "afterSeconds": 150, "whenCleared": true },
+          { "units": [ { "prefab": "CHAR_Cursed_Wolf_Spirit", "count": 2 }, { "prefab": "CHAR_Cursed_Bear_Spirit", "count": 1 }, { "prefab": "CHAR_Cursed_Witch", "count": 3 }, { "prefab": "CHAR_Cursed_Nightlurker", "count": 3 } ], "afterSeconds": 150, "whenCleared": true }
+        ],
+        "radius": 12,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "bosses": [ { "prefab": "CHAR_Cursed_Witch_VBlood", "count": 1 } ]
+      },
+      "announce": { "start": [ "The Cursed Forest stirs: {event}." ], "end": [ "The forest falls quiet. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "realm-gauntlet",
+      "name": "Realm gauntlet",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "waveList": [
+          { "units": [ { "prefab": "CHAR_Bandit_Thug", "count": 4 }, { "prefab": "CHAR_Bandit_Hunter", "count": 2 }, { "prefab": "CHAR_Bandit_Deadeye", "count": 2 } ] },
+          { "units": [ { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 4 }, { "prefab": "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "count": 3 }, { "prefab": "CHAR_Undead_GhostBanshee", "count": 1 } ], "whenCleared": true },
+          { "units": [ { "prefab": "CHAR_Militia_Light", "count": 4 }, { "prefab": "CHAR_Militia_Crossbow", "count": 3 }, { "prefab": "CHAR_Militia_Hound", "count": 2 } ], "whenCleared": true },
+          { "units": [ { "prefab": "CHAR_Gloomrot_Railgunner", "count": 3 }, { "prefab": "CHAR_Gloomrot_Tazer", "count": 3 }, { "prefab": "CHAR_Gloomrot_Technician", "count": 3 } ], "whenCleared": true },
+          { "units": [ { "prefab": "CHAR_ChurchOfLight_Footman", "count": 4 }, { "prefab": "CHAR_ChurchOfLight_Archer", "count": 3 }, { "prefab": "CHAR_ChurchOfLight_Paladin", "count": 1 } ], "whenCleared": true }
+        ],
+        "radius": 12,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "bosses": [ { "prefab": "CHAR_ChurchOfLight_Overseer_VBlood", "count": 1 } ]
+      },
+      "announce": { "start": [ "Every land sends its fighters: {event}." ], "end": [ "The gauntlet is run. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "spider-swarm-timed",
+      "name": "Spider swarm (timed)",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1200,
+      "action": {
+        "type": "SpawnWaves",
+        "waveList": [
+          { "units": [ { "prefab": "CHAR_Spider_Forest", "count": 2, "modifiers": { "level": 30 } }, { "prefab": "CHAR_Spider_Melee", "count": 2, "modifiers": { "level": 30 } }, { "prefab": "CHAR_Spider_Range", "count": 2, "modifiers": { "level": 30 } } ] },
+          { "units": [ { "prefab": "CHAR_Spider_Forest", "count": 3, "modifiers": { "level": 33 } }, { "prefab": "CHAR_Spider_Melee", "count": 3, "modifiers": { "level": 33 } }, { "prefab": "CHAR_Spider_Range", "count": 3, "modifiers": { "level": 33 } } ], "afterSeconds": 75 },
+          { "units": [ { "prefab": "CHAR_Spider_Forest", "count": 4, "modifiers": { "level": 36 } }, { "prefab": "CHAR_Spider_Melee", "count": 4, "modifiers": { "level": 36 } }, { "prefab": "CHAR_Spider_Range", "count": 4, "modifiers": { "level": 36 } } ], "afterSeconds": 75 },
+          { "units": [ { "prefab": "CHAR_Spider_Forest", "count": 5, "modifiers": { "level": 39 } }, { "prefab": "CHAR_Spider_Melee", "count": 5, "modifiers": { "level": 39 } }, { "prefab": "CHAR_Spider_Range", "count": 5, "modifiers": { "level": 39 } } ], "afterSeconds": 75 },
+          { "units": [ { "prefab": "CHAR_Spider_Forest", "count": 6, "modifiers": { "level": 42 } }, { "prefab": "CHAR_Spider_Melee", "count": 6, "modifiers": { "level": 42 } }, { "prefab": "CHAR_Spider_Range", "count": 6, "modifiers": { "level": 42 } } ], "afterSeconds": 75 }
+        ],
+        "radius": 12,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "bosses": [ { "prefab": "CHAR_Spider_Queen_VBlood", "count": 1, "modifiers": { "level": 45 } } ],
+        "pursuit": { "afterSeconds": 60 }
+      },
+      "announce": { "start": [ "The webs stir: {event}." ], "end": [ "The swarm withdraws. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "graveyard-waves-timed",
+      "name": "Graveyard waves (timed)",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1200,
+      "action": {
+        "type": "SpawnWaves",
+        "waveList": [
+          { "units": [ { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 6, "modifiers": { "levelDelta": 1 } }, { "prefab": "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "count": 2, "modifiers": { "levelDelta": 1 } } ] },
+          { "units": [ { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 6, "modifiers": { "levelDelta": 2, "maxHealth": 1.2 } }, { "prefab": "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "count": 3, "modifiers": { "levelDelta": 2, "power": 1.2 } } ], "afterSeconds": 75 },
+          { "units": [ { "prefab": "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "count": 6, "modifiers": { "levelDelta": 3, "maxHealth": 1.4, "power": 1.2 } }, { "prefab": "CHAR_Undead_Guardian", "count": 1, "modifiers": { "level": 30, "maxHealth": 2.0, "power": 1.3 } } ], "afterSeconds": 75 }
+        ],
+        "radius": 10,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "pursuit": { "afterSeconds": 60 }
+      },
+      "announce": { "start": [ "The graves open: {event}." ], "end": [ "The graveyard falls silent. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "militia-muster-timed",
+      "name": "Militia muster (timed)",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "waveList": [
+          { "units": [ { "prefab": "CHAR_Militia_Light", "count": 4 }, { "prefab": "CHAR_Militia_Crossbow", "count": 2 } ] },
+          { "units": [ { "prefab": "CHAR_Militia_Light", "count": 4 }, { "prefab": "CHAR_Militia_Crossbow", "count": 3 }, { "prefab": "CHAR_Militia_Hound", "count": 2 } ], "afterSeconds": 75 },
+          { "units": [ { "prefab": "CHAR_Militia_Guard", "count": 4 }, { "prefab": "CHAR_Militia_Longbowman", "count": 3 }, { "prefab": "CHAR_Militia_Torchbearer", "count": 2 } ], "afterSeconds": 75 },
+          { "units": [ { "prefab": "CHAR_Militia_Heavy", "count": 3 }, { "prefab": "CHAR_Militia_Guard", "count": 3 }, { "prefab": "CHAR_Militia_Nun", "count": 2 }, { "prefab": "CHAR_Militia_Longbowman", "count": 3 } ], "afterSeconds": 75 },
+          { "units": [ { "prefab": "CHAR_Militia_Heavy", "count": 4 }, { "prefab": "CHAR_Militia_Devoted", "count": 3 }, { "prefab": "CHAR_Militia_Bomber", "count": 2 }, { "prefab": "CHAR_Militia_Nun", "count": 2 } ], "afterSeconds": 75 }
+        ],
+        "radius": 12,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "bosses": [ { "prefab": "CHAR_Militia_Leader_VBlood", "count": 1 } ],
+        "pursuit": { "afterSeconds": 60 }
+      },
+      "announce": { "start": [ "Dunley's militia musters against you: {event}." ], "end": [ "The militia breaks ranks. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "silverlight-crusade-timed",
+      "name": "Silverlight crusade (timed)",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "waveList": [
+          { "units": [ { "prefab": "CHAR_ChurchOfLight_Footman", "count": 4 }, { "prefab": "CHAR_ChurchOfLight_Archer", "count": 3 } ] },
+          { "units": [ { "prefab": "CHAR_ChurchOfLight_Footman", "count": 4 }, { "prefab": "CHAR_ChurchOfLight_Rifleman", "count": 3 }, { "prefab": "CHAR_ChurchOfLight_Cleric", "count": 2 } ], "afterSeconds": 75 },
+          { "units": [ { "prefab": "CHAR_ChurchOfLight_Knight_Shield", "count": 3 }, { "prefab": "CHAR_ChurchOfLight_Knight_2H", "count": 2 }, { "prefab": "CHAR_ChurchOfLight_Archer", "count": 3 }, { "prefab": "CHAR_ChurchOfLight_Priest", "count": 1 } ], "afterSeconds": 75 },
+          { "units": [ { "prefab": "CHAR_ChurchOfLight_Paladin", "count": 3 }, { "prefab": "CHAR_ChurchOfLight_Knight_2H", "count": 3 }, { "prefab": "CHAR_ChurchOfLight_Lightweaver", "count": 2 }, { "prefab": "CHAR_ChurchOfLight_Rifleman", "count": 3 } ], "afterSeconds": 75 },
+          { "units": [ { "prefab": "CHAR_ChurchOfLight_Paladin", "count": 4 }, { "prefab": "CHAR_ChurchOfLight_Knight_Shield", "count": 3 }, { "prefab": "CHAR_ChurchOfLight_Lightweaver", "count": 2 }, { "prefab": "CHAR_ChurchOfLight_CardinalAide", "count": 1 } ], "afterSeconds": 75 }
+        ],
+        "radius": 12,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "bosses": [ { "prefab": "CHAR_ChurchOfLight_Paladin_VBlood", "count": 1 } ],
+        "pursuit": { "afterSeconds": 60 }
+      },
+      "announce": { "start": [ "The Church of Light marches from Silverlight: {event}." ], "end": [ "The crusade falls back. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "legion-incursion-timed",
+      "name": "Legion incursion (timed)",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "waveList": [
+          { "units": [ { "prefab": "CHAR_Legion_Shadowkin", "count": 4 }, { "prefab": "CHAR_Legion_Assassin", "count": 2 } ] },
+          { "units": [ { "prefab": "CHAR_Legion_Shadowkin", "count": 4 }, { "prefab": "CHAR_Legion_Vargulf", "count": 2 }, { "prefab": "CHAR_Legion_BloodProphet", "count": 2 } ], "afterSeconds": 75 },
+          { "units": [ { "prefab": "CHAR_Legion_NightMaiden", "count": 3 }, { "prefab": "CHAR_Legion_Dreadhorn", "count": 2 }, { "prefab": "CHAR_Legion_Assassin", "count": 3 } ], "afterSeconds": 75 },
+          { "units": [ { "prefab": "CHAR_Legion_Gargoyle", "count": 2 }, { "prefab": "CHAR_Legion_Nightmare", "count": 2 }, { "prefab": "CHAR_Legion_BloodProphet", "count": 3 }, { "prefab": "CHAR_Legion_Guardian_DraculaMinion", "count": 1 } ], "afterSeconds": 75 }
+        ],
+        "radius": 12,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "bosses": [ { "prefab": "CHAR_Vampire_BloodKnight_VBlood", "count": 1 } ],
+        "pursuit": { "afterSeconds": 60 }
+      },
+      "announce": { "start": [ "Dracula's Legion comes for you: {event}." ], "end": [ "The Legion withdraws into the dark. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "gloomrot-assault-timed",
+      "name": "Gloomrot assault (timed)",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "waveList": [
+          { "units": [ { "prefab": "CHAR_Gloomrot_Technician", "count": 3 }, { "prefab": "CHAR_Gloomrot_Tazer", "count": 3 } ] },
+          { "units": [ { "prefab": "CHAR_Gloomrot_Railgunner", "count": 3 }, { "prefab": "CHAR_Gloomrot_Pyro", "count": 3 }, { "prefab": "CHAR_Gloomrot_Batoon", "count": 2 } ], "afterSeconds": 75 },
+          { "units": [ { "prefab": "CHAR_Gloomrot_SentryOfficer", "count": 2 }, { "prefab": "CHAR_Gloomrot_TractorBeamer", "count": 2 }, { "prefab": "CHAR_Gloomrot_Railgunner", "count": 3 }, { "prefab": "CHAR_Gloomrot_Pyro", "count": 2 } ], "afterSeconds": 75 },
+          { "units": [ { "prefab": "CHAR_Gloomrot_SpiderTank_Driller", "count": 2 }, { "prefab": "CHAR_Gloomrot_Tazer", "count": 3 }, { "prefab": "CHAR_Gloomrot_Railgunner", "count": 4 }, { "prefab": "CHAR_Gloomrot_SentryOfficer", "count": 2 } ], "afterSeconds": 75 }
+        ],
+        "radius": 12,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "bosses": [ { "prefab": "CHAR_Gloomrot_Voltage_VBlood", "count": 1 } ],
+        "pursuit": { "afterSeconds": 60 }
+      },
+      "announce": { "start": [ "Gloomrot's machines roll out: {event}." ], "end": [ "The machines power down. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "cursed-night-timed",
+      "name": "Cursed night (timed)",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "waveList": [
+          { "units": [ { "prefab": "CHAR_Cursed_Wolf", "count": 4 }, { "prefab": "CHAR_Cursed_ToadSpitter", "count": 3 } ] },
+          { "units": [ { "prefab": "CHAR_Cursed_ToadSpitter", "count": 3 }, { "prefab": "CHAR_Cursed_MonsterToad", "count": 2 }, { "prefab": "CHAR_Cursed_Nightlurker", "count": 3 } ], "afterSeconds": 75 },
+          { "units": [ { "prefab": "CHAR_Cursed_Bear_Standard", "count": 2 }, { "prefab": "CHAR_Cursed_WormTerror", "count": 2 }, { "prefab": "CHAR_Cursed_Witch", "count": 2 }, { "prefab": "CHAR_Cursed_Wolf", "count": 3 } ], "afterSeconds": 75 },
+          { "units": [ { "prefab": "CHAR_Cursed_Wolf_Spirit", "count": 2 }, { "prefab": "CHAR_Cursed_Bear_Spirit", "count": 1 }, { "prefab": "CHAR_Cursed_Witch", "count": 3 }, { "prefab": "CHAR_Cursed_Nightlurker", "count": 3 } ], "afterSeconds": 75 }
+        ],
+        "radius": 12,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "bosses": [ { "prefab": "CHAR_Cursed_Witch_VBlood", "count": 1 } ],
+        "pursuit": { "afterSeconds": 60 }
+      },
+      "announce": { "start": [ "The Cursed Forest stirs: {event}." ], "end": [ "The forest falls quiet. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "spider-onslaught",
+      "name": "Spider onslaught",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "pools": {
+          "troops": [ "CHAR_Spider_Forestling", "CHAR_Spider_Forest", "CHAR_Spider_Spiderling" ],
+          "elite": [ "CHAR_Spider_Melee", "CHAR_Spider_Range", "CHAR_Spider_Broodmother" ],
+          "lords": [ "CHAR_Spider_Queen_VBlood" ]
+        },
+        "waveList": [
+          { "units": [ { "pool": "troops", "count": 9, "modifiers": { "level": 30 } } ] },
+          { "units": [ { "pool": "troops", "count": 10, "modifiers": { "level": 33 } }, { "pool": "elite", "count": 4, "modifiers": { "level": 33 } } ], "afterSeconds": 75 },
+          { "units": [ { "pool": "troops", "count": 11, "modifiers": { "level": 36 } }, { "pool": "elite", "count": 7, "modifiers": { "level": 36 } } ], "afterSeconds": 75, "bosses": [ { "pool": "lords", "min": 1, "max": 1, "modifiers": { "level": 45 } } ] },
+          { "units": [ { "pool": "troops", "count": 12, "modifiers": { "level": 39 } }, { "pool": "elite", "count": 8, "modifiers": { "level": 39 } } ], "afterSeconds": 75 },
+          { "units": [ { "pool": "troops", "count": 12, "modifiers": { "level": 42 } }, { "pool": "elite", "count": 8, "modifiers": { "level": 42 } } ], "afterSeconds": 75, "bosses": [ { "pool": "lords", "min": 1, "max": 1, "modifiers": { "level": 45 } } ] }
+        ],
+        "radius": 12,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "pursuit": { "afterSeconds": 60 }
+      },
+      "announce": { "start": [ "The forest floor boils with spiders: {event}." ], "end": [ "The brood scatters. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "undead-onslaught",
+      "name": "Undead onslaught",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "pools": {
+          "troops": [ "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "CHAR_Undead_SkeletonApprentice", "CHAR_Undead_UndyingGhoul", "CHAR_Undead_Priest", "CHAR_Undead_FlyingSkull", "CHAR_Undead_Assassin", "CHAR_Undead_ArmoredSkeletonCrossbow_Dunley", "CHAR_Undead_SkeletonGolem", "CHAR_Undead_Ghoul_Armored_Farmlands", "CHAR_Undead_SkeletonSoldier_Armored_Dunley" ],
+          "elite": [ "CHAR_Undead_SkeletonSoldier_Infiltrator", "CHAR_Undead_Guardian", "CHAR_Undead_SkeletonMage", "CHAR_Undead_Necromancer", "CHAR_Cultist_Pyromancer", "CHAR_Cultist_Slicer", "CHAR_Undead_GhostMilitia_Crossbow", "CHAR_Undead_GhostMilitia_Light", "CHAR_Undead_GhostAssassin", "CHAR_Undead_GhostBanshee", "CHAR_Undead_GhostGuardian" ],
+          "lords": [ "CHAR_Undead_BishopOfDeath_VBlood", "CHAR_Undead_ArenaChampion_VBlood", "CHAR_Undead_BishopOfShadows_VBlood", "CHAR_Undead_Infiltrator_VBlood", "CHAR_Undead_Leader_Vblood", "CHAR_Undead_Priest_VBlood", "CHAR_Undead_ZealousCultist_VBlood" ]
+        },
+        "waveList": [
+          { "units": [ { "pool": "troops", "count": 12 } ] },
+          { "units": [ { "pool": "troops", "count": 8 }, { "pool": "elite", "count": 6 } ], "afterSeconds": 75, "bosses": [ { "pool": "lords", "min": 1, "max": 1 } ] },
+          { "units": [ { "pool": "troops", "count": 6 }, { "pool": "elite", "count": 4 } ], "afterSeconds": 75, "bosses": [ { "pool": "lords", "min": 1, "max": 2 } ] }
+        ],
+        "radius": 10,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "pursuit": { "afterSeconds": 60 }
+      },
+      "announce": { "start": [ "The dead rise in their legions: {event}." ], "end": [ "The dead lie still again. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "militia-onslaught",
+      "name": "Militia onslaught",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "pools": {
+          "troops": [ "CHAR_Militia_BellRinger", "CHAR_Militia_Crossbow", "CHAR_Militia_Hound", "CHAR_Militia_Light", "CHAR_Militia_Rider", "CHAR_Militia_Torchbearer", "CHAR_Militia_Guard" ],
+          "elite": [ "CHAR_Militia_Horseman", "CHAR_Militia_Longbowman", "CHAR_Militia_Nun", "CHAR_Militia_Bomber", "CHAR_Militia_Heavy", "CHAR_Militia_Devoted" ],
+          "lords": [ "CHAR_Militia_Leader_VBlood", "CHAR_ChurchOfLight_Sommelier_VBlood", "CHAR_Militia_BishopOfDunley_VBlood", "CHAR_Militia_Glassblower_VBlood", "CHAR_Militia_Guard_VBlood", "CHAR_Militia_HoundMaster_VBlood", "CHAR_Militia_Hound_VBlood", "CHAR_Militia_Longbowman_LightArrow_Vblood", "CHAR_Militia_Nun_VBlood", "CHAR_Militia_Scribe_VBlood" ]
+        },
+        "waveList": [
+          { "units": [ { "pool": "troops", "count": 9 } ] },
+          { "units": [ { "pool": "troops", "count": 10 }, { "pool": "elite", "count": 4 } ], "afterSeconds": 75 },
+          { "units": [ { "pool": "troops", "count": 8 }, { "pool": "elite", "count": 6 } ], "afterSeconds": 75, "bosses": [ { "pool": "lords", "min": 1, "max": 1 } ] },
+          { "units": [ { "pool": "troops", "count": 10 }, { "pool": "elite", "count": 6 } ], "afterSeconds": 75 },
+          { "units": [ { "pool": "troops", "count": 10 }, { "pool": "elite", "count": 6 } ], "afterSeconds": 75, "bosses": [ { "pool": "lords", "min": 1, "max": 2 } ] }
+        ],
+        "radius": 12,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "pursuit": { "afterSeconds": 60 }
+      },
+      "announce": { "start": [ "All of Dunley's militia takes the field: {event}." ], "end": [ "The militia is routed. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "silverlight-onslaught",
+      "name": "Silverlight onslaught",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "pools": {
+          "troops": [ "CHAR_ChurchOfLight_Archer", "CHAR_ChurchOfLight_Footman", "CHAR_ChurchOfLight_Rifleman", "CHAR_ChurchOfLight_SlaveMaster_Enforcer", "CHAR_ChurchOfLight_SlaveMaster_Sentry", "CHAR_ChurchOfLight_Cleric" ],
+          "elite": [ "CHAR_ChurchOfLight_Knight_2H", "CHAR_ChurchOfLight_Knight_Shield", "CHAR_ChurchOfLight_Lightweaver", "CHAR_ChurchOfLight_Paladin", "CHAR_ChurchOfLight_Priest", "CHAR_ChurchOfLight_CardinalAide" ],
+          "lords": [ "CHAR_ChurchOfLight_Paladin_VBlood", "CHAR_ChurchOfLight_Overseer_VBlood", "CHAR_ChurchOfLight_Cardinal_VBlood", "CHAR_Militia_Fabian_VBlood", "CHAR_Villager_Tailor_VBlood" ]
+        },
+        "waveList": [
+          { "units": [ { "pool": "troops", "count": 10 } ] },
+          { "units": [ { "pool": "troops", "count": 10 }, { "pool": "elite", "count": 4 } ], "afterSeconds": 75 },
+          { "units": [ { "pool": "troops", "count": 8 }, { "pool": "elite", "count": 6 } ], "afterSeconds": 75, "bosses": [ { "pool": "lords", "min": 1, "max": 1 } ] },
+          { "units": [ { "pool": "troops", "count": 10 }, { "pool": "elite", "count": 6 } ], "afterSeconds": 75 },
+          { "units": [ { "pool": "troops", "count": 9 }, { "pool": "elite", "count": 6 } ], "afterSeconds": 75, "bosses": [ { "pool": "lords", "min": 1, "max": 2 } ] }
+        ],
+        "radius": 12,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "pursuit": { "afterSeconds": 60 }
+      },
+      "announce": { "start": [ "The full host of Silverlight descends: {event}." ], "end": [ "The host of Silverlight retreats. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "legion-onslaught",
+      "name": "Legion onslaught",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "pools": {
+          "troops": [ "CHAR_Legion_Guardian_DraculaMinion_Lesser", "CHAR_Legion_Shadowkin_Lesser", "CHAR_Legion_BloodProphet_Lesser", "CHAR_Legion_DreadHorn_Lesser", "CHAR_Legion_NightMaiden_Lesser", "CHAR_Legion_Nightmare_Lesser", "CHAR_Legion_Vargulf_Lesser", "CHAR_Legion_Assassin", "CHAR_Legion_Gargoyle_Styx" ],
+          "elite": [ "CHAR_Legion_Guardian_DraculaMinion", "CHAR_Legion_Nightmare", "CHAR_Legion_Shadowkin", "CHAR_Vampire_CrimsonIronMaiden", "CHAR_Legion_BloodProphet", "CHAR_Legion_Dreadhorn", "CHAR_Legion_NightMaiden", "CHAR_Legion_Vargulf", "CHAR_Legion_Gargoyle" ],
+          "lords": [ "CHAR_Vampire_BloodKnight_VBlood", "CHAR_BatVampire_VBlood", "CHAR_Vampire_HighLord_VBlood", "CHAR_Vampire_IceRanger_VBlood" ]
+        },
+        "waveList": [
+          { "units": [ { "pool": "troops", "count": 9 } ] },
+          { "units": [ { "pool": "troops", "count": 7 }, { "pool": "elite", "count": 5 } ], "afterSeconds": 75, "bosses": [ { "pool": "lords", "min": 1, "max": 1 } ] },
+          { "units": [ { "pool": "troops", "count": 7 }, { "pool": "elite", "count": 5 } ], "afterSeconds": 75 },
+          { "units": [ { "pool": "troops", "count": 7 }, { "pool": "elite", "count": 5 } ], "afterSeconds": 75, "bosses": [ { "pool": "lords", "min": 1, "max": 2 } ] }
+        ],
+        "radius": 12,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "pursuit": { "afterSeconds": 60 }
+      },
+      "announce": { "start": [ "The Legion pours out of the dark: {event}." ], "end": [ "The Legion recedes. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "gloomrot-onslaught",
+      "name": "Gloomrot onslaught",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "pools": {
+          "troops": [ "CHAR_Gloomrot_Pyro", "CHAR_Gloomrot_Batoon", "CHAR_Gloomrot_Railgunner", "CHAR_Gloomrot_Tazer", "CHAR_Gloomrot_Technician", "CHAR_Gloomrot_TractorBeamer" ],
+          "elite": [ "CHAR_Gloomrot_SentryOfficer", "CHAR_Gloomrot_SpiderTank_Driller", "CHAR_Gloomrot_AceIncinerator", "CHAR_Gloomrot_SpiderTank_LightningRod", "CHAR_Gloomrot_SpiderTank_Gattler", "CHAR_Gloomrot_SpiderTank_Zapper" ],
+          "lords": [ "CHAR_Gloomrot_Voltage_VBlood", "CHAR_Gloomrot_Iva_VBlood", "CHAR_Gloomrot_Purifier_VBlood", "CHAR_Gloomrot_RailgunSergeant_VBlood", "CHAR_Gloomrot_TheProfessor_VBlood" ]
+        },
+        "waveList": [
+          { "units": [ { "pool": "troops", "count": 9 } ] },
+          { "units": [ { "pool": "troops", "count": 7 }, { "pool": "elite", "count": 5 } ], "afterSeconds": 75, "bosses": [ { "pool": "lords", "min": 1, "max": 1 } ] },
+          { "units": [ { "pool": "troops", "count": 8 }, { "pool": "elite", "count": 6 } ], "afterSeconds": 75 },
+          { "units": [ { "pool": "troops", "count": 10 }, { "pool": "elite", "count": 6 } ], "afterSeconds": 75, "bosses": [ { "pool": "lords", "min": 1, "max": 2 } ] }
+        ],
+        "radius": 12,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "pursuit": { "afterSeconds": 60 }
+      },
+      "announce": { "start": [ "Gloomrot empties its workshops against you: {event}." ], "end": [ "The last machine falls silent. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "cursed-onslaught",
+      "name": "Cursed onslaught",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 1800,
+      "action": {
+        "type": "SpawnWaves",
+        "pools": {
+          "troops": [ "CHAR_Scarecrow", "CHAR_Cursed_ToadSpitter", "CHAR_Cursed_Bear_Standard", "CHAR_Cursed_MonsterToad", "CHAR_Cursed_Nightlurker" ],
+          "elite": [ "CHAR_Cursed_Wolf", "CHAR_Cursed_WormTerror", "CHAR_Cursed_Witch", "CHAR_Cursed_Bear_Spirit", "CHAR_Cursed_Wolf_Spirit" ],
+          "lords": [ "CHAR_Cursed_Witch_VBlood", "CHAR_Cursed_MountainBeast_VBlood", "CHAR_Cursed_ToadKing_VBlood", "CHAR_Undead_CursedSmith_VBlood", "CHAR_Villager_CursedWanderer_VBlood", "CHAR_Winter_Yeti_VBlood" ]
+        },
+        "waveList": [
+          { "units": [ { "pool": "troops", "count": 10 } ] },
+          { "units": [ { "pool": "troops", "count": 7 }, { "pool": "elite", "count": 5 } ], "afterSeconds": 75, "bosses": [ { "pool": "lords", "min": 1, "max": 1 } ] },
+          { "units": [ { "pool": "troops", "count": 8 }, { "pool": "elite", "count": 6 } ], "afterSeconds": 75 },
+          { "units": [ { "pool": "troops", "count": 8 }, { "pool": "elite", "count": 6 } ], "afterSeconds": 75, "bosses": [ { "pool": "lords", "min": 1, "max": 2 } ] }
+        ],
+        "radius": 12,
+        "location": { "type": "Admin" },
+        "arena": { "radius": 40 },
+        "behaviour": { "type": "Hunt", "range": 40 },
+        "scoreboard": true,
+        "winner": "KillDeath",
+        "pursuit": { "afterSeconds": 60 }
+      },
+      "announce": { "start": [ "Everything in the Cursed Forest wakes at once: {event}." ], "end": [ "The curse sleeps again. {event} is over." ], "warnings": false }
+    }
+  ]
+}

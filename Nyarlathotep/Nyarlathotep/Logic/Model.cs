@@ -164,12 +164,19 @@ public sealed record SpawnWavesAction(
     bool RegionLock = false,
     IReadOnlyList<BossRoll>? Bosses = null,
     IReadOnlyDictionary<string, IReadOnlyList<string>>? Pools = null,
-    Pursuit? Pursuit = null)
+    Pursuit? Pursuit = null,
+    Destination? Destination = null,
+    double MarchSpeed = DestinationLimits.DefaultMarchSpeed)
 {
     /// <summary>The units of wave <paramref name="wave"/> (1-based): its waveList entry's, or <see cref="Units"/> for
     /// every wave of the units form.</summary>
     public IReadOnlyList<UnitEntry> UnitsOf(int wave) => WaveList is { } list ? list[Math.Clamp(wave, 1, list.Count) - 1].Units : Units;
 }
+
+/// <summary>Where a destination event's waves march (undead-hordes D5): from the action's location at MarchSpeed m/s to
+/// <see cref="Location"/> (Point, or Admin: the starting admin's position); within <see cref="Radius"/> m of it a wave takes
+/// the action's behaviour. <see cref="Name"/> is shown to players.</summary>
+public sealed record Destination(Location Location, int Radius, string Name);
 
 /// <summary>A SpawnWaves run's pursuit (wave-variety D7, D8): once no eligible player has stood in its area for
 /// <see cref="AfterSeconds"/> (15-600) in a row, its units go after players anywhere. The rule is Logic/Pursuit.cs.</summary>
@@ -201,9 +208,15 @@ public sealed record EmpowerAction(
 public sealed record ApocalypseHotspots(int Count, int MinNatives, int MinSpacing);
 
 /// <summary>An apocalypse's roamers (apocalypse D3, D4): <see cref="PerHotspot"/> topped up at each hotspot,
-/// <see cref="PerKill"/> spread on each qualifying kill, at most <see cref="Max"/> alive and <see cref="PerMinute"/> spread
-/// in any 60 s. <see cref="HuntRange"/> is the Hunt behaviour's range once the mover has seeded aggro (Review 5 F2).</summary>
-public sealed record ApocalypseRoamers(int PerHotspot, int PerKill, int Max, int PerMinute, int HuntRange);
+/// <see cref="PerKill"/>..<see cref="PerKillMax"/> spread on each qualifying kill, at most <see cref="Max"/> alive and
+/// <see cref="PerMinute"/> spread in any 60 s. <see cref="HuntRange"/> is the Hunt behaviour's range once the mover has
+/// seeded aggro (Review 5 F2). A 0.13.x `perKill: n` is n..n; `perKillMin`/`perKillMax` and <see cref="Pool"/> are
+/// undead-hordes D7: the spread draws from that pool, else from the units as before.</summary>
+public sealed record ApocalypseRoamers(int PerHotspot, int PerKill, int Max, int PerMinute, int HuntRange, int? KillMax = null, string? Pool = null)
+{
+    public int PerKillMin => PerKill;
+    public int PerKillMax => KillMax ?? PerKill;
+}
 
 /// <summary>An apocalypse's hordes (apocalypse D5): <see cref="Count"/> hordes, the first <see cref="FirstAfterMinutes"/>
 /// after the start and one every <see cref="EveryMinutes"/> after it, horde k holding <see cref="Size"/> + (k − 1) ×
@@ -229,7 +242,8 @@ public sealed record ApocalypseAction(
     double MarchSpeed,
     Scope Scope = default,
     bool Scoreboard = true,
-    IReadOnlyList<UnitEntry>? Bosses = null);
+    IReadOnlyList<UnitEntry>? Bosses = null,
+    IReadOnlyDictionary<string, IReadOnlyList<string>>? Pools = null);
 
 public sealed record Announce(IReadOnlyList<string> Start, IReadOnlyList<string> End, bool Warnings)
 {

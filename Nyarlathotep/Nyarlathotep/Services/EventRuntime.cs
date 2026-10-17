@@ -166,7 +166,10 @@ internal static class EventRuntime
         }
         Announcer.EventStarted(active.Instance);
         if (RevengeRule.StartPrivate(active) is { } start) TriggerBus.Tell(start.Player, start.Line);   // revenge D7
-        return AdminLines.Started(id);
+        var ledger = SpawnTracker.Ledger;                                                              // undead-hordes D12
+        // the reply's forecast only: the cut itself is logged and kept for `event info` when the wave or horde is cut
+        var cut = Precedence.StartCut(active.Definition, ledger.Limits.MaxPerWave, ledger.Occupied, ledger.Limits.MaxTracked);
+        return AdminLines.Started(id, actor == Actor.Admin ? cut : null);
     }
 
     /// <summary>`.nyar event stop`: ends the event now and queues its units for despawn.</summary>

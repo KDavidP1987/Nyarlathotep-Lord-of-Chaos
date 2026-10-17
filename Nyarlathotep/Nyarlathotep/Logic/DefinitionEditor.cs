@@ -55,7 +55,7 @@ public sealed class DefinitionEditor(EventsFile file, IFileStore files, EventCat
     public Outcome Edit(string id, string path, object value, IUnitCatalog units)
     {
         // one field name for every location form (A50; hunting-grounds D14); an Apocalypse goal keeps its own (apocalypse D16)
-        if (value is PointArg or AroundPlayerArg or RegionArg && path != CommandArgs.GoalField) path = "action.location";
+        if (value is PointArg or AroundPlayerArg or RegionArg && path is not (CommandArgs.GoalField or CommandArgs.DestinationField)) path = "action.location";
         var shown = value switch
         {
             string[] list => string.Join(",", list),

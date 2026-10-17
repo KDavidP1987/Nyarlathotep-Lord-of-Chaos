@@ -37,7 +37,8 @@ public static partial class AdminLines
     public static readonly Outcome PositionUnread = Outcome.Refused(NoPosition, RefusalCode.BadArg, "location", reason: Reasons.NoPosition);
 
     /// <summary>"event &lt;id&gt; started" (D29).</summary>
-    public static Outcome Started(string id) => Outcome.Done($"event {id} started");
+    public static Outcome Started(string id, CapCut? cut = null) =>
+        Outcome.Done(cut is null ? $"event {id} started" : $"event {id} started; {cut.InfoLine}");     // undead-hordes D12
 
     /// <summary>"event &lt;id&gt; stopped".</summary>
     public static Outcome Stopped(string id) => Outcome.Done($"event {id} stopped");

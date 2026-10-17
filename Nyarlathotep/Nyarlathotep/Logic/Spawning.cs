@@ -1147,7 +1147,11 @@ public enum WaveOutcome { NoWave, Skip, ZeroRolled, Spawn }
 
 /// <summary>One wave's decision and its log line (event-spawns D29); <see cref="Units"/> are the entries to spawn after
 /// the caps.</summary>
-public sealed record WaveDecision(WaveOutcome Outcome, string? Line, IReadOnlyList<UnitEntry> Units, IReadOnlyList<string> CapLines);
+public sealed record WaveDecision(WaveOutcome Outcome, string? Line, IReadOnlyList<UnitEntry> Units, IReadOnlyList<string> CapLines)
+{
+    /// <summary>The wave's cut by a cfg cap (undead-hordes D12), from the same clamp as <see cref="CapLines"/>; null when uncut.</summary>
+    public CapCut? Cut { get; init; }
+}
 
 /// <summary>What a wave's gate needs to know about the wave (event-spawns D29, A27): <see cref="MapFailed"/> says the
 /// territory map could not be built, and the location type and behaviour say whether the wave needs it.</summary>
@@ -1194,7 +1198,7 @@ public static class WaveGate
         if (rolled.Count == 0) return new(WaveOutcome.ZeroRolled, WaveLines.ZeroRolled(f.Wave, f.EventId), [], []);
         var caps = new List<string>();
         var units = WavePlan.Split(WaveRoll.GroupPicks(rolled), maxPerWave, occupied, maxTracked, caps);
-        return new(WaveOutcome.Spawn, null, units, caps);
+        return new(WaveOutcome.Spawn, null, units, caps) { Cut = Precedence.Cut(rolled.Count, maxPerWave, occupied, maxTracked) };
     }
 
     /// <summary>A fanned-out wave (automation D6, S-4): the wave rules of <see cref="Decide"/> in the same order, then per
@@ -1218,7 +1222,7 @@ public static class WaveGate
             var centre = centres.Count > 0 ? centres[0] : default;
             var one = DecideEntries(facts with { CentreClaimed = centres.Count > 0 && centre.Claimed }, roll, maxPerWave, occupied, maxTracked);
             IReadOnlyList<WaveGroup> groups = one.Outcome == WaveOutcome.Spawn ? [new WaveGroup(0, (centre.X, centre.Y, centre.Z), one.Units)] : [];
-            return new(one.Outcome, one.Line, groups, one.CapLines);
+            return new(one.Outcome, one.Line, groups, one.CapLines) { Cut = one.Cut };
         }
 
         var rolled = new List<(int Index, List<UnitEntry> Units)>();
@@ -1240,7 +1244,9 @@ public static class WaveGate
                 : new(WaveOutcome.Skip, firstReason, [], []);
 
         var caps = new List<string>();
-        var allowed = Precedence.WaveSize(rolled.Sum(g => g.Units.Count), maxPerWave, occupied, maxTracked, caps);
+        var asked = rolled.Sum(g => g.Units.Count);
+        var cut = Precedence.Cut(asked, maxPerWave, occupied, maxTracked);
+        var allowed = Precedence.WaveSize(asked, maxPerWave, occupied, maxTracked, caps);
         var dealt = rolled.Select(_ => new List<UnitEntry>()).ToList();
         for (var round = 0; allowed > 0; round++)
         {
@@ -1258,8 +1264,8 @@ public static class WaveGate
             .Select(g => new WaveGroup(g.Index, (centres[g.Index].X, centres[g.Index].Y, centres[g.Index].Z), WaveRoll.GroupPicks(g.Units)))
             .ToList();
         return result.Count > 0
-            ? new(WaveOutcome.Spawn, null, result, caps)
-            : new(WaveOutcome.Skip, WaveLines.NoFreeSlot(facts.Wave, facts.EventId), [], caps);
+            ? new(WaveOutcome.Spawn, null, result, caps) { Cut = cut }
+            : new(WaveOutcome.Skip, WaveLines.NoFreeSlot(facts.Wave, facts.EventId), [], caps) { Cut = cut };
     }
 }
 
@@ -1270,7 +1276,11 @@ public readonly record struct GroupCentre(float X, float Y, float Z, bool Claime
 public sealed record WaveGroup(int Index, (float X, float Y, float Z) Centre, IReadOnlyList<UnitEntry> Units);
 
 /// <summary>A fanned-out wave's decision (automation D6): its outcome and line, the groups to spawn, the cap lines.</summary>
-public sealed record FanOutDecision(WaveOutcome Outcome, string? Line, IReadOnlyList<WaveGroup> Groups, IReadOnlyList<string> CapLines);
+public sealed record FanOutDecision(WaveOutcome Outcome, string? Line, IReadOnlyList<WaveGroup> Groups, IReadOnlyList<string> CapLines)
+{
+    /// <summary>The wave's cut by a cfg cap (undead-hordes D12), from the same clamp as <see cref="CapLines"/>; null when uncut.</summary>
+    public CapCut? Cut { get; init; }
+}
 
 /// <summary>The final wave (revenge D29; design §9 D51): the last of `waves`, the last generated growth wave, the last
 /// waveList entry, which the action-level `bosses` join. A wave's units and bosses (fixed and rolled, bosses first, so the

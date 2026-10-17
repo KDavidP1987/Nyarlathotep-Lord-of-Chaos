@@ -409,6 +409,9 @@ public static class UnitWatchLines
 /// </summary>
 public sealed class UnitWatchPhase
 {
+    /// <summary>The stall marks made since the phase began (ScaleTests, undead-hordes D18).</summary>
+    public long StallMarks { get; private set; }
+
     public const string ReadFailing = "unit watch: read failing";
     public const string MoveFailing = "unit watch: move failing";
 
@@ -729,6 +732,7 @@ public sealed class UnitWatchPhase
                          .OrderBy(r => r.GroundRead ?? DateTime.MinValue).ThenBy(r => r.Key).ToList())
                 Watch(row, _reads[row.Key].U);
 
+            _stallLeft = RoundRobin.PerPass;                                // undead-hordes D18: one budget for the tick
             foreach (var a in active) Stall(a, tracked);
         }
 
@@ -985,6 +989,8 @@ public sealed class UnitWatchPhase
 
         /// <summary>The stall backstop of one instance (D9): a watched wave with no death and no fight of its leftovers for
         /// StallMinutes marks every leftover not yet marked ("stall"); the clock restarts at a death, a fight and each firing.</summary>
+        int _stallLeft;
+
         void Stall(ActiveEvent a, List<TrackedUnit> tracked)
         {
             int? risen = null;
@@ -1018,9 +1024,15 @@ public sealed class UnitWatchPhase
                 var marking = leftovers
                     .Select(t => phase._rows.TryGetValue(t.Key, out var r) ? r : phase.NewRow(a, t, _reads.TryGetValue(t.Key, out var o) ? o.U : null, now))
                     .Where(r => r.Mark is null && !r.Removed).ToList();
-                Phases.Safe(info, UnitWatchLines.Stall(a.Id, k, s.StallMinutes, marking.Count));
-                foreach (var r in marking) phase.Mark(r, StuckReason.Stall, now, info);
-                clock.Since = now;
+                // undead-hordes D18: at most RoundRobin.PerPass marks a tick over every wave of every event; the clock
+                // holds until the rest are marked on the next ticks
+                var turn = marking.Take(_stallLeft).ToList();
+                if (turn.Count == 0 && marking.Count > 0) continue;
+                _stallLeft -= turn.Count;
+                Phases.Safe(info, UnitWatchLines.Stall(a.Id, k, s.StallMinutes, turn.Count));
+                foreach (var r in turn) phase.Mark(r, StuckReason.Stall, now, info);
+                phase.StallMarks += turn.Count;
+                if (turn.Count == marking.Count) clock.Since = now;
             }
         }
     }

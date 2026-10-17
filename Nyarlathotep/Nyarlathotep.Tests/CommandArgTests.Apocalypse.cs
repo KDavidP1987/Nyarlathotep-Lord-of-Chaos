@@ -44,9 +44,9 @@ public partial class CommandArgTests
     [InlineData("action.hordes.everyMinutes", "4", EventValidator.EveryMinutesRule)]
     [InlineData("action.hordes.everyMinutes", "1441", EventValidator.EveryMinutesRule)]
     [InlineData("action.hordes.size", "4", EventValidator.HordeSizeRule)]
-    [InlineData("action.hordes.size", "51", EventValidator.HordeSizeRule)]
+    [InlineData("action.hordes.size", "501", EventValidator.HordeSizeRule)]
     [InlineData("action.roamers.max", "0", EventValidator.RoamersMaxRule)]
-    [InlineData("action.roamers.max", "101", EventValidator.RoamersMaxRule)]
+    [InlineData("action.roamers.max", "501", EventValidator.RoamersMaxRule)]
     [InlineData("action.marchSpeed", "0.4", EventValidator.MarchSpeedRule)]
     [InlineData("action.marchSpeed", "5.01", EventValidator.MarchSpeedRule)]
     [InlineData("action.marchSpeed", "fast", EventValidator.MarchSpeedRule)]
@@ -120,7 +120,7 @@ public partial class CommandArgTests
         var lib = ApoLib();
         foreach (var (field, value) in new[] { ("action.goal.radius", "50"), ("action.hordes.size", "10"), ("action.marchSpeed", "1.0"), ("action.roamers.max", "5") })
         {
-            ApoRefused(lib, "raid", field, value, $"{field} is not a SpawnWaves field");
+            ApoRefused(lib, "raid", field, value, field == "action.marchSpeed" ? EventValidator.MarchSpeedNeedsDestination : $"{field} is not a SpawnWaves field");
             ApoRefused(lib, "surge", field, value, $"{field} is not an Empower field");
         }
         ApoRefused(lib, "raid", "action.goal", "here", "action.goal is not a SpawnWaves field");

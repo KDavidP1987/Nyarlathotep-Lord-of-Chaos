@@ -1,0 +1,524 @@
+== apo startable=True reason=-
+info apo "Night of the dead" enabled pillar spawns trigger manual duration 3600s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: apocalypse of the Undead, march 2 m/s
+info hotspots: 2, at least 3 natives each, 200 m apart
+info roamers: 3 per hotspot, +2 per kill, max 12, 4 spread per minute, hunt range 40
+info hordes: 3, first after 1 min, every 5 min, size 8 +4 each
+info goal: Brighthaven, radius 20, at 500 0 height 12
+info units: CHAR_Undead_SkeletonSoldier_Base ×3, CHAR_Bandit_Thug ×1
+info scoreboard: on
+info trigger scope: Global
+info action scope: Global
+info not running
+roamers 3 2 12 4 40; hordes 3 1 5 8 4; march 2
+horde 1: CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Bandit_Thugx1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Bandit_Thugx1@0 log 
+horde 2: CHAR_Bandit_Thugx1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Bandit_Thugx1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Bandit_Thugx1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Bandit_Thugx1@0, CHAR_Undead_SkeletonSoldier_Basex1@0 log 
+horde 3: CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Bandit_Thugx1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Bandit_Thugx1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Bandit_Thugx1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Undead_SkeletonSoldier_Basex1@0, CHAR_Bandit_Thugx1@0 log 
+topup apocalypse apo roamers: +3 at hotspot 1
+topup apocalypse apo roamers: +3 at hotspot 2
+spread apocalypse apo spread: +2 (8/12, 2/4 this minute)
+spread apocalypse apo spread: +2 (10/12, 4/4 this minute)
+spread -
+spread -
+spread -
+spread -
+spread -
+spread apocalypse apo spread: +2 (12/12, 4/4 this minute)
+spread -
+spread -
+orders CHAR_Undead_SkeletonSoldier_Base@101, CHAR_Bandit_Thug@101, CHAR_Undead_SkeletonSoldier_Base@101, CHAR_Undead_SkeletonSoldier_Base@102, CHAR_Undead_SkeletonSoldier_Base@102, CHAR_Undead_SkeletonSoldier_Base@102, CHAR_Undead_SkeletonSoldier_Base@101, CHAR_Bandit_Thug@101, CHAR_Bandit_Thug@101, CHAR_Bandit_Thug@101, CHAR_Undead_SkeletonSoldier_Base@101, CHAR_Bandit_Thug@101
+== bandit-ambush startable=False reason=-
+info bandit-ambush "Bandit ambush" disabled pillar spawns trigger manual duration 600s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 3 waves every 60s, radius 10, at the admin, units 4 CHAR_Bandit_Thug, 2 CHAR_Bandit_Hunter
+info trigger scope: Global
+info action scope: Global
+info not running
+== bandit-reprisal startable=False reason=-
+info bandit-reprisal "Bandit reprisal" disabled pillar spawns trigger factionkills Bandits 20 in 300s duration 600s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 1 waves every 60s, radius 10, around a player 20-40 m, units 4 CHAR_Bandit_Thug, 2 CHAR_Bandit_Hunter
+info spawn: hunt 45 m
+info trigger scope: Global
+info action scope: Global
+info not running
+== bandit-revenge startable=False reason=-
+info bandit-revenge "Bandit revenge" disabled pillar spawns trigger revenge duration 900s
+info trigger: revenge Bandits heat 30 in 900 s, warn at 10,20, vblood +10, cooldown 30 min
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 3 waves, radius 8, around a player 20-40 m
+info wave 1: 4 units (CHAR_Bandit_Thug ×3, CHAR_Bandit_Hunter ×1), at start
+info wave 2: 6 units (CHAR_Bandit_Thug ×4 L+1, CHAR_Bandit_Hunter ×2 L+1), after 120 s or when cleared
+info wave 3: 8 units (CHAR_Bandit_Thug ×4 L+2, CHAR_Bandit_Hunter ×3 L+2, CHAR_Bandit_Deadeye ×1 L+2 hp×2), after 120 s or when cleared
+info scoreboard: on
+info spawn: hunt 45 m
+info trigger scope: Global
+info action scope: Global
+info not running
+== bandit-vengeance startable=False reason=-
+info bandit-vengeance "Bandit vengeance" disabled pillar empowerment trigger vbloodkilled CHAR_Bandit_Bomber_VBlood,CHAR_Bandit_Chaosarrow_VBlood,CHAR_Bandit_Fisherman_VBlood,CHAR_Bandit_Foreman_VBlood,CHAR_Bandit_Frostarrow_VBlood,CHAR_Bandit_Stalker_VBlood,CHAR_Bandit_StoneBreaker_VBlood,CHAR_Bandit_Tourok_VBlood duration 600s
+info conditions: minPlayers 0, cooldown 30 min, chance 100%, window none, mode any
+info action: empower Bandits: physicalPower x1.3, attackSpeed x1.3
+info trigger scope: Global
+info action scope: Global
+info not running
+== border-watch startable=False reason=-
+info border-watch "Border watch" disabled pillar spawns trigger regionentered cooldown 30 min duration 600s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 1 waves every 60s, radius 10, around a player 20-40 m, units 3 CHAR_Militia_Light, 2 CHAR_Militia_Crossbow
+info spawn: hunt 45 m
+info trigger scope: DunleyFarmlands
+info action scope: Global
+info not running
+== cursed-night startable=False reason=-
+info cursed-night "Cursed night" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 4 waves, radius 12, at the admin
+info wave 1: 7 units (CHAR_Cursed_Wolf ×4, CHAR_Cursed_ToadSpitter ×3), at start
+info wave 2: 8 units (CHAR_Cursed_ToadSpitter ×3, CHAR_Cursed_MonsterToad ×2, CHAR_Cursed_Nightlurker ×3), after 150 s or when cleared
+info wave 3: 9 units (CHAR_Cursed_Bear_Standard ×2, CHAR_Cursed_WormTerror ×2, CHAR_Cursed_Witch ×2, CHAR_Cursed_Wolf ×3), after 150 s or when cleared
+info wave 4: 9 units (CHAR_Cursed_Wolf_Spirit ×2, CHAR_Cursed_Bear_Spirit ×1, CHAR_Cursed_Witch ×3, CHAR_Cursed_Nightlurker ×3), after 150 s or when cleared
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info final wave adds: CHAR_Cursed_Witch_VBlood x1
+info trigger scope: Global
+info action scope: Global
+info not running
+== cursed-night-timed startable=False reason=-
+info cursed-night-timed "Cursed night (timed)" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 4 waves, radius 12, at the admin
+info wave 1: 7 units (CHAR_Cursed_Wolf ×4, CHAR_Cursed_ToadSpitter ×3), at start
+info wave 2: 8 units (CHAR_Cursed_ToadSpitter ×3, CHAR_Cursed_MonsterToad ×2, CHAR_Cursed_Nightlurker ×3), after 75 s
+info wave 3: 9 units (CHAR_Cursed_Bear_Standard ×2, CHAR_Cursed_WormTerror ×2, CHAR_Cursed_Witch ×2, CHAR_Cursed_Wolf ×3), after 75 s
+info wave 4: 9 units (CHAR_Cursed_Wolf_Spirit ×2, CHAR_Cursed_Bear_Spirit ×1, CHAR_Cursed_Witch ×3, CHAR_Cursed_Nightlurker ×3), after 75 s
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info final wave adds: CHAR_Cursed_Witch_VBlood x1
+info pursuit: after 60 s with no player within 40 m
+info trigger scope: Global
+info action scope: Global
+info not running
+== cursed-onslaught startable=False reason=-
+info cursed-onslaught "Cursed onslaught" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 4 waves, radius 12, at the admin
+info wave 1: 10 units (10 from troops), at start
+info wave 2: 12 units (7 from troops, 5 from elite), after 75 s
+info wave 3: 14 units (8 from troops, 6 from elite), after 75 s
+info wave 4: 14 units (8 from troops, 6 from elite), after 75 s
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info pools: troops (5 units): CHAR_Scarecrow, CHAR_Cursed_ToadSpitter, CHAR_Cursed_Bear_Standard, CHAR_Cursed_MonsterToad, CHAR_Cursed_Nightlurker
+info pools: elite (5 units): CHAR_Cursed_Wolf, CHAR_Cursed_WormTerror, CHAR_Cursed_Witch, CHAR_Cursed_Bear_Spirit, CHAR_Cursed_Wolf_Spirit
+info pools: lords (6 units): CHAR_Cursed_Witch_VBlood, CHAR_Cursed_MountainBeast_VBlood, CHAR_Cursed_ToadKing_VBlood, CHAR_Undead_CursedSmith_VBlood, CHAR_Villager_CursedWanderer_VBlood, CHAR_Winter_Yeti_VBlood
+info wave 2 adds: 1-1 bosses from lords
+info wave 4 adds: 1-2 bosses from lords
+info pursuit: after 60 s with no player within 40 m
+info trigger scope: Global
+info action scope: Global
+info not running
+== fixture-raid startable=True reason=-
+info fixture-raid "Bandit raid" enabled pillar spawns trigger manual duration 600s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 3 waves every 60s, radius 10, at -1200.5 -800, units 5 CHAR_Bandit_Thug
+info trigger scope: Global
+info action scope: Global
+info not running
+wave 1 lead 0: CHAR_Bandit_Thugx5 | CHAR_Bandit_Thugx1, CHAR_Bandit_Thugx1, CHAR_Bandit_Thugx1, CHAR_Bandit_Thugx1, CHAR_Bandit_Thugx1
+wave 2 lead 0: CHAR_Bandit_Thugx5 | CHAR_Bandit_Thugx1, CHAR_Bandit_Thugx1, CHAR_Bandit_Thugx1, CHAR_Bandit_Thugx1, CHAR_Bandit_Thugx1
+wave 3 lead 0: CHAR_Bandit_Thugx5 | CHAR_Bandit_Thugx1, CHAR_Bandit_Thugx1, CHAR_Bandit_Thugx1, CHAR_Bandit_Thugx1, CHAR_Bandit_Thugx1
+== gloomrot-assault startable=False reason=-
+info gloomrot-assault "Gloomrot assault" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 4 waves, radius 12, at the admin
+info wave 1: 6 units (CHAR_Gloomrot_Technician ×3, CHAR_Gloomrot_Tazer ×3), at start
+info wave 2: 8 units (CHAR_Gloomrot_Railgunner ×3, CHAR_Gloomrot_Pyro ×3, CHAR_Gloomrot_Batoon ×2), after 150 s or when cleared
+info wave 3: 9 units (CHAR_Gloomrot_SentryOfficer ×2, CHAR_Gloomrot_TractorBeamer ×2, CHAR_Gloomrot_Railgunner ×3, CHAR_Gloomrot_Pyro ×2), after 150 s or when cleared
+info wave 4: 11 units (CHAR_Gloomrot_SpiderTank_Driller ×2, CHAR_Gloomrot_Tazer ×3, CHAR_Gloomrot_Railgunner ×4, CHAR_Gloomrot_SentryOfficer ×2), after 150 s or when cleared
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info final wave adds: CHAR_Gloomrot_Voltage_VBlood x1
+info trigger scope: Global
+info action scope: Global
+info not running
+== gloomrot-assault-timed startable=False reason=-
+info gloomrot-assault-timed "Gloomrot assault (timed)" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 4 waves, radius 12, at the admin
+info wave 1: 6 units (CHAR_Gloomrot_Technician ×3, CHAR_Gloomrot_Tazer ×3), at start
+info wave 2: 8 units (CHAR_Gloomrot_Railgunner ×3, CHAR_Gloomrot_Pyro ×3, CHAR_Gloomrot_Batoon ×2), after 75 s
+info wave 3: 9 units (CHAR_Gloomrot_SentryOfficer ×2, CHAR_Gloomrot_TractorBeamer ×2, CHAR_Gloomrot_Railgunner ×3, CHAR_Gloomrot_Pyro ×2), after 75 s
+info wave 4: 11 units (CHAR_Gloomrot_SpiderTank_Driller ×2, CHAR_Gloomrot_Tazer ×3, CHAR_Gloomrot_Railgunner ×4, CHAR_Gloomrot_SentryOfficer ×2), after 75 s
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info final wave adds: CHAR_Gloomrot_Voltage_VBlood x1
+info pursuit: after 60 s with no player within 40 m
+info trigger scope: Global
+info action scope: Global
+info not running
+== gloomrot-onslaught startable=False reason=-
+info gloomrot-onslaught "Gloomrot onslaught" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 4 waves, radius 12, at the admin
+info wave 1: 9 units (9 from troops), at start
+info wave 2: 12 units (7 from troops, 5 from elite), after 75 s
+info wave 3: 14 units (8 from troops, 6 from elite), after 75 s
+info wave 4: 16 units (10 from troops, 6 from elite), after 75 s
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info pools: troops (6 units): CHAR_Gloomrot_Pyro, CHAR_Gloomrot_Batoon, CHAR_Gloomrot_Railgunner, CHAR_Gloomrot_Tazer, CHAR_Gloomrot_Technician, CHAR_Gloomrot_TractorBeamer
+info pools: elite (6 units): CHAR_Gloomrot_SentryOfficer, CHAR_Gloomrot_SpiderTank_Driller, CHAR_Gloomrot_AceIncinerator, CHAR_Gloomrot_SpiderTank_LightningRod, CHAR_Gloomrot_SpiderTank_Gattler, CHAR_Gloomrot_SpiderTank_Zapper
+info pools: lords (5 units): CHAR_Gloomrot_Voltage_VBlood, CHAR_Gloomrot_Iva_VBlood, CHAR_Gloomrot_Purifier_VBlood, CHAR_Gloomrot_RailgunSergeant_VBlood, CHAR_Gloomrot_TheProfessor_VBlood
+info wave 2 adds: 1-1 bosses from lords
+info wave 4 adds: 1-2 bosses from lords
+info pursuit: after 60 s with no player within 40 m
+info trigger scope: Global
+info action scope: Global
+info not running
+== graveyard-waves startable=False reason=-
+info graveyard-waves "Graveyard waves" disabled pillar spawns trigger manual duration 900s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 3 waves, radius 10, around a player 20-40 m
+info wave 1: 8 units (CHAR_Undead_SkeletonSoldier_Armored_Farbane ×6 L+1, CHAR_Undead_ArmoredSkeletonCrossbow_Farbane ×2 L+1), at start
+info wave 2: 9 units (CHAR_Undead_SkeletonSoldier_Armored_Farbane ×6 L+2 hp×1.2, CHAR_Undead_ArmoredSkeletonCrossbow_Farbane ×3 L+2 pw×1.2), after 120 s or when cleared
+info wave 3: 7 units (CHAR_Undead_SkeletonSoldier_Armored_Farbane ×6 L+3 hp×1.4 pw×1.2, CHAR_Undead_Guardian ×1 L30 hp×2 pw×1.3), when cleared
+info scoreboard: on
+info spawn: hunt 45 m
+info trigger scope: Global
+info action scope: Global
+info not running
+== graveyard-waves-timed startable=False reason=-
+info graveyard-waves-timed "Graveyard waves (timed)" disabled pillar spawns trigger manual duration 1200s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 3 waves, radius 10, at the admin
+info wave 1: 8 units (CHAR_Undead_SkeletonSoldier_Armored_Farbane ×6 L+1, CHAR_Undead_ArmoredSkeletonCrossbow_Farbane ×2 L+1), at start
+info wave 2: 9 units (CHAR_Undead_SkeletonSoldier_Armored_Farbane ×6 L+2 hp×1.2, CHAR_Undead_ArmoredSkeletonCrossbow_Farbane ×3 L+2 pw×1.2), after 75 s
+info wave 3: 7 units (CHAR_Undead_SkeletonSoldier_Armored_Farbane ×6 L+3 hp×1.4 pw×1.2, CHAR_Undead_Guardian ×1 L30 hp×2 pw×1.3), after 75 s
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info pursuit: after 60 s with no player within 40 m
+info trigger scope: Global
+info action scope: Global
+info not running
+== legion-incursion startable=False reason=-
+info legion-incursion "Legion incursion" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 4 waves, radius 12, at the admin
+info wave 1: 6 units (CHAR_Legion_Shadowkin ×4, CHAR_Legion_Assassin ×2), at start
+info wave 2: 8 units (CHAR_Legion_Shadowkin ×4, CHAR_Legion_Vargulf ×2, CHAR_Legion_BloodProphet ×2), after 180 s or when cleared
+info wave 3: 8 units (CHAR_Legion_NightMaiden ×3, CHAR_Legion_Dreadhorn ×2, CHAR_Legion_Assassin ×3), after 180 s or when cleared
+info wave 4: 8 units (CHAR_Legion_Gargoyle ×2, CHAR_Legion_Nightmare ×2, CHAR_Legion_BloodProphet ×3, CHAR_Legion_Guardian_DraculaMinion ×1), after 180 s or when cleared
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info final wave adds: CHAR_Vampire_BloodKnight_VBlood x1
+info trigger scope: Global
+info action scope: Global
+info not running
+== legion-incursion-timed startable=False reason=-
+info legion-incursion-timed "Legion incursion (timed)" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 4 waves, radius 12, at the admin
+info wave 1: 6 units (CHAR_Legion_Shadowkin ×4, CHAR_Legion_Assassin ×2), at start
+info wave 2: 8 units (CHAR_Legion_Shadowkin ×4, CHAR_Legion_Vargulf ×2, CHAR_Legion_BloodProphet ×2), after 75 s
+info wave 3: 8 units (CHAR_Legion_NightMaiden ×3, CHAR_Legion_Dreadhorn ×2, CHAR_Legion_Assassin ×3), after 75 s
+info wave 4: 8 units (CHAR_Legion_Gargoyle ×2, CHAR_Legion_Nightmare ×2, CHAR_Legion_BloodProphet ×3, CHAR_Legion_Guardian_DraculaMinion ×1), after 75 s
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info final wave adds: CHAR_Vampire_BloodKnight_VBlood x1
+info pursuit: after 60 s with no player within 40 m
+info trigger scope: Global
+info action scope: Global
+info not running
+== legion-onslaught startable=False reason=-
+info legion-onslaught "Legion onslaught" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 4 waves, radius 12, at the admin
+info wave 1: 9 units (9 from troops), at start
+info wave 2: 12 units (7 from troops, 5 from elite), after 75 s
+info wave 3: 12 units (7 from troops, 5 from elite), after 75 s
+info wave 4: 12 units (7 from troops, 5 from elite), after 75 s
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info pools: troops (9 units): CHAR_Legion_Guardian_DraculaMinion_Lesser, CHAR_Legion_Shadowkin_Lesser, CHAR_Legion_BloodProphet_Lesser, CHAR_Legion_DreadHorn_Lesser, CHAR_Legion_NightMaiden_Lesser, CHAR_Legion_Nightmare_Lesser, CHAR_Legion_Vargulf_Lesser, CHAR_Legion_Assassin, CHAR_Legion_Gargoyle_Styx
+info pools: elite (9 units): CHAR_Legion_Guardian_DraculaMinion, CHAR_Legion_Nightmare, CHAR_Legion_Shadowkin, CHAR_Vampire_CrimsonIronMaiden, CHAR_Legion_BloodProphet, CHAR_Legion_Dreadhorn, CHAR_Legion_NightMaiden, CHAR_Legion_Vargulf, CHAR_Legion_Gargoyle
+info pools: lords (4 units): CHAR_Vampire_BloodKnight_VBlood, CHAR_BatVampire_VBlood, CHAR_Vampire_HighLord_VBlood, CHAR_Vampire_IceRanger_VBlood
+info wave 2 adds: 1-1 bosses from lords
+info wave 4 adds: 1-2 bosses from lords
+info pursuit: after 60 s with no player within 40 m
+info trigger scope: Global
+info action scope: Global
+info not running
+== legion-weekend-surge startable=False reason=-
+info legion-weekend-surge "Legion weekend surge" disabled pillar empowerment trigger schedule Sat 20:00 duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: empower Legion: physicalPower x1.5, maxHealth x1.5
+info trigger scope: Global
+info action scope: Global
+info not running
+== militia-crackdown startable=False reason=-
+info militia-crackdown "Militia crackdown" disabled pillar empowerment trigger vbloodkilled 15 bosses duration 900s
+info bosses: CHAR_ChurchOfLight_Sommelier_VBlood,CHAR_Militia_BishopOfDunley_VBlood,CHAR_Militia_Glassblower_VBlood,CHAR_Militia_Guard_VBlood,CHAR_Militia_Hound_VBlood,CHAR_Militia_HoundMaster_VBlood,CHAR_Militia_Leader_VBlood,CHAR_Militia_Longbowman_LightArrow_Vblood,CHAR_Militia_Nun_VBlood,CHAR_Militia_Scribe_VBlood,CHAR_ChurchOfLight_Overseer_VBlood,CHAR_Militia_Fabian_VBlood,CHAR_Villager_Tailor_VBlood,CHAR_ChurchOfLight_Cardinal_VBlood,CHAR_ChurchOfLight_Paladin_VBlood
+info conditions: minPlayers 0, cooldown 30 min, chance 100%, window none, mode any
+info action: empower Militia, ChurchOfLum: maxHealth x1.3
+info trigger scope: Global
+info action scope: Global
+info not running
+== militia-muster startable=False reason=-
+info militia-muster "Militia muster" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 5 waves, radius 12, at the admin
+info wave 1: 6 units (CHAR_Militia_Light ×4, CHAR_Militia_Crossbow ×2), at start
+info wave 2: 9 units (CHAR_Militia_Light ×4, CHAR_Militia_Crossbow ×3, CHAR_Militia_Hound ×2), after 150 s or when cleared
+info wave 3: 9 units (CHAR_Militia_Guard ×4, CHAR_Militia_Longbowman ×3, CHAR_Militia_Torchbearer ×2), after 150 s or when cleared
+info wave 4: 11 units (CHAR_Militia_Heavy ×3, CHAR_Militia_Guard ×3, CHAR_Militia_Nun ×2, CHAR_Militia_Longbowman ×3), after 150 s or when cleared
+info wave 5: 11 units (CHAR_Militia_Heavy ×4, CHAR_Militia_Devoted ×3, CHAR_Militia_Bomber ×2, CHAR_Militia_Nun ×2), after 150 s or when cleared
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info final wave adds: CHAR_Militia_Leader_VBlood x1
+info trigger scope: Global
+info action scope: Global
+info not running
+== militia-muster-timed startable=False reason=-
+info militia-muster-timed "Militia muster (timed)" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 5 waves, radius 12, at the admin
+info wave 1: 6 units (CHAR_Militia_Light ×4, CHAR_Militia_Crossbow ×2), at start
+info wave 2: 9 units (CHAR_Militia_Light ×4, CHAR_Militia_Crossbow ×3, CHAR_Militia_Hound ×2), after 75 s
+info wave 3: 9 units (CHAR_Militia_Guard ×4, CHAR_Militia_Longbowman ×3, CHAR_Militia_Torchbearer ×2), after 75 s
+info wave 4: 11 units (CHAR_Militia_Heavy ×3, CHAR_Militia_Guard ×3, CHAR_Militia_Nun ×2, CHAR_Militia_Longbowman ×3), after 75 s
+info wave 5: 11 units (CHAR_Militia_Heavy ×4, CHAR_Militia_Devoted ×3, CHAR_Militia_Bomber ×2, CHAR_Militia_Nun ×2), after 75 s
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info final wave adds: CHAR_Militia_Leader_VBlood x1
+info pursuit: after 60 s with no player within 40 m
+info trigger scope: Global
+info action scope: Global
+info not running
+== militia-onslaught startable=False reason=-
+info militia-onslaught "Militia onslaught" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 5 waves, radius 12, at the admin
+info wave 1: 9 units (9 from troops), at start
+info wave 2: 14 units (10 from troops, 4 from elite), after 75 s
+info wave 3: 14 units (8 from troops, 6 from elite), after 75 s
+info wave 4: 16 units (10 from troops, 6 from elite), after 75 s
+info wave 5: 16 units (10 from troops, 6 from elite), after 75 s
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info pools: troops (7 units): CHAR_Militia_BellRinger, CHAR_Militia_Crossbow, CHAR_Militia_Hound, CHAR_Militia_Light, CHAR_Militia_Rider, CHAR_Militia_Torchbearer, CHAR_Militia_Guard
+info pools: elite (6 units): CHAR_Militia_Horseman, CHAR_Militia_Longbowman, CHAR_Militia_Nun, CHAR_Militia_Bomber, CHAR_Militia_Heavy, CHAR_Militia_Devoted
+info pools: lords (10 units): CHAR_Militia_Leader_VBlood, CHAR_ChurchOfLight_Sommelier_VBlood, CHAR_Militia_BishopOfDunley_VBlood, CHAR_Militia_Glassblower_VBlood, CHAR_Militia_Guard_VBlood, CHAR_Militia_HoundMaster_VBlood, CHAR_Militia_Hound_VBlood, CHAR_Militia_Longbowman_LightArrow_Vblood, CHAR_Militia_Nun_VBlood, CHAR_Militia_Scribe_VBlood
+info wave 3 adds: 1-1 bosses from lords
+info wave 5 adds: 1-2 bosses from lords
+info pursuit: after 60 s with no player within 40 m
+info trigger scope: Global
+info action scope: Global
+info not running
+== realm-gauntlet startable=False reason=-
+info realm-gauntlet "Realm gauntlet" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 5 waves, radius 12, at the admin
+info wave 1: 8 units (CHAR_Bandit_Thug ×4, CHAR_Bandit_Hunter ×2, CHAR_Bandit_Deadeye ×2), at start
+info wave 2: 8 units (CHAR_Undead_SkeletonSoldier_Armored_Farbane ×4, CHAR_Undead_ArmoredSkeletonCrossbow_Farbane ×3, CHAR_Undead_GhostBanshee ×1), when cleared
+info wave 3: 9 units (CHAR_Militia_Light ×4, CHAR_Militia_Crossbow ×3, CHAR_Militia_Hound ×2), when cleared
+info wave 4: 9 units (CHAR_Gloomrot_Railgunner ×3, CHAR_Gloomrot_Tazer ×3, CHAR_Gloomrot_Technician ×3), when cleared
+info wave 5: 8 units (CHAR_ChurchOfLight_Footman ×4, CHAR_ChurchOfLight_Archer ×3, CHAR_ChurchOfLight_Paladin ×1), when cleared
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info final wave adds: CHAR_ChurchOfLight_Overseer_VBlood x1
+info trigger scope: Global
+info action scope: Global
+info not running
+== roaming-hunters startable=False reason=-
+info roaming-hunters "Roaming hunters" disabled pillar spawns trigger interval 60-90 min duration 600s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 1 waves every 60s, radius 10, around a player 20-40 m, units 4 CHAR_Bandit_Thug, 2 CHAR_Bandit_Hunter
+info spawn: hunt 45 m; fanOut 3 players 150 m apart
+info trigger scope: Global
+info action scope: Global
+info not running
+== silverlight-crusade startable=False reason=-
+info silverlight-crusade "Silverlight crusade" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 5 waves, radius 12, at the admin
+info wave 1: 7 units (CHAR_ChurchOfLight_Footman ×4, CHAR_ChurchOfLight_Archer ×3), at start
+info wave 2: 9 units (CHAR_ChurchOfLight_Footman ×4, CHAR_ChurchOfLight_Rifleman ×3, CHAR_ChurchOfLight_Cleric ×2), after 150 s or when cleared
+info wave 3: 9 units (CHAR_ChurchOfLight_Knight_Shield ×3, CHAR_ChurchOfLight_Knight_2H ×2, CHAR_ChurchOfLight_Archer ×3, CHAR_ChurchOfLight_Priest ×1), after 150 s or when cleared
+info wave 4: 11 units (CHAR_ChurchOfLight_Paladin ×3, CHAR_ChurchOfLight_Knight_2H ×3, CHAR_ChurchOfLight_Lightweaver ×2, CHAR_ChurchOfLight_Rifleman ×3), after 150 s or when cleared
+info wave 5: 10 units (CHAR_ChurchOfLight_Paladin ×4, CHAR_ChurchOfLight_Knight_Shield ×3, CHAR_ChurchOfLight_Lightweaver ×2, CHAR_ChurchOfLight_CardinalAide ×1), after 150 s or when cleared
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info final wave adds: CHAR_ChurchOfLight_Paladin_VBlood x1
+info trigger scope: Global
+info action scope: Global
+info not running
+== silverlight-crusade-timed startable=False reason=-
+info silverlight-crusade-timed "Silverlight crusade (timed)" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 5 waves, radius 12, at the admin
+info wave 1: 7 units (CHAR_ChurchOfLight_Footman ×4, CHAR_ChurchOfLight_Archer ×3), at start
+info wave 2: 9 units (CHAR_ChurchOfLight_Footman ×4, CHAR_ChurchOfLight_Rifleman ×3, CHAR_ChurchOfLight_Cleric ×2), after 75 s
+info wave 3: 9 units (CHAR_ChurchOfLight_Knight_Shield ×3, CHAR_ChurchOfLight_Knight_2H ×2, CHAR_ChurchOfLight_Archer ×3, CHAR_ChurchOfLight_Priest ×1), after 75 s
+info wave 4: 11 units (CHAR_ChurchOfLight_Paladin ×3, CHAR_ChurchOfLight_Knight_2H ×3, CHAR_ChurchOfLight_Lightweaver ×2, CHAR_ChurchOfLight_Rifleman ×3), after 75 s
+info wave 5: 10 units (CHAR_ChurchOfLight_Paladin ×4, CHAR_ChurchOfLight_Knight_Shield ×3, CHAR_ChurchOfLight_Lightweaver ×2, CHAR_ChurchOfLight_CardinalAide ×1), after 75 s
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info final wave adds: CHAR_ChurchOfLight_Paladin_VBlood x1
+info pursuit: after 60 s with no player within 40 m
+info trigger scope: Global
+info action scope: Global
+info not running
+== silverlight-onslaught startable=False reason=-
+info silverlight-onslaught "Silverlight onslaught" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 5 waves, radius 12, at the admin
+info wave 1: 10 units (10 from troops), at start
+info wave 2: 14 units (10 from troops, 4 from elite), after 75 s
+info wave 3: 14 units (8 from troops, 6 from elite), after 75 s
+info wave 4: 16 units (10 from troops, 6 from elite), after 75 s
+info wave 5: 15 units (9 from troops, 6 from elite), after 75 s
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info pools: troops (6 units): CHAR_ChurchOfLight_Archer, CHAR_ChurchOfLight_Footman, CHAR_ChurchOfLight_Rifleman, CHAR_ChurchOfLight_SlaveMaster_Enforcer, CHAR_ChurchOfLight_SlaveMaster_Sentry, CHAR_ChurchOfLight_Cleric
+info pools: elite (6 units): CHAR_ChurchOfLight_Knight_2H, CHAR_ChurchOfLight_Knight_Shield, CHAR_ChurchOfLight_Lightweaver, CHAR_ChurchOfLight_Paladin, CHAR_ChurchOfLight_Priest, CHAR_ChurchOfLight_CardinalAide
+info pools: lords (5 units): CHAR_ChurchOfLight_Paladin_VBlood, CHAR_ChurchOfLight_Overseer_VBlood, CHAR_ChurchOfLight_Cardinal_VBlood, CHAR_Militia_Fabian_VBlood, CHAR_Villager_Tailor_VBlood
+info wave 3 adds: 1-1 bosses from lords
+info wave 5 adds: 1-2 bosses from lords
+info pursuit: after 60 s with no player within 40 m
+info trigger scope: Global
+info action scope: Global
+info not running
+== spider-hunting-grounds startable=False reason=-
+info spider-hunting-grounds "Spider hunting grounds" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 3 waves every 300s, radius 8, in the scope regions, units 2 CHAR_Spider_Forestling, 2 CHAR_Spider_Forest, 2 CHAR_Spider_Range
+info spawn: modifiers level 30; scoreboard on
+info location: anywhere in the scope regions
+info region lock: on
+info behaviour: hunts the nearest player in the regions, hidden jumps beyond 60 m
+info final wave adds: CHAR_Spider_Queen_VBlood x1
+info trigger scope: Global
+info action scope: DunleyFarmlands
+info not running
+== spider-onslaught startable=False reason=-
+info spider-onslaught "Spider onslaught" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 5 waves, radius 12, at the admin
+info wave 1: 9 units (9 from troops L30), at start
+info wave 2: 14 units (10 from troops L33, 4 from elite L33), after 75 s
+info wave 3: 18 units (11 from troops L36, 7 from elite L36), after 75 s
+info wave 4: 20 units (12 from troops L39, 8 from elite L39), after 75 s
+info wave 5: 20 units (12 from troops L42, 8 from elite L42), after 75 s
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info pools: troops (3 units): CHAR_Spider_Forestling, CHAR_Spider_Forest, CHAR_Spider_Spiderling
+info pools: elite (3 units): CHAR_Spider_Melee, CHAR_Spider_Range, CHAR_Spider_Broodmother
+info pools: lords (1 units): CHAR_Spider_Queen_VBlood
+info wave 3 adds: 1-1 bosses from lords
+info wave 5 adds: 1-1 bosses from lords
+info pursuit: after 60 s with no player within 40 m
+info trigger scope: Global
+info action scope: Global
+info not running
+== spider-swarm startable=False reason=-
+info spider-swarm "Spider swarm" disabled pillar spawns trigger manual duration 1200s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 5 waves, radius 12, at the admin
+info growth: +1 units per entry and +3 levels per wave, every 120s or when cleared
+info wave 1: 6 units (CHAR_Spider_Forest ×2 L30, CHAR_Spider_Melee ×2 L30, CHAR_Spider_Range ×2 L30), at start
+info wave 2: 9 units (CHAR_Spider_Forest ×3 L33, CHAR_Spider_Melee ×3 L33, CHAR_Spider_Range ×3 L33), after 120 s or when cleared
+info wave 3: 12 units (CHAR_Spider_Forest ×4 L36, CHAR_Spider_Melee ×4 L36, CHAR_Spider_Range ×4 L36), after 120 s or when cleared
+info wave 4: 15 units (CHAR_Spider_Forest ×5 L39, CHAR_Spider_Melee ×5 L39, CHAR_Spider_Range ×5 L39), after 120 s or when cleared
+info wave 5: 18 units (CHAR_Spider_Forest ×6 L42, CHAR_Spider_Melee ×6 L42, CHAR_Spider_Range ×6 L42), after 120 s or when cleared
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info final wave adds: CHAR_Spider_Queen_VBlood x1
+info trigger scope: Global
+info action scope: Global
+info not running
+== spider-swarm-timed startable=False reason=-
+info spider-swarm-timed "Spider swarm (timed)" disabled pillar spawns trigger manual duration 1200s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 5 waves, radius 12, at the admin
+info wave 1: 6 units (CHAR_Spider_Forest ×2 L30, CHAR_Spider_Melee ×2 L30, CHAR_Spider_Range ×2 L30), at start
+info wave 2: 9 units (CHAR_Spider_Forest ×3 L33, CHAR_Spider_Melee ×3 L33, CHAR_Spider_Range ×3 L33), after 75 s
+info wave 3: 12 units (CHAR_Spider_Forest ×4 L36, CHAR_Spider_Melee ×4 L36, CHAR_Spider_Range ×4 L36), after 75 s
+info wave 4: 15 units (CHAR_Spider_Forest ×5 L39, CHAR_Spider_Melee ×5 L39, CHAR_Spider_Range ×5 L39), after 75 s
+info wave 5: 18 units (CHAR_Spider_Forest ×6 L42, CHAR_Spider_Melee ×6 L42, CHAR_Spider_Range ×6 L42), after 75 s
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info final wave adds: CHAR_Spider_Queen_VBlood x1
+info pursuit: after 60 s with no player within 40 m
+info trigger scope: Global
+info action scope: Global
+info not running
+== undead-nightfall startable=False reason=-
+info undead-nightfall "Undead nightfall" disabled pillar empowerment trigger gametime night duration 1200s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: empower Undead: physicalPower x1.25, spellPower x1.25
+info trigger scope: Global
+info action scope: Global
+info not running
+== undead-onslaught startable=False reason=-
+info undead-onslaught "Undead onslaught" disabled pillar spawns trigger manual duration 1800s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 3 waves, radius 10, at the admin
+info wave 1: 12 units (12 from troops), at start
+info wave 2: 14 units (8 from troops, 6 from elite), after 75 s
+info wave 3: 10 units (6 from troops, 4 from elite), after 75 s
+info scoreboard: on, winner K/D
+info spawn: hunt 40 m
+info arena: 40 m around the starting admin
+info pools: troops (11 units): CHAR_Undead_ArmoredSkeletonCrossbow_Farbane, CHAR_Undead_SkeletonSoldier_Armored_Farbane, CHAR_Undead_SkeletonApprentice, CHAR_Undead_UndyingGhoul, CHAR_Undead_Priest, CHAR_Undead_FlyingSkull, CHAR_Undead_Assassin, CHAR_Undead_ArmoredSkeletonCrossbow_Dunley, CHAR_Undead_SkeletonGolem, CHAR_Undead_Ghoul_Armored_Farmlands, CHAR_Undead_SkeletonSoldier_Armored_Dunley
+info pools: elite (11 units): CHAR_Undead_SkeletonSoldier_Infiltrator, CHAR_Undead_Guardian, CHAR_Undead_SkeletonMage, CHAR_Undead_Necromancer, CHAR_Cultist_Pyromancer, CHAR_Cultist_Slicer, CHAR_Undead_GhostMilitia_Crossbow, CHAR_Undead_GhostMilitia_Light, CHAR_Undead_GhostAssassin, CHAR_Undead_GhostBanshee, CHAR_Undead_GhostGuardian
+info pools: lords (7 units): CHAR_Undead_BishopOfDeath_VBlood, CHAR_Undead_ArenaChampion_VBlood, CHAR_Undead_BishopOfShadows_VBlood, CHAR_Undead_Infiltrator_VBlood, CHAR_Undead_Leader_Vblood, CHAR_Undead_Priest_VBlood, CHAR_Undead_ZealousCultist_VBlood
+info wave 2 adds: 1-1 bosses from lords
+info wave 3 adds: 1-2 bosses from lords
+info pursuit: after 60 s with no player within 40 m
+info trigger scope: Global
+info action scope: Global
+info not running
+== undead-rising startable=False reason=-
+info undead-rising "Undead rising" disabled pillar spawns trigger manual duration 600s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: 2 waves every 90s, radius 12, at the admin, units 5 CHAR_Undead_SkeletonSoldier_Armored_Farbane, 2 CHAR_Undead_ArmoredSkeletonCrossbow_Farbane
+info spawn: modifiers levelDelta +2, maxHealth x1.2
+info trigger scope: Global
+info action scope: Global
+info not running
+== zombie-apocalypse startable=False reason=-
+info zombie-apocalypse "Zombie apocalypse" disabled pillar spawns trigger manual duration 14400s
+info conditions: minPlayers 0, cooldown 0 min, chance 100%, window none, mode any
+info action: apocalypse of the Undead, march 2 m/s
+info hotspots: 3, at least 5 natives each, 300 m apart
+info roamers: 4 per hotspot, +1 per kill, max 30, 6 spread per minute, hunt range 40
+info hordes: 4, first after 10 min, every 30 min, size 7 +4 each
+info goal: the living, radius 30, at the starting admin
+info units: CHAR_Undead_SkeletonSoldier_Armored_Farbane ×3 L22, CHAR_Undead_ArmoredSkeletonCrossbow_Farbane ×2 L24, CHAR_Undead_GhostMilitia_Light ×2 L28, CHAR_Undead_GhostBanshee ×1 L32, CHAR_Undead_Guardian ×1 L38 hp×2
+info last horde adds: CHAR_Undead_BishopOfDeath_VBlood x1
+info scoreboard: on
+info trigger scope: Global
+info action scope: Global
+info not running

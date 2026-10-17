@@ -50,8 +50,7 @@ public static class ControlCases
         // unit-watch: step 5 the release
         new(UnitWatch, "D30", 5, "0.13.0"), new(UnitWatch, "D31", 5, "0.13.0"), new(UnitWatch, "D32", 5, "0.13.0"), new(UnitWatch, "D33", 5, "0.13.0"),
         // login-notice: step 3 the release
-        // undead-hordes: D2-D4 later in step 1, steps 2-5
-        new(UndeadHordes, "D5", 2, "0.14.0"), new(UndeadHordes, "D6", 2, "0.14.0"), new(UndeadHordes, "D7", 2, "0.14.0"), new(UndeadHordes, "D12", 2, "0.14.0"), new(UndeadHordes, "D16", 2, "0.14.0"), new(UndeadHordes, "D18", 2, "0.14.0"), new(UndeadHordes, "D19", 2, "0.14.0"), new(UndeadHordes, "D21", 2, "0.14.0"),
+        // undead-hordes: steps 3-5
         new(UndeadHordes, "D8", 3, "0.14.0"), new(UndeadHordes, "D9", 3, "0.14.0"), new(UndeadHordes, "D10", 3, "0.14.0"), new(UndeadHordes, "D11", 3, "0.14.0"), new(UndeadHordes, "D13", 3, "0.14.0"), new(UndeadHordes, "D14", 3, "0.14.0"), new(UndeadHordes, "D15", 3, "0.14.0"), new(UndeadHordes, "D17", 3, "0.14.0"), new(UndeadHordes, "D20", 3, "0.14.0"), new(UndeadHordes, "D33", 3, "0.14.0"),
         new(UndeadHordes, "D23", 4, "0.14.0"), new(UndeadHordes, "D24", 4, "0.14.0"), new(UndeadHordes, "D25", 4, "0.14.0"), new(UndeadHordes, "D26", 4, "0.14.0"),
         new(UndeadHordes, "D28", 5, "0.14.0"), new(UndeadHordes, "D29", 5, "0.14.0"), new(UndeadHordes, "D30", 5, "0.14.0"), new(UndeadHordes, "D31", 5, "0.14.0"),
@@ -76,7 +75,7 @@ public static class ControlCases
         "HuntingGroundsTests", "HuntingGroundsDependencyFailureTests", "RevengeTests", "BossWaveTests", "RevengeDependencyFailureTests",
         "ApocalypseTests", "ApocalypseStateTests", "ApocalypseDependencyFailureTests", "UnitWatchTests",
         "UnitWatchDependencyFailureTests", "PoolTests", "PursuitTests", "FactionGroupsTests", "WaveVarietyDependencyFailureTests", "LoginNoticeTests",
-        "CeilingTests",
+        "CeilingTests", "DestinationTests", "SpreadTests", "CapNoticeTests", "LimitsTests", "ScaleTests", "CompatTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -1051,5 +1050,31 @@ public static class ControlCases
             ["the_code_matches_the_recorded_ladder"], ["a_feature_doc_without_a_ladder_line"]) with { Plan = UndeadHordes },
         T("D22", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit"],
             ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = UndeadHordes },
+        // ---- undead-hordes step 2 (D16, D18 and D19 gain the infestation's and the horde march's cases in step 3)
+        T("D5", "Schema", "DestinationTests",
+            ["a_refused_combination_is_accepted", "a_valid_destination_is_refused_or_a_start_is_wrong", "a_chat_field_writes_another_field"],
+            ["a_point_or_admin_destination_and_shows_the_march"], ["no_destination_no_march"]) with { Plan = UndeadHordes },
+        T("D6", "March", "DestinationTests",
+            ["a_front_moves_while_a_player_is_within_60_m", "arrival_does_not_switch_the_behaviour", "a_stall_leaves_the_wave_without_orders",
+             "a_stall_counts_ground_it_could_not_read"],
+            ["the_front_from_the_action_to_its_destination"], ["a_wave_without_a_destination_has_no_march"]) with { Plan = UndeadHordes },
+        T("D7", "Spread", "SpreadTests",
+            ["a_draw_leaves_min_max", "a_member_outside_the_pool_spawns", "the_max_the_minute_or_the_free_slots_are_passed", "a_0_13_perKill_reads_differently",
+             "a_draw_form_or_a_pool_is_wrong"],
+            ["a_range_from_a_pool_and_shows_it"], ["a_zero_draw_spreads_nothing"]) with { Plan = UndeadHordes },
+        T("D12", "Cap", "CapNoticeTests", ["a_cut_is_silent", "it_names_the_wrong_key_or_value", "a_cut_reaches_a_player"],
+            ["an_uncut_start_says_only_started"], ["no_cut_no_line"]) with { Plan = UndeadHordes },
+        T("D16", "Limits", "LimitsTests", ["a_range_differs_from_limits", "a_value_outside_is_accepted", "a_reason_lacks_the_field_or_range"],
+            ["the_raised_ranges_reach_the_cfg_ceilings"], ["no_new_keys_no_new_reasons"]) with { Plan = UndeadHordes },
+        T("D18", "Scale", "ScaleTests",
+            ["a_tick_visits_more_than_its_bound", "a_unit_waits_more_than_10_s_at_1000_units", "a_step_grows_faster_than_linearly",
+             "a_search_sits_inside_the_per_unit_loop", "a_stall_marks_more_than_its_bound_in_one_tick"],
+            ["a_list_under_the_bound_whole_each_pass"], ["no_units_no_visits"]) with { Plan = UndeadHordes },
+        T("D19", "UndeadHordes", "ContractDocTests", ["the_api_changes_a_push_kind_is_added_or_the_contract_lacks_the_sentence"],
+            ["api_8_and_the_sentence"], ["contract"]) with { Plan = UndeadHordes },
+        T("D19", "UndeadHordes", "PrivacyTests", ["a_name_id_or_position_reaches_a_line"],
+            ["a_stall_names_the_front_never_the_player", "destination_here_echoes_the_value_like_location_here"], ["no_destination_no_march_line"]) with { Plan = UndeadHordes },
+        T("D21", "Compat", "CompatTests", ["a_definition_validates_or_plans_differently"],
+            ["every_0_13_1_definition_plans_as_before"], ["no_definitions_give_an_empty_digest"]) with { Plan = UndeadHordes },
     ];
 }

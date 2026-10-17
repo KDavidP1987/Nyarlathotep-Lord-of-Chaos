@@ -75,10 +75,10 @@ public partial class ConfigClampTests
     {
         Assert.Equal(["Action", "Announce", "Apocalypse", "Conditions", "DisabledReason", "DurationSeconds", "Empower", "Enabled", "Id", "Name", "Pillar",
             "Startable", "Trigger"], Names(typeof(EventDefinition)));
-        Assert.Equal(["AllowTerritory", "Arena", "Behaviour", "Bosses", "FanOut", "Growth", "IntervalSeconds", "Location", "Loot", "Modifiers", "Pools",
+        Assert.Equal(["AllowTerritory", "Arena", "Behaviour", "Bosses", "Destination", "FanOut", "Growth", "IntervalSeconds", "Location", "Loot", "MarchSpeed", "Modifiers", "Pools",
             "Pursuit", "Radius", "RegionLock", "Scope", "Scoreboard", "UnitLifetimeSeconds", "Units", "WaveList", "Waves", "Winner"], Names(typeof(SpawnWavesAction)));
         Assert.Equal(["AfterSeconds", "Bosses", "Units", "WaitsForClear", "WhenCleared"], Names(typeof(WaveSpec)));     // wave-variety D3: Pools.Resolve
-        Assert.Equal(["Bosses", "Faction", "Goal", "Hordes", "Hotspots", "MarchSpeed", "Roamers", "Scope", "Scoreboard", "Units"], Names(typeof(ApocalypseAction)));
+        Assert.Equal(["Bosses", "Faction", "Goal", "Hordes", "Hotspots", "MarchSpeed", "Pools", "Roamers", "Scope", "Scoreboard", "Units"], Names(typeof(ApocalypseAction)));
         Assert.Equal(["Apocalypse", "DailyBanner", "Instances", "LastFired", "LastStart", "NextInterval", "PurgeUntilUtc", "SchemaVersion", "Units"],
             Names(typeof(StateDocument)));
     }

@@ -89,7 +89,7 @@ public static class EventsEditor
         if (path == CommandArgs.BossesField) return SetBosses(root, ev, actionType, value, out error);
         if (path == CommandArgs.PursuitField) return SetPursuit(root, ev, actionType, value, out error);          // wave-variety D10
         if (CommandArgs.PoolOf(path) is { } pool) return SetPool(root, ev, actionType, pool, value, out error);
-        if (CommandArgs.ApocalypseFields.Contains(path)) return SetApocalypse(root, ev, actionType, path, value, out error);
+        if (CommandArgs.ApocalypseFields.Contains(path) || CommandArgs.DestinationFields.Contains(path)) return SetApocalypse(root, ev, actionType, path, value, out error);
         if (CommandArgs.SwarmFields.Contains(path)) return SetSwarm(root, ev, actionType, path, value, out error);
         if (CommandArgs.SpawnKeyFields.Contains(CommandArgs.TableName(path)) || path is CommandArgs.FanOutField or CommandArgs.RegionLockField)
             return SetSpawnKey(root, ev, actionType, path, value, out error);
@@ -516,19 +516,38 @@ public static class EventsEditor
 
     /// <summary>An Apocalypse field (apocalypse D16), refused on any other action type: `action.goal` writes the admin's
     /// x, y and z as goal.location { "type": "Point", x, y, z }; the other fields write their key into goal, hordes or
-    /// roamers (created when missing) or the action. Whether the result fits the duration is
-    /// <see cref="SwarmConflicts"/>'s, as for every other kind.</summary>
+    /// roamers (created when missing) or the action. A destination field (undead-hordes D5) and `action.marchSpeed` fit a
+    /// SpawnWaves action the same way, `action.destination` writing destination.location. Whether the result fits the
+    /// duration is <see cref="SwarmConflicts"/>'s, as for every other kind.</summary>
     static string? SetApocalypse(JsonNode root, JsonObject ev, string? actionType, string path, object value, out Outcome? error)
     {
         error = null;
-        if (actionType != EventValidator.ApocalypseType || ev["action"] is not JsonObject action)
+        var fits = CommandArgs.DestinationFields.Contains(path) ? actionType == "SpawnWaves"
+            : actionType == EventValidator.ApocalypseType || (path == CommandArgs.MarchSpeedField && actionType == "SpawnWaves");
+        if (!fits || ev["action"] is not JsonObject action)
         {
             error = Invalid($"{path} is not {Article(actionType)} field", Reasons.Field);
             return null;
         }
+        if (actionType == "SpawnWaves" && path == CommandArgs.MarchSpeedField && action["destination"] is null)
+        {
+            error = Invalid(EventValidator.MarchSpeedNeedsDestination, Reasons.Field);      // undead-hordes D5: set the destination first
+            return null;
+        }
+        if (path == CommandArgs.DestinationField && value is FieldRemoval)
+        {
+            action.Remove("destination");                                               // and the march speed it carried
+            action.Remove("marchSpeed");
+            return root.ToJsonString(Write) + Environment.NewLine;
+        }
+        if (path != CommandArgs.DestinationField && CommandArgs.DestinationFields.Contains(path) && action["destination"] is null)
+        {
+            error = Invalid(EventValidator.NeedsDestination(path), Reasons.Field);
+            return null;
+        }
         var node = ToNode(value);
         if (node is null) { error = Invalid($"{path} has an unsupported value", Reasons.Value); return null; }
-        var parts = (path == CommandArgs.GoalField ? "action.goal.location" : path).Split('.')[1..];
+        var parts = (path is CommandArgs.GoalField or CommandArgs.DestinationField ? path + ".location" : path).Split('.')[1..];
         var target = action;
         for (var i = 0; i < parts.Length - 1; i++)
         {
@@ -600,6 +619,14 @@ public static class EventsEditor
             if (TypeOf(action["behaviour"]) != nameof(BehaviourType.Hunt)) yield return EventValidator.PursuitHunt;
             if (action["fanOut"] is not null) yield return EventValidator.PursuitFanOut;
             if (locked) yield return EventValidator.PursuitRegionLock;
+        }
+        if (action["destination"] is not null)                                                     // undead-hordes D5
+        {
+            if (locationType is not ("Point" or "Admin")) yield return EventValidator.DestinationStart;
+            if (action["fanOut"] is not null) yield return EventValidator.DestinationTakesNo("fanOut");
+            if (locked) yield return EventValidator.DestinationTakesNo("regionLock");
+            if (action["arena"] is not null) yield return EventValidator.DestinationTakesNo("arena");
+            if (action["pursuit"] is not null) yield return EventValidator.DestinationTakesNo("pursuit");
         }
         if (action["waveList"] is JsonArray { Count: > 0 } waveList)                                 // wave-variety D3
         {
@@ -835,6 +862,7 @@ public static class EventLines
             lines.AddRange(HuntingGroundsLines(a));
             if (BossesLine(a) is { } bosses) lines.Add(bosses);
             lines.AddRange(WaveVarietyLines(a));                                                        // wave-variety D6
+            if (MarchLine(a) is { } march) lines.Add(march);                                            // undead-hordes D5
         }
         if (d.Apocalypse is { } apo) lines.AddRange(ApocalypseLines(apo));
         lines.Add($"trigger scope: {d.Trigger.Scope}");                 // regions D9
@@ -845,6 +873,7 @@ public static class EventLines
               (d.Apocalypse is { } running ? $", horde {apocalypse?.Risen ?? 0}/{running.Hordes.Count}"
               : d.Empower is null ? $", wave {active.WavesSpawned}/{d.Action?.Waves ?? 0}" : ""));
         if (active is not null && apocalypse is not null) lines.AddRange(ApocalypseRunLines(apocalypse));
+        if (active?.LastCut is { } cut) lines.Add(cut.InfoLine);                                     // undead-hordes D12
         if (active is not null && watch is not null) lines.Add(watch);
         if (d.Trigger.Type == TriggerType.Interval && d.Enabled && NextStartLine(active is not null, nextInterval, utcNow) is { } next) lines.Add(next);
         return lines;
@@ -868,13 +897,33 @@ public static class EventLines
     /// "pursuit: after &lt;s&gt; s with no player within &lt;r&gt; m".</summary>
     public static IEnumerable<string> WaveVarietyLines(SpawnWavesAction a)
     {
-        foreach (var (name, members) in a.Pools ?? new Dictionary<string, IReadOnlyList<string>>())
-            foreach (var line in PackList($"pools: {name} ({members.Count} units): ", members)) yield return line;
+        foreach (var line in PoolLines(a.Pools)) yield return line;
         for (var n = 1; n <= (a.WaveList?.Count ?? 0); n++)
             if (a.WaveList![n - 1].Bosses is { Count: > 0 } own)
                 foreach (var line in PackList($"wave {n} adds: ", own.Select(BossText).ToList())) yield return line;
         if (a.Pursuit is { } p) yield return $"pursuit: after {p.AfterSeconds} s with no player within {Pursuit.Radius(a)} m";
     }
+
+    /// <summary>"march: from &lt;start&gt; to &lt;name&gt; (&lt;x&gt;, &lt;z&gt;) at &lt;speed&gt; m/s" for a destination event
+    /// (undead-hordes D5), an Admin start or destination shown as "the starting admin"; null without a destination.</summary>
+    public static string? MarchLine(SpawnWavesAction a)
+    {
+        if (a.Destination is not { } d) return null;
+        static string At(Location l) => l.Type == LocationType.Admin ? "the starting admin" : FormattableString.Invariant($"{l.X:0.#}, {l.Z:0.#}");
+        return FormattableString.Invariant($"march: from {(a.Location.Type == LocationType.Admin ? "the starting admin" : $"({At(a.Location)})")} to {d.Name} ({At(d.Location)}) at {a.MarchSpeed:0.##} m/s");
+    }
+
+    /// <summary>"pools: &lt;name&gt; (&lt;k&gt; units): &lt;prefab&gt;, …" per pool, a long pool wrapping onto further lines.</summary>
+    static IEnumerable<string> PoolLines(IReadOnlyDictionary<string, IReadOnlyList<string>>? pools)
+    {
+        foreach (var (name, members) in pools ?? new Dictionary<string, IReadOnlyList<string>>())
+            foreach (var line in PackList($"pools: {name} ({members.Count} units): ", members)) yield return line;
+    }
+
+    /// <summary>"+&lt;n&gt; per kill" for a fixed draw, "+&lt;min&gt;-&lt;max&gt; per kill" for a range, " from &lt;pool&gt;" with a
+    /// spread pool (undead-hordes D7).</summary>
+    public static string KillDrawText(ApocalypseRoamers r) =>
+        (r.PerKillMin == r.PerKillMax ? $"+{r.PerKill} per kill" : $"+{r.PerKillMin}-{r.PerKillMax} per kill") + (r.Pool is { } pool ? $" from {pool}" : "");
 
     /// <summary>An Apocalypse definition's `event info` lines (apocalypse D17), one per D1 key group, each within
     /// Wire.MaxBytes: the action, the hotspots, the roamers, the hordes, the goal (a Point goal's x, z and height, an
@@ -883,7 +932,7 @@ public static class EventLines
     {
         yield return FormattableString.Invariant($"action: apocalypse of the {Apocalypse.FactionText(a.Faction)}, march {a.MarchSpeed:0.##} m/s");
         yield return $"hotspots: {a.Hotspots.Count}, at least {a.Hotspots.MinNatives} natives each, {a.Hotspots.MinSpacing} m apart";
-        yield return $"roamers: {a.Roamers.PerHotspot} per hotspot, +{a.Roamers.PerKill} per kill, max {a.Roamers.Max}, " +
+        yield return $"roamers: {a.Roamers.PerHotspot} per hotspot, {KillDrawText(a.Roamers)}, max {a.Roamers.Max}, " +
                      $"{a.Roamers.PerMinute} spread per minute, hunt range {a.Roamers.HuntRange}";
         yield return $"hordes: {a.Hordes.Count}, first after {a.Hordes.FirstAfterMinutes} min, every {a.Hordes.EveryMinutes} min, " +
                      $"size {a.Hordes.Size} +{a.Hordes.Growth} each";
@@ -892,6 +941,7 @@ public static class EventLines
               (a.Goal.Location.Y is { } h ? FormattableString.Invariant($" height {h:0.#}") : "");
         yield return $"goal: {a.Goal.Name}, radius {a.Goal.Radius}, {at}";
         foreach (var line in PackList("units: ", a.Units.Select(EntryText).ToList())) yield return line;
+        foreach (var line in PoolLines(a.Pools)) yield return line;
         if (a.Bosses is { Count: > 0 } bosses)
         {
             var full = "last horde adds: " + string.Join(", ", bosses.Select(b => $"{b.Prefab} x{b.Count}"));

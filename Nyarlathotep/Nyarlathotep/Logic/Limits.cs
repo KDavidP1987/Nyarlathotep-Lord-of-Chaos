@@ -113,6 +113,15 @@ public static class TriggerLimits
     public const int CooldownRows = 2000;
 }
 
+/// <summary>The bounds of a wave destination (undead-hordes D5, D16): its radius and name, and the march speed, the
+/// apocalypse's.</summary>
+public static class DestinationLimits
+{
+    public const int MinRadius = 10, MaxRadius = 100;
+    public const int MaxName = 40;
+    public const double DefaultMarchSpeed = 2.0;
+}
+
 /// <summary>The bounds of an Apocalypse action (apocalypse D1, D13): each key's range, inclusive, and the rolling unit
 /// lifetime. Every other event kind keeps its duration of 30-7200 s.</summary>
 public static class ApocalypseLimits
@@ -130,14 +139,19 @@ public static class ApocalypseLimits
     public const int MinSpacing = 100, MaxSpacing = 3000;
     public const int MinPerHotspot = 1, MaxPerHotspot = 10;
     public const int MinPerKill = 0, MaxPerKill = 2;
-    public const int MinRoamers = 1, MaxRoamers = 100;
+    /// <summary>A spread block's draw per kill, perKillMin..perKillMax (undead-hordes D7, D16).</summary>
+    public const int MinKillDraw = 0, MaxKillDraw = 3;
+    /// <summary>roamers.max reaches MaxTrackedUnits' ceiling (undead-hordes D16; LimitsTests pins the two equal).</summary>
+    public const int MinRoamers = 1, MaxRoamers = 500;
     public const int MinPerMinute = 1, MaxPerMinute = 30;
     public const int MinHuntRange = 20, MaxHuntRange = 60;
     public const int MinHordes = 1, MaxHordes = 10;
     public const int MinFirstAfter = 0, MaxFirstAfter = 1440;
     public const int MinEvery = 5, MaxEvery = 1440;
-    public const int MinSize = 5, MaxSize = 50;
-    public const int MinGrowth = 0, MaxGrowth = 20;
+    /// <summary>A horde's size reaches MaxUnitsPerWave's ceiling and its growth 100 (undead-hordes D16; LimitsTests pins
+    /// the size to the ceiling).</summary>
+    public const int MinSize = 5, MaxSize = 500;
+    public const int MinGrowth = 0, MaxGrowth = 100;
     public const int MinGoalRadius = 10, MaxGoalRadius = 100;
     public const int MaxGoalName = 32;
     public const double MinMarchSpeed = 0.5, MaxMarchSpeed = 5.0;
