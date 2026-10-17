@@ -77,6 +77,7 @@ units, with hunting, fan-out, the player-trigger scan and the kill feed included
 | Unit watch | Stuck units moved back to walkable ground, or removed after two tries | 0.13.0 | [UNIT_WATCH](docs/features/UNIT_WATCH.md) |
 | Wave variety | Pursuit of players who run, unit pools and boss rolls, the timed and onslaught templates | 0.13.0 | [WAVE_VARIETY](docs/features/WAVE_VARIETY.md) |
 | Login notice | A private line to a player who logs in while an event runs, naming the running events (on by default) | 0.13.1 | [LOGIN_NOTICE](docs/features/LOGIN_NOTICE.md) |
+| Undead hordes | Big undead events: `undead-infestation` (the dead rise in many places and spread) and `undead-horde-march` (one great horde marches on the players); `zombie-apocalypse` retuned | 0.14.0 | [UNDEAD_HORDES](docs/features/UNDEAD_HORDES.md) |
 | Raphael API | A machine-readable `[NYAR:*]` wire for the Raphael client: status, admin actions, pushes | 0.3.0, api 8 in 0.13.0 | [Contract](docs/RAPHAEL_INTEGRATION_CONTRACT.md) |
 | Scaling, replacements, boss reinforcements, live operations, stats, sieges | Planned | — | [Epic plan](docs/dod/nyarlathotep.md) |
 

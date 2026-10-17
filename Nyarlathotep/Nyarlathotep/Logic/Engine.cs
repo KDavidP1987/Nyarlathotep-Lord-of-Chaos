@@ -25,17 +25,19 @@ public static class EventActions
     /// <summary>True for the kinds whose units outlive the end by the grace: Waves and Apocalypse (apocalypse D8, D9).</summary>
     public static bool HasUnits(EventDefinition def) => ActionKindOf(def) is EventActionKind.Waves or EventActionKind.Apocalypse;
 
-    /// <summary>"an apocalypse is already running: &lt;id&gt;" (apocalypse D14).</summary>
-    public static string ApocalypseRunning(string id) => $"an apocalypse is already running: {id}";
+    /// <summary>"an apocalypse-type event is running: &lt;name&gt;" (apocalypse D14, undead-hordes D13).</summary>
+    public static string ApocalypseRunning(string name) => $"an apocalypse-type event is running: {TextSink.Clean(name)}";
 
-    /// <summary>One apocalypse at a time (apocalypse D14; Review 3 F1): the reason <paramref name="def"/> may not start while
-    /// <paramref name="active"/> run or <paramref name="resumePending"/> holds the slot for a resume, or null.</summary>
-    public static string? ApocalypseClash(EventDefinition def, IEnumerable<ActiveEvent> active, string? resumePending)
+    /// <summary>One apocalypse-type event at a time (apocalypse D14; Review 3 F1; undead-hordes D13: an Apocalypse, an
+    /// Infestation or a HordeMarch): the reason <paramref name="def"/> may not start while <paramref name="active"/> run or
+    /// <paramref name="resumePending"/> holds the slot for a resume, or null. The running one is named by its definition's
+    /// name (<paramref name="nameOf"/> for the pending resume, its id when unknown).</summary>
+    public static string? ApocalypseClash(EventDefinition def, IEnumerable<ActiveEvent> active, string? resumePending, Func<string, string?>? nameOf = null)
     {
         if (def.Apocalypse is null) return null;
-        if (resumePending is not null) return ApocalypseRunning(resumePending);
-        var running = active.Where(a => a.Definition.Apocalypse is not null).Select(a => a.Id).OrderBy(i => i, StringComparer.Ordinal).FirstOrDefault();
-        return running is null ? null : ApocalypseRunning(running);
+        if (resumePending is not null) return ApocalypseRunning(nameOf?.Invoke(resumePending) ?? resumePending);
+        var running = active.Where(a => a.Definition.Apocalypse is not null).OrderBy(a => a.Id, StringComparer.Ordinal).FirstOrDefault();
+        return running is null ? null : ApocalypseRunning(running.Definition.Name);
     }
 
     /// <summary>One empowerment per faction (faction-empowerment D6, Business rules 3): the reason
@@ -393,12 +395,14 @@ public sealed class EventEngine(EventCatalog catalog, Func<IDictionary<string, D
         if (blocker is not null) return blocker;
         var clash = EventActions.EmpowerClash(def, _active.Values);
         if (clash is not null) return Outcome.Refused(clash, RefusalCode.State, "id", reason: Reasons.EmpowerClash);
-        var apocalypse = EventActions.ApocalypseClash(def, _active.Values, ResumePending);
+        var apocalypse = EventActions.ApocalypseClash(def, _active.Values, ResumePending, p => catalog.Current.Find(p)?.Name);
         if (apocalypse is not null) return Outcome.Refused(apocalypse, RefusalCode.State, "id", reason: Reasons.AlreadyActive);
         if (def.Action?.Location.Type == LocationType.Admin && origin is null)
             return Outcome.Refused($"event {id} spawns at the admin: start it with .nyar event start", RefusalCode.BadArg, "location", reason: Reasons.AdminLocation);
         if (def.Apocalypse?.Goal.Location.Type == LocationType.Admin && origin is null)
             return Outcome.Refused($"event {id} marches on the admin who starts it: only an admin's .nyar event start can start it", RefusalCode.BadArg, "location", reason: Reasons.AdminLocation);
+        if (def.Apocalypse?.March?.Start.Location?.Type == LocationType.Admin && origin is null)                       // undead-hordes D10
+            return Outcome.Refused($"event {id} rises at the admin who starts it: only an admin's .nyar event start can start it", RefusalCode.BadArg, "location", reason: Reasons.AdminLocation);
         var outside = ScopeGate.AdminOutside(def, origin, controls);
         if (outside is not null) return outside;
         var scoped = ScopeGate.TriggerBlocker(def, controls, kill);

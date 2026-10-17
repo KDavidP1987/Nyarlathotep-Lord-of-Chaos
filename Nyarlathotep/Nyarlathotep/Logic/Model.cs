@@ -225,13 +225,40 @@ public sealed record ApocalypseHordes(int Count, int FirstAfterMinutes, int Ever
 
 /// <summary>Where the hordes march (apocalypse D6, D8): a Point location, or Admin (the starting admin's position, read
 /// once at the start; Manual trigger only). A front within <see cref="Radius"/> m loses the run; <see cref="Name"/> is the
-/// place's name in the chat lines.</summary>
-public sealed record ApocalypseGoal(Location Location, int Radius, string Name);
+/// place's name in the chat lines. A HordeMarch's destination is its goal (undead-hordes D10); an Infestation has none.</summary>
+public sealed record ApocalypseGoal(Location Location, int Radius, string Name)
+{
+    /// <summary>An Infestation's goal: none; nothing reads it.</summary>
+    public static readonly ApocalypseGoal None = new(new Location(LocationType.Point, 0, 0), 0, "");
+}
+
+/// <summary>The apocalypse family (undead-hordes D8, D10, D13): one engine, three kinds of run. An Infestation rises at the
+/// hotspots (its origins) and spreads; a HordeMarch rises as one horde, marches to its destination and infests there.</summary>
+public enum ApocalypseMode { Apocalypse, Infestation, HordeMarch }
+
+/// <summary>How an infestation's units move (undead-hordes D9): <see cref="Hunters"/> percent of them hunt the nearest
+/// eligible player anywhere, the rest drift up to <see cref="DriftRadius"/> m from their origin.</summary>
+public sealed record InfestRule(int Hunters, int DriftRadius);
+
+/// <summary>Where a horde march rises (undead-hordes D10): a Point or the starting admin's position (<see cref="Location"/>),
+/// or the faction-native hotspot nearest the destination at least <see cref="MinDistance"/> m from it (Location null).</summary>
+public sealed record HordeStart(Location? Location, int MinDistance = 0)
+{
+    public bool IsHotspot => Location is null;
+}
+
+/// <summary>A HordeMarch's own parts (undead-hordes D10, D11): its start; its growth (a spread block whose units join the
+/// horde); after arrival its infest rule and spread block; its bosses, fixed or rolled, which join the horde at the rise.</summary>
+public sealed record HordeMarchSpec(HordeStart Start, ApocalypseRoamers Growth, InfestRule Infest, ApocalypseRoamers InfestSpread,
+    IReadOnlyList<BossRoll>? Bosses = null);
 
 /// <summary>An Apocalypse action (apocalypse D1): hotspots found among <see cref="Faction"/>'s natives in
 /// <see cref="Scope"/>, roamers and hordes drawn from <see cref="Units"/> by weight (count) and chance, hordes marching to
 /// <see cref="Goal"/> at <see cref="MarchSpeed"/> m/s; <see cref="Bosses"/> join the last horde only (D36), null without
-/// the key. Its rules are Logic/Apocalypse.cs.</summary>
+/// the key. Its rules are Logic/Apocalypse.cs. An Infestation (undead-hordes D8) holds its origins as the hotspots, its
+/// perOrigin as roamers.perHotspot, its spread block as the roamers' draw, max and minute limit, no hordes and
+/// <see cref="Infest"/>; a HordeMarch (D10) one horde of its units' counts, its destination as the goal and
+/// <see cref="March"/>.</summary>
 public sealed record ApocalypseAction(
     string Faction,
     IReadOnlyList<UnitEntry> Units,
@@ -243,7 +270,14 @@ public sealed record ApocalypseAction(
     Scope Scope = default,
     bool Scoreboard = true,
     IReadOnlyList<UnitEntry>? Bosses = null,
-    IReadOnlyDictionary<string, IReadOnlyList<string>>? Pools = null);
+    IReadOnlyDictionary<string, IReadOnlyList<string>>? Pools = null,
+    ApocalypseMode Mode = ApocalypseMode.Apocalypse,
+    InfestRule? Infest = null,
+    HordeMarchSpec? March = null)
+{
+    /// <summary>The JSON type of the action: Apocalypse, Infestation or HordeMarch.</summary>
+    public string Type => Mode.ToString();
+}
 
 public sealed record Announce(IReadOnlyList<string> Start, IReadOnlyList<string> End, bool Warnings)
 {

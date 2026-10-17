@@ -867,10 +867,10 @@ public partial class ApocalypseTests
         var engine = Engine(out _, Apo.Event(), Apo.Event("apo2", "{ \"type\": \"Interval\", \"minMinutes\": 60, \"maxMinutes\": 90 }"));
         engine.ResumePending = "apo";
         Assert.Equal(AdminLines.AlreadyActive("apo").Human, engine.Start("apo", "schedule", T0, Open())!.Human);
-        Assert.Equal("an apocalypse is already running: apo", engine.Start("apo2", "interval", T0, Open())!.Human);
+        Assert.Equal("an apocalypse-type event is running: Night of the dead", engine.Start("apo2", "interval", T0, Open())!.Human);
         Assert.Empty(engine.Active);
         Assert.Null(engine.Resume("apo", T0, T0.AddHours(1), (500, 12, 0)));
-        Assert.Equal("an apocalypse is already running: apo", engine.Start("apo2", "interval", T0, Open())!.Human);
+        Assert.Equal("an apocalypse-type event is running: Night of the dead", engine.Start("apo2", "interval", T0, Open())!.Human);
     }
 
     [Fact]
@@ -956,7 +956,7 @@ public partial class ApocalypseTests
         var engine = Engine(out _, Apo.Event(), Apo.Event("apo2"), Json.Event("raid"));
         Assert.Null(engine.Start("apo", "manual", T0, Open()));
         Assert.Equal(AdminLines.AlreadyActive("apo").Human, engine.Start("apo", "manual", T0, Open(1))!.Human);
-        Assert.Equal(EventActions.ApocalypseRunning("apo"), engine.Start("apo2", "manual", T0, Open(1))!.Human);
+        Assert.Equal(EventActions.ApocalypseRunning("Night of the dead"), engine.Start("apo2", "manual", T0, Open(1))!.Human);
         Assert.NotNull(engine.Start("raid", "manual", T0, Open(active: engine.Active.Count, max: 1)));
         Assert.Null(engine.Start("raid", "manual", T0, Open(active: engine.Active.Count, max: 2)));
     }

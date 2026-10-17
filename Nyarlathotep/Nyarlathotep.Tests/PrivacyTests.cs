@@ -71,6 +71,10 @@ public partial class PrivacyTests
         [nameof(Messages.ApocalypseOutcome)] = () => new[] { ApocalypseResult.Won, ApocalypseResult.Lost, ApocalypseResult.Survived }
             .Select(r => Messages.ApocalypseOutcome("Night of the dead", r, "Brighthaven")),
         [nameof(Messages.ApocalypseStatus)] = () => [Messages.ApocalypseStatus("Night of the dead", 2, 4, 50, "Brighthaven", 12, 90)],
+        [nameof(Messages.InfestationRise)] = () => [Messages.InfestationRise("Undead infestation", 5)],
+        [nameof(Messages.HordeArrived)] = () => [Messages.HordeArrived("the living")],
+        [nameof(Messages.InfestationStatus)] = () => [Messages.InfestationStatus("Undead infestation", 120, 5)],
+        [nameof(Messages.HordeStatus)] = () => [Messages.HordeStatus("Undead horde march", 180, 420, false, "the living"), Messages.HordeStatus("Undead horde march", 180, null, true, "the living"), Messages.HordeStatus("Undead horde march", 0, null, false, "the living")],
     };
 
     static IEnumerable<string> Members() =>

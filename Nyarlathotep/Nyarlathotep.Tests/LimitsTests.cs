@@ -5,8 +5,8 @@ namespace Nyarlathotep.Tests;
 
 /// <summary>undead-hordes D16: every new range lives in Logic/Limits.cs, the rule text says the same range, a value at
 /// either end is accepted, one past it is refused with that rule (the field and the range), and the apocalypse's raised
-/// ranges reach the cfg ceilings: roamers.max MaxTrackedUnits', hordes.size MaxUnitsPerWave's. Step 3 adds the
-/// infestation's and the horde march's rows (D8, D10).</summary>
+/// ranges reach the cfg ceilings: roamers.max MaxTrackedUnits', hordes.size MaxUnitsPerWave's; with the infestation's and
+/// the horde march's rows (D8, D10), whose spread max and horde size reach the same ceilings.</summary>
 public class LimitsTests
 {
     static string Spread(string min, string max, string roamersMax = "12") =>
@@ -38,6 +38,32 @@ public class LimitsTests
             (Func<double, string>)(v => Destination(radius: N(v)))];
         yield return [EventValidator.MarchSpeedRule, ApocalypseLimits.MinMarchSpeed, ApocalypseLimits.MaxMarchSpeed, 0.1,
             (Func<double, string>)(v => Destination(march: N(v)))];
+        // step 3: the infestation's (D8) and the horde march's (D10) ranges
+        static string I(string action) => Apo.Event(action: action);
+        yield return [EventValidator.OriginsCountRule, HordeLimits.MinOrigins, HordeLimits.MaxOrigins, 1.0,
+            (Func<double, string>)(v => I(Inf.Action(origins: Inf.Origins(count: (int)v))))];
+        yield return [EventValidator.OriginNativesRule, HordeLimits.MinOriginNatives, HordeLimits.MaxOriginNatives, 1.0,
+            (Func<double, string>)(v => I(Inf.Action(origins: Inf.Origins(minNatives: (int)v))))];
+        yield return [EventValidator.OriginSpacingRule, HordeLimits.MinOriginSpacing, HordeLimits.MaxOriginSpacing, 1.0,
+            (Func<double, string>)(v => I(Inf.Action(origins: Inf.Origins(minSpacing: (int)v))))];
+        yield return [EventValidator.PerOriginRule, HordeLimits.MinPerOrigin, HordeLimits.MaxPerOrigin, 1.0,
+            (Func<double, string>)(v => I(Inf.Action(origins: Inf.Origins(perOrigin: (int)v))))];
+        yield return [EventValidator.HuntersRule("action"), HordeLimits.MinHunters, HordeLimits.MaxHunters, 1.0,
+            (Func<double, string>)(v => I(Inf.Action(hunters: (int)v)))];
+        yield return [EventValidator.DriftRule("action"), HordeLimits.MinDrift, HordeLimits.MaxDrift, 1.0,
+            (Func<double, string>)(v => I(Inf.Action(drift: (int)v)))];
+        yield return [EventValidator.SpreadMaxRule("action.spread"), HordeLimits.MinSpreadMax, HordeLimits.MaxSpreadMax, 1.0,
+            (Func<double, string>)(v => I(Inf.Action(spread: Inf.Spread(cap: (int)v))))];
+        yield return [EventValidator.SpreadMaxRule("action.growth"), HordeLimits.MinSpreadMax, HordeLimits.MaxSpreadMax, 1.0,
+            (Func<double, string>)(v => I(Inf.March(growth: Inf.Spread(cap: (int)v))))];
+        yield return [EventValidator.HuntersRule("action.infest"), HordeLimits.MinHunters, HordeLimits.MaxHunters, 1.0,
+            (Func<double, string>)(v => I(Inf.March(infest: "{ \"hunters\": " + (int)v + ", \"driftRadius\": 300, \"spread\": " + Inf.Spread() + " }")))];
+        yield return [EventValidator.DriftRule("action.infest"), HordeLimits.MinDrift, HordeLimits.MaxDrift, 1.0,
+            (Func<double, string>)(v => I(Inf.March(infest: "{ \"hunters\": 60, \"driftRadius\": " + (int)v + ", \"spread\": " + Inf.Spread() + " }")))];
+        yield return [EventValidator.StartDistanceRule, HordeLimits.MinStartDistance, HordeLimits.MaxStartDistance, 1.0,
+            (Func<double, string>)(v => I(Inf.March(start: "{ \"type\": \"Hotspot\", \"minDistance\": " + (int)v + " }")))];
+        yield return [EventValidator.HordeUnitsRule, HordeLimits.MinHorde, HordeLimits.MaxHorde, 1.0,
+            (Func<double, string>)(v => I(Inf.March(units: "[ " + Apo.Unit(count: N(Math.Floor(v / 2))) + ", " + Apo.Unit(Apo.Thug, N(v - Math.Floor(v / 2))) + " ]")))];   // the total, each entry within its own 1-500
     }
 
     [Theory]
@@ -73,6 +99,11 @@ public class LimitsTests
                      (EventValidator.RoamersMaxRule, "action.roamers.max"), (EventValidator.HordeSizeRule, "action.hordes.size"),
                      (EventValidator.HordeGrowthRule, "action.hordes.growth"), (EventValidator.DestinationRadiusRule, "action.destination.radius"),
                      (EventValidator.DestinationNameRule, "action.destination.name"), (EventValidator.MarchSpeedRule, "action.marchSpeed"),
+                     (EventValidator.OriginsCountRule, "action.origins.count"), (EventValidator.OriginNativesRule, "action.origins.minNatives"),
+                     (EventValidator.OriginSpacingRule, "action.origins.minSpacing"), (EventValidator.PerOriginRule, "action.origins.perOrigin"),
+                     (EventValidator.HuntersRule("action.infest"), "action.infest.hunters"), (EventValidator.DriftRule("action"), "action.driftRadius"),
+                     (EventValidator.SpreadMaxRule("action.growth"), "action.growth.max"), (EventValidator.StartDistanceRule, "action.start.minDistance"),
+                     (EventValidator.SpreadKillMaxRule("action.infest.spread"), "action.infest.spread.perKillMax"),
                  })
         {
             Assert.StartsWith(field + " must be ", rule);
@@ -85,6 +116,8 @@ public class LimitsTests
     {
         Assert.Equal(ApocalypseLimits.MaxRoamers, Limits.MaxTrackedUnits.Max);
         Assert.Equal(ApocalypseLimits.MaxSize, Limits.MaxUnitsPerWave.Max);
+        Assert.Equal(HordeLimits.MaxSpreadMax, Limits.MaxTrackedUnits.Max);
+        Assert.Equal(HordeLimits.MaxHorde, Limits.MaxUnitsPerWave.Max);
         Assert.Equal(100, ApocalypseLimits.MaxGrowth);
         Assert.Equal(3, ApocalypseLimits.MaxKillDraw);
         Assert.Equal(DestinationLimits.DefaultMarchSpeed, Assert.Single(EventValidator.Parse(Json.File(Destination()), FakeUnits.Default(),
@@ -96,5 +129,7 @@ public class LimitsTests
     {
         Assert.Null(Reason(Apo.Event()));
         Assert.Null(Reason(Json.Event("raid")));
+        Assert.Null(Reason(Apo.Event(action: Inf.Action())));
+        Assert.Null(Reason(Apo.Event(action: Inf.March())));
     }
 }

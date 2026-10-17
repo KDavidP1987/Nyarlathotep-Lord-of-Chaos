@@ -288,15 +288,76 @@
           { "prefab": "CHAR_Undead_GhostBanshee", "count": 1, "modifiers": { "level": 32 } },
           { "prefab": "CHAR_Undead_Guardian", "count": 1, "modifiers": { "level": 38, "maxHealth": 2.0 } }
         ],
-        "hotspots": { "count": 3, "minNatives": 5, "minSpacing": 300 },
-        "roamers": { "perHotspot": 4, "perKill": 1, "max": 30, "perMinute": 6, "huntRange": 40 },
-        "hordes": { "count": 4, "firstAfterMinutes": 10, "everyMinutes": 30, "size": 7, "growth": 4 },
+        "pools": {
+          "troops": [ "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "CHAR_Undead_SkeletonApprentice", "CHAR_Undead_UndyingGhoul", "CHAR_Undead_Priest", "CHAR_Undead_Ghoul_Armored_Farmlands" ]
+        },
+        "hotspots": { "count": 5, "minNatives": 5, "minSpacing": 300 },
+        "roamers": { "perHotspot": 10, "perKillMin": 1, "perKillMax": 3, "pool": "troops", "max": 100, "perMinute": 20, "huntRange": 40 },
+        "hordes": { "count": 4, "firstAfterMinutes": 3, "everyMinutes": 20, "size": 30, "growth": 15 },
         "goal": { "location": { "type": "Admin" }, "radius": 30, "name": "the living" },
         "marchSpeed": 2.0,
         "bosses": [ { "prefab": "CHAR_Undead_BishopOfDeath_VBlood", "count": 1, "modifiers": { "level": 40 } } ],
         "scoreboard": true
       },
       "announce": { "start": [ "The dead rise: {event}." ], "end": [ "The dead lie still again. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "undead-infestation",
+      "name": "Undead infestation",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 14400,
+      "action": {
+        "type": "Infestation",
+        "faction": "Faction_Undead",
+        "pools": {
+          "troops": [ "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "CHAR_Undead_SkeletonApprentice", "CHAR_Undead_UndyingGhoul", "CHAR_Undead_Priest", "CHAR_Undead_Ghoul_Armored_Farmlands" ],
+          "elite": [ "CHAR_Undead_Guardian", "CHAR_Undead_SkeletonMage", "CHAR_Undead_SkeletonGolem" ],
+          "strong": [ "CHAR_Undead_GhostBanshee", "CHAR_Undead_GhostGuardian" ]
+        },
+        "units": [
+          { "pool": "troops", "count": 8, "modifiers": { "level": 20 } },
+          { "pool": "elite", "count": 2, "modifiers": { "level": 40 } },
+          { "pool": "strong", "count": 1, "modifiers": { "level": 60 } }
+        ],
+        "origins": { "count": 5, "minNatives": 5, "minSpacing": 300, "perOrigin": 10 },
+        "hunters": 50,
+        "driftRadius": 400,
+        "spread": { "perKillMin": 1, "perKillMax": 3, "pool": "troops", "max": 300, "perMinute": 20 },
+        "scoreboard": true
+      },
+      "announce": { "end": [ "The dead lie still again. {event} is over." ], "warnings": false }
+    },
+    {
+      "id": "undead-horde-march",
+      "name": "Undead horde march",
+      "enabled": false,
+      "pillar": "spawns",
+      "trigger": { "type": "Manual" },
+      "durationSeconds": 3600,
+      "action": {
+        "type": "HordeMarch",
+        "faction": "Faction_Undead",
+        "pools": {
+          "troops": [ "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "CHAR_Undead_ArmoredSkeletonCrossbow_Farbane", "CHAR_Undead_SkeletonApprentice", "CHAR_Undead_UndyingGhoul", "CHAR_Undead_Priest", "CHAR_Undead_Ghoul_Armored_Farmlands" ],
+          "elite": [ "CHAR_Undead_Guardian", "CHAR_Undead_SkeletonMage", "CHAR_Undead_SkeletonGolem" ],
+          "strong": [ "CHAR_Undead_GhostBanshee", "CHAR_Undead_GhostGuardian" ]
+        },
+        "units": [
+          { "pool": "troops", "count": 160, "modifiers": { "level": 20 } },
+          { "pool": "elite", "count": 32, "modifiers": { "level": 40 } },
+          { "pool": "strong", "count": 8, "modifiers": { "level": 60 } }
+        ],
+        "bosses": [ { "prefab": "CHAR_Undead_BishopOfDeath_VBlood", "count": 1, "modifiers": { "level": 50 } } ],
+        "start": { "type": "Hotspot", "minDistance": 300 },
+        "destination": { "location": { "type": "Admin" }, "radius": 30, "name": "the living" },
+        "marchSpeed": 2.0,
+        "growth": { "perKillMin": 1, "perKillMax": 3, "pool": "troops", "max": 400, "perMinute": 20 },
+        "infest": { "hunters": 60, "driftRadius": 500, "spread": { "perKillMin": 1, "perKillMax": 3, "pool": "troops", "max": 400, "perMinute": 20 } },
+        "scoreboard": true
+      },
+      "announce": { "start": [ "The dead gather into one great horde: {event}." ], "end": [ "The horde is broken. {event} is over." ], "warnings": false }
     },
     {
       "id": "militia-muster",

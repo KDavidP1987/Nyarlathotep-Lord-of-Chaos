@@ -4,15 +4,16 @@ using Nyarlathotep.Logic;
 namespace Nyarlathotep.Tests;
 
 /// <summary>apocalypse D18: zombie-apocalypse, disabled and valid: Manual, pillar spawns, Faction_Undead, CHAR_Undead_* units at
-/// levels 20-40 with one tough leader (maxHealth 2.0), 3 hotspots, 4 roamers each, perKill 1, max 30, perMinute 6, 4 hordes
-/// from 10 min every 30 min of 7 + 4, one Faction_Undead V Blood boss, an Admin goal of radius 30 named "the living",
-/// marchSpeed 2.0, 4 h, the scoreboard on; its worst case (30 roamers and all four hordes alive with the boss: 83) fits the
-/// default caps with no horde over MaxUnitsPerWave; fourteen templates, one more than revenge's thirteen.
+/// levels 20-40 with one tough leader (maxHealth 2.0), one Faction_Undead V Blood boss, an Admin goal of radius 30 named
+/// "the living", marchSpeed 2.0, 4 h, the scoreboard on. Retuned by undead-hordes D15 (Design › Templates): 5 hotspots,
+/// 10 roamers each, 1-3 per kill from its troops pool, max 100, 20 a minute, 4 hordes from 3 min every 20 min of 30 + 15;
+/// its worst case (100 roamers and all four hordes alive with the boss: 311) passes the default caps, which cut it and name
+/// the cut (D12).
 /// apocalypse D38: every shipped SpawnWaves and Apocalypse template keeps its units and bosses inside one allied group of
 /// Logic/FactionGroups, and an Apocalypse template's group is its faction's.</summary>
 public partial class TemplateLibraryTests
 {
-    const int TemplatesNow = TemplatesBefore + 2 + 6 + 14;                       // revenge's bandit-revenge, apocalypse's zombie-apocalypse, Epic A43's six wave templates, wave-variety's fourteen
+    const int TemplatesNow = TemplatesBefore + 2 + 6 + 14 + 2;                   // revenge's bandit-revenge, apocalypse's zombie-apocalypse, Epic A43's six wave templates, wave-variety's fourteen, undead-hordes' two
 
     static readonly string[] UndeadGroup =
     [
@@ -41,19 +42,16 @@ public partial class TemplateLibraryTests
         if (a.Units.Any(u => !u.Prefab.StartsWith("CHAR_Undead_", StringComparison.Ordinal))) diffs.Add("a unit is not CHAR_Undead_*");
         if (a.Units.Any(u => u.Modifiers?.Level is not (>= 20 and <= 40))) diffs.Add("a unit is outside levels 20-40");
         if (a.Units.Count(u => u.Modifiers?.MaxHealth == 2.0) != 1) diffs.Add("not one tough leader at maxHealth 2.0");
-        if (a.Hotspots.Count != 3) diffs.Add($"{a.Hotspots.Count} hotspots");
-        if (a.Roamers is not { PerHotspot: 4, PerKill: 1, Max: 30, PerMinute: 6 }) diffs.Add("roamers differ");
-        if (a.Hordes is not { Count: 4, FirstAfterMinutes: 10, EveryMinutes: 30, Size: 7, Growth: 4 }) diffs.Add("hordes differ");
+        if (a.Hotspots.Count != 5) diffs.Add($"{a.Hotspots.Count} hotspots");
+        if (a.Roamers is not { PerHotspot: 10, PerKillMin: 1, PerKillMax: 3, Pool: "troops", Max: 100, PerMinute: 20 }) diffs.Add("roamers differ");
+        if (a.Hordes is not { Count: 4, FirstAfterMinutes: 3, EveryMinutes: 20, Size: 30, Growth: 15 }) diffs.Add("hordes differ");
         if (a.Bosses is not [{ Count: 1 } boss] || !boss.Prefab.EndsWith("_VBlood", StringComparison.Ordinal) || !UndeadGroup.Contains(boss.Prefab))
             diffs.Add("lacks its one undead V Blood boss");
         if (a.Goal is not { Radius: 30, Name: "the living" } || a.Goal.Location.Type != LocationType.Admin) diffs.Add("goal differs");
         if (a.MarchSpeed != 2.0) diffs.Add($"marchSpeed {a.MarchSpeed}");
         if (!a.Scoreboard) diffs.Add("no scoreboard");
-        // the default caps at the worst case (S-18): MaxTrackedUnits and, per horde with the last one's bosses, MaxUnitsPerWave
-        var worst = WorstCase(a);
-        if (worst > Limits.MaxTrackedUnits.Default) diffs.Add($"worst case {worst} exceeds MaxTrackedUnits {Limits.MaxTrackedUnits.Default}");
-        var last = a.Hordes.Size + (a.Hordes.Count - 1) * a.Hordes.Growth + (a.Bosses ?? []).Sum(b => b.Count);
-        if (last > Limits.MaxUnitsPerWave.Default) diffs.Add($"the last horde ({last}) exceeds MaxUnitsPerWave {Limits.MaxUnitsPerWave.Default}");
+        // undead-hordes D15: the worst case passes the default caps, so a start at the default cfg names its cut (D12)
+        if (WorstCase(a) <= Limits.MaxTrackedUnits.Default) diffs.Add($"worst case {WorstCase(a)} fits MaxTrackedUnits {Limits.MaxTrackedUnits.Default}: the retune is lost");
         return diffs;
     }
 
@@ -63,15 +61,15 @@ public partial class TemplateLibraryTests
         var c = Real();
         Assert.Empty(ApocalypseDifferences(c));
         Assert.Equal(TemplatesNow, c.ValidCount);
-        Assert.Equal(83, WorstCase(c.Find("zombie-apocalypse")!.Definition.Apocalypse!));
+        Assert.Equal(311, WorstCase(c.Find("zombie-apocalypse")!.Definition.Apocalypse!));
     }
 
     [Theory]
     [InlineData("enabled")]
     [InlineData("invalid")]
     [InlineData("no boss")]
-    [InlineData("caps")]
-    [InlineData("last horde")]
+    [InlineData("roamers")]
+    [InlineData("hordes")]
     [InlineData("no scoreboard")]
     [InlineData("no leader")]
     [InlineData("fifteenth")]
@@ -87,8 +85,8 @@ public partial class TemplateLibraryTests
             case "enabled": ev["enabled"] = true; break;
             case "invalid": action["bogus"] = 1; break;
             case "no boss": action.Remove("bosses"); break;
-            case "caps": action["roamers"]!["max"] = 100; break;                 // 153 at the worst case
-            case "last horde": action["hordes"]!["size"] = 8; break;             // 20 + the boss
+            case "roamers": action["roamers"]!["max"] = 30; break;               // 0.13.1's roamers
+            case "hordes": action["hordes"]!["size"] = 7; break;                 // 0.13.1's horde
             case "no scoreboard": action["scoreboard"] = false; break;
             case "no leader": action["units"]![4]!["modifiers"]!["maxHealth"] = 1.5; break;
             case "fifteenth":
@@ -112,14 +110,17 @@ public partial class TemplateLibraryTests
     /// template that spawns nothing (Empower).</summary>
     static (List<string> Prefabs, string? Faction)? Spawned(EventDefinition d)
     {
-        if (d.Apocalypse is { } a) return ([.. a.Units.Select(u => u.Prefab), .. (a.Bosses ?? []).Select(b => b.Prefab)], a.Faction);
+        // an apocalypse-type action's pool members and a horde march's bosses count too (undead-hordes D14)
+        if (d.Apocalypse is { } a)
+            return ([.. a.Units.SelectMany(u => u.Pool is { } p ? a.Pools![p] : [u.Prefab]), .. (a.Bosses ?? []).Select(b => b.Prefab),
+                .. (a.March?.Bosses ?? []).SelectMany(b => b.Pool is { } p ? a.Pools![p] : [b.Prefab])], a.Faction);
         if (d.Action is not { } w) return null;
         var prefabs = w.Units.Select(u => u.Prefab).Concat((w.WaveList ?? []).SelectMany(x => x.Units.Select(u => u.Prefab)))
             .Concat((w.Bosses ?? []).Select(b => b.Prefab)).ToList();
         return (prefabs, null);
     }
 
-    static List<string> FactionProblems(TemplateCatalog c)
+    internal static List<string> FactionProblems(TemplateCatalog c)
     {
         var problems = new List<string>();
         var checkedAny = 0;
@@ -141,7 +142,7 @@ public partial class TemplateLibraryTests
     {
         var c = Real();
         Assert.Empty(FactionProblems(c));
-        Assert.Equal(30, c.Templates.Count(t => Spawned(t.Definition) is not null));   // 29 SpawnWaves (Epic A43's six, wave-variety's fourteen) and one Apocalypse
+        Assert.Equal(32, c.Templates.Count(t => Spawned(t.Definition) is not null));   // 29 SpawnWaves (Epic A43's six, wave-variety's fourteen), one Apocalypse, an Infestation and a HordeMarch
     }
 
     /// <summary>Design §9 D60: realm-gauntlet mixes groups across waves; it passes only while each wave is one group, each

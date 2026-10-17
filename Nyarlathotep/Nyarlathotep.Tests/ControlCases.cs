@@ -50,8 +50,7 @@ public static class ControlCases
         // unit-watch: step 5 the release
         new(UnitWatch, "D30", 5, "0.13.0"), new(UnitWatch, "D31", 5, "0.13.0"), new(UnitWatch, "D32", 5, "0.13.0"), new(UnitWatch, "D33", 5, "0.13.0"),
         // login-notice: step 3 the release
-        // undead-hordes: steps 3-5
-        new(UndeadHordes, "D8", 3, "0.14.0"), new(UndeadHordes, "D9", 3, "0.14.0"), new(UndeadHordes, "D10", 3, "0.14.0"), new(UndeadHordes, "D11", 3, "0.14.0"), new(UndeadHordes, "D13", 3, "0.14.0"), new(UndeadHordes, "D14", 3, "0.14.0"), new(UndeadHordes, "D15", 3, "0.14.0"), new(UndeadHordes, "D17", 3, "0.14.0"), new(UndeadHordes, "D20", 3, "0.14.0"), new(UndeadHordes, "D33", 3, "0.14.0"),
+        // undead-hordes: steps 4-5
         new(UndeadHordes, "D23", 4, "0.14.0"), new(UndeadHordes, "D24", 4, "0.14.0"), new(UndeadHordes, "D25", 4, "0.14.0"), new(UndeadHordes, "D26", 4, "0.14.0"),
         new(UndeadHordes, "D28", 5, "0.14.0"), new(UndeadHordes, "D29", 5, "0.14.0"), new(UndeadHordes, "D30", 5, "0.14.0"), new(UndeadHordes, "D31", 5, "0.14.0"),
     ];
@@ -76,12 +75,13 @@ public static class ControlCases
         "ApocalypseTests", "ApocalypseStateTests", "ApocalypseDependencyFailureTests", "UnitWatchTests",
         "UnitWatchDependencyFailureTests", "PoolTests", "PursuitTests", "FactionGroupsTests", "WaveVarietyDependencyFailureTests", "LoginNoticeTests",
         "CeilingTests", "DestinationTests", "SpreadTests", "CapNoticeTests", "LimitsTests", "ScaleTests", "CompatTests",
+        "InfestationTests", "HordeMarchTests", "SourceTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
     public static readonly string[] ExistingClasses =
         ["CommandArgTests", "ConfigChangedTests", "AuthorizationTests", "ContractDocTests", "ControlPrecedenceTests", "DependencyFailureTests",
-         "ApiLinesTests", "WireFormatTests", "PushTests", "PrivacyTests", "EventValidationTests", "SpawnLedgerTests"];
+         "ApiLinesTests", "WireFormatTests", "PushTests", "PrivacyTests", "EventValidationTests", "SpawnLedgerTests", "TemplateTests"];
 
     public static readonly IReadOnlyList<ControlRow> Table =
     [
@@ -1050,7 +1050,7 @@ public static class ControlCases
             ["the_code_matches_the_recorded_ladder"], ["a_feature_doc_without_a_ladder_line"]) with { Plan = UndeadHordes },
         T("D22", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit"],
             ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = UndeadHordes },
-        // ---- undead-hordes step 2 (D16, D18 and D19 gain the infestation's and the horde march's cases in step 3)
+        // ---- undead-hordes step 2 (D16, D18 and D19 gained the infestation's and the horde march's cases in step 3)
         T("D5", "Schema", "DestinationTests",
             ["a_refused_combination_is_accepted", "a_valid_destination_is_refused_or_a_start_is_wrong", "a_chat_field_writes_another_field"],
             ["a_point_or_admin_destination_and_shows_the_march"], ["no_destination_no_march"]) with { Plan = UndeadHordes },
@@ -1072,9 +1072,42 @@ public static class ControlCases
             ["a_list_under_the_bound_whole_each_pass"], ["no_units_no_visits"]) with { Plan = UndeadHordes },
         T("D19", "UndeadHordes", "ContractDocTests", ["the_api_changes_a_push_kind_is_added_or_the_contract_lacks_the_sentence"],
             ["api_8_and_the_sentence"], ["contract"]) with { Plan = UndeadHordes },
-        T("D19", "UndeadHordes", "PrivacyTests", ["a_name_id_or_position_reaches_a_line"],
+        T("D19", "UndeadHordes", "PrivacyTests", ["a_name_id_or_position_reaches_a_line", "an_infestation_or_horde_march_line_carries_a_name_id_or_position"],
             ["a_stall_names_the_front_never_the_player", "destination_here_echoes_the_value_like_location_here"], ["no_destination_no_march_line"]) with { Plan = UndeadHordes },
         T("D21", "Compat", "CompatTests", ["a_definition_validates_or_plans_differently"],
             ["every_0_13_1_definition_plans_as_before"], ["no_definitions_give_an_empty_digest"]) with { Plan = UndeadHordes },
+        // ---- undead-hordes step 3
+        T("D8", "Rise", "InfestationTests",
+            ["an_origin_is_not_a_hotspot_or_gets_other_than_perOrigin", "the_max_is_passed", "a_start_without_origins_runs"],
+            ["ten_origins_each_topped_up_once"], ["no_natives_no_run"]) with { Plan = UndeadHordes },
+        T("D9", "Spread", "InfestationTests",
+            ["the_hunter_share_is_off_by_more_than_one_unit", "a_jump_or_hop_happens_with_a_player_within_100_m", "a_drifter_passes_driftRadius",
+             "the_outcome_differs", "the_unexplained_share_of_the_living_count_is_over_0"],
+            ["kills_draw_into_the_nearest_origin"], ["no_player_no_hunt"]) with { Plan = UndeadHordes },
+        T("D10", "Rise", "HordeMarchTests",
+            ["the_horde_total_differs_from_its_entries_and_rolls", "a_hotspot_start_is_nearer_than_minDistance_or_not_the_nearest_qualifying_one",
+             "an_admin_destination_runs_without_an_admins_start", "growth_passes_its_max_or_does_not_join_the_front"],
+            ["a_template_sized_horde_under_raised_caps"], ["a_horde_cut_to_nothing_waits"]) with { Plan = UndeadHordes },
+        T("D11", "Arrival", "HordeMarchTests",
+            ["arrival_does_not_switch_the_rule_or_the_infest_spread_is_not_used", "a_stall_does_not_switch_the_rule", "an_outcome_differs"],
+            ["kills_after_arrival_count_on_the_scoreboard"], ["an_apocalypse_never_arrives"]) with { Plan = UndeadHordes },
+        T("D13", "Clash", "InfestationTests", ["two_of_the_family_run_together_or_a_destination_wave_is_refused"],
+            ["one_after_another"], ["nothing_running_nothing_refused"]) with { Plan = UndeadHordes },
+        T("D14", "Hostility", "SourceTests", ["Logic_or_Services_writes_a_faction_team_or_aggro_category"],
+            ["reads_and_comparisons"], ["no_files_no_problems"]) with { Plan = UndeadHordes },
+        T("D14", "Groups", "TemplateTests", ["a_new_template_mixes_groups"],
+            ["the_new_templates_inside_the_undead_group"], ["no_prefabs_no_problem"]) with { Plan = UndeadHordes },
+        T("D15", "UndeadHordes", "TemplateTests", ["a_template_differs", "a_table_lacks_a_template"],
+            ["the_templates_as_designed"], ["an_empty_catalogue_misses_all_three"]) with { Plan = UndeadHordes },
+        T("D17", "Resume", "InfestationTests", ["a_resumed_run_loses_its_mode_or_rebuilds_a_different_count", "an_over_ceiling_record_is_accepted"],
+            ["ten_origins_in_the_record"], ["an_apocalypse_record_writes_no_mode"]) with { Plan = UndeadHordes },
+        T("D17", "Resume", "HordeMarchTests", ["a_resumed_run_loses_its_front_or_arrival"],
+            ["growth_within_the_living_count"], ["a_march_with_no_horde_records_none"]) with { Plan = UndeadHordes },
+        T("D20", "Chat", "InfestationTests", ["a_field_cannot_be_set_or_writes_another_field", "a_status_or_info_line_differs"],
+            ["the_duration_of_the_family"], ["a_definition_without_the_block_shows_none"]) with { Plan = UndeadHordes },
+        T("D20", "Chat", "HordeMarchTests", ["a_field_cannot_be_set_or_writes_another_field", "a_status_or_info_line_differs"],
+            ["a_template_copy"], ["an_apocalypse_shows_no_march_lines"]) with { Plan = UndeadHordes },
+        T("D33", "Stall", "HordeMarchTests", ["an_infestation_or_a_horde_march_has_a_watched_wave"],
+            ["an_apocalypse_watches_its_growth_slots_too"], ["a_quiet_unrisen_apocalypse_has_none"]) with { Plan = UndeadHordes },
     ];
 }

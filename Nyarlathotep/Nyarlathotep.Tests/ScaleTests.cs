@@ -4,8 +4,8 @@ namespace Nyarlathotep.Tests;
 
 /// <summary>undead-hordes D18: the per-unit passes are bounded per tick. The round robin takes at most 500 a pass and visits
 /// every one of 1000 units within two 5 s passes; the apocalypse host's hops and roam go through it with no search inside
-/// the per-unit loop, so a step's work grows linearly from 100 to 1000 units; the unit watch marks at most 500 stalled
-/// units a tick and the rest on the next.</summary>
+/// the per-unit loop, so a step's work grows linearly from 100 to 1000 units; an infestation's jumps and drifts take at most
+/// 500 a tick, all of its 500 at most each pass; the unit watch marks at most 500 stalled units a tick and the rest on the next.</summary>
 public class ScaleTests
 {
     static readonly DateTime T0 = Zones.Utc(2026, 10, 31, 20, 0);
@@ -45,6 +45,35 @@ public class ScaleTests
             game.SpawnAll(host, now);
         }
         return (game, host, Tick, now);
+    }
+
+    /// <summary>A running infestation of 10 origins of <paramref name="perOrigin"/> units, risen and spawned, with a player
+    /// far from all of them; returns the most infest visits one tick made and the visits of 10 s, over 20 one-second ticks.</summary>
+    static (long PerTick, long PerTenSeconds, int Units) Infesting(int perOrigin)
+    {
+        var rig = ApocalypseDependencyFailureTests.Make(Inf.Action(origins: Inf.Origins(count: 10, minNatives: 3, minSpacing: 200, perOrigin: perOrigin),
+            spread: Inf.Spread(cap: 500)));
+        var game = new ApoGame
+        {
+            Ledger = new SpawnLedger(new LedgerLimits(1100, 500, 2000, 2000)),
+            NativeRead = () => Enumerable.Range(0, 10).SelectMany(i => Cluster(i * 300, 0, 5)).ToList(),
+        };
+        var big = rig with { Game = game };
+        Assert.Null(big.Engine.Start("apo", "manual", T0, Open(), gate: d => big.Host.Prepare(d, game)));
+        Assert.True(big.Host.Begin(big.Active, game, big.State, big.Board, T0));
+        game.SpawnAll(big.Host, T0);
+        game.Online.Add(new HuntCandidate(7, 9000, 9000, true, true, false, false));
+        var units = game.Ledger.Units.Count(u => Apocalypse.Ours(u, big.Active));
+        long most = 0, ten = 0;
+        for (var s = 1; s <= 20; s++)
+        {
+            game.Budget.Reset();
+            var before = big.Host.InfestVisits;
+            big.Tick(T0.AddSeconds(s));
+            most = Math.Max(most, big.Host.InfestVisits - before);
+            if (s <= 10) ten += big.Host.InfestVisits - before;
+        }
+        return (most, ten, units);
     }
 
     /// <summary>The unit reads and the round-robin visits of 20 one-second ticks (four move passes) after the hordes rose,
@@ -108,6 +137,12 @@ public class ScaleTests
         var (_, hops, roam) = Work(2, 500);
         Assert.InRange(hops, 1, RoundRobin.PerPass + 2);
         Assert.InRange(roam, 1, RoundRobin.PerPass + 2);
+
+        // an infestation at its most (its max reaches MaxTrackedUnits' ceiling, 500): its jumps and drifts visit at most
+        // PerPass a tick, all of them in one pass
+        var (perTick, _, n) = Infesting(50);
+        Assert.Equal(Limits.MaxTrackedUnits.Max, n);
+        Assert.Equal(RoundRobin.PerPass, perTick);
     }
 
     [Fact]
@@ -130,6 +165,8 @@ public class ScaleTests
         Assert.True(LongestWait(500, 500) <= 10);
         Assert.True(LongestWait(900, 100) <= 10);
         Assert.True(LongestWait(200, 200, 200, 200, 200) <= 10);
+        // an infestation of 500: two passes in 10 s, each unit twice
+        Assert.Equal(1000, Infesting(50).PerTenSeconds);
 
         // deaths before the cursor shift no one past their turn: the keyed round robin resumes after the last key taken
         var keyed = new RoundRobin();
@@ -167,6 +204,8 @@ public class ScaleTests
         Assert.Contains("RoamTurns(spot.Number).Take(roamers, RoundRobin.Share(roamers.Count, roaming), r => r.Key)", host);
         Assert.Contains("_hopTurns.Clear();", host);                                  // a new run starts its turns afresh
         Assert.Contains("units.ToLookup(", host);
+        Assert.Contains("_infestTurns.Take(units, RoundRobin.PerPass, u => u.Key)", host);     // the infestation's moves too
+        Assert.Contains("_infestTurns = new RoundRobin(RoundRobin.PerPass);", host);
     }
 
     [Fact]

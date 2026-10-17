@@ -199,7 +199,7 @@ public class DestinationTests
         Assert.Equal(0, m.StuckSeconds);
         // unheld with no ground ahead: 120 s, then stalled where it stands
         for (var s = 0; s < 130 && line is null; s++) line = m.Step(1, Nobody, NoGround, t = t.AddSeconds(1), 5, out _);
-        Assert.Equal("march raid wave 1: stalled at 0, 0", line);
+        Assert.Equal("march raid wave 1: stalled 200 m short of its destination", line);   // stuck where it started (A5: no point)
         Assert.Equal(WaveMarchState.Stalled, m.State);
         Assert.True(m.Released);
         // held time in between does not count, and a step forward clears the stuck time

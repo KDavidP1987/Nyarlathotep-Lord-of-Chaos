@@ -85,7 +85,8 @@ public sealed class AdminFlows(IAdminOps ops, ActionGateway gateway, PurgeArming
         if (BadId(id) is { } bad) return bad;
         (float X, float Y, float Z)? origin = null;
         if (ops.Definitions.Find(id) is { } found
-            && (found.Action?.Location.Type == LocationType.Admin || found.Apocalypse?.Goal.Location.Type == LocationType.Admin))   // apocalypse: the goal is the starting admin's position (D11)
+            && (found.Action?.Location.Type == LocationType.Admin || found.Apocalypse?.Goal.Location.Type == LocationType.Admin   // apocalypse: the goal is the starting admin's position (D11)
+                || found.Apocalypse?.March?.Start.Location?.Type == LocationType.Admin))                                    // undead-hordes D10: so is a horde march's Admin start
         {
             origin = who.Position();
             if (origin is null) return AdminLines.PositionUnread;

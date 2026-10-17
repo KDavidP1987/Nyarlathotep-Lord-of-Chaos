@@ -59,27 +59,40 @@ public static class Apocalypse
     /// boss's is <see cref="BossWaveBase"/> + horde × 10 + its `bosses` entry's number (D11, D36).</summary>
     public const int RoamerWaveBase = 100;
     public const int BossWaveBase = 200;
+    /// <summary>A horde march's growth units (undead-hordes D10) are ledger wave this plus the horde's number: horde units,
+    /// counted apart so the growth block's max and the record read them.</summary>
+    public const int GrowthWaveBase = 50;
+    /// <summary>The most hotspots or origins a run holds (an infestation's 10, undead-hordes D8), and the most boss slots a
+    /// horde holds (a horde march's resolved bosses, D10; an apocalypse's 3 entries).</summary>
+    public const int MaxSpots = HordeLimits.MaxOrigins;
+    public const int MaxBossSlots = EventValidator.MaxWaveBosses;
 
     public static int RoamerWave(int hotspot) => RoamerWaveBase + hotspot;
     public static int HordeWave(int horde) => horde;
+    public static int GrowthWave(int horde) => GrowthWaveBase + horde;
     public static int BossWave(int horde, int entry) => BossWaveBase + horde * 10 + entry;
 
     /// <summary>The hotspot (1-based) a roamer's ledger wave names, or null.</summary>
-    public static int? HotspotOfWave(int wave) => wave is > RoamerWaveBase and <= RoamerWaveBase + ApocalypseLimits.MaxHotspots ? wave - RoamerWaveBase : null;
+    public static int? HotspotOfWave(int wave) => wave is > RoamerWaveBase and <= RoamerWaveBase + MaxSpots ? wave - RoamerWaveBase : null;
 
-    /// <summary>The horde (1-based) a horde unit's or boss's ledger wave names, or null for a roamer.</summary>
+    /// <summary>The horde (1-based) a horde unit's, growth unit's or boss's ledger wave names, or null for a roamer.</summary>
     public static int? HordeOfWave(int wave) =>
         wave is >= 1 and <= ApocalypseLimits.MaxHordes ? wave
+        : wave is > GrowthWaveBase and <= GrowthWaveBase + ApocalypseLimits.MaxHordes ? wave - GrowthWaveBase
         : wave > BossWaveBase ? (wave - BossWaveBase) / 10 is var k and >= 1 and <= ApocalypseLimits.MaxHordes ? k : null
         : null;
 
-    /// <summary>The `bosses` entry (1-based) a boss's ledger wave names, or null.</summary>
-    public static int? BossEntryOfWave(int wave) => wave > BossWaveBase && (wave - BossWaveBase) % 10 is var j and >= 1 and <= EventValidator.MaxBosses ? j : null;
+    /// <summary>The `bosses` entry or boss slot (1-based) a boss's ledger wave names, or null.</summary>
+    public static int? BossEntryOfWave(int wave) => wave > BossWaveBase && (wave - BossWaveBase) % 10 is var j and >= 1 and <= MaxBossSlots ? j : null;
 
     /// <summary>The goal fixed at the start (D11, S-10): a Point goal's coordinates (height 0 when none is stored), or an
     /// Admin goal's starting admin position, read once; null for an Admin goal without one (the start is refused).</summary>
     public static (float X, float Y, float Z)? ResolveGoal(ApocalypseGoal goal, (float X, float Y, float Z)? origin) =>
         goal.Location.Type == LocationType.Admin ? origin : (goal.Location.X, goal.Location.Y ?? 0f, goal.Location.Z);
+
+    /// <summary>A horde march's Point or Admin start (undead-hordes D10), resolved as the goal is; null for a Hotspot start.</summary>
+    public static (float X, float Z)? ResolveStart(HordeStart start, (float X, float Y, float Z)? origin) =>
+        start.Location is not { } l ? null : l.Type == LocationType.Admin ? origin is { } o ? (o.X, o.Z) : null : (l.X, l.Z);
 
     public static float Distance(float ax, float az, float bx, float bz) => HuntingGrounds.Distance(ax, az, bx, bz);
 
@@ -115,11 +128,19 @@ public static class Hotspots
     /// <summary>"no hotspot: native read failed: &lt;message&gt;" (D21).</summary>
     public static string ReadFailed(string message) => $"no hotspot: native read failed: {message}";
 
+    /// <summary>An infestation with no origin (undead-hordes D8): "no &lt;faction&gt; natives found".</summary>
+    public static string NoNatives(string faction) => $"no {Apocalypse.FactionText(faction)} natives found";
+
+    /// <summary>A horde march's Hotspot start with none far enough (undead-hordes D10): "no &lt;faction&gt; natives found at
+    /// least &lt;minDistance&gt; m away".</summary>
+    public static string NoStart(string faction, int minDistance) => $"no {Apocalypse.FactionText(faction)} natives found at least {minDistance} m away";
+
     // <native-read>
-    /// <summary>The hotspots of <paramref name="action"/> over the natives <paramref name="read"/> returns. A throwing read
-    /// refuses the start with <see cref="ReadFailed"/>; fewer than one hotspot with <see cref="NoHotspot"/>.</summary>
-    public static HotspotPick Pick(string eventId, ApocalypseAction action, Func<IEnumerable<HotspotNative>> read)
+    /// <summary>The eligible natives of <paramref name="action"/> by 100 m cell; a throwing read gives its refusal.</summary>
+    static Dictionary<(int X, int Z), List<(float X, float Z)>>? Cells(string eventId, ApocalypseAction action, Func<IEnumerable<HotspotNative>> read,
+        out HotspotPick? failed)
     {
+        failed = null;
         var rule = new EmpowerAction([action.Faction], [], [], false, new EmpowerStats(), action.Scope);
         var cells = new Dictionary<(int X, int Z), List<(float X, float Z)>>();
         try
@@ -134,9 +155,19 @@ public static class Hotspots
         }
         catch (Exception e)
         {
-            var failed = ReadFailed(e.Message);
-            return new HotspotPick([], failed, $"apocalypse {eventId}: {failed}");
+            var reason = ReadFailed(e.Message);
+            failed = new HotspotPick([], reason, $"apocalypse {eventId}: {reason}");
+            return null;
         }
+        return cells;
+    }
+
+    /// <summary>The hotspots of <paramref name="action"/> over the natives <paramref name="read"/> returns. A throwing read
+    /// refuses the start with <see cref="ReadFailed"/>; fewer than one hotspot with <see cref="NoHotspot"/> (an
+    /// infestation's origins with <see cref="NoNatives"/>).</summary>
+    public static HotspotPick Pick(string eventId, ApocalypseAction action, Func<IEnumerable<HotspotNative>> read)
+    {
+        if (Cells(eventId, action, read, out var failed) is not { } cells) return failed!;
         var ranked = cells.Where(c => c.Value.Count >= action.Hotspots.MinNatives)
             .OrderByDescending(c => c.Value.Count).ThenBy(c => c.Key.X).ThenBy(c => c.Key.Z);
         var spots = new List<Hotspot>();
@@ -150,10 +181,31 @@ public static class Hotspots
         }
         if (spots.Count == 0)
         {
-            var none = NoHotspot(action.Hotspots.MinNatives, action.Faction);
+            var none = action.Mode == ApocalypseMode.Infestation ? NoNatives(action.Faction) : NoHotspot(action.Hotspots.MinNatives, action.Faction);
             return new HotspotPick([], none, $"apocalypse {eventId}: {none}");
         }
         return new HotspotPick(spots, null, Line(eventId, spots));
+    }
+
+    /// <summary>A horde march's Hotspot start (undead-hordes D10): of the cells holding at least minNatives eligible natives,
+    /// the one whose natives' mean lies nearest <paramref name="destination"/> at least start.minDistance m from it (ties by
+    /// cell x, then z); none refuses the start with <see cref="NoStart"/>.</summary>
+    public static HotspotPick PickStart(string eventId, ApocalypseAction action, (float X, float Z) destination, Func<IEnumerable<HotspotNative>> read)
+    {
+        if (Cells(eventId, action, read, out var failed) is not { } cells) return failed!;
+        var min = action.March?.Start.MinDistance ?? 0;
+        var best = cells.Where(c => c.Value.Count >= action.Hotspots.MinNatives)
+            .Select(c => (Cell: c.Key, X: (float)c.Value.Average(p => (double)p.X), Z: (float)c.Value.Average(p => (double)p.Z), Natives: c.Value.Count))
+            .Select(c => (c.Cell, c.X, c.Z, c.Natives, Far: Apocalypse.Distance(c.X, c.Z, destination.X, destination.Z)))
+            .Where(c => c.Far >= min)
+            .OrderBy(c => c.Far).ThenBy(c => c.Cell.X).ThenBy(c => c.Cell.Z)
+            .Select(c => new Hotspot(1, c.X, c.Z, c.Natives, c.Cell.X, c.Cell.Z)).FirstOrDefault();
+        if (best is null)
+        {
+            var none = NoStart(action.Faction, min);
+            return new HotspotPick([], none, $"apocalypse {eventId}: {none}");
+        }
+        return new HotspotPick([best], null, Line(eventId, [best]));
     }
     // </native-read>
 
@@ -239,9 +291,13 @@ public static class RoamerPlan
 
     /// <summary>One spread unit (undead-hordes D7): a member of roamers.pool drawn uniformly, with the modifiers of the first
     /// units entry naming that pool; without a pool, <see cref="Draw(ApocalypseAction, IRandom)"/>.</summary>
-    public static UnitEntry Spread(ApocalypseAction action, IRandom rng)
+    public static UnitEntry Spread(ApocalypseAction action, IRandom rng) => Spread(action, action.Roamers, rng);
+
+    /// <summary><see cref="Spread(ApocalypseAction, IRandom)"/> from the spread block <paramref name="block"/> (a horde
+    /// march's growth or infest spread, undead-hordes D10).</summary>
+    public static UnitEntry Spread(ApocalypseAction action, ApocalypseRoamers block, IRandom rng)
     {
-        if (action.Roamers.Pool is not { } pool) return Draw(action, rng);
+        if (block.Pool is not { } pool) return Draw(action, rng);
         var named = action.Units.FirstOrDefault(u => u.Pool == pool);
         return Member(action, UnitEntry.FromPool(pool, 1, 1.0, named?.Modifiers), rng);
     }
@@ -317,6 +373,80 @@ public sealed class RoamTargets
         if (_target.TryGetValue(hotspot, out var was) && was == key) return null;
         _target[hotspot] = key;
         return RoamRule.Line(eventId, hotspot);
+    }
+}
+
+/// <summary>
+/// Who hunts in an infestation (undead-hordes D9): the hunters' share of the living units, rounded down, hunts players; the
+/// rest drift. A unit seen for the first time (a spread unit, a rebuilt one, every unit at the rise) joins the hunters while
+/// their share is not met, the drifters otherwise, in key order. When deaths move the share (Codex step 3 F1), the fewest
+/// units change role: the lowest-keyed drifters join the hunters, or the highest-keyed hunters drift.
+/// </summary>
+public sealed class InfestRoles
+{
+    readonly Dictionary<long, bool> _hunter = [];
+
+    /// <summary>The hunters' share of <paramref name="living"/> units at <paramref name="percent"/>, rounded down.</summary>
+    public static int Share(int percent, int living) => (int)((long)living * Math.Clamp(percent, 0, 100) / 100);
+
+    public int Hunters => _hunter.Values.Count(h => h);
+
+    public bool IsHunter(long key) => _hunter.TryGetValue(key, out var h) && h;
+
+    /// <summary>Forgets the units no longer living, then gives every new one of <paramref name="living"/> its role.</summary>
+    public void Assign(IReadOnlyCollection<long> living, int percent)
+    {
+        var alive = living as ISet<long> ?? new HashSet<long>(living);
+        foreach (var gone in _hunter.Keys.Where(k => !alive.Contains(k)).ToList()) _hunter.Remove(gone);
+        var hunters = Hunters;
+        var share = Share(percent, living.Count);
+        foreach (var key in living.Where(k => !_hunter.ContainsKey(k)).OrderBy(k => k))
+        {
+            var hunts = hunters < share;
+            _hunter[key] = hunts;
+            if (hunts) hunters++;
+        }
+        if (hunters < share)
+            foreach (var key in _hunter.Where(r => !r.Value).Select(r => r.Key).OrderBy(k => k).Take(share - hunters).ToList()) _hunter[key] = true;
+        else if (hunters > share)
+            foreach (var key in _hunter.Where(r => r.Value).Select(r => r.Key).OrderByDescending(k => k).Take(hunters - share).ToList()) _hunter[key] = false;
+    }
+
+    public void Clear() => _hunter.Clear();
+}
+
+/// <summary>
+/// An infestation's moves (undead-hordes D9): a hunter goes after the eligible player nearest its origin's hunters, anywhere,
+/// by the roam's hidden jumps (RoamRule.Plan: only while no player is within 100 m, landing 50 m or more from every player); a
+/// drifter hops outward from its origin by the same hidden jumps toward the ring driftRadius m out on its own bearing, never
+/// landing past that ring. Units in view walk under the game's AI.
+/// </summary>
+public static class InfestMove
+{
+    /// <summary>The point a drifter heads for: on the ring <paramref name="radius"/> m from its origin, along the unit's
+    /// bearing from the origin, or a bearing from its key when it stands on the origin.</summary>
+    public static (float X, float Z) DriftTarget((float X, float Z) origin, RegionUnit u, int radius)
+    {
+        var d = Apocalypse.Distance(origin.X, origin.Z, u.X, u.Z);
+        double dx, dz;
+        if (d >= 1f) { dx = (u.X - origin.X) / d; dz = (u.Z - origin.Z) / d; }
+        else
+        {
+            var a = u.Key * 2.399963229728653;                       // the golden angle: keys spread round the ring
+            dx = Math.Cos(a);
+            dz = Math.Sin(a);
+        }
+        return ((float)(origin.X + dx * radius), (float)(origin.Z + dz * radius));
+    }
+
+    /// <summary>One drifter's plan: none with a radius of 0; else JumpRule's toward <see cref="DriftTarget"/> with landings
+    /// allowed only within <paramref name="radius"/> m of the origin and outside claimed territory.</summary>
+    public static (JumpKind Kind, RegionJump? Jump) Drift(RegionUnit u, (float X, float Z) origin, int radius, IReadOnlyList<HuntCandidate> online,
+        Func<float, float, bool> claimed, Func<float, float, byte, bool> walkable, Func<byte, float> heightOf, WalkBudget budget)
+    {
+        if (radius <= 0) return (JumpKind.InReach, null);
+        return JumpRule.Plan(u, DriftTarget(origin, u, radius), online,
+            (x, z) => !claimed(x, z) && Apocalypse.Distance(origin.X, origin.Z, x, z) <= radius, walkable, heightOf, budget);
     }
 }
 
@@ -425,6 +555,56 @@ public static class HordeSchedule
 
     /// <summary>"&lt;n&gt; units of horde &lt;k&gt; of &lt;c&gt;"-style counts for the rise line.</summary>
     public static int Count(IReadOnlyList<(UnitEntry Unit, int Entry)> units) => units.Sum(u => u.Unit.Count);
+
+    /// <summary>A horde march's bosses (undead-hordes D10), one slot each: fixed bosses in list order, then each roll's count
+    /// drawn uniformly in min..max and that many distinct members of its pool the list does not already hold, as
+    /// wave-variety's roll does (Pools.Resolve).</summary>
+    public static IReadOnlyList<UnitEntry> MarchBosses(ApocalypseAction action, IRandom rng)
+    {
+        var list = action.March?.Bosses ?? [];
+        var bosses = list.Where(b => !b.IsRoll).Select(b => new UnitEntry(b.Prefab, b.Count, 1.0, b.Modifiers)).ToList();
+        foreach (var b in list)
+        {
+            if (b.Pool is not { } pool || action.Pools?.GetValueOrDefault(pool) is not { } members) continue;
+            var count = b.Min + Pools.Index(rng, b.Max - b.Min + 1);
+            var free = members.Where(p => bosses.All(h => h.Prefab != p)).ToList();
+            for (var i = 0; i < count && free.Count > 0; i++)
+            {
+                var k = Pools.Index(rng, free.Count);
+                bosses.Add(new UnitEntry(free[k], 1, 1.0, b.Modifiers));
+                free.RemoveAt(k);
+            }
+        }
+        return bosses;
+    }
+
+    /// <summary>The units a horde march's horde queues (undead-hordes D10): its resolved <paramref name="bosses"/> first, slot
+    /// j as entry j, then each units entry's count, a pool entry drawing each copy uniformly from its pool and every copy
+    /// kept with its entry's chance; the whole clamped by MaxUnitsPerWave, then by the free tracked slots, cutting regular
+    /// units before bosses (revenge D29). <paramref name="asked"/> is the count before the clamp.</summary>
+    public static IReadOnlyList<(UnitEntry Unit, int Entry)> MarchUnits(ApocalypseAction action, IReadOnlyList<UnitEntry> bosses, int maxPerWave, int occupied,
+        int maxTracked, IRandom rng, List<string> log, out int asked)
+    {
+        var regular = new List<UnitEntry>();
+        foreach (var e in action.Units)
+            for (var i = 0; i < e.Count; i++)
+            {
+                if (e.Chance < 1.0 && rng.NextDouble() >= e.Chance) continue;
+                var prefab = e.Pool is { } pool && action.Pools?.GetValueOrDefault(pool) is { Count: > 0 } members ? members[Pools.Index(rng, members.Count)] : e.Prefab;
+                regular.Add(new UnitEntry(prefab, 1, 1.0, e.Modifiers));
+            }
+        asked = regular.Count + bosses.Sum(b => b.Count);
+        var room = Precedence.WaveSize(asked, maxPerWave, occupied, maxTracked, log);
+        var result = new List<(UnitEntry, int)>();
+        for (var j = 0; j < bosses.Count && room > 0; j++)
+        {
+            var n = Math.Min(bosses[j].Count, room);
+            result.Add((bosses[j] with { Count = n }, j + 1));
+            room -= n;
+        }
+        foreach (var u in regular.Take(Math.Max(0, room))) result.Add((u, 0));
+        return result;
+    }
 }
 
 /// <summary>A risen horde's front (D6): the point moving from its hotspot to the goal at marchSpeed m/s.</summary>
@@ -611,9 +791,16 @@ public static class ApocalypseOutcome
         return ApocalypseResult.None;
     }
 
-    /// <summary>"event &lt;id&gt; ended: &lt;won|lost|survived&gt; (&lt;r&gt; of &lt;c&gt; hordes risen)" (D8).</summary>
-    public static string Line(string eventId, ApocalypseResult result, int risen, int count) =>
-        $"event {eventId} ended: {result.ToString().ToLowerInvariant()} ({risen} of {count} hordes risen)";
+    /// <summary>"event &lt;id&gt; ended: &lt;won|lost|survived&gt; (&lt;r&gt; of &lt;c&gt; hordes risen)" (D8); an infestation's
+    /// "won (cleared)" or "survived", a horde march's "won (horde destroyed)" or "survived" (undead-hordes D9, D11).</summary>
+    public static string Line(string eventId, ApocalypseResult result, int risen, int count, ApocalypseMode mode = ApocalypseMode.Apocalypse) =>
+        $"event {eventId} ended: {result.ToString().ToLowerInvariant()}" + (mode, result) switch
+        {
+            (ApocalypseMode.Apocalypse, _) => $" ({risen} of {count} hordes risen)",
+            (ApocalypseMode.Infestation, ApocalypseResult.Won) => " (cleared)",
+            (ApocalypseMode.HordeMarch, ApocalypseResult.Won) => " (horde destroyed)",
+            _ => "",
+        };
 
     /// <summary>The end path the scoreboard reads: won is Victory, lost Defeat, survived Natural.</summary>
     public static EndPath PathOf(ApocalypseResult result) => result switch
@@ -627,7 +814,8 @@ public static class ApocalypseOutcome
     /// WaveCleared over its regular wave and each boss entry's wave, counting only units spawned since the start.</summary>
     public static bool HordeCleared(SpawnLedger ledger, string eventId, int horde, DateTime startedUtc) =>
         ledger.WaveCleared(eventId, Apocalypse.HordeWave(horde), startedUtc)
-        && Enumerable.Range(1, EventValidator.MaxBosses).All(j => ledger.WaveCleared(eventId, Apocalypse.BossWave(horde, j), startedUtc));
+        && ledger.WaveCleared(eventId, Apocalypse.GrowthWave(horde), startedUtc)
+        && Enumerable.Range(1, Apocalypse.MaxBossSlots).All(j => ledger.WaveCleared(eventId, Apocalypse.BossWave(horde, j), startedUtc));
 }
 
 /// <summary>Every way an apocalypse ends or is touched (D8, D9; Business rules 11's "every end path").</summary>
@@ -702,14 +890,31 @@ public static class ResumeRule
         return ResumeVerdict.Resume;
     }
 
-    /// <summary>The definition changed kind, has fewer hordes than had risen, or lacks a recorded boss prefab (D12).</summary>
+    /// <summary>The definition changed kind or mode (undead-hordes D17), has fewer hordes than had risen, or lacks a
+    /// recorded boss prefab (D12): a horde march's among its fixed bosses or its rolls' pools.</summary>
     public static bool Changed(ApocalypseRecord record, EventDefinition def)
     {
         if (def.Apocalypse is not { } a) return true;
+        if (record.ModeOf != a.Mode) return true;
         if (a.Hordes.Count < record.HordesRisen) return true;
-        var bosses = a.Bosses ?? [];
-        return record.Hordes.SelectMany(h => h.LivingBosses).Any(b => b.Living > 0 && bosses.All(e => e.Prefab != b.Prefab));
+        return record.Hordes.SelectMany(h => h.LivingBosses).Any(b => b.Living > 0 && BossEntry(a, b.Prefab, -1) is null && !RolledBoss(a, b.Prefab));
     }
+
+    /// <summary>The bosses entry of <paramref name="prefab"/>: entry <paramref name="index"/> when it names it (two entries may
+    /// share a prefab with different modifiers, review L2), else the first that does; a horde march's fixed bosses.</summary>
+    static UnitEntry? BossEntry(ApocalypseAction a, string prefab, int index)
+    {
+        IReadOnlyList<UnitEntry> list = a.Mode == ApocalypseMode.HordeMarch
+            ? (a.March?.Bosses ?? []).Where(b => !b.IsRoll).Select(b => new UnitEntry(b.Prefab, b.Count, 1.0, b.Modifiers)).ToList()
+            : a.Bosses ?? [];
+        return index >= 0 && index < list.Count && list[index].Prefab == prefab ? list[index] : list.FirstOrDefault(e => e.Prefab == prefab);
+    }
+
+    /// <summary>A horde march's roll that can draw <paramref name="prefab"/>: its pool holds it.</summary>
+    static BossRoll? RollOf(ApocalypseAction a, string prefab) =>
+        (a.March?.Bosses ?? []).FirstOrDefault(b => b.Pool is { } p && a.Pools?.GetValueOrDefault(p)?.Contains(prefab) == true);
+
+    static bool RolledBoss(ApocalypseAction a, string prefab) => a.Mode == ApocalypseMode.HordeMarch && RollOf(a, prefab) is not null;
 
     public static string Reason(ResumeVerdict v) => v switch
     {
@@ -744,9 +949,14 @@ public static class ResumeRule
     public static IReadOnlyList<RebuildOrder> Rebuild(ApocalypseRecord record, ApocalypseAction action)
     {
         var orders = new List<RebuildOrder>();
+        // a horde march's spread units infest round its arrival point (undead-hordes D17)
+        var arrival = record.Arrived && record.Arrival is { } p ? (p.X, p.Z) : ((float X, float Z)?)null;
         for (var h = 0; h < record.Hotspots.Count; h++)
             if (record.Roamers[h] > 0)
-                orders.Add(new RebuildOrder(Apocalypse.RoamerWave(h + 1), null, record.Roamers[h], null, record.Hotspots[h].X, record.Hotspots[h].Z));
+            {
+                var (x, z) = arrival ?? (record.Hotspots[h].X, record.Hotspots[h].Z);
+                orders.Add(new RebuildOrder(Apocalypse.RoamerWave(h + 1), null, record.Roamers[h], null, x, z));
+            }
         foreach (var horde in record.Hordes.OrderBy(x => x.Number))
         {
             var bosses = 0;
@@ -754,13 +964,13 @@ public static class ResumeRule
             {
                 var b = horde.LivingBosses[j];
                 if (b.Living <= 0) continue;
-                // by entry index first: two entries may share a prefab with different modifiers (review L2)
-                var entry = action.Bosses is { } list && j < list.Count && list[j].Prefab == b.Prefab ? list[j]
-                    : action.Bosses?.FirstOrDefault(e => e.Prefab == b.Prefab);
-                orders.Add(new RebuildOrder(Apocalypse.BossWave(horde.Number, j + 1), b.Prefab, b.Living, entry?.Modifiers, horde.FrontX, horde.FrontZ));
+                var modifiers = BossEntry(action, b.Prefab, j)?.Modifiers ?? (action.Mode == ApocalypseMode.HordeMarch ? RollOf(action, b.Prefab)?.Modifiers : null);
+                orders.Add(new RebuildOrder(Apocalypse.BossWave(horde.Number, j + 1), b.Prefab, b.Living, modifiers, horde.FrontX, horde.FrontZ));
                 bosses += b.Living;
             }
-            var regular = horde.Living - bosses;
+            var growth = Math.Clamp(horde.Growth, 0, horde.Living - bosses);
+            if (growth > 0) orders.Add(new RebuildOrder(Apocalypse.GrowthWave(horde.Number), null, growth, null, horde.FrontX, horde.FrontZ));
+            var regular = horde.Living - bosses - growth;
             if (regular > 0) orders.Add(new RebuildOrder(Apocalypse.HordeWave(horde.Number), null, regular, null, horde.FrontX, horde.FrontZ));
         }
         return orders;
@@ -866,8 +1076,9 @@ public interface IApocalypseWorld
     int DrainMarginSeconds { get; }
 }
 
-/// <summary>A rise of horde k (D5, D7): its number, hotspot, queued count, and the clamp lines.</summary>
-public sealed record HordeRise(int Horde, int Hotspot, int Queued, IReadOnlyList<string> Log, CapCut? Cut = null);
+/// <summary>A rise of horde k (D5, D7): its number, hotspot, queued count (<see cref="Bosses"/> of them bosses), and the
+/// clamp lines.</summary>
+public sealed record HordeRise(int Horde, int Hotspot, int Queued, IReadOnlyList<string> Log, CapCut? Cut = null, int Bosses = 0);
 
 /// <summary>
 /// One running apocalypse's state (D3-D8, D11, D12, D15, D36): hotspots, the resolved goal, hordes risen, fronts, the spread
@@ -890,7 +1101,36 @@ public sealed class ApocalypseRun
     /// <summary>The top-ups done since the run (or its resume) began: the start's or the resume's, and one per rise.</summary>
     public int TopUps { get; private set; }
 
+    /// <summary>True once a unit of the run was seen alive or confirmed spawned: an infestation or a horde march is won only
+    /// after that (code review step 3).</summary>
+    bool _lived;
+
     public string Id => Active.Id;
+
+    /// <summary>The kind of run (undead-hordes D8, D10): an apocalypse, an infestation or a horde march.</summary>
+    public ApocalypseMode Mode => Action.Mode;
+
+    /// <summary>A horde march that reached its destination or stalled, and where (undead-hordes D11): it infests there.</summary>
+    public bool Arrived { get; private set; }
+    public (float X, float Z)? ArrivedAt { get; private set; }
+
+    /// <summary>The infestation's origins (undead-hordes D9): an infestation's hotspots, a horde march's arrival point once it
+    /// arrived, else none.</summary>
+    public IReadOnlyList<Hotspot> Origins => Mode == ApocalypseMode.Infestation ? Hotspots
+        : ArrivedAt is { } at ? [new Hotspot(1, at.X, at.Z, 0, (int)MathF.Floor(at.X / Apocalypse.CellSize), (int)MathF.Floor(at.Z / Apocalypse.CellSize))] : [];
+
+    /// <summary>True while the units move by the infestation's rule (an infestation, or a horde march after arrival).</summary>
+    public bool Infesting => Mode == ApocalypseMode.Infestation || (Mode == ApocalypseMode.HordeMarch && Arrived);
+
+    /// <summary>The infest rule now: an infestation's, a horde march's infest block; null for an apocalypse.</summary>
+    public InfestRule? Infest => Mode == ApocalypseMode.HordeMarch ? Action.March!.Infest : Action.Infest;
+
+    /// <summary>The spread block a qualifying kill draws from now (undead-hordes D7, D10): the roamers' (an apocalypse's or an
+    /// infestation's spread), a horde march's growth before arrival and its infest spread after.</summary>
+    public ApocalypseRoamers SpreadBlock => Mode != ApocalypseMode.HordeMarch ? Action.Roamers : Arrived ? Action.March!.InfestSpread : Action.March!.Growth;
+
+    /// <summary>Who hunts and who drifts while the run infests (undead-hordes D9).</summary>
+    public InfestRoles Roles { get; } = new();
 
     public ApocalypseRun(ActiveEvent active, IReadOnlyList<Hotspot> hotspots, (float X, float Y, float Z) goal)
     {
@@ -899,6 +1139,20 @@ public sealed class ApocalypseRun
         Hotspots = hotspots;
         Goal = goal;
     }
+
+    /// <summary>A horde march's horde reached its destination, or stalled, at (x, z) (undead-hordes D11): from now on it is
+    /// an infestation with that point as its one origin. False when it had already arrived.</summary>
+    public bool Arrive(float x, float z)
+    {
+        if (Mode != ApocalypseMode.HordeMarch || Arrived) return false;
+        Arrived = true;
+        ArrivedAt = (x, z);
+        return true;
+    }
+
+    /// <summary>The run's living or waiting units of every wave: its tracked units spawned since the start and its orders not
+    /// yet confirmed (the infestation's and the horde's living count, undead-hordes D7, D10).</summary>
+    public int Living(IApocalypseWorld w) => w.Ledger.Units.Count(u => Apocalypse.Ours(u, Active)) + _pending.Values.Sum();
 
     UnitLifetime Life(IApocalypseWorld w, DateTime utcNow) => RollingLifetime.Of(utcNow, Active.Instance.EndsUtc, w.GraceSeconds, w.DrainMarginSeconds);
 
@@ -974,20 +1228,24 @@ public sealed class ApocalypseRun
     {
         cut = null;
         if (!SpreadGate.Qualifies(sides, Active)) return null;
-        var live = RoamersPerHotspot(w).Sum();
-        var drawn = SpreadGate.Draw(Action.Roamers, w.Random);
+        // the block's max bounds an apocalypse's live roamers, and every other mode's living count (undead-hordes D7, D10)
+        var block = SpreadBlock;
+        var live = Mode == ApocalypseMode.Apocalypse ? RoamersPerHotspot(w).Sum() : Living(w);
+        var drawn = SpreadGate.Draw(block, w.Random);
         var free = FreeTracked(w);
-        var n = Spread.Allow(utcNow, Action.Roamers, live, free, drawn);
-        var allowed = Spread.Allow(utcNow, Action.Roamers, live, int.MaxValue, drawn);
+        var n = Spread.Allow(utcNow, block, live, free, drawn);
+        var allowed = Spread.Allow(utcNow, block, live, int.MaxValue, drawn);
         if (free < allowed) cut = Active.LastCut = new CapCut(n, allowed, "MaxTrackedUnits", w.Ledger.Limits.MaxTracked);
         if (n <= 0) return null;
-        var hotspot = RoamerPlan.NearestHotspot(Hotspots, victim.X, victim.Z);
+        // a horde march's growth joins its horde before arrival, and its spread infests round the arrival point after
+        var wave = Mode != ApocalypseMode.HordeMarch ? Apocalypse.RoamerWave(RoamerPlan.NearestHotspot(Hotspots, victim.X, victim.Z))
+            : Arrived ? Apocalypse.RoamerWave(1) : Apocalypse.GrowthWave(1);
         var queued = 0;
         for (var i = 0; i < n; i++)
-            queued += Queue(w, RoamerPlan.Spread(Action, w.Random), 1, Apocalypse.RoamerWave(hotspot), victim.X, victim.Z, Apocalypse.SpreadRadius, utcNow);
+            queued += Queue(w, RoamerPlan.Spread(Action, block, w.Random), 1, wave, victim.X, victim.Z, Apocalypse.SpreadRadius, utcNow);
         Spread.Queued(utcNow, queued);
         return queued == 0 ? null
-            : SpreadGate.Line(Id, queued, live + queued, Action.Roamers.Max, Spread.InWindow(utcNow), Action.Roamers.PerMinute);
+            : SpreadGate.Line(Id, queued, live + queued, block.Max, Spread.InWindow(utcNow), block.PerMinute);
     }
 
     /// <summary>The horde due now, risen (D5, D36): its units queued at its hotspot (its bosses as their own ledger waves);
@@ -996,8 +1254,24 @@ public sealed class ApocalypseRun
     public HordeRise? Rise(IApocalypseWorld w, DateTime utcNow, out IReadOnlyList<string> roamerLines, bool topUp = true)
     {
         roamerLines = [];
+        if (Mode == ApocalypseMode.Infestation)
+        {
+            // an infestation rises by its top-up at the start; one that queued nothing (the caps full) tries again each
+            // minute until it queues (code review step 3)
+            if (Tally.Queued == 0 && (LastTryUtc is not { } tried || utcNow - tried >= Apocalypse.RiseRetry))
+                roamerLines = InfestTopUp(w, utcNow);
+            return null;
+        }
         var k = HordeSchedule.Due(Active.Instance.StartedUtc, Active.Instance.EndsUtc, Action.Hordes, Risen, LastTryUtc, utcNow);
         return k is { } due ? RiseHorde(w, due, utcNow, out roamerLines, topUp) : null;
+    }
+
+    /// <summary>An infestation's top-up, at the start and on each retry: the attempt is recorded so a top-up that queued
+    /// none waits a minute before the next (code review step 3).</summary>
+    public IReadOnlyList<string> InfestTopUp(IApocalypseWorld w, DateTime utcNow)
+    {
+        LastTryUtc = utcNow;
+        return TopUp(w, utcNow);
     }
 
     HordeRise? RiseHorde(IApocalypseWorld w, int k, DateTime utcNow, out IReadOnlyList<string> roamerLines, bool topUp)
@@ -1005,14 +1279,32 @@ public sealed class ApocalypseRun
         roamerLines = [];
         var hotspot = Hotspots[HordeSchedule.HotspotOf(k, Hotspots.Count) - 1];
         var log = new List<string>();
-        var asked = HordeSchedule.Size(Action.Hordes, k) + (k == Action.Hordes.Count ? (Action.Bosses ?? []).Sum(b => b.Count) : 0);
+        int asked;
+        IReadOnlyList<(UnitEntry Unit, int Entry)> units;
+        List<string> slots;
+        if (Mode == ApocalypseMode.HordeMarch)
+        {
+            // undead-hordes D10: the entries' own counts and the bosses rolled once, each boss its own slot
+            var bosses = HordeSchedule.MarchBosses(Action, w.Random);
+            units = HordeSchedule.MarchUnits(Action, bosses, w.Ledger.Limits.MaxPerWave, w.Ledger.Occupied, w.Ledger.Limits.MaxTracked, w.Random, log, out asked);
+            slots = bosses.Select(b => b.Prefab).ToList();
+        }
+        else
+        {
+            asked = HordeSchedule.Size(Action.Hordes, k) + (k == Action.Hordes.Count ? (Action.Bosses ?? []).Sum(b => b.Count) : 0);
+            units = HordeSchedule.Units(Action, k, w.Ledger.Limits.MaxPerWave, w.Ledger.Occupied, w.Ledger.Limits.MaxTracked, w.Random, log);
+            slots = units.Any(u => u.Entry > 0) ? (Action.Bosses ?? []).Select(b => b.Prefab).ToList() : [];
+        }
         var cut = Precedence.Cut(asked, w.Ledger.Limits.MaxPerWave, w.Ledger.Occupied, w.Ledger.Limits.MaxTracked);   // undead-hordes D12
         if (cut is not null) Active.LastCut = cut;
-        var units = HordeSchedule.Units(Action, k, w.Ledger.Limits.MaxPerWave, w.Ledger.Occupied, w.Ledger.Limits.MaxTracked, w.Random, log);
-        var queued = 0;
+        var (queued, bossesQueued) = (0, 0);
         foreach (var (unit, entry) in units)
-            queued += Queue(w, unit, unit.Count, entry == 0 ? Apocalypse.HordeWave(k) : Apocalypse.BossWave(k, entry), hotspot.X, hotspot.Z,
+        {
+            var n = Queue(w, unit, unit.Count, entry == 0 ? Apocalypse.HordeWave(k) : Apocalypse.BossWave(k, entry), hotspot.X, hotspot.Z,
                 Apocalypse.RoamerSpawnRadius, utcNow);
+            queued += n;
+            if (entry > 0) bossesQueued += n;
+        }
         if (queued == 0)
         {
             LastTryUtc = utcNow;                          // D5: a full cap never fakes a risen (or defeated) horde
@@ -1020,12 +1312,9 @@ public sealed class ApocalypseRun
         }
         Risen = k;
         LastTryUtc = null;
-        _fronts[k] = new Front(k, hotspot.X, hotspot.Z, Goal.X, Goal.Z)
-        {
-            BossPrefabs = units.Any(u => u.Entry > 0) ? (Action.Bosses ?? []).Select(b => b.Prefab).ToList() : [],
-        };
-        if (topUp) roamerLines = TopUp(w, utcNow);
-        return new HordeRise(k, hotspot.Number, queued, log, cut);
+        _fronts[k] = new Front(k, hotspot.X, hotspot.Z, Goal.X, Goal.Z) { BossPrefabs = slots };
+        if (topUp && Mode == ApocalypseMode.Apocalypse) roamerLines = TopUp(w, utcNow);
+        return new HordeRise(k, hotspot.Number, queued, log, cut, bossesQueued);
     }
 
     /// <summary>True when horde <paramref name="horde"/> has risen and has no unit and no order left, bosses included.</summary>
@@ -1035,6 +1324,17 @@ public sealed class ApocalypseRun
     /// <summary>The run's outcome now (D8) over <paramref name="living"/> units' positions by horde.</summary>
     public ApocalypseResult Outcome(IApocalypseWorld w, Func<int, IReadOnlyList<(float X, float Z)>> living, DateTime utcNow)
     {
+        if (Mode != ApocalypseMode.Apocalypse)
+        {
+            // undead-hordes D9, D11: won once every unit has died (an infestation's after its rise, a horde march's after its
+            // horde rose) with no order pending; survived when the duration ends first; never lost
+            // code review step 3: a rise whose orders all failed, or a top-up that queued none, is no win
+            var alive = Living(w);
+            if (Tally.Confirmed > 0 || w.Ledger.Units.Any(u => Apocalypse.Ours(u, Active))) _lived = true;   // spawned, not merely queued
+            var rose = Mode == ApocalypseMode.Infestation ? Tally.Queued > 0 : Risen >= 1;
+            if (rose && _lived && alive == 0) return ApocalypseResult.Won;
+            return utcNow >= Active.Instance.EndsUtc ? ApocalypseResult.Survived : ApocalypseResult.None;
+        }
         var states = _fronts.Values.Where(f => !Cleared(w, f.Horde)).Select(f => new HordeState(f.Horde, f, living(f.Horde))).ToList();
         return ApocalypseOutcome.Decide(Action, (Goal.X, Goal.Z), states, Risen, k => Cleared(w, k), utcNow, Active.Instance.EndsUtc);
     }
@@ -1055,13 +1355,17 @@ public sealed class ApocalypseRun
             Roamers = RoamersPerHotspot(w).ToList(),
             SpreadWindow = Spread.InWindow(utcNow),
             Scores = scores.Select(s => new RecordScore { PlatformId = s.PlatformId, Kills = s.Kills, Deaths = s.Deaths, First = s.First }).ToList(),
+            Mode = Mode == ApocalypseMode.Apocalypse ? null : Mode.ToString(),          // undead-hordes D17; an apocalypse's stays 0.13's
+            Arrived = Arrived,
+            Arrival = ArrivedAt is { } at ? new RecordPoint { X = at.X, Z = at.Z } : null,
         };
         foreach (var f in _fronts.Values.OrderBy(f => f.Horde))
         {
             var livingBosses = f.BossPrefabs.Select((prefab, j) => new RecordBoss { Prefab = prefab, Living = LivingOf(w, Apocalypse.BossWave(f.Horde, j + 1)) }).ToList();
-            var living = LivingOf(w, Apocalypse.HordeWave(f.Horde)) + livingBosses.Sum(b => b.Living);
+            var growth = LivingOf(w, Apocalypse.GrowthWave(f.Horde));
+            var living = LivingOf(w, Apocalypse.HordeWave(f.Horde)) + growth + livingBosses.Sum(b => b.Living);
             if (living == 0) continue;
-            record.Hordes.Add(new RecordHorde { Number = f.Horde, FrontX = f.X, FrontZ = f.Z, Living = living, LivingBosses = livingBosses });
+            record.Hordes.Add(new RecordHorde { Number = f.Horde, FrontX = f.X, FrontZ = f.Z, Living = living, LivingBosses = livingBosses, Growth = growth });
         }
         return record;
     }
@@ -1072,6 +1376,7 @@ public sealed class ApocalypseRun
     {
         var spots = record.Hotspots.Select((h, i) => new Hotspot(i + 1, h.X, h.Z, 0, (int)MathF.Floor(h.X / Apocalypse.CellSize), (int)MathF.Floor(h.Z / Apocalypse.CellSize))).ToList();
         var run = new ApocalypseRun(active, spots, (record.Goal!.X, record.Goal.Y, record.Goal.Z)) { Risen = record.HordesRisen };
+        if (record.Arrived && record.Arrival is { } at) run.Arrive(at.X, at.Z);                     // undead-hordes D17
         foreach (var h in record.Hordes)
         {
             var origin = spots[HordeSchedule.HotspotOf(h.Number, spots.Count) - 1];
@@ -1081,6 +1386,7 @@ public sealed class ApocalypseRun
             run._fronts[h.Number] = front;
         }
         run.Spread.Restore(utcNow, record.SpreadWindow);
+        if (run.Mode == ApocalypseMode.Infestation) run.LastTryUtc = utcNow;    // the resume counts as a try: the next waits a minute
         return run;
     }
 
@@ -1096,7 +1402,7 @@ public sealed class ApocalypseRun
             else
                 for (var i = 0; i < o.Count; i++)
                 {
-                    var one = Queue(w, RoamerPlan.Draw(Action, w.Random) with { Count = 1 }, 1, o.Wave, o.X, o.Z, Apocalypse.RoamerSpawnRadius, utcNow);
+                    var one = Queue(w, RebuildUnit(o.Wave, w.Random) with { Count = 1 }, 1, o.Wave, o.X, o.Z, Apocalypse.RoamerSpawnRadius, utcNow);
                     if (one == 0) break;                                       // the caps refused it: the rest would be refused too
                     rebuilt += one;
                 }
@@ -1114,12 +1420,29 @@ public sealed class ApocalypseRun
         return (rebuilt, rises, lines);
     }
 
+    /// <summary>A rebuilt unit of no recorded prefab (D12; undead-hordes D17): a horde march's growth unit from its growth
+    /// block and its spread unit from its infest block, any other drawn from `units` by weight, as 0.13 does.</summary>
+    UnitEntry RebuildUnit(int wave, IRandom rng) =>
+        Mode != ApocalypseMode.HordeMarch ? RoamerPlan.Draw(Action, rng)
+        : wave > Apocalypse.GrowthWaveBase && wave <= Apocalypse.GrowthWaveBase + ApocalypseLimits.MaxHordes ? RoamerPlan.Spread(Action, Action.March!.Growth, rng)
+        : Apocalypse.HotspotOfWave(wave) is not null ? RoamerPlan.Spread(Action, Action.March!.InfestSpread, rng)
+        : RoamerPlan.Draw(Action, rng);
+
     /// <summary>The admin view of the live run for `event info` (D17): each hotspot's region and x, z, each living horde's
     /// front x, z and progress, and the tally line.</summary>
     public ApocalypseView View(IApocalypseWorld w, Func<float, float, string> regionOf) =>
         new(Hotspots.Select(h => (h.Number, regionOf(h.X, h.Z), h.X, h.Z)).ToList(),
             _fronts.Values.Where(f => !Cleared(w, f.Horde)).OrderBy(f => f.Horde).Select(f => (f.Horde, f.X, f.Z, f.Percent)).ToList(),
-            Risen, Tally.Line(Id, w.Ledger.Units.Count(u => Apocalypse.Ours(u, Active))), RoamersPerHotspot(w).Sum());
+            Risen, Tally.Line(Id, w.Ledger.Units.Count(u => Apocalypse.Ours(u, Active))), RoamersPerHotspot(w).Sum())
+        {
+            Living = Living(w),
+            Places = Origins.Count,
+            ToGoal = Mode == ApocalypseMode.HordeMarch && !Arrived && _fronts.Values.FirstOrDefault() is { } f
+                ? (int)Math.Round(Apocalypse.Distance(f.X, f.Z, Goal.X, Goal.Z)) : null,
+            Arrived = Arrived,
+            AdminStart = Action.March?.Start.Location?.Type == LocationType.Admin,
+            AdminGoal = Action.Goal.Location.Type == LocationType.Admin,
+        };
 }
 
 /// <summary>What `event info` and `.nyar status` show of a live apocalypse (D17): hotspots with their region and x, z
@@ -1133,4 +1456,18 @@ public sealed record ApocalypseView(
 {
     /// <summary>The farthest living front's progress, the status line's percent (0 with none marching).</summary>
     public int Percent => Fronts.Count == 0 ? 0 : Fronts.Max(f => f.Percent);
+
+    /// <summary>The run's living count, its infestation's places, a marching horde's metres left to its destination (null
+    /// once it arrived, or for another mode) and whether it arrived (undead-hordes D20).</summary>
+    public int Living { get; init; }
+    public int Places { get; init; }
+    public int? ToGoal { get; init; }
+    public bool Arrived { get; init; }
+
+    /// <summary>A horde march that rose at the starting admin's position: `event info` names neither it nor its front's
+    /// point (A5).</summary>
+    public bool AdminStart { get; init; }
+
+    /// <summary>A run marching on the starting admin's position: `event info` names no front's point, which ends there (A5).</summary>
+    public bool AdminGoal { get; init; }
 }

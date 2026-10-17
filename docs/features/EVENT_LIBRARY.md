@@ -45,6 +45,10 @@ with no file edits.
     pools (`action.pools`, one allied group), and bosses roll mid-run and at the end (a wave's `bosses`, `min`-`max`
     from a pool of V Bloods), so no two runs look the same. They keep the same 75 s beat.
   - realm-gauntlet has no timed variant: its waves are different groups and must never be alive together.
+- **Undead hordes templates (0.14.0, undead-hordes D15):** `undead-infestation` (an Infestation: five graveyards,
+  hunters and drifters, 1-3 more per kill) and `undead-horde-march` (a HordeMarch: one horde of 200 and the Bishop of
+  Death marching on the admin's spot, then infesting there), both Manual; `zombie-apocalypse` is retuned to 5 hotspots
+  and hordes of 30 to 75. The numbers are in `docs/features/UNDEAD_HORDES.md` › Templates.
 - **Template commands:** `.nyar template list [pillar] [page]`, `.nyar template info <id>` and
   `.nyar template use <t> [as <id>]` (the last writes a disabled copy).
 - **Authoring commands:**

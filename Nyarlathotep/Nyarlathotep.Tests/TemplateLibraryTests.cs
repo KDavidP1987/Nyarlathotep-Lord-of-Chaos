@@ -137,7 +137,7 @@ public partial class TemplateLibraryTests
     static List<string> Differences(TemplateCatalog c)
     {
         var diffs = new List<string>();
-        var total = Expected.Length + AutomationExpected.Length + 5 + 6 + 14;       // the six starters, automation D18's three, graveyard-waves, spider-swarm, spider-hunting-grounds, bandit-revenge, zombie-apocalypse, Epic A43's six wave templates, wave-variety's fourteen timed and onslaught
+        var total = Expected.Length + AutomationExpected.Length + 5 + 6 + 14 + 2;   // the six starters, automation D18's three, graveyard-waves, spider-swarm, spider-hunting-grounds, bandit-revenge, zombie-apocalypse, Epic A43's six wave templates, wave-variety's fourteen timed and onslaught, undead-hordes' two
         if (c.Templates.Count != total) diffs.Add($"{c.Templates.Count} templates, not {total}");
         foreach (var e in Expected)
         {
@@ -236,12 +236,12 @@ public partial class TemplateLibraryTests
         else rising["action"]!["modifiers"]!["levelDelta"] = 6;                     // outside D6's -5..5
         var c = TemplateCatalog.Load(Bytes(root.ToJsonString()), Units(), Units());
         Assert.Contains(TemplateCatalog.Problems(c, DefaultIds()), p => p.StartsWith(problem, StringComparison.Ordinal));
-        Assert.Empty(TemplateCatalog.Problems(Real(), DefaultIds()));                // "templates: 34/34 valid", all disabled
+        Assert.Empty(TemplateCatalog.Problems(Real(), DefaultIds()));                // "templates: 36/36 valid", all disabled
     }
 
     [Fact]
     public void StarterTemplates_empty_no_templates() =>
-        Assert.Contains("0 templates, not 34", Differences(TemplateCatalog.Load(Bytes("{\"SchemaVersion\":1,\"events\":[]}"), Units(), Units())));
+        Assert.Contains("0 templates, not 36", Differences(TemplateCatalog.Load(Bytes("{\"SchemaVersion\":1,\"events\":[]}"), Units(), Units())));
 
     // ---- automation D18: roaming-hunters, border-watch, bandit-reprisal
 
@@ -286,7 +286,7 @@ public partial class TemplateLibraryTests
         Assert.Empty(AutomationDifferences(c));
         var lines = new List<string>();
         TemplateCatalog.Boot(Bytes(RealText), Units(), Units(), lines.Add, lines.Add);
-        Assert.Contains("templates: 34/34 valid", lines);
+        Assert.Contains("templates: 36/36 valid", lines);
     }
 
     [Theory]
@@ -322,7 +322,7 @@ public partial class TemplateLibraryTests
         {
             var lines = new List<string>();
             TemplateCatalog.Boot(Bytes(root.ToJsonString()), Units(), Units(), lines.Add, lines.Add);
-            Assert.DoesNotContain("templates: 34/34 valid", lines);
+            Assert.DoesNotContain("templates: 36/36 valid", lines);
         }
     }
     [Fact]

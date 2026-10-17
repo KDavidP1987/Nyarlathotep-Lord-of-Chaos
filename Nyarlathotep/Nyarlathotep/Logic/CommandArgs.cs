@@ -217,7 +217,56 @@ public static class CommandArgs
         d[PoolsField] = ("spawn action", "admin");
         foreach (var f in ApocalypseFields) d[f] = ("apocalypse action", "admin");     // apocalypse D16
         foreach (var f in DestinationFields) d[f] = ("spawn action", "admin");         // undead-hordes D5
+        foreach (var f in HordeFields) d[f] = ("apocalypse action", "admin");          // undead-hordes D20
         return d;
+    }
+
+    /// <summary>`action.start` (undead-hordes D20): here only, the admin's x, y and z as a Point start;
+    /// `action.start.minDistance` makes it a Hotspot start that far from the destination.</summary>
+    public const string StartField = "action.start";
+    public const string StartDistanceField = "action.start.minDistance";
+    public const string StartHereRule = "action.start takes here (your position)";
+
+    static IEnumerable<string> SpreadFields(string at) => new[] { "perKillMin", "perKillMax", "max", "perMinute", "pool" }.Select(k => $"{at}.{k}");
+
+    /// <summary>The Infestation and HordeMarch fields (undead-hordes D20): an infestation's origins, hunters, driftRadius and
+    /// spread block; a horde march's start, growth block and infest block. The destination fields and `action.marchSpeed`
+    /// fit a HordeMarch too, and `action.bosses` (rolls allowed).</summary>
+    public static readonly IReadOnlyList<string> HordeFields =
+    [
+        StartField, StartDistanceField,
+        "action.origins.count", "action.origins.minNatives", "action.origins.minSpacing", "action.origins.perOrigin",
+        "action.hunters", "action.driftRadius", .. SpreadFields("action.spread"),
+        .. SpreadFields("action.growth"),
+        "action.infest.hunters", "action.infest.driftRadius", .. SpreadFields("action.infest.spread"),
+    ];
+
+    /// <summary>A HordeFields value, each in its Limits range and refused with the validator's own reason; a spread block's
+    /// `pool` takes a pool name or none. Whether the pool exists, and perKillMax against perKillMin, are the validator's.</summary>
+    static Arg<object> HordeValue(string field, string? value)
+    {
+        static Arg<object> IntIn(string v, int min, int max, string rule) =>
+            int.TryParse(v, NumberStyles.None, CultureInfo.InvariantCulture, out var i) && i >= min && i <= max ? Arg<object>.Of(i) : Arg<object>.Bad(rule);
+        if (string.IsNullOrWhiteSpace(value)) return Arg<object>.Bad(ValueRequired);
+        var dot = field.LastIndexOf('.');
+        var (at, key) = (field[..dot], field[(dot + 1)..]);
+        return (at, key) switch
+        {
+            ("action", "start") => value == "here" ? Arg<object>.Of(LocationHere.Instance) : Arg<object>.Bad(StartHereRule),
+            ("action.start", _) => IntIn(value, HordeLimits.MinStartDistance, HordeLimits.MaxStartDistance, EventValidator.StartDistanceRule),
+            ("action.origins", "count") => IntIn(value, HordeLimits.MinOrigins, HordeLimits.MaxOrigins, EventValidator.OriginsCountRule),
+            ("action.origins", "minNatives") => IntIn(value, HordeLimits.MinOriginNatives, HordeLimits.MaxOriginNatives, EventValidator.OriginNativesRule),
+            ("action.origins", "minSpacing") => IntIn(value, HordeLimits.MinOriginSpacing, HordeLimits.MaxOriginSpacing, EventValidator.OriginSpacingRule),
+            ("action.origins", _) => IntIn(value, HordeLimits.MinPerOrigin, HordeLimits.MaxPerOrigin, EventValidator.PerOriginRule),
+            (_, "hunters") => IntIn(value, HordeLimits.MinHunters, HordeLimits.MaxHunters, EventValidator.HuntersRule(at)),
+            (_, "driftRadius") => IntIn(value, HordeLimits.MinDrift, HordeLimits.MaxDrift, EventValidator.DriftRule(at)),
+            (_, "perKillMin") => IntIn(value, ApocalypseLimits.MinKillDraw, ApocalypseLimits.MaxKillDraw, EventValidator.SpreadKillMinRule(at)),
+            (_, "perKillMax") => IntIn(value, ApocalypseLimits.MinKillDraw, ApocalypseLimits.MaxKillDraw, EventValidator.SpreadKillMaxRule(at)),
+            (_, "max") => IntIn(value, HordeLimits.MinSpreadMax, HordeLimits.MaxSpreadMax, EventValidator.SpreadMaxRule(at)),
+            (_, "perMinute") => IntIn(value, ApocalypseLimits.MinPerMinute, ApocalypseLimits.MaxPerMinute, EventValidator.SpreadPerMinuteRule(at)),
+            _ => value == "none" ? Arg<object>.Of(FieldRemoval.Instance)
+                : EventValidator.IsPoolName(value) ? Arg<object>.Of(value) : Arg<object>.Bad(EventValidator.NoPool(at, value)),
+        };
     }
 
     /// <summary>`action.destination` (undead-hordes D5): here only, the admin's x, y and z as a Point destination.</summary>
@@ -825,6 +874,7 @@ public static class CommandArgs
         if (PoolOf(field) is { } pool) return PoolValue(field, pool, value);
         if (ApocalypseFields.Contains(field)) return ApocalypseValue(field, value);
         if (DestinationFields.Contains(field)) return DestinationValue(field, value);
+        if (HordeFields.Contains(field)) return HordeValue(field, value);                 // undead-hordes D20
         if (field == ScoreboardField)
             return value switch { "true" => Arg<object>.Of(true), "false" => Arg<object>.Of(false), _ => Arg<object>.Bad(EventValidator.ScoreboardRule) };
         if (WaveListPath(field) is { } wave) return WaveListValue(field, wave, value);

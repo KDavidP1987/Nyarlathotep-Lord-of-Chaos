@@ -226,6 +226,8 @@ public sealed class RecordHorde
     public float FrontZ { get; set; }
     public int Living { get; set; }
     public List<RecordBoss> LivingBosses { get; set; } = [];
+    /// <summary>A horde march's living growth units, part of <see cref="Living"/> (undead-hordes D17); 0 in an apocalypse.</summary>
+    public int Growth { get; set; }
 }
 
 /// <summary>A scoreboard row of an apocalypse's record (design §9 D45): platform id, kills, deaths and first credit, no
@@ -254,6 +256,20 @@ public sealed class ApocalypseRecord
     public List<int> Roamers { get; set; } = [];
     public int SpreadWindow { get; set; }
     public List<RecordScore> Scores { get; set; } = [];
+    /// <summary>The run's mode (undead-hordes D17): Infestation or HordeMarch; absent for an apocalypse, as 0.13 wrote it.</summary>
+    public string? Mode { get; set; }
+    /// <summary>A horde march that arrived (or stalled) and the point it infests from.</summary>
+    public bool Arrived { get; set; }
+    public RecordPoint? Arrival { get; set; }
+
+    /// <summary>The run's mode; an unknown name reads as an apocalypse and <see cref="Problem"/> refuses it.</summary>
+    [JsonIgnore] public ApocalypseMode ModeOf => Mode switch { "Infestation" => ApocalypseMode.Infestation, "HordeMarch" => ApocalypseMode.HordeMarch, _ => ApocalypseMode.Apocalypse };
+
+    /// <summary>The reason a record holding more living units than MaxTrackedUnits' ceiling is refused (undead-hordes D17).</summary>
+    public const string OverCap = "the living counts exceed the tracked-unit cap";
+
+    /// <summary>"event &lt;id&gt; ended: survived (&lt;reason&gt;)": a refused record whose run is over (undead-hordes D17).</summary>
+    public static string EndedLine(string eventId, string reason) => $"event {eventId} ended: survived ({reason})";
 
     /// <summary>Set by the reader on a record that does not parse (memory only): why, for the boot log line.</summary>
     [JsonIgnore] public string? Unreadable { get; set; }
@@ -269,21 +285,26 @@ public sealed class ApocalypseRecord
         if (string.IsNullOrEmpty(EventId) || EventId.Length > 32) return "eventId missing";
         if (StartedUtc >= EndsUtc) return "startedUtc is not before endsUtc";
         if (Goal is null) return "goal missing";
-        if (Hotspots is not { Count: >= ApocalypseLimits.MinHotspots and <= ApocalypseLimits.MaxHotspots }) return "hotspots must hold 1-5 entries";
+        if (Mode is not (null or "Infestation" or "HordeMarch")) return "mode must be Infestation or HordeMarch";       // names only, never "7" (code review step 3)
+        // an infestation's origins reach 10 (undead-hordes D8); an apocalypse keeps 1-5
+        var spots = Mode is null ? ApocalypseLimits.MaxHotspots : Apocalypse.MaxSpots;
+        if (Hotspots is null || Hotspots.Count < ApocalypseLimits.MinHotspots || Hotspots.Count > spots) return $"hotspots must hold 1-{spots} entries";
+        if (Arrived && Arrival is null) return "arrival missing";
         if (Roamers is null || Roamers.Count != Hotspots.Count || Roamers.Any(r => r < 0)) return "roamers must hold one count per hotspot";
         if (HordesRisen is < 0 or > ApocalypseLimits.MaxHordes) return "hordesRisen must be 0-10";
         if (Hordes is null || Hordes.Count > ApocalypseLimits.MaxHordes) return "hordes must hold 0-10 entries";
         foreach (var h in Hordes)
         {
             if (h is null || h.Number < 1 || h.Number > HordesRisen || h.Living < 0) return "a horde's number or living count is out of range";
-            if (h.LivingBosses is null || h.LivingBosses.Count > EventValidator.MaxBosses
+            if (h.LivingBosses is null || h.LivingBosses.Count > (Mode is null ? EventValidator.MaxBosses : Apocalypse.MaxBossSlots)
                 || h.LivingBosses.Any(b => b is null || string.IsNullOrEmpty(b.Prefab) || b.Living < 0) || h.LivingBosses.Sum(b => b.Living) > h.Living)
                 return "a horde's living bosses are out of range";
+            if (h.Growth < 0 || h.Growth + h.LivingBosses.Sum(b => b.Living) > h.Living) return "a horde's growth is out of range";
         }
         if (Hordes.Select(h => h.Number).Distinct().Count() != Hordes.Count) return "a horde is listed twice";
         // a resume never rebuilds more than the tracked-unit cap can ever hold (Codex cross-inspection H1: a hand-edited
         // count of millions looped the rebuild on one tick)
-        if (Roamers.Sum(r => (long)r) + Hordes.Sum(h => (long)h.Living) > Limits.MaxTrackedUnits.Max) return "the living counts exceed the tracked-unit cap";
+        if (Roamers.Sum(r => (long)r) + Hordes.Sum(h => (long)h.Living) > Limits.MaxTrackedUnits.Max) return OverCap;
         if (SpreadWindow < 0) return "spreadWindow is negative";
         if (Scores is null || Scores.Count > Limits.ScoreboardPlayers || Scores.Any(s => s is null || string.IsNullOrEmpty(s.PlatformId) || s.Kills < 0 || s.Deaths < 0))
             return "scores are out of range";
@@ -306,7 +327,8 @@ public sealed class ApocalypseRecordConverter : JsonConverter<ApocalypseRecord?>
         catch (JsonException e) { return new ApocalypseRecord { Unreadable = Short(e.Message) }; }
         catch (NotSupportedException e) { return new ApocalypseRecord { Unreadable = Short(e.Message) }; }
         if (record is null) return new ApocalypseRecord { Unreadable = "empty" };
-        return record.Problem() is { } problem ? new ApocalypseRecord { Unreadable = problem } : record;
+        // the event id stays with a refused record, so its run's end can be logged (undead-hordes D17)
+        return record.Problem() is { } problem ? new ApocalypseRecord { Unreadable = problem, EventId = record.EventId ?? "" } : record;
     }
 
     public override void Write(Utf8JsonWriter writer, ApocalypseRecord? value, JsonSerializerOptions options) =>
@@ -381,6 +403,8 @@ public sealed class StateStore(DataStore store, Func<DateTime> utcNow, Action<st
         {
             // apocalypse D11: the bad record is dropped alone; the next write leaves it out.
             log(ApocalypseRecord.UnreadableLine(reason));
+            // undead-hordes D17: a run too large to rebuild ends survived
+            if (reason == ApocalypseRecord.OverCap && doc.Apocalypse.EventId is { Length: > 0 } id) log(ApocalypseRecord.EndedLine(id, reason));
             doc.Apocalypse = null;
             Dirty = !ReadOnly;
         }

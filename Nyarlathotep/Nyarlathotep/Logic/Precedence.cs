@@ -87,6 +87,10 @@ public static class Precedence
     /// event or when nothing is cut.</summary>
     public static CapCut? StartCut(EventDefinition d, int maxPerWave, int occupied, int maxTracked)
     {
+        if (d.Apocalypse is { Mode: ApocalypseMode.Infestation } inf)                                                     // undead-hordes D12: the rise
+            return Cut(inf.Hotspots.Count * inf.Roamers.PerHotspot, maxPerWave, occupied, maxTracked);
+        if (d.Apocalypse is { Mode: ApocalypseMode.HordeMarch } march)                                                    // the horde with its fixed bosses
+            return Cut(march.Units.Sum(u => u.Count) + (march.March?.Bosses ?? []).Sum(b => b.MostBosses), maxPerWave, occupied, maxTracked);   // a roll at its most
         if (d.Apocalypse is { } apo)
             return Cut(HordeSchedule.Size(apo.Hordes, apo.Hordes.Count) + (apo.Bosses ?? []).Sum(b => b.Count), maxPerWave, occupied, maxTracked);
         if (d.Action is not { Destination: not null } a) return null;

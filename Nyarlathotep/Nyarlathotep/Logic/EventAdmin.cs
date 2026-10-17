@@ -90,6 +90,7 @@ public static class EventsEditor
         if (path == CommandArgs.PursuitField) return SetPursuit(root, ev, actionType, value, out error);          // wave-variety D10
         if (CommandArgs.PoolOf(path) is { } pool) return SetPool(root, ev, actionType, pool, value, out error);
         if (CommandArgs.ApocalypseFields.Contains(path) || CommandArgs.DestinationFields.Contains(path)) return SetApocalypse(root, ev, actionType, path, value, out error);
+        if (CommandArgs.HordeFields.Contains(path)) return SetHorde(root, ev, actionType, path, value, out error);              // undead-hordes D20
         if (CommandArgs.SwarmFields.Contains(path)) return SetSwarm(root, ev, actionType, path, value, out error);
         if (CommandArgs.SpawnKeyFields.Contains(CommandArgs.TableName(path)) || path is CommandArgs.FanOutField or CommandArgs.RegionLockField)
             return SetSpawnKey(root, ev, actionType, path, value, out error);
@@ -121,7 +122,7 @@ public static class EventsEditor
         }
         var isStat = path.StartsWith("action.stats.", StringComparison.Ordinal);
         if (isStat && actionType != "Empower") { error = Invalid($"{path} is not a field of a {actionType ?? "missing"} action", Reasons.Field); return null; }
-        if (CommandArgs.WaveFields.Contains(path) && actionType is "Empower" or EventValidator.ApocalypseType)
+        if (CommandArgs.WaveFields.Contains(path) && (actionType == "Empower" || EventValidator.IsFamily(actionType)))
         {
             error = Invalid($"{path} is not a field of {Article(actionType)} action", Reasons.Field);
             return null;
@@ -189,7 +190,7 @@ public static class EventsEditor
     static string? SetBosses(JsonNode root, JsonObject ev, string? actionType, object value, out Outcome? error)
     {
         error = null;
-        if (actionType is not ("SpawnWaves" or EventValidator.ApocalypseType) || ev["action"] is not JsonObject action)      // apocalypse D16
+        if (actionType is not ("SpawnWaves" or EventValidator.ApocalypseType or EventValidator.HordeMarchType) || ev["action"] is not JsonObject action)   // apocalypse D16, undead-hordes D20
         {
             error = Invalid($"{CommandArgs.BossesField} is not {Article(actionType)} field", Reasons.Field);
             return null;
@@ -522,11 +523,17 @@ public static class EventsEditor
     static string? SetApocalypse(JsonNode root, JsonObject ev, string? actionType, string path, object value, out Outcome? error)
     {
         error = null;
-        var fits = CommandArgs.DestinationFields.Contains(path) ? actionType == "SpawnWaves"
-            : actionType == EventValidator.ApocalypseType || (path == CommandArgs.MarchSpeedField && actionType == "SpawnWaves");
+        var march = actionType == EventValidator.HordeMarchType;                         // undead-hordes D20: its destination and speed
+        var fits = CommandArgs.DestinationFields.Contains(path) ? actionType == "SpawnWaves" || march
+            : actionType == EventValidator.ApocalypseType || (path == CommandArgs.MarchSpeedField && (actionType == "SpawnWaves" || march));
         if (!fits || ev["action"] is not JsonObject action)
         {
             error = Invalid($"{path} is not {Article(actionType)} field", Reasons.Field);
+            return null;
+        }
+        if (march && value is FieldRemoval)
+        {
+            error = Invalid(EventValidator.DestinationObject, Reasons.Field);              // a horde march always has one
             return null;
         }
         if (actionType == "SpawnWaves" && path == CommandArgs.MarchSpeedField && action["destination"] is null)
@@ -547,14 +554,47 @@ public static class EventsEditor
         }
         var node = ToNode(value);
         if (node is null) { error = Invalid($"{path} has an unsupported value", Reasons.Value); return null; }
-        var parts = (path is CommandArgs.GoalField or CommandArgs.DestinationField ? path + ".location" : path).Split('.')[1..];
+        WritePath(action, (path is CommandArgs.GoalField or CommandArgs.DestinationField ? path + ".location" : path).Split('.')[1..], node);
+        return root.ToJsonString(Write) + Environment.NewLine;
+    }
+
+    /// <summary>Writes <paramref name="node"/> at <paramref name="parts"/> under <paramref name="action"/>, creating the objects on
+    /// the way; a null node removes the last key.</summary>
+    static void WritePath(JsonObject action, string[] parts, JsonNode? node)
+    {
         var target = action;
         for (var i = 0; i < parts.Length - 1; i++)
         {
             if (target[parts[i]] is not JsonObject child) target[parts[i]] = child = new JsonObject();
             target = child;
         }
-        target[parts[^1]] = node;
+        if (node is null) target.Remove(parts[^1]);
+        else target[parts[^1]] = node;
+    }
+
+    /// <summary>An Infestation or HordeMarch field (undead-hordes D20), refused on any other action type: `action.start` writes
+    /// the admin's x, y and z as start { "type": "Point", x, y, z }, `action.start.minDistance` a Hotspot start; the other
+    /// fields write their key into origins, spread, growth or infest (created when missing) or the action, and a pool's
+    /// none removes it. The whole action is the validator's on reload.</summary>
+    static string? SetHorde(JsonNode root, JsonObject ev, string? actionType, string path, object value, out Outcome? error)
+    {
+        error = null;
+        var key = path["action.".Length..];
+        var marchKey = key.StartsWith("start", StringComparison.Ordinal) || key.StartsWith("growth.", StringComparison.Ordinal)
+                       || key.StartsWith("infest.", StringComparison.Ordinal);
+        if (actionType != (marchKey ? EventValidator.HordeMarchType : EventValidator.InfestationType) || ev["action"] is not JsonObject action)
+        {
+            error = Invalid($"{path} is not {Article(actionType)} field", Reasons.Field);
+            return null;
+        }
+        if (path == CommandArgs.StartDistanceField)
+        {
+            action["start"] = new JsonObject { ["type"] = "Hotspot", ["minDistance"] = ToNode(value) };
+            return root.ToJsonString(Write) + Environment.NewLine;
+        }
+        var node = value is FieldRemoval ? null : ToNode(value);
+        if (node is null && value is not FieldRemoval) { error = Invalid($"{path} has an unsupported value", Reasons.Value); return null; }
+        WritePath(action, key.Split('.'), node);
         return root.ToJsonString(Write) + Environment.NewLine;
     }
 
@@ -580,13 +620,15 @@ public static class EventsEditor
     {
         static int? IntOf(JsonNode? n) => n is JsonValue v && v.TryGetValue<int>(out var i) ? i : null;
         if (IntOf(ev["durationSeconds"]) is not { } d) yield break;
-        var apocalypse = action["type"] is JsonValue t && t.TryGetValue<string>(out var type) && type == EventValidator.ApocalypseType;
-        if (!apocalypse)
+        var type = action["type"] is JsonValue t && t.TryGetValue<string>(out var s) ? s : null;
+        if (!EventValidator.IsFamily(type))
         {
             if (d < ApocalypseLimits.OtherMinDurationSeconds || d > ApocalypseLimits.OtherMaxDurationSeconds) yield return EventValidator.DurationRule;
             yield break;
         }
-        if (d < ApocalypseLimits.MinDurationSeconds || d > ApocalypseLimits.MaxDurationSeconds) yield return EventValidator.ApocalypseDurationRule;
+        if (d < ApocalypseLimits.MinDurationSeconds || d > ApocalypseLimits.MaxDurationSeconds)            // undead-hordes D16: the family's range
+            yield return type == EventValidator.ApocalypseType ? EventValidator.ApocalypseDurationRule : EventValidator.FamilyDurationRule(type!);
+        if (type != EventValidator.ApocalypseType) yield break;
         if (action["hordes"] is JsonObject h && IntOf(h["count"]) is { } count && IntOf(h["firstAfterMinutes"]) is { } first && IntOf(h["everyMinutes"]) is { } every
             && HordeSchedule.LastRiseSeconds(new ApocalypseHordes(count, first, every, 0, 0)) >= d)
             yield return EventValidator.LastHordeLate;
@@ -668,6 +710,7 @@ public static class EventsEditor
         null => "a missing",
         "Empower" => "an Empower",
         EventValidator.ApocalypseType => "an Apocalypse",
+        EventValidator.InfestationType => "an Infestation",
         _ => $"a {type}",
     };
 
@@ -870,7 +913,8 @@ public static class EventLines
         lines.Add(active is null
             ? "not running"
             : $"running: started by {active.Trigger}, {Math.Max(0, (int)Math.Ceiling((active.Instance.EndsUtc - utcNow).TotalSeconds))}s left" +
-              (d.Apocalypse is { } running ? $", horde {apocalypse?.Risen ?? 0}/{running.Hordes.Count}"
+              (d.Apocalypse is { Mode: not ApocalypseMode.Apocalypse } ? $", {apocalypse?.Living ?? 0} units"            // undead-hordes D20
+              : d.Apocalypse is { } running ? $", horde {apocalypse?.Risen ?? 0}/{running.Hordes.Count}"
               : d.Empower is null ? $", wave {active.WavesSpawned}/{d.Action?.Waves ?? 0}" : ""));
         if (active is not null && apocalypse is not null) lines.AddRange(ApocalypseRunLines(apocalypse));
         if (active?.LastCut is { } cut) lines.Add(cut.InfoLine);                                     // undead-hordes D12
@@ -928,7 +972,52 @@ public static class EventLines
     /// <summary>An Apocalypse definition's `event info` lines (apocalypse D17), one per D1 key group, each within
     /// Wire.MaxBytes: the action, the hotspots, the roamers, the hordes, the goal (a Point goal's x, z and height, an
     /// Admin goal "at the starting admin"), the units (packed when long), the last horde's bosses and the scoreboard.</summary>
-    public static IEnumerable<string> ApocalypseLines(ApocalypseAction a)
+    public static IEnumerable<string> ApocalypseLines(ApocalypseAction a) => a.Mode switch
+    {
+        ApocalypseMode.Infestation => InfestationLines(a),
+        ApocalypseMode.HordeMarch => HordeMarchLines(a),
+        _ => ApocalypseOnlyLines(a),
+    };
+
+    static string SpreadText(ApocalypseRoamers r) => $"{KillDrawText(r)}, max {r.Max}, {r.PerMinute} per minute";
+
+    static string AtText(Location l) => l.Type == LocationType.Admin ? "at the starting admin"
+        : FormattableString.Invariant($"at {l.X:0.#} {l.Z:0.#}") + (l.Y is { } h ? FormattableString.Invariant($" height {h:0.#}") : "");
+
+    /// <summary>An Infestation's `event info` lines (undead-hordes D20): the action, the origins, the hunters and drift, the
+    /// spread, the units, the pools and the scoreboard, one line each.</summary>
+    static IEnumerable<string> InfestationLines(ApocalypseAction a)
+    {
+        yield return $"action: infestation of the {Apocalypse.FactionText(a.Faction)}";
+        yield return $"origins: {a.Hotspots.Count}, at least {a.Hotspots.MinNatives} natives each, {a.Hotspots.MinSpacing} m apart, {a.Roamers.PerHotspot} units each";
+        if (a.Infest is { } i) yield return $"hunters: {i.Hunters} %, drift radius {i.DriftRadius} m";
+        yield return $"spread: {SpreadText(a.Roamers)}";
+        foreach (var line in PackList("units: ", a.Units.Select(EntryText).ToList())) yield return line;
+        foreach (var line in PoolLines(a.Pools)) yield return line;
+        yield return $"scoreboard: {(a.Scoreboard ? "on" : "off")}";
+    }
+
+    /// <summary>A HordeMarch's `event info` lines (undead-hordes D20): the action, the start, the destination, the growth, the
+    /// infest block, the horde's units, the pools, its bosses and the scoreboard, one line each.</summary>
+    static IEnumerable<string> HordeMarchLines(ApocalypseAction a)
+    {
+        yield return FormattableString.Invariant($"action: horde march of the {Apocalypse.FactionText(a.Faction)}, march {a.MarchSpeed:0.##} m/s");
+        if (a.March is not { } m) yield break;
+        yield return m.Start.Location is { } start ? $"start: {AtText(start)}" : $"start: the natives' hotspot nearest the destination, at least {m.Start.MinDistance} m away";
+        yield return $"destination: {a.Goal.Name}, radius {a.Goal.Radius}, {AtText(a.Goal.Location)}";
+        yield return $"growth: {SpreadText(m.Growth)}";
+        yield return $"infest: hunters {m.Infest.Hunters} %, drift radius {m.Infest.DriftRadius} m, spread {SpreadText(m.InfestSpread)}";
+        foreach (var line in PackList($"horde of {a.Units.Sum(u => u.Count)}: ", a.Units.Select(EntryText).ToList())) yield return line;
+        foreach (var line in PoolLines(a.Pools)) yield return line;
+        if (m.Bosses is { Count: > 0 } bosses)
+        {
+            var full = "horde adds: " + string.Join(", ", bosses.Select(BossText));
+            yield return Fits(full) ? full : $"horde adds: {bosses.Sum(b => b.MostBosses)} bosses at most";
+        }
+        yield return $"scoreboard: {(a.Scoreboard ? "on" : "off")}";
+    }
+
+    static IEnumerable<string> ApocalypseOnlyLines(ApocalypseAction a)
     {
         yield return FormattableString.Invariant($"action: apocalypse of the {Apocalypse.FactionText(a.Faction)}, march {a.MarchSpeed:0.##} m/s");
         yield return $"hotspots: {a.Hotspots.Count}, at least {a.Hotspots.MinNatives} natives each, {a.Hotspots.MinSpacing} m apart";
@@ -956,8 +1045,10 @@ public static class EventLines
     public static IEnumerable<string> ApocalypseRunLines(ApocalypseView v)
     {
         foreach (var h in v.Hotspots)
-            yield return TextSink.CutToBytes(FormattableString.Invariant($"hotspot {h.Number}: {(string.IsNullOrEmpty(h.Region) ? Messages.Wilds : h.Region)} at {h.X:0} {h.Z:0}"), Wire.MaxBytes);
-        foreach (var f in v.Fronts) yield return FormattableString.Invariant($"horde {f.Horde} front at {f.X:0} {f.Z:0}, {f.Percent} %");
+            yield return v.AdminStart ? $"hotspot {h.Number}: the starting admin"                            // A5: never the admin's point
+                : TextSink.CutToBytes(FormattableString.Invariant($"hotspot {h.Number}: {(string.IsNullOrEmpty(h.Region) ? Messages.Wilds : h.Region)} at {h.X:0} {h.Z:0}"), Wire.MaxBytes);
+        foreach (var f in v.Fronts)
+            yield return v.AdminStart || v.AdminGoal ? $"horde {f.Horde} front: {f.Percent} %" : FormattableString.Invariant($"horde {f.Horde} front at {f.X:0} {f.Z:0}, {f.Percent} %");
         yield return $"roamers: {v.Roamers} living";
         yield return TextSink.CutToBytes(v.TallyLine, Wire.MaxBytes);
     }

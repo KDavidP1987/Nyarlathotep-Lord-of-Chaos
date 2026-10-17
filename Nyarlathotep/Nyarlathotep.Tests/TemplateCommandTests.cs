@@ -91,7 +91,7 @@ public class TemplateCommandTests
         var units = TemplateLibraryTests.Units();
         units.Factions.Remove("Faction_Legion");
         var c = TemplateCatalog.Load(TemplateLibraryTests.Bytes(TemplateLibraryTests.RealText), units, units);
-        Assert.Equal(33, c.ValidCount);
+        Assert.Equal(35, c.ValidCount);
         Assert.EndsWith(" invalid: unknown faction Faction_Legion", List(c)[0]);
         Assert.Equal(["legion-weekend-surge disabled: unknown faction Faction_Legion"], TemplateLines.Info(c, "legion-weekend-surge", Now));
     }

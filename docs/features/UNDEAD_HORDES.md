@@ -1,6 +1,6 @@
 # Undead hordes — waves that march to a destination, an infestation, a horde march, up to 500 units
 
-**Status:** in progress, step 2 of 5 (docs/dod/undead-hordes.md, audit docs/audits/undead-hordes.md; design §9 D62,
+**Status:** in progress, step 3 of 5 (docs/dod/undead-hordes.md, audit docs/audits/undead-hordes.md; design §9 D62,
 Epic A46). Release target 0.14.0.
 
 ## Goal
@@ -40,7 +40,35 @@ Up to 1000 tracked units, once a load test on the local server proves it takes t
 - **Raised ranges.** roamers.max 1-500, hordes.size 5-500, growth 0-100.
 - **Work per tick is bounded.** The hops, the roam and the unit watch's stall marks each take at most 500 units a tick,
   shared by every horde, hotspot and wave and taken in turn by unit, so every unit of 1000 is visited within 10 s and a
-  step's work grows linearly.
+  step's work grows linearly. An infestation's jumps and drifts take the same bound.
+- **Infestation** (`"type": "Infestation"`). The dead rise at `origins.count` hotspots of the faction's natives, each
+  `minNatives` strong and `minSpacing` m apart, `perOrigin` units each. `hunters` % of the living hunt the nearest
+  player anywhere by hidden jumps; the rest drift by hidden hops up to `driftRadius` m from their origin. Each kill adds
+  a draw of its `spread` block, up to its `max` alive and `perMinute`. Won when every unit is dead with no spread
+  pending, survived when the duration runs out. Banner: "The dead rise in <n> places: <event>."
+- **Horde march** (`"type": "HordeMarch"`). One horde of its units' counts (10-500) and its `bosses` (fixed or rolled
+  from a pool) rises at `start`: a Point, the admin's spot, or the native hotspot nearest the destination at least
+  `minDistance` m away. It marches to its `destination` at `marchSpeed`; each kill on the way adds a `growth` draw that
+  joins the horde. On arrival, or where it stands after 120 s stuck, it infests there by its `infest` rule and spread.
+  Won when the horde is destroyed. Banner on arrival: "The horde has reached <destination>!"
+- **One at a time.** An Apocalypse, an Infestation and a HordeMarch share one engine: a second start is refused with
+  "an apocalypse-type event is running: <name>". Destination waves run beside them.
+- **Unit watch.** Its stall rule leaves both new types alone: their units roam and drift by design; the march's own
+  stall and the event's end clear them.
+
+## Templates
+
+All three are disabled and started by command. Their pools: troops (six weak undead at level 20), elite (three at level
+40) and strong (two ghosts at level 60).
+
+| Template | Numbers |
+|---|---|
+| `undead-infestation` | 4 h; 5 origins of 10 (troops 8, elite 2, strong 1 as draw weights), at least 5 natives each and 300 m apart; hunters 50 %, drift 400 m; 1-3 troops per kill, max 300, 20 a minute |
+| `undead-horde-march` | 1 h; a horde of 200 (troops 160, elite 32, strong 8) and the Bishop of Death at level 50; starts at the hotspot nearest the admin at least 300 m away; marches at 2 m/s; grows 1-3 troops per kill up to 400; then hunters 60 %, drift 500 m, 1-3 per kill up to 400, 20 a minute |
+| `zombie-apocalypse` (retuned) | 5 hotspots of 10 roamers; 1-3 troops per kill, max 100, 20 a minute; 4 hordes from minute 3, every 20 minutes, of 30 growing by 15; the rest as 0.13.1 |
+
+At the default caps (150 tracked, 20 a wave) each of them is cut, and the start reply names the cut and the key to
+raise.
 
 ## Open questions
 
@@ -82,6 +110,17 @@ native probed fights the undead, so the spread test can use any of them (a wild 
 | CHAR_Legion_Shadowkin_Lesser | yes | 10 undead killed by it, 2 killed by the undead |
 
 ## Test results
+
+### Step 3 · 2026-10-17 · Logic (unit tests, no in-game run; the two types run in game at step 4)
+
+- Test methods: InfestationTests 23, HordeMarchTests 21, TemplateTests.UndeadHordes 7 (22 cases), SourceTests 3;
+  LimitsTests, PrivacyTests.UndeadHordes and ScaleTests gained the new types' cases; full suite 4034/4034.
+- A horde march from (0, 0) to (500, 0) arrives, announces once and infests at its destination; with no ground past
+  40 m it stalls after 120 s and infests where it stands. Both resume before and after arrival.
+- SourceTests scans Logic/ and Services/: no write of FactionReference, Team, TeamReference, EntityCategory or
+  Aggroable.
+- Planted faults: one per control (D8, D9, D10, D11, D13, D14, D15, D16, D17, D20, D33), each turned its test red and
+  was restored.
 
 ### Step 2 · 2026-10-17 · Logic (unit tests, no in-game run; the march is wired in game at step 4)
 

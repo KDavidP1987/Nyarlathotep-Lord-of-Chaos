@@ -26,8 +26,10 @@ public sealed class WaveMarch
     public DateTime StartedUtc { get; }
     public WaveMarchState State { get; private set; } = WaveMarchState.Marching;
 
+    readonly MarchStall _stall = new();
+
     /// <summary>The seconds the front has been stuck (no walkable ground ahead) with no player holding it, in a row.</summary>
-    public double StuckSeconds { get; private set; }
+    public double StuckSeconds => _stall.StuckSeconds;
 
     public WaveMarch(string eventId, int wave, (float X, float Z) start, (float X, float Z) destination, int radius, double speed, DateTime startedUtc)
     {
@@ -75,29 +77,46 @@ public sealed class WaveMarch
             State = WaveMarchState.Arrived;
             return ArrivedLine(EventId, Wave, (int)Math.Round((utcNow - StartedUtc).TotalSeconds), living);
         }
-        switch (step)
-        {
-            case MarchStep.HeldNoGround when unread:
-                return null;                                     // the ground was not read (the walk budget): no stuck time
-            case MarchStep.HeldNoGround:
-                StuckSeconds += Math.Max(0, seconds);
-                if (StuckSeconds < StallAfter.TotalSeconds) return null;
-                State = WaveMarchState.Stalled;
-                return StalledLine(EventId, Wave, Front.X, Front.Z);
-            case MarchStep.Moved:
-                StuckSeconds = 0;
-                return null;
-            default:
-                return null;                                     // held by a player: neither counts nor clears the stuck time
-        }
+        if (!_stall.Add(step, unread, seconds)) return null;
+        State = WaveMarchState.Stalled;
+        return StalledLine(EventId, Wave, (int)Math.Round(Apocalypse.Distance(Front.X, Front.Z, Front.GoalX, Front.GoalZ)));
     }
 
     /// <summary>"march &lt;event&gt; wave &lt;k&gt;: arrived after &lt;s&gt; s, &lt;n&gt; units".</summary>
     public static string ArrivedLine(string eventId, int wave, int seconds, int units) => $"march {eventId} wave {wave}: arrived after {seconds} s, {units} units";
 
-    /// <summary>"march &lt;event&gt; wave &lt;k&gt;: stalled at &lt;x&gt;, &lt;z&gt;" (a map point the front reached, never a player's).</summary>
-    public static string StalledLine(string eventId, int wave, float x, float z) =>
-        FormattableString.Invariant($"march {eventId} wave {wave}: stalled at {x:0}, {z:0}");
+    /// <summary>"march &lt;event&gt; wave &lt;k&gt;: stalled &lt;d&gt; m short of its destination" (A5): a distance, never a point,
+    /// since a front starts at its spawn centre, which can be the starting admin's position.</summary>
+    public static string StalledLine(string eventId, int wave, int metresShort) =>
+        $"march {eventId} wave {wave}: stalled {metresShort} m short of its destination";
+}
+
+/// <summary>
+/// A march's stall clock (undead-hordes D6, D11): the seconds its front is held by unwalkable ground with no player holding
+/// it, in a row; 120 s of them is a stall. Ground the walk budget left unread adds nothing, a move clears it, and a player's
+/// hold neither counts nor clears it.
+/// </summary>
+public sealed class MarchStall
+{
+    public double StuckSeconds { get; private set; }
+
+    /// <summary>Counts one step; true once the front has stalled.</summary>
+    public bool Add(MarchStep step, bool unread, double seconds)
+    {
+        switch (step)
+        {
+            case MarchStep.HeldNoGround when unread:
+                return false;                                    // the ground was not read (the walk budget): no stuck time
+            case MarchStep.HeldNoGround:
+                StuckSeconds += Math.Max(0, seconds);
+                return StuckSeconds >= WaveMarch.StallAfter.TotalSeconds;
+            case MarchStep.Moved:
+                StuckSeconds = 0;
+                return false;
+            default:
+                return false;                                    // held by a player: neither counts nor clears the stuck time
+        }
+    }
 }
 
 /// <summary>

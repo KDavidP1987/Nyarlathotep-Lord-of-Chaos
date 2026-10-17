@@ -157,6 +157,29 @@ public static class ApocalypseLimits
     public const double MinMarchSpeed = 0.5, MaxMarchSpeed = 5.0;
 }
 
+/// <summary>The bounds of an Infestation and a HordeMarch (undead-hordes D8, D10, D16), each inclusive; their units, pools,
+/// faction, scope and duration take the apocalypse's.</summary>
+public static class HordeLimits
+{
+    public const int MinOrigins = 1, MaxOrigins = 10;
+    public const int MinOriginNatives = 1, MaxOriginNatives = 20;
+    public const int MinOriginSpacing = 100, MaxOriginSpacing = 2000;
+    public const int MinPerOrigin = 1, MaxPerOrigin = 100;
+    public const int MinHunters = 0, MaxHunters = 100;
+    public const int MinDrift = 0, MaxDrift = 2000;
+    /// <summary>A spread or growth block's max reaches MaxTrackedUnits' ceiling, its minute limit the apocalypse's.</summary>
+    public const int MinSpreadMax = 1;
+    public static int MaxSpreadMax => Limits.MaxTrackedUnits.Max;
+    /// <summary>A horde holds 10 to MaxUnitsPerWave's ceiling units, its entries' counts summed.</summary>
+    public const int MinHorde = 10;
+    public static int MaxHorde => Limits.MaxUnitsPerWave.Max;
+    public const int MinStartDistance = 100, MaxStartDistance = 3000;
+    /// <summary>A Hotspot start's cell holds at least this many eligible natives (the apocalypse's 100 m cells, D10).</summary>
+    public const int StartNatives = 5;
+    /// <summary>The Hunt range a horde's units take once they reach a player (the apocalypse's huntRange; not a key).</summary>
+    public const int HuntRange = 40;
+}
+
 public static partial class Limits
 {
     /// <summary>The rolling LifeTime of an apocalypse's units (apocalypse D13).</summary>

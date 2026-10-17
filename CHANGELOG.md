@@ -3,6 +3,22 @@
 The complete technical history. The concise, player-facing changelog that ships to Thunderstore lives at
 `Nyarlathotep/Nyarlathotep/CHANGELOG.md`. Public beta from 0.2.0; features stay experimental until validated on live servers.
 
+## [Unreleased] - 0.14.0
+
+Undead hordes (`docs/dod/undead-hordes.md`; feature doc `docs/features/UNDEAD_HORDES.md`). In progress; Services and the
+in-game runs follow.
+
+- Load ladder on the local server: 100 and 250 units pass, 500 fails the frame bar (the game's own cost; the mod's
+  tick stays near 1 ms). `MaxTrackedUnits` keeps its ceiling of 500 (owner's call).
+- Waves can march to a `destination` (a point, or where the admin stood) at `marchSpeed`, then take their behaviour.
+- Spread from a pool: roamers take `perKillMin`/`perKillMax` (0-3) and `pool`. The old `perKill` plans as before.
+- A cut by a cap names it: "capped: n of m by <key> <value>; raise it in the cfg".
+- New event types `Infestation` and `HordeMarch` on the apocalypse engine, one at a time with `Apocalypse`.
+- New templates `undead-infestation` and `undead-horde-march`; `zombie-apocalypse` retuned (5 hotspots, larger
+  hordes from minute 3).
+- Work per tick bounded at 500 units, taken in turn.
+- Stall lines name the distance left, never a point.
+
 ## [0.13.1] - 2026-10-17
 
 The login notice: the `login-notice` child of the DoD Epic (`docs/dod/login-notice.md`; design §9 D63, Epic A45, A47;

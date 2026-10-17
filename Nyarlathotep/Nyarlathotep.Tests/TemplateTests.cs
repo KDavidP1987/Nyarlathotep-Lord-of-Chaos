@@ -4,7 +4,7 @@ namespace Nyarlathotep.Tests;
 
 /// <summary>faction-empowerment D2: the shipped Resources/events.default.json carries example-empowerment as a disabled
 /// Empower definition on Faction_Bandits and its four other templates unchanged.</summary>
-public class TemplateTests
+public partial class TemplateTests
 {
     static LoadResult Seed() => EventValidator.Parse(SeedTests.SeedText, new FakeUnits(
         "CHAR_Bandit_Thug", "CHAR_Bandit_Deadeye", "CHAR_Undead_SkeletonSoldier_Armored_Farbane", "CHAR_Bandit_Tourok_VBlood"));

@@ -258,6 +258,8 @@ public sealed class ApocalypseHost
         _hops.Clear();
         _hopTurns.Clear();
         _roamTurns.Clear();
+        _infestTurns = new RoundRobin(RoundRobin.PerPass);
+        _stalls.Clear();
         _lastMarch = _lastMove = _lastRenew = _lastRecord = null;
         _march.Ok();
         _roam.Ok();
@@ -269,11 +271,20 @@ public sealed class ApocalypseHost
     /// <summary>The hotspots of <paramref name="def"/>, read just before its instance starts (Engine.Start's last gate):
     /// null to go on, or the refusal. A throwing native read refuses with "no hotspot: native read failed: &lt;message&gt;",
     /// logged once per streak; fewer than one hotspot with "no hotspot: …", logged. Kept for <see cref="Begin"/>.</summary>
-    public Outcome? Prepare(EventDefinition def, IApocalypseGame game)
+    public Outcome? Prepare(EventDefinition def, IApocalypseGame game, (float X, float Y, float Z)? origin = null)
     {
         _prepared = null;
         if (def.Apocalypse is not { } action) return null;
-        var pick = Hotspots.Pick(def.Id, action, game.Natives);
+        if (action.March is { } march && Apocalypse.ResolveStart(march.Start, origin) is { } at)
+        {
+            // undead-hordes D10: a Point or Admin start reads no native; an Admin start is the admin's own position, never logged (A5)
+            IReadOnlyList<Hotspot> start = [new Hotspot(1, at.X, at.Z, 0, (int)MathF.Floor(at.X / Apocalypse.CellSize), (int)MathF.Floor(at.Z / Apocalypse.CellSize))];
+            _prepared = (def.Id, start, march.Start.Location?.Type == LocationType.Admin ? AdminStartLine(def.Id) : Hotspots.Line(def.Id, start));
+            return null;
+        }
+        var pick = action.March is not null
+            ? Hotspots.PickStart(def.Id, action, Apocalypse.ResolveGoal(action.Goal, origin) is { } d ? (d.X, d.Z) : (0f, 0f), game.Natives)
+            : Hotspots.Pick(def.Id, action, game.Natives);
         if (pick.Refusal is { } refusal)
         {
             var failed = refusal.StartsWith(Hotspots.ReadFailed(""), StringComparison.Ordinal);
@@ -299,7 +310,10 @@ public sealed class ApocalypseHost
         Guard(_record, game, "start", () =>
         {
             game.MapTerritory(active.Id);
-            foreach (var line in _run!.TopUp(game, now)) Say(game.Log, line);
+            // a horde march's horde rises on its first tick (undead-hordes D10); every other mode tops up its spots now
+            if (action.Mode == ApocalypseMode.HordeMarch) return;
+            foreach (var line in action.Mode == ApocalypseMode.Infestation ? _run!.InfestTopUp(game, now) : _run!.TopUp(game, now)) Say(game.Log, line);
+            if (action.Mode == ApocalypseMode.Infestation) game.Announce(active.Id, Messages.InfestationRise(active.Definition.Name, p.Spots.Count));
         });
         WriteRecord(game, state, board, now);
         return true;
@@ -339,6 +353,7 @@ public sealed class ApocalypseHost
         try
         {
             if (run.Rise(game, now, out var roamerLines) is { } risen) rise = (risen, roamerLines);
+            else foreach (var l in roamerLines) Say(game.Log, l);                                        // an infestation's retried top-up
             _rise.Ok();
         }
         catch (Exception e) { if (_rise.Fail()) Say(game.Warn, $"apocalypse: rise skipped: {e.Message}"); }
@@ -347,13 +362,15 @@ public sealed class ApocalypseHost
         {
             var (r, roamerLines) = done;
             Safe(game, () => { game.MapTerritory(run.Id); return 0; });
-            Say(game.Log, string.Create(CultureInfo.InvariantCulture, $"apocalypse {run.Id} horde {r.Horde}/{action.Hordes.Count} rose at hotspot {r.Hotspot}: {r.Queued} units"));
+            var spot = run.Hotspots[r.Hotspot - 1];
+            var region = Safe(game, () => game.RegionName(spot.X, spot.Z));
+            Say(game.Log, run.Mode == ApocalypseMode.HordeMarch
+                ? HordeLine(run.Id, r.Queued - r.Bosses, r.Bosses, region, action.Goal.Name)                         // undead-hordes D10
+                : string.Create(CultureInfo.InvariantCulture, $"apocalypse {run.Id} horde {r.Horde}/{action.Hordes.Count} rose at hotspot {r.Hotspot}: {r.Queued} units"));
             foreach (var l in r.Log) Say(game.Log, $"apocalypse {run.Id} horde {r.Horde}: {l}");
             if (r.Cut is { } cut) Say(game.Log, cut.LogLine(run.Id));                                  // undead-hordes D12
             foreach (var l in roamerLines) Say(game.Log, l);
             Say(game.Log, run.Tally.Line(run.Id, Alive(game, run)));
-            var spot = run.Hotspots[r.Hotspot - 1];
-            var region = Safe(game, () => game.RegionName(spot.X, spot.Z));
             game.Announce(run.Id, Messages.ApocalypseRise(active.Definition.Name, r.Queued, region, action.Goal.Name));
             forced = true;
             rose = r.Horde;
@@ -377,7 +394,8 @@ public sealed class ApocalypseHost
             Parts.Mark("read");
             var online = players.Where(p => p.Online && PlayerPosition.Usable(p.X, p.Z)).Select(p => (p.X, p.Z)).ToList();
             var byHorde = units.ToLookup(u => Apocalypse.HordeOfWave(u.Wave));                     // undead-hordes D18: one pass
-            var fronts = run.Fronts.Values.Where(f => !_defeated.Contains(f.Horde)).ToList();
+            // a horde march's front marches until it arrives or stalls (undead-hordes D11); then the run infests
+            var fronts = run.Arrived ? [] : run.Fronts.Values.Where(f => !_defeated.Contains(f.Horde)).ToList();
             var hordeUnits = fronts.Sum(f => byHorde[f.Horde].Count());                           // the hops share one tick's bound
             foreach (var front in fronts)
             {
@@ -408,11 +426,18 @@ public sealed class ApocalypseHost
                     Parts.Mark("hops");
                 }
                 byte? level = horde.Count == 0 ? null : horde.MinBy(u => Apocalypse.Distance(u.X, u.Z, front.X, front.Z))!.Level;
+                var unread = false;
                 var step = MarchRule.Step(front, action.Goal.Radius, action.MarchSpeed, seconds, online,
                     (x, z) => HopRule.Ground(x, z, level, game.Walkable, game.Budget), now, out var held,
-                    (x, z) => HopRule.GroundRead(x, z, level, game.Walkable, game.Budget));
+                    (x, z) =>
+                    {
+                        var known = HopRule.GroundRead(x, z, level, game.Walkable, game.Budget);
+                        if (known is null) unread = true;                                                   // D11: unread ground adds no stall time
+                        return known;
+                    });
                 if (held is not null) Say(game.Log, $"apocalypse {run.Id} {held}");
                 if (step == MarchStep.Moved) marching = true;
+                if (run.Mode == ApocalypseMode.HordeMarch && Arrival(run, front, step, unread, seconds, horde.Count, game, now)) forced = true;
                 var crossed = MarchRule.NewSteps(front);
                 foreach (var pct in crossed) game.Announce(run.Id, Messages.ApocalypseProgress(active.Definition.Name, pct, action.Goal.Name));
                 if (step is MarchStep.Moved or MarchStep.HeldNoGround && MarchRule.IsUnobserved(front, now)
@@ -434,7 +459,11 @@ public sealed class ApocalypseHost
             if (_march.Fail()) Say(game.Warn, $"apocalypse: march skipped: {e.Message}");
         }
 
-        if (moveDue && players is not null) Roam(run, game, players, units);
+        if (moveDue && players is not null)
+        {
+            if (run.Infesting) Infest(run, game, players, units);                                   // undead-hordes D9, D11
+            else Roam(run, game, players, units);
+        }
         Parts.Mark("roam");
 
         if (_lastRenew is not { } lr || now - lr >= RenewEvery)
@@ -444,8 +473,9 @@ public sealed class ApocalypseHost
         }
         Parts.Mark("renew");
 
-        // defeats (D7): a risen horde with nothing left, bosses included, once
-        foreach (var k in run.Fronts.Keys.OrderBy(k => k).ToList())
+        // defeats (D7): a risen horde with nothing left, bosses included, once; an apocalypse's only (a horde march's one
+        // horde ends its run, undead-hordes D11)
+        foreach (var k in run.Mode == ApocalypseMode.Apocalypse ? run.Fronts.Keys.OrderBy(k => k).ToList() : [])
         {
             if (_defeated.Contains(k) || !Safe(game, () => run.Cleared(game, k))) continue;
             _defeated.Add(k);
@@ -473,10 +503,92 @@ public sealed class ApocalypseHost
     RoundRobin HopTurns(int horde) => _hopTurns.TryGetValue(horde, out var r) ? r : _hopTurns[horde] = new RoundRobin();
     RoundRobin RoamTurns(int hotspot) => _roamTurns.TryGetValue(hotspot, out var r) ? r : _roamTurns[hotspot] = new RoundRobin();
 
-    /// <summary>Every unit the hops and the roam visited since the host began (ScaleTests, undead-hordes D18).</summary>
-    public long Visits => HopVisits + RoamVisits;
+    /// <summary>The infestation's moves, every unit of the run in one round robin of <see cref="RoundRobin.PerPass"/> a pass
+    /// (undead-hordes D18), and a horde march's stall clock per horde (D11).</summary>
+    RoundRobin _infestTurns = new(RoundRobin.PerPass);
+    readonly Dictionary<int, MarchStall> _stalls = [];
+
+    /// <summary>Every unit the hops, the roam and the infestation's moves visited since the host began (ScaleTests,
+    /// undead-hordes D18).</summary>
+    public long Visits => HopVisits + RoamVisits + InfestVisits;
     public long HopVisits => _hopTurns.Values.Sum(r => r.Visits);
     public long RoamVisits => _roamTurns.Values.Sum(r => r.Visits);
+    public long InfestVisits => _infestTurns.Visits;
+
+    /// <summary>"horde &lt;event&gt;: &lt;n&gt; units, &lt;b&gt; bosses, from &lt;start&gt; to &lt;name&gt;" (undead-hordes D10): the
+    /// start's region (the wilds in none), never a position.</summary>
+    public static string HordeLine(string eventId, int units, int bosses, string? startRegion, string destination) =>
+        $"horde {eventId}: {units} units, {bosses} bosses, from {(string.IsNullOrEmpty(startRegion) ? Messages.Wilds : startRegion)} to {destination}";
+
+    /// <summary>"apocalypse &lt;event&gt; hotspots: 1 (the starting admin)": a horde march's Admin start, with no position (A5).</summary>
+    public static string AdminStartLine(string eventId) => $"apocalypse {eventId} hotspots: 1 (the starting admin)";
+
+    /// <summary>"horde &lt;event&gt;: arrived at &lt;name&gt; after &lt;s&gt; s, &lt;n&gt; units; infesting" (undead-hordes D11).</summary>
+    public static string ArrivedLine(string eventId, string destination, int seconds, int units) =>
+        $"horde {eventId}: arrived at {destination} after {seconds} s, {units} units; infesting";
+
+    /// <summary>"horde &lt;event&gt;: stalled &lt;d&gt; m short of &lt;name&gt;; infesting there" (undead-hordes D11, A5): a distance,
+    /// never a point, since the front starts where the horde rose, which can be the starting admin's position.</summary>
+    public static string StalledLine(string eventId, int metresShort, string destination) => $"horde {eventId}: stalled {metresShort} m short of {destination}; infesting there";
+
+    /// <summary>A horde march's front after its step (undead-hordes D11): within the destination's radius it arrives there,
+    /// and after 120 s held by unwalkable ground with no player holding it (D6's stall) it infests where it stands; either way
+    /// the run switches to the infestation's rule, logs it and, on arrival, tells the players. True when it switched.</summary>
+    bool Arrival(ApocalypseRun run, Front front, MarchStep step, bool unread, double seconds, int units, IApocalypseGame game, DateTime now)
+    {
+        var goal = run.Action.Goal;
+        var near = Apocalypse.Distance(front.X, front.Z, front.GoalX, front.GoalZ) <= goal.Radius;
+        if (!_stalls.TryGetValue(front.Horde, out var stall)) _stalls[front.Horde] = stall = new MarchStall();
+        if (!near && !stall.Add(step, unread, seconds)) return false;
+        if (!run.Arrive(near ? front.GoalX : front.X, near ? front.GoalZ : front.Z)) return false;
+        if (near)
+        {
+            Say(game.Log, ArrivedLine(run.Id, goal.Name, (int)Math.Round((now - run.Active.Instance.StartedUtc).TotalSeconds), units));
+            game.Announce(run.Id, Messages.HordeArrived(goal.Name));
+        }
+        else Say(game.Log, StalledLine(run.Id, (int)Math.Round(Apocalypse.Distance(front.X, front.Z, front.GoalX, front.GoalZ)), goal.Name));
+        return true;
+    }
+
+    /// <summary>The infestation's moves (undead-hordes D9): the roles first (the hunters' share of the living units), then
+    /// each origin's hunters' target, the nearest eligible player to their mean anywhere (the roam line once per origin and
+    /// target change), then up to <see cref="RoundRobin.PerPass"/> units a pass: a hunter jumps toward its target and a
+    /// drifter hops outward within driftRadius of its origin, both hidden from every player. A throwing move logs once per
+    /// streak and holds <see cref="RoamFailing"/>.</summary>
+    void Infest(ApocalypseRun run, IApocalypseGame game, IReadOnlyList<HuntCandidate> players, IReadOnlyList<RegionUnit> units)
+    {
+        if (run.Infest is not { } rule || run.Origins is not { Count: > 0 } origins) return;
+        try
+        {
+            // every living unit of the run, read this tick or not, so an unread unit keeps its role (code review step 3)
+            run.Roles.Assign(game.Ledger.Units.Where(u => Apocalypse.Ours(u, run.Active)).Select(u => u.Key).ToHashSet(), rule.Hunters);
+            var candidates = players.Select(p => p with { InTerritory = game.IsClaimed(run.Id, p.X, p.Z) }).ToList();
+            // an infestation's unit belongs to the origin its wave names; every unit of an arrived horde to its one origin
+            int OriginOf(RegionUnit u) => run.Mode == ApocalypseMode.Infestation ? Math.Clamp(Apocalypse.HotspotOfWave(u.Wave) ?? 1, 1, origins.Count) : 1;
+            var targets = new Dictionary<int, HuntCandidate>();
+            foreach (var g in units.Where(u => run.Roles.IsHunter(u.Key)).GroupBy(OriginOf))
+            {
+                var mean = ((float)g.Average(u => (double)u.X), (float)g.Average(u => (double)u.Z));
+                var target = RoamRule.Target(candidates, mean);
+                if (_roamTargets.Seen(run.Id, g.Key, target?.Key) is { } line) Say(game.Log, line);
+                if (target is { } t) targets[g.Key] = t;
+            }
+            bool Claimed(float x, float z) => game.IsClaimed(run.Id, x, z);
+            foreach (var u in _infestTurns.Take(units, RoundRobin.PerPass, u => u.Key))
+            {
+                var at = OriginOf(u);
+                var (kind, jump) = run.Roles.IsHunter(u.Key)
+                    ? targets.TryGetValue(at, out var t) ? RoamRule.Plan(u, (t.X, t.Z), players, Claimed, game.Walkable, game.HeightOf, game.Budget) : (JumpKind.InReach, null)
+                    : InfestMove.Drift(u, (origins[at - 1].X, origins[at - 1].Z), rule.DriftRadius, players, Claimed, game.Walkable, game.HeightOf, game.Budget);
+                if (kind == JumpKind.Jump && jump is { } j) game.Move(j);
+            }
+            _roam.Ok();
+        }
+        catch (Exception e)
+        {
+            if (_roam.Fail()) Say(game.Warn, $"apocalypse: roam move skipped: {e.Message}");
+        }
+    }
 
     void Roam(ApocalypseRun run, IApocalypseGame game, IReadOnlyList<HuntCandidate> players, IReadOnlyList<RegionUnit> units)
     {
@@ -782,7 +894,12 @@ public sealed class ApocalypseHost
         if (_run is not { } run || run.Id != instance.Definition.Id) return null;
         var view = run.View(w, (_, _) => "");
         var minutes = instance.EndsUtc > now ? (int)Math.Ceiling((instance.EndsUtc - now).TotalMinutes) : 0;
-        return Messages.ApocalypseStatus(instance.Definition.Name, view.Risen, run.Action.Hordes.Count, view.Percent, run.Action.Goal.Name, view.Roamers, minutes);
+        return run.Mode switch                                                                                // undead-hordes D20
+        {
+            ApocalypseMode.Infestation => Messages.InfestationStatus(instance.Definition.Name, view.Living, view.Places),
+            ApocalypseMode.HordeMarch => Messages.HordeStatus(instance.Definition.Name, view.Living, view.ToGoal, view.Arrived, run.Action.Goal.Name),
+            _ => Messages.ApocalypseStatus(instance.Definition.Name, view.Risen, run.Action.Hordes.Count, view.Percent, run.Action.Goal.Name, view.Roamers, minutes),
+        };
     }
 
     /// <summary>`event info`'s run view of <paramref name="id"/> (admins only), or null when it is not the running one.</summary>

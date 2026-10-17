@@ -182,9 +182,10 @@ public static class EventValidator
             var pillar = ParsePillar(Required(e, "pillar", "pillar is required"));
             var trigger = ParseTrigger(Required(e, "trigger", "trigger is required"), units, factions, regions);
             var conditions = e.TryGetProperty("conditions", out var c) ? ParseConditions(c) : new Conditions();
-            // apocalypse D1: an Apocalypse runs 600-604800 s, every other kind keeps 30-7200 s.
-            var (minDuration, maxDuration, durationRule) = IsApocalypse(e)
-                ? (ApocalypseLimits.MinDurationSeconds, ApocalypseLimits.MaxDurationSeconds, ApocalypseDurationRule)
+            // apocalypse D1: an Apocalypse runs 600-604800 s, every other kind keeps 30-7200 s; an Infestation and a
+            // HordeMarch take the apocalypse's (undead-hordes D8, D10)
+            var (minDuration, maxDuration, durationRule) = FamilyOf(e) is { } family
+                ? (ApocalypseLimits.MinDurationSeconds, ApocalypseLimits.MaxDurationSeconds, family == ApocalypseType ? ApocalypseDurationRule : FamilyDurationRule(family))
                 : (ApocalypseLimits.OtherMinDurationSeconds, ApocalypseLimits.OtherMaxDurationSeconds, DurationRule);
             var duration = Int(Required(e, "durationSeconds", durationRule), minDuration, maxDuration, durationRule);
             var (action, empower, apocalypse) = ParseAction(Required(e, "action", "action is required"), pillar, trigger, units, factions, regions,
@@ -531,6 +532,12 @@ public static class EventValidator
             case ApocalypseType:
                 if (pillar != Pillar.Spawns) throw new Fail(ApocalypsePillar);
                 return (null, null, ParseApocalypse(a, trigger, units, factions, regions, durationSeconds));
+            case InfestationType:
+                if (pillar != Pillar.Spawns) throw new Fail(FamilyPillar(type));
+                return (null, null, ParseInfestation(a, units, factions, regions));
+            case HordeMarchType:
+                if (pillar != Pillar.Spawns) throw new Fail(FamilyPillar(type));
+                return (null, null, ParseHordeMarch(a, trigger, units, factions, regions));
             default:
                 throw new Fail($"unknown action type{Shown(type)}");
         }
@@ -586,10 +593,149 @@ public static class EventValidator
 
     public static string GoalCoordRule(string axis) => $"action.goal.location.{axis} must be a number within -10000..10000";
 
-    /// <summary>True when the event's action names the Apocalypse type, read before the duration so its bound applies.</summary>
-    static bool IsApocalypse(JsonElement e) =>
+    /// <summary>The apocalypse-family type the event's action names (Apocalypse, Infestation, HordeMarch), or null; read
+    /// before the duration so its bound applies.</summary>
+    static string? FamilyOf(JsonElement e) =>
         e.TryGetProperty("action", out var a) && a.ValueKind == JsonValueKind.Object && a.TryGetProperty("type", out var t)
-        && t.ValueKind == JsonValueKind.String && t.GetString() == ApocalypseType;
+        && t.ValueKind == JsonValueKind.String && IsFamily(t.GetString()) ? t.GetString() : null;
+
+    /// <summary>True for the three types of the apocalypse family (undead-hordes D13).</summary>
+    public static bool IsFamily(string? type) => type is ApocalypseType or InfestationType or HordeMarchType;
+
+    // ---------------------------------------------------------------- Infestation and HordeMarch (undead-hordes D8, D10)
+
+    public const string InfestationType = "Infestation";
+    public const string HordeMarchType = "HordeMarch";
+    public static string FamilyPillar(string type) => $"action {type} needs pillar spawns";
+    public static string FamilyDurationRule(string type) => $"durationSeconds must be 600-604800 for {Article(type)}";
+    static string Article(string type) => (type.StartsWith('I') ? "an " : "a ") + type;
+    public const string OriginsObject = "action.origins must be an object { count, minNatives, minSpacing, perOrigin }";
+    public const string OriginsCountRule = "action.origins.count must be 1-10";
+    public const string OriginNativesRule = "action.origins.minNatives must be 1-20";
+    public const string OriginSpacingRule = "action.origins.minSpacing must be 100-2000";
+    public const string PerOriginRule = "action.origins.perOrigin must be 1-100";
+    public const string InfestObject = "action.infest must be an object { hunters, driftRadius, spread }";
+    public static string HuntersRule(string at) => $"{at}.hunters must be 0-100";
+    public static string DriftRule(string at) => $"{at}.driftRadius must be 0-2000";
+    public static string SpreadObject(string at) => $"{at} must be an object {{ perKillMin, perKillMax, max, perMinute }}";
+    public static string SpreadKillMinRule(string at) => $"{at}.perKillMin must be 0-3";
+    public static string SpreadKillMaxRule(string at) => $"{at}.perKillMax must be perKillMin-3";
+    public static string SpreadMaxRule(string at) => $"{at}.max must be {HordeLimits.MinSpreadMax}-{HordeLimits.MaxSpreadMax}";
+    public static string SpreadPerMinuteRule(string at) => $"{at}.perMinute must be {ApocalypseLimits.MinPerMinute}-{ApocalypseLimits.MaxPerMinute}";
+    public static string HordeUnitsRule => $"action.units must total {HordeLimits.MinHorde}-{HordeLimits.MaxHorde} units for a HordeMarch";
+    public const string StartRule = "action.start must be { \"type\": \"Point\", \"x\", \"z\" }, { \"type\": \"Admin\" } or { \"type\": \"Hotspot\", \"minDistance\" }";
+    public const string StartAdminManual = "action.start Admin needs a Manual trigger";
+    public const string StartDistanceRule = "action.start.minDistance must be 100-3000";
+    public const string BothAdmin = "action.start and action.destination are not both Admin";
+    public static string StartCoordRule(string axis) => $"action.start.{axis} must be a number within -10000..10000";
+
+    /// <summary>Every reason undead-hordes D8 and D10 add, for the 120-byte check (the unit, pool, faction, scope, bosses
+    /// and destination reasons are the existing builders').</summary>
+    public static readonly IReadOnlyList<string> HordeReasons =
+    [
+        FamilyPillar(HordeMarchType), FamilyDurationRule(InfestationType), OriginsObject, OriginsCountRule, OriginNativesRule, OriginSpacingRule,
+        PerOriginRule, InfestObject, HuntersRule("action.infest"), DriftRule("action.infest"), SpreadObject("action.infest.spread"),
+        SpreadKillMinRule("action.infest.spread"), SpreadKillMaxRule("action.infest.spread"), SpreadMaxRule("action.infest.spread"),
+        SpreadPerMinuteRule("action.infest.spread"), HordeUnitsRule, StartRule, StartAdminManual, StartDistanceRule, BothAdmin, StartCoordRule("x"),
+    ];
+
+    /// <summary>The faction, pools and units every apocalypse-family action opens with (apocalypse D1, undead-hordes D7).</summary>
+    static (string Faction, IReadOnlyDictionary<string, IReadOnlyList<string>>? Pools, List<UnitEntry> Units) FamilyHead(JsonElement a, IUnitCatalog units,
+        IFactionCatalog factions)
+    {
+        var faction = Str(Required(a, "faction", ApocalypseFactionRule), ApocalypseFactionRule);
+        if (FactionDenyList.IsDenied(faction)) throw new Fail($"faction{Shown(faction)} is deny-listed");
+        if (!faction.StartsWith("Faction_", StringComparison.Ordinal)) throw new Fail(ApocalypseFactionRule);
+        if (!factions.IsKnown(faction)) throw new Fail($"unknown faction{Shown(faction)}");
+        var pools = a.TryGetProperty("pools", out var po) ? ParsePools(po, units) : null;
+        var list = ParseEntries(Required(a, "units", ApocalypseUnitsRule), "action.units", ApocalypseUnitsRule, units, withModifiers: true, pools, poolEntries: true);
+        return (faction, pools, list);
+    }
+
+    /// <summary>A spread block at <paramref name="at"/> (undead-hordes D7): { perKillMin 0-3, perKillMax perKillMin-3, max
+    /// 1 to MaxTrackedUnits' ceiling, perMinute 1-30, optional pool }, as roamers whose perHotspot is 0.</summary>
+    static ApocalypseRoamers ParseSpread(JsonElement v, string at, IReadOnlyDictionary<string, IReadOnlyList<string>>? pools)
+    {
+        var s = Obj(v, SpreadObject(at));
+        OnlyKeys(s, at, "perKillMin", "perKillMax", "pool", "max", "perMinute");
+        var min = Int(Required(s, "perKillMin", SpreadKillMinRule(at)), ApocalypseLimits.MinKillDraw, ApocalypseLimits.MaxKillDraw, SpreadKillMinRule(at));
+        var max = Int(Required(s, "perKillMax", SpreadKillMaxRule(at)), min, ApocalypseLimits.MaxKillDraw, SpreadKillMaxRule(at));
+        var pool = s.TryGetProperty("pool", out var p) ? SpreadPool(p, at, pools) : null;
+        return new ApocalypseRoamers(0, min,
+            Int(Required(s, "max", SpreadMaxRule(at)), HordeLimits.MinSpreadMax, HordeLimits.MaxSpreadMax, SpreadMaxRule(at)),
+            Int(Required(s, "perMinute", SpreadPerMinuteRule(at)), ApocalypseLimits.MinPerMinute, ApocalypseLimits.MaxPerMinute, SpreadPerMinuteRule(at)),
+            HordeLimits.HuntRange, max == min ? null : max, pool);
+    }
+
+    /// <summary>The hunters share and drift radius at <paramref name="at"/> (undead-hordes D9).</summary>
+    static InfestRule ParseInfestRule(JsonElement o, string at) => new(
+        Int(Required(o, "hunters", HuntersRule(at)), HordeLimits.MinHunters, HordeLimits.MaxHunters, HuntersRule(at)),
+        Int(Required(o, "driftRadius", DriftRule(at)), HordeLimits.MinDrift, HordeLimits.MaxDrift, DriftRule(at)));
+
+    /// <summary>`"type": "Infestation"` (undead-hordes D8): faction, units (drawn by weight, as an apocalypse's), pools,
+    /// origins, hunters, driftRadius and a spread block; scope and scoreboard as an apocalypse's.</summary>
+    static ApocalypseAction ParseInfestation(JsonElement a, IUnitCatalog units, IFactionCatalog factions, IRegionCatalog regions)
+    {
+        OnlyKeys(a, "action", "type", "faction", "units", "pools", "origins", "hunters", "driftRadius", "spread", "scope", "scoreboard");
+        var (faction, pools, list) = FamilyHead(a, units, factions);
+        var o = Obj(Required(a, "origins", OriginsObject), OriginsObject);
+        OnlyKeys(o, "action.origins", "count", "minNatives", "minSpacing", "perOrigin");
+        var origins = new ApocalypseHotspots(
+            Int(Required(o, "count", OriginsCountRule), HordeLimits.MinOrigins, HordeLimits.MaxOrigins, OriginsCountRule),
+            Int(Required(o, "minNatives", OriginNativesRule), HordeLimits.MinOriginNatives, HordeLimits.MaxOriginNatives, OriginNativesRule),
+            Int(Required(o, "minSpacing", OriginSpacingRule), HordeLimits.MinOriginSpacing, HordeLimits.MaxOriginSpacing, OriginSpacingRule));
+        var perOrigin = Int(Required(o, "perOrigin", PerOriginRule), HordeLimits.MinPerOrigin, HordeLimits.MaxPerOrigin, PerOriginRule);
+        var infest = ParseInfestRule(a, "action");
+        var spread = ParseSpread(Required(a, "spread", SpreadObject("action.spread")), "action.spread", pools) with { PerHotspot = perOrigin };
+        var scope = a.TryGetProperty("scope", out var sc) ? ParseScope(sc, "action.scope", regions) : Scope.Global;
+        var scoreboard = !a.TryGetProperty("scoreboard", out var sb) || Bool(sb, ScoreboardRule);
+        if (pools is not null) PoolsUsed(pools, spread.Pool is null ? list : [.. list, UnitEntry.FromPool(spread.Pool, 1)], null, null);
+        return new ApocalypseAction(faction, list, origins, spread, new ApocalypseHordes(0, 0, ApocalypseLimits.MinEvery, 0, 0), ApocalypseGoal.None, 0,
+            scope, scoreboard, null, pools, ApocalypseMode.Infestation, infest);
+    }
+
+    /// <summary>`"type": "HordeMarch"` (undead-hordes D10): faction, units whose counts total the horde (10 to
+    /// MaxUnitsPerWave's ceiling), pools, bosses (fixed or rolled), start, destination, marchSpeed (default 2.0), a growth
+    /// block and an infest block { hunters, driftRadius, spread }; an Admin start or destination only on a Manual trigger,
+    /// never both.</summary>
+    static ApocalypseAction ParseHordeMarch(JsonElement a, Trigger trigger, IUnitCatalog units, IFactionCatalog factions, IRegionCatalog regions)
+    {
+        OnlyKeys(a, "action", "type", "faction", "units", "pools", "bosses", "start", "destination", "marchSpeed", "growth", "infest", "scope", "scoreboard");
+        var (faction, pools, list) = FamilyHead(a, units, factions);
+        var total = list.Sum(u => (long)u.Count);
+        if (total < HordeLimits.MinHorde || total > HordeLimits.MaxHorde) throw new Fail(HordeUnitsRule);
+        var bosses = a.TryGetProperty("bosses", out var bo) ? ParseBossList(bo, "action.bosses", units, null, pools, waveLevel: false) : null;
+        var start = ParseStart(Required(a, "start", StartRule), trigger);
+        var destination = ParseDestination(Required(a, "destination", DestinationObject), trigger);
+        if (start.Location?.Type == LocationType.Admin && destination.Location.Type == LocationType.Admin) throw new Fail(BothAdmin);
+        var march = a.TryGetProperty("marchSpeed", out var ms)
+            ? Number(ms, ApocalypseLimits.MinMarchSpeed, ApocalypseLimits.MaxMarchSpeed, MarchSpeedRule) : DestinationLimits.DefaultMarchSpeed;
+        var growth = ParseSpread(Required(a, "growth", SpreadObject("action.growth")), "action.growth", pools);
+        var i = Obj(Required(a, "infest", InfestObject), InfestObject);
+        OnlyKeys(i, "action.infest", "hunters", "driftRadius", "spread");
+        var infest = ParseInfestRule(i, "action.infest");
+        var infestSpread = ParseSpread(Required(i, "spread", SpreadObject("action.infest.spread")), "action.infest.spread", pools);
+        var scope = a.TryGetProperty("scope", out var sc) ? ParseScope(sc, "action.scope", regions) : Scope.Global;
+        var scoreboard = !a.TryGetProperty("scoreboard", out var sb) || Bool(sb, ScoreboardRule);
+        if (pools is not null)
+            PoolsUsed(pools, [.. list, .. new[] { growth.Pool, infestSpread.Pool }.OfType<string>().Select(p => UnitEntry.FromPool(p, 1))], null, bosses);
+        return new ApocalypseAction(faction, list, new ApocalypseHotspots(1, HordeLimits.StartNatives, ApocalypseLimits.MinSpacing), growth,
+            new ApocalypseHordes(1, 0, ApocalypseLimits.MinEvery, (int)total, 0), new ApocalypseGoal(destination.Location, destination.Radius, destination.Name),
+            march, scope, scoreboard, null, pools, ApocalypseMode.HordeMarch, infest, new HordeMarchSpec(start, growth, infest, infestSpread, bosses));
+    }
+
+    /// <summary>`start` (undead-hordes D10): a Point (x, z, optional y), Admin (a Manual trigger only) or { "type":
+    /// "Hotspot", "minDistance": 100-3000 }.</summary>
+    static HordeStart ParseStart(JsonElement v, Trigger trigger)
+    {
+        var s = Obj(v, StartRule);
+        if (s.TryGetProperty("type", out var ty) && ty.ValueKind == JsonValueKind.String && ty.GetString() == "Hotspot")
+        {
+            OnlyKeys(s, "action.start", "type", "minDistance");
+            return new HordeStart(null, Int(Required(s, "minDistance", StartDistanceRule), HordeLimits.MinStartDistance, HordeLimits.MaxStartDistance, StartDistanceRule));
+        }
+        return new HordeStart(ParseTarget(s, "action.start", trigger, StartRule, StartAdminManual, StartCoordRule));
+    }
 
     /// <summary>`"type": "Apocalypse"` (apocalypse D1): every key in its range, an unknown key named with its path, an Admin
     /// goal only with a Manual trigger, and no horde rising at or after the duration.</summary>

@@ -44,16 +44,22 @@ sealed class ApoGame : IApocalypseGame
     /// <summary>Every unit position read (ScaleTests, undead-hordes D18).</summary>
     public long Reads { get; private set; }
 
+    /// <summary>The units whose read returns nothing this tick (undead-hordes code review step 3: an unread unit keeps its role).</summary>
+    public Func<TrackedUnit, bool> Unread { get; set; } = _ => false;
+
     public RegionUnit? Read(TrackedUnit unit)
     {
         if (ReadThrow is { } e) throw e;
+        if (Unread(unit)) return null;
         Reads++;
         var (x, z) = Positions.TryGetValue(unit.Key, out var p) ? p : (0f, 0f);
         return new RegionUnit(unit.Key, unit.EventId, unit.SpawnedUtc, x, 0, z, 1, unit.Wave);
     }
 
     public bool IsClaimed(string eventId, float x, float z) => false;
-    public bool Walkable(float x, float z, byte level) => true;
+    /// <summary>The ground: walkable everywhere unless a test says otherwise (undead-hordes D11's stall).</summary>
+    public Func<float, float, byte, bool> Ground { get; set; } = (_, _, _) => true;
+    public bool Walkable(float x, float z, byte level) => Ground(x, z, level);
     public float HeightOf(byte level) => level;
 
     public void Move(RegionJump jump)

@@ -87,7 +87,7 @@ public class ApocalypseStateTests
         Assert.DoesNotContain("Chaos", json);
         Assert.DoesNotContain("\"name\"", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Player", json);
-        // the only coordinates are the goal, the hotspots and the fronts
+        // the only coordinates are the goal, the hotspots, the fronts and a horde march's arrival
         var keys = new List<string>();
         void Walk(JsonElement e)
         {
@@ -95,8 +95,8 @@ public class ApocalypseStateTests
             else if (e.ValueKind == JsonValueKind.Array) foreach (var x in e.EnumerateArray()) Walk(x);
         }
         Walk(JsonDocument.Parse(json).RootElement.GetProperty("Apocalypse"));
-        Assert.Equal(["deaths", "endsUtc", "eventId", "first", "frontX", "frontZ", "goal", "hordes", "hordesRisen", "hotspots", "kills", "living", "livingBosses",
-                "number", "platformId", "prefab", "roamers", "scores", "spreadWindow", "startedUtc", "x", "y", "z"],
+        Assert.Equal(["arrival", "arrived", "deaths", "endsUtc", "eventId", "first", "frontX", "frontZ", "goal", "growth", "hordes", "hordesRisen", "hotspots", "kills",
+                "living", "livingBosses", "mode", "number", "platformId", "prefab", "roamers", "scores", "spreadWindow", "startedUtc", "x", "y", "z"],
             keys.Distinct().OrderBy(k => k, StringComparer.Ordinal));
     }
 

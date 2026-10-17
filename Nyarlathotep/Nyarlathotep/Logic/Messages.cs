@@ -293,6 +293,24 @@ public static class Messages
     public static string ApocalypseStatus(string eventName, int risen, int hordes, int percent, string goalName, int roamers, int minutesLeft) =>
         Line($"{TextSink.Clean(eventName)}: horde {risen}/{hordes}, {percent} % to {TextSink.Clean(goalName)}, {roamers} roamers, ends in {minutesLeft} min");
 
+    /// <summary>An infestation's start (undead-hordes D8): "The dead rise in &lt;n&gt; places: &lt;event&gt;." No position.</summary>
+    public static string InfestationRise(string eventName, int places) =>
+        Line($"The dead rise in {places} places: {TextSink.Clean(eventName)}.");
+
+    /// <summary>A horde march's arrival (undead-hordes D11): "The horde has reached &lt;name&gt;!"</summary>
+    public static string HordeArrived(string destination) => Line($"The horde has reached {TextSink.Clean(destination)}!");
+
+    /// <summary>An infestation's `.nyar status` line (undead-hordes D20): "&lt;event&gt;: &lt;n&gt; undead, &lt;k&gt; places".</summary>
+    public static string InfestationStatus(string eventName, int living, int places) =>
+        Line($"{TextSink.Clean(eventName)}: {living} undead, {places} places");
+
+    /// <summary>A horde march's `.nyar status` line (undead-hordes D20): "&lt;event&gt;: horde &lt;n&gt; units, &lt;d&gt; m to
+    /// &lt;dest&gt;", or "… arrived" once it arrived (<paramref name="toGoal"/> null).</summary>
+    public static string HordeStatus(string eventName, int units, int? toGoal, bool arrived, string destination) =>
+        Line(toGoal is { } d ? $"{TextSink.Clean(eventName)}: horde {units} units, {d} m to {TextSink.Clean(destination)}"
+            : arrived ? $"{TextSink.Clean(eventName)}: horde {units} units, arrived"
+            : $"{TextSink.Clean(eventName)}: the horde is gathering");                   // code review step 3: not yet risen
+
     static string Line(string text) => TextSink.CutToBytes(text, Wire.MaxBytes);
 
     static string Choose(IReadOnlyList<string> own, IReadOnlyList<string> pool, int pick)

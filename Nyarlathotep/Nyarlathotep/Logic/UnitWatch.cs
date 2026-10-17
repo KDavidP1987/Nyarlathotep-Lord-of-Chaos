@@ -329,6 +329,8 @@ public static class StallClock
     /// <summary>The watched waves of <paramref name="a"/> (1-based waveList waves, or horde numbers).</summary>
     public static IEnumerable<int> Waves(ActiveEvent a, int? hordesRisen)
     {
+        // undead-hordes D33: an infestation's and a horde march's units roam and drift by design; the watch leaves them alone
+        if (a.Definition.Apocalypse is { Mode: not ApocalypseMode.Apocalypse }) yield break;
         if (a.Definition.Apocalypse is { } apo)
         {
             if (hordesRisen is { } risen && risen >= apo.Hordes.Count)

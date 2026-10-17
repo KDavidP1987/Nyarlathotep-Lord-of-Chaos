@@ -116,13 +116,19 @@ public partial class CommandArgTests
         "action.hordes.count" => "4",
         "action.hordes.size" => "20",
         "action.marchSpeed" => "1.5",
+        "action.start" => "here",                                        // undead-hordes D20
+        "action.start.minDistance" or "action.origins.minSpacing" => "300",
+        "action.origins.count" or "action.origins.minNatives" => "5",
+        _ when field.EndsWith(".perKillMin", StringComparison.Ordinal) || field.EndsWith(".perKillMax", StringComparison.Ordinal) => "2",
+        _ when field.EndsWith(".perMinute", StringComparison.Ordinal) => "20",
+        _ when field.EndsWith(".pool", StringComparison.Ordinal) => "elite",
         _ => "60",
     };
 
     [Fact]
     public void SettableFields_passes_every_table_name()
     {
-        Assert.Equal(77, CommandArgs.SettableFields.Count);      // automation D16: 7 trigger fields and action.fanOut; wave-sets D14: 11; swarm D9: 6; hunting-grounds D14: 1; revenge D11: 3, D31: 1; apocalypse D16: 8; wave-variety D10: 3; undead-hordes D5: 3
+        Assert.Equal(102, CommandArgs.SettableFields.Count);     // automation D16: 7 trigger fields and action.fanOut; wave-sets D14: 11; swarm D9: 6; hunting-grounds D14: 1; revenge D11: 3, D31: 1; apocalypse D16: 8; wave-variety D10: 3; undead-hordes D5: 3, D20: 25
         foreach (var (name, (family, who)) in CommandArgs.SettableFields)
         {
             var field = name.Replace(".N.", ".1.", StringComparison.Ordinal).Replace(".M.", ".1.", StringComparison.Ordinal);   // the placeholders

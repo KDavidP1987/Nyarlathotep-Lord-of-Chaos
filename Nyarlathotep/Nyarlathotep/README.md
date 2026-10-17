@@ -243,10 +243,10 @@ in `state.json` every minute (30 s while a horde marches); after the boot its un
 the server was down rises then.
 
 **Big hordes.** A horde never passes `[Limits] MaxUnitsPerWave` (20), and every unit counts against `MaxTrackedUnits`
-(150). For hordes over 20, raise `MaxUnitsPerWave` (up to 50) and `MaxTrackedUnits` with it. `zombie-apocalypse` fits
-the defaults: at most 83 units.
+(150). For bigger hordes raise both, up to 500. At the defaults `zombie-apocalypse` is cut, and the start reply and
+`.nyar event info` name the cut and the key to raise.
 
-`zombie-apocalypse`: undead of levels 22–38 at 3 hotspots, 4 hordes of 7 to 19 from minute 10, every 30 minutes, the
+`zombie-apocalypse`: undead of levels 22–38 at 5 hotspots, 4 hordes of 30 to 75 from minute 3, every 20 minutes, the
 last with the Bishop of Death, marching at 2 m/s on where the admin stood, for 4 hours. `.nyar template use
 zombie-apocalypse`, `.nyar event enable zombie-apocalypse`, then `.nyar event start zombie-apocalypse` where the living
 make their stand. In chat: `.nyar event set <id> action.goal here`, `action.goal.radius`, `action.goal.name`,
@@ -314,7 +314,9 @@ disabled, ready to adjust and enable.
 | `spider-swarm` | 5 spider waves growing from 6 to 18 units and level 30 to 42, held in a 40 m arena around the admin, ending on Ungoro, with the scoreboard and a K/D winner (0.10.0; Ungoro 0.12.0) | By command |
 | `spider-hunting-grounds` | 3 waves of 6 level 30 spiders spread over Dunley Farmlands, kept inside and hunting the players there, ending on Ungoro, with the scoreboard (0.11.0; Ungoro 0.12.0) | By command |
 | `bandit-revenge` | 3 tiers of bandits around a player who killed 30 bandits within 15 minutes, warned at 10 and 20, hunting only that player, with the scoreboard (0.12.0) | Revenge |
-| `zombie-apocalypse` | The undead outbreak above: 3 hotspots, 4 hordes marching on the admin's spot, the Bishop of Death, 4 hours (0.13.0) | By command |
+| `zombie-apocalypse` | The undead outbreak above: 5 hotspots, 4 hordes marching on the admin's spot, the Bishop of Death, 4 hours (0.13.0; retuned 0.14.0) | By command |
+| `undead-infestation` | The dead rise at 5 graveyards, 10 each; half hunt the nearest players, the rest spread outward, and every kill adds 1–3 more, up to 300, for 4 hours (0.14.0) | By command |
+| `undead-horde-march` | A horde of 200 undead and the Bishop of Death rises at a graveyard 300 m or more away and marches on the admin's spot, growing with every kill; there it breaks up and hunts the players, for 1 hour (0.14.0) | By command |
 | `militia-muster` · `silverlight-crusade` · `legion-incursion` · `gloomrot-assault` · `cursed-night` | 4–5 growing waves of one faction in a 40 m arena around the admin, 150 s apart (legion 180 s) or on a clear, ending on a V Blood (Militia Leader, Paladin, Blood Knight, Voltage, Cursed Witch), with the scoreboard and a K/D winner (0.13.0) | By command |
 | `realm-gauntlet` | 5 waves, one faction each (bandits, undead, militia, gloomrot, church), each once the last is cleared, ending on the Overseer (0.13.0) | By command |
 | `spider-swarm-timed` · `graveyard-waves-timed` · `militia-muster-timed` · `silverlight-crusade-timed` · `legion-incursion-timed` · `gloomrot-assault-timed` · `cursed-night-timed` | The base template's waves (and its final V Blood, if any) on a fixed 75 s beat, cleared or not, in a 40 m arena around the admin, pursuing after 60 s (0.13.0) | By command |

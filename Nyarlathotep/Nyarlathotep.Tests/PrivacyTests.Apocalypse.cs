@@ -104,10 +104,11 @@ public partial class PrivacyTests
         Assert.Equal(["Apocalypse", "DailyBanner", "Instances", "LastFired", "LastStart", "NextInterval", "PurgeUntilUtc", "SchemaVersion", "Units"],
             typeof(StateDocument).GetProperties().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal));
         // the record's fields: ids, counts, times and map locations only
-        Assert.Equal(["EndsUtc", "EventId", "Goal", "Hordes", "HordesRisen", "Hotspots", "Roamers", "Scores", "SpreadWindow", "StartedUtc", "Unreadable"],
+        Assert.Equal(["Arrival", "Arrived", "EndsUtc", "EventId", "Goal", "Hordes", "HordesRisen", "Hotspots", "Mode", "ModeOf", "Roamers", "Scores", "SpreadWindow",
+                "StartedUtc", "Unreadable"],
             typeof(ApocalypseRecord).GetProperties(BindingFlags.Public | BindingFlags.Instance).Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal));
         Assert.Equal(["Deaths", "First", "Kills", "PlatformId"], typeof(RecordScore).GetProperties().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal));
-        Assert.Equal(["FrontX", "FrontZ", "Living", "LivingBosses", "Number"], typeof(RecordHorde).GetProperties().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal));
+        Assert.Equal(["FrontX", "FrontZ", "Growth", "Living", "LivingBosses", "Number"], typeof(RecordHorde).GetProperties().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal));
     }
 
     [Fact]
