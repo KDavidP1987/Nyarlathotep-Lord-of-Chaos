@@ -85,6 +85,9 @@ internal static class HuntAction
         _waves[key] = wave;
     }
 
+    /// <summary>This tick's players by key (undead-hordes D18: a seed's player is found without a search per unit).</summary>
+    static readonly Dictionary<long, PlayerRow> _byKey = new();
+
     /// <summary>Each unit's wave, for a destination wave's hunt tag (undead-hordes D6).</summary>
     static readonly Dictionary<long, int> _waves = new();
 
@@ -148,6 +151,8 @@ internal static class HuntAction
             if (byEvent.Count == 0) { LastTargets = 0; return; }
             sweepEnd = Stopwatch.GetTimestamp();
             players = PlayerQuery.Read();
+            _byKey.Clear();
+            foreach (var p in players) _byKey[p.Key] = p;                   // undead-hordes D18: no search per unit
             playersEnd = Stopwatch.GetTimestamp();
         }
         catch (Exception ex)
@@ -298,12 +303,17 @@ internal static class HuntAction
         var (adds, removes) = _seeds.Plan(key, targets, inBuffer.Keys.ToList());
 
         // A seed is the player's only entry, whatever values the game gave it (A67); a shared player keeps every entry.
+        // the buffer's targets read once, kept in step with each removal (undead-hordes D18)
+        var entryTargets = new List<long>(buffer.Length);
+        if (removes.Count > 0) for (var i = 0; i < buffer.Length; i++) entryTargets.Add(KeyOf(buffer[i].Entity));
         foreach (var target in removes)
         {
-            var entryTargets = new List<long>(buffer.Length);
-            for (var i = 0; i < buffer.Length; i++) entryTargets.Add(KeyOf(buffer[i].Entity));
             var index = HuntBuffer.RemovalIndex(entryTargets, target);
-            if (index >= 0) buffer.RemoveAt(index);
+            if (index >= 0)
+            {
+                buffer.RemoveAt(index);
+                entryTargets.RemoveAt(index);
+            }
             _seeds.Removed(key, target);
         }
         foreach (var target in targets) if (inBuffer.ContainsKey(target) && !removes.Contains(target)) held.Add(target);
@@ -311,8 +321,7 @@ internal static class HuntAction
         var added = 0;
         foreach (var target in adds)
         {
-            var player = players.FirstOrDefault(p => p.Key == target);
-            if (!player.Character.Exists()) continue;
+            if (!_byKey.TryGetValue(target, out var player) || !player.Character.Exists()) continue;
             added++;
             buffer.Add(new AggroBuffer { Entity = player.Character, DamageValue = SeedDamage, Weight = SeedWeight });
             _seeds.Wrote(key, eventId, new AggroSeed(target, SeedDamage, SeedWeight));
@@ -328,7 +337,7 @@ internal static class HuntAction
     static void Rehome(Entity unit, List<long> targets, List<HuntCandidate> pool, List<PlayerRow> players)
     {
         if (HuntRule.Home(targets, pool) is not { } home) return;
-        var row = players.FirstOrDefault(p => p.Key == targets[0]);
+        var row = _byKey.TryGetValue(targets[0], out var r) ? r : default;
         var to = new float3(home.X, row.Y, home.Z);
         if (unit.TryGetComponent<AggroConsumer>(out var aggro) && math.distance(aggro.PreCombatPosition.xz, to.xz) >= 2f)
         {

@@ -254,6 +254,10 @@ public class ScaleTests
         Assert.DoesNotContain(".IndexOf(", marches);
         var hunt = File.ReadAllText(Path.Combine(ControlCaseTests.RepoRoot(), "Nyarlathotep", "Nyarlathotep", "Services", "HuntAction.cs"));
         Assert.Contains("_turns.Take(_units.Keys.ToList(), RoundRobin.PerPass, k => k)", hunt);
+        // no search inside its per-unit seeding: players by key once a tick, the buffer's targets read once a unit (Codex step 4)
+        Assert.Contains("foreach (var p in players) _byKey[p.Key] = p;", hunt);
+        Assert.DoesNotContain("players.FirstOrDefault(", hunt);
+        Assert.Contains("entryTargets.RemoveAt(index);", hunt);
     }
 
     [Fact]
