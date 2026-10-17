@@ -7,13 +7,14 @@ factions, hunting waves, swarms in an arena, region-bound hunting grounds, facti
 Admins build events from templates or in chat. Each event starts on a schedule, at nightfall, after a V Blood kill, on
 its own, or by command, and everything it spawned is removed when it ends.
 
-Public beta. Every pillar and every automatic announcement starts disabled; admins opt in.
+Public beta. Every pillar and every automatic announcement starts disabled, but for the login notice of running events; admins opt in.
 
 ## Status
 
 | Build | What it is |
 |---|---|
-| [**v0.13.0**](https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.0) | Current release, the Halloween release: the apocalypse, unit watch and wave variety. The test round's workbook is in [`testing/`](testing/). |
+| [**v0.13.1**](https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.1) | Current release: the login notice, a private line to a player who logs in while an event runs. |
+| [v0.13.0](https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.0) | The Halloween release: the apocalypse, unit watch and wave variety. The test round's workbook is in [`testing/`](testing/). |
 
 What each version shipped: [`CHANGELOG.md`](CHANGELOG.md). What comes next: the Epic plan,
 [`docs/dod/nyarlathotep.md`](docs/dod/nyarlathotep.md).
@@ -75,6 +76,7 @@ units, with hunting, fan-out, the player-trigger scan and the kill feed included
 | Apocalypse | A map-wide outbreak of one faction: hotspots, roamers that spread, hordes marching on a goal | 0.13.0 | [APOCALYPSE](docs/features/APOCALYPSE.md) |
 | Unit watch | Stuck units moved back to walkable ground, or removed after two tries | 0.13.0 | [UNIT_WATCH](docs/features/UNIT_WATCH.md) |
 | Wave variety | Pursuit of players who run, unit pools and boss rolls, the timed and onslaught templates | 0.13.0 | [WAVE_VARIETY](docs/features/WAVE_VARIETY.md) |
+| Login notice | A private line to a player who logs in while an event runs, naming the running events (on by default) | 0.13.1 | [LOGIN_NOTICE](docs/features/LOGIN_NOTICE.md) |
 | Raphael API | A machine-readable `[NYAR:*]` wire for the Raphael client: status, admin actions, pushes | 0.3.0, api 8 in 0.13.0 | [Contract](docs/RAPHAEL_INTEGRATION_CONTRACT.md) |
 | Scaling, replacements, boss reinforcements, live operations, stats, sieges | Planned | — | [Epic plan](docs/dod/nyarlathotep.md) |
 

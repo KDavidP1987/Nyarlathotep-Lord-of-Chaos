@@ -1,7 +1,7 @@
 # Login notice — a player who logs in during a running event is told what is running
 
-**Status:** in progress for 0.13.1 (docs/dod/login-notice.md, audit docs/audits/login-notice.md; design §9 D63, Epic
-A45). Steps 1 and 2 are built and Session 1 passed in game (17/17); the release (0.13.1) follows.
+**Status:** shipped in 0.13.1 (docs/dod/login-notice.md, audit docs/audits/login-notice.md; design §9 D63, Epic A45,
+A47). Session 1 passed in game (17/17); the Codex cross-inspection's four findings were fixed before the release.
 
 ## Goal
 
@@ -53,3 +53,16 @@ read "[nyar] announcements: LoginEventNotice; warning offsets 300,60,10 s; daily
   tools/vrclient/vrclient.py retries each, and the 8th run passed.
 - Timing: the tick that sent the first notice took 5.8 ms in the announcements phase (one SendSystemMessageToClient);
   every later slowest-tick line stayed under 2 ms.
+
+### Session 2 · 2026-10-17 · step 3 Release build 0.13.1 (f6f5326) · vrclient as Chaos on the local dev server
+
+Setup: snapshot ln2 (34 files), restored after ("hashes equal"). The build carries the Codex and /code-review fixes of
+step 3 (the gate recorded after a send, contained reads, a rejoin replacing its queued notice, the switch read per
+tick).
+
+- **D7** `tools/vrclient/scenarios/login-notice.vrs` → SCENARIO PASS 17/17
+  (%TEMP%\vrclient\results\login-notice-20261017-050909.json), first run: with ln-test running, a login 61 s after
+  leaving gave "[nyar] login notice sent: 1 events" and the chat line (OCR match); after `.nyar event stop ln-test`, no
+  "login notice sent" line in 30 s at the next login; the log then reads "event ln-test deleted".
+- Log check: 0 unhandled, 95 nyar lines, 0 orphan errors, 0 unity errors; the same 226 game missing-prefab warnings as
+  every boot here.

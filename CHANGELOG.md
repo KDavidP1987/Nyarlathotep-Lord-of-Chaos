@@ -3,6 +3,30 @@
 The complete technical history. The concise, player-facing changelog that ships to Thunderstore lives at
 `Nyarlathotep/Nyarlathotep/CHANGELOG.md`. Public beta from 0.2.0; features stay experimental until validated on live servers.
 
+## [0.13.1] - 2026-10-17
+
+The login notice: the `login-notice` child of the DoD Epic (`docs/dod/login-notice.md`; design §9 D63, Epic A45, A47;
+feature doc `docs/features/LOGIN_NOTICE.md`; audit `docs/audits/login-notice.md`). A player who connects while an event
+runs gets one private line 10 s later, for example `Events in progress: Bandit raid: 5 min left; Siege: 20 min left. Type
+.nyar status for details.`
+
+- New cfg switch `[Announcements] LoginEventNotice`, **on by default**: the one announcement that is (D63), since it
+  only tells a player what an admin already started. Enabled events that are not running are never named.
+- The running list is read when the line leaves, not at connect, so nothing is sent if the event ended in those 10 s,
+  if the player left, or if another player now holds the user entity. Each part is the event's `.nyar status` line,
+  soonest end first; a line over 480 bytes keeps whole parts and ends `… and N more`.
+- One notice per player per 60 s of reconnects, with its own gate, separate from the admin degraded notice's; a
+  connect that sends nothing, or a send that fails, does not use the gate up. A quick drop and rejoin replaces the
+  queued notice, so it arrives 10 s into the new session; turning the switch off drops the queued ones.
+- A throwing read or send is logged once per streak (`login notice failed:` / `private message failed:`) and never
+  stops the tick or the other notices. Log line per notice: `[nyar] login notice sent: <n> events`.
+- Wire unchanged (api 8); `[NYAR:version]` keeps its keys (`docs/RAPHAEL_INTEGRATION_CONTRACT.md`).
+- Preflight `AnnouncementDefaults` now requires exactly six `[Announcements]` switches, all off but LoginEventNotice
+  (Epic D41 as amended by A47). vrclient: join waits out a slow server list and retries swallowed menu clicks; leave
+  confirms LEAVE GAME.
+- In game: `tools/vrclient/scenarios/login-notice.vrs` SCENARIO PASS (a notice at login while an event runs, none
+  after it stops).
+
 ## [0.13.0] - 2026-10-16
 
 The Halloween release: three children of the DoD Epic. `apocalypse` (`docs/dod/apocalypse.md`) adds a third action kind,

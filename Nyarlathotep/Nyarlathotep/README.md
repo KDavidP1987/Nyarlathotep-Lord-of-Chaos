@@ -6,8 +6,8 @@ A **server-side** event layer for V Rising. Admins stage NPC events the base gam
 and empowered factions on a schedule, at nightfall or after a V Blood falls, a days-long apocalypse, with warnings
 and banners for players, and in later releases castle sieges, defended zones and boss-fight adds.
 
-> **Public beta (0.13.0).** Every pillar and automatic announcement is off by default; no event runs until an
-> admin turns on its pillar and enables it.
+> **Public beta (0.13.1).** Every pillar and automatic announcement is off by default, but for the login notice of
+> running events; no event runs until an admin turns on its pillar and enables it.
 
 ## What it does
 
@@ -351,6 +351,10 @@ Announcements can say `{region}`. If the map cannot be read, regional events are
 Wave warnings before each wave (by default 5 min, 1 min and 10 s ahead), start and end banners with your own
 text or a stock line, and a daily banner naming the events still due that day, each behind its own switch.
 Admins can also broadcast on demand with `.nyar announce`.
+
+From 0.13.1 a player who logs in while an event is running gets a private line 10 seconds later naming each running
+event and its time left (`Events in progress: Bandit raid: 5 min left. Type .nyar status for details.`). It is the one
+announcement on by default; set `[Announcements] LoginEventNotice = false` to turn it off.
 </details>
 
 <details>
@@ -438,8 +442,8 @@ Install and start the server once. Then, in game as an admin, no file edits need
 4. `.nyar event enable undead-nightfall`
 5. `.nyar status`: at the next nightfall the undead are empowered for 20 minutes, and this shows it running.
 
-If anything goes wrong, `.nyar purge` then `.nyar purge confirm` ends everything. Announcements stay off until
-you turn on `[Announcements] WaveWarnings` and `EventBanners` in `BepInEx/config/kdpen.Nyarlathotep.cfg`.
+If anything goes wrong, `.nyar purge` then `.nyar purge confirm` ends everything. Announcements, but for the login
+notice, stay off until you turn on `[Announcements] WaveWarnings` and `EventBanners` in `BepInEx/config/kdpen.Nyarlathotep.cfg`.
 
 Scheduled and triggered events spawn at a `Point` location (world `x` and `z` in `events.json`), `AroundPlayer` or
 `Region` (spread over the event's regions, see Hunting grounds above);
@@ -536,6 +540,7 @@ slowest part, at most once a minute.
 | Announcements | WaveWarnings · EventBanners · DailyBanner | `false` | Wave warnings, start/end banners, the daily banner |
 | Announcements | WarningOffsets | `300,60,10` | Seconds before a wave at which warnings fire (1-5 values, each 5-3600) |
 | Announcements | DailyBannerTime | `20:00` | Server-local time of the daily banner |
+| Announcements | LoginEventNotice | `true` | A private line at login naming the running events and their time left (0.13.1) |
 | Announcements | LoginStats · PlayerShare · ShareCooldownSeconds · ShareMaxPerMinute | `false` · `false` · `300` · `3` | Reserved for stats (later release); cooldown 10-86400, per minute 1-20 |
 | Scoreboard | IncludeAdmins | `false` | Whether admins appear on an event's scoreboard (0.9.0) |
 | UnitWatch | Enabled | `true` | Stuck event units are moved back, then removed (0.13.0); `false` also refuses `unstick` |

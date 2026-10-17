@@ -1,6 +1,13 @@
 # Changelog
 
-Public beta. Event pillars and automatic announcements default off; admins opt in per feature.
+Public beta. Event pillars and automatic announcements default off, but for the login notice; admins opt in per feature.
+
+## 0.13.1 (2026-10-17)
+
+- **Login notice** (on by default, `[Announcements] LoginEventNotice`). A player who logs in while an event is running
+  gets a private line 10 seconds later naming each running event and its time left, for example `Events in progress:
+  Bandit raid: 5 min left. Type .nyar status for details.` Nothing is sent when nothing is running, and one line per
+  player covers quick reconnects. Set the switch to `false` to turn it off.
 
 ## 0.13.0 (2026-10-16)
 
