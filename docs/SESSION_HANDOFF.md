@@ -4,6 +4,28 @@ Where work stands between sessions. Overwrite this file at the end of a session;
 The plans (`docs/dod/`), audits (`docs/audits/`) and feature docs stay the source of truth. This file only points
 into them.
 
+**Written 2026-10-17 (the v0.13.0 release)**: at the owner's request ("make sure that the current version is published to
+GitHub … ready to be submitted to Thunderstore"), **0.13.0 is released before the players' test weekend**; the weekend now
+runs on the released build and its findings go to 0.13.x.
+- **Published:** release commit b695063 `chore(release): v0.13.0` (six surfaces), annotated tag v0.13.0, GitHub pre-release
+  https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.0 with `kdpen-Nyarlathotep-0.13.0.zip` (the
+  Thunderstore package, sha256 68E1978F…, `release verify: hashes equal`), the tester workbook and its PDF. Records commit
+  f0d50f4 and the dod evidence commit after it, all pushed.
+- **Thunderstore:** not uploaded (the owner publishes). The zip is `Nyarlathotep/Nyarlathotep/build/kdpen-Nyarlathotep-0.13.0.zip`
+  and the same file is on the GitHub release: upload it at thunderstore.io (V Rising community, kdpen team), or
+  `tcli publish --file <zip>` with the owner's token in TCLI_AUTH_TOKEN.
+- **Checks:** tests 3830/3830; preflight OK ("release tags: 15/15", secrets none); rollback gates apocalypse and unit-watch
+  4/4 (real boots of 0.13.0 then 0.12.0 on the same files); drill selftest 37/37; wave-variety audit 4/4/4, sessions 6/6,
+  paths declared 127/127.
+- **Tester package:** rows rewritten as real setups (saved spot, schedule plus announcement, named place to defend), event
+  banners on in the install steps, now pointing at the v0.13.0 release; tester-setups.vrs 79/80 on rc.3 (the refused
+  `action.arena 30` step dropped).
+- **dod:** wave-variety 20/24 (D13, D17, D18, D19 wait on the owner), apocalypse 29/38, unit-watch 7/34 (the test weekend's
+  items and older session-record items stay open: `-SessionsOf apocalypse` 0/4, `-SessionsOf unit-watch` 0/1 because those
+  sessions' log-check and snapshot lines are not in the audit form). `dod close` waits for the weekend.
+- **Next:** the owner's test weekend on 0.13.0 (apocalypse D31, unit-watch D23 and D29, wave-variety D19); then 0.13.x fixes;
+  the HuntAction eligibility-helper advice; live-ops planning.
+
 **Written 2026-10-16 (wave-variety session close)**: the wave-variety child (docs/dod/wave-variety.md, 18/24) is
 built through step 4's pre-release work, commits a896846..88cb5cf, all pushed (main cf2ef2a).
 - **Published (owner's OK 2026-10-16):** test build **v0.13.0-rc.3** (tag on cf2ef2a, GitHub pre-release with the zip,
