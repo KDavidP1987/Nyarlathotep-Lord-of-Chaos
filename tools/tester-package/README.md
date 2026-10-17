@@ -34,6 +34,11 @@ python tools/tester-package/build.py --check-published  # is testing/ built from
 
 ## Round log
 
+- Round 1 revised 2026-10-16 for rc.3: rows set events up as a live server would, with a saved spot (`location here`,
+  N-05, N-18, N-19), a schedule and an announcement (N-10, the arena night), a named place to defend (N-14, `action.goal
+  here`), and the start/end banners turned on in the install steps. Setup commands checked in game on rc.3:
+  tester-setups.vrs 79/80; the one failure was `action.arena 30` (refused: an arena may not be smaller than the hunt
+  range), so that step was dropped from N-10 and from the scenario.
 - Round 1 republished 2026-10-14: install steps for the test server and the download link added; blank package
   committed under `testing/`; build `v0.13.0-rc.1` (pre-release with the mod zip, workbook and reading copy).
 

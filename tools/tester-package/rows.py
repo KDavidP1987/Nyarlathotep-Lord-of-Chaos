@@ -61,6 +61,9 @@ INSTALL = [
     "Put Nyarlathotep.dll from the zip in the same BepInEx/plugins folder, replacing any older copy -> one copy only.",
     "Start the server and open BepInEx/LogOutput.log -> a line 'Plugin kdpen.Nyarlathotep v0.13.0-rc.3 loaded' "
     "appears, and BepInEx/config gains kdpen.Nyarlathotep.cfg.",
+    "So players see events as they would on a live server: stop the server, open BepInEx/config/kdpen.Nyarlathotep.cfg, "
+    "set EventBanners = true under [Announcements], save, start the server -> from now on everyone gets a server-wide "
+    "line when an event starts and when it ends.",
     "Make each tester an admin: add their Steam ID (the 17-digit number) on its own line to adminlist.txt in the "
     "server's save data Settings folder, then restart the server -> in game, with the console switched on in "
     "Options, press the ~ key and type adminauth.",
@@ -172,15 +175,16 @@ ROWS = [
     {
         "id": "N-03", "status": "new", "area": "Faction empowerment",
         "title": "A weekly surge on a schedule (day and time)",
-        "summary": "The 'Legion weekend surge' template empowers the Legion on Saturdays at 20:00. Here you move its "
-                   "time to a few minutes from now, as an admin planning a real evening would.",
+        "summary": "'Legion weekend surge' empowers the Legion on Saturdays at 20:00. Here you move its time to a few "
+                   "minutes from now, as an admin planning a real evening would.",
         "needs": "Admin rights; the server's local time (ask the owner); a Legion area (Gloomrot or the Dunley "
                  "outskirts).",
         "howToTest": [
-            "Type .nyar template use legion-weekend-surge, then .nyar event enable legion-weekend-surge.",
-            "Type .nyar event set legion-weekend-surge trigger.days <today, e.g. Wed> -> it confirms.",
-            "Type .nyar event set legion-weekend-surge trigger.times <server time plus 5 minutes, e.g. 21:35> "
-            "-> it confirms; .nyar event info legion-weekend-surge shows the next start.",
+            "Type .nyar template use legion-weekend-surge and .nyar pillar empowerment on.",
+            "Type .nyar event set legion-weekend-surge trigger.days <today, e.g. Wed> and .nyar event set "
+            "legion-weekend-surge trigger.times <server time plus 5 minutes, e.g. 21:35> -> each confirms.",
+            "Type .nyar event enable legion-weekend-surge, then .nyar event info legion-weekend-surge -> it shows the "
+            "next start.",
             "Wait for that time near Legion NPCs -> the event starts on the minute with a start line in chat.",
             "After 30 minutes -> an end line shows and the Legion are back to normal.",
         ],
@@ -205,19 +209,23 @@ ROWS = [
     },
     {
         "id": "N-05", "status": "new", "area": "Spawn events",
-        "title": "An admin-run ambush at a bandit camp",
-        "summary": "'Bandit ambush' brings 3 waves of bandit thugs and hunters around the admin, a minute apart: the "
-                   "kind of event an admin starts by hand for a group evening.",
-        "needs": "Admin rights; one or two players with gear level 20 or more; open ground away from any castle.",
+        "title": "An ambush waiting at a spot you choose",
+        "summary": "The admin picks the place first and can then start the event from anywhere. 'Bandit ambush' "
+                   "brings 3 waves of bandits to the saved spot, a minute apart.",
+        "needs": "Admin rights; one or two players with gear level 25 or more; a road or clearing away from any castle.",
         "howToTest": [
-            "Type .nyar template use bandit-ambush, .nyar pillar spawns on, .nyar event enable bandit-ambush.",
-            "Stand where the ambush should happen and type .nyar event start bandit-ambush -> a start line shows; "
-            "about 6 bandits appear within 10 m.",
-            "Fight them -> a second and third wave arrive a minute apart.",
-            "After 10 minutes, or when you type .nyar event stop bandit-ambush -> an end line shows; any bandits "
-            "left disappear about 30 s later; .nyar status reads 'tracked units: 0'.",
+            "Type .nyar template use bandit-ambush and .nyar pillar spawns on -> both confirm.",
+            "Walk to where the ambush should happen and type .nyar event set bandit-ambush location here -> it "
+            "confirms with your position.",
+            "Set the difficulty with .nyar event set bandit-ambush action.modifiers.level 30, then type .nyar event "
+            "enable bandit-ambush -> each confirms.",
+            "Walk at least 100 m away and type .nyar event start bandit-ambush -> nothing appears around you; the "
+            "bandits are waiting at the saved spot.",
+            "Go back and fight -> waves 2 and 3 arrive a minute apart, all at level 30. When it ends (10 minutes, or "
+            ".nyar event stop bandit-ambush) the leftovers disappear about 30 s later; .nyar status reads 'tracked "
+            "units: 0'.",
         ],
-        "mostWanted": "Did the waves arrive on walkable ground near you, never inside rocks or water?",
+        "mostWanted": "Were the bandits at the saved spot, on walkable ground, and at the level you set?",
     },
     {
         "id": "N-06", "status": "new", "area": "Spawn events",
@@ -284,19 +292,26 @@ ROWS = [
     },
     {
         "id": "N-10", "status": "new", "area": "Swarm",
-        "title": "Spider swarm: an arena, growing waves and the Spider Queen",
-        "summary": "'Spider swarm' holds 5 waves of spiders in a 40 m arena around where the admin starts it; each wave "
-                   "adds a spider and 3 levels, the last brings the Spider Queen. The best kills-to-deaths ratio wins.",
-        "needs": "Admin rights; two players with gear level 35 or more (the Queen is level 45); open ground.",
+        "title": "A scheduled arena night: the spider swarm at a set place and time",
+        "summary": "How a server runs a weekly event: the admin picks the arena, sets the day and time and tells the "
+                   "players. The swarm then starts by itself: 5 growing waves in the arena, the Spider Queen last, and "
+                   "the best kills-to-deaths ratio wins.",
+        "needs": "Admin rights; the server's local time; two players with gear level 35 or more (the Queen is level "
+                 "45); open ground away from castles.",
         "howToTest": [
-            "Type .nyar template use spider-swarm, .nyar event enable spider-swarm, then .nyar event info "
-            "spider-swarm -> all five waves are listed with their counts and levels.",
-            "Stand in the middle of open ground and type .nyar event start spider-swarm -> spiders appear around you.",
-            "Run more than 40 m from the centre during a wave -> the spiders do not follow you out; they go back.",
-            "Clear the waves -> each one is bigger; wave 5 brings the Spider Queen.",
-            "Kill the Queen -> chat shows the scoreboard and names a winner; you can feed on the Queen's V Blood.",
+            "Type .nyar template use spider-swarm. Stand in the middle of your arena and type .nyar event set "
+            "spider-swarm location here -> it confirms; the arena is the 40 m around that spot.",
+            "Type .nyar event set spider-swarm trigger.type Schedule, .nyar event set spider-swarm trigger.days "
+            "<today, e.g. Sat> and .nyar event set spider-swarm trigger.times <server time plus 10 minutes, e.g. "
+            "21:40>, then .nyar event enable spider-swarm -> .nyar event info spider-swarm shows the next start and "
+            "all five waves.",
+            "Tell everyone: .nyar announce Spider arena at <place> in 10 minutes -> every player sees the line.",
+            "Gather in the arena; nobody types start -> on the minute, a start line shows and spiders appear in the "
+            "arena.",
+            "Run more than 40 m out during a wave -> the spiders do not follow. Clear wave 5 and the Queen -> the "
+            "scoreboard names a winner. Then type .nyar event disable spider-swarm so it does not repeat next week.",
         ],
-        "mostWanted": "Did the arena edge feel fair, or did spiders snap back in a way that looked wrong?",
+        "mostWanted": "Could you run a real arena night this way, and did the arena edge feel fair?",
     },
     {
         "id": "N-11", "status": "new", "area": "Hunting grounds",
@@ -354,17 +369,20 @@ ROWS = [
         "id": "N-14", "status": "new", "area": "Apocalypse",
         "title": "Zombie apocalypse: a two-hour outbreak the server has to survive",
         "summary": "The undead rise at three hotspots, roamers hunt players across the map and spread with every kill, "
-                   "and four hordes march on the spot the admin defends. The last horde brings the Bishop of Death.",
-        "needs": "Admin rights; two hours; as many players as you can gather, gear level 30 or more; a spot to defend "
-                 "outside any castle.",
+                   "and four hordes march on a place the admin names for the server to defend. The last horde brings "
+                   "the Bishop of Death.",
+        "needs": "Admin rights; two hours; as many players as you can gather, gear level 30 or more; a place to defend "
+                 "outside any castle (a crossroads, a ruin).",
         "howToTest": [
-            "Type .nyar template use zombie-apocalypse, .nyar event enable zombie-apocalypse, and .nyar event set "
-            "zombie-apocalypse durationSeconds 7200.",
-            "Standing at the spot to defend, type .nyar event start zombie-apocalypse -> chat says the dead rise; "
-            ".nyar event info zombie-apocalypse lists three hotspots with their regions.",
-            "Players spread out over the map -> within a few minutes roamers find players far from the defended spot.",
-            "After 10 minutes, then every 30 -> chat announces each horde rising and its march at each quarter.",
-            "Stand in a horde's path -> it stops to fight while you hold within about 60 m of its front.",
+            "Type .nyar template use zombie-apocalypse and .nyar event set zombie-apocalypse durationSeconds 7200.",
+            "Walk to the place to defend and type .nyar event set zombie-apocalypse action.goal here, then .nyar "
+            "event set zombie-apocalypse action.goal.name Crossroads, then .nyar event enable zombie-apocalypse -> "
+            "each confirms.",
+            "When everyone is ready, type .nyar event start zombie-apocalypse from anywhere -> chat says the dead "
+            "rise; .nyar event info zombie-apocalypse lists three hotspots and the defended place.",
+            "Players spread out over the map -> within a few minutes roamers find players far from the defended place.",
+            "After 10 minutes, then every 30 -> chat announces each horde rising and its march towards the place.",
+            "Hold the place, or stand in a horde's path -> it stops to fight while you hold within about 60 m of it. "
             "Play it out -> chat shows the outcome (won, lost or survived) and the scoreboard.",
         ],
         "mostWanted": "Did the outbreak feel like a server-wide event worth gathering for?",
@@ -393,8 +411,8 @@ ROWS = [
         "summary": "Events never put monsters inside a claimed castle and never pick a player standing in their castle.",
         "needs": "Admin rights; a claimed castle; a second player outside it is best.",
         "howToTest": [
-            "Stand inside your castle territory. Type .nyar event start bandit-ambush (set up in N-05) -> no bandits "
-            "appear inside the territory.",
+            "Stand inside your castle territory with nobody else online outside one. Type .nyar event start "
+            "graveyard-waves (set up in N-06) -> no skeletons come for you: a player in their castle is never picked.",
             "Start roaming-hunters (N-07) while one player is in their castle and one outside -> only the outside "
             "player gets a squad.",
             "During the apocalypse (N-14), shelter in the castle -> roamers do not appear inside it.",
@@ -418,21 +436,22 @@ ROWS = [
     },
     {
         "id": "N-18", "status": "new", "area": "Spawn events",
-        "title": "Timed waves: the next wave comes whether you are ready or not",
-        "summary": "'Militia muster (timed)' is militia-muster on a clock: 5 waves of militia in a 40 m arena, a new "
-                   "wave every 75 seconds even if the last one is still alive, ending on the militia leader. Six "
-                   "other factions have a timed version too (names ending in -timed).",
+        "title": "Timed waves at a muster point: the next wave comes whether you are ready or not",
+        "summary": "'Militia muster (timed)' brings 5 waves of militia to a place the admin saves, a new wave every 75 "
+                   "seconds even if the last is still alive, ending on the militia leader. Six other factions have a "
+                   "timed version too (names ending in -timed).",
         "needs": "Admin rights; the Spawns kind on (.nyar pillar spawns on); two players with gear level 50 or more "
-                 "(the militia leader is level 58); "
-                 "open ground.",
+                 "(the militia leader is level 58); open ground in Dunley Farmlands.",
         "howToTest": [
-            "Type .nyar template use militia-muster-timed, .nyar event enable militia-muster-timed.",
-            "Stand in open ground and type .nyar event start militia-muster-timed -> wave 1 (6 militia) appears "
-            "around you.",
-            "Do not fight for a while -> about 75 seconds after the start, wave 2 (9 militia) arrives while wave 1 "
-            "is still alive.",
-            "Fight the rest -> waves keep coming every 75 seconds; wave 5 brings the militia leader; the scoreboard "
-            "names a winner at the end.",
+            "Type .nyar template use militia-muster-timed. At an open spot in Dunley Farmlands type .nyar event set "
+            "militia-muster-timed location here -> it confirms.",
+            "Give it a time limit: .nyar event set militia-muster-timed durationSeconds 900 (15 minutes), then .nyar "
+            "event enable militia-muster-timed.",
+            "With the players at the spot, type .nyar event start militia-muster-timed -> wave 1 (6 militia) appears "
+            "there.",
+            "Hold back -> about 75 seconds after the start, wave 2 (9 militia) arrives while wave 1 is still alive.",
+            "Fight on -> a new wave every 75 seconds; wave 5 brings the militia leader; the scoreboard names a winner. "
+            "If you are still fighting at 15 minutes, the event ends.",
         ],
         "mostWanted": "Did the pressure of the clock feel exciting or simply unfair?",
     },
@@ -440,18 +459,21 @@ ROWS = [
         "id": "N-19", "status": "new", "area": "Spawn events",
         "title": "Onslaught: random waves, surprise bosses, and no running away",
         "summary": "'Undead onslaught' rolls each wave at random from groups of undead, adds a random undead V Blood in "
-                   "the middle wave and one or two at the end. If nobody stays in the 40 m arena for 60 seconds, "
-                   "the undead go after the nearest player anywhere on the map. Six other factions have one too "
-                   "(names ending in -onslaught).",
-        "needs": "Admin rights; the Spawns kind on; two players with gear level 60 or more (the undead V Bloods "
-                 "run from level 27 to 63, up to two at once); a castle nearby.",
+                   "the middle wave and one or two at the end. If nobody stays in its 40 m arena, after a set time the "
+                   "undead go after the nearest player anywhere on the map. Six other factions have one too (names "
+                   "ending in -onslaught).",
+        "needs": "Admin rights; the Spawns kind on; two players with gear level 60 or more (the undead V Bloods run "
+                 "from level 27 to 63, up to two at once); a castle within reach.",
         "howToTest": [
-            "Type .nyar template use undead-onslaught, .nyar event enable undead-onslaught, then .nyar event start "
-            "undead-onslaught in open ground -> about 12 undead appear around you.",
+            "Type .nyar template use undead-onslaught. At an open spot near a graveyard type .nyar event set "
+            "undead-onslaught location here.",
+            "Set how long they wait before giving chase: .nyar event set undead-onslaught action.pursuit 90, then "
+            ".nyar event enable undead-onslaught and .nyar event start undead-onslaught -> about 12 undead appear "
+            "at the spot.",
             "Clear wave 1 or wait 75 seconds -> wave 2 brings different undead and one V Blood boss.",
-            "Both players run more than 60 m away and wait -> about a minute later the undead come after the "
-            "nearest of you, arriving near you rather than on top of you.",
-            "Go into your castle's territory -> they do not follow you in.",
+            "Both players run more than 60 m away and wait -> about 90 seconds later the undead come after the "
+            "nearest of you, arriving near you rather than on top of you. Go into your castle's territory -> they "
+            "do not follow you in.",
             "Stop it (.nyar event stop undead-onslaught) and start it again -> the waves and bosses are different.",
         ],
         "mostWanted": "Did the chase feel like a threat, and did anything visibly teleport while you watched?",

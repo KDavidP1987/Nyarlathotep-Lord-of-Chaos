@@ -27,6 +27,10 @@ chat .nyar event enable undead-nightfall
 expect-reply undead-nightfall
 chat .nyar template use legion-weekend-surge
 expect-reply template legion-weekend-surge added as legion-weekend-surge (disabled)
+chat .nyar event set legion-weekend-surge trigger.days Wed
+expect-reply legion-weekend-surge trigger.days =
+chat .nyar event set legion-weekend-surge trigger.times 21:35
+expect-reply legion-weekend-surge trigger.times =
 chat .nyar event enable legion-weekend-surge
 expect-reply legion-weekend-surge
 chat .nyar template use bandit-vengeance
@@ -35,8 +39,14 @@ chat .nyar event enable bandit-vengeance
 expect-reply bandit-vengeance
 chat .nyar template use bandit-ambush
 expect-reply template bandit-ambush added as bandit-ambush (disabled)
+chat .nyar event set bandit-ambush location here
+expect-reply bandit-ambush action.location =
+chat .nyar event set bandit-ambush action.modifiers.level 30
+expect-reply bandit-ambush action.modifiers.level =
 chat .nyar event enable bandit-ambush
 expect-reply bandit-ambush
+chat .nyar event info bandit-ambush
+expect-reply enabled pillar spawns
 chat .nyar template use graveyard-waves
 expect-reply template graveyard-waves added as graveyard-waves (disabled)
 chat .nyar event enable graveyard-waves
@@ -55,8 +65,20 @@ chat .nyar event enable bandit-reprisal
 expect-reply bandit-reprisal
 chat .nyar template use spider-swarm
 expect-reply template spider-swarm added as spider-swarm (disabled)
+chat .nyar event set spider-swarm location here
+expect-reply spider-swarm action.location =
+chat .nyar event set spider-swarm trigger.type Schedule
+expect-reply spider-swarm trigger.type =
+chat .nyar event set spider-swarm trigger.days Sat
+expect-reply spider-swarm trigger.days =
+chat .nyar event set spider-swarm trigger.times 21:40
+expect-reply spider-swarm trigger.times =
 chat .nyar event enable spider-swarm
 expect-reply spider-swarm
+chat .nyar event info spider-swarm
+expect-reply enabled pillar spawns trigger Schedule
+chat .nyar announce Spider arena at the crossroads in 10 minutes
+expect-log announce Spider arena at the crossroads
 chat .nyar template use spider-hunting-grounds
 expect-reply template spider-hunting-grounds added as spider-hunting-grounds (disabled)
 chat .nyar event enable spider-hunting-grounds
@@ -67,8 +89,37 @@ chat .nyar event enable bandit-revenge
 expect-reply bandit-revenge
 chat .nyar template use zombie-apocalypse
 expect-reply template zombie-apocalypse added as zombie-apocalypse (disabled)
+chat .nyar event set zombie-apocalypse durationSeconds 7200
+expect-reply zombie-apocalypse durationSeconds =
+chat .nyar event set zombie-apocalypse action.goal here
+expect-reply zombie-apocalypse action.goal
+chat .nyar event set zombie-apocalypse action.goal.name Crossroads
+expect-reply zombie-apocalypse action.goal.name =
 chat .nyar event enable zombie-apocalypse
 expect-reply zombie-apocalypse
+chat .nyar event info zombie-apocalypse
+expect-reply enabled pillar spawns
+# N-18 and N-19: the timed and onslaught waves at a saved spot
+chat .nyar template use militia-muster-timed
+expect-reply template militia-muster-timed added as militia-muster-timed (disabled)
+chat .nyar event set militia-muster-timed location here
+expect-reply militia-muster-timed action.location =
+chat .nyar event set militia-muster-timed durationSeconds 900
+expect-reply militia-muster-timed durationSeconds =
+chat .nyar event enable militia-muster-timed
+expect-reply militia-muster-timed
+chat .nyar event info militia-muster-timed
+expect-reply enabled pillar spawns
+chat .nyar template use undead-onslaught
+expect-reply template undead-onslaught added as undead-onslaught (disabled)
+chat .nyar event set undead-onslaught location here
+expect-reply undead-onslaught action.location =
+chat .nyar event set undead-onslaught action.pursuit 90
+expect-reply undead-onslaught action.pursuit =
+chat .nyar event enable undead-onslaught
+expect-reply undead-onslaught
+chat .nyar event info undead-onslaught
+expect-reply enabled pillar spawns
 chat .nyar template use graveyard-waves as farbane-ambush
 expect-reply template graveyard-waves added as farbane-ambush (disabled)
 chat .nyar event enable farbane-ambush
@@ -77,10 +128,6 @@ chat .nyar template use spider-swarm as stuck-test
 expect-reply template spider-swarm added as stuck-test (disabled)
 chat .nyar event enable stuck-test
 expect-reply stuck-test
-chat .nyar event set legion-weekend-surge trigger.days Wed
-expect-reply legion-weekend-surge trigger.days =
-chat .nyar event set legion-weekend-surge trigger.times 21:35
-expect-reply legion-weekend-surge trigger.times =
 chat .nyar event set roaming-hunters trigger.minMinutes 5
 expect-reply roaming-hunters trigger.minMinutes =
 chat .nyar event set roaming-hunters trigger.maxMinutes 5
@@ -97,14 +144,10 @@ chat .nyar event set bandit-revenge trigger.warnAt 4,8
 expect-reply bandit-revenge trigger.warnAt =
 chat .nyar event set bandit-revenge trigger.heat 12
 expect-reply bandit-revenge trigger.heat =
-chat .nyar event set zombie-apocalypse durationSeconds 7200
-expect-reply zombie-apocalypse durationSeconds =
 chat .nyar event info legion-weekend-surge
 expect-reply legion-weekend-surge
 chat .nyar event info roaming-hunters
 expect-reply roaming-hunters
-chat .nyar event info spider-swarm
-expect-reply spider-swarm
 chat .nyar region here
 expect-reply you are in
 # E-01: a new event built from chat
