@@ -222,7 +222,7 @@ public sealed class LoginNotices<TUser>(Func<DateTime> clock, Action<string> inf
     /// <summary>Sends every notice due now. <paramref name="holds"/> says whether the user is still connected as the same
     /// platform id; <paramref name="running"/> is read once per due notice; <paramref name="send"/> may throw, which the
     /// shared private-message streak logs once, and the other due notices still leave.</summary>
-    public void Tick(Func<TUser, ulong, bool> holds, Func<IReadOnlyList<RunningInstance>> running,
+    public void Tick(Func<TUser, ulong, bool> holds, Func<IReadOnlyCollection<RunningInstance>> running,
         Func<RunningInstance, string?> own, Action<TUser, string> send)
     {
         var now = clock();
@@ -232,7 +232,7 @@ public sealed class LoginNotices<TUser>(Func<DateTime> clock, Action<string> inf
             if (now - connectUtc < Delay) { i++; continue; }
             _due.RemoveAt(i);
             if (!holds(user, platformId)) continue;
-            IReadOnlyList<RunningInstance> list;
+            IReadOnlyCollection<RunningInstance> list;
             try { list = running(); _readFaults.Ok(); }
             catch (Exception ex)
             {

@@ -48,8 +48,7 @@ public static class ControlCases
         new(Apocalypse, "D33", 5, "0.13.0"), new(Apocalypse, "D34", 5, "0.13.0"), new(Apocalypse, "D35", 5, "0.13.0"),
         // unit-watch: step 5 the release
         new(UnitWatch, "D30", 5, "0.13.0"), new(UnitWatch, "D31", 5, "0.13.0"), new(UnitWatch, "D32", 5, "0.13.0"), new(UnitWatch, "D33", 5, "0.13.0"),
-        // login-notice: step 2 the session in game, step 3 the release
-        new(LoginNotice, "D7", 2, "0.13.1"),
+        // login-notice: step 3 the release
         new(LoginNotice, "D8", 3, "0.13.1"), new(LoginNotice, "D9", 3, "0.13.1"), new(LoginNotice, "D10", 3, "0.13.1"), new(LoginNotice, "D11", 3, "0.13.1"),
     ];
 
@@ -1005,5 +1004,10 @@ public static class ControlCases
             ["a_name_id_or_position_reaches_a_line"], ["counts_and_event_names_only"], ["no_running_event_no_line"]) with { Plan = LoginNotice },
         T("D6", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit"],
             ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = LoginNotice },
+        // ---- login-notice step 2: the session in game
+        C("D7", "LoginScenario", "vrclient run scenarios/login-notice.vrs",
+            ["expect-log login notice sent: 1 events fails when no notice leaves while ln-test runs", "expect-chat Events in progress fails when the line does not render",
+             "expect-no-log login notice sent fails when a notice leaves with nothing running"],
+            ["tools/vrclient/scenarios/login-notice.vrs"], ["ln-test stopped: expect-no-log login notice sent"]) with { Plan = LoginNotice },
     ];
 }

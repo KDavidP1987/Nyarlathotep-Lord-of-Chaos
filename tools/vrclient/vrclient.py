@@ -427,7 +427,7 @@ def launch(timeout: float = 120) -> bool:
             log("launch: closing the in-game System menu")
             click_text("RESUME GAME", timeout=5)
             time.sleep(1)
-        if client_running() and (find_text("PLAY") or find_text("Online Play") or in_world()):
+        if client_running() and (find_text("PLAY") or find_text("Online Play") or find_text("Direct Connect") or in_world()):
             # A fresh client's menu still animates when PLAY first reads: a click then can land on CONTINUE, which
             # times out on a local server (swarm Session 1, 2026-10-11). Let it settle first.
             if started:
@@ -440,13 +440,23 @@ def launch(timeout: float = 120) -> bool:
 def leave_to_menu() -> None:
     """From a disconnect / error dialog or the in-game menu, get back to the main menu."""
     focus()
+    # The in-game System menu's "LEAVE GAME" asks "Are you sure you want to leave the game?" (Yes/No); a disconnect
+    # dialog's Leave Game does not, so Yes is clicked only when it shows (login-notice Session 1, 2026-10-17)
     for label in ("Leave Game", "Back to Menu"):
-        if click_text(label, timeout=2, wait=6):
-            return
-    if in_world():
-        key("esc"); time.sleep(1.5)
-        if click_text("Exit to Main Menu", timeout=4, wait=2, exact=False):
+        if click_text(label, timeout=2, wait=2):
             click_text("Yes", timeout=4, wait=8)
+            return
+    # a first Esc may only close the console a `console` step left open: a second one opens the System menu
+    for _ in range(2):
+        if not (in_world() or find_text("RESUME GAME")):
+            return
+        if not find_text("RESUME GAME"):
+            key("esc"); time.sleep(2)
+        for label in ("Leave Game", "Exit to Main Menu"):
+            if click_text(label, timeout=4, wait=2, exact=False):
+                click_text("Yes", timeout=4, wait=8)
+                return
+    log(f"leave: FAIL no Leave Game in the System menu ({shot('full', 'leave-fail')})")
 
 
 def connect(timeout: float = 180) -> bool:
@@ -461,22 +471,43 @@ def connect(timeout: float = 180) -> bool:
     # resume from a menu screen already open (Select Game Mode shows "Online Play"), and retry the previous click once when
     # a screen did not come (the PLAY click is sometimes swallowed while the main menu's news carousel loads)
     start = 1 if find_text("Online Play") else 0
+    # Join Game opens only once the server list has loaded, which took over 25 s on 2026-10-17 (login-notice Session 1):
+    # Direct Connect gets 60 s, and a client already on Join Game goes straight to it
+    if find_text("Direct Connect"):
+        start = len(steps) - 1
     for i, (label, wait) in enumerate(steps[start:], start):
-        if click_text(label, timeout=25, wait=wait):
+        t = 60 if label == "Direct Connect" else 25
+        if click_text(label, timeout=t, wait=wait):
             continue
-        if i > 0 and click_text(steps[i - 1][0], timeout=5, wait=steps[i - 1][1] + 3) and click_text(label, timeout=25, wait=wait):
+        # the previous click can be swallowed (the menu still animating or loading): click it again, up to twice
+        if i > 0 and any(click_text(steps[i - 1][0], timeout=5, wait=steps[i - 1][1] + 3) and click_text(label, timeout=t, wait=wait)
+                         for _ in range(2)):
             continue
         log(f"connect: FAIL could not find '{label}' on screen ({shot('full', 'connect-fail')})")
         return False
-    field = find_text("IP[:Port] / Server ID") or find_text("Server")
-    if field:
-        fx = int(field["x"] + field["w"] / 2)
-        fy = int(field["y"] + field["h"] / 2 + (field["h"] * 1.8 if _norm(field["text"]) == "server" else 0))
-        click(fx, fy, 0.4)
+    # the dialog can open seconds after the click while the server list still loads: wait for its field before typing
+    # while the list refreshes a click on Direct Connect can be swallowed: click it again until the dialog opens
+    end = time.time() + 60
+    while not find_text("Direct Connect to Server") and time.time() < end:
+        time.sleep(4)
+        if not find_text("Direct Connect to Server"):
+            click_text("Direct Connect", timeout=5, wait=1)
+    time.sleep(1)
+    # the typed address is sometimes lost (the field not yet focused): retype while the placeholder still shows
     pg, _ = _gui()
-    pg.hotkey("ctrl", "a")
-    pg.typewrite(CONFIG["addr"], interval=0.04)  # the menu text field accepts virtual keys
-    time.sleep(0.4)
+    for attempt in range(3):
+        field = find_text("IP[:Port] / Server ID") or find_text("Server")
+        if field:
+            fx = int(field["x"] + field["w"] / 2)
+            fy = int(field["y"] + field["h"] / 2 + (field["h"] * 1.8 if _norm(field["text"]) == "server" else 0))
+            click(fx, fy, 0.8)
+        focus()
+        pg.hotkey("ctrl", "a")
+        pg.typewrite(CONFIG["addr"], interval=0.04)  # the menu text field accepts virtual keys
+        time.sleep(0.8)
+        if not find_text("IP[:Port] / Server ID"):
+            break
+        log(f"connect: the address did not land (try {attempt + 1}), typing again")
     # the dialog's "Connect" (exact) — not the "Direct Connect" button behind it
     if not click_text("Connect", timeout=10, wait=1):
         log("connect: FAIL no Connect button")

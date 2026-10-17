@@ -1,8 +1,7 @@
 # Login notice — a player who logs in during a running event is told what is running
 
 **Status:** in progress for 0.13.1 (docs/dod/login-notice.md, audit docs/audits/login-notice.md; design §9 D63, Epic
-A45). Step 1 (the text, the delivery rule, the switch and its checks) is built; the in-game session and the release
-follow.
+A45). Steps 1 and 2 are built and Session 1 passed in game (17/17); the release (0.13.1) follows.
 
 ## Goal
 
@@ -37,3 +36,20 @@ apocalypse unaware. It is on by default and turned off with one cfg switch.
 
 ## Test results
 
+### Session 1 · 2026-10-17 · step 2 Release build (version string 0.13.0) · vrclient as Chaos on the local dev server
+
+Setup: snapshot ln1 (`pwsh tools/dev-snapshot.ps1 -Save ln1`, 34 files), restored after ("hashes equal"); the boot line
+read "[nyar] announcements: LoginEventNotice; warning offsets 300,60,10 s; daily banner 20:00".
+
+- **D7** `tools/vrclient/scenarios/login-notice.vrs` → SCENARIO PASS 17/17
+  (%TEMP%\vrclient\results\login-notice-20261017-043046.json): with ln-test running, a login 61 s after leaving gave
+  "[nyar] login notice sent: 1 events" and the chat line (expect-chat "Events in progress", OCR match); after
+  `.nyar event stop ln-test`, the next login 61 s later gave no "login notice sent" line in 30 s.
+- The chat text, read by OCR at a login during an earlier run: "[SYSTEM] Events in progress: ln-test: 4 min left. Type
+  .nyar status for details." (the event name as `.nyar status` shows it).
+- Every login while ln-test ran sent one notice (5 across the runs) and none with nothing running.
+- Seven earlier runs failed in the client, not the mod: the server list took over 25 s to load, clicks during the load
+  were swallowed, and `leave` looked for "Exit to Main Menu" where the System menu now says "LEAVE GAME" and asks Yes/No.
+  tools/vrclient/vrclient.py retries each, and the 8th run passed.
+- Timing: the tick that sent the first notice took 5.8 ms in the announcements phase (one SendSystemMessageToClient);
+  every later slowest-tick line stayed under 2 ms.

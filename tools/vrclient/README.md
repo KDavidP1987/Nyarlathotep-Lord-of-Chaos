@@ -102,6 +102,9 @@ What `ensure` does:
 1. Starts the game through Steam if it is not running, then waits for `PLAY`.
 2. Connects through the menus: PLAY → Online Play → Show all Servers → Direct Connect → address → Connect.
    **"Continue" never works for a local server**; it times out.
+   Join Game opens only once the server list has loaded (over 25 s on some days), and clicks during that load can
+   be swallowed: each menu click is retried, Direct Connect is clicked again until its dialog opens, and the address is
+   typed again while the field still shows its placeholder.
 3. Waits until the server logs `Character: '<name>' connected`, then until the HP readout is on screen.
 4. Runs `adminauth` in the console. Admin rights do not survive a reconnect, so every connection needs it.
 
@@ -134,7 +137,7 @@ regex group captured by an earlier `expect-log`. Ending a step with `timeout=N` 
 | `calc NAME = <expr>` | Arithmetic on numbers (`+ - * / ** %`, `sqrt hypot abs min max round floor ceil`); the result becomes `${NAME}` | no |
 | `expect-calc <expr>` | A comparison (`>= == <` …, `and`/`or`) over numbers and `${VARS}` is true | yes |
 | `shot <region> [name]` | Save a screenshot | no |
-| `leave` | Back to the main menu | no |
+| `leave` | Back to the main menu (System menu → LEAVE GAME → Yes; a second Esc when the first only closed the console) | no |
 
 Log checks only see lines written **after** the run started (or after `mark`), and they consume lines in order:
 `expect-log A` then `expect-log B` means B appeared after A.

@@ -15,7 +15,7 @@ namespace Nyarlathotep.Services;
 /// banners and the daily banner each need their [Announcements] switch; `.nyar announce` needs only the admin. Every
 /// server-wide line goes through Logic/AnnounceQueue, one a second from a queue of 20, sent by the scheduler's
 /// announcements phase to each connected user. The login hook (Patches/UserConnectPatch) sends an admin the private
-/// degraded notice. The clan-only target of siege messages is left to the sieges child; login stats and player shares
+/// degraded notice, and every player who logs in while events run the login notice (login-notice, Logic/LoginNotices). The clan-only target of siege messages is left to the sieges child; login stats and player shares
 /// to the stats child (the switches are bound now and the limits are Logic/ShareLimiter and Logic/LoginGate).
 /// </summary>
 internal static class Announcer
@@ -27,6 +27,8 @@ internal static class Announcer
     static Broadcaster _broadcaster = new(new GameUsers(), _ => { });
     static readonly FailureStreak _privateFaults = new();
     static readonly List<(Entity User, ulong PlatformId, DateTime DueUtc)> _notices = new();
+    static readonly LoginNotices<Entity> _loginNotices = new(() => DateTime.UtcNow,
+        line => Core.Log.LogInfo($"[nyar] {line}"), line => Core.Log.LogWarning($"[nyar] {line}"), _privateFaults);
 
     /// <summary>A private login line waits this long, so it reaches a client that has finished loading.</summary>
     static readonly TimeSpan NoticeDelay = TimeSpan.FromSeconds(10);
@@ -107,6 +109,7 @@ internal static class Announcer
     internal static void Tick(DateTime now)
     {
         SendDueNotices(now);
+        _loginNotices.Tick(Holds, () => EventStore.Catalog.Running, ApocalypseAction.StatusLine, SendLoginNotice);
         QueueWarnings(now);
         if (Settings.DailyBanner.Value) QueueDailyBanner(now);
         if (_queue.Next(now) is not { } line) return;
@@ -151,6 +154,7 @@ internal static class Announcer
     {
         if (!userEntity.Exists() || !userEntity.Has<User>()) return;   // a stale approved-user entry: nothing to greet
         var user = Core.EntityManager.GetComponentData<User>(userEntity);
+        _loginNotices.Connected(userEntity, user.PlatformId, Settings.LoginEventNotice.Value);   // login-notice D2: everyone
         // The reconnect gate is consulted last, so a connect that queues nothing does not use it up (Codex round 2).
         if (!IsAdmin(user) || HealthMonitor.Degraded().Count == 0) return;
         if (!_logins.ShouldGreet(user.PlatformId, DateTime.UtcNow)) return;
@@ -173,6 +177,22 @@ internal static class Announcer
             SendPrivate(user, AdminLines.DegradedNotice(degraded));
             Core.Log.LogInfo($"[nyar] degraded notice sent to admin {TextSink.Name(user.CharacterName.ToString())}");
         }
+    }
+
+    // login-notice D2: the user entity still holds the same connected player.
+    static bool Holds(Entity entity, ulong platformId)
+    {
+        if (!entity.Exists() || !entity.Has<User>()) return false;
+        var user = Core.EntityManager.GetComponentData<User>(entity);
+        return user.IsConnected && user.PlatformId == platformId;
+    }
+
+    // Throws when the send fails, so LoginNotices counts it on the shared private-message streak (login-notice D4).
+    static void SendLoginNotice(Entity entity, string text)
+    {
+        var user = Core.EntityManager.GetComponentData<User>(entity);
+        var message = new FixedString512Bytes(TextSink.CutToBytes(text, Wire.MaxBytes));
+        ServerChatUtils.SendSystemMessageToClient(Core.EntityManager, user, ref message);
     }
 
     static bool IsAdmin(User user)

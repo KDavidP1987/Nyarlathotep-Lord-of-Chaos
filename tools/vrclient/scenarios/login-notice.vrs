@@ -1,0 +1,66 @@
+# login-notice.vrs: login-notice D7. A Manual spawns event ln-test (one wave of 2 CHAR_Bandit_Thug at the pond, duration
+# 600, so nothing depends on the clock) is started; Chaos goes home, leaves to the menu, waits 61 s (past the 60 s
+# reconnect window) and joins again: within 30 s the log reads "login notice sent: 1 events" and the chat shows
+# "Events in progress". After `.nyar event stop ln-test`, a further leave, 61 s and join: no "login notice sent" line
+# within 30 s. The event is deleted at the end.
+# Needs: the step 2 Release DLL; [Announcements] LoginEventNotice = true (the default); NyarDevTools (.devgo) and
+# DevChatEcho; the pond mark; pillar spawns on; no other event running; Chaos invulnerable (`ToggleInvulnerable true`).
+ensure
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .devgo pond
+expect-log \[DEV TP\] pond x=
+wait 4
+console ToggleInvulnerable true
+wait 2
+chat .nyar event delete ln-test
+wait 1
+chat .nyar event delete ln-test confirm
+wait 2
+chat .nyar event new ln-test spawns
+expect-reply event ln-test created
+chat .nyar event set ln-test trigger.type Manual
+expect-reply ln-test trigger.type =
+chat .nyar event set ln-test action.units CHAR_Bandit_Thug:2
+expect-reply ln-test action.units =
+chat .nyar event set ln-test action.waves 1
+expect-reply ln-test action.waves =
+chat .nyar event set ln-test location here
+expect-reply ln-test action.location =
+chat .nyar event set ln-test durationSeconds 600
+expect-reply ln-test durationSeconds =
+chat .nyar event enable ln-test
+expect-reply ln-test
+chat .nyar event start ln-test
+expect-log event ln-test started by timeout=20
+console TPHome
+wait 5
+# 1. a login while ln-test runs: the notice
+mark
+leave
+wait 61
+ensure
+expect-log login notice sent: 1 events timeout=30
+expect-chat Events in progress timeout=20
+shot chat login-notice-chat
+console ToggleInvulnerable true
+wait 2
+# 2. a login with nothing running: no notice
+chat .nyar event stop ln-test
+expect-log event ln-test stopped timeout=20
+wait 5
+mark
+leave
+wait 61
+ensure
+expect-no-log login notice sent timeout=30
+console ToggleInvulnerable true
+wait 2
+console TPHome
+wait 3
+chat .nyar event delete ln-test
+wait 1
+chat .nyar event delete ln-test confirm
+expect-reply ln-test
