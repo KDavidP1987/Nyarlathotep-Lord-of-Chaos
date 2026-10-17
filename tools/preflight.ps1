@@ -362,8 +362,8 @@ function Test-CheckPillarDefaults([string]$Root) {
     return New-Result $true "pillar defaults: all off ($($binds.Count) switches, $($templates.Count) templates)"
 }
 
-# Every bool Bind in [Announcements] of Config/Settings.cs defaults to false, and the section binds the five switches
-# WaveWarnings, EventBanners, DailyBanner, LoginStats, PlayerShare and LoginEventNotice (Epic D41, foundation D17). LoginEventNotice
+# Every bool Bind in [Announcements] of Config/Settings.cs defaults to false, and the section binds exactly the six switches
+# WaveWarnings, EventBanners, DailyBanner, LoginStats, PlayerShare and LoginEventNotice and no other (Epic D41, foundation D17). LoginEventNotice
 # is the one switch on by default (design §9 D63, login-notice D3): it must default to true, every other one to false.
 $script:AnnouncementSwitches = @('WaveWarnings', 'EventBanners', 'DailyBanner', 'LoginStats', 'PlayerShare', 'LoginEventNotice')
 $script:AnnouncementOnByDefault = @('LoginEventNotice')
@@ -375,6 +375,8 @@ function Test-CheckAnnouncementDefaults([string]$Root) {
     $names = @($binds | ForEach-Object { $_.Groups[1].Value })
     $missing = @($script:AnnouncementSwitches | Where-Object { $names -notcontains $_ })
     if ($missing) { return New-Result $false "announcement defaults: switch not bound: $($missing -join ', ')" }
+    $extra = @($names | Where-Object { $script:AnnouncementSwitches -notcontains $_ } | Sort-Object -Unique)
+    if ($extra) { return New-Result $false "announcement defaults: unknown switch: $($extra -join ', ')" }
     $on = @($binds | Where-Object { $_.Groups[2].Value -ne 'false' -and $script:AnnouncementOnByDefault -notcontains $_.Groups[1].Value } | ForEach-Object { $_.Groups[1].Value })
     if ($on) { return New-Result $false "announcement defaults: ON by default: $($on -join ', ')" }
     $off = @($binds | Where-Object { $_.Groups[2].Value -ne 'true' -and $script:AnnouncementOnByDefault -contains $_.Groups[1].Value } | ForEach-Object { $_.Groups[1].Value })

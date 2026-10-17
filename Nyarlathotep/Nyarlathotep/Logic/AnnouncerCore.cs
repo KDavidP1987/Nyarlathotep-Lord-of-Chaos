@@ -192,10 +192,23 @@ public sealed class LoginGate
     public bool ShouldGreet(ulong player, DateTime utcNow)
     {
         foreach (var old in _lastConnect.Where(p => utcNow - p.Value >= Quiet).Select(p => p.Key).ToList()) _lastConnect.Remove(old);
-        var greet = !_lastConnect.TryGetValue(player, out var last) || utcNow - last >= Quiet;
+        var greet = Allows(player, utcNow);
         _lastConnect[player] = utcNow;
         return greet;
     }
+
+    /// <summary>What <see cref="ShouldGreet"/> would answer, without recording the connect.</summary>
+    public bool Allows(ulong player, DateTime utcNow) =>
+        !_lastConnect.TryGetValue(player, out var last) || utcNow - last >= Quiet;
+}
+
+/// <summary>Whether a connecting admin's degraded notice is queued: an admin, something degraded, and the admin's own
+/// reconnect gate (consulted last, so a connect that queues nothing does not use it up). Services/Announcer.UserConnected
+/// asks this after the login notice queued its own entry, so the two never share a gate (login-notice D2).</summary>
+public static class DegradedGreeting
+{
+    public static bool ShouldQueue(bool isAdmin, int degraded, LoginGate gate, ulong platformId, DateTime utcNow) =>
+        isAdmin && degraded > 0 && gate.ShouldGreet(platformId, utcNow);
 }
 
 /// <summary>The login notice of running events (login-notice D2, D4). Every connect while the switch is on is queued; the
@@ -231,21 +244,33 @@ public sealed class LoginNotices<TUser>(Func<DateTime> clock, Action<string> inf
             var (user, platformId, connectUtc) = _due[i];
             if (now - connectUtc < Delay) { i++; continue; }
             _due.RemoveAt(i);
-            if (!holds(user, platformId)) continue;
-            IReadOnlyCollection<RunningInstance> list;
-            try { list = running(); _readFaults.Ok(); }
+            // holds, the catalog read and the text (with each event's own status line) may throw: one streak logs it
+            // and the other due notices still leave (D4, Codex step 3 F2).
+            string? text;
+            int count;
+            try
+            {
+                if (!holds(user, platformId)) continue;
+                var list = running();
+                text = Messages.LoginNotice(list, now, own);
+                count = list.Count;
+                _readFaults.Ok();
+            }
             catch (Exception ex)
             {
                 if (_readFaults.Fail()) warn($"login notice failed: {ex.Message}");
                 continue;
             }
-            if (Messages.LoginNotice(list, now, own) is not { } text) continue;
-            if (!_gate.ShouldGreet(platformId, connectUtc)) continue;
+            if (text is null) continue;
+            // The gate records a connect only once its notice was sent, or when it suppressed one, so a failed send does
+            // not cost the player the notice on a quick reconnect (Codex step 3 F1).
+            if (!_gate.Allows(platformId, connectUtc)) { _gate.ShouldGreet(platformId, connectUtc); continue; }
             try
             {
                 send(user, text);
+                _gate.ShouldGreet(platformId, connectUtc);
                 sendFaults.Ok();
-                info($"login notice sent: {list.Count} events");
+                info($"login notice sent: {count} events");
             }
             catch (Exception ex)
             {

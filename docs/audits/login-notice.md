@@ -17,6 +17,14 @@
 - feature doc read: docs/features/LOGIN_NOTICE.md (Status: step 1 built; open question: the 10 s delay on a slow remote server)
 - baseline boot: the dev server's last boot (the 0.13.0 rollback gate's v0.12.0 boot) `-LogCheck` "0 unhandled, 10 nyar lines, 0 orphan errors, 0 unity errors, regions 10 polygons"; every [Warning read: the four baseline kinds (Il2CppInterop, HarmonyX x3) and Beelzebub TUNE, no [Error; logs copied to %TEMP%\nyar-ln-logs\s0-baseline; snapshot ln1 saved (34 files)
 
+### Step 3 · 2026-10-17 · f81022c
+- git status: clean at f81022c
+- compile: 0 Warning(s), 0 Error(s); tests Passed! 3854/3854 (step 2's post-audit, same code)
+- preflight: PREFLIGHT OK (step 2's post-audit)
+- dod status: 8/12 verified (D1-D7, D12)
+- feature doc read: docs/features/LOGIN_NOTICE.md (Status: steps 1-2 built, Session 1 passed)
+- baseline boot: the dev server's last session (Session 1) log check clean; the snapshot restored the 0.13.0 DLL and config
+
 ## Post-audit
 ### Step 1 · 2026-10-17 · 3f7803b
 - compile: `dotnet build Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__ --no-incremental` 0 Warning(s), 0 Error(s); tests Passed! 3854/3854

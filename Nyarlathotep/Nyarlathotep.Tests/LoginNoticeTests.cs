@@ -80,7 +80,7 @@ public class LoginNoticeTests
         public readonly List<string> Info = [], Warn = [];
         public readonly FailureStreak SendFaults = new();
         public Func<int, string, bool>? FailSend;
-        public Exception? ReadFault;
+        public Exception? ReadFault, HoldsFault, OwnFault;
         public readonly LoginNotices<int> Notices;
 
         public Rig() => Notices = new LoginNotices<int>(() => Now, Info.Add, Warn.Add, SendFaults);
@@ -90,8 +90,8 @@ public class LoginNoticeTests
         public void At(int seconds)
         {
             Now = T0.AddSeconds(seconds);
-            Notices.Tick((u, id) => Holders.TryGetValue(u, out var h) && h == id,
-                () => ReadFault is { } f ? throw f : Running, NoOwn,
+            Notices.Tick((u, id) => HoldsFault is { } hf ? throw hf : Holders.TryGetValue(u, out var h) && h == id,
+                () => ReadFault is { } f ? throw f : Running, r => OwnFault is { } of ? throw of : NoOwn(r),
                 (u, text) =>
                 {
                     if (FailSend?.Invoke(u, text) == true) throw new InvalidOperationException("send broke");
@@ -184,14 +184,34 @@ public class LoginNoticeTests
     [Fact]
     public void Delivery_fails_when_it_skips_a_non_admin_or_stops_the_admin_degraded_notice()
     {
+        // Services/Announcer.UserConnected queues the login notice for everyone, then asks DegradedGreeting with the
+        // admin's own gate: both must hold for one admin connect (Codex step 3 F4).
         var rig = new Rig { Running = [Run("a", "Bandit raid", 5)] };
-        var degradedGate = new LoginGate();    // the admin degraded notice keeps its own gate (Services/Announcer)
-        rig.Connect(1, 100);                   // a player: no admin check in the rule
-        rig.Connect(2, 200);                   // an admin
-        Assert.True(degradedGate.ShouldGreet(200, T0));
+        var degradedGate = new LoginGate();
+        rig.Connect(1, 100);                   // a player
+        Assert.False(DegradedGreeting.ShouldQueue(false, 2, degradedGate, 100, T0));
+        rig.Connect(2, 200);                   // an admin, with two systems degraded
+        Assert.True(DegradedGreeting.ShouldQueue(true, 2, degradedGate, 200, T0));
         rig.At(10);
         Assert.Equal([1, 2], rig.Sent.Select(s => s.User).OrderBy(u => u));
-        Assert.True(degradedGate.ShouldGreet(200, T0.AddSeconds(60)));    // its own 60 s window, untouched by the notice
+        Assert.False(DegradedGreeting.ShouldQueue(true, 2, degradedGate, 200, T0.AddSeconds(30)));   // its own 60 s window
+        Assert.True(DegradedGreeting.ShouldQueue(true, 2, degradedGate, 200, T0.AddSeconds(100)));
+        Assert.False(DegradedGreeting.ShouldQueue(true, 0, degradedGate, 300, T0));                   // nothing degraded
+        Assert.True(degradedGate.Allows(300, T0));                                                    // and the gate untouched
+    }
+
+    [Fact]
+    public void Delivery_fails_when_a_failed_send_uses_up_the_gate()
+    {
+        var rig = new Rig { Running = [Run("a", "Bandit raid", 5)], FailSend = (_, _) => true };
+        rig.Connect(1, 100);
+        rig.At(10);                            // the send throws: nothing delivered
+        Assert.Empty(rig.Sent);
+        rig.FailSend = null;
+        rig.Now = T0.AddSeconds(20);
+        rig.Notices.Connected(1, 100, true);   // a reconnect inside 60 s still gets the notice
+        rig.At(30);
+        Assert.Single(rig.Sent);
     }
 
     [Fact]
@@ -236,6 +256,24 @@ public class LoginNoticeTests
         rig.At(10);
         Assert.Empty(rig.Sent);
         Assert.Equal(["login notice failed: catalog broke"], rig.Warn);
+    }
+
+    [Fact]
+    public void Faults_fails_when_a_throwing_holds_or_status_line_escapes_the_tick()
+    {
+        var rig = new Rig { Running = [Run("a", "Bandit raid", 5)], HoldsFault = new InvalidOperationException("entity broke") };
+        rig.Connect(1, 100);
+        rig.At(10);                            // must not throw
+        rig.HoldsFault = null;
+        rig.OwnFault = new InvalidOperationException("status broke");
+        rig.Connect(2, 200);
+        rig.At(20);                            // must not throw
+        Assert.Empty(rig.Sent);
+        Assert.Equal(["login notice failed: entity broke"], rig.Warn);   // one streak for both
+        rig.OwnFault = null;
+        rig.Connect(3, 300);
+        rig.At(30);
+        Assert.Equal([3], rig.Sent.Select(s => s.User));
     }
 
     [Fact]

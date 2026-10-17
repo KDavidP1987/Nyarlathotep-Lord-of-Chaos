@@ -156,8 +156,7 @@ internal static class Announcer
         var user = Core.EntityManager.GetComponentData<User>(userEntity);
         _loginNotices.Connected(userEntity, user.PlatformId, Settings.LoginEventNotice.Value);   // login-notice D2: everyone
         // The reconnect gate is consulted last, so a connect that queues nothing does not use it up (Codex round 2).
-        if (!IsAdmin(user) || HealthMonitor.Degraded().Count == 0) return;
-        if (!_logins.ShouldGreet(user.PlatformId, DateTime.UtcNow)) return;
+        if (!DegradedGreeting.ShouldQueue(IsAdmin(user), HealthMonitor.Degraded().Count, _logins, user.PlatformId, DateTime.UtcNow)) return;
         _notices.Add((userEntity, user.PlatformId, DateTime.UtcNow + NoticeDelay));
     }
 
