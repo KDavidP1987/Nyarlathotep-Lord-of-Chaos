@@ -69,3 +69,13 @@
 - owner: D19 (the feel of pursuit and the rolls) waits on the owner (rubric 3, never self-accepted)
 - Codex verdict: deferred to step 4 (the child's single cross-inspection, design §9 D34)
 - docs: %TEMP% paths that an earlier shell edit had mangled were repaired in docs/features/WAVE_VARIETY.md, docs/audits/wave-variety.md, docs/SESSION_HANDOFF.md, docs/dod/event-spawns.reviews.md, docs/dod/unit-watch.md (Log only), docs/features/APOCALYPSE.md and docs/features/UNIT_WATCH.md
+
+### Step 4 · 2026-10-16 · b695063 (chore(release): v0.13.0, tag v0.13.0 local)
+- compile: `dotnet build Nyarlathotep.sln -c Release --no-incremental` at b695063 with a clean tree: 0 Warning(s), 0 Error(s) (deployed to the stopped dev server)
+- tests: Passed! 3830/3830 (the D22-D24 rows registered in ControlCases at the release)
+- preflight: "secrets: none (2135 files scanned, 2077 index blobs)", "release tags: 14/15 (v0.13.0 not pushed)" before the push
+- Codex verdict: PASS — the child's single cross-inspection: CHANGES REQUESTED (2) (F1 boss rolls on a shared pool could under-draw, F2 the quiet clock started at the decision), both fixed in 88cb5cf; re-check 1 found the per-roll double count, fixed with a matching; re-check 2 PASS, no findings
+- rollback: `rollback-drill.ps1 -SelfTest` "drill selftest: 37/37" (D21, the real 0.12.0 boot recorded at step 4's pre-audit)
+- records: `-SessionsOf wave-variety` "session logs: wave-variety 6/6 checked"; `-Paths -DeclaredOf wave-variety` "paths: 2099 walked, all in manifest; declared: 127/127 in wave-variety" once Paths walked named the release's writes (Log), the leftover %TEMP% log copies removed after this record
+- tester package: tester-setups.vrs 79/80 on rc.3 (the refused arena step dropped from row N-10), rebuilt for 0.13.0
+- release: zip and hash in docs/audits/apocalypse.md (the joint release); push, tag and the GitHub pre-release follow this record

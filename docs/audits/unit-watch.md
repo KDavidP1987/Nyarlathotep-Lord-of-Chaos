@@ -85,3 +85,9 @@
   dev-only DevHold type scan (boots f- on); NyarDev.log has the same 226 boot-time missing-prefab traces in every boot
 - server: snapshot uw1 restored ("snapshot restored; hashes equal"), then the current DLL redeployed (hash equal to the build)
 - dod status: 4/34 verified (D18, D20, D22, D28); D24-D27 ready for the owner's acceptance; D23 and D34's measurement at the test weekend (A3)
+
+## Post-audit · 2026-10-16 · the v0.13.0 release (step 5's release part, with apocalypse; step 4, the test weekend, has not run)
+- release commit: b695063 `chore(release): v0.13.0`, the joint release (zip, hash and Codex in docs/audits/apocalypse.md)
+- compile: 0 Warning(s), 0 Error(s) at b695063; tests 3830/3830; preflight "secrets: none (2135 files scanned, 2077 index blobs)"
+- rollback: `rollback-gate.ps1 -From v0.12.0 -To v0.13.0 -Plan unit-watch` "rollback gate: 4/4" (routes unit-watch 5/5; the v0.12.0 boot on 0.13.0's files 0 unhandled, 0 orphan errors, 0 unity errors)
+- open: D23 and D29 (the test weekend) and D32's session records (`-SessionsOf unit-watch` 0/1); step 5 closes after step 4

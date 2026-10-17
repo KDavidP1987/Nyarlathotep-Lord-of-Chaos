@@ -118,3 +118,13 @@
   brand-new world boot (docs/features/FOUNDATION.md › Test results); every [Warning] known (stop lines, the dev
   example-empowerment, Beelzebub, HarmonyX, Il2CppInterop), no [Error]; the 224 PrefabLookupMap notices at save load
   appear on every boot of the dev world
+
+## Post-audit · 2026-10-16 · the v0.13.0 release (step 5's release part; step 4, the test weekend, has not run)
+- release commit: b695063 `chore(release): v0.13.0` (six surfaces, csproj and thunderstore.toml 0.13.0), released before the test weekend at the owner's request (plan Log)
+- compile: `dotnet build Nyarlathotep.sln -c Release --no-incremental` at b695063 with a clean tree: 0 Warning(s), 0 Error(s); tests 3830/3830
+- preflight: "secrets: none (2135 files scanned, 2077 index blobs)", "release tags: 14/15 (v0.13.0 not pushed)" before the push
+- Codex verdict: APPROVED — the once-per-child pre-release review (`git diff v0.12.0..main`, 2026-10-14) REVISE with four findings, fixed in b1e3cdc and re-checked APPROVED (Codex cross-inspection section above); the later G-Portal fixes PASS (post-audit 2026-10-16 above)
+- rollback: `rollback-drill.ps1 -SelfTest` "drill selftest: 37/37"; `rollback-gate.ps1 -From v0.12.0 -To v0.13.0 -Plan apocalypse` "rollback gate: 4/4" (repo with -BeforePush; boots v0.13.0 seed, v0.13.0 drill-mark and v0.12.0 each 0 unhandled, 0 orphan errors, 0 unity errors, regions 10 polygons), after Rollout › Rollback › On a server was reworded (Log; the first run read routes 4/5)
+- tcli build: kdpen-Nyarlathotep-0.13.0.zip (606711 bytes), built at the release commit b695063 with a clean tree, the tcli token variable set to a sentinel (absent from build/tcli-build.log and the zip); icon.png, README.md, manifest.json (version_number 0.13.0, BepInExPack 1.733.2, VampireCommandFramework 0.10.4), BepInEx/plugins/Nyarlathotep.dll (1242112 bytes), CHANGELOG.md, LICENSE; no platform id or mail name in the zip's README or CHANGELOG
+- zip sha256: kdpen-Nyarlathotep-0.13.0.zip 68E1978FF7B8DBADA5BEA36B704B2A81657E67B1773D746F9329EF5A8489DF7F
+- open: D31 (the players' test weekend), and D34's session records of Sessions 1-4 (`-SessionsOf apocalypse` 0/4: the session log-check and snapshot lines are not in this audit's form); step 5 closes after step 4
