@@ -4,6 +4,19 @@ Where work stands between sessions. Overwrite this file at the end of a session;
 The plans (`docs/dod/`), audits (`docs/audits/`) and feature docs stay the source of truth. This file only points
 into them.
 
+**Written 2026-10-17 (undead-hordes step 1 done)**: v0.13.1 is pushed and released. The undead-hordes child
+(docs/dod/undead-hordes.md, L, 0.14.0, design §9 D62) is in progress, **4/33**, with step 1 closed.
+- **Local only:** the plan commits (17a190b..3e22e87), step 1 158ec59 and its evidence f0e4132. Pushing them waits on the owner's OK.
+- **Load ladder (Session 0):** 100 pass, 250 pass, 500 fail. At 500 the quiet minutes held 30 fps, but with Chaos among
+  the units the fight minutes ran at about 19 fps; the mod's tick stayed at 1.2 ms. The owner kept MaxTrackedUnits at
+  500 (A3). MaxUnitsPerWave goes 50 → 500 and the tick budgets 20 → 40. Rows: docs/features/UNDEAD_HORDES.md › Load test.
+- **Hostility:** all four natives probed fight the spawned undead (feature doc › Hostility).
+- **Owner, still open:** A2 (D33, the stall rule spares the infestation and horde march) needs their yes before step 3.
+- **Kept for the release:** %TEMP%
+yar-udh-logs (Session 0 log copies; `-Paths` flags them until they are deleted).
+- **Known, not this child's:** `-SessionsOf apocalypse` and `-SessionsOf unit-watch` fail on missing session log-check lines.
+- **Next:** step 2 (Logic: the destination rule and the spread draw: D5-D7, D12, D16, D18, D19, D21); pre-audit first.
+
 **Written 2026-10-17 (login-notice, v0.13.1 ready, not pushed)**: the owner asked that a player who logs in while an event
 is *running* be told so, on by default (design §9 D63, Epic A45, A47). The login-notice child (docs/dod/login-notice.md) is
 built: **11/12**, only D9 left, and D9 needs the push.
