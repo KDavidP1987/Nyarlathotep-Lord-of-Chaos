@@ -4,6 +4,31 @@ Where work stands between sessions. Overwrite this file at the end of a session;
 The plans (`docs/dod/`), audits (`docs/audits/`) and feature docs stay the source of truth. This file only points
 into them.
 
+**Written 2026-10-17 (login-notice, v0.13.1 ready, not pushed)**: the owner asked that a player who logs in while an event
+is *running* be told so, on by default (design §9 D63, Epic A45, A47). The login-notice child (docs/dod/login-notice.md) is
+built: **11/12**, only D9 left, and D9 needs the push.
+- **Local only, 10 commits ahead of origin** (1435352..bc4d55f): the plan; steps 1-2; the Codex and /code-review fixes
+  (bd6e01f, f6f5326, 8e2421a); release commit 7ec3328 `chore(release): v0.13.1`; **annotated tag v0.13.1 (local)**; and the
+  evidence commit bc4d55f.
+- **Waiting on the owner's OK:** `git push origin main v0.13.1`; then confirm `git rev-parse HEAD` equals
+  `git ls-remote origin main`; then the GitHub pre-release v0.13.1 with `Nyarlathotep/Nyarlathotep/build/kdpen-Nyarlathotep-0.13.1.zip`
+  (sha256 0724CA56…, recorded in docs/audits/login-notice.md); then `pwsh tools/release-verify.ps1 -Tag v0.13.1 -Asset
+  kdpen-Nyarlathotep-0.13.1.zip` → "release verify: hashes equal"; then preflight "release tags: 16/16"; D9's pass line;
+  and `dod close login-notice`. The owner uploads to Thunderstore.
+- **What it does:** `[Announcements] LoginEventNotice` (default true). 10 s after a connect, a private line names each
+  running event with its `.nyar status` text ("Events in progress: ln-test: 4 min left. Type .nyar status for details.").
+  Nothing is sent when nothing runs, the player left, or the switch is off. There is one notice per 60 s of reconnects, and a
+  quick rejoin replaces the queued notice. Failures are logged once per streak. Wire unchanged (api 8).
+- **Checks:** tests 3859/3859; preflight OK except "v0.13.1 not pushed"; selftest 40/40 and 7/7; rollback gate 4/4;
+  login-notice.vrs PASS 17/17 in Sessions 1 and 2 (Session 2 on the 0.13.1 build); audit 3/3/3, sessions 2/2, paths 74/74.
+- **Codex:** REVISE (4) → fixed → re-check REVISE on one regex spelling → fixed (bad-5). /code-review: 10 findings, 3 bugs
+  fixed, 2 comments fixed, 5 advisory left (plan Log).
+- **G-Portal** still runs 0.13.0. Update it only on the owner's request (the DLL only; other mods live there).
+- **Next:** after the push, plan the **undead-hordes** child (L, 0.14.0, design §9 D62): the owner's answers ("Up to 1000,
+  tested", "Reuse the hidden march", "Two new + keep the old", "Game's own hostility only"). Wave start and destination,
+  an infestation spreading from graveyards (1-3 undead per kill, from a pool), and a horde march of 50-500 from A to B that
+  grows per kill and then infests. The 1000-unit load test comes first.
+
 **Written 2026-10-17 (the v0.13.0 release)**: at the owner's request ("make sure that the current version is published to
 GitHub … ready to be submitted to Thunderstore"), **0.13.0 is released before the players' test weekend**; the weekend now
 runs on the released build and its findings go to 0.13.x.
