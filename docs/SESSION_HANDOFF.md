@@ -4,6 +4,44 @@ Where work stands between sessions. Overwrite this file at the end of a session;
 The plans (`docs/dod/`), audits (`docs/audits/`) and feature docs stay the source of truth. This file only points
 into them.
 
+**Written 2026-10-18 (session close): start here.** v0.14.0 is released, on GitHub and on both servers. The session
+ended with three backlog items researched and the owner's answers still due. All work is pushed (main = origin/main).
+- **Where things run:**
+  - **G-Portal:** on 0.14.0 since 2026-10-18 (only Nyarlathotep.dll swapped; details in the block below).
+  - **Local dev server:** stopped, on the release DLL. Its cfg keeps MaxTrackedUnits 500 and MaxUnitsPerWave 500 for
+    D27; set them back to 150 and 20 after.
+- **Waiting on the owner, first thing next session:**
+  1. **D27, undead hordes look and feel.** The sheet is in docs/features/UNDEAD_HORDES.md › Owner's check. Start the dev
+     server first; the owner connects to 127.0.0.1:9876. Record the owner's line as D27's pass. Never self-accept it.
+  2. **`dod close undead-hordes` (partial while D27 waits).** The owner confirms:
+     - A3 (the 500 ceiling kept): new scope, or a reversal?
+     - the 15 `note · method` Log lines (plan lines ~384-405, ~438-447): they changed how, not what.
+     Then write the report, regenerate the pages, remove the build view, run the feedback step.
+  3. **Decisions on the new backlog items:**
+     - #13 has 8 decisions; #14-15 have 5. Each doc has a table with a recommendation per decision.
+     - Next step for each: `/dod plan` (or the claudex loop: interrogation, Codex, sign-off).
+- **New backlog** (the table "Backlog to 1.0" below, rows 13-15; Codex cross-read each doc read-only):
+  - **#13 Defend objective,** docs/features/DEFEND_OBJECTIVE.md. Villagers the waves and horde marches go for: killed =
+    lose; attackers cleared or time out = win.
+    - Five spikes come before a plan: attack an NPC, stay put and stay safe, servants, unattended, placement.
+    - Recommended first scope: SpawnWaves only. Size about L.
+  - **#14 Concurrent events cap,** docs/features/LIMITS_CONTROL.md decision 1.
+    - MaxConcurrentEvents is already a cfg key (default 3), capped at 10.
+    - Raise the ceiling after an event-count load test (10, 25, 50 light events plus empowerments; target 50).
+      Codex: per-event work exists (EventRuntime.Tick, empowerment, hunt passes), so it is not load-safe by the unit
+      caps alone. Size S.
+  - **#15 Live limits,** the same doc, decisions 2-5. `.nyar limit list/set` without a restart, an api 9 `limits` read
+    so Raphael's editor can show the caps, and scheduled starts held up to 5 minutes for a free slot. Size M.
+  - **Raphael's MaxUnitsPerWave question:** answered, with no change for 0.14.0 (LIMITS_CONTROL.md › The answer to
+    Raphael now). The editor accepts 1-500, shows a note above 20, and never blocks.
+- **Raphael docs, in order:** RAPHAEL_INTEGRATION_CONTRACT.md, then RAPHAEL_HANDOFF_API8.md, RAPHAEL_HANDOFF_WAVE_VARIETY.md
+  and RAPHAEL_HANDOFF_UNDEAD_HORDES.md. Offered and not yet asked for: one merged page.
+- **Other priority work, in the owner's order:** the "Backlog to 1.0" table:
+  - scaling (#1), then replacements (#2);
+  - the open closes: wave-variety 20/24, apocalypse 29/38, unit-watch 7/34, revenge 26/32, login-notice 12/12 (all wait on
+    owner checks);
+  - the suggestion not built: a validator warning when a horde march's growth.max ≤ its size.
+
 **Written 2026-10-18 (v0.14.0 released)**: undead hordes shipped. **v0.14.0** is tagged at f0f9df0, pushed, and on GitHub
 as a pre-release with kdpen-Nyarlathotep-0.14.0.zip. release-verify gives "hashes equal" and preflight "release tags: 17/17".
 undead-hordes (docs/dod/undead-hordes.md) is **32/33**: only D27, the owner's look-and-feel check, is open.
