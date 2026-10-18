@@ -3,7 +3,8 @@
 <p align="center"><img src="docs/img/nyarlathotep-cover.jpg" alt="Nyarlathotep, Lord of Chaos" width="512"></p>
 
 A server-side BepInEx IL2CPP plugin for V Rising that stages NPC events the base game doesn't have: empowered
-factions, hunting waves, swarms in an arena, region-bound hunting grounds, faction revenge and a map-wide apocalypse.
+factions, hunting waves, swarms in an arena, region-bound hunting grounds, faction revenge, a map-wide apocalypse and
+undead hordes that infest the map or march on the players.
 Admins build events from templates or in chat. Each event starts on a schedule, at nightfall, after a V Blood kill, on
 its own, or by command, and everything it spawned is removed when it ends.
 
@@ -13,7 +14,8 @@ Public beta. Every pillar and every automatic announcement starts disabled, but 
 
 | Build | What it is |
 |---|---|
-| [**v0.13.1**](https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.1) | Current release: the login notice, a private line to a player who logs in while an event runs. |
+| [**v0.14.0**](https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.14.0) | Current release: undead hordes. Infestations and horde marches of up to 500, and waves that march to a destination. |
+| [v0.13.1](https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.1) | The login notice, a private line to a player who logs in while an event runs. |
 | [v0.13.0](https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.0) | The Halloween release: the apocalypse, unit watch and wave variety. The test round's workbook is in [`testing/`](testing/). |
 
 What each version shipped: [`CHANGELOG.md`](CHANGELOG.md). What comes next: the Epic plan,
@@ -41,7 +43,7 @@ the event created is reverted or despawned.
 
 | Triggers | Actions |
 |---|---|
-| Schedule (days and times), nightfall or daybreak, a V Blood kill, a random interval, a player entering a region, a player killing a faction, faction revenge, an admin command | Empower factions with timed carrier buffs; spawn waves of units, with levels, stat multipliers and a behaviour (hunt nearby players, roam a region, hold an arena, pursue); or run an apocalypse of hordes marching on a goal |
+| Schedule (days and times), nightfall or daybreak, a V Blood kill, a random interval, a player entering a region, a player killing a faction, faction revenge, an admin command | Empower factions with timed carrier buffs; spawn waves of units, with levels, stat multipliers and a behaviour (hunt nearby players, roam a region, hold an arena, pursue); send waves marching to a destination; or run an apocalypse, an infestation or a horde march |
 
 Safety rules hold for every event:
 
@@ -56,7 +58,8 @@ Safety rules hold for every event:
 
 **Scale.** The tick budget, under 5 ms average per one-minute window, is measured at the default caps: 150 tracked
 units, with hunting, fan-out, the player-trigger scan and the kill feed included. Raising `MaxTrackedUnits` to
-151-500 is best effort. A 250 ms slow-tick warning names the slowest phase.
+151-500 is best effort: on the local server 250 units held 30 frames a second with a player among them, and 500 ran
+with the mod near 1 ms a tick but the game itself slower. A 250 ms slow-tick warning names the slowest phase.
 
 ## Features
 
@@ -130,7 +133,8 @@ Start at [`docs/README.md`](docs/README.md). The most used:
 
 - [Design](docs/NYARLATHOTEP_DESIGN.md): architecture, configuration, the command reference (§6), decisions (§9)
 - [Feature docs](docs/features/): one per feature, each with its test results
-- [Raphael contract](docs/RAPHAEL_INTEGRATION_CONTRACT.md) and the [api 8 handoff](docs/RAPHAEL_HANDOFF_API8.md)
+- [Raphael contract](docs/RAPHAEL_INTEGRATION_CONTRACT.md), the [api 8 handoff](docs/RAPHAEL_HANDOFF_API8.md) and the
+  [undead hordes handoff](docs/RAPHAEL_HANDOFF_UNDEAD_HORDES.md) (0.14.0's new kinds, keys and commands)
 - [Plans](docs/dod/): the Definition-of-Done plans that track every feature
 
 ## License

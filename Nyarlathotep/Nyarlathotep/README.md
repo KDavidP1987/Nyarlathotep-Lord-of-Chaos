@@ -6,7 +6,7 @@ A **server-side** event layer for V Rising. Admins stage NPC events the base gam
 and empowered factions on a schedule, at nightfall or after a V Blood falls, a days-long apocalypse, with warnings
 and banners for players, and in later releases castle sieges, defended zones and boss-fight adds.
 
-> **Public beta (0.13.1).** Every pillar and automatic announcement is off by default, but for the login notice of
+> **Public beta (0.14.0).** Every pillar and automatic announcement is off by default, but for the login notice of
 > running events; no event runs until an admin turns on its pillar and enables it.
 
 ## What it does
@@ -229,8 +229,8 @@ from 10 minutes to 7 days (`durationSeconds` 600–604800):
 |---|---|---|
 | `faction`, `units` | a `Faction_*` name; 1–10 units, `count` is each one's weight | Who rises |
 | `hotspots` | `count` 1–5, `minNatives` 3–50, `minSpacing` 100–3000 m | Found at the start where at least `minNatives` of the faction's own NPCs stand together; those NPCs are never touched |
-| `roamers` | `perHotspot` 1–10, `perKill` 0–2, `max` 1–100, `perMinute` 1–30, `huntRange` 20–60 | Roamers hunt the nearest player anywhere on the map, closing in with hidden jumps, never into a castle. Each kill a roamer or horde makes, player or NPC, adds `perKill` roamers where the victim fell, at most `perMinute` a minute and `max` alive |
-| `hordes` | `count` 1–10, `firstAfterMinutes` 0–1440, `everyMinutes` 5–1440, `size` 5–50, `growth` 0–20 | Horde k rises at the next hotspot with `size` + (k−1)·`growth` units and marches on the goal; the last brings the action's `bosses` |
+| `roamers` | `perHotspot` 1–10, `perKillMin`/`perKillMax` 0–3 (or the older `perKill` 0–2), `pool`, `max` 1–500, `perMinute` 1–30, `huntRange` 20–60 | Roamers hunt the nearest player anywhere on the map, closing in with hidden jumps, never into a castle. Each kill a roamer or horde makes, player or NPC, adds `perKillMin`–`perKillMax` roamers (from `pool` when set) where the victim fell, at most `perMinute` a minute and `max` alive |
+| `hordes` | `count` 1–10, `firstAfterMinutes` 0–1440, `everyMinutes` 5–1440, `size` 5–500, `growth` 0–100 | Horde k rises at the next hotspot with `size` + (k−1)·`growth` units and marches on the goal; the last brings the action's `bosses` |
 | `goal`, `marchSpeed` | `{ "type": "Point", x, z }` or `{ "type": "Admin" }` (where the admin stood at the start; by command only), `radius` 10–100, `name`; 0.5–5.0 m/s | A horde stops and fights while a player stands within 60 m of its front, except close to the goal |
 
 A horde at the goal loses the event ("<goal> has fallen"), destroying every horde wins it, and running out the clock
@@ -244,7 +244,9 @@ the server was down rises then.
 
 **Big hordes.** A horde never passes `[Limits] MaxUnitsPerWave` (20), and every unit counts against `MaxTrackedUnits`
 (150). For bigger hordes raise both, up to 500. At the defaults `zombie-apocalypse` is cut, and the start reply and
-`.nyar event info` name the cut and the key to raise.
+`.nyar event info` name the cut and the key to raise ("capped: 20 of 60 by MaxUnitsPerWave 20; raise it in the cfg").
+On the local test server 250 units held a full 30 frames a second with a player among them; 500 ran but dropped to
+about 19 with a player in the middle of them (the game's own cost; the mod's own work stayed near 1 ms a tick).
 
 `zombie-apocalypse`: undead of levels 22–38 at 5 hotspots, 4 hordes of 30 to 75 from minute 3, every 20 minutes, the
 last with the Bishop of Death, marching at 2 m/s on where the admin stood, for 4 hours. `.nyar template use
@@ -252,6 +254,55 @@ zombie-apocalypse`, `.nyar event enable zombie-apocalypse`, then `.nyar event st
 make their stand. In chat: `.nyar event set <id> action.goal here`, `action.goal.radius`, `action.goal.name`,
 `action.hordes.count|everyMinutes|size`, `action.roamers.max`, `action.marchSpeed`, `action.bosses` and
 `durationSeconds`; every other key in `events.json`, then `.nyar event reload`.
+</details>
+
+<details>
+<summary><b>Undead hordes: infestations, horde marches and waves that march</b> · <i>0.14.0</i></summary>
+
+**Waves that march.** Any spawn event can send its waves somewhere: `"destination": { "location": { "type": "Point",
+x, z } or { "type": "Admin" }, "radius": 10–100, "name": "the gate" }` and `"marchSpeed": 0.5–5.0` (2.0). Each wave
+marches as one body from where it spawned and takes its behaviour on arrival. A player in its way holds it: the front
+waits for its units while it is watched, and a wave a player has watched for 30 seconds is met and fights where it
+stands. Its own location must be a Point or the admin's spot; `fanOut`, `regionLock`, `arena` and `pursuit` don't mix
+with it.
+
+**Infestation** (`"type": "Infestation"`): the dead rise at several graveyards (the places the faction's own NPCs
+gather), and the infestation spreads from there.
+
+| Key | Values | Effect |
+|---|---|---|
+| `faction`, `units`, `pools` | as for the apocalypse; pool entries as in wave variety | Who rises |
+| `origins` | `count` 1–10, `minNatives` 1–20, `minSpacing` 100–2000 m, `perOrigin` 1–100 | Where, and how many at each |
+| `hunters`, `driftRadius` | 0–100 %, 0–2000 m | That share of the living hunts the nearest player anywhere; the rest drift outward from their graveyard |
+| `spread` | `perKillMin`/`perKillMax` 0–3, `pool`, `max` 1–500, `perMinute` 1–30 | Each kill they make, player or NPC, raises that many more where the victim fell |
+
+**Horde march** (`"type": "HordeMarch"`): one great horde rises and marches on the living.
+
+| Key | Values | Effect |
+|---|---|---|
+| `units`, `bosses` | 10–500 units in all; bosses fixed or rolled from a pool | The horde |
+| `start` | a Point, `{ "type": "Admin" }`, or `{ "type": "Hotspot", "minDistance": 100–3000 }` | A Hotspot start is the graveyard nearest the destination at least that far from it |
+| `destination`, `marchSpeed` | as for waves that march | Where it goes |
+| `growth` | a spread block | Each kill on the way joins the horde; its `max` caps the horde's living count, so set it above the horde's size |
+| `infest` | `hunters`, `driftRadius`, `spread` | On arrival, after 2 minutes stuck, or once players have watched it for 30 seconds, the horde becomes an infestation where it stands |
+
+Only one apocalypse, infestation or horde march runs at a time ("an apocalypse-type event is running: <name>");
+waves that march run beside them. Both new kinds carry on after a restart, like the apocalypse. Chat announces "The
+dead rise in <n> places" and "The horde has reached <destination>!".
+
+**How they move.** Hunters close in by hidden jumps in straight lines, never in view of a player and never into a
+castle's territory, which stays a refuge. A player behind a river or a cliff band is reached only by the hunters with a
+clear line. The last jump lands 50–60 m away, out of sight, and the game does not walk an idle unit the rest of the
+way, so they gather there and the fight starts when the player comes closer. The game stops its own NPCs far from every
+player, so kills, and the spread and growth they bring, happen only where players are.
+
+Templates (off): `undead-infestation` and `undead-horde-march`, below. Raise the caps for the full size: at the defaults
+(150 tracked, 20 a wave) the horde is cut and the start reply says by which key. In chat: `.nyar event set <id>
+action.destination here` (or `none`), `action.destination.radius`, `action.destination.name`, `action.marchSpeed`,
+`action.origins.count|minNatives|minSpacing|perOrigin`, `action.hunters`, `action.driftRadius`,
+`action.spread.perKillMin|perKillMax|max|perMinute|pool`, `action.start here`, `action.start.minDistance`,
+`action.growth.*` and `action.infest.hunters|driftRadius|spread.*`. Rolling back to 0.13.1 disables the events that use
+these kinds or keys.
 </details>
 
 <details>
@@ -521,7 +572,8 @@ empowerment buff, and holds off new events for `PurgeCooldownSeconds` (60 s). To
 ## Configuration
 
 `BepInEx/config/kdpen.Nyarlathotep.cfg`. Event definitions live in `BepInEx/config/Nyarlathotep/events.json`.
-Out-of-range values are clamped at load, with a log line.
+Out-of-range values are clamped at load, with a log line. The `[Limits]` values and the number keys of
+`[UnitWatch]` are read when the server starts: restart it after changing them.
 
 **Scale:** at the default caps, 150 hunting units cost the server under 5 ms per tick on average, with fan-out, the
 player-trigger scan and the kill counting running (measured on the dev server). Raised caps (151–500 tracked) are best effort: a tick of 250 ms or more logs a warning naming the
@@ -532,9 +584,9 @@ slowest part, at most once a minute.
 | General | Enabled | `true` | Master switch |
 | Pillars | FactionEmpowerment · SiegeWaves · DefendedZones · BossReinforcements · EventSpawns | `false` | One switch per pillar; an event runs only while its pillar is on |
 | Limits | MaxTrackedUnits | `150` | Most mod units alive at once (1-500; see Scale above) |
-| Limits | MaxUnitsPerWave | `20` | Most units in one wave or apocalypse horde (1-50); raise it, and MaxTrackedUnits, for bigger hordes |
+| Limits | MaxUnitsPerWave | `20` | Most units in one wave or apocalypse horde (1-500); raise it, and MaxTrackedUnits, for bigger hordes |
 | Limits | MaxConcurrentEvents | `3` | Most events running at once (1-10) |
-| Limits | MaxSpawnsPerTick · MaxDespawnsPerTick | `10` · `5` | Spawns and removals per server tick (1-20 each), so big waves never land in one frame |
+| Limits | MaxSpawnsPerTick · MaxDespawnsPerTick | `10` · `5` | Spawns and removals per server tick (1-40 each), so big waves never land in one frame |
 | Limits | GraceSeconds | `30` | How long units outlive their event before removal (0-600) |
 | Limits | PurgeCooldownSeconds | `60` | Pause after a purge (0-3600) |
 | Limits | ManualSpawnLifetimeSeconds | `300` | Lifetime of a `.nyar spawn` unit (30-3600) |

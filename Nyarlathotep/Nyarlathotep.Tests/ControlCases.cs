@@ -50,9 +50,6 @@ public static class ControlCases
         // unit-watch: step 5 the release
         new(UnitWatch, "D30", 5, "0.13.0"), new(UnitWatch, "D31", 5, "0.13.0"), new(UnitWatch, "D32", 5, "0.13.0"), new(UnitWatch, "D33", 5, "0.13.0"),
         // login-notice: step 3 the release
-        // undead-hordes: steps 4-5
-        new(UndeadHordes, "D23", 4, "0.14.0"), new(UndeadHordes, "D24", 4, "0.14.0"), new(UndeadHordes, "D25", 4, "0.14.0"), new(UndeadHordes, "D26", 4, "0.14.0"),
-        new(UndeadHordes, "D28", 5, "0.14.0"), new(UndeadHordes, "D29", 5, "0.14.0"), new(UndeadHordes, "D30", 5, "0.14.0"), new(UndeadHordes, "D31", 5, "0.14.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -1115,5 +1112,41 @@ public static class ControlCases
             ["a_template_copy"], ["an_apocalypse_shows_no_march_lines"]) with { Plan = UndeadHordes },
         T("D33", "Stall", "HordeMarchTests", ["an_infestation_or_a_horde_march_has_a_watched_wave"],
             ["an_apocalypse_watches_its_growth_slots_too"], ["a_quiet_unrisen_apocalypse_has_none"]) with { Plan = UndeadHordes },
+        // ---- undead-hordes step 4: the sessions in game
+        C("D23", "DestinationScenario", "vrclient run scenarios/wave-destination.vrs",
+            ["expect-calc units within 40 m of the mark fails when the wave arrives without its units",
+             "expect-log first hunt seed fails when it does not hunt at the destination",
+             "expect-log met by a player fails when it is not met where Chaos holds it", "expect-seen state=Combat target=1 fails when no unit engages"],
+            ["tools/vrclient/scenarios/wave-destination.vrs"], ["wd-test deleted: expect-reply wd-test"]) with { Plan = UndeadHordes },
+        C("D24", "InfestationScenario", "vrclient run scenarios/infestation.vrs",
+            ["expect-log hotspot fails when no origin is found", "expect-calc hunters within 100 m fails when fewer than half reach Chaos in 5 minutes",
+             "expect-calc spread 1-3 fails when a kill spreads outside 1-3", "poll-reply DRAIN fails when units remain after the stop"],
+            ["tools/vrclient/scenarios/infestation.vrs"], ["inf-test stopped: poll-reply DRAIN tracked units: 0"]) with { Plan = UndeadHordes },
+        C("D25", "HordeScenario", "vrclient run scenarios/horde-march.vrs, then preflight -TimingSpan › Test-CheckTimingSpan",
+            ["expect-log arrived at the mark fails when the horde does not arrive", "expect-log met by a player fails when it is not met where Chaos holds it",
+             "expect-calc growth 1-3 fails when it grows outside its draw", "tools/preflight-fixtures/TimingSpan/bad-avg", "tools/preflight-fixtures/TimingSpan/bad-slow"],
+            ["tools/vrclient/scenarios/horde-march.vrs", "tools/preflight-fixtures/TimingSpan/good"],
+            ["tools/preflight-fixtures/TimingSpan/empty"]) with { Plan = UndeadHordes },
+        C("D26", "CeilingRun", "load-ladder.py selftest (the ceiling run)",
+            ["selftest the ceiling not reached", "selftest no resume", "selftest no boot sweep", "selftest the resume short", "selftest 29 windows",
+             "selftest a frame p95 at the bar", "selftest a slow tick", "selftest a drain over its margin", "selftest the purge lost units",
+             "selftest another event resumed"],
+            ["selftest a passing ceiling run"], ["selftest no restart", "selftest not finished"]) with { Plan = UndeadHordes },
+        // ---- undead-hordes step 5: the release 0.14.0
+        C("D28", "RollbackGate", "rollback-gate.ps1 -Plan undead-hordes › preflight -RollbackOf › RollbackRoutes",
+            ["tools/preflight-fixtures/RollbackRoutes/bad", "tools/preflight-fixtures/RollbackRoutes/bad-2", "tools/preflight-fixtures/RollbackRoutes/bad-3"],
+            ["tools/preflight-fixtures/RollbackRoutes/good"], ["tools/preflight-fixtures/RollbackRoutes/empty"]) with { Plan = UndeadHordes },
+        C("D29", "Release", "preflight › Test-CheckVersion and Test-CheckChangelogs",
+            ["tools/preflight-fixtures/Version/bad", "tools/preflight-fixtures/Changelogs/bad"],
+            ["tools/preflight-fixtures/Version/good", "tools/preflight-fixtures/Changelogs/good"],
+            ["tools/preflight-fixtures/Version/empty", "tools/preflight-fixtures/Changelogs/empty"]) with { Plan = UndeadHordes },
+        C("D30", "Records", "preflight -AuditOf, -SessionsOf and -Paths -DeclaredOf › AuditSteps, SessionLogs and Paths",
+            ["tools/preflight-fixtures/AuditSteps/bad", "tools/preflight-fixtures/SessionLogs/bad", "tools/preflight-fixtures/Paths/bad-undeclared"],
+            ["tools/preflight-fixtures/AuditSteps/good", "tools/preflight-fixtures/SessionLogs/good", "tools/preflight-fixtures/Paths/good"],
+            ["tools/preflight-fixtures/AuditSteps/empty", "tools/preflight-fixtures/SessionLogs/empty", "tools/preflight-fixtures/Paths/empty"]) with { Plan = UndeadHordes },
+        C("D31", "Secrets", "preflight › Test-CheckSecrets",
+            ["tools/preflight-fixtures/Secrets/bad", "tools/preflight-fixtures/Secrets/bad-sentinel-log"],
+            ["tools/preflight-fixtures/Secrets/good", "tools/preflight-fixtures/Secrets/good-sentinel"],
+            ["tools/preflight-fixtures/Secrets/empty", "tools/preflight-fixtures/Secrets/empty-sentinel"]) with { Plan = UndeadHordes },
     ];
 }

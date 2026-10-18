@@ -3,21 +3,48 @@
 The complete technical history. The concise, player-facing changelog that ships to Thunderstore lives at
 `Nyarlathotep/Nyarlathotep/CHANGELOG.md`. Public beta from 0.2.0; features stay experimental until validated on live servers.
 
-## [Unreleased] - 0.14.0
+## [0.14.0] - 2026-10-18
 
-Undead hordes (`docs/dod/undead-hordes.md`; feature doc `docs/features/UNDEAD_HORDES.md`). In progress; Services and the
-in-game runs follow.
+Undead hordes: the `undead-hordes` child of the DoD Epic (`docs/dod/undead-hordes.md`; feature doc
+`docs/features/UNDEAD_HORDES.md`; audit `docs/audits/undead-hordes.md`; Raphael handoff
+`docs/RAPHAEL_HANDOFF_UNDEAD_HORDES.md`).
 
-- Load ladder on the local server: 100 and 250 units pass, 500 fails the frame bar (the game's own cost; the mod's
-  tick stays near 1 ms). `MaxTrackedUnits` keeps its ceiling of 500 (owner's call).
-- Waves can march to a `destination` (a point, or where the admin stood) at `marchSpeed`, then take their behaviour.
-- Spread from a pool: roamers take `perKillMin`/`perKillMax` (0-3) and `pool`. The old `perKill` plans as before.
-- A cut by a cap names it: "capped: n of m by <key> <value>; raise it in the cfg".
-- New event types `Infestation` and `HordeMarch` on the apocalypse engine, one at a time with `Apocalypse`.
-- New templates `undead-infestation` and `undead-horde-march`; `zombie-apocalypse` retuned (5 hotspots, larger
+- New event type `Infestation`: the dead rise at `origins.count` graveyards (places with at least `minNatives` of the
+  faction's own NPCs, `minSpacing` apart), `perOrigin` each. `hunters` % of them hunt the nearest player anywhere on the
+  map; the rest drift within `driftRadius` of their graveyard. `spread` raises `perKillMin`-`perKillMax` more for each
+  kill they make, up to `max` and `perMinute`.
+- New event type `HordeMarch`: one horde of up to 500 (units and bosses) rises at a Point, the admin's spot or a
+  graveyard at least `minDistance` from the goal, and marches to `destination` at `marchSpeed`, growing by `growth`.
+  On arrival, after 2 minutes stalled, or once players have watched it for 30 s in a row, it becomes an infestation
+  where it stands (`infest`). Chat: `The horde has reached <destination>!`; an infestation opens with `The dead rise in
+  <n> places: <event>.`
+- Both run on the apocalypse engine: one apocalypse-type event at a time, resumed after a restart, scored and ended as
+  before.
+- Waves that march: any spawn event can set `destination` (a Point or Admin, `radius` 10-100, `name`) and `marchSpeed`
+  (0.5-5.0). A wave marches as one body and takes its behaviour on arrival. A player within 60 m holds the front; a
+  watched front waits for any unit left more than 30 m behind; a wave watched for 30 s is met and fights where it stands.
+  Log lines: `march <id> wave <k>: arrived after <s> s, <n> units`, `met by a player after …`, `held by a player`,
+  `marching on`, `stalled <d> m short of its destination`.
+- Spread from a pool: roamers, infestations and growth take `perKillMin`/`perKillMax` (0-3) and `pool`; the old
+  `perKill` plans as before.
+- A start or wave cut by a cap names it: `capped: <n> of <m> by <key> <value>; raise it in the cfg`. An infestation's
+  start forecasts only its rise against the free `MaxTrackedUnits` slots.
+- `MaxUnitsPerWave` ceiling raised to 500, like `MaxTrackedUnits`. Work per tick is bounded at 500 units, taken in
+  turn. Roamer `max` and horde `size` go to 500, horde `growth` to 100.
+- Templates `undead-infestation` and `undead-horde-march` (off); `zombie-apocalypse` retuned (5 hotspots, larger
   hordes from minute 3).
-- Work per tick bounded at 500 units, taken in turn.
-- Stall lines name the distance left, never a point.
+- Diagnostics: an infestation logs one `infest moves:` count line a minute; stall lines name the distance left, never
+  a point.
+- Known limits: hunters jump in straight lines and do not path, so a player behind a river or a cliff band is reached
+  only by those with a clear line (A7). The last jump lands 50-60 m away; the game does not walk an idle unit closer
+  (design §9 D50). The game stops its own NPCs 80 m or more from every player (the mod keeps its units running), so
+  kills, spread and growth happen only near players (A8). A castle territory stays a refuge.
+- Rollback to 0.13.1 disables the events that use the new kinds or keys (`tools/rollback-gate.ps1`).
+- Wire unchanged (api 8).
+- Load ladder on the local server: 100 and 250 units pass every bar; 500 fails the frame bar with a player among them
+  (the game's own cost; the mod's tick stays near 1 ms). `MaxTrackedUnits` keeps its ceiling of 500 (owner's call).
+- In game (vrclient): wave-destination 42/42, infestation 24/24, horde march at 500 39/39, and the ceiling run: 500
+  units held 16 minutes on each side of a restart, rebuilt 480 of 480, purged in 25 s, tick under 2.3 ms average.
 
 ## [0.13.1] - 2026-10-17
 

@@ -2,6 +2,24 @@
 
 Public beta. Event pillars and automatic announcements default off, but for the login notice; admins opt in per feature.
 
+## 0.14.0 (2026-10-18)
+
+Undead hordes.
+
+- **Infestation.** A new event kind, `"type": "Infestation"`: the dead rise at several graveyards at once and spread.
+  Some hunt the nearest player anywhere on the map, the rest drift outward, and every kill they make raises more where
+  the victim fell. New template `undead-infestation` (off).
+- **Horde march.** A new event kind, `"type": "HordeMarch"`: one great horde, up to 500, rises and marches on a point
+  or where the admin stood, growing with every kill on the way. Once it arrives, is stopped, or is met by players, it
+  becomes an infestation where it stands. New template `undead-horde-march` (off).
+- **Waves that march.** Any spawn event can send its waves to a `destination` at a `marchSpeed`; each wave marches as
+  one body and takes its behaviour on arrival, or where players meet it.
+- **Spread from a pool.** Kills raise `perKillMin` to `perKillMax` (0-3) units, drawn from a `pool` when set.
+- **Bigger caps.** `MaxUnitsPerWave` now goes to 500, like `MaxTrackedUnits`. A start that a cap cuts says which key,
+  for example `capped: 20 of 60 by MaxUnitsPerWave 20; raise it in the cfg`.
+- `zombie-apocalypse` retuned: five hotspots and larger hordes from minute 3.
+- Only one apocalypse, infestation or horde march runs at a time; all three carry on after a restart.
+
 ## 0.13.1 (2026-10-17)
 
 - **Login notice** (on by default, `[Announcements] LoginEventNotice`). A player who logs in while an event is running
