@@ -17,8 +17,10 @@ undead-hordes (docs/dod/undead-hordes.md) is **32/33**: only D27, the owner's lo
   1. D27: the sheet is in docs/features/UNDEAD_HORDES.md › Owner's check. Record their line as D27's pass.
   2. `dod close undead-hordes` (partial while D27 waits): the owner confirms the excluded amendment (A3, requested) and the
      method notes first (lifecycle close step 4).
-  3. The G-Portal test server: replace only Nyarlathotep.dll, with the zip's DLL, after the owner says the server is
-     down. FTP credentials come from the owner and are never stored. Other mods are on that server.
+- **G-Portal test server on 0.14.0 (2026-10-18):** with the server stopped by the owner, only
+  BepInEx/plugins/Nyarlathotep.dll was replaced over FTP by the release zip's DLL (sha256 aaa70ee4…bea13, read back equal;
+  the other 17 plugins unchanged; config, events and state untouched). The 0.13.0 DLL it replaced: sha256 85bb12cc…7cea.
+  The owner starts the server; read its first boot's nyar lines and every [Error/[Warning over FTP.
 - **Raphael:** docs/RAPHAEL_HANDOFF_UNDEAD_HORDES.md lists the new fields, ranges and editor hints. The wire is unchanged
   (api 8).
 - **Suggestion not built:** a validator warning when a horde march's growth.max is at or below its size (the D25
