@@ -1,8 +1,9 @@
 # infestation.vrs: undead-hordes D24. The inf-test event (tools/vrclient/scenarios/fixtures/inf-test.json: an
 # Infestation of Faction_Undead, 3 origins of at least 5 natives 300 m apart, 10 CHAR_Undead_SkeletonSoldier_Withered
-# at level 20 each, hunters 50, spread 1-3 from the Withered pool) starts with Chaos at (-2480, -1640), outside his castle
-# territory (a refuge: no hunter targets a player inside it) and 558 m from Session 1's nearest origin. Its origins must lie at
-# least 500 m from Chaos; at least half of the hunter share (8 of the 15 hunters of 30) must stand within 100 m of Chaos
+# at level 20 each, hunters 50, spread 1-3 from the Withered pool) starts with Chaos at (-1690, -1400), the apocalypse sessions'
+# wait spot, outside his castle territory (a refuge: no hunter targets a player inside it) with open ground to the origins
+# (A7: hunters jump in straight lines, so a spot past a cliff band or river is never reached). Its origins must lie at
+# least 300 m from Chaos (A7); at least half of the hunter share (8 of the 15 hunters of 30) must stand within 100 m of Chaos
 # within 5 minutes (wild Withered within 100 m of Chaos before the start are subtracted). Three CHAR_Bandit_Thug natives
 # (`.devnative`, never the mod's units; Session 0's Hostility table: bandits fight the undead) then spawn beside Chaos
 # among the hunters: a spread of 1-3 is logged within 3 minutes. `.nyar event stop` ends it and drains to 0 tracked.
@@ -17,7 +18,7 @@ console TPHome
 wait 5
 console ToggleInvulnerable true
 wait 2
-chat .devtp -2480 -1640
+chat .devtp -1690 -1400
 expect-log \[DEV TP\] to
 wait 4
 console ToggleInvulnerable true
@@ -36,7 +37,7 @@ chat .nyar event start inf-test
 expect-log event inf-test started by timeout=20
 expect-log apocalypse inf-test hotspots: 3 \([0-9]+ at (?P<AX>-?[0-9]+) (?P<AZ>-?[0-9]+), [0-9]+ at (?P<BX>-?[0-9]+) (?P<BZ>-?[0-9]+), [0-9]+ at (?P<CX>-?[0-9]+) (?P<CZ>-?[0-9]+)\) timeout=30
 calc DMIN = min(hypot(${AX} - ${HX}, ${AZ} - ${HZ}), hypot(${BX} - ${HX}, ${BZ} - ${HZ}), hypot(${CX} - ${HX}, ${CZ} - ${HZ}))
-expect-calc ${DMIN} >= 500
+expect-calc ${DMIN} >= 300
 expect-log apocalypse inf-test roamers: \+10 at hotspot 1 timeout=60
 expect-log apocalypse inf-test roamers: \+10 at hotspot 2 timeout=60
 expect-log apocalypse inf-test roamers: \+10 at hotspot 3 timeout=60

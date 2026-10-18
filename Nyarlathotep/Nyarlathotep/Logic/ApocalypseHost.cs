@@ -472,7 +472,7 @@ public sealed class ApocalypseHost
 
         if (moveDue && players is not null)
         {
-            if (run.Infesting) Infest(run, game, players, units);                                   // undead-hordes D9, D11
+            if (run.Infesting) Infest(run, game, players, units, now);                              // undead-hordes D9, D11
             else Roam(run, game, players, units);
         }
         Parts.Mark("roam");
@@ -519,6 +519,7 @@ public sealed class ApocalypseHost
     RoundRobin _infestTurns = new(RoundRobin.PerPass);
     readonly Dictionary<int, MarchStall> _stalls = [];
     readonly Dictionary<int, MetClock> _met = [];                                                  // undead-hordes A6
+    readonly InfestTally _infestTally = new();                                                     // the minute's moves line (step 4)
 
     /// <summary>Every unit the hops, the roam and the infestation's moves visited since the host began (ScaleTests,
     /// undead-hordes D18).</summary>
@@ -576,7 +577,7 @@ public sealed class ApocalypseHost
     /// target change), then up to <see cref="RoundRobin.PerPass"/> units a pass: a hunter jumps toward its target and a
     /// drifter hops outward within driftRadius of its origin, both hidden from every player. A throwing move logs once per
     /// streak and holds <see cref="RoamFailing"/>.</summary>
-    void Infest(ApocalypseRun run, IApocalypseGame game, IReadOnlyList<HuntCandidate> players, IReadOnlyList<RegionUnit> units)
+    void Infest(ApocalypseRun run, IApocalypseGame game, IReadOnlyList<HuntCandidate> players, IReadOnlyList<RegionUnit> units, DateTime now)
     {
         if (run.Infest is not { } rule || run.Origins is not { Count: > 0 } origins) return;
         try
@@ -598,11 +599,15 @@ public sealed class ApocalypseHost
             foreach (var u in _infestTurns.Take(units, RoundRobin.PerPass, u => u.Key))
             {
                 var at = OriginOf(u);
-                var (kind, jump) = run.Roles.IsHunter(u.Key)
-                    ? targets.TryGetValue(at, out var t) ? RoamRule.Plan(u, (t.X, t.Z), players, Claimed, game.Walkable, game.HeightOf, game.Budget) : (JumpKind.InReach, null)
+                var hunter = run.Roles.IsHunter(u.Key);
+                var targeted = targets.TryGetValue(at, out var t);
+                var (kind, jump) = hunter
+                    ? targeted ? RoamRule.Plan(u, (t.X, t.Z), players, Claimed, game.Walkable, game.HeightOf, game.Budget, _infestTally.Waits) : (JumpKind.InReach, null)
                     : InfestMove.Drift(u, (origins[at - 1].X, origins[at - 1].Z), rule.DriftRadius, players, Claimed, game.Walkable, game.HeightOf, game.Budget);
+                if (hunter) _infestTally.Count(targeted ? kind : null);
                 if (kind == JumpKind.Jump && jump is { } j) game.Move(j);
             }
+            if (_infestTally.Due(now)) Say(game.Log, _infestTally.Line(run.Id, run.Roles.Hunters, targets.Count, now));
             _roam.Ok();
         }
         catch (Exception e)

@@ -111,6 +111,27 @@ native probed fights the undead, so the spread test can use any of them (a wild 
 | CHAR_Forest_Wolf | yes | 0 undead killed by it, 5 killed by the undead |
 | CHAR_Legion_Shadowkin_Lesser | yes | 10 undead killed by it, 2 killed by the undead |
 
+## Owner's check (D27, look and feel)
+
+The dev server keeps `[Limits] MaxTrackedUnits = 500` and `MaxUnitsPerWave = 500` for this check (the README's cap advice
+for big hordes). Each step has a one-line PASS. Your judgement is the evidence: "a very engaging, overwhelming event … a
+last stand".
+
+1. Connect to **127.0.0.1:9876** (Direct Connect). Stand in the open, away from your castle: a castle's territory is a
+   refuge, and nothing hunts a player inside it.
+2. `.nyar template use undead-horde-march`, then `.nyar event enable undead-horde-march`, then
+   `.nyar event start undead-horde-march`. The horde rises at the undead hotspot nearest you, at least 300 m off, and
+   marches on where you stood. Walk towards it and watch it come.
+   PASS: the horde is large, mostly weak skeletons and ghouls with stronger ones and the Bishop of Death among them, and
+   it walks in view (no unit pops forward while you watch).
+3. Stand in its path. Within 30 s of watching, it stops and fights where it stands, and the rest of it closes in.
+   PASS: it feels like a wall of undead you have to hold.
+4. `.nyar event stop undead-horde-march`. Then `.nyar template use undead-infestation`,
+   `.nyar event enable undead-infestation` and `.nyar event start undead-infestation`. Wait in the open for 5 minutes.
+   PASS: the dead rise in several places (the banner names how many), a good share of them find you, enough to fight,
+   and each kill they make (a native NPC, or you) raises more.
+5. `.nyar event stop undead-infestation` (or `.nyar purge confirm`). Then tell me "D27 pass", or what felt off.
+
 ## Test results
 
 ### Step 3 · 2026-10-17 · Logic (unit tests, no in-game run; the two types run in game at step 4)

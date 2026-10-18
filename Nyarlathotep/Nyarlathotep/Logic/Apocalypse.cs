@@ -349,8 +349,9 @@ public static class RoamRule
     /// player stands within 100 m, landing 50 m or more from every online player and on walkable ground) with landings
     /// allowed wherever <paramref name="claimed"/> says the point is not claimed territory.</summary>
     public static (JumpKind Kind, RegionJump? Jump) Plan(RegionUnit u, (float X, float Z) target, IReadOnlyList<HuntCandidate> online,
-        Func<float, float, bool> claimed, Func<float, float, byte, bool> walkable, Func<byte, float> heightOf, WalkBudget budget) =>
-        JumpRule.Plan(u, target, online, (x, z) => !claimed(x, z), walkable, heightOf, budget);
+        Func<float, float, bool> claimed, Func<float, float, byte, bool> walkable, Func<byte, float> heightOf, WalkBudget budget,
+        WaitTally? tally = null) =>
+        JumpRule.Plan(u, target, online, (x, z) => !claimed(x, z), walkable, heightOf, budget, tally);
 
     /// <summary>The players to seed for a roamer at <paramref name="at"/>: eligible players within the seed reach (100 m,
     /// hunting-grounds A4), nearest first, at most HuntPlan.MaxTargets; anywhere on the map.</summary>
@@ -413,6 +414,50 @@ public sealed class InfestRoles
     }
 
     public void Clear() => _hunter.Clear();
+}
+
+/// <summary>An infestation's hunters' moves over a minute (undead-hordes step 4, a diagnostic, counts only):
+/// "apocalypse &lt;id&gt; infest moves: &lt;h&gt; hunters, &lt;t&gt; origins on a player; &lt;j&gt; jumps, &lt;r&gt; in reach,
+/// &lt;w&gt; waiting, &lt;n&gt; with no target (… landings tried, … near a player, … claimed, … not walkable, … out of
+/// budget)", once a minute while the run infests.</summary>
+public sealed class InfestTally
+{
+    public static readonly TimeSpan Every = TimeSpan.FromMinutes(1);
+    public WaitTally Waits { get; private set; } = new();
+    int _jumps, _reach, _waiting, _untargeted;
+    DateTime? _since;
+
+    /// <summary>One hunter's plan this pass; null when its origin has no target.</summary>
+    public void Count(JumpKind? kind)
+    {
+        switch (kind)
+        {
+            case JumpKind.Jump: _jumps++; break;
+            case JumpKind.InReach: _reach++; break;
+            case JumpKind.Waiting: _waiting++; break;
+            default: _untargeted++; break;
+        }
+    }
+
+    /// <summary>True once a minute has passed since the first pass counted (or the last line).</summary>
+    public bool Due(DateTime utcNow)
+    {
+        _since ??= utcNow;
+        return utcNow - _since.Value >= Every;
+    }
+
+    /// <summary>The minute's line; resets the counts.</summary>
+    public string Line(string eventId, int hunters, int targeted, DateTime utcNow)
+    {
+        var w = Waits;
+        var line = $"apocalypse {eventId} infest moves: {hunters} hunters, {targeted} origins on a player; {_jumps} jumps, {_reach} in reach, " +
+                   $"{_waiting} waiting, {_untargeted} with no target ({w.Candidates} landings tried, {w.Watched} watched, {w.NearPlayer} near a player, " +
+                   $"{w.NotAllowed} claimed, {w.NotWalkable} not walkable, {w.Budget} out of budget)";
+        _jumps = _reach = _waiting = _untargeted = 0;
+        Waits = new WaitTally();
+        _since = utcNow;
+        return line;
+    }
 }
 
 /// <summary>

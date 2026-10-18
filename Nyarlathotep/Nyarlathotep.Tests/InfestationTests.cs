@@ -61,6 +61,28 @@ public class InfestationTests
     // ---- D8 Rise
 
     [Fact]
+    public void Spread_fails_when_the_moves_line_misses_a_count_or_names_a_position()
+    {
+        // step 4's diagnostic: the hunters' plans over a minute, counts only, then reset
+        var tally = new InfestTally();
+        Assert.False(tally.Due(T0));
+        tally.Count(JumpKind.Jump);
+        tally.Count(JumpKind.Jump);
+        tally.Count(JumpKind.Waiting);
+        tally.Count(JumpKind.InReach);
+        tally.Count(null);
+        tally.Waits.Candidates = 7;
+        tally.Waits.NotWalkable = 5;
+        Assert.False(tally.Due(T0.AddSeconds(59)));
+        Assert.True(tally.Due(T0.AddSeconds(60)));
+        Assert.Equal("apocalypse inf infest moves: 15 hunters, 2 origins on a player; 2 jumps, 1 in reach, 1 waiting, 1 with no target "
+            + "(7 landings tried, 0 watched, 0 near a player, 0 claimed, 5 not walkable, 0 out of budget)", tally.Line("inf", 15, 2, T0.AddSeconds(60)));
+        Assert.False(tally.Due(T0.AddSeconds(100)));
+        Assert.Equal("apocalypse inf infest moves: 15 hunters, 2 origins on a player; 0 jumps, 0 in reach, 0 waiting, 0 with no target "
+            + "(0 landings tried, 0 watched, 0 near a player, 0 claimed, 0 not walkable, 0 out of budget)", tally.Line("inf", 15, 2, T0.AddSeconds(120)));
+    }
+
+    [Fact]
     public void Rise_fails_when_an_origin_is_not_a_hotspot_or_gets_other_than_perOrigin()
     {
         var rig = Running();
