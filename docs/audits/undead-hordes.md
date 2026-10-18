@@ -76,3 +76,15 @@
 - in-game: Session 1, D23-D26 in docs/features/UNDEAD_HORDES.md › Test results; D23 rerun on 00874af 42/42; D26 on 00874af across a restart
 - session 1 log check: 0 unhandled, 432 nyar lines, 0 orphan errors, 0 unity errors
 - dod status: D6, D11, D18, D19, D23, D24, D25, D26 have evidence; D27 waits on the owner
+
+### Step 5 · 2026-10-18 · f0f9df0 (the release commit)
+- Codex verdict: REVISE on eb41867..the release tree (M a Log note gave the character's death spot as coordinates, removed; L the package README's per-tick range 1-20, fixed to 1-40); re-check READY; MetClock judged to match D6
+- compile: `dotnet build Nyarlathotep.sln -c Release` 0 Warning(s), 0 Error(s); tests Passed! 4046/4046 with D23-D26 and D28-D31 moved from ControlCases.Pending to their rows
+- preflight: PREFLIGHT OK but "release tags: 16/17 (v0.14.0 not pushed)" before the push; "version: 0.14.0 (csproj = thunderstore.toml)"; "secrets: none (2209 files scanned, 2143 index blobs)"
+- records: `-AuditOf undead-hordes` with this entry; `-SessionsOf undead-hordes` "session logs: undead-hordes 2/2 checked after A10"; `-Paths -DeclaredOf undead-hordes` "paths: 2165 walked, all in manifest; declared: 156/156 in undead-hordes" after Rollout › Paths walked gained the files steps 2-4 also wrote and the tool scratch line; the step 4 log copies removed from %TEMP%
+- snapshot: uh4 restored "snapshot restored; hashes equal (uh4"; the dev cfg then set to MaxTrackedUnits 500 and MaxUnitsPerWave 500 only, for the owner's D27
+- release: v0.14.0 (f0f9df0) tagged locally; `pwsh tools/rollback-gate.ps1 -From v0.13.1 -To v0.14.0 -Plan undead-hordes` "rollback gate: 4/4" (repo "rollback: clean", drill "rollback drill: pass", "snapshot selftest: 6/6", "rollback routes: undead-hordes 5/5")
+- tcli build: kdpen-Nyarlathotep-0.14.0.zip (642075 bytes), built at the release commit f0f9df0 with a clean tree, the tcli token variable set to a sentinel (absent from build/tcli-build.log and the zip); icon.png, README.md, manifest.json (version_number 0.14.0), BepInEx/plugins/Nyarlathotep.dll (1339392 bytes), CHANGELOG.md, LICENSE; no platform id or mail name in the zip; the local dev server runs this zip's DLL
+- zip sha256: kdpen-Nyarlathotep-0.14.0.zip 4704AC2C99934816CDFF956FDE35CB9858586686BE28C029F58277E688AF47C1
+- privacy grep (7656119, kdpenland) before the push: only lines quoting the pattern and the tests' fake ids (76561190000000…); no real id anywhere in the tree
+- dod status: D1-D26 and D28, D31 have evidence; D29 and D30 after the push; D27 waits on the owner
