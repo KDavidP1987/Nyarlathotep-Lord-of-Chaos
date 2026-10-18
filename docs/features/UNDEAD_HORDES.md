@@ -47,6 +47,12 @@ Up to 1000 tracked units, once a load test on the local server proves it takes t
   player anywhere by hidden jumps; the rest drift by hidden hops up to `driftRadius` m from their origin. Each kill adds
   a draw of its `spread` block, up to its `max` alive and `perMinute`. Won when every unit is dead with no spread
   pending, survived when the duration runs out. Banner: "The dead rise in <n> places: <event>."
+  Hunters jump in straight lines (25 m a jump, turning 30 ° at most) with no pathing, as the apocalypse's roamers do: a
+  player past a river or cliff band on that line is reached only by hunters with a clear line (A7). The last jump lands
+  50-60 m from the player, out of view, and the game does not walk an idle unit the rest of the way (design §9 D50), so
+  the hunters gather there and fight once the player comes within their aggro range. A castle's
+  territory is a refuge: no hunter targets a player inside it. Once a minute the log counts the hunters' moves:
+  "apocalypse <id> infest moves: … jumps, … waiting … (… not walkable …)".
 - **Horde march** (`"type": "HordeMarch"`). One horde of its units' counts (10-500) and its `bosses` (fixed or rolled
   from a pool) rises at `start`: a Point, the admin's spot, or the native hotspot nearest the destination at least
   `minDistance` m away. It marches to its `destination` at `marchSpeed`; each kill on the way adds a `growth` draw that

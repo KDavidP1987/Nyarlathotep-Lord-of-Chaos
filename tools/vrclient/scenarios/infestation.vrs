@@ -5,8 +5,8 @@
 # (A7: hunters jump in straight lines, so a spot past a cliff band or river is never reached). Its origins must lie at
 # least 300 m from Chaos (A7); at least half of the hunter share (8 of the 15 hunters of 30) must stand within 100 m of Chaos
 # within 5 minutes (wild Withered within 100 m of Chaos before the start are subtracted). Three CHAR_Bandit_Thug natives
-# (`.devnative`, never the mod's units; Session 0's Hostility table: bandits fight the undead) then spawn beside Chaos
-# among the hunters: a spread of 1-3 is logged within 3 minutes. `.nyar event stop` ends it and drains to 0 tracked.
+# (`.devnative`, never the mod's units; Session 0's Hostility table: bandits fight the undead) then spawn beside the
+# first hunter listed (Chaos stands there to spawn them): a spread of 1-3 is logged within 3 minutes. `.nyar event stop` ends it and drains to 0 tracked.
 # Needs: `python tools/vrclient/fixture-install.py <server>/BepInEx/config/Nyarlathotep/events.json inf-test` before the
 # boot (or `.nyar event reload` below); the dev cfg at MaxTrackedUnits 300 (the pillar switch below re-reads it);
 # NyarDevTools (.devwhere .devunits .devnative) and DevChatEcho; pillar spawns on; no other event running; Chaos
@@ -48,11 +48,17 @@ chat .devunits -1584807109 100
 expect-log \[DEV UNITS\] n=(?P<N1>[0-9]+) prefab=-1584807109
 wait 145
 chat .devunits -1584807109 100
+expect-log \[DEV UNIT\] 0 x=(?P<UX>-?[0-9.]+) y=-?[0-9.]+ z=(?P<UZ>-?[0-9.]+)
 expect-log \[DEV UNITS\] n=(?P<N>[0-9]+) prefab=-1584807109
 calc HUNTERS = ${N} - ${WILD}
 expect-calc ${HUNTERS} >= 8
 shot full inf-hunters
-# natives among them: a kill by the run's units spreads 1-3
+# natives among them (the hunters stand 40-60 m from Chaos: the jump ring), beside the first one listed: a kill by the
+# run's units spreads 1-3
+chat .devtp ${UX} ${UZ}
+expect-log \[DEV TP\] to
+wait 3
+console ToggleInvulnerable true
 mark
 chat .devnative -301730941 3 300
 expect-log \[DEV NATIVE\] n=3
