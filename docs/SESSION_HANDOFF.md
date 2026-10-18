@@ -4,6 +4,26 @@ Where work stands between sessions. Overwrite this file at the end of a session;
 The plans (`docs/dod/`), audits (`docs/audits/`) and feature docs stay the source of truth. This file only points
 into them.
 
+**Written 2026-10-18 (v0.14.0 released)**: undead hordes shipped. **v0.14.0** is tagged at f0f9df0, pushed, and on GitHub
+as a pre-release with kdpen-Nyarlathotep-0.14.0.zip. release-verify gives "hashes equal" and preflight "release tags: 17/17".
+undead-hordes (docs/dod/undead-hordes.md) is **32/33**: only D27, the owner's look-and-feel check, is open.
+- **In game (Session 1, vrclient):** D23 wave-destination 42/42 (rerun on the reviewed build 00874af), D24 infestation
+  24/24, D25 horde march at 500 39/39, D26 the ceiling run across a restart, "ceiling run: pass (held 500, swept 500,
+  rebuilt 480 of 480 …)". Limits found and recorded: A7 (hunters jump in straight lines) and A8 (the game stops NPCs 80 m
+  or more from every player, so kills and growth happen only near players).
+- **Dev server:** stopped. It runs the release zip's DLL. The uh4 snapshot is restored, and the cfg is at defaults except
+  MaxTrackedUnits 500 and MaxUnitsPerWave 500, kept for D27. After D27, set them back to 150 and 20.
+- **Waiting on the owner:**
+  1. D27: the sheet is in docs/features/UNDEAD_HORDES.md › Owner's check. Record their line as D27's pass.
+  2. `dod close undead-hordes` (partial while D27 waits): the owner confirms the excluded amendment (A3, requested) and the
+     method notes first (lifecycle close step 4).
+  3. The G-Portal test server: replace only Nyarlathotep.dll, with the zip's DLL, after the owner says the server is
+     down. FTP credentials come from the owner and are never stored. Other mods are on that server.
+- **Raphael:** docs/RAPHAEL_HANDOFF_UNDEAD_HORDES.md lists the new fields, ranges and editor hints. The wire is unchanged
+  (api 8).
+- **Suggestion not built:** a validator warning when a horde march's growth.max is at or below its size (the D25
+  fixture fault).
+
 **Written 2026-10-17 (undead-hordes step 3 done)**: undead-hordes (docs/dod/undead-hordes.md, 0.14.0) is in progress,
 **20/33**, with steps 1-3 closed. Steps 2 and 3 are Logic only, so nothing new has run in game yet.
 - **Local only, not pushed:** step 2 (e366845, 40385fb, c737599) and step 3 (dbc04ad, evidence bfa8aa6). The owner was
@@ -30,8 +50,7 @@ into them.
   500 (A3). MaxUnitsPerWave goes 50 → 500 and the tick budgets 20 → 40. Rows: docs/features/UNDEAD_HORDES.md › Load test.
 - **Hostility:** all four natives probed fight the spawned undead (feature doc › Hostility).
 - **Owner:** A2 confirmed (D33, the stall rule spares the infestation and horde march).
-- **Kept for the release:** %TEMP%
-yar-udh-logs (Session 0 log copies; `-Paths` flags them until they are deleted).
+- **Kept for the release:** %TEMP%\nyar-udh-logs (Session 0 log copies; `-Paths` flags them until they are deleted).
 - **Known, not this child's:** `-SessionsOf apocalypse` and `-SessionsOf unit-watch` fail on missing session log-check lines.
 - **Next:** step 2 (Logic: the destination rule and the spread draw: D5-D7, D12, D16, D18, D19, D21); pre-audit first.
 
