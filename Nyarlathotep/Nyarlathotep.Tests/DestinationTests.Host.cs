@@ -144,6 +144,27 @@ public partial class DestinationTests
     }
 
     [Fact]
+    public void March_fails_when_a_flickering_watch_holds_the_front_forever()
+    {
+        // code review step 4: a unit stuck 40 m behind, a player 90 m off who steps out of sight for 5 s in every 13; the
+        // watch never lapses for 10 s, so no hop brings the unit up, and the met clock on the same watch ends the wait
+        var (host, game) = Marching();
+        var stuck = game.Positions.Keys.First();
+        game.Positions[stuck] = (-40, 0);
+        for (var s = 0; s <= 60; s++)
+        {
+            game.Online.Clear();
+            if (s % 13 < 8) game.Online.Add((0, 90));
+            game.Budget.Reset();
+            host.Tick(game, T0.AddSeconds(s));
+            if (host.Find("raid", 1)!.State == WaveMarchState.Met) break;
+        }
+        Assert.Equal(WaveMarchState.Met, host.Find("raid", 1)!.State);
+        Assert.Contains(game.Logs, l => l.StartsWith("march raid wave 1: met by a player after 3", StringComparison.Ordinal));
+        Assert.DoesNotContain(game.Moves, m => m.Key == stuck);                  // never hopped in view
+    }
+
+    [Fact]
     public void March_fails_when_arrival_does_not_hand_the_wave_its_hunt_at_the_destination()
     {
         var (host, game) = Marching();

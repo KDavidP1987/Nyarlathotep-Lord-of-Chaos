@@ -786,13 +786,13 @@ public static class MarchRule
     public static bool KeptUp((int Near, int Of) k) => k.Of == 0 || k.Near >= Math.Ceiling(Apocalypse.KeepUpShare * k.Of - 1e-9);
 
     /// <summary>True when a player stands within 100 m of the front or a unit this tick (<see cref="Watch"/> ran first):
-    /// the met clock's sighting (undead-hordes A6), without <see cref="IsUnobserved"/>'s 10 s tail.</summary>
+    /// a sighting for the met clock (undead-hordes A6).</summary>
     public static bool SeenNow(Front front, DateTime utcNow) => front.LastWatchedUtc == utcNow;
 
     /// <summary>True when a destination wave's or a horde march's front waits for its units (undead-hordes A6, D6): they
     /// are watched, so no hop brings them up, and any one of them stands more than 30 m from the front where a step
     /// towards the goal would not bring it closer (behind the front or level with it). A front never runs ahead of units a
-    /// player can see; the met clock ends the wait after 30 s in view.</summary>
+    /// player can see; the met clock, on the same watch, ends the wait after 30 s.</summary>
     public static bool WaitsForUnits(Front front, IReadOnlyCollection<(float X, float Z)> units, DateTime utcNow) =>
         units.Count > 0 && !IsUnobserved(front, utcNow) && units.Any(u => LeftBehind(front, u));
 

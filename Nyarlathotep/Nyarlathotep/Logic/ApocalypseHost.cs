@@ -261,6 +261,7 @@ public sealed class ApocalypseHost
         _infestTurns = new RoundRobin(RoundRobin.PerPass);
         _stalls.Clear();
         _met.Clear();
+        _infestTally = new InfestTally();                                    // code review step 4: no count or minute from an old run
         _lastMarch = _lastMove = _lastRenew = _lastRecord = null;
         _march.Ok();
         _roam.Ok();
@@ -519,7 +520,7 @@ public sealed class ApocalypseHost
     RoundRobin _infestTurns = new(RoundRobin.PerPass);
     readonly Dictionary<int, MarchStall> _stalls = [];
     readonly Dictionary<int, MetClock> _met = [];                                                  // undead-hordes A6
-    readonly InfestTally _infestTally = new();                                                     // the minute's moves line (step 4)
+    InfestTally _infestTally = new();                                                              // the minute's moves line (step 4), one a run
 
     /// <summary>Every unit the hops, the roam and the infestation's moves visited since the host began (ScaleTests,
     /// undead-hordes D18).</summary>

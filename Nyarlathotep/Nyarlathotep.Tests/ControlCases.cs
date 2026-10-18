@@ -1059,7 +1059,7 @@ public static class ControlCases
              "a_stall_counts_ground_it_could_not_read", "a_hop_happens_with_a_player_within_100_m",
              "arrival_does_not_hand_the_wave_its_hunt_at_the_destination", "a_stalled_wave_is_left_without_its_hunt",
              "a_player_holding_the_front_is_not_logged_or_does_not_hold_it", "a_seen_wave_runs_ahead_of_its_units_or_is_never_met",
-             "a_seen_front_leaves_one_unit_behind"],   // step 4: the march's driver; D23's hold line
+             "a_seen_front_leaves_one_unit_behind", "a_flickering_watch_holds_the_front_forever"],   // step 4: the march's driver; D23's hold line
             ["the_front_from_the_action_to_its_destination"],
             ["a_wave_without_a_destination_has_no_march", "a_wave_whose_units_are_gone_or_whose_event_ended_has_no_march"]) with { Plan = UndeadHordes },
         T("D7", "Spread", "SpreadTests",
@@ -1087,7 +1087,8 @@ public static class ControlCases
             ["ten_origins_each_topped_up_once"], ["no_natives_no_run"]) with { Plan = UndeadHordes },
         T("D9", "Spread", "InfestationTests",
             ["the_hunter_share_is_off_by_more_than_one_unit", "a_jump_or_hop_happens_with_a_player_within_100_m", "a_drifter_passes_driftRadius",
-             "the_outcome_differs", "the_unexplained_share_of_the_living_count_is_over_0", "the_moves_line_misses_a_count_or_names_a_position"],
+             "the_outcome_differs", "the_unexplained_share_of_the_living_count_is_over_0", "the_moves_line_misses_a_count_or_names_a_position",
+             "the_moves_line_counts_drifters_or_carries_an_old_run"],
             ["kills_draw_into_the_nearest_origin"], ["no_player_no_hunt"]) with { Plan = UndeadHordes },
         T("D10", "Rise", "HordeMarchTests",
             ["the_horde_total_differs_from_its_entries_and_rolls", "a_hotspot_start_is_nearer_than_minDistance_or_not_the_nearest_qualifying_one",

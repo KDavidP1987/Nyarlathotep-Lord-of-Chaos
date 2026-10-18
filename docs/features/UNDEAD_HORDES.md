@@ -142,6 +142,25 @@ last stand".
 
 ## Test results
 
+### Step 4 · Session 1 · 2026-10-17 · vrclient as Chaos on the local dev server
+
+Setup: dev cfg MaxTrackedUnits 300 (D23, D24), then 500 / MaxUnitsPerWave 500 / StallMinutes 60 after a restart
+(the `[Limits]` values load at boot only); fixtures wd-test, inf-test, hm-test, ceiling-test and ceiling-fill.
+
+- **D23 destination wave** `wave-destination.vrs` → SCENARIO PASS 42/42 (wave-destination-20261017-204104.json, the
+  build with the Codex step 4b fixes): unseen, arrived after 141 s with 20 units, all 20 within 40 m of the mark, then
+  hunting (a unit in Combat with Chaos); seen, met by a player after 56 s with 20, then fighting.
+- **D24 infestation** `infestation.vrs` → SCENARIO PASS 24/24 (infestation-20261017-203149.json): 3 origins of 10,
+  Chaos 336 m from the nearest, 11 hunters within 100 m of him at 2.5 and 5 minutes, spread +2 on a kill of a native
+  beside a hunter. Three earlier runs failed and each named a limit: a castle territory is a refuge, hunters need a
+  straight walkable line (A7), and idle hunters stop 50-60 m out (design §9 D50).
+- **D25 horde march at 500** `horde-march.vrs` → SCENARIO PASS 39/39 (horde-march-20261017-222625.json): unseen, 480
+  rose in 31 s, marched 600 m and infested at the mark; met, it grew +2 on a horde unit's kill before the met, was met
+  after 169 s with 493 and infested there with 100 Armored_Farbane within 100 m. Tick windows 2.1-2.9 ms average (bar
+  5), no slow tick; frames 33.6 / 33.4 ms average / p95 (bars 36 / 50). Earlier runs found three test faults (the
+  limits load at boot; the fixture's growth max sat under the horde's size; the coffin is stone) and one game limit:
+  NPCs 80 m or more from every player are not run, so an unseen horde has nothing to kill (A8).
+
 ### Step 3 · 2026-10-17 · Logic (unit tests, no in-game run; the two types run in game at step 4)
 
 - Test methods: InfestationTests 23, HordeMarchTests 21, TemplateTests.UndeadHordes 7 (22 cases), SourceTests 3;

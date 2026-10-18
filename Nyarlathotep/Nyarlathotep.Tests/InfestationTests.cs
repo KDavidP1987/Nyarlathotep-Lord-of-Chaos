@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Nyarlathotep.Logic;
 
 namespace Nyarlathotep.Tests;
@@ -80,6 +81,38 @@ public class InfestationTests
         Assert.False(tally.Due(T0.AddSeconds(100)));
         Assert.Equal("apocalypse inf infest moves: 15 hunters, 2 origins on a player; 0 jumps, 0 in reach, 0 waiting, 0 with no target "
             + "(0 landings tried, 0 watched, 0 near a player, 0 claimed, 0 not walkable, 0 out of budget)", tally.Line("inf", 15, 2, T0.AddSeconds(120)));
+    }
+
+    [Fact]
+    public void Spread_fails_when_the_moves_line_counts_drifters_or_carries_an_old_run()
+    {
+        // code review step 4: the host counts hunters only, a hunter with no target as "with no target", and a new run
+        // starts its own minute with its own counts
+        static IEnumerable<string> Moves(ApocalypseDependencyFailureTests.Rig rig) =>
+            rig.Game.Logs.Where(l => l.Contains(" infest moves: ", StringComparison.Ordinal));
+        static int NoTarget(int hunters)
+        {
+            var rig = Running(Inf.Action(hunters: hunters));                         // 8 units, no player: no origin has a target
+            for (var s = 5; s <= 70; s += 5) rig.Tick(T0.AddSeconds(s));
+            var line = Assert.Single(Moves(rig));
+            var m = Regex.Match(line, @"; 0 jumps, 0 in reach, 0 waiting, (\d+) with no target");
+            Assert.True(m.Success, line);
+            return int.Parse(m.Groups[1].Value);
+        }
+        var two = NoTarget(25);                                                        // 2 hunters, 6 drifters
+        Assert.True(two > 0);
+        Assert.Equal(4 * two, NoTarget(100));                                          // 8 hunters: four times the plans
+        var rig = Running();
+        for (var s = 5; s <= 40; s += 5) rig.Tick(T0.AddSeconds(s));
+        Assert.Empty(Moves(rig));
+        rig.Engine.Cancel("apo");
+        rig.Host.Ended("apo", ApocalypseEnd.Stop, rig.Game, rig.State);
+        var t1 = T0.AddMinutes(10);
+        Assert.Null(rig.Start(t1));
+        Assert.True(rig.Host.Begin(rig.Active, rig.Game, rig.State, rig.Board, t1));
+        rig.Game.SpawnAll(rig.Host, t1);
+        for (var s = 5; s <= 55; s += 5) rig.Tick(t1.AddSeconds(s));
+        Assert.Empty(Moves(rig));                                                      // the old run's minute is not this run's
     }
 
     [Fact]

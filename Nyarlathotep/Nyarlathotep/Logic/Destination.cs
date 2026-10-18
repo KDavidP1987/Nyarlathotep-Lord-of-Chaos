@@ -113,20 +113,29 @@ public sealed class WaveMarch
         $"march {eventId} wave {wave}: stalled {metresShort} m short of its destination";
 }
 
-/// <summary>A march's seen clock (undead-hordes A6): true once a player has watched it for <see cref="After"/> in a row.</summary>
+/// <summary>A march's seen clock (undead-hordes A6): true on a sighting <see cref="After"/> or more after the first one of an
+/// unbroken watch. A gap under 10 s (<see cref="Apocalypse.Unobserved"/>) does not break it, as it does not end the front's
+/// wait for its units, so no wait outlasts the clock, even with a player who keeps stepping out of sight (code review
+/// step 4); a 10 s gap starts it again.</summary>
 public sealed class MetClock
 {
     public static readonly TimeSpan After = TimeSpan.FromSeconds(30);
-    DateTime? _since;
+    DateTime? _since, _last;
 
     public bool Seen(bool watched, DateTime utcNow)
     {
-        if (!watched) { _since = null; return false; }
+        if (!watched)
+        {
+            if (_last is { } last && utcNow - last >= Apocalypse.Unobserved) _since = _last = null;
+            return false;
+        }
+        if (_last is { } prev && utcNow - prev >= Apocalypse.Unobserved) _since = null;
         _since ??= utcNow;
+        _last = utcNow;
         return utcNow - _since.Value >= After;
     }
 
-    public void Reset() => _since = null;
+    public void Reset() => _since = _last = null;
 }
 
 /// <summary>
