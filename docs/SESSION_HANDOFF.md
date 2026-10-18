@@ -8,6 +8,16 @@ into them.
 ended with three backlog items researched and the owner's answers still due. All work is pushed (main = origin/main).
 - **Where things run:**
   - **G-Portal:** on 0.14.0 since 2026-10-18 (only Nyarlathotep.dll swapped; details in the block below).
+  - **Local dev server mods (synced 2026-10-18, owner's request: the Raphael-covered server mods):**
+    - New: Bloodcraft 1.13.26 (Thunderstore, newest) and KindredCommands 2.5.8 with its NetTopologySuite.dll.
+    - Updated: Beelzebub 0.137.5 → 0.137.7 (the GitHub release zip; that repo's HEAD only adds docs commits).
+    - Already newest: Uriel 0.22.0 (deployed by the Uriel session; release commit 0bad5fe), Faust 0.16.5 (= its
+      HEAD), Nyarlathotep 0.14.0. VampireCommandFramework stays 0.10.4: Bloodcraft and KindredCommands ask for it,
+      and Thunderstore's 0.11.0 is not adopted.
+    - Boot check: all nine plugins loaded, Bloodcraft "Startup checks passed", nyar templates 36/36, 0 [Error] lines.
+      The 226 game missing-prefab warnings at save load are the same 224 GUIDs as the boot before.
+    - Old plugins folder backed up in the session scratchpad (modsync/plugins-backup-20261018).
+    - Bloodcraft now runs in every vrclient session: if a scenario changes (levels, familiars, stats), suspect it first.
   - **Local dev server:** stopped, on the release DLL. Its cfg keeps MaxTrackedUnits 500 and MaxUnitsPerWave 500 for
     D27; set them back to 150 and 20 after.
 - **Waiting on the owner, first thing next session:**
