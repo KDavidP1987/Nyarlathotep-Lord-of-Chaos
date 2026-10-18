@@ -262,3 +262,6 @@ and `scaling` are pushed and equal to origin. The repo is
 | 10 | Spawn extras (Epic A32) | no plan | Ambush and Guard modes, spawn visual effect |
 | 11 | Stats | no plan | kill/participation counters, leaderboards, daily digest, privacy controls |
 | 12 | Epic close-out (`docs/dod/nyarlathotep.md`) | 38/47 | D16, D22 (closed plan `spikes` has one `--check` problem), D32 rollback drill, D36 permissions, D37 Raphael wire lines, D43 messages in game; D39, D40, D46 wait on Stats |
+| 13 | Defend objective (owner, 2026-10-18) | researched, no plan | spawn villagers (one or a room) that waves and horde marches go for; killed = lose, attackers beaten or time out = win. Research, spikes and 7 open decisions: `docs/features/DEFEND_OBJECTIVE.md` |
+| 14 | Concurrent events cap (owner, 2026-10-18) | researched, no plan | `MaxConcurrentEvents` is already a cfg key (default 3) but capped at 10; raise the ceiling (target 50, after an event-count load test) so admins pick 3, 10 or 20. `docs/features/LIMITS_CONTROL.md` decision 1 |
+| 15 | Live limits and Raphael's cap read (owner, 2026-10-18) | researched, no plan | `.nyar limit list/set` without a restart, an api 9 `limits` read so Raphael's editor shows `MaxUnitsPerWave`; held scheduled starts. `docs/features/LIMITS_CONTROL.md` decisions 2-5 |
