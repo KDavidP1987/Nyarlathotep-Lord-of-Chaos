@@ -12,8 +12,10 @@ namespace NyarDevTools;
 
 // DEV-ONLY (tools/vrclient), undead-hordes D24: an apocalypse spreads only on the death of a unit that is not the mod's
 // own, and `.nyar spawn` units are tracked, so the spread test needs natives the mod never saw.
-//   .devnative <prefabGuid> [count] [lifetime]  spawns count (default 3, at most 10) units of that prefab round the sender,
-//                          4 m apart, with a LifeTime of lifetime seconds (default 300, at most 900) that destroys them,
+//   .devnative <prefabGuid> [count] [lifetime] [x z]  spawns count (default 3, at most 10) units of that prefab round the
+//                          sender, or round (x, z) at the ground height of the sender's level when both are given,
+//                          4 m apart (a sender who teleports away from natives in combat with them ends them, so
+//                          horde-march.vrs spawns them at a point while Chaos waits off the route), with a LifeTime of lifetime seconds (default 300, at most 900) that destroys them,
 //                          Age so it counts down, and DestroyWhenDisabled; log [DEV NATIVE] n=<count> x=<x> z=<z>
 // They are never registered with the mod. The session's dev-snapshot restore is the backstop. Never in the mod.
 static class DevNative
@@ -21,12 +23,13 @@ static class DevNative
     static string F(float v) => v.ToString("0.0", CultureInfo.InvariantCulture);
 
     [Command("devnative", adminOnly: true)]
-    public static void Spawn(ChatCommandContext ctx, int prefab, int count = 3, int lifetime = 300)
+    public static void Spawn(ChatCommandContext ctx, int prefab, int count = 3, int lifetime = 300, float x = float.NaN, float z = float.NaN)
     {
         count = Math.Clamp(count, 1, 10);
         lifetime = Math.Clamp(lifetime, 30, 900);
         var p = DevCommands.Where(ctx);
         if (p is null) { ctx.Reply("devnative: no position"); return; }
+        if (!float.IsNaN(x) && !float.IsNaN(z)) p = new float3(x, p.Value.y, z);
         var em = DevCommands.Em;
         ServerGameManager sgm = default;
         foreach (var w in World.s_AllWorlds)

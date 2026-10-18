@@ -126,7 +126,7 @@ regex group captured by an earlier `expect-log`. Ending a step with `timeout=N` 
 | `wait <secs>` | Pause | no |
 | `mark` | Ignore every log line written so far | no |
 | `click-text <label>` | Find a button by OCR and click it | yes |
-| `respawn-coffin [timeout]` | On the respawn map after a death, click the Wooden Coffin icon (under its label); passes if already in the world | yes |
+| `respawn-coffin [timeout]` | On the respawn map after a death, click the coffin icon (Wooden or Stone, under its label); passes if already in the world | yes |
 | `expect-log <regex>` | A new BepInEx log line matches (default wait 15 s) | yes |
 | `expect-seen <regex>` | A BepInEx log line since the last `mark` matches, read by an earlier check or not (the last such line; consumes nothing; default wait 15 s) | yes |
 | `expect-server-log <regex>` | A new Unity server log line matches | yes |

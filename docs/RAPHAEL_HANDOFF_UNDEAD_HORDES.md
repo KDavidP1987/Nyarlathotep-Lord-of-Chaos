@@ -21,6 +21,11 @@ line shape. Feature doc: `docs/features/UNDEAD_HORDES.md`.
 | **Spread blocks** | `spread`, `growth`, `infest.spread`: `{ "perKillMin": 0-3, "perKillMax": 0-3, "pool", "max": 1-500, "perMinute" }` | A uniform draw of min..max units from the named pool per kill, within `max` alive and `perMinute`. The apocalypse's old `"perKill": n` still reads as n..n. |
 | **Raised ranges** | `roamers.max` 1-500, `hordes.size` 5-500, `growth` 0-100 | The cfg's `MaxTrackedUnits` stays capped at 500 (the load test: 250 units ran clean, 500 dropped to about 19 fps with a player among them). |
 
+**Caps.** `[Limits] MaxUnitsPerWave` now goes to 500, like `MaxTrackedUnits` (defaults stay 20 and 150). A start that
+a cap cuts says so in the human reply and in `.nyar event info`: "capped: <n> of <m> by <key> <value>; raise it in the
+cfg". It is text, not a wire field; the api reply is unchanged. The `[Limits]` values are read when the server starts,
+so a cfg editor in Raphael should tell the admin to restart after changing them.
+
 One apocalypse-type event runs at a time (Apocalypse, Infestation or HordeMarch). A second start is refused with
 "an apocalypse-type event is running: <name>". Destination waves can run alongside them.
 

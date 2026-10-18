@@ -111,7 +111,7 @@
       "perKillMin": 1,
       "perKillMax": 3,
       "pool": "troops",
-      "max": 20,
+      "max": 500,
       "perMinute": 20
     },
     "infest": {
@@ -121,7 +121,7 @@
         "perKillMin": 1,
         "perKillMax": 3,
         "pool": "troops",
-        "max": 20,
+        "max": 500,
         "perMinute": 20
       }
     }

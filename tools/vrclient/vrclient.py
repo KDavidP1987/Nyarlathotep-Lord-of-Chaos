@@ -677,11 +677,11 @@ class Scenario:
         elif op == "mark":
             self.plugin.mark(); self.server.mark()
         elif op == "respawn-coffin":
-            # after a death and a held space: the respawn map; click the Wooden Coffin's icon (just under its label)
+            # after a death and a held space: the respawn map; click the coffin's icon (Wooden or Stone, just under its label)
             t = float(rest) if rest.strip() else 15
             end, ok = time.time() + t, False
             while time.time() < end and not ok:
-                l = find_text("Wooden Coffin", "full", False)
+                l = find_text("Coffin", "full", False)
                 if l:
                     click(int(l["x"] + l["w"] / 2), int(l["y"] + l["h"] + 22), 1.0)
                     ok = True

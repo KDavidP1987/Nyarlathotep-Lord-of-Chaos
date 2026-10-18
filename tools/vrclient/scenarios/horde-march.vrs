@@ -1,12 +1,14 @@
 # horde-march.vrs: undead-hordes D25. The hm-test event (tools/vrclient/scenarios/fixtures/hm-test.json: a HordeMarch
 # of 480 units, 380 troops at level 20, 79 elite at 40, 20 strong at 60 and the Bishop of Death at 50, from the pond's
-# Point (-1880, -1640) to "the mark" 600 m east (-1280, -1640), radius 30, marchSpeed 2.0, growth 1-3 up to 20, infest
+# Point (-1880, -1640) to "the mark" 600 m east (-1280, -1640), radius 30, marchSpeed 2.0, growth 1-3 while the horde is under 500, infest
 # hunters 60) runs twice.
-# Run 1, unseen: three CHAR_Bandit_Thug natives (`.devnative`, lifetime 900 s) wait on the route 300 m from the start;
-# Chaos waits 200 m north of the route. The front's percent climbs, the horde grows by 1-3 when it kills one, and it
-# arrives at the mark and logs the switch to the infestation.
-# Run 2, met: Chaos stands on the route 300 m from the start. The horde is met (A6: seen for 30 s in a row) and infests
-# where it stands, with at least 40 of its 95 CHAR_Undead_SkeletonSoldier_Armored_Farbane within 100 m of Chaos.
+# Run 1, unseen: Chaos waits 120 m north of the route. The front's percent climbs, and the horde arrives at the mark and
+# logs the switch to the infestation.
+# Run 2, met: Chaos stands on the route 300 m from the start. The game stops its own NPCs 80 m or more from every
+# player, so a kill happens only near one (A8): once the horde's first CHAR_Undead_SkeletonSoldier_Armored_Farbane is
+# within 100 m, the nearest one kills Chaos (`.devdie`, as in apocalypse.vrs) and the horde grows by 1-3 before it is
+# met. Chaos respawns, returns, and the horde is met (A6: seen for 30 s in a row) and infests where it stands, with at
+# least 40 of its 95 Armored_Farbane within 100 m of him.
 # Each run ends with `.nyar event stop` and 0 tracked.
 # After the session, on a copy of BepInEx/LogOutput.log:
 #   pwsh tools/preflight.ps1 -TimingSpan <copy> -MinTracked 432          (90 % of the horde)
@@ -14,7 +16,7 @@
 #                                                          ladder's window counts do not apply to these short runs)
 # Needs: `python tools/vrclient/fixture-install.py <server>/BepInEx/config/Nyarlathotep/events.json hm-test`; the dev cfg
 # at the ladder's ceiling (MaxTrackedUnits 500, MaxUnitsPerWave 500, MaxSpawnsPerTick 20, MaxDespawnsPerTick 20,
-# [Debug] TimingLog true; the pillar switch below re-reads it); NyarDevTools (.devtp .devframes .devnative .devnote
+# [Debug] TimingLog true; the limits are read at boot, so restart the server after the edit); NyarDevTools (.devtp .devframes .devnative .devnote
 # .devunits) and DevChatEcho; pillar spawns on; no other event running; Chaos invulnerable (`ToggleInvulnerable true`,
 # never false).
 ensure
@@ -29,15 +31,11 @@ expect-log events: reloaded
 expect-no-log event hm-test: timeout=3
 chat .devframes on
 expect-reply devframes: on
-# run 1: natives on the route, Chaos 200 m north of it
-chat .devtp -1580 -1640
+# run 1: Chaos 120 m north of the route
+chat .devtp -1580 -1520
 expect-log \[DEV TP\] to
 wait 3
 console ToggleInvulnerable true
-chat .devnative -301730941 3 900
-expect-log \[DEV NATIVE\] n=3
-chat .devtp -1580 -1440
-expect-log \[DEV TP\] to
 wait 3
 console ToggleInvulnerable true
 wait 2
@@ -46,15 +44,13 @@ expect-reply devnote: step=480 phase=start
 mark
 chat .nyar event start hm-test
 expect-log event hm-test started by timeout=20
-expect-log horde hm-test: 480 units, 1 bosses, from .* to the mark timeout=30
+expect-log horde hm-test: 479 units, 1 bosses, from .* to the mark timeout=30
 poll-reply RISE tracked units: 480 \(spawning 0, :: .nyar status every=5 timeout=300
 chat .devnote step=480 phase=quiet s=${RISE} tracked=480
 expect-reply devnote: step=480 phase=quiet
 expect-log apocalypse hm-test horde 1 front (?P<P1>[0-9]+) % units timeout=60
 expect-log apocalypse hm-test horde 1 front (?P<P2>[0-9]+) % units timeout=60
 expect-calc ${P2} > ${P1}
-expect-seen apocalypse hm-test spread: \+(?P<GROW>[0-9]+) \( timeout=420
-expect-calc ${GROW} >= 1 and ${GROW} <= 3
 expect-log horde hm-test: arrived at the mark after [0-9]+ s, (?P<ARRIVED>[0-9]+) units; infesting timeout=600
 shot full hm-arrived
 chat .devnote step=480 phase=drain
@@ -78,6 +74,23 @@ expect-log event hm-test started by timeout=20
 poll-reply RISE2 tracked units: 480 \(spawning 0, :: .nyar status every=5 timeout=300
 chat .devnote step=481 phase=fight
 expect-reply devnote: step=481 phase=fight
+poll-reply FIRST devunits n=[1-9] :: .devunits -837329073 100 every=2 timeout=300
+chat .devdie -837329073 100
+expect-log \[DEV DIE\] found=1 timeout=10
+expect-log apocalypse hm-test spread: \+(?P<GROW>[0-9]+) \( timeout=20
+expect-calc ${GROW} >= 1 and ${GROW} <= 3
+expect-no-log horde hm-test: met by a player timeout=1
+# the respawn is a held space; a death resets invulnerability
+hold space 1.5
+wait 3
+respawn-coffin 15
+wait 10
+console ToggleInvulnerable true
+wait 2
+chat .devtp -1580 -1640
+expect-log \[DEV TP\] to
+wait 3
+console ToggleInvulnerable true
 expect-log horde hm-test: met by a player after [0-9]+ s, (?P<MET>[0-9]+) units; infesting there timeout=600
 expect-no-log horde hm-test: arrived at timeout=5
 wait 20

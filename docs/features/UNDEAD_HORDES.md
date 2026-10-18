@@ -57,7 +57,9 @@ Up to 1000 tracked units, once a load test on the local server proves it takes t
   from a pool) rises at `start`: a Point, the admin's spot, or the native hotspot nearest the destination at least
   `minDistance` m away. It marches to its `destination` at `marchSpeed`; each kill on the way adds a `growth` draw that
   joins the horde. On arrival, where it stands after 120 s stuck, or where players have watched it for 30 s, it infests there by its
-  `infest` rule and spread.
+  `infest` rule and spread. Kills happen only near players: the game stops its own NPCs 80 m or more from every player
+  (the mod keeps its units running), so a horde marching unseen meets nothing to kill, and it grows where players are
+  (A8).
   Won when the horde is destroyed. Banner on arrival: "The horde has reached <destination>!"
 - **One at a time.** An Apocalypse, an Infestation and a HordeMarch share one engine: a second start is refused with
   "an apocalypse-type event is running: <name>". Destination waves run beside them.
