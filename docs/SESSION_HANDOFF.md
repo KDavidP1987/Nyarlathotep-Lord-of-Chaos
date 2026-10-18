@@ -18,6 +18,11 @@ ended with three backlog items researched and the owner's answers still due. All
       The 226 game missing-prefab warnings at save load are the same 224 GUIDs as the boot before.
     - Old plugins folder backed up in the session scratchpad (modsync/plugins-backup-20261018).
     - Bloodcraft now runs in every vrclient session: if a scenario changes (levels, familiars, stats), suspect it first.
+    - Owner's scope (2026-10-18): the dev server must carry what Raphael covers (Bloodcraft, KindredCommands,
+      Beelzebub, Uriel, Faust, Nyarlathotep). G-Portal's other 13 mods are of no consequence for now; they are kept in
+      mind for future testing. G-Portal itself lacks Beelzebub, Uriel and Faust, and its Bloodcraft (file dated
+      2026-10-15) is likely one version behind. Updating it was offered, not asked for: do it only on the owner's
+      request, after they shut it down.
   - **Local dev server:** stopped, on the release DLL. Its cfg keeps MaxTrackedUnits 500 and MaxUnitsPerWave 500 for
     D27; set them back to 150 and 20 after.
 - **Waiting on the owner, first thing next session:**
