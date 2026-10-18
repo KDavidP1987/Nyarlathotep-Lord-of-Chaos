@@ -29,6 +29,12 @@
 - feature doc read: docs/features/UNDEAD_HORDES.md (Status, Design, Load test, Hostility); the baseline boot runs at the start of Session 1, before any scenario
 - baseline boot: 5ccf276's Release DLL on the dev server, no client: "Nyarlathotep initialized via GameDataInitializedPatch (attempt #1)", events 17 valid, templates 36/36, boot marker sweep 0 found, boot carrier sweep 0 found; warnings only the known example-empowerment line, Beelzebub's TUNE line and HarmonyX's type-load lines; the Unity log's 226 missing-prefab lines are the game's own
 
+### Step 5 · 2026-10-18 · the step 4 evidence commit
+- git status: clean after the step 4 evidence commit (release surfaces staged in the release commit)
+- compile: `dotnet build Nyarlathotep.sln -c Release` 0 Warning(s), 0 Error(s) at 00874af; tests 4046/4046
+- dod status: 29/33 verified; open D27 (owner), D28-D31 (this step)
+- feature doc read: docs/features/UNDEAD_HORDES.md (Status, Owner's check, Test results); the dev server is stopped, as the rollback drill needs
+
 ## Post-audit
 ### Step 1 · 2026-10-17 · the step's commit follows
 - compile: `dotnet build Nyarlathotep.sln -c Release` 0 Warning(s), 0 Error(s); tests Passed! 3868/3868 with D2, D3 and D4 moved from ControlCases.Pending to their rows
@@ -60,3 +66,13 @@
 - deferred to step 4 (Services): the admin origin to ApocalypseHost.Prepare, the mode to ApocalypseOutcome.Line, the Infestation start banner, the destination march in WaveAction, HuntAction's bounded aggro seeding
 - in-game: none; step 3 is Logic only (both types run in game at step 4)
 - dod status: D8, D9, D10, D11, D13, D14, D15, D16, D17, D20, D22 and D33 have evidence after this commit
+
+### Step 4 · 2026-10-18 · the step 4 evidence commit
+- compile: `dotnet build Nyarlathotep.sln -c Release` 0 Warning(s), 0 Error(s); tests Passed! 4046/4046 (the review fixes' two tests in the D6 and D9 rows)
+- preflight: PREFLIGHT OK
+- planted faults: one per control and one per fix (the plan's Log; plant-uh4r.py for the review fixes, 4 plants, all red, restored)
+- /code-review: a fresh read-only subagent on 972bb7c..eb41867, VERDICT: REVISE; (1) the moves tally carried across runs and (2) a flickering watch could hold a front forever: both fixed at 00874af with tests; (3) the host's tally wiring covered
+- Codex verdict: REVISE (4a: HuntAction's per-unit searches, fixed at a8d08dd; 4b: F1 a seen front left a unit behind, F2 the ceiling report never checked the purge, F3 any event's resume counted: fixed, with selftest cases); the review fix 00874af is cross-inspected with the release diff at step 5
+- in-game: Session 1, D23-D26 in docs/features/UNDEAD_HORDES.md › Test results; D23 rerun on 00874af 42/42; D26 on 00874af across a restart
+- session 1 log check: 0 unhandled, 432 nyar lines, 0 orphan errors, 0 unity errors
+- dod status: D6, D11, D18, D19, D23, D24, D25, D26 have evidence; D27 waits on the owner

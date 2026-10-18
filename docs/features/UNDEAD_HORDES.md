@@ -1,7 +1,7 @@
 # Undead hordes — waves that march to a destination, an infestation, a horde march, up to 500 units
 
-**Status:** in progress, step 3 of 5 (docs/dod/undead-hordes.md, audit docs/audits/undead-hordes.md; design §9 D62,
-Epic A46). Release target 0.14.0.
+**Status:** shipped in 0.14.0 (docs/dod/undead-hordes.md, audit docs/audits/undead-hordes.md; design §9 D62, Epic A46).
+Verified in game by vrclient (Session 1); the owner's look-and-feel check (D27, below) is open.
 
 ## Goal
 
@@ -142,7 +142,7 @@ last stand".
 
 ## Test results
 
-### Step 4 · Session 1 · 2026-10-17 · vrclient as Chaos on the local dev server
+### Session 1 · 2026-10-17 · step 4 Release builds · vrclient as Chaos on the local dev server
 
 Setup: dev cfg MaxTrackedUnits 300 (D23, D24), then 500 / MaxUnitsPerWave 500 / StallMinutes 60 after a restart
 (the `[Limits]` values load at boot only); fixtures wd-test, inf-test, hm-test, ceiling-test and ceiling-fill.
@@ -160,6 +160,14 @@ Setup: dev cfg MaxTrackedUnits 300 (D23, D24), then 500 / MaxUnitsPerWave 500 / 
   5), no slow tick; frames 33.6 / 33.4 ms average / p95 (bars 36 / 50). Earlier runs found three test faults (the
   limits load at boot; the fixture's growth max sat under the horde's size; the coffin is stone) and one game limit:
   NPCs 80 m or more from every player are not run, so an unseen horde has nothing to kill (A8).
+- **D26 the ceiling in play** `ceiling-run.vrs` then `ceiling-resume.vrs` across a restart, the reviewed build (00874af)
+  deployed at it → `load-ladder.py report … --run ceiling`: "ceiling run: pass (held 500, swept 500, rebuilt 480 of 480,
+  32 windows, tick avg max 2.242 ms, frame avg 33.6 ms p95 max 33.4 ms, drain 25 s, purged 500)". The horde of 480
+  marched unseen, infested at the mark and, with ceiling-fill, held 500 for 16 minutes on each side of the restart.
+  The first attempt's resume scenario had a typo in its rebuild poll; it was purged and rerun from a fresh boot.
+- **D23 again on the reviewed build** (00874af) → SCENARIO PASS 42/42 (wave-destination-20261018-000544.json):
+  arrived after 141 s with 20, met after 56 s with 20. Log check before the last stop: 0 unhandled, 432 nyar lines,
+  0 orphan errors, 0 unity errors; no [Error in any boot of the session.
 
 ### Step 3 · 2026-10-17 · Logic (unit tests, no in-game run; the two types run in game at step 4)
 

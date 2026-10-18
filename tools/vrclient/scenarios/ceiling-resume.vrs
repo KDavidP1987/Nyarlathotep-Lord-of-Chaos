@@ -10,7 +10,7 @@ console ToggleInvulnerable true
 wait 2
 chat .devframes on
 expect-reply devframes: on
-poll-reply REBUILD tracked units: (?P<REBUILT>[1-9][0-9]{2}) \(spawning 0, despawning 0\) ::.nyar status every=5 timeout=300
+poll-reply REBUILD tracked units: (?P<REBUILT>[1-9][0-9]{2}) \(spawning 0, despawning 0\) :: .nyar status every=5 timeout=300
 expect-calc ${REBUILT} >= ${UNITS} * 0.95
 chat .nyar event start ceiling-fill
 expect-log event ceiling-fill started by timeout=20

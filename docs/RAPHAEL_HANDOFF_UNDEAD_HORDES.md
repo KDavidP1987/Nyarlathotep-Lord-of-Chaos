@@ -92,6 +92,14 @@ the event is disabled with the reason: re-read `api events` and show the row's `
 
 Pools and pool entries work as in wave variety (`action.pools.<name>`, `pool:<name>:<count>`).
 
+**Hints worth showing beside the fields** (found in game, 0.14.0):
+
+- A horde march's `growth.max` caps the horde's living count, so a max at or below `size` means it never grows. The
+  shipped template has size 200 and growth max 400.
+- Kills, spread and growth happen only near players: the game stops its own NPCs 80 m or more from every player.
+- Hunters jump in straight lines, so a player behind a river or a cliff band is reached by fewer of them. A castle
+  territory is a refuge.
+
 ### 3b. Seeing the current values
 
 `.nyar event info <id>` shows each new block on one line (origins, hunters and drift, spread, start, growth, infest).
