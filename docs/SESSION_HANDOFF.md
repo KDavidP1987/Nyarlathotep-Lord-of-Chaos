@@ -4,10 +4,15 @@ Where work stands between sessions. Overwrite this file at the end of a session;
 The plans (`docs/dod/`), audits (`docs/audits/`) and feature docs stay the source of truth. This file only points
 into them.
 
-**Written 2026-10-18 (session close): start here.** v0.14.0 is released, on GitHub and on both servers. The session
+**Written 2026-10-19 (session close, the owner restarting the PC): start here.** v0.14.0 is released, on GitHub and on both servers. The session
 ended with three backlog items researched and the owner's answers still due. All work is pushed (main = origin/main).
 - **Where things run:**
   - **G-Portal:** on 0.14.0 since 2026-10-18 (only Nyarlathotep.dll swapped; details in the block below).
+    - Verified running (FTP read, 2026-10-18): "Loading [Nyarlathotep 0.14.0]", templates 36/36, events 4 valid,
+      "degraded: none", no Nyarlathotep error.
+    - Other mods there: KindredCommands logs "Missing NetTopologySuite.dll" (respawn forcing limited), and Bloodcraft is
+      1.13.22 (the newest is 1.13.26). Fixing both was offered, not asked for; do it only on the owner's request, after
+      they shut the server down.
   - **Local dev server mods (synced 2026-10-18, owner's request: the Raphael-covered server mods):**
     - New: Bloodcraft 1.13.26 (Thunderstore, newest) and KindredCommands 2.5.8 with its NetTopologySuite.dll.
     - Updated: Beelzebub 0.137.5 → 0.137.7 (the GitHub release zip; that repo's HEAD only adds docs commits).
