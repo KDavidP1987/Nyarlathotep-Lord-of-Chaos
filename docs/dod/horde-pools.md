@@ -160,7 +160,7 @@ Migration (3.4): none for events.json; a cfg that already holds `MaxTrackedUnits
    - Hand the owner the D13 sheet (docs/features/HORDE_POOLS.md › Owner's check): "connect to 127.0.0.1:9876", numbered steps, real commands, one PASS line each.
 4. **Release.** · needs: horde pools in game · advances C4 · satisfies D13, D14, D15, D16, D17
    - The single Codex cross-inspection of the child's diff (`codex exec -s read-only -c features.experimental_windows_sandbox=true`, prompt by stdin) and /code-review; verdict lines in step 4's post-audit.
-   - The six surfaces and the feature doc's Status in one `chore(release): vX.Y.Z` commit; `pwsh tools/rollback-gate.ps1 -From v0.14.0 -To vX.Y.Z -Plan horde-pools` (D14); tcli build, release-verify, tag; -AuditOf, -SessionsOf and -Paths -DeclaredOf horde-pools (D16); the privacy grep (D17); `dod close horde-pools` (partial while D13 waits). The push, the release and any G-Portal change wait for the owner's OK; with that OK and the server stopped by the owner, the G-Portal cfg's `MaxTrackedUnits` is raised from its written 150 to 500 (read back over FTP).
+   - The six surfaces and the feature doc's Status in one `chore(release): vX.Y.Z` commit; `pwsh tools/rollback-gate.ps1 -From v0.14.0 -To v0.15.0 -Plan horde-pools` (D14); tcli build, release-verify, tag; -AuditOf, -SessionsOf and -Paths -DeclaredOf horde-pools (D16); the privacy grep (D17); `dod close horde-pools` (partial while D13 waits). The push, the release and any G-Portal change wait for the owner's OK; with that OK and the server stopped by the owner, the G-Portal cfg's `MaxTrackedUnits` is raised from its written 150 to 500 (read back over FTP).
 
 ## Work breakdown
 - W1 · **Hordes**
@@ -181,11 +181,11 @@ In the next minor release (0.15.0 unless replacements ships first), a GitHub pre
 - The wire is unchanged; Raphael api 8 sees new keys in definitions it edits (D9).
 
 ### Rollback
-- **In the repository:** `git revert --no-edit v0.14.0..vX.Y.Z` (the child's commits), tested by the gate's repository drill (D14).
+- **In the repository:** `git revert --no-edit v0.14.0..v0.15.0` (the child's commits), tested by the gate's repository drill (D14).
 - **On the dev server during the build:** every session wrapped by tools/dev-snapshot.ps1 (D16).
 - **On a server:** install the 0.14.0 DLL; it ignores pools.json and keeps the cfg; events using the new keys or library-only pool names are listed invalid and do not run, so remove those keys first; the step stays possible after data is written (D14).
 - **Published release:** tags and releases are never deleted; a bad one is withdrawn by retitling it (Epic S-19).
-- **Commit range:** v0.14.0..vX.Y.Z.
+- **Commit range:** v0.14.0..v0.15.0.
 
 ### Paths walked
 - **Steps 1-4:** docs/audits/horde-pools.md, docs/features/HORDE_POOLS.md, docs/features/UNDEAD_HORDES.md, docs/dod/horde-pools.md, docs/dod/horde-pools.build.md, docs/dod/README.md, docs/dod/nyarlathotep.md, docs/NYARLATHOTEP_DESIGN.md (§9), docs/RAPHAEL_INTEGRATION_CONTRACT.md, docs/RAPHAEL_HANDOFF_HORDE_POOLS.md, docs/SESSION_HANDOFF.md.
@@ -361,3 +361,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-24 · note · method · D5 · Codex F1: PoolLibrary.Load wraps its whole body, so an unforeseen failure (a catalog or I/O throw) empties the library and sets Error; PoolLibraryTests File loads 17 pools, then a throwing catalog, and finds none left
 - 2026-10-24 · note · method · D15 · the package README gains Configuration, Setting up events (templates, events.json, fields, triggers, locations, every action, unit entries and modifiers) and Unit pools, drafted from the code by a subagent and checked here; the stale comments in Logic/Apocalypse.cs that said hordes are clamped by MaxUnitsPerWave are corrected
 - 2026-10-24 · note · step 4 · the dev server booted 0.15.0 with no new error or warning (the owner's check in place of D12); D14 (rollback gate) is run after the tag
+- 2026-10-24 · note · method · D14 · the Build plan and Rollout named the release as vX.Y.Z, so the gate's routes check failed ("2 ranges"); they now name v0.15.0, and `pwsh tools/preflight.ps1 -RollbackOf horde-pools -From v0.14.0 -To v0.15.0` gives "rollback routes: horde-pools 5/5"; the gate's own run gave "rollback: clean", "rollback drill: pass" (0.14.0 booted on 0.15.0's files: 0 unhandled, 0 orphan errors, 0 unity errors; "restored the saved plugin DLL and config; hashes equal") and "snapshot selftest: 6/6"
