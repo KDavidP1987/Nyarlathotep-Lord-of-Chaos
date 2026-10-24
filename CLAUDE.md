@@ -21,7 +21,7 @@ running events, `[Announcements] LoginEventNotice`, on by default (design §9 D6
 Same family as the author's other mods — **Beelzebub** (server), **Uriel** (server), **Faust** (server),
 and **Raphael** (client, formerly BloodCraftHub). Nyarlathotep mirrors the Faust/Uriel architecture.
 
-> **Status:** v0.14.0 public beta (undead hordes, 2026-10-18; the login notice 0.13.1; apocalypse, unit watch and wave variety 0.13.0). **Halloween
+> **Status:** v0.15.0 public beta (horde pools, 2026-10-24; undead hordes 0.14.0; the login notice 0.13.1; apocalypse, unit watch and wave variety 0.13.0). **Halloween
 > track** (design §9 D33-D37, D42-D51, Epic A35, A37): the test weekend with the owner's players runs on 0.13.0 (owner,
 > 2026-10-16: released before it), fixes in 0.13.x by 2026-10-31. Development is tracked by the DoD Epic
 > `docs/dod/nyarlathotep.md` (its child manifest and `docs/dod/README.md` give the order). New decisions go to the

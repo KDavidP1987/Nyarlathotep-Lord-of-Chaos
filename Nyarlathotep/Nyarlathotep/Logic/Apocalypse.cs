@@ -545,7 +545,7 @@ public sealed class SpreadGate
 
 /// <summary>
 /// The hordes' clock and size (D5, D36, Business rules 5): horde k (1..count) rises at start + firstAfterMinutes + (k − 1) ×
-/// everyMinutes at hotspot ((k − 1) mod hotspots) + 1 with size + (k − 1) × growth units, clamped by MaxUnitsPerWave and the
+/// everyMinutes at hotspot ((k − 1) mod hotspots) + 1 with size + (k − 1) × growth units, clamped by the
 /// free MaxTrackedUnits slots; the last horde also queues the action's bosses, a clamp cutting its regular units before
 /// its bosses (revenge D29's order). A horde that queued no unit has not risen and is tried again every 60 s; a rise due at
 /// or after the run's end never comes.
@@ -575,8 +575,8 @@ public static class HordeSchedule
     }
 
     /// <summary>The units horde <paramref name="k"/> queues: its bosses first when it is the last horde (each entry's own
-    /// modifiers), then size + (k − 1) × growth regular units drawn by weight; the whole clamped by MaxUnitsPerWave, then
-    /// by the free tracked slots, cutting regular units before bosses (revenge D29). Each clamp adds its log line.</summary>
+    /// modifiers), then size + (k − 1) × growth regular units drawn by weight; the whole clamped by the free tracked
+    /// slots alone (the wave cap the caller passes is Precedence.NoWaveCap, horde-pools D1), cutting regular units before bosses (revenge D29). Each clamp adds its log line.</summary>
     public static IReadOnlyList<(UnitEntry Unit, int Entry)> Units(ApocalypseAction action, int k, int maxPerWave, int occupied, int maxTracked,
         IRandom rng, List<string> log)
     {
@@ -625,7 +625,7 @@ public static class HordeSchedule
 
     /// <summary>The units a horde march's horde queues (undead-hordes D10): its resolved <paramref name="bosses"/> first, slot
     /// j as entry j, then each units entry's count, a pool entry drawing each copy uniformly from its pool and every copy
-    /// kept with its entry's chance; the whole clamped by MaxUnitsPerWave, then by the free tracked slots, cutting regular
+    /// kept with its entry's chance; the whole clamped by the free tracked slots alone (horde-pools D1), cutting regular
     /// units before bosses (revenge D29). <paramref name="asked"/> is the count before the clamp.</summary>
     public static IReadOnlyList<(UnitEntry Unit, int Entry)> MarchUnits(ApocalypseAction action, IReadOnlyList<UnitEntry> bosses, int maxPerWave, int occupied,
         int maxTracked, IRandom rng, List<string> log, out int asked)

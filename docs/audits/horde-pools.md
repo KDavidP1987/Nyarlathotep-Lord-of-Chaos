@@ -15,6 +15,12 @@
 - dod status: 5/18 verified (D1-D4, D10)
 - feature doc read: docs/features/HORDE_POOLS.md (Status, Design summary's pool library paragraph, Open questions none); Logic/Pools.cs, Logic/FactionGroups.cs, Logic/Validation.cs (ParsePools, PoolOf, SpreadPool, PoolsUsed, ParseEntries), Services/EventStore.cs and Services/HealthMonitor.cs read; step 2 is Logic, Services and Commands with no in-game check, so no baseline boot
 
+### Step 3 · 2026-10-24 · skipped by the owner
+- owner, 2026-10-24: skip the in-game test and release now; the dev server's boot is checked for errors instead (step 4). D12 stays open
+### Step 4 · 2026-10-24 · 3c73d2d
+- git tree: the release edits only (READMEs, changelogs, versions, the handoff); compile 0 Warning(s), 0 Error(s); tests Passed! 4076/4076; preflight OK
+- baseline boot: the dev server on the 0.14.0 DLL was last booted 2026-10-18 (its logs backed up before this step's deploy)
+
 ## Post-audit
 ### Step 1 · 2026-10-24 · the step's commit follows
 - compile: `dotnet build Nyarlathotep.sln -c Release -p:VRisingServerPath=C:\__nodeploy__` 0 Warning(s), 0 Error(s); tests Passed! 4058/4058 with horde-pools D1-D4 and D10 in their rows and D5-D9, D11, D12, D14-D17 in ControlCases.Pending
@@ -35,3 +41,11 @@
 - amendment: none; Rollout › Paths walked gains "Step 2 also" (Log note)
 - in-game: none; step 2 is Logic, Services and commands, run in game at step 3 (D12)
 - dod status: D5-D9 and D11 have evidence after this commit
+
+### Step 4 · 2026-10-24 · the release commit follows
+- Codex verdict: REVISE on 52b35f1..3c73d2d (F1: an unforeseen throw inside PoolLibrary.Load left the old library loaded while reload replied "0 loaded"); fixed (Load wraps its body and empties the library on any failure; PoolLibraryTests File); one cross-inspection per child (Halloween track), no re-run
+- compile: `dotnet build Nyarlathotep.sln -c Release` 0 Warning(s), 0 Error(s); tests Passed! 4076/4076 with D14-D17 moved from ControlCases.Pending to their rows
+- preflight: PREFLIGHT OK, "version: 0.15.0 (csproj = thunderstore.toml)", "changelogs: 0.15.0 in both"
+- dev server boot (owner's check in place of the in-game run): Nyarlathotep 0.15.0 loaded; "first run: seeded pools.json with 17 pools", "pools: 17 loaded (17 seeded)", "templates: 36/36 valid", "limits: MaxTrackedUnits 500, MaxUnitsPerWave 500, …" (the dev cfg's values); [Error/[Warning lines 30 in LogOutput.log and 452 in NyarDev.log, the same counts as the 0.14.0 boot (HarmonyX type-load warnings, the game's 226 missing prefabs, KindredCommands and Beelzebub notices); the one nyar warning is the dev server's old example-empowerment ("pillar empowerment takes an Empower action"); stopped with taskkill after 5 s
+- READMEs: the package README gains the full reference (Configuration, Setting up events, Unit pools, all collapsible), written from the code; its stale 150 default, "Thirty-four" templates and horde-cap sentences corrected
+- in-game: none (owner skipped D12)

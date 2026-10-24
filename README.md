@@ -14,11 +14,14 @@ Public beta. Every pillar and every automatic announcement starts disabled, but 
 
 | Build | What it is |
 |---|---|
-| [**v0.14.0**](https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.14.0) | Current release: undead hordes. Infestations and horde marches of up to 500, and waves that march to a destination. |
+| [**v0.15.0**](https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.15.0) | Current release: horde pools. Full-size hordes (held by `MaxTrackedUnits` alone, default 500), castles closed to hordes unless an event allows it, a shared library of unit pools (`pools.json`, `.nyar pool`) and random pool counts. |
+| [v0.14.0](https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.14.0) | Undead hordes. Infestations and horde marches of up to 500, and waves that march to a destination. |
 | [v0.13.1](https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.1) | The login notice, a private line to a player who logs in while an event runs. |
 | [v0.13.0](https://github.com/KDavidP1987/Nyarlathotep-Lord-of-Chaos/releases/tag/v0.13.0) | The Halloween release: the apocalypse, unit watch and wave variety. The test round's workbook is in [`testing/`](testing/). |
 
-What each version shipped: [`CHANGELOG.md`](CHANGELOG.md). What comes next: the Epic plan,
+What each version shipped: [`CHANGELOG.md`](CHANGELOG.md). Every setting, event field, modifier and pool, with how to
+set up an event from a template and how to set up a pool: the package README,
+[`Nyarlathotep/Nyarlathotep/README.md`](Nyarlathotep/Nyarlathotep/README.md) (Configuration, Setting up events, Unit pools). What comes next: the Epic plan,
 [`docs/dod/nyarlathotep.md`](docs/dod/nyarlathotep.md).
 
 ## Quick start
@@ -56,9 +59,9 @@ Safety rules hold for every event:
 - **Placed with care:** waves spawn on walkable ground, and outside claimed castle territory unless the event allows
   it.
 
-**Scale.** The tick budget, under 5 ms average per one-minute window, is measured at the default caps: 150 tracked
-units, with hunting, fan-out, the player-trigger scan and the kill feed included. Raising `MaxTrackedUnits` to
-151-500 is best effort: on the local server 250 units held 30 frames a second with a player among them, and 500 ran
+**Scale.** The tick budget, under 5 ms average per one-minute window, was measured at 150 tracked units, with hunting,
+fan-out, the player-trigger scan and the kill feed included. Since 0.15.0 `MaxTrackedUnits` defaults to 500 so hordes
+rise at full size; above 150 is best effort: on the local server 250 units held 30 frames a second with a player among them, and 500 ran
 with the mod near 1 ms a tick but the game itself slower. A 250 ms slow-tick warning names the slowest phase.
 
 ## Features
@@ -81,6 +84,7 @@ with the mod near 1 ms a tick but the game itself slower. A 250 ms slow-tick war
 | Wave variety | Pursuit of players who run, unit pools and boss rolls, the timed and onslaught templates | 0.13.0 | [WAVE_VARIETY](docs/features/WAVE_VARIETY.md) |
 | Login notice | A private line to a player who logs in while an event runs, naming the running events (on by default) | 0.13.1 | [LOGIN_NOTICE](docs/features/LOGIN_NOTICE.md) |
 | Undead hordes | Big undead events: `undead-infestation` (the dead rise in many places and spread) and `undead-horde-march` (one great horde marches on the players); `zombie-apocalypse` retuned | 0.14.0 | [UNDEAD_HORDES](docs/features/UNDEAD_HORDES.md) |
+| Horde pools | Hordes held by `MaxTrackedUnits` alone (default 500); the castle switch `allowTerritory` on the horde types; the shared pool library `pools.json` with 17 faction pools and `.nyar pool`; random `min`/`max` pool counts | 0.15.0 | [HORDE_POOLS](docs/features/HORDE_POOLS.md) |
 | Raphael API | A machine-readable `[NYAR:*]` wire for the Raphael client: status, admin actions, pushes | 0.3.0, api 8 in 0.13.0 | [Contract](docs/RAPHAEL_INTEGRATION_CONTRACT.md) |
 | Scaling, replacements, boss reinforcements, live operations, stats, sieges | Planned | — | [Epic plan](docs/dod/nyarlathotep.md) |
 
@@ -134,7 +138,8 @@ Start at [`docs/README.md`](docs/README.md). The most used:
 - [Design](docs/NYARLATHOTEP_DESIGN.md): architecture, configuration, the command reference (§6), decisions (§9)
 - [Feature docs](docs/features/): one per feature, each with its test results
 - [Raphael contract](docs/RAPHAEL_INTEGRATION_CONTRACT.md), the [api 8 handoff](docs/RAPHAEL_HANDOFF_API8.md) and the
-  [undead hordes handoff](docs/RAPHAEL_HANDOFF_UNDEAD_HORDES.md) (0.14.0's new kinds, keys and commands)
+  [undead hordes handoff](docs/RAPHAEL_HANDOFF_UNDEAD_HORDES.md) (0.14.0's new kinds, keys and commands) and the
+  [horde pools handoff](docs/RAPHAEL_HANDOFF_HORDE_POOLS.md) (0.15.0: the castle switch, pool library and random counts)
 - [Plans](docs/dod/): the Definition-of-Done plans that track every feature
 
 ## License

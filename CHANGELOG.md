@@ -3,6 +3,36 @@
 The complete technical history. The concise, player-facing changelog that ships to Thunderstore lives at
 `Nyarlathotep/Nyarlathotep/CHANGELOG.md`. Public beta from 0.2.0; features stay experimental until validated on live servers.
 
+## [0.15.0] - 2026-10-24
+
+Horde pools: the `horde-pools` child of the DoD Epic (`docs/dod/horde-pools.md`; feature doc `docs/features/HORDE_POOLS.md`;
+audit `docs/audits/horde-pools.md`; Raphael handoff `docs/RAPHAEL_HANDOFF_HORDE_POOLS.md`). Released without the
+in-game scenario run (D12): the owner skipped it on 2026-10-24; the dev server's boot was checked for errors.
+
+- Full-size hordes: a HordeMarch, Infestation or Apocalypse horde is held only by the free `[Limits] MaxTrackedUnits`
+  slots, never by `MaxUnitsPerWave`, which still holds SpawnWaves waves (destination waves included). A horde's cut
+  names `MaxTrackedUnits`. `MaxTrackedUnits` defaults to 500 (range 1-500 unchanged); a cfg that already holds a value
+  keeps it. The boot log prints the loaded limits (`[nyar] limits: …`).
+- The castle switch: `allowTerritory` (bool, default false) on the three horde types. Off: no hunter or roamer targets
+  a player on claimed territory and the hunt layer seeds no aggro on one; no jump, hop, drift, march step, spread or
+  growth spawn lands on a claimed block; a march stops at its last unclaimed point and counts as arrived; a claimed
+  start is refused ("start is inside a castle's territory; set action.allowTerritory true to allow it"); claimed
+  hotspots and origins are skipped and counted in the log. On: castles are open. Chat `.nyar event set <id>
+  action.allowTerritory true|false`; `event info` adds "claimed territory allowed".
+- The pool library `BepInEx/config/Nyarlathotep/pools.json` (SchemaVersion 1, 1-64 pools under the event pool rules):
+  seeded once with 17 pools, `<group>-units` and `<group>-bosses` for the nine allied groups (no `bandits-bosses`),
+  members unknown on the server left out with a warning; never overwritten. Any pool entry, boss roll, spread or growth
+  pool of an event may name a library pool; the event's own pool of the same name wins; a running event keeps what it
+  resolved. An invalid file loads no pool, logs `pools.json not loaded: <reason>` and opens the `pools unknown` health
+  entry; a pool spanning groups logs `pool <name> mixes groups: …`.
+- Random counts: a unit pool entry on SpawnWaves (units and waveList) and HordeMarch takes `min` and `max` (1-500)
+  instead of `count`; each draw rolls min..max. Refused on Apocalypse and Infestation, where `count` is a weight. A
+  horde's maxes sum to at most 500 and its mins to at least 10; the wave-size check reads the max. Chat
+  `pool:<name>:<min>-<max>`; `event info` shows `pool <name> ×<min>-<max>`.
+- `.nyar pool list [page] | info <pool> [page] | reload` (admin): the library, a pool's members and the events that
+  name it, and a reload that names every event invalid now (or says events.json was not reloaded).
+- Raphael: no wire change (api 8); the contract states the new keys; an editor must keep keys it does not know.
+
 ## [0.14.0] - 2026-10-18
 
 Undead hordes: the `undead-hordes` child of the DoD Epic (`docs/dod/undead-hordes.md`; feature doc

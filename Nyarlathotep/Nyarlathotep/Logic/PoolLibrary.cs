@@ -129,6 +129,13 @@ public sealed class PoolLibrary : IPoolLibrary
     /// loaded; on a failure the library is empty and <see cref="Error"/> says why. Never writes a file that exists.</summary>
     public int Load(DataStore store, IUnitCatalog units, Action<string> info, Action<string> warn)
     {
+        // Anything unforeseen empties the library too, so a reload never keeps the pools it replaced (Codex horde-pools F1).
+        try { return LoadFile(store, units, info, warn); }
+        catch (Exception ex) { return Fail($"could not be loaded: {ex.Message}", warn); }
+    }
+
+    int LoadFile(DataStore store, IUnitCatalog units, Action<string> info, Action<string> warn)
+    {
         store.CleanStaleTmp(DataFile.Pools);
         bool exists;
         try { exists = store.Files.Exists(DataFile.Pools, FileVariant.Main); }

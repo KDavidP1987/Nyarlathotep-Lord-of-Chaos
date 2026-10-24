@@ -2,6 +2,22 @@
 
 Public beta. Event pillars and automatic announcements default off, but for the login notice; admins opt in per feature.
 
+## 0.15.0 (2026-10-24)
+
+Horde pools.
+
+- **Full-size hordes.** Horde marches, infestations and apocalypse hordes now rise at the size their event asks for,
+  held only by `MaxTrackedUnits`, whose default is now 500. `MaxUnitsPerWave` (20) still holds ordinary waves. A cfg
+  you already have keeps its values: raise `MaxTrackedUnits` yourself for bigger hordes.
+- **Castles are safe from hordes.** By default a horde never hunts, enters, spawns in or marches into a castle's
+  territory. Set `"allowTerritory": true` on the event (or `.nyar event set <id> action.allowTerritory true`) to let it in.
+- **Shared unit pools.** `BepInEx/config/Nyarlathotep/pools.json` holds named pools any event can use, like templates.
+  It starts with 17 faction pools (`undead-units`, `undead-bosses`, …). An event's own pool of the same name wins.
+- **Random counts.** A pool entry in a wave or a horde march can take `min` and `max` instead of `count`, for example
+  `{ "pool": "undead-units", "min": 5, "max": 20 }` or `pool:undead-units:5-20` in chat.
+- **`.nyar pool list | info <pool> | reload`** (admin) shows the pools, which events use them, and reloads the file.
+- The README now has a full reference for every setting, event field, modifier and pool.
+
 ## 0.14.0 (2026-10-18)
 
 Undead hordes.

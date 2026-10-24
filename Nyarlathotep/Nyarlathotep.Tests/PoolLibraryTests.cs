@@ -39,6 +39,12 @@ public class PoolLibraryTests
 
     internal static string File(string pools) => "{ \"SchemaVersion\": 1, \"pools\": " + pools + " }";
 
+    sealed class BrokenUnits : IUnitCatalog
+    {
+        public bool IsKnown(string prefabName) => throw new InvalidOperationException("catalog broke");
+        public bool IsDenied(string prefabName) => throw new InvalidOperationException("catalog broke");
+    }
+
     static string Names(params string[] names) => "[ " + string.Join(", ", names.Select(n => "\"" + n + "\"")) + " ]";
 
     /// <summary>A library of "elite" (Deadeye) and "mix" (a skeleton and a thug: undead and bandits).</summary>
@@ -127,6 +133,16 @@ public class PoolLibraryTests
             Assert.Equal(1, log2.Count("pools.json not loaded: "));
             Assert.Equal([PoolLibrary.HealthEntry], bad.Entries);
         }
+
+        // an unforeseen failure mid-load empties a library loaded before, so a reload never keeps stale pools (Codex F1)
+        var (fs4, store4, log4) = Disk();
+        var stale = new PoolLibrary();
+        Assert.Equal(17, stale.Load(store4, Units(), log4.Add, log4.Add));
+        Assert.Equal(0, stale.Load(store4, new BrokenUnits(), log4.Add, log4.Add));
+        Assert.Empty(stale.LibraryPools);
+        Assert.Empty(stale.List);
+        Assert.Equal([PoolLibrary.HealthEntry], stale.Entries);
+        Assert.Contains("pools.json not loaded: could not be loaded: catalog broke", log4.Lines);
 
         // a pool spanning two groups loads with its warning
         var (fs3, store3, log3) = Disk();
