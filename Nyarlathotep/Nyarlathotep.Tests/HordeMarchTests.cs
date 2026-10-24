@@ -55,7 +55,7 @@ public class HordeMarchTests
         Assert.Equal(12, Ours(pooled).Count);
         // code review step 3: the start's forecast counts a roll at its most; the rise line counts what was queued (the
         // schedule trims a unit, never the boss, to fit MaxTrackedUnits 10)
-        Assert.Equal(new CapCut(11, 12, "MaxUnitsPerWave", 11), Precedence.StartCut(pooled.Active.Definition, 11, 0, 500));
+        Assert.Equal(new CapCut(11, 12, "MaxTrackedUnits", 11), Precedence.StartCut(pooled.Active.Definition, 5, 0, 11));   // horde-pools D1
         var tight = Started();
         var ten = tight with { Game = new ApoGame { Ledger = new SpawnLedger(new LedgerLimits(10, 50, 1000, 1000)) } };
         Assert.Equal(10, ten.Tick(T0).Queued);

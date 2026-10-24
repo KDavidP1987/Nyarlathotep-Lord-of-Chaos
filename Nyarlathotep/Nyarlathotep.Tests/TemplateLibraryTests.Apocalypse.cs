@@ -21,6 +21,9 @@ public partial class TemplateLibraryTests
         "CHAR_Undead_GhostMilitia_Light", "CHAR_Undead_GhostBanshee", "CHAR_Undead_BishopOfDeath_VBlood",
     ];
 
+    /// <summary>0.14.0's MaxTrackedUnits default, which undead-hordes D15's retune was sized past (horde-pools D2 made it 500).</summary>
+    internal const int RetuneFloor = 150;
+
     /// <summary>The worst case of an Apocalypse action: every roamer alive and every horde alive with its bosses.</summary>
     internal static int WorstCase(ApocalypseAction a) =>
         a.Roamers.Max + Enumerable.Range(1, a.Hordes.Count).Sum(k => a.Hordes.Size + (k - 1) * a.Hordes.Growth) + (a.Bosses ?? []).Sum(b => b.Count);
@@ -50,8 +53,9 @@ public partial class TemplateLibraryTests
         if (a.Goal is not { Radius: 30, Name: "the living" } || a.Goal.Location.Type != LocationType.Admin) diffs.Add("goal differs");
         if (a.MarchSpeed != 2.0) diffs.Add($"marchSpeed {a.MarchSpeed}");
         if (!a.Scoreboard) diffs.Add("no scoreboard");
-        // undead-hordes D15: the worst case passes the default caps, so a start at the default cfg names its cut (D12)
-        if (WorstCase(a) <= Limits.MaxTrackedUnits.Default) diffs.Add($"worst case {WorstCase(a)} fits MaxTrackedUnits {Limits.MaxTrackedUnits.Default}: the retune is lost");
+        // undead-hordes D15: the worst case passes 0.14.0's default caps, so a start there names its cut (D12); the default
+        // is 500 since horde-pools D2, so the retune is held to the cap it was sized past
+        if (WorstCase(a) <= RetuneFloor) diffs.Add($"worst case {WorstCase(a)} fits MaxTrackedUnits {RetuneFloor}: the retune is lost");
         return diffs;
     }
 

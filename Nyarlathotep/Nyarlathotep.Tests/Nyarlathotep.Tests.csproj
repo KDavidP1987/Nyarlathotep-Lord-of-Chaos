@@ -50,9 +50,11 @@
 		<None Include="..\..\docs\audits\wave-variety.md" Link="Resources\audits\wave-variety.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\dod\login-notice.md" Link="Resources\login-notice.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\dod\undead-hordes.md" Link="Resources\undead-hordes.md" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\..\docs\dod\horde-pools.md" Link="Resources\horde-pools.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\features\UNDEAD_HORDES.md" Link="Resources\UNDEAD_HORDES.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\audits\login-notice.md" Link="Resources\audits\login-notice.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\audits\undead-hordes.md" Link="Resources\audits\undead-hordes.md" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\..\docs\audits\horde-pools.md" Link="Resources\audits\horde-pools.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\RAPHAEL_INTEGRATION_CONTRACT.md" Link="Resources\RAPHAEL_INTEGRATION_CONTRACT.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\NYARLATHOTEP_DESIGN.md" Link="Resources\NYARLATHOTEP_DESIGN.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\GAME_ASSETS.md" Link="Resources\GAME_ASSETS.md" CopyToOutputDirectory="PreserveNewest" />

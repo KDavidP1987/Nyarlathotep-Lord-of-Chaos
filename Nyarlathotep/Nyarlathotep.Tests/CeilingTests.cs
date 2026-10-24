@@ -47,7 +47,7 @@ public class CeilingTests
     [Fact]
     public void Ceilings_fails_when_a_default_changes()
     {
-        Assert.Equal((150, 20, 10, 5),
+        Assert.Equal((500, 20, 10, 5),                                                        // horde-pools D2
             (Limits.MaxTrackedUnits.Default, Limits.MaxUnitsPerWave.Default, Limits.MaxSpawnsPerTick.Default, Limits.MaxDespawnsPerTick.Default));
     }
 

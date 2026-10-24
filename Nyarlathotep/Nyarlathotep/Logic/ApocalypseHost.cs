@@ -23,9 +23,6 @@ public interface IApocalypseGame : IApocalypseWorld
     /// <summary>One tracked unit's position and level; null when it is gone since the ledger listed it.</summary>
     RegionUnit? Read(TrackedUnit unit);
 
-    /// <summary>The point lies in claimed territory by the run's kept map (fail closed: true without one).</summary>
-    bool IsClaimed(string eventId, float x, float z);
-
     /// <summary>Free and grounded at <paramref name="level"/>.</summary>
     bool Walkable(float x, float z, byte level);
 
@@ -45,6 +42,10 @@ public interface IApocalypseGame : IApocalypseWorld
 
     /// <summary>Builds the run's claimed-territory map for its hunt and roam (TerritoryMap.ForWave); never throws.</summary>
     void MapTerritory(string eventId);
+
+    /// <summary>The claimed blocks now, kept by no run (TerritoryMap.ForScan), for the start's check (horde-pools D3); null
+    /// when the read failed. Never throws.</summary>
+    IReadOnlySet<(int X, int Z)>? ClaimedNow();
 
     /// <summary>A resume that failed after the engine resumed the run cancels it outside EventRuntime's end paths: the
     /// event's spawn state beyond its units goes here (hunt seeds, territory map, failure streaks, region and unit-watch
@@ -277,8 +278,13 @@ public sealed class ApocalypseHost
     {
         _prepared = null;
         if (def.Apocalypse is not { } action) return null;
+        // horde-pools D3: with allowTerritory off a start never rises on claimed ground; an unread map is checked by the
+        // run's own map, which fails closed
+        var claimed = action.AllowTerritory ? null : game.ClaimedNow();
         if (action.March is { } march && Apocalypse.ResolveStart(march.Start, origin) is { } at)
         {
+            if (claimed is not null && Territory.IsClaimed(claimed, at.X, at.Z))
+                return Outcome.Refused(ClaimedStart, RefusalCode.State, "id", reason: Reasons.Condition);
             // undead-hordes D10: a Point or Admin start reads no native; an Admin start is the admin's own position, never logged (A5)
             IReadOnlyList<Hotspot> start = [new Hotspot(1, at.X, at.Z, 0, (int)MathF.Floor(at.X / Apocalypse.CellSize), (int)MathF.Floor(at.Z / Apocalypse.CellSize))];
             _prepared = (def.Id, start, march.Start.Location?.Type == LocationType.Admin ? AdminStartLine(def.Id) : Hotspots.Line(def.Id, start));
@@ -295,9 +301,26 @@ public sealed class ApocalypseHost
             return Outcome.Refused(refusal, RefusalCode.State, "id", reason: failed ? Reasons.Read : Reasons.Condition);
         }
         _native.Ok();
+        if (claimed is not null && pick.Spots.Any(h => Territory.IsClaimed(claimed, h.X, h.Z)))
+        {
+            // a hotspot or origin on claimed ground is skipped and named by count; none left refuses the start
+            var kept = pick.Spots.Where(h => !Territory.IsClaimed(claimed, h.X, h.Z)).Select((h, i) => h with { Number = i + 1 }).ToList();
+            Say(game.Log, SkippedLine(def.Id, pick.Spots.Count - kept.Count));
+            if (kept.Count == 0) return Outcome.Refused(action.March is null ? NoUnclaimedHotspot : ClaimedStart, RefusalCode.State, "id", reason: Reasons.Condition);
+            pick = pick with { Spots = kept, Line = Hotspots.Line(def.Id, kept) };
+        }
         _prepared = (def.Id, pick.Spots, pick.Line);
         return null;
     }
+
+    /// <summary>A horde march's start on claimed ground with allowTerritory off (horde-pools D3).</summary>
+    public const string ClaimedStart = "start is inside a castle's territory; set action.allowTerritory true to allow it";
+
+    /// <summary>Every hotspot or origin found lies on claimed ground with allowTerritory off (horde-pools D3).</summary>
+    public const string NoUnclaimedHotspot = "no hotspot: every hotspot is inside a castle's territory; set action.allowTerritory true to allow it";
+
+    /// <summary>The start's skipped hotspots, by count only (horde-pools D3).</summary>
+    public static string SkippedLine(string eventId, int n) => $"apocalypse {eventId}: {n} hotspots skipped inside a castle's territory";
 
     /// <summary>The run of <paramref name="active"/>, started with the hotspots <see cref="Prepare"/> found: its goal fixed
     /// now (an Admin goal at the starting admin), its territory map built, every hotspot topped up (D3) and the record
@@ -417,7 +440,7 @@ public sealed class ApocalypseHost
                     {
                         var at = index[stragglers[i]];
                         var u = horde[at];
-                        if (HopRule.Land(u, front, i, stragglers.Count, game.Walkable, game.HeightOf, game.Budget) is not { } hop) continue;
+                        if (HopRule.Land(u, front, i, stragglers.Count, Ground(run, game), game.HeightOf, game.Budget) is not { } hop) continue;
                         game.Move(hop);
                         moved++;
                         // the keep-up count reads the unit where it landed, not where it stood before the hop (session 1)
@@ -440,10 +463,13 @@ public sealed class ApocalypseHost
                 string? held = null;
                 var step = met || run.Mode == ApocalypseMode.HordeMarch && MarchRule.WaitsForUnits(front, points, now) ? MarchStep.HeldByPlayer
                     : MarchRule.Step(front, action.Goal.Radius, action.MarchSpeed, seconds, online,
-                    (x, z) => HopRule.Ground(x, z, level, game.Walkable, game.Budget), now, out held,
+                    // horde-pools D3: the front's own point is never claimed (the ground search looks 30 m around it), and a
+                    // crossing ends at claimed ground, so the march stops at the castle's edge
+                    (x, z) => !Claimed(run, game, x, z) && HopRule.Ground(x, z, level, Ground(run, game), game.Budget), now, out held,
                     (x, z) =>
                     {
-                        var known = HopRule.GroundRead(x, z, level, game.Walkable, game.Budget);
+                        if (Claimed(run, game, x, z)) return null;
+                        var known = HopRule.GroundRead(x, z, level, Ground(run, game), game.Budget);
                         if (known is null) unread = true;                                                   // D11: unread ground adds no stall time
                         return known;
                     });
@@ -585,7 +611,7 @@ public sealed class ApocalypseHost
         {
             // every living unit of the run, read this tick or not, so an unread unit keeps its role (code review step 3)
             run.Roles.Assign(game.Ledger.Units.Where(u => Apocalypse.Ours(u, run.Active)).Select(u => u.Key).ToHashSet(), rule.Hunters);
-            var candidates = players.Select(p => p with { InTerritory = game.IsClaimed(run.Id, p.X, p.Z) }).ToList();
+            var candidates = players.Select(p => p with { InTerritory = Claimed(run, game, p.X, p.Z) }).ToList();
             // an infestation's unit belongs to the origin its wave names; every unit of an arrived horde to its one origin
             int OriginOf(RegionUnit u) => run.Mode == ApocalypseMode.Infestation ? Math.Clamp(Apocalypse.HotspotOfWave(u.Wave) ?? 1, 1, origins.Count) : 1;
             var targets = new Dictionary<int, HuntCandidate>();
@@ -596,15 +622,15 @@ public sealed class ApocalypseHost
                 if (_roamTargets.Seen(run.Id, g.Key, target?.Key) is { } line) Say(game.Log, line);
                 if (target is { } t) targets[g.Key] = t;
             }
-            bool Claimed(float x, float z) => game.IsClaimed(run.Id, x, z);
+            bool IsClaimed(float x, float z) => Claimed(run, game, x, z);
             foreach (var u in _infestTurns.Take(units, RoundRobin.PerPass, u => u.Key))
             {
                 var at = OriginOf(u);
                 var hunter = run.Roles.IsHunter(u.Key);
                 var targeted = targets.TryGetValue(at, out var t);
                 var (kind, jump) = hunter
-                    ? targeted ? RoamRule.Plan(u, (t.X, t.Z), players, Claimed, game.Walkable, game.HeightOf, game.Budget, _infestTally.Waits) : (JumpKind.InReach, null)
-                    : InfestMove.Drift(u, (origins[at - 1].X, origins[at - 1].Z), rule.DriftRadius, players, Claimed, game.Walkable, game.HeightOf, game.Budget);
+                    ? targeted ? RoamRule.Plan(u, (t.X, t.Z), players, IsClaimed, game.Walkable, game.HeightOf, game.Budget, _infestTally.Waits) : (JumpKind.InReach, null)
+                    : InfestMove.Drift(u, (origins[at - 1].X, origins[at - 1].Z), rule.DriftRadius, players, IsClaimed, game.Walkable, game.HeightOf, game.Budget);
                 if (hunter) _infestTally.Count(targeted ? kind : null);
                 if (kind == JumpKind.Jump && jump is { } j) game.Move(j);
             }
@@ -617,11 +643,19 @@ public sealed class ApocalypseHost
         }
     }
 
+    /// <summary>Claimed castle ground for this run (horde-pools D3, D4): only while its allowTerritory is off.</summary>
+    static bool Claimed(ApocalypseRun run, IApocalypseGame game, float x, float z) => !run.Action.AllowTerritory && game.IsClaimed(run.Id, x, z);
+
+    /// <summary>The march's and the hops' ground (horde-pools D3): walkable, and off claimed castle ground unless the run's
+    /// allowTerritory is on, so a front stops at a castle's edge and a straggler never lands inside.</summary>
+    static Func<float, float, byte, bool> Ground(ApocalypseRun run, IApocalypseGame game) =>
+        run.Action.AllowTerritory ? game.Walkable : (x, z, level) => !game.IsClaimed(run.Id, x, z) && game.Walkable(x, z, level);
+
     void Roam(ApocalypseRun run, IApocalypseGame game, IReadOnlyList<HuntCandidate> players, IReadOnlyList<RegionUnit> units)
     {
         try
         {
-            var candidates = players.Select(p => p with { InTerritory = game.IsClaimed(run.Id, p.X, p.Z) }).ToList();
+            var candidates = players.Select(p => p with { InTerritory = Claimed(run, game, p.X, p.Z) }).ToList();
             var bySpot = units.ToLookup(u => Apocalypse.HotspotOfWave(u.Wave));                    // undead-hordes D18: one pass
             var roaming = run.Hotspots.Sum(h => bySpot[h.Number].Count());                         // the jumps share one tick's bound
             foreach (var spot in run.Hotspots)
@@ -634,7 +668,7 @@ public sealed class ApocalypseHost
                 if (target is not { } t) continue;
                 foreach (var u in RoamTurns(spot.Number).Take(roamers, RoundRobin.Share(roamers.Count, roaming), r => r.Key))   // undead-hordes D18
                 {
-                    var (kind, jump) = RoamRule.Plan(u, (t.X, t.Z), players, (x, z) => game.IsClaimed(run.Id, x, z), game.Walkable, game.HeightOf, game.Budget);
+                    var (kind, jump) = RoamRule.Plan(u, (t.X, t.Z), players, (x, z) => Claimed(run, game, x, z), game.Walkable, game.HeightOf, game.Budget);
                     if (kind == JumpKind.Jump && jump is { } j) game.Move(j);
                 }
             }

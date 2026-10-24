@@ -334,7 +334,9 @@ public static class EventsEditor
     static string? SetSpawnKey(JsonNode root, JsonObject ev, string? actionType, string path, object value, out Outcome? error)
     {
         error = null;
-        if (actionType != "SpawnWaves" || ev["action"] is not JsonObject action)
+        // horde-pools D4: allowTerritory is an apocalypse-family field too
+        var spawnKey = actionType == "SpawnWaves" || path == "action.allowTerritory" && EventValidator.IsFamily(actionType);
+        if (!spawnKey || ev["action"] is not JsonObject action)
         {
             error = Invalid($"{CommandArgs.TableName(path)} is not {Article(actionType)} field", Reasons.Field);
             return null;
@@ -972,12 +974,17 @@ public static class EventLines
     /// <summary>An Apocalypse definition's `event info` lines (apocalypse D17), one per D1 key group, each within
     /// Wire.MaxBytes: the action, the hotspots, the roamers, the hordes, the goal (a Point goal's x, z and height, an
     /// Admin goal "at the starting admin"), the units (packed when long), the last horde's bosses and the scoreboard.</summary>
-    public static IEnumerable<string> ApocalypseLines(ApocalypseAction a) => a.Mode switch
+    public static IEnumerable<string> ApocalypseLines(ApocalypseAction a)
     {
-        ApocalypseMode.Infestation => InfestationLines(a),
-        ApocalypseMode.HordeMarch => HordeMarchLines(a),
-        _ => ApocalypseOnlyLines(a),
-    };
+        var lines = a.Mode switch
+        {
+            ApocalypseMode.Infestation => InfestationLines(a),
+            ApocalypseMode.HordeMarch => HordeMarchLines(a),
+            _ => ApocalypseOnlyLines(a),
+        };
+        // horde-pools D4: the castle switch, named only when it is on
+        return a.AllowTerritory ? lines.Append("claimed territory allowed") : lines;
+    }
 
     static string SpreadText(ApocalypseRoamers r) => $"{KillDrawText(r)}, max {r.Max}, {r.PerMinute} per minute";
 

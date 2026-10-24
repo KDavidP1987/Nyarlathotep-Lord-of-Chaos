@@ -51,6 +51,10 @@ public static class Precedence
         return null;
     }
 
+    /// <summary>The wave cap of the apocalypse family (horde-pools D1, design §9 D65): none. A HordeMarch's horde, an
+    /// Apocalypse's horde rises and an Infestation's rise and spread are held by the free MaxTrackedUnits slots alone.</summary>
+    public const int NoWaveCap = int.MaxValue;
+
     /// <summary>How many of <paramref name="requested"/> units a wave may spawn: first clamped by MaxUnitsPerWave,
     /// then by the free MaxTrackedUnits slots. Each clamp adds its log line.</summary>
     public static int WaveSize(int requested, int maxPerWave, int trackedNow, int maxTracked, List<string> log)
@@ -95,9 +99,9 @@ public static class Precedence
             return free < rise ? new CapCut(free, rise, "MaxTrackedUnits", maxTracked) : null;
         }
         if (d.Apocalypse is { Mode: ApocalypseMode.HordeMarch } march)                                                    // the horde with its fixed bosses
-            return Cut(march.Units.Sum(u => u.Count) + (march.March?.Bosses ?? []).Sum(b => b.MostBosses), maxPerWave, occupied, maxTracked);   // a roll at its most
+            return Cut(march.Units.Sum(u => u.Count) + (march.March?.Bosses ?? []).Sum(b => b.MostBosses), NoWaveCap, occupied, maxTracked);   // a roll at its most
         if (d.Apocalypse is { } apo)
-            return Cut(HordeSchedule.Size(apo.Hordes, apo.Hordes.Count) + (apo.Bosses ?? []).Sum(b => b.Count), maxPerWave, occupied, maxTracked);
+            return Cut(HordeSchedule.Size(apo.Hordes, apo.Hordes.Count) + (apo.Bosses ?? []).Sum(b => b.Count), NoWaveCap, occupied, maxTracked);
         if (d.Action is not { Destination: not null } a) return null;
         var first = a.UnitsOf(1).Sum(u => u.Count) + (Pools.BossesOf(a, 1) ?? []).Where(b => !b.IsRoll).Sum(b => b.Count);
         return Cut(first, maxPerWave, occupied, maxTracked);

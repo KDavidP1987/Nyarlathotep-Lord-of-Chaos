@@ -56,7 +56,10 @@ sealed class ApoGame : IApocalypseGame
         return new RegionUnit(unit.Key, unit.EventId, unit.SpawnedUtc, x, 0, z, 1, unit.Wave);
     }
 
-    public bool IsClaimed(string eventId, float x, float z) => false;
+    /// <summary>The claimed blocks (horde-pools D3): none unless a test sets them; null is a failed read.</summary>
+    public IReadOnlySet<(int X, int Z)>? Claimed { get; set; } = new HashSet<(int X, int Z)>();
+    public IReadOnlySet<(int X, int Z)>? ClaimedNow() => Claimed;
+    public bool IsClaimed(string eventId, float x, float z) => Claimed is not { } m || Territory.IsClaimed(m, x, z);
     /// <summary>The ground: walkable everywhere unless a test says otherwise (undead-hordes D11's stall).</summary>
     public Func<float, float, byte, bool> Ground { get; set; } = (_, _, _) => true;
     public bool Walkable(float x, float z, byte level) => Ground(x, z, level);

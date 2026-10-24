@@ -107,6 +107,9 @@
     "undead-hordes": [
       "docs/features/UNDEAD_HORDES.md"
     ],
+    "horde-pools": [
+      "docs/features/HORDE_POOLS.md"
+    ],
     "boss-reinforcements": [
       "docs/features/BOSS_REINFORCEMENTS.md"
     ],

@@ -21,8 +21,9 @@ public sealed record IntLimit(string Section, string Key, int Default, int Min, 
 public static partial class Limits
 {
     /// <summary>The ceilings of the first four follow the undead-hordes load ladder (D1, D4; Epic Business rules 9, A48): it
-    /// passed 250 units and failed 500 (about 19 fps with a player among them), and the owner kept 0.13.1's 500 (A3).</summary>
-    public static readonly IntLimit MaxTrackedUnits = new("Limits", "MaxTrackedUnits", 150, 1, 500);
+    /// passed 250 units and failed 500 (about 19 fps with a player among them), and the owner kept 0.13.1's 500 (A3).
+    /// MaxTrackedUnits defaults to its ceiling so a horde rises at full size on a default cfg (horde-pools D2, design §9 D65).</summary>
+    public static readonly IntLimit MaxTrackedUnits = new("Limits", "MaxTrackedUnits", 500, 1, 500);
     public static readonly IntLimit MaxUnitsPerWave = new("Limits", "MaxUnitsPerWave", 20, 1, 500);
     public static readonly IntLimit MaxConcurrentEvents = new("Limits", "MaxConcurrentEvents", 3, 1, 10);
     public static readonly IntLimit MaxSpawnsPerTick = new("Limits", "MaxSpawnsPerTick", 10, 1, 40);

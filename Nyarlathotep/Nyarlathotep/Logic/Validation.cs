@@ -676,7 +676,7 @@ public static class EventValidator
     /// origins, hunters, driftRadius and a spread block; scope and scoreboard as an apocalypse's.</summary>
     static ApocalypseAction ParseInfestation(JsonElement a, IUnitCatalog units, IFactionCatalog factions, IRegionCatalog regions)
     {
-        OnlyKeys(a, "action", "type", "faction", "units", "pools", "origins", "hunters", "driftRadius", "spread", "scope", "scoreboard");
+        OnlyKeys(a, "action", "type", "faction", "units", "pools", "origins", "hunters", "driftRadius", "spread", "scope", "scoreboard", "allowTerritory");
         var (faction, pools, list) = FamilyHead(a, units, factions);
         var o = Obj(Required(a, "origins", OriginsObject), OriginsObject);
         OnlyKeys(o, "action.origins", "count", "minNatives", "minSpacing", "perOrigin");
@@ -691,7 +691,7 @@ public static class EventValidator
         var scoreboard = !a.TryGetProperty("scoreboard", out var sb) || Bool(sb, ScoreboardRule);
         if (pools is not null) PoolsUsed(pools, spread.Pool is null ? list : [.. list, UnitEntry.FromPool(spread.Pool, 1)], null, null);
         return new ApocalypseAction(faction, list, origins, spread, new ApocalypseHordes(0, 0, ApocalypseLimits.MinEvery, 0, 0), ApocalypseGoal.None, 0,
-            scope, scoreboard, null, pools, ApocalypseMode.Infestation, infest);
+            scope, scoreboard, null, pools, ApocalypseMode.Infestation, infest, AllowTerritory: AllowsTerritory(a));
     }
 
     /// <summary>`"type": "HordeMarch"` (undead-hordes D10): faction, units whose counts total the horde (10 to
@@ -700,7 +700,8 @@ public static class EventValidator
     /// never both.</summary>
     static ApocalypseAction ParseHordeMarch(JsonElement a, Trigger trigger, IUnitCatalog units, IFactionCatalog factions, IRegionCatalog regions)
     {
-        OnlyKeys(a, "action", "type", "faction", "units", "pools", "bosses", "start", "destination", "marchSpeed", "growth", "infest", "scope", "scoreboard");
+        OnlyKeys(a, "action", "type", "faction", "units", "pools", "bosses", "start", "destination", "marchSpeed", "growth", "infest", "scope", "scoreboard",
+            "allowTerritory");
         var (faction, pools, list) = FamilyHead(a, units, factions);
         var total = list.Sum(u => (long)u.Count);
         if (total < HordeLimits.MinHorde || total > HordeLimits.MaxHorde) throw new Fail(HordeUnitsRule);
@@ -721,7 +722,8 @@ public static class EventValidator
             PoolsUsed(pools, [.. list, .. new[] { growth.Pool, infestSpread.Pool }.OfType<string>().Select(p => UnitEntry.FromPool(p, 1))], null, bosses);
         return new ApocalypseAction(faction, list, new ApocalypseHotspots(1, HordeLimits.StartNatives, ApocalypseLimits.MinSpacing), growth,
             new ApocalypseHordes(1, 0, ApocalypseLimits.MinEvery, (int)total, 0), new ApocalypseGoal(destination.Location, destination.Radius, destination.Name),
-            march, scope, scoreboard, null, pools, ApocalypseMode.HordeMarch, infest, new HordeMarchSpec(start, growth, infest, infestSpread, bosses));
+            march, scope, scoreboard, null, pools, ApocalypseMode.HordeMarch, infest, new HordeMarchSpec(start, growth, infest, infestSpread, bosses),
+            AllowsTerritory(a));
     }
 
     /// <summary>`start` (undead-hordes D10): a Point (x, z, optional y), Admin (a Manual trigger only) or { "type":
@@ -742,7 +744,8 @@ public static class EventValidator
     static ApocalypseAction ParseApocalypse(JsonElement a, Trigger trigger, IUnitCatalog units, IFactionCatalog factions,
         IRegionCatalog regions, int durationSeconds)
     {
-        OnlyKeys(a, "action", "type", "faction", "units", "hotspots", "roamers", "hordes", "goal", "marchSpeed", "bosses", "scope", "scoreboard", "pools");
+        OnlyKeys(a, "action", "type", "faction", "units", "hotspots", "roamers", "hordes", "goal", "marchSpeed", "bosses", "scope", "scoreboard", "pools",
+            "allowTerritory");
         var faction = Str(Required(a, "faction", ApocalypseFactionRule), ApocalypseFactionRule);
         if (FactionDenyList.IsDenied(faction)) throw new Fail($"faction{Shown(faction)} is deny-listed");
         if (!faction.StartsWith("Faction_", StringComparison.Ordinal)) throw new Fail(ApocalypseFactionRule);
@@ -786,8 +789,13 @@ public static class EventValidator
         var scope = a.TryGetProperty("scope", out var sc) ? ParseScope(sc, "action.scope", regions) : Scope.Global;
         var scoreboard = !a.TryGetProperty("scoreboard", out var sb) || Bool(sb, ScoreboardRule);      // absent = true (D1)
         if (pools is not null) PoolsUsed(pools, spreadPool is null ? list : [.. list, UnitEntry.FromPool(spreadPool, 1)], null, null);
-        return new ApocalypseAction(faction, list, hotspots, roamers, hordes, goal, march, scope, scoreboard, bosses, pools);
+        return new ApocalypseAction(faction, list, hotspots, roamers, hordes, goal, march, scope, scoreboard, bosses, pools,
+            AllowTerritory: AllowsTerritory(a));
     }
+
+    /// <summary>An apocalypse-family action's `allowTerritory` (horde-pools D4): a bool, absent = false (D3).</summary>
+    static bool AllowsTerritory(JsonElement a) =>
+        a.TryGetProperty("allowTerritory", out var at) && Bool(at, "action.allowTerritory must be true or false");
 
     /// <summary>The draw per kill (undead-hordes D7): the 0.13.x `perKill` n (0-2) as n..n, or `perKillMin` 0-3 with
     /// `perKillMax` perKillMin-3; never both forms.</summary>

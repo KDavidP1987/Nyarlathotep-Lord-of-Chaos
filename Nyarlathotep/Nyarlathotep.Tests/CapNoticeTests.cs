@@ -3,7 +3,7 @@ using Nyarlathotep.Logic;
 namespace Nyarlathotep.Tests;
 
 /// <summary>undead-hordes D12: a cut by MaxUnitsPerWave or MaxTrackedUnits (a horde, a rise, a destination event's wave or
-/// a spread draw) is named by the cap that set it, in the admin's start reply, `event info` and one log line; a player's
+/// a spread draw; since horde-pools D1 a horde by MaxTrackedUnits only) is named by the cap that set it, in the admin's start reply, `event info` and one log line; a player's
 /// announcement never names a cfg key.</summary>
 public class CapNoticeTests
 {
@@ -19,22 +19,22 @@ public class CapNoticeTests
     [Fact]
     public void Cap_fails_when_a_cut_is_silent()
     {
-        // a horde rise: 60 asked, 50 a wave
+        // a horde rise: 60 asked, 50 tracked slots; a horde is never held by MaxUnitsPerWave (horde-pools D1)
         var d = BigHordes();
         var active = Apo.Active(d, T0);
         var run = Apo.Run(active);
-        var w = new ApoWorld(maxTracked: 500, maxPerWave: 50);
+        var w = new ApoWorld(maxTracked: 50, maxPerWave: 20);
         var rise = run.Rise(w, T0.AddMinutes(1), out _)!;
-        Assert.Equal(new CapCut(50, 60, "MaxUnitsPerWave", 50), rise.Cut);
+        Assert.Equal(new CapCut(50, 60, "MaxTrackedUnits", 50), rise.Cut);
         Assert.Equal(rise.Cut, active.LastCut);
-        Assert.Contains("capped: 50 of 60 by MaxUnitsPerWave 50; raise it in the cfg", EventLines.Info(d, active, T0.AddMinutes(1)));
-        Assert.Equal("apo capped: 50 of 60 by MaxUnitsPerWave 50", rise.Cut!.LogLine("apo"));
+        Assert.Contains("capped: 50 of 60 by MaxTrackedUnits 50; raise it in the cfg", EventLines.Info(d, active, T0.AddMinutes(1)));
+        Assert.Equal("apo capped: 50 of 60 by MaxTrackedUnits 50", rise.Cut!.LogLine("apo"));
 
         // the host logs the rise's cut once
-        var game = new ApoGame { Ledger = new SpawnLedger(new LedgerLimits(500, 50, 1000, 1000)), NativeRead = () => Natives() };
+        var game = new ApoGame { Ledger = new SpawnLedger(new LedgerLimits(50, 20, 1000, 1000)), NativeRead = () => Natives() };
         var (host, tick) = Host(game, BigHordes());
         tick(T0.AddMinutes(1));
-        Assert.Single(game.Logs, "apo capped: 50 of 60 by MaxUnitsPerWave 50");
+        Assert.Single(game.Logs, l => l.StartsWith("apo capped: ", StringComparison.Ordinal) && l.EndsWith(" of 60 by MaxTrackedUnits 50", StringComparison.Ordinal));
 
         // a spread draw cut by the free slots: every cut has its line
         var full = Apo.Run(Apo.Active(Apo.Def(), T0));
@@ -73,7 +73,8 @@ public class CapNoticeTests
         Assert.Contains("active.LastCut = cut;\n            Core.Log.LogInfo($\"[nyar] {cut.LogLine(id)}\");", waveAction);
 
         // the start: an apocalypse's largest horde and a destination event's first wave
-        Assert.Equal(new CapCut(50, 60, "MaxUnitsPerWave", 50), Precedence.StartCut(d, 50, 0, 500));
+        Assert.Equal(new CapCut(50, 60, "MaxTrackedUnits", 50), Precedence.StartCut(d, 20, 0, 50));
+        Assert.Null(Precedence.StartCut(d, 50, 0, 500));
         Assert.Equal(new CapCut(3, 5, "MaxUnitsPerWave", 3), Precedence.StartCut(Destination(), 3, 0, 500));
         Assert.Equal("event raid started; capped: 3 of 5 by MaxUnitsPerWave 3; raise it in the cfg",
             AdminLines.Started("raid", Precedence.StartCut(Destination(), 3, 0, 500)).Human);
@@ -112,7 +113,7 @@ public class CapNoticeTests
     [Fact]
     public void Cap_fails_when_a_cut_reaches_a_player()
     {
-        var game = new ApoGame { Ledger = new SpawnLedger(new LedgerLimits(500, 50, 1000, 1000)), NativeRead = () => Natives() };
+        var game = new ApoGame { Ledger = new SpawnLedger(new LedgerLimits(50, 20, 1000, 1000)), NativeRead = () => Natives() };
         var (_, tick) = Host(game, BigHordes());
         for (var s = 0; s <= 600; s += 5) tick(T0.AddMinutes(1).AddSeconds(s));
         Assert.Contains(game.Logs, l => l.Contains("capped:"));

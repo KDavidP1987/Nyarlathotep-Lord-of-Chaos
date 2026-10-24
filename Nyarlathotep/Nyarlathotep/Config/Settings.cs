@@ -76,9 +76,9 @@ internal static class Settings
             "Admin-scheduled or command-triggered wave spawns into chosen areas.");
 
         BindLimit(config, Limits.MaxTrackedUnits,
-            "Hard cap on mod-spawned units alive at once across all events. New spawns are skipped past this cap.");
+            "Hard cap on mod-spawned units alive at once across all events. New spawns are skipped past this cap. A horde (HordeMarch, Infestation, Apocalypse) is held by this cap alone.");
         BindLimit(config, Limits.MaxUnitsPerWave,
-            "Hard cap on units in a single wave, regardless of what an event definition requests.");
+            "Hard cap on units in a single wave, regardless of what an event definition requests. It does not hold a horde (HordeMarch, Infestation, Apocalypse).");
         BindLimit(config, Limits.MaxConcurrentEvents,
             "How many events (of any pillar) may be active at the same time.");
         BindLimit(config, Limits.MaxSpawnsPerTick,

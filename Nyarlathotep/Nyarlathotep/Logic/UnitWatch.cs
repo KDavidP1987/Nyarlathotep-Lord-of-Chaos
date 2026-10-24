@@ -973,7 +973,8 @@ public sealed class UnitWatchPhase
             var action = a.Definition.Action;
             // wave-variety D8: a pursuing unit lands anywhere outside claimed territory, its arena and scope lifted
             var scope = a.Pursuing ? Scope.Global : action?.Scope ?? a.Definition.Apocalypse?.Scope ?? Scope.Global;
-            var allowTerritory = !a.Pursuing && (action?.AllowTerritory ?? false);
+            // horde-pools D4: an apocalypse-family run's own switch, as a wave's
+            var allowTerritory = !a.Pursuing && (action?.AllowTerritory ?? a.Definition.Apocalypse?.AllowTerritory ?? false);
             var centre = a.Pursuing ? null : Arena.Centre(a);
             var radius = action?.Arena?.Radius ?? 0;
             bool Allowed(float x, float z) =>

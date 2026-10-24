@@ -27,7 +27,8 @@ Up to 1000 tracked units, once a load test on the local server proves it takes t
   only when nobody is within 100 m.
 - **Graveyards** are the hotspots of the faction's native NPCs (the apocalypse's hotspot pick).
 - **Hostility** is the game's own: nothing writes a unit's faction.
-- **Caps** stay modest by default (150 tracked, 20 a wave); a cut names the cfg key to raise: the admin's start
+- **Caps** stay modest by default (150 tracked, 20 a wave; since horde-pools 500 tracked, and a horde is held by
+  MaxTrackedUnits alone: docs/features/HORDE_POOLS.md); a cut names the cfg key to raise: the admin's start
   reply and `event info` say "capped: n of m by <key> <value>; raise it in the cfg", and the log has one line per cut.
 - **Wave destination.** A SpawnWaves action may carry `"destination": { "location": Point | Admin, "radius": 10-100,
   "name" }` and `"marchSpeed"` (0.5-5.0, default 2.0). Its own location must then be a Point or Admin, and fanOut,

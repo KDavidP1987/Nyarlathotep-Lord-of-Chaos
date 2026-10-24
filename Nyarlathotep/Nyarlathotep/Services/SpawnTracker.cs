@@ -71,6 +71,8 @@ internal static class SpawnTracker
             Settings.Limit(Limits.MaxUnitsPerWave),
             Settings.Limit(Limits.MaxSpawnsPerTick),
             Settings.Limit(Limits.MaxDespawnsPerTick)));
+        // horde-pools D2: the loaded caps, once at boot (an existing cfg keeps its written MaxTrackedUnits)
+        Core.Log.LogInfo($"[nyar] limits: {_ledger.Limits.Line}");
         _entities.Clear();
         _stateUnits.Clear();
         _regroup.Clear();

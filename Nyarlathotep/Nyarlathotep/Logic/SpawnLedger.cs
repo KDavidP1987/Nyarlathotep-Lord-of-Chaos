@@ -43,7 +43,11 @@ public sealed record SpawnOrder(long Ticket, string Prefab, string? EventId, flo
 public sealed record TrackedUnit(long Key, string Prefab, string? EventId, DateTime SpawnedUtc, int LifetimeSeconds, DateTime DueUtc, int Wave = 0);
 
 /// <summary>The limits the ledger enforces, read from the cfg (already clamped to their ceilings, D5).</summary>
-public sealed record LedgerLimits(int MaxTracked, int MaxPerWave, int SpawnsPerTick, int DespawnsPerTick);
+public sealed record LedgerLimits(int MaxTracked, int MaxPerWave, int SpawnsPerTick, int DespawnsPerTick)
+{
+    /// <summary>The boot log's limits line (horde-pools D2): the loaded caps by their cfg keys.</summary>
+    public string Line => $"MaxTrackedUnits {MaxTracked}, MaxUnitsPerWave {MaxPerWave}, MaxSpawnsPerTick {SpawnsPerTick}, MaxDespawnsPerTick {DespawnsPerTick}";
+}
 
 /// <summary>The outcome of a spawn request: how many units were queued, and the "skipped by &lt;cap&gt;" line when
 /// fewer than asked (D16, D22).</summary>
@@ -92,16 +96,17 @@ public sealed class SpawnLedger(LedgerLimits limits)
     public bool IsTracked(long key) => _tracked.ContainsKey(key);
     public TrackedUnit? Find(long key) => _tracked.TryGetValue(key, out var u) ? u : null;
 
-    /// <summary>Queues up to <paramref name="count"/> units, first clamped by MaxUnitsPerWave, then by the free
-    /// MaxTrackedUnits slots. <paramref name="place"/> gives the position of the i-th unit.</summary>
+    /// <summary>Queues up to <paramref name="count"/> units, first clamped by MaxUnitsPerWave (unless
+    /// <paramref name="waveCap"/> is false: the apocalypse family, horde-pools D1), then by the free MaxTrackedUnits slots.
+    /// <paramref name="place"/> gives the position of the i-th unit.</summary>
     public SpawnRequestResult Request(string prefab, string? eventId, int count, UnitLifetime life, UnitTuning tuning,
         Func<int, (float X, float Y, float Z)> place, (float X, float Y, float Z)? anchor = null, bool loot = false, HuntTag? hunt = null,
-        int wave = 0)
+        int wave = 0, bool waveCap = true)
     {
         if (count < 1) return new SpawnRequestResult(0, null);
         var n = count;
         string? skipped = null;
-        if (n > limits.MaxPerWave)
+        if (waveCap && n > limits.MaxPerWave)
         {
             skipped = $"skipped by MaxUnitsPerWave: {n - limits.MaxPerWave} of {count}";
             n = limits.MaxPerWave;

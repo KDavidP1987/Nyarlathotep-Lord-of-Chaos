@@ -1133,6 +1133,8 @@ public interface IApocalypseWorld
     IRandom Random { get; }
     /// <summary>The i-th of n spawn points on walkable ground within <paramref name="radius"/> m of (x, z).</summary>
     (float X, float Y, float Z) Place(float x, float z, float radius, int i, int n);
+    /// <summary>The point lies in claimed territory by the run's kept map (fail closed: true without one).</summary>
+    bool IsClaimed(string eventId, float x, float z);
     int GraceSeconds { get; }
     int DrainMarginSeconds { get; }
 }
@@ -1223,8 +1225,15 @@ public sealed class ApocalypseRun
         // Each unit hunts from its own position (Services/HuntAction, step 3): a roamer over the seed reach (100 m), a horde
         // unit over huntRange; the tag's centre names its group (SpawnTracker S-14).
         var hunt = new HuntTag(x, z, Apocalypse.HotspotOfWave(wave) is not null ? HuntingGrounds.SeedReach : Action.Roamers.HuntRange);
-        var r = w.Ledger.Request(unit.Prefab, Id, count, Life(w, utcNow), SpawnTuning.TuningFrom(unit.Modifiers), i => w.Place(x, z, radius, i, count),
-            hunt: hunt, wave: wave);
+        // horde-pools D3: while allowTerritory is off no unit is put down on claimed castle ground; the spots are placed for
+        // the free tracked slots only, so a full ledger costs no walk checks
+        var room = Math.Min(count, Math.Max(0, w.Ledger.Limits.MaxTracked - w.Ledger.Occupied));
+        var spots = Enumerable.Range(0, room).Select(i => w.Place(x, z, radius, i, room))
+            .Where(p => Action.AllowTerritory || !w.IsClaimed(Id, p.X, p.Z)).ToList();
+        if (spots.Count == 0) return 0;
+        // horde-pools D1: the family is held by the free tracked slots alone, never by MaxUnitsPerWave
+        var r = w.Ledger.Request(unit.Prefab, Id, spots.Count, Life(w, utcNow), SpawnTuning.TuningFrom(unit.Modifiers), i => spots[i],
+            hunt: hunt, wave: wave, waveCap: false);
         Tally.Add(r.Queued);
         if (r.Queued > 0) _pending[wave] = PendingOf(wave) + r.Queued;
         return r.Queued;
@@ -1347,16 +1356,16 @@ public sealed class ApocalypseRun
         {
             // undead-hordes D10: the entries' own counts and the bosses rolled once, each boss its own slot
             var bosses = HordeSchedule.MarchBosses(Action, w.Random);
-            units = HordeSchedule.MarchUnits(Action, bosses, w.Ledger.Limits.MaxPerWave, w.Ledger.Occupied, w.Ledger.Limits.MaxTracked, w.Random, log, out asked);
+            units = HordeSchedule.MarchUnits(Action, bosses, Precedence.NoWaveCap, w.Ledger.Occupied, w.Ledger.Limits.MaxTracked, w.Random, log, out asked);
             slots = bosses.Select(b => b.Prefab).ToList();
         }
         else
         {
             asked = HordeSchedule.Size(Action.Hordes, k) + (k == Action.Hordes.Count ? (Action.Bosses ?? []).Sum(b => b.Count) : 0);
-            units = HordeSchedule.Units(Action, k, w.Ledger.Limits.MaxPerWave, w.Ledger.Occupied, w.Ledger.Limits.MaxTracked, w.Random, log);
+            units = HordeSchedule.Units(Action, k, Precedence.NoWaveCap, w.Ledger.Occupied, w.Ledger.Limits.MaxTracked, w.Random, log);
             slots = units.Any(u => u.Entry > 0) ? (Action.Bosses ?? []).Select(b => b.Prefab).ToList() : [];
         }
-        var cut = Precedence.Cut(asked, w.Ledger.Limits.MaxPerWave, w.Ledger.Occupied, w.Ledger.Limits.MaxTracked);   // undead-hordes D12
+        var cut = Precedence.Cut(asked, Precedence.NoWaveCap, w.Ledger.Occupied, w.Ledger.Limits.MaxTracked);   // undead-hordes D12, horde-pools D1
         if (cut is not null) Active.LastCut = cut;
         var (queued, bossesQueued) = (0, 0);
         foreach (var (unit, entry) in units)

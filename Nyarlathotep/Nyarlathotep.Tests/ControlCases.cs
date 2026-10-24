@@ -38,9 +38,10 @@ public static class ControlCases
     public const string WaveVariety = "wave-variety";
     public const string LoginNotice = "login-notice";
     public const string UndeadHordes = "undead-hordes";
+    public const string HordePools = "horde-pools";
 
     /// <summary>The plans whose controls the table lists; each is copied to the test output under Resources/.</summary>
-    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm, HuntingGrounds, Revenge, Apocalypse, UnitWatch, WaveVariety, LoginNotice, UndeadHordes];
+    public static readonly string[] Plans = [EventLibrary, WalkableSpawns, RaphaelApiAdmin, Regions, EventSpawns, Automation, WaveSets, Swarm, HuntingGrounds, Revenge, Apocalypse, UnitWatch, WaveVariety, LoginNotice, UndeadHordes, HordePools];
 
     /// <summary>The controls that have no row yet, each with the step that builds it (event-spawns D22).</summary>
     public static readonly IReadOnlyList<PendingControl> Pending =
@@ -50,6 +51,10 @@ public static class ControlCases
         // unit-watch: step 5 the release
         new(UnitWatch, "D30", 5, "0.13.0"), new(UnitWatch, "D31", 5, "0.13.0"), new(UnitWatch, "D32", 5, "0.13.0"), new(UnitWatch, "D33", 5, "0.13.0"),
         // login-notice: step 3 the release
+        // horde-pools: step 2 the pool library, count and commands; step 3 in game; step 4 the release
+        new(HordePools, "D5", 2, "0.15.0"), new(HordePools, "D6", 2, "0.15.0"), new(HordePools, "D7", 2, "0.15.0"), new(HordePools, "D8", 2, "0.15.0"),
+        new(HordePools, "D9", 2, "0.15.0"), new(HordePools, "D11", 2, "0.15.0"), new(HordePools, "D12", 3, "0.15.0"),
+        new(HordePools, "D14", 4, "0.15.0"), new(HordePools, "D15", 4, "0.15.0"), new(HordePools, "D16", 4, "0.15.0"), new(HordePools, "D17", 4, "0.15.0"),
     ];
 
     static ControlRow T(string control, string name, string cls, string[] bad, string[] good, string[] empty) =>
@@ -72,7 +77,7 @@ public static class ControlCases
         "ApocalypseTests", "ApocalypseStateTests", "ApocalypseDependencyFailureTests", "UnitWatchTests",
         "UnitWatchDependencyFailureTests", "PoolTests", "PursuitTests", "FactionGroupsTests", "WaveVarietyDependencyFailureTests", "LoginNoticeTests",
         "CeilingTests", "DestinationTests", "SpreadTests", "CapNoticeTests", "LimitsTests", "ScaleTests", "CompatTests",
-        "InfestationTests", "HordeMarchTests", "SourceTests",
+        "InfestationTests", "HordeMarchTests", "SourceTests", "HordePoolsTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -1112,6 +1117,17 @@ public static class ControlCases
             ["a_template_copy"], ["an_apocalypse_shows_no_march_lines"]) with { Plan = UndeadHordes },
         T("D33", "Stall", "HordeMarchTests", ["an_infestation_or_a_horde_march_has_a_watched_wave"],
             ["an_apocalypse_watches_its_growth_slots_too"], ["a_quiet_unrisen_apocalypse_has_none"]) with { Plan = UndeadHordes },
+        // ---- horde-pools step 1 (steps 2-4 in Pending)
+        T("D1", "Caps", "HordePoolsTests", ["a_horde_is_held_by_the_wave_cap_or_passes_the_tracked_slots"],
+            ["a_horde_within_both_caps_uncut"], ["a_full_ledger_raises_no_horde"]) with { Plan = HordePools },
+        T("D2", "HordeDefaults", "LimitsTests", ["a_default_or_its_horde_sentence_differs"],
+            ["a_cfg_of_500_loads_as_written"], ["a_cfg_of_0_takes_the_minimum"]) with { Plan = HordePools },
+        T("D3", "TerritoryOff", "HordePoolsTests", ["a_castle_is_targeted_entered_or_started_in"],
+            ["a_march_with_no_castle_on_its_way"], ["no_claimed_ground_skips_nothing"]) with { Plan = HordePools },
+        T("D4", "TerritoryOn", "HordePoolsTests", ["a_castle_stays_closed_with_the_switch_on"],
+            ["a_claimed_hotspot_kept_with_the_switch_on"], ["an_unread_map_leaves_the_start_to_the_runs_own_map"]) with { Plan = HordePools },
+        T("D10", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit"],
+            ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = HordePools },
         // ---- undead-hordes step 4: the sessions in game
         C("D23", "DestinationScenario", "vrclient run scenarios/wave-destination.vrs",
             ["expect-calc units within 40 m of the mark fails when the wave arrives without its units",

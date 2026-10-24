@@ -132,4 +132,31 @@ public class LimitsTests
         Assert.Null(Reason(Apo.Event(action: Inf.Action())));
         Assert.Null(Reason(Apo.Event(action: Inf.March())));
     }
+
+    /// <summary>horde-pools D2: MaxTrackedUnits defaults to 500 and holds a horde alone; MaxUnitsPerWave stays 20 and does
+    /// not hold one; the boot log prints the loaded caps.</summary>
+    [Fact]
+    public void HordeDefaults_fails_when_a_default_or_its_horde_sentence_differs()
+    {
+        Assert.Equal((500, 1, 500), (Limits.MaxTrackedUnits.Default, Limits.MaxTrackedUnits.Min, Limits.MaxTrackedUnits.Max));
+        Assert.Equal(20, Limits.MaxUnitsPerWave.Default);
+        string Src(params string[] path) => File.ReadAllText(Path.Combine([ControlCaseTests.RepoRoot(), "Nyarlathotep", "Nyarlathotep", .. path])).Replace("\r\n", "\n");
+        var settings = Src("Config", "Settings.cs");
+        Assert.Contains("BindLimit(config, Limits.MaxTrackedUnits,\n            \"Hard cap on mod-spawned units alive at once across all events. New spawns are skipped past this cap. A horde (HordeMarch, Infestation, Apocalypse) is held by this cap alone.\");", settings);
+        Assert.Contains("BindLimit(config, Limits.MaxUnitsPerWave,\n            \"Hard cap on units in a single wave, regardless of what an event definition requests. It does not hold a horde (HordeMarch, Infestation, Apocalypse).\");", settings);
+        Assert.Contains("Core.Log.LogInfo($\"[nyar] limits: {_ledger.Limits.Line}\");", Src("Services", "SpawnTracker.cs"));
+        Assert.Equal("MaxTrackedUnits 500, MaxUnitsPerWave 20, MaxSpawnsPerTick 10, MaxDespawnsPerTick 5", new LedgerLimits(500, 20, 10, 5).Line);
+    }
+
+    [Fact]
+    public void HordeDefaults_passes_a_cfg_of_500_loads_as_written() =>
+        Assert.Equal((500, (string?)null), Limits.MaxTrackedUnits.Clamp(500));
+
+    [Fact]
+    public void HordeDefaults_empty_a_cfg_of_0_takes_the_minimum()
+    {
+        var (value, log) = Limits.MaxTrackedUnits.Clamp(0);
+        Assert.Equal(1, value);
+        Assert.NotNull(log);
+    }
 }

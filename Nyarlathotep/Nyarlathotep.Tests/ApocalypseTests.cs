@@ -77,6 +77,9 @@ sealed class ApoWorld(int maxTracked = 200, int maxPerWave = 50) : IApocalypseWo
     public int GraceSeconds => 60;
     public int DrainMarginSeconds => 120;
     public List<(float X, float Z, float Radius)> Placed { get; } = [];
+    /// <summary>Claimed ground for the run (horde-pools D3): none unless a test sets it.</summary>
+    public Func<float, float, bool> Claimed { get; set; } = (_, _) => false;
+    public bool IsClaimed(string eventId, float x, float z) => Claimed(x, z);
     long _key = 1000;
 
     public (float X, float Y, float Z) Place(float x, float z, float radius, int i, int n)
@@ -950,8 +953,12 @@ public partial class ApocalypseTests
         Assert.Equal(18, w.Ledger.Tracked);
         var big = Apo.Run(Apo.Active(Apo.Def(Apo.Action(hordes: Apo.Hordes(size: 50, growth: 20))), T0));
         var w2 = new ApoWorld(maxTracked: 500, maxPerWave: 30);
-        Assert.Equal(30, big.Rise(w2, T0.AddMinutes(1), out _)!.Queued);         // a horde never passes MaxUnitsPerWave
-        Assert.Equal(30 + 6, w2.Ledger.PendingSpawns);                           // and its rise tops up 3 roamers at each hotspot
+        Assert.Equal(50, big.Rise(w2, T0.AddMinutes(1), out _)!.Queued);         // horde-pools D1: a horde is not held by MaxUnitsPerWave
+        Assert.Equal(50 + 6, w2.Ledger.PendingSpawns);                           // and its rise tops up 3 roamers at each hotspot
+        var w3 = new ApoWorld(maxTracked: 40, maxPerWave: 30);
+        var held = Apo.Run(Apo.Active(Apo.Def(Apo.Action(hordes: Apo.Hordes(size: 50, growth: 20))), T0));
+        Assert.Equal(40, held.Rise(w3, T0.AddMinutes(1), out _)!.Queued);       // only by the free MaxTrackedUnits slots
+        Assert.True(w3.Ledger.Occupied <= 40);
         // one apocalypse at a time; it counts as a concurrent event; a second start of the same id gets 0.8.0's reply
         var engine = Engine(out _, Apo.Event(), Apo.Event("apo2"), Json.Event("raid"));
         Assert.Null(engine.Start("apo", "manual", T0, Open()));

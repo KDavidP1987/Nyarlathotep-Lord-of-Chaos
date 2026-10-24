@@ -246,9 +246,11 @@ internal static class HuntAction
         var candidates = players.Select(p => Candidate(p, map));
         var active = EventRuntime.Engine.Active.FirstOrDefault(a => a.Id == eventId);
         // apocalypse D3, D5: its units march and roam, so each seeds from its own position over its tag's range among the
-        // eligible players anywhere (RoamRule.Eligible), and is rehomed to its nearest seeded player
-        if (active?.Definition.Apocalypse is not null)
-            return new EventTargeting(candidates.Where(RoamRule.Eligible).ToList(), null, null, OwnPosition: true);
+        // eligible players anywhere (RoamRule.Eligible), and is rehomed to its nearest seeded player; with the run's
+        // allowTerritory on, a player in a castle is eligible too (horde-pools D4)
+        if (active?.Definition.Apocalypse is { } apocalypse)
+            return new EventTargeting((apocalypse.AllowTerritory ? candidates.Select(c => c with { InTerritory = false }) : candidates)
+                .Where(RoamRule.Eligible).ToList(), null, null, OwnPosition: true);
         var action = active?.Definition.Action;
         if (action is null) return new EventTargeting(candidates.ToList(), null, null);
         var focusOnly = WaveFacts.IsFocusOnly(active.Definition);

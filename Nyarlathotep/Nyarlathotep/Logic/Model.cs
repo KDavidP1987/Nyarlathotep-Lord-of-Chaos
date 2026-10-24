@@ -258,7 +258,8 @@ public sealed record HordeMarchSpec(HordeStart Start, ApocalypseRoamers Growth, 
 /// the key. Its rules are Logic/Apocalypse.cs. An Infestation (undead-hordes D8) holds its origins as the hotspots, its
 /// perOrigin as roamers.perHotspot, its spread block as the roamers' draw, max and minute limit, no hordes and
 /// <see cref="Infest"/>; a HordeMarch (D10) one horde of its units' counts, its destination as the goal and
-/// <see cref="March"/>.</summary>
+/// <see cref="March"/>. <see cref="AllowTerritory"/> (horde-pools D3, D4) lets the run target, move and spawn on claimed
+/// castle ground; off by default.</summary>
 public sealed record ApocalypseAction(
     string Faction,
     IReadOnlyList<UnitEntry> Units,
@@ -273,7 +274,8 @@ public sealed record ApocalypseAction(
     IReadOnlyDictionary<string, IReadOnlyList<string>>? Pools = null,
     ApocalypseMode Mode = ApocalypseMode.Apocalypse,
     InfestRule? Infest = null,
-    HordeMarchSpec? March = null)
+    HordeMarchSpec? March = null,
+    bool AllowTerritory = false)
 {
     /// <summary>The JSON type of the action: Apocalypse, Infestation or HordeMarch.</summary>
     public string Type => Mode.ToString();
