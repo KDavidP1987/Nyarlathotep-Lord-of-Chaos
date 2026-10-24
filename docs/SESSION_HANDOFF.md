@@ -17,8 +17,9 @@ pre-release with kdpen-Nyarlathotep-0.15.0.zip). All work is pushed (main = orig
   pools.json with 17 pools", events 2 valid, templates 36/36, triggers all available, no Nyarlathotep warning or error.
   Other mods' notices only (Bloodcraft startup check and an Il2CppInterop NullReferenceException at type registration,
   KindredCommands "Missing NetTopologySuite.dll").
-  - **Its cfg still reads MaxTrackedUnits 150** (a cfg keeps its old value), so hordes there stop at 150 until the
-    owner raises `[Limits] MaxTrackedUnits` in BepInEx/config/kdpen.Nyarlathotep.cfg.
+  - **MaxTrackedUnits raised 150 -> 500** in BepInEx/config/kdpen.Nyarlathotep.cfg at the owner's request (server
+    stopped by the owner; only that line changed, read back equal; the old file is in the session scratchpad).
+    MaxUnitsPerWave stays 20 (SpawnWaves only).
   - The FTP login is in 1Password (Dev, "G-Portal FTP"). It appeared in plain text in chat: the owner was advised to
     rotate it.
 - **Local dev server:** stopped, on the 0.15.0 DLL; cfg still MaxTrackedUnits 500 and MaxUnitsPerWave 500 for the
