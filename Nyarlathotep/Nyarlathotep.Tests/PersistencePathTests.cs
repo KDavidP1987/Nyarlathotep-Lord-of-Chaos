@@ -10,9 +10,9 @@ public class PersistencePathTests
     static bool NoReparse(string _) => false;
 
     [Fact]
-    public void Exactly_the_four_data_files_and_their_siblings_resolve()
+    public void Exactly_the_five_data_files_and_their_siblings_resolve()
     {
-        var expected = new[] { "events", "zones", "state", "stats" }
+        var expected = new[] { "events", "zones", "state", "stats", "pools" }      // horde-pools D5: pools.json
             .SelectMany(n => new[] { $"{n}.json", $"{n}.json.bak", $"{n}.json.tmp", $"{n}.json.corrupt" })
             .OrderBy(n => n, StringComparer.Ordinal);
         Assert.Equal(expected, DataPaths.AllNames.OrderBy(n => n, StringComparer.Ordinal));

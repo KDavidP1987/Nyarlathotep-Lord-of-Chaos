@@ -389,16 +389,22 @@ public static class CommandArgs
     /// <summary>The token of a pool in a units list or a boss roll: `pool:&lt;name&gt;:…` (wave-variety D10).</summary>
     public const string PoolToken = "pool:";
 
-    /// <summary>A `pool:&lt;name&gt;:&lt;count&gt;` token of a units list (wave-variety D10): count 1 to MaxUnitsPerWave's ceiling; null when
-    /// <paramref name="part"/> is no pool token, else the entry or the refusal.</summary>
+    /// <summary>A `pool:&lt;name&gt;:&lt;count&gt;` token of a units list (wave-variety D10), or `pool:&lt;name&gt;:&lt;min&gt;-&lt;max&gt;`
+    /// (horde-pools D7): counts 1 to MaxUnitsPerWave's ceiling, min at most max; null when <paramref name="part"/> is no pool
+    /// token, else the entry or the refusal. Whether the action counts its entries is the validator's, on reload.</summary>
     static Arg<object>? PoolEntry(string field, string part, string rule)
     {
         if (!part.StartsWith(PoolToken, StringComparison.Ordinal)) return null;
         var bits = part.Split(':');
         if (bits.Length != 3) return Arg<object>.Bad(rule);
         if (!EventValidator.IsPoolName(bits[1])) return Arg<object>.Bad(EventValidator.NoPool(field, bits[1]));
-        return int.TryParse(bits[2], NumberStyles.None, CultureInfo.InvariantCulture, out var count) && count >= 1 && count <= Limits.MaxUnitsPerWave.Max
-            ? Arg<object>.Of(UnitEntry.FromPool(bits[1], count)) : Arg<object>.Bad(rule);
+        static bool Count(string text, out int n) =>
+            int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out n) && n >= 1 && n <= Limits.MaxUnitsPerWave.Max;
+        var range = bits[2].Split('-');
+        if (range.Length == 2)
+            return Count(range[0], out var min) && Count(range[1], out var max) && min <= max
+                ? Arg<object>.Of(UnitEntry.FromPool(bits[1], max) with { Min = min }) : Arg<object>.Bad(rule);
+        return Count(bits[2], out var count) ? Arg<object>.Of(UnitEntry.FromPool(bits[1], count)) : Arg<object>.Bad(rule);
     }
 
     /// <summary>`action.pursuit`'s value (wave-variety D10): afterSeconds 15-600, or none.</summary>

@@ -63,6 +63,10 @@ public sealed record Conditions(
 /// decision, so everything after the roll sees prefab entries only.</summary>
 public sealed record UnitEntry(string Prefab, int Count, double Chance = 1.0, SpawnModifiers? Modifiers = null, string? Pool = null)
 {
+    /// <summary>A counted pool entry's least count (horde-pools D7): each draw rolls min..<see cref="Count"/>, so
+    /// <see cref="Count"/> is the most it draws and every size check reads it; null for a fixed count.</summary>
+    public int? Min { get; init; }
+
     /// <summary>A pool entry of <paramref name="count"/> draws from <paramref name="pool"/>.</summary>
     public static UnitEntry FromPool(string pool, int count, double chance = 1.0, SpawnModifiers? modifiers = null) =>
         new("", count, chance, modifiers, pool);
@@ -171,6 +175,10 @@ public sealed record SpawnWavesAction(
     /// <summary>The units of wave <paramref name="wave"/> (1-based): its waveList entry's, or <see cref="Units"/> for
     /// every wave of the units form.</summary>
     public IReadOnlyList<UnitEntry> UnitsOf(int wave) => WaveList is { } list ? list[Math.Clamp(wave, 1, list.Count) - 1].Units : Units;
+
+    /// <summary>The names in <see cref="Pools"/> that came from the server's pool library, not the action's own `pools`
+    /// (horde-pools D6); null when none did.</summary>
+    public IReadOnlyList<string>? Linked { get; init; }
 }
 
 /// <summary>Where a destination event's waves march (undead-hordes D5): from the action's location at MarchSpeed m/s to
@@ -279,6 +287,9 @@ public sealed record ApocalypseAction(
 {
     /// <summary>The JSON type of the action: Apocalypse, Infestation or HordeMarch.</summary>
     public string Type => Mode.ToString();
+
+    /// <summary>The names in <see cref="Pools"/> that came from the server's pool library (horde-pools D6); null when none did.</summary>
+    public IReadOnlyList<string>? Linked { get; init; }
 }
 
 public sealed record Announce(IReadOnlyList<string> Start, IReadOnlyList<string> End, bool Warnings)

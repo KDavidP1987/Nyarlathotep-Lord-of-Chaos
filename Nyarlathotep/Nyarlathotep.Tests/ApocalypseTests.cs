@@ -735,7 +735,7 @@ public partial class ApocalypseTests
 
     // ---- D12 Resume
 
-    static ApocalypseRecord Record(string id = "apo", int risen = 1, IReadOnlyList<(int Horde, float X, float Z, int Living, (string Prefab, int Living)[] Bosses)>? fronts = null,
+    internal static ApocalypseRecord Record(string id = "apo", int risen = 1, IReadOnlyList<(int Horde, float X, float Z, int Living, (string Prefab, int Living)[] Bosses)>? fronts = null,
         int[]? roamers = null, DateTime? started = null, DateTime? ends = null, (float X, float Y, float Z)? goal = null)
     {
         var r = new ApocalypseRecord

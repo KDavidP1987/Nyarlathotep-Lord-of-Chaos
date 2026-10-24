@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.IO;
 using System.Reflection;
 using Nyarlathotep.Logic;
@@ -17,12 +18,16 @@ internal static class EventStore
 
     internal static EventCatalog Catalog { get; } = new();
 
+    /// <summary>pools.json (horde-pools D5): loaded before the definitions, which may name its pools (D6).</summary>
+    internal static PoolLibrary Library { get; } = new();
+
     /// <summary>Second in Core.TryInitialize, after Persistence. Never throws.</summary>
     internal static void Initialize()
     {
         try
         {
             if (!Persistence.Events.Exists()) Seed();
+            LoadLibrary();
             // The boot load is the operator's file, so it runs as Operator (D10). It skips Reload's region retry:
             // RegionMap has just been built (regions D7), and only `.nyar event reload` retries it.
             Gateway.Run(ActionKind.LoadDefinitions, Actor.Operator, () => Editor.Reload(new PrefabUnitCatalog()));   // logs its outcome
@@ -32,6 +37,32 @@ internal static class EventStore
             // No definitions is a safe state: nothing can start. The admin reloads once the cause is fixed.
             Core.Log.LogError($"[nyar] events.json load failed: {ex.Message}; no events loaded");
         }
+    }
+
+    /// <summary>Seeds pools.json when it is missing and loads it; a failure leaves an empty library (horde-pools D5).</summary>
+    static int LoadLibrary()
+    {
+        try
+        {
+            return Library.Load(Persistence.Store, new PrefabUnitCatalog(), line => Core.Log.LogInfo($"[nyar] {line}"),
+                line => Core.Log.LogWarning($"[nyar] {line}"));
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[nyar] pools.json load failed: {ex.Message}; no library pools");
+            return 0;
+        }
+    }
+
+    /// <summary>`.nyar pool reload` (horde-pools D8): re-reads pools.json, then reloads events.json against it, and names
+    /// every event invalid now.</summary>
+    [Mutating]
+    internal static string ReloadPools()
+    {
+        var loaded = LoadLibrary();
+        var events = Reload();
+        var invalid = Catalog.Current.All.Where(d => d.DisabledReason is not null).Select(d => d.Id).ToList();
+        return PoolLines.Reload(loaded, Library.Error, invalid, events.Ok ? null : events.Human);
     }
 
     /// <summary>The load and edit flows (Logic/DefinitionEditor) over the disk and the game's unit catalog.</summary>
@@ -95,8 +126,10 @@ internal static class EventStore
     /// <summary>Unit names from PrefabCollectionSystem; denied are the name-based do-not-spawn list plus prefabs
     /// carrying DropInInventoryOnSpawn (docs/GAME_ASSETS.md › Do-not-spawn list). Faction names are the Faction_* prefab
     /// names of the prefab map, read once (faction-empowerment D1). Regions are RegionMap's index (regions D3, D7).</summary>
-    internal sealed class PrefabUnitCatalog : IUnitCatalog, IFactionCatalog, IRegionCatalog
+    internal sealed class PrefabUnitCatalog : IUnitCatalog, IFactionCatalog, IRegionCatalog, IPoolLibrary
     {
+        public IReadOnlyDictionary<string, IReadOnlyList<string>> LibraryPools => Library.LibraryPools;    // horde-pools D6
+
         public bool Available => RegionMap.State.Available;
         public bool OnMap(string region) => RegionMap.State.OnMap(region);
         public string RegionOf(float x, float z) => RegionMap.State.RegionOf(x, z);

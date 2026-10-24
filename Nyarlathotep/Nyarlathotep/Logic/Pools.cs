@@ -50,7 +50,7 @@ public static class Pools
 
     /// <summary>Rolls wave <paramref name="wave"/>: fixed bosses in list order, then each boss roll's count drawn uniformly
     /// in min..max and that many distinct prefabs of its pool the wave does not already hold (fewer when the pool runs
-    /// out), then the wave's own entries in order, each pool entry drawing its count uniformly from its pool with repeats.
+    /// out), then the wave's own entries in order, each pool entry drawing its count (rolled in min..max for a range, horde-pools D7) uniformly from its pool with repeats.
     /// A boss without modifiers takes the wave's shared ones: the action's for the units form, the wave's
     /// first entry's for a waveList or a growth wave (revenge D29).</summary>
     public static WaveDraw Resolve(SpawnWavesAction action, int wave, IRandom rng)
@@ -85,11 +85,16 @@ public static class Pools
             }
             rolled = true;
             var members = Members(action, pool);
-            for (var i = 0; i < u.Count && members.Count > 0; i++)
+            var count = Roll(u, rng);                                                      // horde-pools D7
+            for (var i = 0; i < count && members.Count > 0; i++)
                 units.Add(new UnitEntry(members[Index(rng, members.Count)], 1, u.Chance, u.Modifiers));
         }
         return new WaveDraw(units, bosses.Sum(b => b.Count), rolled, bosses);
     }
+
+    /// <summary>The count one draw of <paramref name="entry"/> takes (horde-pools D7): uniformly in min..max for an entry with
+    /// a range, drawing one random number, else its count, drawing none.</summary>
+    public static int Roll(UnitEntry entry, IRandom rng) => entry.Min is { } min ? min + Index(rng, entry.Count - min + 1) : entry.Count;
 
     /// <summary>A uniform index in 0..<paramref name="n"/>−1.</summary>
     internal static int Index(IRandom rng, int n) => Math.Min(n - 1, (int)(rng.NextDouble() * n));

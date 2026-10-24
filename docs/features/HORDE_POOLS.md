@@ -1,8 +1,8 @@
 # Horde pools — full-size hordes, the castle switch, a library of faction pools
 
-**Status:** in build (docs/dod/horde-pools.md, audit docs/audits/horde-pools.md; design §9 D65, Epic A49). Step 1
-(caps and the castle switch) is built; step 2 (the pool library, random counts and `.nyar pool`) and the in-game
-session follow.
+**Status:** in build (docs/dod/horde-pools.md, audit docs/audits/horde-pools.md; design §9 D65, Epic A49). Steps 1
+(caps and the castle switch) and 2 (the pool library, random counts and `.nyar pool`) are built; the in-game
+session and the release follow.
 
 ## Goal
 
@@ -52,3 +52,6 @@ The owner asked for three things (2026-10-24):
 
 - **Step 1 (Logic and Services, no in-game run):** `dotnet test` Passed! 4058/4058; HordePoolsTests Caps, TerritoryOff and
   TerritoryOn, LimitsTests HordeDefaults; planted faults red and restored (the plan's Log).
+- **Step 2 (Logic, Services and the pool commands, no in-game run):** `dotnet test` Passed! 4076/4076; PoolLibraryTests
+  File, Resolve and Count, PoolCommandTests, ContractDocTests HordePools, PrivacyTests HordePools; six planted faults red
+  and restored (the plan's Log).

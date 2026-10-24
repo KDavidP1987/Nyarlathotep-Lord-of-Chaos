@@ -59,6 +59,7 @@
 		<None Include="..\..\docs\NYARLATHOTEP_DESIGN.md" Link="Resources\NYARLATHOTEP_DESIGN.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\GAME_ASSETS.md" Link="Resources\GAME_ASSETS.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\docs\RAPHAEL_HANDOFF_API4.md" Link="Resources\RAPHAEL_HANDOFF_API4.md" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\..\docs\RAPHAEL_HANDOFF_HORDE_POOLS.md" Link="Resources\RAPHAEL_HANDOFF_HORDE_POOLS.md" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="Fixtures\human-replies-*.txt" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="Fixtures\region-index-size.txt" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>

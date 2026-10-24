@@ -632,7 +632,7 @@ public static class HordeSchedule
     {
         var regular = new List<UnitEntry>();
         foreach (var e in action.Units)
-            for (var i = 0; i < e.Count; i++)
+            for (int i = 0, n = Pools.Roll(e, rng); i < n; i++)                           // horde-pools D7: a range rolls its count
             {
                 if (e.Chance < 1.0 && rng.NextDouble() >= e.Chance) continue;
                 var prefab = e.Pool is { } pool && action.Pools?.GetValueOrDefault(pool) is { Count: > 0 } members ? members[Pools.Index(rng, members.Count)] : e.Prefab;

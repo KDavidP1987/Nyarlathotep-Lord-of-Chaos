@@ -51,9 +51,8 @@ public static class ControlCases
         // unit-watch: step 5 the release
         new(UnitWatch, "D30", 5, "0.13.0"), new(UnitWatch, "D31", 5, "0.13.0"), new(UnitWatch, "D32", 5, "0.13.0"), new(UnitWatch, "D33", 5, "0.13.0"),
         // login-notice: step 3 the release
-        // horde-pools: step 2 the pool library, count and commands; step 3 in game; step 4 the release
-        new(HordePools, "D5", 2, "0.15.0"), new(HordePools, "D6", 2, "0.15.0"), new(HordePools, "D7", 2, "0.15.0"), new(HordePools, "D8", 2, "0.15.0"),
-        new(HordePools, "D9", 2, "0.15.0"), new(HordePools, "D11", 2, "0.15.0"), new(HordePools, "D12", 3, "0.15.0"),
+        // horde-pools: step 3 in game; step 4 the release
+        new(HordePools, "D12", 3, "0.15.0"),
         new(HordePools, "D14", 4, "0.15.0"), new(HordePools, "D15", 4, "0.15.0"), new(HordePools, "D16", 4, "0.15.0"), new(HordePools, "D17", 4, "0.15.0"),
     ];
 
@@ -77,7 +76,7 @@ public static class ControlCases
         "ApocalypseTests", "ApocalypseStateTests", "ApocalypseDependencyFailureTests", "UnitWatchTests",
         "UnitWatchDependencyFailureTests", "PoolTests", "PursuitTests", "FactionGroupsTests", "WaveVarietyDependencyFailureTests", "LoginNoticeTests",
         "CeilingTests", "DestinationTests", "SpreadTests", "CapNoticeTests", "LimitsTests", "ScaleTests", "CompatTests",
-        "InfestationTests", "HordeMarchTests", "SourceTests", "HordePoolsTests",
+        "InfestationTests", "HordeMarchTests", "SourceTests", "HordePoolsTests", "PoolLibraryTests", "PoolCommandTests",
     ];
 
     /// <summary>The existing classes that gain the plans' cases; their earlier methods keep their names.</summary>
@@ -1117,7 +1116,7 @@ public static class ControlCases
             ["a_template_copy"], ["an_apocalypse_shows_no_march_lines"]) with { Plan = UndeadHordes },
         T("D33", "Stall", "HordeMarchTests", ["an_infestation_or_a_horde_march_has_a_watched_wave"],
             ["an_apocalypse_watches_its_growth_slots_too"], ["a_quiet_unrisen_apocalypse_has_none"]) with { Plan = UndeadHordes },
-        // ---- horde-pools step 1 (steps 2-4 in Pending)
+        // ---- horde-pools steps 1 and 2 (steps 3-4 in Pending)
         T("D1", "Caps", "HordePoolsTests", ["a_horde_is_held_by_the_wave_cap_or_passes_the_tracked_slots"],
             ["a_horde_within_both_caps_uncut"], ["a_full_ledger_raises_no_horde"]) with { Plan = HordePools },
         T("D2", "HordeDefaults", "LimitsTests", ["a_default_or_its_horde_sentence_differs"],
@@ -1128,6 +1127,18 @@ public static class ControlCases
             ["a_claimed_hotspot_kept_with_the_switch_on"], ["an_unread_map_leaves_the_start_to_the_runs_own_map"]) with { Plan = HordePools },
         T("D10", "ControlCases", "ControlCaseTests", ["table_breaks_a_rule", "pending_key_has_a_row", "pending_after_its_post_audit"],
             ["plan_and_table_agree"], ["plan_without_controls"]) with { Plan = HordePools },
+        T("D5", "File", "PoolLibraryTests", ["the_seed_or_a_load_breaks_the_file_rules"],
+            ["an_edited_library_loads_and_reloads_unchanged"], ["a_member_unknown_here_is_left_out_of_the_seed"]) with { Plan = HordePools },
+        T("D6", "Resolve", "PoolLibraryTests", ["a_library_pool_beats_an_own_pool_or_escapes_a_check"],
+            ["every_template_validates_and_draws_as_before"], ["no_library_leaves_the_events_as_they_were"]) with { Plan = HordePools },
+        T("D7", "Count", "PoolLibraryTests", ["a_range_is_refused_misread_or_drawn_outside_its_bounds"],
+            ["a_fixed_count_draws_as_before"], ["a_one_value_range_draws_exactly_it"]) with { Plan = HordePools },
+        T("D8", "PoolCommands", "PoolCommandTests", ["a_reply_overflows_a_non_admin_is_answered_or_an_event_goes_unnamed"],
+            ["list_and_info_show_the_library"], ["no_library_and_unknown_names_answer_plainly"]) with { Plan = HordePools },
+        T("D9", "HordePools", "ContractDocTests", ["the_api_changes_a_push_kind_is_added_or_a_sentence_is_missing"],
+            ["api_8_the_sentences_and_the_handoff"], ["contract_and_handoff"]) with { Plan = HordePools },
+        T("D11", "HordePools", "PrivacyTests", ["a_name_id_or_position_reaches_a_line"],
+            ["pool_names_units_and_event_ids_only"], ["no_library_no_pool_line"]) with { Plan = HordePools },
         // ---- undead-hordes step 4: the sessions in game
         C("D23", "DestinationScenario", "vrclient run scenarios/wave-destination.vrs",
             ["expect-calc units within 40 m of the mark fails when the wave arrives without its units",

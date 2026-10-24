@@ -127,6 +127,7 @@ it. **Who:** *anyone*, or *admin* (VCF `adminOnly`, Epic D5). **Child:** the chi
 | `.nyar pillar list` | admin | The five pillar switches, on or off | event-library |
 | `.nyar pillar <name> on\|off` | admin | Switch a pillar and save it to the cfg; off ends that pillar's running events | event-library |
 | `.nyar event reload` | admin | Re-read events.json | foundation |
+| `.nyar pool list [page]\|info <pool> [page]\|reload` | admin | The pool library of pools.json: its pools, one pool's members and the events that name it; reload re-reads it and names every event invalid now | horde-pools |
 | `.nyar spawn <unit> [count] [level] [hp×] [power×]` | admin | One-off test spawn through the full pipeline | foundation |
 | `.nyar purge [confirm]` | admin | Kill switch: end everything, despawn all tracked units (two-step) | foundation |
 | `.nyar debug here` | admin | Faction, territory, zone and nearest boss at your position | foundation |

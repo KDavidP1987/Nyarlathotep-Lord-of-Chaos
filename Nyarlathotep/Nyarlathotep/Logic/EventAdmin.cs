@@ -161,7 +161,8 @@ public static class EventsEditor
         string[] list => new JsonArray(list.Select(x => (JsonNode?)JsonValue.Create(x)).ToArray()),
         int[] ints => new JsonArray(ints.Select(x => (JsonNode?)JsonValue.Create(x)).ToArray()),            // revenge D11: trigger.warnAt
         UnitEntry[] units => new JsonArray(units.Select(u => (JsonNode?)(u.Pool is { } pool
-            ? new JsonObject { ["pool"] = pool, ["count"] = u.Count }                                       // wave-variety D10
+            ? u.Min is { } min ? new JsonObject { ["pool"] = pool, ["min"] = min, ["max"] = u.Count }      // horde-pools D7
+            : new JsonObject { ["pool"] = pool, ["count"] = u.Count }                                       // wave-variety D10
             : new JsonObject { ["prefab"] = u.Prefab, ["count"] = u.Count })).ToArray()),
         BossRoll[] bosses => new JsonArray(bosses.Select(b => (JsonNode?)BossNode(b)).ToArray()),
         PursuitArg p => new JsonObject { ["afterSeconds"] = p.AfterSeconds },
@@ -943,7 +944,7 @@ public static class EventLines
     /// "pursuit: after &lt;s&gt; s with no player within &lt;r&gt; m".</summary>
     public static IEnumerable<string> WaveVarietyLines(SpawnWavesAction a)
     {
-        foreach (var line in PoolLines(a.Pools)) yield return line;
+        foreach (var line in PoolLines(a.Pools, a.Linked)) yield return line;
         for (var n = 1; n <= (a.WaveList?.Count ?? 0); n++)
             if (a.WaveList![n - 1].Bosses is { Count: > 0 } own)
                 foreach (var line in PackList($"wave {n} adds: ", own.Select(BossText).ToList())) yield return line;
@@ -960,10 +961,11 @@ public static class EventLines
     }
 
     /// <summary>"pools: &lt;name&gt; (&lt;k&gt; units): &lt;prefab&gt;, …" per pool, a long pool wrapping onto further lines.</summary>
-    static IEnumerable<string> PoolLines(IReadOnlyDictionary<string, IReadOnlyList<string>>? pools)
+    static IEnumerable<string> PoolLines(IReadOnlyDictionary<string, IReadOnlyList<string>>? pools, IReadOnlyList<string>? linked)
     {
         foreach (var (name, members) in pools ?? new Dictionary<string, IReadOnlyList<string>>())
-            foreach (var line in PackList($"pools: {name} ({members.Count} units): ", members)) yield return line;
+            foreach (var line in PackList($"pools: {name} ({(linked?.Contains(name) == true ? "library, " : "")}{members.Count} units): ", members))   // horde-pools D6
+                yield return line;
     }
 
     /// <summary>"+&lt;n&gt; per kill" for a fixed draw, "+&lt;min&gt;-&lt;max&gt; per kill" for a range, " from &lt;pool&gt;" with a
@@ -1000,7 +1002,7 @@ public static class EventLines
         if (a.Infest is { } i) yield return $"hunters: {i.Hunters} %, drift radius {i.DriftRadius} m";
         yield return $"spread: {SpreadText(a.Roamers)}";
         foreach (var line in PackList("units: ", a.Units.Select(EntryText).ToList())) yield return line;
-        foreach (var line in PoolLines(a.Pools)) yield return line;
+        foreach (var line in PoolLines(a.Pools, a.Linked)) yield return line;
         yield return $"scoreboard: {(a.Scoreboard ? "on" : "off")}";
     }
 
@@ -1015,7 +1017,7 @@ public static class EventLines
         yield return $"growth: {SpreadText(m.Growth)}";
         yield return $"infest: hunters {m.Infest.Hunters} %, drift radius {m.Infest.DriftRadius} m, spread {SpreadText(m.InfestSpread)}";
         foreach (var line in PackList($"horde of {a.Units.Sum(u => u.Count)}: ", a.Units.Select(EntryText).ToList())) yield return line;
-        foreach (var line in PoolLines(a.Pools)) yield return line;
+        foreach (var line in PoolLines(a.Pools, a.Linked)) yield return line;
         if (m.Bosses is { Count: > 0 } bosses)
         {
             var full = "horde adds: " + string.Join(", ", bosses.Select(BossText));
@@ -1037,7 +1039,7 @@ public static class EventLines
               (a.Goal.Location.Y is { } h ? FormattableString.Invariant($" height {h:0.#}") : "");
         yield return $"goal: {a.Goal.Name}, radius {a.Goal.Radius}, {at}";
         foreach (var line in PackList("units: ", a.Units.Select(EntryText).ToList())) yield return line;
-        foreach (var line in PoolLines(a.Pools)) yield return line;
+        foreach (var line in PoolLines(a.Pools, a.Linked)) yield return line;
         if (a.Bosses is { Count: > 0 } bosses)
         {
             var full = "last horde adds: " + string.Join(", ", bosses.Select(b => $"{b.Prefab} x{b.Count}"));
@@ -1108,7 +1110,9 @@ public static class EventLines
     /// (wave-sets D15).</summary>
     public static string EntryText(UnitEntry u)
     {
-        var b = new StringBuilder(u.Pool is { } pool ? $"{u.Count} from {pool}" : $"{u.Prefab} ×{u.Count}");      // wave-variety D6
+        var b = new StringBuilder(u.Pool is { } pool
+            ? u.Min is { } min ? $"pool {pool} ×{min}-{u.Count}" : $"{u.Count} from {pool}"                  // horde-pools D7, wave-variety D6
+            : $"{u.Prefab} ×{u.Count}");
         if (u.Modifiers is { } m)
         {
             if (m.Level is { } lv) b.Append(FormattableString.Invariant($" L{lv}"));

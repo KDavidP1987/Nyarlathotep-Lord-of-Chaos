@@ -107,6 +107,35 @@ public static class FactionGroups
         ]),
     ];
 
+    /// <summary>The V Bloods of <see cref="All"/> (horde-pools D5): the bosses half of each group's seeded pools, compiled
+    /// because Reference Data is not on a server; PoolLibraryTests compares it with unit_index.tsv's V Blood flag. No
+    /// bandit V Blood is in its allied group, so the seed has no bandits-bosses.</summary>
+    public static readonly IReadOnlySet<string> Bosses = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "CHAR_Undead_BishopOfDeath_VBlood", "CHAR_Undead_ArenaChampion_VBlood", "CHAR_Undead_BishopOfShadows_VBlood",
+        "CHAR_Undead_Infiltrator_VBlood", "CHAR_Undead_Leader_Vblood", "CHAR_Undead_Priest_VBlood", "CHAR_Undead_ZealousCultist_VBlood",
+        "CHAR_Spider_Queen_VBlood",
+        "CHAR_Militia_Leader_VBlood", "CHAR_ChurchOfLight_Sommelier_VBlood", "CHAR_Militia_BishopOfDunley_VBlood",
+        "CHAR_Militia_Glassblower_VBlood", "CHAR_Militia_Guard_VBlood", "CHAR_Militia_HoundMaster_VBlood", "CHAR_Militia_Hound_VBlood",
+        "CHAR_Militia_Longbowman_LightArrow_Vblood", "CHAR_Militia_Nun_VBlood", "CHAR_Militia_Scribe_VBlood",
+        "CHAR_ChurchOfLight_Paladin_VBlood", "CHAR_ChurchOfLight_Overseer_VBlood", "CHAR_ChurchOfLight_Cardinal_VBlood",
+        "CHAR_Militia_Fabian_VBlood", "CHAR_Villager_Tailor_VBlood",
+        "CHAR_Vampire_BloodKnight_VBlood", "CHAR_BatVampire_VBlood", "CHAR_Vampire_HighLord_VBlood", "CHAR_Vampire_IceRanger_VBlood",
+        "CHAR_Gloomrot_Voltage_VBlood", "CHAR_Gloomrot_Iva_VBlood", "CHAR_Gloomrot_Purifier_VBlood", "CHAR_Gloomrot_RailgunSergeant_VBlood",
+        "CHAR_Gloomrot_TheProfessor_VBlood",
+        "CHAR_Cursed_Witch_VBlood", "CHAR_Cursed_MountainBeast_VBlood", "CHAR_Cursed_ToadKing_VBlood", "CHAR_Undead_CursedSmith_VBlood",
+        "CHAR_Villager_CursedWanderer_VBlood", "CHAR_Winter_Yeti_VBlood",
+        "CHAR_Blackfang_CarverBoss_VBlood", "CHAR_Blackfang_Lucie_VBlood", "CHAR_Blackfang_Valyr_VBlood",
+    };
+
+    /// <summary>The names of the groups whose members <paramref name="members"/> holds, in the table's order (a pool of
+    /// the library "mixes groups" when there are two or more, horde-pools D5).</summary>
+    public static IReadOnlyList<string> GroupsOf(IEnumerable<string> members)
+    {
+        var list = members.ToList();
+        return All.Where(g => list.Any(g.Holds)).Select(g => g.Name).ToList();
+    }
+
     /// <summary>The groups <paramref name="prefab"/> belongs to (one for a checked unit, none for an unchecked one).</summary>
     public static IReadOnlyList<FactionGroup> Of(string prefab) => All.Where(g => g.Holds(prefab)).ToList();
 

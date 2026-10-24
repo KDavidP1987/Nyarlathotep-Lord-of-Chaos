@@ -103,11 +103,15 @@ public static class EventValidator
 
     /// <summary>Parses events.json. <paramref name="factions"/> checks Empower factions; when null, a unit catalog that
     /// is also an <see cref="IFactionCatalog"/> serves, otherwise no faction is known. <paramref name="regions"/> checks
-    /// scopes the same way (regions D3, D7): when none is known, a regional scope disables its definition.</summary>
-    public static LoadResult Parse(string text, IUnitCatalog units, IFactionCatalog? factions = null, IRegionCatalog? regions = null)
+    /// scopes the same way (regions D3, D7): when none is known, a regional scope disables its definition. <paramref name="library"/>
+    /// holds the pools an event may name beside its own (horde-pools D6); when null, a unit catalog that is also an
+    /// <see cref="IPoolLibrary"/> serves, otherwise there is none.</summary>
+    public static LoadResult Parse(string text, IUnitCatalog units, IFactionCatalog? factions = null, IRegionCatalog? regions = null,
+        IPoolLibrary? library = null)
     {
         factions ??= units as IFactionCatalog ?? NoFactions.Instance;
         regions ??= units as IRegionCatalog ?? NoRegions.Instance;
+        if (library is not null && !ReferenceEquals(library, units)) units = new LinkedCatalog(units, library.LibraryPools);
         var bytes = System.Text.Encoding.UTF8.GetByteCount(text);
         if (bytes > MaxFileBytes)
             return new LoadResult { FileError = $"events.json is {bytes} bytes, over the {MaxFileBytes} byte limit" };
@@ -639,17 +643,21 @@ public static class EventValidator
         SpreadPerMinuteRule("action.infest.spread"), HordeUnitsRule, StartRule, StartAdminManual, StartDistanceRule, BothAdmin, StartCoordRule("x"),
     ];
 
-    /// <summary>The faction, pools and units every apocalypse-family action opens with (apocalypse D1, undead-hordes D7).</summary>
-    static (string Faction, IReadOnlyDictionary<string, IReadOnlyList<string>>? Pools, List<UnitEntry> Units) FamilyHead(JsonElement a, IUnitCatalog units,
-        IFactionCatalog factions)
+    /// <summary>The faction, pools and units every apocalypse-family action opens with (apocalypse D1, undead-hordes D7): its own
+    /// pools, and the pools its entries may name, its own then the library's (horde-pools D6). A <paramref name="counted"/>
+    /// action's entries count units, so a pool entry may roll min..max (horde-pools D7).</summary>
+    static (string Faction, IReadOnlyDictionary<string, IReadOnlyList<string>>? Own, IReadOnlyDictionary<string, IReadOnlyList<string>>? Pools,
+        List<UnitEntry> Units) FamilyHead(JsonElement a, IUnitCatalog units, IFactionCatalog factions, bool counted)
     {
         var faction = Str(Required(a, "faction", ApocalypseFactionRule), ApocalypseFactionRule);
         if (FactionDenyList.IsDenied(faction)) throw new Fail($"faction{Shown(faction)} is deny-listed");
         if (!faction.StartsWith("Faction_", StringComparison.Ordinal)) throw new Fail(ApocalypseFactionRule);
         if (!factions.IsKnown(faction)) throw new Fail($"unknown faction{Shown(faction)}");
-        var pools = a.TryGetProperty("pools", out var po) ? ParsePools(po, units) : null;
-        var list = ParseEntries(Required(a, "units", ApocalypseUnitsRule), "action.units", ApocalypseUnitsRule, units, withModifiers: true, pools, poolEntries: true);
-        return (faction, pools, list);
+        var own = a.TryGetProperty("pools", out var po) ? ParsePools(po, units) : null;
+        var pools = Linked(own, units);
+        var list = ParseEntries(Required(a, "units", ApocalypseUnitsRule), "action.units", ApocalypseUnitsRule, units, withModifiers: true, pools, poolEntries: true,
+            counted);
+        return (faction, own, pools, list);
     }
 
     /// <summary>A spread block at <paramref name="at"/> (undead-hordes D7): { perKillMin 0-3, perKillMax perKillMin-3, max
@@ -677,7 +685,7 @@ public static class EventValidator
     static ApocalypseAction ParseInfestation(JsonElement a, IUnitCatalog units, IFactionCatalog factions, IRegionCatalog regions)
     {
         OnlyKeys(a, "action", "type", "faction", "units", "pools", "origins", "hunters", "driftRadius", "spread", "scope", "scoreboard", "allowTerritory");
-        var (faction, pools, list) = FamilyHead(a, units, factions);
+        var (faction, own, pools, list) = FamilyHead(a, units, factions, counted: false);
         var o = Obj(Required(a, "origins", OriginsObject), OriginsObject);
         OnlyKeys(o, "action.origins", "count", "minNatives", "minSpacing", "perOrigin");
         var origins = new ApocalypseHotspots(
@@ -689,9 +697,9 @@ public static class EventValidator
         var spread = ParseSpread(Required(a, "spread", SpreadObject("action.spread")), "action.spread", pools) with { PerHotspot = perOrigin };
         var scope = a.TryGetProperty("scope", out var sc) ? ParseScope(sc, "action.scope", regions) : Scope.Global;
         var scoreboard = !a.TryGetProperty("scoreboard", out var sb) || Bool(sb, ScoreboardRule);
-        if (pools is not null) PoolsUsed(pools, spread.Pool is null ? list : [.. list, UnitEntry.FromPool(spread.Pool, 1)], null, null);
+        pools = Kept(own, pools, UsedPools(spread.Pool is null ? list : [.. list, UnitEntry.FromPool(spread.Pool, 1)], null, null), out var linked);
         return new ApocalypseAction(faction, list, origins, spread, new ApocalypseHordes(0, 0, ApocalypseLimits.MinEvery, 0, 0), ApocalypseGoal.None, 0,
-            scope, scoreboard, null, pools, ApocalypseMode.Infestation, infest, AllowTerritory: AllowsTerritory(a));
+            scope, scoreboard, null, pools, ApocalypseMode.Infestation, infest, AllowTerritory: AllowsTerritory(a)) { Linked = linked };
     }
 
     /// <summary>`"type": "HordeMarch"` (undead-hordes D10): faction, units whose counts total the horde (10 to
@@ -702,9 +710,10 @@ public static class EventValidator
     {
         OnlyKeys(a, "action", "type", "faction", "units", "pools", "bosses", "start", "destination", "marchSpeed", "growth", "infest", "scope", "scoreboard",
             "allowTerritory");
-        var (faction, pools, list) = FamilyHead(a, units, factions);
-        var total = list.Sum(u => (long)u.Count);
-        if (total < HordeLimits.MinHorde || total > HordeLimits.MaxHorde) throw new Fail(HordeUnitsRule);
+        var (faction, own, pools, list) = FamilyHead(a, units, factions, counted: true);
+        var total = list.Sum(u => (long)u.Count);                                    // a range counts its max (horde-pools D7)
+        var least = list.Sum(u => (long)(u.Min ?? u.Count));
+        if (least < HordeLimits.MinHorde || total > HordeLimits.MaxHorde) throw new Fail(HordeUnitsRule);
         var bosses = a.TryGetProperty("bosses", out var bo) ? ParseBossList(bo, "action.bosses", units, null, pools, waveLevel: false) : null;
         var start = ParseStart(Required(a, "start", StartRule), trigger);
         var destination = ParseDestination(Required(a, "destination", DestinationObject), trigger);
@@ -718,12 +727,11 @@ public static class EventValidator
         var infestSpread = ParseSpread(Required(i, "spread", SpreadObject("action.infest.spread")), "action.infest.spread", pools);
         var scope = a.TryGetProperty("scope", out var sc) ? ParseScope(sc, "action.scope", regions) : Scope.Global;
         var scoreboard = !a.TryGetProperty("scoreboard", out var sb) || Bool(sb, ScoreboardRule);
-        if (pools is not null)
-            PoolsUsed(pools, [.. list, .. new[] { growth.Pool, infestSpread.Pool }.OfType<string>().Select(p => UnitEntry.FromPool(p, 1))], null, bosses);
+        pools = Kept(own, pools, UsedPools([.. list, .. new[] { growth.Pool, infestSpread.Pool }.OfType<string>().Select(p => UnitEntry.FromPool(p, 1))], null, bosses), out var linked);
         return new ApocalypseAction(faction, list, new ApocalypseHotspots(1, HordeLimits.StartNatives, ApocalypseLimits.MinSpacing), growth,
             new ApocalypseHordes(1, 0, ApocalypseLimits.MinEvery, (int)total, 0), new ApocalypseGoal(destination.Location, destination.Radius, destination.Name),
             march, scope, scoreboard, null, pools, ApocalypseMode.HordeMarch, infest, new HordeMarchSpec(start, growth, infest, infestSpread, bosses),
-            AllowsTerritory(a));
+            AllowsTerritory(a)) { Linked = linked };
     }
 
     /// <summary>`start` (undead-hordes D10): a Point (x, z, optional y), Admin (a Manual trigger only) or { "type":
@@ -751,8 +759,10 @@ public static class EventValidator
         if (!faction.StartsWith("Faction_", StringComparison.Ordinal)) throw new Fail(ApocalypseFactionRule);
         if (!factions.IsKnown(faction)) throw new Fail($"unknown faction{Shown(faction)}");
         // undead-hordes D7: the SpawnWaves pool rules, pool entries in the units and a spread pool
-        var pools = a.TryGetProperty("pools", out var po) ? ParsePools(po, units) : null;
-        var list = ParseEntries(Required(a, "units", ApocalypseUnitsRule), "action.units", ApocalypseUnitsRule, units, withModifiers: true, pools, poolEntries: true);
+        var own = a.TryGetProperty("pools", out var po) ? ParsePools(po, units) : null;
+        var pools = Linked(own, units);                                               // horde-pools D6
+        var list = ParseEntries(Required(a, "units", ApocalypseUnitsRule), "action.units", ApocalypseUnitsRule, units, withModifiers: true, pools, poolEntries: true,
+            counted: false);
 
         var h = Obj(Required(a, "hotspots", HotspotsObject), HotspotsObject);
         OnlyKeys(h, "action.hotspots", "count", "minNatives", "minSpacing");
@@ -788,9 +798,9 @@ public static class EventValidator
         var bosses = a.TryGetProperty("bosses", out var bo) ? ParseBosses(bo, units, null, apocalypse: true) : null;
         var scope = a.TryGetProperty("scope", out var sc) ? ParseScope(sc, "action.scope", regions) : Scope.Global;
         var scoreboard = !a.TryGetProperty("scoreboard", out var sb) || Bool(sb, ScoreboardRule);      // absent = true (D1)
-        if (pools is not null) PoolsUsed(pools, spreadPool is null ? list : [.. list, UnitEntry.FromPool(spreadPool, 1)], null, null);
+        pools = Kept(own, pools, UsedPools(spreadPool is null ? list : [.. list, UnitEntry.FromPool(spreadPool, 1)], null, null), out var linked);
         return new ApocalypseAction(faction, list, hotspots, roamers, hordes, goal, march, scope, scoreboard, bosses, pools,
-            AllowTerritory: AllowsTerritory(a));
+            AllowTerritory: AllowsTerritory(a)) { Linked = linked };
     }
 
     /// <summary>An apocalypse-family action's `allowTerritory` (horde-pools D4): a bool, absent = false (D3).</summary>
@@ -935,7 +945,8 @@ public static class EventValidator
             "bosses", "pools", "pursuit", "destination", "marchSpeed");
 
         // wave-variety D1: the pools come first, so a unit entry or a boss roll can name one.
-        var pools = a.TryGetProperty("pools", out var po) ? ParsePools(po, units) : null;
+        var own = a.TryGetProperty("pools", out var po) ? ParsePools(po, units) : null;
+        var pools = Linked(own, units);                                               // horde-pools D6: own pools, then the library's
 
         IReadOnlyList<UnitEntry> list;
         IReadOnlyList<WaveSpec>? waveList = null;
@@ -954,7 +965,7 @@ public static class EventValidator
         else
         {
             var unitsRule = $"action.units must be 1-10 entries {{ \"prefab\": CHAR_ name, \"count\": {CountRange} }}";
-            list = ParseEntries(Required(a, "units", unitsRule), "action.units", unitsRule, units, withModifiers: false, pools, poolEntries: true);
+            list = ParseEntries(Required(a, "units", unitsRule), "action.units", unitsRule, units, withModifiers: false, pools, poolEntries: true, counted: true);
             WaveSize(list, "action.units");
             waves = Int(Required(a, "waves", "action.waves must be 1-10"), 1, 10, "action.waves must be 1-10");
             interval = Int(Required(a, "intervalSeconds", "action.intervalSeconds must be 10-600"), 10, 600, "action.intervalSeconds must be 10-600");
@@ -990,7 +1001,7 @@ public static class EventValidator
         var bosses = a.TryGetProperty("bosses", out var bo) ? ParseBossList(bo, "action.bosses", units, fanOut, pools, waveLevel: false) : null;
         WaveBosses(waveList, bosses, fanOut);
         var pursuit = a.TryGetProperty("pursuit", out var pu) ? ParsePursuit(pu, behaviour, fanOut, regionLock) : null;
-        if (pools is not null) PoolsUsed(pools, list, waveList, bosses);
+        pools = Kept(own, pools, UsedPools(list, waveList, bosses), out var linked);
         // undead-hordes D5: a destination marches the waves from a Point or Admin start, none of them fanned out, locked,
         // in an arena or pursuing
         var destination = a.TryGetProperty("destination", out var de) ? ParseDestination(de, trigger) : null;
@@ -1009,7 +1020,7 @@ public static class EventValidator
             if (pursuit is not null) throw new Fail(DestinationTakesNo("pursuit"));
         }
         return new SpawnWavesAction(list, waves, interval, radius, location, lifetime, scope, modifiers, loot, behaviour, allowTerritory, fanOut,
-            waveList, scoreboard, arena, winner, growth, regionLock, bosses, pools, pursuit, destination, march);
+            waveList, scoreboard, arena, winner, growth, regionLock, bosses, pools, pursuit, destination, march) { Linked = linked };
     }
 
     public const string DestinationObject = "action.destination must be an object { location, radius, name }";
@@ -1109,6 +1120,12 @@ public static class EventValidator
     public static string PoolUnused(string pool) => $"action.pools.{pool} is not used";
     public static string NoPool(string at, string? pool) => $"{at}.pool: no pool{(IsPoolName(pool) ? " " + pool : "")}";
     public static string PrefabOrPool(string at) => $"{at} needs prefab or pool, not both";
+    /// <summary>The horde-pools D7 reasons of a pool entry's min..max count.</summary>
+    public static string RangeWeighted(string at) => $"{at}: min/max apply to counted entries (SpawnWaves, HordeMarch); here count is a weight";
+    public static string CountOrRange(string at) => $"{at} takes count or min and max, not both";
+    public static string RangeNeedsPool(string at) => $"{at}: min/max need a pool entry";
+    public static string UnitMinRule(string at) => $"{at}.min must be {CountRange}";
+    public static string UnitMaxRule(string at) => $"{at}.max must be min-{Limits.MaxUnitsPerWave.Max}";
     public static string WaveSizeRule(string path) => $"{path} must hold at most {Limits.MaxUnitsPerWave.Max} units";
     public static string BossesRuleAt(string path) => $"{path} must hold 1-3 entries";
     public static string BossCountRuleAt(string path) => $"{path} count must be 1-3";
@@ -1128,7 +1145,7 @@ public static class EventValidator
 
     /// <summary>A unit entry's keys (wave-sets D1), and with a pool (wave-variety D2); the units form drops the last.</summary>
     static readonly string[] EntryKeys = ["prefab", "count", "chance", "modifiers"];
-    static readonly string[] PoolEntryKeys = ["prefab", "count", "chance", "pool", "modifiers"];
+    static readonly string[] PoolEntryKeys = ["prefab", "count", "chance", "pool", "min", "max", "modifiers"];
 
     /// <summary>`pools` (wave-variety D1): an object of 1-8 pools, each name 1-24 of a-z, 0-9 and "-", each an array of
     /// 1-30 distinct known, not deny-listed CHAR_ names, kept in the file's order.</summary>
@@ -1263,16 +1280,46 @@ public static class EventValidator
         if (bosses is not null && waveList[^1].Bosses is not null) throw new Fail(BossesBothLast(waveList.Count));
     }
 
-    /// <summary>Every pool is named by a unit entry or a boss roll (wave-variety D1), checked in the file's order.</summary>
-    static void PoolsUsed(IReadOnlyDictionary<string, IReadOnlyList<string>> pools, IReadOnlyList<UnitEntry> units,
-        IReadOnlyList<WaveSpec>? waveList, IReadOnlyList<BossRoll>? bosses)
+    /// <summary>The pool names a unit entry, a boss roll or a spread block (passed as a pool entry) of an action uses.</summary>
+    static HashSet<string> UsedPools(IReadOnlyList<UnitEntry> units, IReadOnlyList<WaveSpec>? waveList, IReadOnlyList<BossRoll>? bosses)
     {
         var used = new HashSet<string>(units.Select(u => u.Pool).OfType<string>(), StringComparer.Ordinal);
         foreach (var w in waveList ?? [])
             used.UnionWith((w.Bosses ?? []).Select(b => b.Pool).OfType<string>());
         used.UnionWith((bosses ?? []).Select(b => b.Pool).OfType<string>());
-        foreach (var name in pools.Keys)
+        return used;
+    }
+
+    /// <summary>The pools an action's entries may name (horde-pools D6): its own, then the library's under any name its own
+    /// do not hold; null when there are none.</summary>
+    static IReadOnlyDictionary<string, IReadOnlyList<string>>? Linked(IReadOnlyDictionary<string, IReadOnlyList<string>>? own, IUnitCatalog units)
+    {
+        if ((units as IPoolLibrary)?.LibraryPools is not { Count: > 0 } library) return own;
+        var linked = new Dictionary<string, IReadOnlyList<string>>(library, StringComparer.Ordinal);
+        foreach (var (name, members) in own ?? new Dictionary<string, IReadOnlyList<string>>()) linked[name] = members;
+        return linked;
+    }
+
+    /// <summary>The pools the definition keeps: every own pool, each named by a unit entry, a boss roll or a spread block
+    /// (wave-variety D1, checked in the file's order), then the library pools it names, resolved now, so a running event
+    /// draws from what it loaded with (horde-pools D6); null when it has none.</summary>
+    static IReadOnlyDictionary<string, IReadOnlyList<string>>? Kept(IReadOnlyDictionary<string, IReadOnlyList<string>>? own,
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? linked, HashSet<string> used, out IReadOnlyList<string>? fromLibrary)
+    {
+        fromLibrary = null;
+        foreach (var name in (own ?? new Dictionary<string, IReadOnlyList<string>>()).Keys)
             if (!used.Contains(name)) throw new Fail(PoolUnused(name));
+        if (linked is null || ReferenceEquals(linked, own)) return own;
+        var kept = new Dictionary<string, IReadOnlyList<string>>(own ?? new Dictionary<string, IReadOnlyList<string>>(), StringComparer.Ordinal);
+        var names = new List<string>();
+        foreach (var name in used)
+            if (!kept.ContainsKey(name) && linked.TryGetValue(name, out var members))
+            {
+                kept[name] = members;
+                names.Add(name);
+            }
+        if (names.Count > 0) fromLibrary = names;
+        return kept.Count > 0 ? kept : null;
     }
 
     /// <summary>`pursuit` (wave-variety D7): { "afterSeconds": 15-600 } on a Hunt action without fanOut or regionLock.</summary>
@@ -1400,7 +1447,7 @@ public static class EventValidator
             if (w.ValueKind != JsonValueKind.Object) throw new Fail(WaveRule(n));
             OnlyKeys(w, path, "units", "afterSeconds", "whenCleared", "bosses");
             var unitsRule = $"{path}.units must be 1-10 entries {{ \"prefab\": CHAR_ name, \"count\": {CountRange} }}";
-            var entries = ParseEntries(Required(w, "units", unitsRule), $"{path}.units", unitsRule, units, withModifiers: true, pools, poolEntries: true);
+            var entries = ParseEntries(Required(w, "units", unitsRule), $"{path}.units", unitsRule, units, withModifiers: true, pools, poolEntries: true, counted: true);
             WaveSize(entries, $"{path}.units");
             int? after = w.TryGetProperty("afterSeconds", out var af) ? Int(af, MinAfterSeconds, MaxAfterSeconds, AfterSecondsRule(n)) : null;
             bool? cleared = w.TryGetProperty("whenCleared", out var wc) ? Bool(wc, WhenClearedRule(n)) : null;
@@ -1418,7 +1465,7 @@ public static class EventValidator
     /// (a SpawnWaves action, wave-variety D2) an entry may name a `pool` of <paramref name="pools"/> instead of a prefab,
     /// under the same count, chance and modifier rules; an entry without the key reads as 0.12.0's.</summary>
     static List<UnitEntry> ParseEntries(JsonElement u, string path, string rule, IUnitCatalog units, bool withModifiers,
-        IReadOnlyDictionary<string, IReadOnlyList<string>>? pools = null, bool poolEntries = false)
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? pools = null, bool poolEntries = false, bool counted = false)
     {
         if (u.ValueKind != JsonValueKind.Array || u.GetArrayLength() is < 1 or > 10) throw new Fail(rule);
         var list = new List<UnitEntry>();
@@ -1440,10 +1487,21 @@ public static class EventValidator
                 if (UnitDenyList.IsDenied(prefab) || units.IsDenied(prefab)) throw new Fail($"unit{Shown(prefab)} is deny-listed");
                 if (!prefab.StartsWith("CHAR_", StringComparison.Ordinal) || !units.IsKnown(prefab)) throw new Fail($"unknown unit{Shown(prefab)}");
             }
-            var count = Int(Required(x, "count", rule), 1, Limits.MaxUnitsPerWave.Max, $"{at}.count must be {CountRange}");
+            int count;
+            int? min = null;
+            if (x.TryGetProperty("min", out _) || x.TryGetProperty("max", out _))
+            {
+                // horde-pools D7: a counted pool entry rolls min..max; in a weighted list count is a draw weight
+                if (!counted) throw new Fail(RangeWeighted(at));
+                if (pool is null) throw new Fail(RangeNeedsPool(at));
+                if (x.TryGetProperty("count", out _)) throw new Fail(CountOrRange(at));
+                min = Int(Required(x, "min", UnitMinRule(at)), 1, Limits.MaxUnitsPerWave.Max, UnitMinRule(at));
+                count = Int(Required(x, "max", UnitMaxRule(at)), min.Value, Limits.MaxUnitsPerWave.Max, UnitMaxRule(at));
+            }
+            else count = Int(Required(x, "count", rule), 1, Limits.MaxUnitsPerWave.Max, $"{at}.count must be {CountRange}");
             var chance = x.TryGetProperty("chance", out var ch) ? Number(ch, MinChance, 1.0, ChanceRule.Replace("action.units", at)) : 1.0;
             var modifiers = withModifiers && x.TryGetProperty("modifiers", out var mo) ? ParseModifiers(mo, $"{path}.{m}.modifiers") : null;
-            list.Add(pool is null ? new UnitEntry(prefab!, count, chance, modifiers) : UnitEntry.FromPool(pool, count, chance, modifiers));
+            list.Add(pool is null ? new UnitEntry(prefab!, count, chance, modifiers) : UnitEntry.FromPool(pool, count, chance, modifiers) with { Min = min });
         }
         return list;
     }

@@ -10,7 +10,7 @@ namespace Nyarlathotep.Services;
 /// &lt;list&gt;"; the list (unavailable hooks, pillars whose event was cancelled after its faults, and the failing
 /// player scan or kill read, automation D15; the scoreboard's kill read and the cleared read, wave-sets D13, D18; a failing
 /// arena check, swarm D4; a failing region lock check or region hunt move, hunting-grounds D6, D9; "unit watch: read
-/// failing" and "unit watch: move failing", unit-watch D18) is also what
+/// failing" and "unit watch: move failing", unit-watch D18; "pools unknown", horde-pools D5) is also what
 /// `.nyar status` shows admins and what the Announcer's login notice sends them.
 /// </summary>
 internal static class HealthMonitor
@@ -21,7 +21,7 @@ internal static class HealthMonitor
 
     /// <summary>Every degraded part, "hook &lt;name&gt;" first.</summary>
     internal static IReadOnlyList<string> Degraded() =>
-        TriggerBus.Hooks.Unavailable.Select(h => $"hook {h}").Concat(TriggerBus.Degraded).Concat(EventRuntime.Degraded).Concat(EventRuntime.WaveSetHealth).Concat(SpawnTracker.ArenaHealth).Concat(SpawnTracker.RegionHealth).Concat(ApocalypseAction.Health).Concat(SpawnTracker.WatchHealth).Concat(WalkCheck.Health.Entries).Concat(RegionMap.State.Entries)
+        TriggerBus.Hooks.Unavailable.Select(h => $"hook {h}").Concat(TriggerBus.Degraded).Concat(EventRuntime.Degraded).Concat(EventRuntime.WaveSetHealth).Concat(SpawnTracker.ArenaHealth).Concat(SpawnTracker.RegionHealth).Concat(ApocalypseAction.Health).Concat(SpawnTracker.WatchHealth).Concat(WalkCheck.Health.Entries).Concat(RegionMap.State.Entries).Concat(EventStore.Library.Entries)
             .Concat(LibraryHealth.Entries(TemplateLibrary.Catalog.Error, Persistence.Events?.WriteUncertain ?? false)).ToList();
 
     /// <summary>The scheduler's health phase.</summary>

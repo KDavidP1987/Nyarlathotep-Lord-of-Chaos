@@ -6,7 +6,7 @@ namespace Nyarlathotep.Logic;
 
 /// <summary>The data files of BepInEx/config/Nyarlathotep/ (Design › Data). Persistence takes these enums,
 /// never a name or a path, so no caller can spell another file (D7, D17 file-write fence).</summary>
-public enum DataFile { Events, Zones, State, Stats }
+public enum DataFile { Events, Zones, State, Stats, Pools }
 
 /// <summary>A data file itself, or one of its siblings.</summary>
 public enum FileVariant { Main, Bak, Tmp, Corrupt }
@@ -24,6 +24,7 @@ public static class DataPaths
             DataFile.Zones => "zones.json",
             DataFile.State => "state.json",
             DataFile.Stats => "stats.json",
+            DataFile.Pools => "pools.json",                                     // horde-pools D5
             _ => throw new ArgumentOutOfRangeException(nameof(file)),
         };
         return variant switch
@@ -36,7 +37,7 @@ public static class DataPaths
         };
     }
 
-    /// <summary>Every name Persistence may resolve: the four data files and their .bak, .tmp and .corrupt siblings.</summary>
+    /// <summary>Every name Persistence may resolve: the five data files and their .bak, .tmp and .corrupt siblings.</summary>
     public static IReadOnlyCollection<string> AllNames { get; } = BuildAll();
 
     static HashSet<string> BuildAll()
