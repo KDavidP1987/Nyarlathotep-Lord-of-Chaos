@@ -5,7 +5,7 @@ profile: full
 id: dod-20261024-hp01
 slug: horde-pools
 title: Horde pools — full-size hordes, a castle-territory switch for hordes, and a shared faction pool library
-status: ready
+status: in-progress
 size: M
 parent: nyarlathotep
 kind: feature
@@ -306,3 +306,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-24 · note · deferred · Review 2 F4 · PoolLibraryTests File validates the seeded file under the release rules (D5)
 - 2026-10-24 · note · deferred · Review 2 F5 · D12 runs from tools/vrclient, as every scenario does
 - 2026-10-24 · status → ready · approve · review: subagent
+- 2026-10-24 · status → in-progress · start
