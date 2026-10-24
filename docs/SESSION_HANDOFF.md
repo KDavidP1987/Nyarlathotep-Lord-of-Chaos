@@ -4,7 +4,33 @@ Where work stands between sessions. Overwrite this file at the end of a session;
 The plans (`docs/dod/`), audits (`docs/audits/`) and feature docs stay the source of truth. This file only points
 into them.
 
-**Written 2026-10-19 (session close, the owner restarting the PC): start here.** v0.14.0 is released, on GitHub and on both servers. The session
+**Written 2026-10-24 (v0.15.0 released): start here.** horde-pools shipped as **v0.15.0** (tag at a072ad9; GitHub
+pre-release with kdpen-Nyarlathotep-0.15.0.zip). All work is pushed (main = origin/main).
+- **What 0.15.0 adds:** full-size hordes (held by MaxTrackedUnits alone, default 500), the castle switch
+  (`allowTerritory` on the three horde types, default false), the pool library (`pools.json`, 17 seeded pools, random
+  `min`/`max` counts, `.nyar pool list/info/reload`). The package README now documents every cfg key, template, action,
+  unit entry and pool in collapsible sections.
+- **The owner skipped the in-game test** (2026-10-24, quoted in the plan Log). In its place: the dev server's boot was
+  checked (clean, same warning counts as 0.14.0) and G-Portal's boot was read over FTP.
+- **G-Portal on 0.15.0 (2026-10-24):** only BepInEx/plugins/Nyarlathotep.dll replaced (sha256 fdfa9358…, read back
+  equal; the 0.14.0 DLL aaa70ee4… is in the session scratchpad). Its boot: "Loading [Nyarlathotep 0.15.0]", "seeded
+  pools.json with 17 pools", events 2 valid, templates 36/36, triggers all available, no Nyarlathotep warning or error.
+  Other mods' notices only (Bloodcraft startup check and an Il2CppInterop NullReferenceException at type registration,
+  KindredCommands "Missing NetTopologySuite.dll").
+  - **Its cfg still reads MaxTrackedUnits 150** (a cfg keeps its old value), so hordes there stop at 150 until the
+    owner raises `[Limits] MaxTrackedUnits` in BepInEx/config/kdpen.Nyarlathotep.cfg.
+  - The FTP login is in 1Password (Dev, "G-Portal FTP"). It appeared in plain text in chat: the owner was advised to
+    rotate it.
+- **Local dev server:** stopped, on the 0.15.0 DLL; cfg still MaxTrackedUnits 500 and MaxUnitsPerWave 500 for the
+  undead-hordes D27 check.
+- **horde-pools plan (docs/dod/horde-pools.md) 14/18.** Open: D12 (in-game run, skipped by the owner; never
+  self-accept), D13 (the owner's look and feel), D16 (the records: the step 4 post-audit header must name its commit;
+  -Paths needs the build/ folder and the v0.15.0 tag and release), D18.
+- **Raphael:** docs/RAPHAEL_HANDOFF_HORDE_POOLS.md. No wire change (api 8); the editor must keep keys it does not know.
+- **Still waiting on the owner from 2026-10-19:** D27 (undead hordes look and feel), the undead-hordes partial close,
+  and the backlog #13-15 decisions (the block below).
+
+**Written 2026-10-19 (session close, the owner restarting the PC).** v0.14.0 is released, on GitHub and on both servers. The session
 ended with three backlog items researched and the owner's answers still due. All work is pushed (main = origin/main).
 - **Where things run:**
   - **G-Portal:** on 0.14.0 since 2026-10-18 (only Nyarlathotep.dll swapped; details in the block below).
