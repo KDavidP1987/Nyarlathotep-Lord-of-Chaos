@@ -283,6 +283,7 @@ Constraints each child inherits (a child's review checks they appear verbatim or
 - undead-hordes · planned · A46
 - unit-watch · planned · A38
 - live-ops · planned · A41
+- horde-pools · planned · A49
 - scaling · planned · A39
 - replacements · planned · A40
 - communications · planned · A41
@@ -444,6 +445,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - A46 · 2026-10-17 · requested · — · layer: — · owner request 2026-10-17 after the G-Portal demo (design §9 D62): waves with a start and a destination, an undead infestation and an undead horde march with 1-3 undead per kill from a pool, hordes of up to 500 and 1000 tracked units after a load test; new child undead-hordes (L), 0.14.0
 - A47 · 2026-10-17 · requested · ~D41 · layer: — · follows A45 (design §9 D63, owner 2026-10-17: the login notice "by default"): LoginEventNotice is the one [Announcements] switch on by default, so D41's check binds six switches and requires that one true and the other five false; built by login-notice step 1 (D3)
 - A48 · 2026-10-17 · requested · — · layer: — · follows A46 (design §9 D62, owner 2026-10-17: "up to 1000, tested", the ladder 100-1000): Business rules 9's ceilings become MaxTrackedUnits ≤ 1000 (lowered to the ladder's ceiling if a step fails, never below 500 without the owner), MaxUnitsPerWave ≤ 500, MaxSpawnsPerTick and MaxDespawnsPerTick ≤ 40; the defaults (150, 20, 10, 5) are unchanged; built by undead-hordes step 1 (D1, D4); no D-item changes
+- A49 · 2026-10-24 · requested · — · layer: — · owner request 2026-10-24 (design §9 D65): hordes (HordeMarch, Infestation, Apocalypse) reach their full size, held by MaxTrackedUnits only, whose default becomes 500 (Business rules 9's default caps change for it); a per-event action.allowTerritory on the three horde types, off by default; a shared pool library (pools.json, faction unit and boss pools seeded from the allied groups) that any event links by name with a random count. New child horde-pools (docs/dod/horde-pools.md)
 
 ## Log
 - 2026-09-23 · status → draft · plan
@@ -540,3 +542,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-17 · version · v12 · owner-requested scope (A45, A46): children login-notice (0.13.1) and undead-hordes (0.14.0) added from design §9 D62 and D63
 - 2026-10-17 · note · S-24 (every announcement switch off by default) has one exception since A47: LoginEventNotice, on by default (design §9 D63); login-notice Review 1 F1
 - 2026-10-17 · note · A45 sized the child S; its plan was written and reviewed as M (docs/dod/login-notice.md), which stands; login-notice Review 1 F3
+- 2026-10-24 · version · v13 · owner-requested scope (A49): child horde-pools (full-size hordes, castle switch for hordes, shared faction pool library)
